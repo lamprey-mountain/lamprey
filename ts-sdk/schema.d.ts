@@ -1328,16 +1328,16 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Webhook list thread (TODO)
+		 * Webhook list thread
 		 * @description
 		 */
-		get: operations["list_webhooks_thread"];
+		get: operations["webhook_list_channel"];
 		put?: never;
 		/**
-		 * Webhook create (TODO)
+		 * Webhook create
 		 * @description
 		 */
-		post: operations["create_webhook"];
+		post: operations["webhook_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2423,7 +2423,11 @@ export interface paths {
 		 */
 		get: operations["room_member_search"];
 		put?: never;
-		post?: never;
+		/**
+		 * Room member search advanced
+		 * @description
+		 */
+		post: operations["room_member_search_advanced"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2691,10 +2695,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Webhook list room (TODO)
+		 * Webhook list room
 		 * @description
 		 */
-		get: operations["list_webhooks_room"];
+		get: operations["webhook_list_room"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3544,24 +3548,24 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Webhook get (TODO)
+		 * Webhook get
 		 * @description
 		 */
-		get: operations["get_webhook"];
+		get: operations["webhook_get"];
 		put?: never;
 		post?: never;
 		/**
-		 * Webhook delete (TODO)
+		 * Webhook delete
 		 * @description
 		 */
-		delete: operations["delete_webhook"];
+		delete: operations["webhook_delete"];
 		options?: never;
 		head?: never;
 		/**
-		 * Webhook update (TODO)
+		 * Webhook update
 		 * @description
 		 */
-		patch: operations["update_webhook"];
+		patch: operations["webhook_update"];
 		trace?: never;
 	};
 	"/api/v1/webhook/{webhook_id}/{token}": {
@@ -3572,28 +3576,28 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Webhook get with token (TODO)
+		 * Webhook get with token
 		 * @description
 		 */
-		get: operations["get_webhook_with_token"];
+		get: operations["webhook_get_with_token"];
 		put?: never;
 		/**
-		 * Webhook execute (TODO)
+		 * Webhook execute
 		 * @description
 		 */
-		post: operations["execute_webhook"];
+		post: operations["webhook_execute"];
 		/**
-		 * Webhook delete with token (TODO)
+		 * Webhook delete with token
 		 * @description
 		 */
-		delete: operations["delete_webhook_with_token"];
+		delete: operations["webhook_delete_with_token"];
 		options?: never;
 		head?: never;
 		/**
-		 * Webhook update with token (TODO)
+		 * Webhook update with token
 		 * @description
 		 */
-		patch: operations["update_webhook_with_token"];
+		patch: operations["webhook_update_with_token"];
 		trace?: never;
 	};
 	"/api/v1/webhook/{webhook_id}/{token}/discord": {
@@ -3609,7 +3613,7 @@ export interface paths {
 		 * Webhook execute discord (TODO)
 		 * @description
 		 */
-		post: operations["execute_webhook_discord"];
+		post: operations["webhook_execute_discord"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3629,7 +3633,7 @@ export interface paths {
 		 * Webhook execute github (TODO)
 		 * @description
 		 */
-		post: operations["execute_webhook_github"];
+		post: operations["webhook_execute_github"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3649,7 +3653,7 @@ export interface paths {
 		 * Webhook execute slack (TODO)
 		 * @description
 		 */
-		post: operations["execute_webhook_slack"];
+		post: operations["webhook_execute_slack"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4214,6 +4218,26 @@ export interface components {
 			};
 			/** @enum {string} */
 			type: "CalendarEventDelete";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				webhook_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "WebhookCreate";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				webhook_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "WebhookUpdate";
+		} | {
+			metadata: {
+				webhook_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "WebhookDelete";
 		};
 		AuthEmailComplete: {
 			code: string;
@@ -5310,6 +5334,23 @@ export interface components {
 				event_id: components["schemas"]["Id"];
 				/** @enum {string} */
 				type: "CalendarEventDelete";
+			}
+			| {
+				/** @enum {string} */
+				type: "WebhookCreate";
+				webhook: components["schemas"]["Webhook"];
+			}
+			| {
+				/** @enum {string} */
+				type: "WebhookUpdate";
+				webhook: components["schemas"]["Webhook"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				room_id?: null | components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "WebhookDelete";
+				webhook_id: components["schemas"]["Id"];
 			};
 		/** @description Information about the pingback */
 		MessageThreadPingback: {
@@ -5917,6 +5958,21 @@ export interface components {
 				system: boolean;
 				user_config?: null | components["schemas"]["UserConfigUser"];
 				version_id: components["schemas"]["Id"];
+				webhook?: null | components["schemas"]["UserWebhook"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
+		PaginationResponse_Webhook: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				avatar?: null | components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
+				id: components["schemas"]["Id"];
+				name: string;
+				room_id?: null | components["schemas"]["Id"];
+				token?: string | null;
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -6325,8 +6381,35 @@ export interface components {
 			roles?: components["schemas"]["Id"][] | null;
 			timeout_until?: null | components["schemas"]["Time"];
 		};
+		RoomMemberSearchAdvanced: {
+			create_after?: null | components["schemas"]["Time"];
+			create_before?: null | components["schemas"]["Time"];
+			/** @description return members who are/aren't room deafened */
+			deaf?: boolean | null;
+			/** @description return members who are/aren't server guests */
+			guest?: boolean | null;
+			invite?: null | components["schemas"]["InviteCode"];
+			join_after?: null | components["schemas"]["Time"];
+			join_before?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int32
+			 * @description maximum number of results to return
+			 */
+			limit?: number | null;
+			/** @description return members who are/aren't room muted */
+			mute?: boolean | null;
+			/** @description return members who do/don't have a custom nickname */
+			nickname?: boolean | null;
+			/** @description user name, override_name, or id */
+			query?: string | null;
+			/** @description has all of these roles */
+			roles?: components["schemas"]["Id"][];
+			/** @description return members who are/aren't timed out */
+			timeout?: boolean | null;
+		};
 		RoomMemberSearchResponse: {
-			items: components["schemas"]["RoomMember"][];
+			room_members: components["schemas"]["RoomMember"][];
+			users: components["schemas"]["User"][];
 		};
 		/** @enum {string} */
 		RoomMembership: "Join" | "Leave";
@@ -6664,6 +6747,7 @@ export interface components {
 			system: boolean;
 			user_config?: null | components["schemas"]["UserConfigUser"];
 			version_id: components["schemas"]["Id"];
+			webhook?: null | components["schemas"]["UserWebhook"];
 		};
 		/** @description configuration for a user in a thread */
 		UserConfigChannel: {
@@ -6716,6 +6800,11 @@ export interface components {
 			banner?: null | components["schemas"]["Id"];
 			description?: string | null;
 			name?: string | null;
+		};
+		UserWebhook: {
+			channel_id: components["schemas"]["Id"];
+			creator_id: components["schemas"]["Id"];
+			room_id?: null | components["schemas"]["Id"];
 		};
 		UserWithRelationship: components["schemas"]["User"] & {
 			relationship: components["schemas"]["Relationship"];
@@ -6823,10 +6912,10 @@ export interface components {
 		};
 		Webhook: {
 			avatar?: null | components["schemas"]["Id"];
+			channel_id: components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
 			name: string;
 			room_id?: null | components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
 			token?: string | null;
 		};
 		WebhookCreate: {
@@ -6835,9 +6924,9 @@ export interface components {
 		};
 		WebhookUpdate: {
 			avatar?: null | components["schemas"]["Id"];
+			channel_id?: null | components["schemas"]["Id"];
 			name?: string | null;
 			rotate_token?: boolean;
-			thread_id?: null | components["schemas"]["Id"];
 		};
 	};
 	responses: never;
@@ -8883,9 +8972,14 @@ export interface operations {
 			};
 		};
 	};
-	list_webhooks_thread: {
+	webhook_list_channel: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
 				/** @description channel id */
@@ -8901,12 +8995,13 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["Webhook"][];
+					"application/json":
+						components["schemas"]["PaginationResponse_Webhook"];
 				};
 			};
 		};
 	};
-	create_webhook: {
+	webhook_create: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -10713,6 +10808,30 @@ export interface operations {
 			};
 		};
 	};
+	room_member_search_advanced: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoomMemberSearchAdvanced"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RoomMemberSearchResponse"];
+				};
+			};
+		};
+	};
 	room_member_get: {
 		parameters: {
 			query?: never;
@@ -11244,9 +11363,14 @@ export interface operations {
 			};
 		};
 	};
-	list_webhooks_room: {
+	webhook_list_room: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
 				/** @description Room id */
@@ -11262,7 +11386,8 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["Webhook"][];
+					"application/json":
+						components["schemas"]["PaginationResponse_Webhook"];
 				};
 			};
 		};
@@ -12613,7 +12738,7 @@ export interface operations {
 			};
 		};
 	};
-	get_webhook: {
+	webhook_get: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12636,7 +12761,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_webhook: {
+	webhook_delete: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12657,7 +12782,7 @@ export interface operations {
 			};
 		};
 	};
-	update_webhook: {
+	webhook_update: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12684,7 +12809,7 @@ export interface operations {
 			};
 		};
 	};
-	get_webhook_with_token: {
+	webhook_get_with_token: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12709,7 +12834,7 @@ export interface operations {
 			};
 		};
 	};
-	execute_webhook: {
+	webhook_execute: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12721,18 +12846,24 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessageCreate"];
+			};
+		};
 		responses: {
-			/** @description Execute webhook success */
-			204: {
+			/** @description Execute webhook success, returns created message */
+			201: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
 			};
 		};
 	};
-	delete_webhook_with_token: {
+	webhook_delete_with_token: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12755,7 +12886,7 @@ export interface operations {
 			};
 		};
 	};
-	update_webhook_with_token: {
+	webhook_update_with_token: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12784,7 +12915,7 @@ export interface operations {
 			};
 		};
 	};
-	execute_webhook_discord: {
+	webhook_execute_discord: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12807,7 +12938,7 @@ export interface operations {
 			};
 		};
 	};
-	execute_webhook_github: {
+	webhook_execute_github: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12830,7 +12961,7 @@ export interface operations {
 			};
 		};
 	};
-	execute_webhook_slack: {
+	webhook_execute_slack: {
 		parameters: {
 			query?: never;
 			header?: never;
