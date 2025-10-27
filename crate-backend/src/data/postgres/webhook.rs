@@ -1,16 +1,26 @@
 use async_trait::async_trait;
 use common::v1::types::{
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    ChannelId, RoomId, UserId, WebhookId,
+    ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId, WebhookId,
 };
+use sqlx::Acquire;
 use uuid::Uuid;
 
 use crate::{
-    data::DataWebhook,
+    data::{postgres::Pagination, DataWebhook},
     error::{Error, Result},
+    gen_paginate,
 };
 
 use super::Postgres;
+
+struct DbWebhook {
+    id: Uuid,
+    room_id: Option<Uuid>,
+    channel_id: Uuid,
+    name: String,
+    avatar: Option<Uuid>,
+}
 
 #[async_trait]
 impl DataWebhook for Postgres {
@@ -109,58 +119,88 @@ impl DataWebhook for Postgres {
         })
     }
 
-    async fn webhook_list_channel(&self, channel_id: ChannelId) -> Result<Vec<Webhook>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar
-            FROM webhook w
-            JOIN usr u ON w.id = u.id
-            JOIN channel c ON w.channel_id = c.id
-            WHERE w.channel_id = $1
-            "#,
-            *channel_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
+    async fn webhook_list_channel(
+        &self,
+        channel_id: ChannelId,
+        pagination: PaginationQuery<WebhookId>,
+    ) -> Result<PaginationResponse<Webhook>> {
+        let p: Pagination<_> = pagination.try_into()?;
 
-        Ok(rows
-            .into_iter()
-            .map(|row| Webhook {
+        gen_paginate!(
+            p,
+            self.pool,
+            sqlx::query_as!(
+                DbWebhook,
+                r#"
+                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar
+                FROM webhook w
+                JOIN usr u ON w.id = u.id
+                JOIN channel c ON w.channel_id = c.id
+                WHERE w.channel_id = $1 AND w.id > $2 AND w.id < $3
+                ORDER BY (CASE WHEN $4 = 'f' THEN w.id END), w.id DESC LIMIT $5
+                "#,
+                *channel_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            sqlx::query_scalar!(
+                "SELECT count(*) FROM webhook WHERE channel_id = $1",
+                *channel_id
+            ),
+            |row: DbWebhook| Webhook {
                 id: row.id.into(),
                 room_id: row.room_id.map(Into::into),
                 channel_id: row.channel_id.into(),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
                 token: None,
-            })
-            .collect())
+            },
+            |i: &Webhook| i.id.to_string()
+        )
     }
 
-    async fn webhook_list_room(&self, room_id: RoomId) -> Result<Vec<Webhook>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar
-            FROM webhook w
-            JOIN usr u ON w.id = u.id
-            JOIN channel c ON w.channel_id = c.id
-            WHERE c.room_id = $1
-            "#,
-            *room_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
+    async fn webhook_list_room(
+        &self,
+        room_id: RoomId,
+        pagination: PaginationQuery<WebhookId>,
+    ) -> Result<PaginationResponse<Webhook>> {
+        let p: Pagination<_> = pagination.try_into()?;
 
-        Ok(rows
-            .into_iter()
-            .map(|row| Webhook {
+        gen_paginate!(
+            p,
+            self.pool,
+            sqlx::query_as!(
+                DbWebhook,
+                r#"
+                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar
+                FROM webhook w
+                JOIN usr u ON w.id = u.id
+                JOIN channel c ON w.channel_id = c.id
+                WHERE c.room_id = $1 AND w.id > $2 AND w.id < $3
+                ORDER BY (CASE WHEN $4 = 'f' THEN w.id END), w.id DESC LIMIT $5
+                "#,
+                *room_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            sqlx::query_scalar!(
+                "SELECT count(*) FROM webhook w JOIN channel c ON w.channel_id = c.id WHERE c.room_id = $1",
+                *room_id
+            ),
+            |row: DbWebhook| Webhook {
                 id: row.id.into(),
                 room_id: row.room_id.map(Into::into),
                 channel_id: row.channel_id.into(),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
                 token: None,
-            })
-            .collect())
+            },
+            |i: &Webhook| i.id.to_string()
+        )
     }
 
     async fn webhook_update(&self, webhook_id: WebhookId, patch: WebhookUpdate) -> Result<Webhook> {

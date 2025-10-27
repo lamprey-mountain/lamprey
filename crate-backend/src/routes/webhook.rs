@@ -1,17 +1,18 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use common::v1::types::{
     audit_logs::{AuditLogChange, AuditLogEntry, AuditLogEntryType},
+    pagination::{PaginationQuery, PaginationResponse},
     sync::MessageSync,
     util::Changes,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    AuditLogEntryId, Message, MessageCreate, Permission,
+    AuditLogEntryId, Message, MessageCreate, Permission, WebhookId,
 };
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -19,7 +20,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use super::util::{Auth, HeaderReason};
 use crate::{
     error::{Error, Result},
-    types::{ChannelId, RoomId, WebhookId},
+    types::{ChannelId, RoomId},
     ServerState,
 };
 
@@ -80,16 +81,20 @@ async fn webhook_create(
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/webhook",
-    params(("channel_id", description = "channel id")),
+    params(
+        ("channel_id", description = "channel id"),
+        PaginationQuery<WebhookId>
+    ),
     tags = ["webhook"],
     responses(
-        (status = OK, body = Vec<Webhook>, description = "List webhooks success"),
+        (status = OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
     )
 )]
 async fn webhook_list_channel(
     Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
     let channel = s.data().channel_get(channel_id).await?;
     let room_id = channel
@@ -98,7 +103,10 @@ async fn webhook_list_channel(
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
-    let webhooks = s.data().webhook_list_channel(channel_id).await?;
+    let webhooks = s
+        .data()
+        .webhook_list_channel(channel_id, pagination)
+        .await?;
 
     Ok(Json(webhooks))
 }
@@ -107,21 +115,25 @@ async fn webhook_list_channel(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/webhook",
-    params(("room_id", description = "Room id")),
+    params(
+        ("room_id", description = "Room id"),
+        PaginationQuery<WebhookId>
+    ),
     tags = ["webhook"],
     responses(
-        (status = OK, body = Vec<Webhook>, description = "List webhooks success"),
+        (status = OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
     )
 )]
 async fn webhook_list_room(
     Path(room_id): Path<RoomId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
-    let webhooks = s.data().webhook_list_room(room_id).await?;
+    let webhooks = s.data().webhook_list_room(room_id, pagination).await?;
 
     Ok(Json(webhooks))
 }

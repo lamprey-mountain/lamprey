@@ -986,8 +986,16 @@ pub trait DataWebhook {
     ) -> Result<Webhook>;
     async fn webhook_get(&self, webhook_id: WebhookId) -> Result<Webhook>;
     async fn webhook_get_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<Webhook>;
-    async fn webhook_list_channel(&self, channel_id: ChannelId) -> Result<Vec<Webhook>>;
-    async fn webhook_list_room(&self, room_id: RoomId) -> Result<Vec<Webhook>>;
+    async fn webhook_list_channel(
+        &self,
+        channel_id: ChannelId,
+        pagination: PaginationQuery<WebhookId>,
+    ) -> Result<PaginationResponse<Webhook>>;
+    async fn webhook_list_room(
+        &self,
+        room_id: RoomId,
+        pagination: PaginationQuery<WebhookId>,
+    ) -> Result<PaginationResponse<Webhook>>;
     async fn webhook_update(&self, webhook_id: WebhookId, patch: WebhookUpdate) -> Result<Webhook>;
     async fn webhook_update_with_token(
         &self,
