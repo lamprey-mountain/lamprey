@@ -22,8 +22,9 @@ use common::v1::types::{
     MediaPatch, NotificationId, PaginationQuery, PaginationResponse, Permission,
     PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch, RelationshipWithUserId,
     Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
-    RoomMembership, RoomMetrics, SessionPatch, SessionStatus, SessionToken, Suspended,
-    ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
+    RoomMemberSearchAdvanced, RoomMemberSearchResponse, RoomMembership, RoomMetrics, SessionPatch,
+    SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
+    UserListFilter, WebhookId,
 };
 
 use uuid::Uuid;
@@ -144,6 +145,12 @@ pub trait DataRoomMember {
         query: String,
         limit: u16,
     ) -> Result<Vec<RoomMember>>;
+
+    async fn room_member_search_advanced(
+        &self,
+        room_id: RoomId,
+        search: RoomMemberSearchAdvanced,
+    ) -> Result<RoomMemberSearchResponse>;
 
     async fn room_ban_create(
         &self,
@@ -507,6 +514,7 @@ pub trait DataUser {
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
     async fn user_undelete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;
+    async fn user_get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>>;
     async fn user_list(
         &self,
         pagination: PaginationQuery<UserId>,

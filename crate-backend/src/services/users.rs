@@ -76,6 +76,14 @@ impl ServiceUsers {
         Ok(usr)
     }
 
+    pub async fn get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>> {
+        if user_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let users = self.state.data().user_get_many(user_ids).await?;
+        Ok(users)
+    }
+
     pub async fn invalidate(&self, user_id: UserId) {
         self.cache_users.invalidate(&user_id).await
     }

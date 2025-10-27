@@ -8,7 +8,7 @@ use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
-    RoomMemberSearch, RoomMemberSearchResponse, RoomMembership, UserId,
+    RoomMemberSearch, RoomMemberSearchAdvanced, RoomMemberSearchResponse, RoomMembership, UserId,
 };
 use common::v1::types::{
     RoleId, RoomBan, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
@@ -571,9 +571,46 @@ async fn room_member_search(
 
     let limit = search.limit.unwrap_or(10).min(100);
 
-    let items = d.room_member_search(room_id, search.query, limit).await?;
+    let room_members = d.room_member_search(room_id, search.query, limit).await?;
 
-    Ok(Json(RoomMemberSearchResponse { items }))
+    let user_ids: Vec<UserId> = room_members.iter().map(|m| m.user_id).collect();
+
+    let users = s.services().users.get_many(&user_ids).await?;
+
+    Ok(Json(RoomMemberSearchResponse {
+        room_members,
+        users,
+    }))
+}
+
+/// Room member search advanced
+#[utoipa::path(
+    post,
+    path = "/room/{room_id}/member/search",
+    request_body = RoomMemberSearchAdvanced,
+    tags = ["room_member"],
+    responses(
+        (status = OK, body = RoomMemberSearchResponse, description = "success"),
+    )
+)]
+async fn room_member_search_advanced(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(search): Json<RoomMemberSearchAdvanced>,
+) -> Result<impl IntoResponse> {
+    search.validate()?;
+    let d = s.data();
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+
+    // extra permission check to prevent returning the entire list of registered users
+    if room_id == SERVER_ROOM_ID {
+        perms.ensure(Permission::ServerOversee)?;
+    }
+
+    let res = d.room_member_search_advanced(room_id, search).await?;
+
+    Ok(Json(res))
 }
 
 /// Room ban create
@@ -905,7 +942,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_member_add))
         .routes(routes!(room_member_update))
         .routes(routes!(room_member_delete))
-        .routes(routes!(room_member_search))
+        .routes(routes!(room_member_search, room_member_search_advanced))
         .routes(routes!(room_ban_create_bulk))
         .routes(routes!(room_ban_create))
         .routes(routes!(room_ban_remove))

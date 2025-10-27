@@ -378,6 +378,27 @@ impl DataUser for Postgres {
         Ok(id.map(Into::into))
     }
 
+    async fn user_get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>> {
+        let ids: Vec<Uuid> = user_ids.iter().map(|id| id.into_inner()).collect();
+        let rows = query_as!(
+            DbUser,
+            r#"
+            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                   a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+            FROM usr u
+            LEFT JOIN application a ON u.id = a.id
+            LEFT JOIN webhook w ON u.id = w.id
+            LEFT JOIN channel c ON w.channel_id = c.id
+            WHERE u.id = ANY($1)
+            "#,
+            &ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     async fn user_set_registered(
         &self,
         user_id: UserId,

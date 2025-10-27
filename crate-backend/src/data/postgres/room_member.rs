@@ -2,13 +2,15 @@ use async_trait::async_trait;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember,
-    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership,
+    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
+    RoomMemberSearchResponse, RoomMembership, User,
 };
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_file_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
 use tracing::info;
 use uuid::Uuid;
 
+use crate::data::postgres::user::DbUser;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{DbMembership, RoomId, UserId};
@@ -74,6 +76,87 @@ impl From<DbRoomMember> for RoomMember {
                 .origin
                 .map(|o| serde_json::from_value(o).expect("invalid data in db")),
         }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+pub struct DbRoomMemberWithUser {
+    pub user_id: Uuid,
+    pub room_id: Uuid,
+    pub membership: DbMembership,
+    pub override_name: Option<String>,
+    pub override_description: Option<String>,
+    pub joined_at: time::PrimitiveDateTime,
+    pub roles: Vec<Uuid>,
+    pub origin: Option<serde_json::Value>,
+    pub mute: bool,
+    pub deaf: bool,
+    pub timeout_until: Option<time::PrimitiveDateTime>,
+    pub u_id: Uuid,
+    pub u_version_id: Uuid,
+    pub u_parent_id: Option<Uuid>,
+    pub u_name: String,
+    pub u_description: Option<String>,
+    pub u_avatar: Option<Uuid>,
+    pub u_banner: Option<Uuid>,
+    pub u_puppet: Option<serde_json::Value>,
+    pub u_system: bool,
+    pub u_suspended: Option<serde_json::Value>,
+    pub u_registered_at: Option<time::PrimitiveDateTime>,
+    pub u_deleted_at: Option<time::PrimitiveDateTime>,
+    pub u_app_owner_id: Option<Uuid>,
+    pub u_app_bridge: Option<bool>,
+    pub u_app_public: Option<bool>,
+    pub u_webhook_channel_id: Option<Uuid>,
+    pub u_webhook_creator_id: Option<Uuid>,
+    pub u_webhook_room_id: Option<Uuid>,
+}
+
+impl From<DbRoomMemberWithUser> for (RoomMember, User) {
+    fn from(row: DbRoomMemberWithUser) -> Self {
+        let room_member = RoomMember {
+            user_id: row.user_id.into(),
+            room_id: row.room_id.into(),
+            membership: match row.membership {
+                DbMembership::Join => RoomMembership::Join,
+                DbMembership::Leave => RoomMembership::Leave,
+                DbMembership::Ban => RoomMembership::Leave,
+            },
+            joined_at: row.joined_at.assume_utc().into(),
+            override_name: row.override_name,
+            override_description: row.override_description,
+            roles: row.roles.into_iter().map(Into::into).collect(),
+            origin: row
+                .origin
+                .map(|o| serde_json::from_value(o).expect("invalid data in db")),
+            mute: row.mute,
+            deaf: row.deaf,
+            timeout_until: row.timeout_until.map(|t| t.assume_utc().into()),
+        };
+
+        let user: User = DbUser {
+            id: row.u_id.into(),
+            version_id: row.u_version_id.into(),
+            parent_id: row.u_parent_id,
+            name: row.u_name,
+            description: row.u_description,
+            avatar: row.u_avatar,
+            banner: row.u_banner,
+            puppet: row.u_puppet,
+            system: row.u_system,
+            suspended: row.u_suspended,
+            registered_at: row.u_registered_at,
+            deleted_at: row.u_deleted_at,
+            app_owner_id: row.u_app_owner_id,
+            app_bridge: row.u_app_bridge,
+            app_public: row.u_app_public,
+            webhook_channel_id: row.u_webhook_channel_id,
+            webhook_creator_id: row.u_webhook_creator_id,
+            webhook_room_id: row.u_webhook_room_id,
+        }
+        .into();
+
+        (room_member, user)
     }
 }
 
@@ -559,5 +642,43 @@ impl DataRoomMember for Postgres {
         .await?;
 
         Ok(items.into_iter().map(Into::into).collect())
+    }
+
+    async fn room_member_search_advanced(
+        &self,
+        room_id: RoomId,
+        search: RoomMemberSearchAdvanced,
+    ) -> Result<RoomMemberSearchResponse> {
+        let limit = search.limit.unwrap_or(10).min(1024);
+        let query = search.query.map(|q| format!("%{}%", q));
+        let role_ids: Vec<Uuid> = search.roles.iter().map(|r| r.into_inner()).collect();
+
+        let rows = query_file_as!(
+            DbRoomMemberWithUser,
+            "sql/room_member_search_advanced.sql",
+            *room_id,
+            query,
+            limit as i64,
+            &role_ids,
+            search.invite.map(|i| i.to_string()),
+            search.timeout,
+            search.mute,
+            search.deaf,
+            search.nickname,
+            search.guest,
+            search.join_before.map(PrimitiveDateTime::from),
+            search.join_after.map(PrimitiveDateTime::from),
+            search.create_before.map(PrimitiveDateTime::from),
+            search.create_after.map(PrimitiveDateTime::from)
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let (room_members, users) = rows.into_iter().map(Into::into).unzip();
+
+        Ok(RoomMemberSearchResponse {
+            room_members,
+            users,
+        })
     }
 }

@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use super::{RoleId, RoomId, UserId};
+use super::{RoleId, RoomId, User, UserId};
 
 use crate::v1::types::{
     util::{some_option, Diff, Time},
@@ -215,15 +215,65 @@ pub struct RoomBanBulkCreate {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams, ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberSearch {
     pub query: String,
+    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
     pub limit: Option<u16>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoomMemberSearchAdvanced {
+    /// user name, override_name, or id
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    pub query: Option<String>,
+
+    /// maximum number of results to return
+    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 1024)))]
+    pub limit: Option<u16>,
+
+    /// has all of these roles
+    #[serde(default)]
+    pub roles: Vec<RoleId>,
+
+    /// joined from this invite
+    pub invite: Option<InviteCode>,
+
+    /// return members who are/aren't timed out
+    pub timeout: Option<bool>,
+
+    /// return members who are/aren't room muted
+    pub mute: Option<bool>,
+
+    /// return members who are/aren't room deafened
+    pub deaf: Option<bool>,
+
+    /// return members who do/don't have a custom nickname
+    pub nickname: Option<bool>,
+
+    /// return members who are/aren't server guests
+    pub guest: Option<bool>,
+
+    /// members who joined the room before this time
+    pub join_before: Option<Time>,
+
+    /// members who joined the room after this time
+    pub join_after: Option<Time>,
+
+    /// users who were created before this time
+    pub create_before: Option<Time>,
+
+    /// users who were created after this time
+    pub create_after: Option<Time>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomMemberSearchResponse {
-    pub items: Vec<RoomMember>,
+    pub room_members: Vec<RoomMember>,
+    pub users: Vec<User>,
 }
 
 impl Diff<RoomMember> for RoomMemberPatch {
