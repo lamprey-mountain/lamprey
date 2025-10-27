@@ -73,6 +73,7 @@ enum AuthCheck {
     User(UserId),
     UserMutual(UserId),
     Channel(ChannelId),
+    ChannelPerm(ChannelId, Permission),
     EitherChannel(ChannelId, ChannelId),
 }
 
@@ -597,6 +598,15 @@ impl Connection {
             MessageSync::CalendarEventCreate { event } => AuthCheck::Channel(event.channel_id),
             MessageSync::CalendarEventUpdate { event } => AuthCheck::Channel(event.channel_id),
             MessageSync::CalendarEventDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::WebhookCreate { webhook } => {
+                AuthCheck::ChannelPerm(webhook.thread_id, Permission::IntegrationsManage)
+            }
+            MessageSync::WebhookUpdate { webhook } => {
+                AuthCheck::ChannelPerm(webhook.thread_id, Permission::IntegrationsManage)
+            }
+            MessageSync::WebhookDelete { channel_id, .. } => {
+                AuthCheck::ChannelPerm(*channel_id, Permission::IntegrationsManage)
+            }
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
@@ -628,6 +638,15 @@ impl Connection {
                     .for_channel(user_id, thread_id)
                     .await?;
                 perms.has(Permission::ViewChannel)
+            }
+            (Some(user_id), AuthCheck::ChannelPerm(thread_id, perm)) => {
+                let perms = self
+                    .s
+                    .services()
+                    .perms
+                    .for_channel(user_id, thread_id)
+                    .await?;
+                perms.has(Permission::ViewChannel) && perms.has(perm)
             }
             (Some(user_id), AuthCheck::EitherChannel(thread_id_0, thread_id_1)) => {
                 let perms0 = self

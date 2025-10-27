@@ -7,7 +7,7 @@ use crate::v1::types::{
     application::Scope, email::EmailAddr, role::RoleReorderItem, util::Time, ApplicationId,
     AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem, ChannelType, EmojiId,
     InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId,
-    UserId,
+    UserId, WebhookId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
@@ -385,6 +385,20 @@ pub enum AuditLogEntryType {
     CalendarEventDelete {
         title: String,
         event_id: CalendarEventId,
+    },
+
+    WebhookCreate {
+        webhook_id: WebhookId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    WebhookUpdate {
+        webhook_id: WebhookId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    WebhookDelete {
+        webhook_id: WebhookId,
     },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,

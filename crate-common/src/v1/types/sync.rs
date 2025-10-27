@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Connection, user_status::StatusPatch, util::Time, ApplicationId, AuditLogEntry,
-    CalendarEventId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
+    application::Connection, user_status::StatusPatch, util::Time, webhook::Webhook, ApplicationId,
+    AuditLogEntry, CalendarEventId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan,
+    ThreadMember, WebhookId,
 };
 
 use super::{
@@ -398,6 +399,20 @@ pub enum MessageSync {
     CalendarEventDelete {
         channel_id: ChannelId,
         event_id: CalendarEventId,
+    },
+
+    WebhookCreate {
+        webhook: Webhook,
+    },
+
+    WebhookUpdate {
+        webhook: Webhook,
+    },
+
+    WebhookDelete {
+        webhook_id: WebhookId,
+        room_id: Option<RoomId>,
+        channel_id: ChannelId,
     },
 }
 

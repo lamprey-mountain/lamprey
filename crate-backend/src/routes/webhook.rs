@@ -7,12 +7,16 @@ use axum::{
     Json,
 };
 use common::v1::types::{
+    audit_logs::{AuditLogChange, AuditLogEntry, AuditLogEntryType},
+    sync::MessageSync,
+    util::Changes,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    Message, MessageCreate, Permission,
+    AuditLogEntryId, Message, MessageCreate, Permission,
 };
+use serde_json::{json, Value};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::{
     error::{Error, Result},
     types::{ChannelId, RoomId, WebhookId},
@@ -33,6 +37,7 @@ async fn create_webhook(
     Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookCreate>,
 ) -> Result<impl IntoResponse> {
     let channel = s.data().channel_get(channel_id).await?;
@@ -44,8 +49,29 @@ async fn create_webhook(
 
     let webhook = s
         .data()
-        .webhook_create(channel_id, auth_user.id, json)
+        .webhook_create(channel_id, auth_user.id, json.clone())
         .await?;
+
+    let audit_entry = AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::WebhookCreate {
+            webhook_id: webhook.id,
+            changes: Changes::new()
+                .add("name", &webhook.name)
+                .add("channel_id", &webhook.thread_id)
+                .build(),
+        },
+    };
+    s.audit_log_append(audit_entry).await?;
+
+    let sync_msg = MessageSync::WebhookCreate {
+        webhook: webhook.clone(),
+    };
+    s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
 
     Ok((StatusCode::CREATED, Json(webhook)))
 }
@@ -160,6 +186,7 @@ async fn delete_webhook(
     Path(webhook_id): Path<WebhookId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get(webhook_id).await?;
     let room_id = webhook
@@ -169,6 +196,23 @@ async fn delete_webhook(
     perms.ensure(Permission::IntegrationsManage)?;
 
     s.data().webhook_delete(webhook_id).await?;
+
+    let audit_entry = AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::WebhookDelete { webhook_id },
+    };
+    s.audit_log_append(audit_entry).await?;
+
+    let sync_msg = MessageSync::WebhookDelete {
+        webhook_id,
+        room_id: webhook.room_id,
+        channel_id: webhook.thread_id,
+    };
+    s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -210,16 +254,55 @@ async fn update_webhook(
     Path(webhook_id): Path<WebhookId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookUpdate>,
 ) -> Result<impl IntoResponse> {
-    let webhook = s.data().webhook_get(webhook_id).await?;
-    let room_id = webhook
+    let before_webhook = s.data().webhook_get(webhook_id).await?;
+    let room_id = before_webhook
         .room_id
         .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
-    let updated_webhook = s.data().webhook_update(webhook_id, json).await?;
+    let updated_webhook = s.data().webhook_update(webhook_id, json.clone()).await?;
+
+    let mut changes = Changes::new()
+        .change("name", &before_webhook.name, &updated_webhook.name)
+        .change("avatar", &before_webhook.avatar, &updated_webhook.avatar)
+        .change(
+            "channel_id",
+            &before_webhook.thread_id,
+            &updated_webhook.thread_id,
+        )
+        .build();
+
+    if json.rotate_token {
+        changes.push(AuditLogChange {
+            key: "token".to_string(),
+            old: Value::Null,
+            new: Value::Null,
+        });
+    }
+
+    if !changes.is_empty() {
+        let audit_entry = AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::WebhookUpdate {
+                webhook_id,
+                changes,
+            },
+        };
+        s.audit_log_append(audit_entry).await?;
+    }
+
+    let sync_msg = MessageSync::WebhookUpdate {
+        webhook: updated_webhook.clone(),
+    };
+    s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
 
     Ok(Json(updated_webhook))
 }
