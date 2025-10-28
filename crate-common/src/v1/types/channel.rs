@@ -10,7 +10,7 @@ use crate::v1::types::tag::Tag;
 use crate::v1::types::user_config::UserConfigChannel;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
-use crate::v1::types::{MediaId, MessageVerId, TagId, User};
+use crate::v1::types::{MediaId, MessageVerId, TagId, ThreadMember, User};
 
 use super::{ChannelId, RoomId, UserId};
 
@@ -108,6 +108,10 @@ pub struct Channel {
     /// whether users without ThreadManage can add other members to this thread
     #[serde(default)]
     pub invitable: bool,
+
+    /// The user's thread member object, if the channel is a thread and the user is a member.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thread_member: Option<Box<ThreadMember>>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

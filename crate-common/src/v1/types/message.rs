@@ -13,6 +13,7 @@ use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
 use crate::v1::types::{EmojiId, RoomId};
 
+use super::channel::Channel;
 use super::EmbedCreate;
 use super::{
     media::{Media, MediaRef},
@@ -43,8 +44,6 @@ pub struct Message {
     #[serde(default)]
     pub reactions: ReactionCounts,
 
-    // pub moved_at: Option<Time>,
-    // pub moved_from: Option<(ThreadId, MessageId)>,
     pub created_at: Option<Time>,
 
     /// deleted messages can still be viewed by moderators for a period of time, but otherwise cannot be recovered
@@ -54,8 +53,10 @@ pub struct Message {
     pub removed_at: Option<Time>,
 
     pub edited_at: Option<Time>,
-    // // drop the is_?
-    // pub is_ephemeral: bool,
+
+    /// the associated thread for this message, if one exists.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thread: Option<Box<Channel>>,
 }
 
 /// information about a pinned message
@@ -240,6 +241,9 @@ pub enum MessageType {
     /// this thread was renamed
     ThreadRename(MessageThreadRename),
 
+    /// A thread was created from a message
+    ThreadCreated(MessageThreadCreated),
+
     /// (TODO) someone mentioned this thread
     // needs some sort of antispam system. again, see github.
     // doesnt necessarily reference a thread in the same room, but usually should
@@ -274,6 +278,14 @@ pub struct MessageThreadRename {
 
     #[serde(alias = "old")]
     pub name_old: String,
+}
+
+/// Information about a thread being created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageThreadCreated {
+    /// the message this thread was created from
+    pub source_message_id: Option<MessageId>,
 }
 
 /// Information about the pingback
@@ -539,6 +551,7 @@ impl MessageType {
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
+            MessageType::ThreadCreated(_) => false,
         }
     }
 

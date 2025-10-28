@@ -3,16 +3,18 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
-    ChannelType, MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse,
-    Permission, ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
+    ChannelType, MessageId, MessageMember, MessageSync, MessageThreadCreated, MessageType,
+    PaginationQuery, PaginationResponse, Permission, ThreadMember, ThreadMemberPut,
+    ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::types::UserIdReq;
+use crate::types::{DbChannelCreate, DbChannelType, DbMessageCreate, UserIdReq};
 use crate::ServerState;
 
 use super::util::{Auth, HeaderReason};
@@ -157,7 +159,10 @@ pub async fn thread_member_add(
                 mentions: Default::default(),
             })
             .await?;
-        let message = d.message_get(thread_id, message_id, auth_user.id).await?;
+        let message = srv
+            .messages
+            .get(thread_id, message_id, auth_user.id)
+            .await?;
         srv.channels.invalidate(thread_id).await; // message count
         s.broadcast_channel(
             thread_id,
@@ -269,7 +274,10 @@ pub async fn thread_member_delete(
                 mentions: Default::default(),
             })
             .await?;
-        let message = d.message_get(thread_id, message_id, auth_user.id).await?;
+        let message = srv
+            .messages
+            .get(thread_id, message_id, auth_user.id)
+            .await?;
         srv.channels.invalidate(thread_id).await; // message count
         s.broadcast_channel(
             thread_id,
@@ -452,9 +460,7 @@ pub async fn thread_create(
         .channels
         .get(parent_id, Some(auth_user.id))
         .await?;
-    let room_id = parent_channel
-        .room_id
-        .ok_or(Error::BadStatic("Parent channel not in a room"))?;
+    let room_id = parent_channel.room_id;
 
     json.parent_id = Some(parent_id);
 
@@ -467,9 +473,173 @@ pub async fn thread_create(
     Ok((StatusCode::CREATED, Json(channel)))
 }
 
+/// Thread create from message
+///
+/// Starts a new thread from a message. Requires the channel the message was
+/// sent in to be threadable, ie. Text, Dm, Gdm. Forums will not work as threads
+/// can't be created inside of other threads.
+#[utoipa::path(
+    post,
+    path = "/channel/{channel_id}/message/{message_id}/thread",
+    params(
+        ("channel_id", description = "Parent channel id"),
+        ("message_id", description = "Source message id")
+    ),
+    request_body = ChannelCreate,
+    tags = [
+        "thread",
+        "badge.perm.ThreadCreatePublic",
+    ],
+    responses(
+        (status = CREATED, body = Channel, description = "Create thread success"),
+        (status = CONFLICT, description = "A thread for this message already exists"),
+    )
+)]
+async fn thread_create_from_message(
+    Path((parent_channel_id, source_message_id)): Path<(ChannelId, MessageId)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(mut json): Json<ChannelCreate>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    json.validate()?;
+
+    let srv = s.services();
+    let data = s.data();
+
+    // 1. Check permissions
+    let perms = srv
+        .perms
+        .for_channel(auth_user.id, parent_channel_id)
+        .await?;
+    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ThreadCreatePublic)?;
+
+    // 2. Check if channel is threadable
+    let parent_channel = srv
+        .channels
+        .get(parent_channel_id, Some(auth_user.id))
+        .await?;
+    if !parent_channel.ty.has_public_threads() {
+        return Err(Error::BadStatic(
+            "Cannot create a thread in this channel type",
+        ));
+    }
+
+    // 3. Check if message exists and doesn't have a thread already
+    let _source_message = srv
+        .messages
+        .get(parent_channel_id, source_message_id, auth_user.id)
+        .await?;
+    let thread_id: ChannelId = (*source_message_id).into();
+    if data.channel_get(thread_id).await.is_ok() {
+        return Err(Error::Conflict);
+    }
+
+    // 4. Create the thread
+    let room_id = parent_channel.room_id;
+
+    json.parent_id = Some(parent_channel_id);
+
+    let create = DbChannelCreate {
+        room_id: room_id.map(|id| id.into_inner()),
+        creator_id: auth_user.id,
+        name: json.name.clone(),
+        description: json.description.clone(),
+        ty: DbChannelType::ThreadPublic,
+        nsfw: json.nsfw,
+        bitrate: json.bitrate.map(|b| b as i32),
+        user_limit: json.user_limit.map(|u| u as i32),
+        parent_id: json.parent_id.map(|i| *i),
+        owner_id: None,
+        icon: None,
+        invitable: json.invitable,
+    };
+
+    data.channel_create_with_id(thread_id, create).await?;
+
+    // 5. Add creator as a member
+    data.thread_member_put(thread_id, auth_user.id, ThreadMemberPut::default())
+        .await?;
+
+    // 6. Conditionally create system message in the original thread
+    let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
+    if _source_message
+        .created_at
+        .map_or(false, |t| t.into_inner() < four_hours_ago)
+    {
+        let system_message_id = data
+            .message_create(DbMessageCreate {
+                channel_id: parent_channel_id,
+                attachment_ids: vec![],
+                author_id: auth_user.id,
+                embeds: vec![],
+                message_type: MessageType::ThreadCreated(MessageThreadCreated {
+                    source_message_id: Some(source_message_id),
+                }),
+                edited_at: None,
+                created_at: None,
+                mentions: Default::default(),
+            })
+            .await?;
+
+        let system_message = srv
+            .messages
+            .get(parent_channel_id, system_message_id, auth_user.id)
+            .await?;
+        s.broadcast_channel(
+            parent_channel_id,
+            auth_user.id,
+            MessageSync::MessageCreate {
+                message: system_message,
+            },
+        )
+        .await?;
+    }
+
+    let channel = srv.channels.get(thread_id, Some(auth_user.id)).await?;
+
+    if let Some(room_id) = room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ChannelCreate {
+                channel_id: thread_id,
+                channel_type: channel.ty,
+                changes: Changes::new()
+                    .add("name", &channel.name)
+                    .add("description", &channel.description)
+                    .add("nsfw", &channel.nsfw)
+                    .add("user_limit", &channel.user_limit)
+                    .add("bitrate", &channel.bitrate)
+                    .add("type", &channel.ty)
+                    .add("parent_id", &channel.parent_id)
+                    .build(),
+            },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        parent_channel_id,
+        auth_user.id,
+        MessageSync::ChannelCreate {
+            channel: Box::new(channel.clone()),
+        },
+    )
+    .await?;
+
+    Ok((StatusCode::CREATED, Json(channel)))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create))
+        .routes(routes!(thread_create_from_message))
         .routes(routes!(thread_member_list))
         .routes(routes!(thread_member_get))
         .routes(routes!(thread_member_add))

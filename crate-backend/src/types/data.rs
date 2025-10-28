@@ -216,6 +216,7 @@ impl From<DbChannel> for Channel {
                 .tags_available
                 .map(|v| serde_json::from_value(v).unwrap_or_default()),
             root_message_count: None,
+            thread_member: None,
         }
     }
 }
@@ -319,6 +320,7 @@ impl DbMessageCreate {
             MessageType::MemberRemove(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberJoin => None,
             MessageType::MessagePinned(pinned) => Some(serde_json::to_value(pinned).ok()?),
+            MessageType::ThreadCreated(created) => Some(serde_json::to_value(created).ok()?),
             _ => None,
         }
     }

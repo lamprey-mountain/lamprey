@@ -58,7 +58,7 @@ async fn channel_create_room(
     let channel = s
         .services()
         .channels
-        .create_channel(auth_user.id, room_id, reason, json)
+        .create_channel(auth_user.id, Some(room_id), reason, json)
         .await?;
     Ok((StatusCode::CREATED, Json(channel)))
 }

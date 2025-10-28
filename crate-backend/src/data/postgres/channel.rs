@@ -18,6 +18,15 @@ use super::{Pagination, Postgres};
 impl DataChannel for Postgres {
     async fn channel_create(&self, create: DbChannelCreate) -> Result<ChannelId> {
         let channel_id = ChannelId::new();
+        self.channel_create_with_id(channel_id, create).await?;
+        Ok(channel_id)
+    }
+
+    async fn channel_create_with_id(
+        &self,
+        channel_id: ChannelId,
+        create: DbChannelCreate,
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         if let Some(room_id) = create.room_id {
@@ -45,7 +54,7 @@ impl DataChannel for Postgres {
             channel_id.into_inner(),
             channel_id.into_inner(),
             create.creator_id.into_inner(),
-            create.room_id.map(|id| id),
+            create.room_id,
             create.name,
             create.description,
             create.ty as _,
@@ -61,7 +70,7 @@ impl DataChannel for Postgres {
         .await?;
         tx.commit().await?;
         info!("inserted channel");
-        Ok(channel_id)
+        Ok(())
     }
 
     async fn channel_get(&self, channel_id: ChannelId) -> Result<Channel> {

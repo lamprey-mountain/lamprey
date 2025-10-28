@@ -30,6 +30,34 @@ pub struct ServiceMessages {
 }
 
 impl ServiceMessages {
+    pub async fn get(
+        &self,
+        thread_id: ChannelId,
+        message_id: MessageId,
+        user_id: UserId,
+    ) -> Result<Message> {
+        let mut message = self
+            .state
+            .data()
+            .message_get(thread_id, message_id, user_id)
+            .await?;
+        self.state.presign_message(&mut message).await?;
+
+        // Check if a thread was created from this message
+        let thread_channel_id: ChannelId = (*message.id).into();
+        if let Ok(thread) = self
+            .state
+            .services()
+            .channels
+            .get(thread_channel_id, Some(user_id))
+            .await
+        {
+            message.thread = Some(Box::new(thread));
+        }
+
+        Ok(message)
+    }
+
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
@@ -200,7 +228,7 @@ impl ServiceMessages {
             data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
                 .await?;
         }
-        let mut message = data.message_get(thread_id, message_id, user_id).await?;
+        let mut message = self.get(thread_id, message_id, user_id).await?;
 
         if let Some(content) = &content {
             let mut should_embed = is_webhook;
@@ -453,7 +481,7 @@ impl ServiceMessages {
         let srv = s.services();
         let perms = s.services().perms.for_channel(user_id, thread_id).await?;
         perms.ensure(Permission::ViewChannel)?;
-        let message = data.message_get(thread_id, message_id, user_id).await?;
+        let message = self.get(thread_id, message_id, user_id).await?;
         if !message.message_type.is_editable() {
             return Err(Error::BadStatic("cant edit that message"));
         }

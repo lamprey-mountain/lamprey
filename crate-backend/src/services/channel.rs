@@ -111,12 +111,24 @@ impl ServiceThreads {
                 .user_config_channel_get(user_id, channel_id)
                 .await?;
 
+            let thread_member = if thread.ty.is_thread() {
+                self.state
+                    .data()
+                    .thread_member_get(channel_id, user_id)
+                    .await
+                    .ok()
+                    .map(Box::new)
+            } else {
+                None
+            };
+
             thread = Channel {
                 recipients,
                 is_unread: Some(private_data.is_unread),
                 last_read_id: private_data.last_read_id.map(Into::into),
                 mention_count: Some(private_data.mention_count as u64),
                 user_config: Some(user_config),
+                thread_member,
                 ..thread
             }
         }
@@ -251,7 +263,7 @@ impl ServiceThreads {
     pub async fn create_channel(
         &self,
         user_id: UserId,
-        room_id: RoomId,
+        room_id: Option<RoomId>,
         reason: Option<String>,
         json: ChannelCreate,
     ) -> Result<Channel> {
@@ -259,8 +271,12 @@ impl ServiceThreads {
         let data = self.state.data();
         let perms = if let Some(parent_id) = json.parent_id {
             srv.perms.for_channel(user_id, parent_id).await?
-        } else {
+        } else if let Some(room_id) = room_id {
             srv.perms.for_room(user_id, room_id).await?
+        } else {
+            return Err(Error::BadStatic(
+                "Channel must have a parent or be in a room",
+            ));
         };
         perms.ensure(Permission::ViewChannel)?;
         match json.ty {
@@ -311,7 +327,7 @@ impl ServiceThreads {
         }
         let channel_id = data
             .channel_create(DbChannelCreate {
-                room_id: Some(room_id.into_inner()),
+                room_id: room_id.map(|id| id.into_inner()),
                 creator_id: user_id,
                 name: json.name.clone(),
                 description: json.description.clone(),
@@ -357,37 +373,51 @@ impl ServiceThreads {
         let thread_member = data.thread_member_get(channel_id, user_id).await?;
 
         let channel = srv.channels.get(channel_id, Some(user_id)).await?;
-        self.state
-            .audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id,
-                session_id: None,
-                reason: reason.clone(),
-                ty: AuditLogEntryType::ChannelCreate {
-                    channel_id,
-                    channel_type: channel.ty,
-                    changes: Changes::new()
-                        .add("name", &channel.name)
-                        .add("description", &channel.description)
-                        .add("nsfw", &channel.nsfw)
-                        .add("user_limit", &channel.user_limit)
-                        .add("bitrate", &channel.bitrate)
-                        .add("type", &channel.ty)
-                        .build(),
-                },
-            })
-            .await?;
+        if let Some(room_id) = room_id {
+            self.state
+                .audit_log_append(AuditLogEntry {
+                    id: AuditLogEntryId::new(),
+                    room_id,
+                    user_id,
+                    session_id: None,
+                    reason: reason.clone(),
+                    ty: AuditLogEntryType::ChannelCreate {
+                        channel_id,
+                        channel_type: channel.ty,
+                        changes: Changes::new()
+                            .add("name", &channel.name)
+                            .add("description", &channel.description)
+                            .add("nsfw", &channel.nsfw)
+                            .add("user_limit", &channel.user_limit)
+                            .add("bitrate", &channel.bitrate)
+                            .add("type", &channel.ty)
+                            .add("parent_id", &channel.parent_id)
+                            .build(),
+                    },
+                })
+                .await?;
 
-        self.state
-            .broadcast_room(
-                room_id,
-                user_id,
-                MessageSync::ChannelCreate {
-                    channel: Box::new(channel.clone()),
-                },
-            )
-            .await?;
+            self.state
+                .broadcast_room(
+                    room_id,
+                    user_id,
+                    MessageSync::ChannelCreate {
+                        channel: Box::new(channel.clone()),
+                    },
+                )
+                .await?;
+        } else if let Some(parent_id) = json.parent_id {
+            self.state
+                .broadcast_channel(
+                    parent_id,
+                    user_id,
+                    MessageSync::ChannelCreate {
+                        channel: Box::new(channel.clone()),
+                    },
+                )
+                .await?;
+        }
+
         self.state
             .broadcast_channel(
                 channel.id,

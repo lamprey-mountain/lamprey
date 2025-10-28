@@ -18,6 +18,8 @@ pub enum Error {
     Blocked,
     #[error("missing authentication (not provided or invalid/expired session)")]
     MissingAuth,
+    #[error("conflict")]
+    Conflict,
     #[error("bad header")]
     BadHeader,
     #[error("session not yet authenticated")]
@@ -133,6 +135,7 @@ impl Error {
             Error::Blocked => StatusCode::FORBIDDEN,
             Error::NotFound => StatusCode::NOT_FOUND,
             Error::BadHeader => StatusCode::BAD_REQUEST,
+            Error::Conflict => StatusCode::CONFLICT,
             Error::BadStatic(_) => StatusCode::BAD_REQUEST,
             Error::BadRequest(_) => StatusCode::BAD_REQUEST,
             Error::Serde(_) => StatusCode::BAD_REQUEST,
@@ -158,6 +161,7 @@ impl Error {
             Error::Blocked => Error::Blocked,
             Error::MissingAuth => Error::MissingAuth,
             Error::BadHeader => Error::BadHeader,
+            Error::Conflict => Error::Conflict,
             Error::UnauthSession => Error::UnauthSession,
             Error::NotFound => Error::NotFound,
             Error::MissingPermissions => Error::MissingPermissions,
