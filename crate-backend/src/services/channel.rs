@@ -443,6 +443,30 @@ impl ServiceThreads {
             return Ok(chan_old);
         }
 
+        if let Some(new_ty) = patch.ty {
+            if !chan_old.ty.can_change_to(new_ty) {
+                return Err(Error::BadStatic("invalid channel type change"));
+            }
+
+            if chan_old.ty.is_thread() && new_ty.is_thread() && chan_old.ty != new_ty {
+                perms.ensure(Permission::ThreadManage)?;
+            }
+        }
+
+        if let Some(new_parent_id_opt) = patch.parent_id {
+            if new_parent_id_opt != chan_old.parent_id {
+                if let Some(old_parent_id) = chan_old.parent_id {
+                    let old_parent_perms = srv.perms.for_channel(user_id, old_parent_id).await?;
+                    old_parent_perms.ensure(Permission::ThreadManage)?;
+                }
+
+                if let Some(new_parent_id) = new_parent_id_opt {
+                    let new_parent_perms = srv.perms.for_channel(user_id, new_parent_id).await?;
+                    new_parent_perms.ensure(Permission::ThreadManage)?;
+                }
+            }
+        }
+
         if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
@@ -476,8 +500,8 @@ impl ServiceThreads {
         }
 
         if let Some(Some(icon)) = patch.icon {
-            if chan_old.ty != ChannelType::Gdm {
-                return Err(Error::BadStatic("only gdm threads can have icons"));
+            if chan_old.ty.has_icon() {
+                return Err(Error::BadStatic("this channel doesnt have an icon"));
             }
             let (media, _) = data.media_select(icon).await?;
             if !matches!(
@@ -541,6 +565,7 @@ impl ServiceThreads {
                             )
                             .change("locked", &chan_old.locked, &chan_new.locked)
                             .change("tags", &chan_old.tags, &chan_new.tags)
+                            .change("parent_id", &chan_old.parent_id, &chan_new.parent_id)
                             .build(),
                     },
                 })

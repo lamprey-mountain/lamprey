@@ -224,6 +224,11 @@ pub struct ChannelPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub owner_id: Option<Option<UserId>>,
 
+    pub ty: Option<ChannelType>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub parent_id: Option<Option<ChannelId>>,
+
     pub archived: Option<bool>,
     pub locked: Option<bool>,
 }
@@ -262,6 +267,8 @@ impl Diff<Channel> for ChannelPatch {
             || self.bitrate.changes(&other.bitrate)
             || self.user_limit.changes(&other.user_limit)
             || self.owner_id.changes(&other.owner_id)
+            || self.ty.changes(&other.ty)
+            || self.parent_id.changes(&other.parent_id)
             || self.locked.changes(&other.locked)
             || self
                 .archived
@@ -330,5 +337,17 @@ impl ChannelType {
 
     pub fn has_tags(&self) -> bool {
         matches!(self, ChannelType::Forum)
+    }
+
+    pub fn has_icon(&self) -> bool {
+        matches!(self, ChannelType::Gdm)
+    }
+
+    pub fn can_change_to(self, other: ChannelType) -> bool {
+        match (self, other) {
+            (ChannelType::ThreadPublic, ChannelType::ThreadPrivate) => true,
+            (ChannelType::ThreadPrivate, ChannelType::ThreadPublic) => true,
+            _ => false,
+        }
     }
 }
