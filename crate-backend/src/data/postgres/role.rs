@@ -26,6 +26,7 @@ pub struct DbRole {
     pub is_mentionable: bool,
     pub member_count: i64,
     pub position: i64,
+    pub hoist: bool,
 }
 
 impl From<DbRole> for Role {
@@ -41,6 +42,7 @@ impl From<DbRole> for Role {
             is_mentionable: row.is_mentionable,
             member_count: row.member_count as u64,
             position: row.position as u64,
+            hoist: row.hoist,
         }
     }
 }
@@ -80,9 +82,9 @@ impl DataRole for Postgres {
         .execute(&mut *tx)
         .await?;
         let role = query_as!(DbRole, r#"
-            INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable, position)
-            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, 0 as "member_count!", position
+            INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable, position, hoist)
+            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
         "#,
             role_id,
             *create.room_id,
@@ -92,6 +94,7 @@ impl DataRole for Postgres {
             create.is_mentionable,
             create.is_self_applicable,
             position as i64,
+            create.hoist,
         )
             .fetch_one(&mut *tx)
         	.await?;
@@ -122,7 +125,8 @@ impl DataRole for Postgres {
                 	r.is_self_applicable,
                 	r.name,
                     coalesce(rm.count, 0) as "member_count!",
-                    r.position
+                    r.position,
+                    r.hoist
                 FROM role r
                 LEFT JOIN (
                     SELECT role_id, count(*) as count
@@ -170,7 +174,8 @@ impl DataRole for Postgres {
                 r.id, r.version_id, r.room_id, r.name, r.description, r.permissions as "permissions: _",
                 r.is_mentionable, r.is_self_applicable,
                 coalesce(rm.count, 0) as "member_count!",
-                r.position
+                r.position,
+                r.hoist
             FROM role r
             LEFT JOIN (
                 SELECT role_id, count(*) as count
@@ -203,7 +208,7 @@ impl DataRole for Postgres {
             r#"
             SELECT
                 id, version_id, room_id, name, description, permissions as "permissions: _",
-                is_mentionable, is_self_applicable, 0 as "member_count!", position
+                is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
             FROM role
             WHERE room_id = $1 AND id = $2
             FOR UPDATE
@@ -222,7 +227,8 @@ impl DataRole for Postgres {
                 description = $4,
                 permissions = $5,
                 is_mentionable = $6,
-                is_self_applicable = $7
+                is_self_applicable = $7,
+                hoist = $8
             WHERE id = $1
         "#,
             *role_id,
@@ -232,6 +238,7 @@ impl DataRole for Postgres {
             perms.unwrap_or(role.permissions.into_iter().map(|p| p.into()).collect()) as _,
             patch.is_mentionable.unwrap_or(role.is_mentionable),
             patch.is_self_applicable.unwrap_or(role.is_self_applicable),
+            patch.hoist.unwrap_or(role.hoist),
         )
         .execute(&mut *tx)
         .await?;

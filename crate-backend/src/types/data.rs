@@ -290,6 +290,7 @@ pub struct DbRoleCreate {
     pub permissions: Vec<Permission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
+    pub hoist: bool,
 }
 
 pub struct DbMessageCreate {

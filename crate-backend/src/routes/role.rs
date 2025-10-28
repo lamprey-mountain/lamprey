@@ -68,6 +68,7 @@ async fn role_create(
                 permissions: json.permissions,
                 is_self_applicable: json.is_self_applicable,
                 is_mentionable: json.is_mentionable,
+                hoist: json.hoist,
             },
             1,
         )
@@ -79,6 +80,7 @@ async fn role_create(
         .add("permissions", &role.permissions)
         .add("is_self_applicable", &role.is_self_applicable)
         .add("is_mentionable", &role.is_mentionable)
+        .add("hoist", &role.hoist)
         .build();
 
     s.audit_log_append(AuditLogEntry {

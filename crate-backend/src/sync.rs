@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
@@ -9,14 +10,19 @@ use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, Vo
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
     ChannelId, InviteTarget, InviteTargetId, MemberListGroup, MemberListGroupId, MemberListOp,
-    MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session, UserId,
+    MessageClient, MessageEnvelope, MessageSync, Permission, Role, RoleId, RoomId, Session, UserId,
 };
-use futures::StreamExt;
+use futures::{stream::FuturesUnordered, StreamExt};
 use tokio::time::Instant;
 use tracing::{debug, error, trace};
 
 use crate::error::{Error, Result};
+use crate::sync::member_list::{MemberListSub, MemberListTarget};
+use crate::sync::permissions::AuthCheck;
 use crate::ServerState;
+
+mod member_list;
+mod permissions;
 
 type WsMessage = axum::extract::ws::Message;
 
@@ -45,36 +51,10 @@ pub struct Connection {
 }
 
 #[derive(Debug, Clone)]
-struct MemberListSub {
-    target: MemberListTarget,
-    ranges: Vec<(u64, u64)>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum MemberListTarget {
-    Room(RoomId),
-    Channel(ChannelId),
-}
-
-#[derive(Debug, Clone)]
 enum ConnectionState {
     Unauthed,
     Authenticated { session: Session },
     Disconnected { session: Session },
-}
-
-#[derive(Debug)]
-enum AuthCheck {
-    Custom(bool),
-    Room(RoomId),
-    RoomPerm(RoomId, Permission),
-    RoomOrUser(RoomId, UserId),
-    ChannelOrUser(ChannelId, UserId),
-    User(UserId),
-    UserMutual(UserId),
-    Channel(ChannelId),
-    ChannelPerm(ChannelId, Permission),
-    EitherChannel(ChannelId, ChannelId),
 }
 
 impl Connection {
@@ -822,7 +802,7 @@ impl Connection {
         let srv = self.s.services();
         let data = self.s.data();
 
-        let (room_members, thread_members, users) = match &sub.target {
+        let (room_members, thread_members, users, room_roles) = match &sub.target {
             MemberListTarget::Room(room_id) => {
                 let members = data.room_member_list_all(*room_id).await?;
                 let user_ids: Vec<_> = members.iter().map(|m| m.user_id).collect();
@@ -832,7 +812,19 @@ impl Connection {
                         .map(|id| srv.users.get(id, Some(user_id))),
                 )
                 .await?;
-                (Some(members), None, users)
+                let roles = data
+                    .role_list(
+                        *room_id,
+                        types::PaginationQuery {
+                            from: None,
+                            to: None,
+                            dir: None,
+                            limit: Some(1024),
+                        },
+                    )
+                    .await?
+                    .items;
+                (Some(members), None, users, Some(roles))
             }
             MemberListTarget::Channel(thread_id) => {
                 let thread = srv.channels.get(*thread_id, Some(user_id)).await?;
@@ -867,13 +859,40 @@ impl Connection {
                             .map(|id| srv.users.get(id, Some(user_id))),
                     )
                     .await?;
-                    (Some(visible_members), None, users)
+                    let roles = data
+                        .role_list(
+                            room_id,
+                            types::PaginationQuery {
+                                from: None,
+                                to: None,
+                                dir: None,
+                                limit: Some(1024),
+                            },
+                        )
+                        .await?
+                        .items;
+                    (Some(visible_members), None, users, Some(roles))
                 } else {
                     let thread_members = data.thread_member_list_all(*thread_id).await?;
-                    let room_members = if let Some(room_id) = thread.room_id {
-                        Some(data.room_member_list_all(room_id).await?)
+                    let (room_members, roles) = if let Some(room_id) = thread.room_id {
+                        (
+                            Some(data.room_member_list_all(room_id).await?),
+                            Some(
+                                data.role_list(
+                                    room_id,
+                                    types::PaginationQuery {
+                                        from: None,
+                                        to: None,
+                                        dir: None,
+                                        limit: Some(1024),
+                                    },
+                                )
+                                .await?
+                                .items,
+                            ),
+                        )
                     } else {
-                        None
+                        (None, None)
                     };
                     let user_ids: Vec<_> = thread_members.iter().map(|m| m.user_id).collect();
                     let users = futures::future::try_join_all(
@@ -882,7 +901,7 @@ impl Connection {
                             .map(|id| srv.users.get(id, Some(user_id))),
                     )
                     .await?;
-                    (room_members, Some(thread_members), users)
+                    (room_members, Some(thread_members), users, roles)
                 }
             }
         };
@@ -911,13 +930,82 @@ impl Connection {
             unreachable!()
         };
 
-        members.sort_by(|(_, _, a), (_, _, b)| {
-            let a_online = srv.users.is_online(a.id);
-            let b_online = srv.users.is_online(b.id);
-            a_online
-                .cmp(&b_online)
-                .reverse()
-                .then_with(|| a.name.cmp(&b.name))
+        let roles_map: std::collections::HashMap<RoleId, &Role> = if let Some(roles) = &room_roles {
+            roles.iter().map(|r| (r.id, r)).collect()
+        } else {
+            Default::default()
+        };
+
+        let get_highest_hoisted_role = |rm: &Option<types::RoomMember>| -> Option<&Role> {
+            rm.as_ref().and_then(|m| {
+                m.roles
+                    .iter()
+                    .filter_map(|role_id| roles_map.get(role_id))
+                    .filter(|r| r.hoist)
+                    .min_by_key(|r| r.position)
+                    .map(|v| &**v)
+            })
+        };
+
+        enum MemberGroup<'a> {
+            Hoisted(u64, &'a Role),
+            Online,
+            Offline,
+        }
+
+        impl PartialEq for MemberGroup<'_> {
+            fn eq(&self, other: &Self) -> bool {
+                match (self, other) {
+                    (Self::Hoisted(_, a), Self::Hoisted(_, b)) => a.id == b.id,
+                    _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+                }
+            }
+        }
+
+        impl Eq for MemberGroup<'_> {}
+
+        impl PartialOrd for MemberGroup<'_> {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl Ord for MemberGroup<'_> {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                match (self, other) {
+                    (MemberGroup::Hoisted(_, a), MemberGroup::Hoisted(_, b)) => {
+                        a.position.cmp(&b.position)
+                    }
+                    (MemberGroup::Hoisted(_, _), _) => Ordering::Less,
+                    (MemberGroup::Online, MemberGroup::Hoisted(_, _)) => Ordering::Less,
+                    (MemberGroup::Online, MemberGroup::Online) => Ordering::Equal,
+                    (MemberGroup::Online, MemberGroup::Offline) => Ordering::Greater,
+                    (MemberGroup::Offline, MemberGroup::Hoisted(_, _)) => Ordering::Less,
+                    (MemberGroup::Offline, MemberGroup::Online) => Ordering::Less,
+                    (MemberGroup::Offline, MemberGroup::Offline) => Ordering::Equal,
+                }
+            }
+        }
+
+        let get_group = |rm: &Option<types::RoomMember>, user: &types::User| {
+            if srv.users.is_online(user.id) {
+                if let Some(role) = get_highest_hoisted_role(rm) {
+                    MemberGroup::Hoisted(role.position, role)
+                } else {
+                    MemberGroup::Online
+                }
+            } else {
+                MemberGroup::Offline
+            }
+        };
+
+        members.sort_by(|(a_rm, _, a_user), (b_rm, _, b_user)| {
+            let a_group = get_group(a_rm, a_user);
+            let b_group = get_group(b_rm, b_user);
+
+            a_group
+                .cmp(&b_group)
+                .then_with(|| a_user.name.cmp(&b_user.name))
         });
 
         Ok(members)
@@ -931,6 +1019,7 @@ impl Connection {
         let session = self.state.session().ok_or(Error::MissingAuth)?;
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
         let srv = self.s.services();
+        let data = self.s.data();
 
         let new_members = self.get_member_list().await?;
 
@@ -998,22 +1087,73 @@ impl Connection {
             }
         }
 
+        let mut groups = vec![];
+        if let MemberListTarget::Room(room_id) = sub.target {
+            let all_roles = data
+                .role_list(
+                    room_id,
+                    types::PaginationQuery {
+                        from: None,
+                        to: None,
+                        dir: None,
+                        limit: Some(1024),
+                    },
+                )
+                .await?
+                .items;
+            let mut hoisted_roles: Vec<_> = all_roles.into_iter().filter(|r| r.hoist).collect();
+            hoisted_roles.sort_by_key(|r| r.position);
+
+            let roles_map: std::collections::HashMap<_, _> =
+                hoisted_roles.iter().map(|r| (r.id, r)).collect();
+
+            let get_highest_hoisted_role = |rm: &Option<types::RoomMember>| -> Option<&Role> {
+                rm.as_ref().and_then(|m| {
+                    m.roles
+                        .iter()
+                        .filter_map(|role_id| roles_map.get(role_id))
+                        .filter(|r| r.hoist)
+                        .min_by_key(|r| r.position)
+                        .map(|v| &**v)
+                })
+            };
+
+            for role in &hoisted_roles {
+                let count = new_members
+                    .iter()
+                    .filter(|(rm, _, u)| {
+                        srv.users.is_online(u.id)
+                            && get_highest_hoisted_role(rm).map_or(false, |r| r.id == role.id)
+                    })
+                    .count();
+                if count > 0 {
+                    groups.push(MemberListGroup {
+                        id: MemberListGroupId::Role(role.id),
+                        count: count as u64,
+                    });
+                }
+            }
+        }
+
         let online_count = new_members
             .iter()
             .filter(|(_, _, u)| srv.users.is_online(u.id))
             .count() as u64;
         let offline_count = new_members.len() as u64 - online_count;
 
-        let groups = vec![
-            MemberListGroup {
+        if online_count > 0 {
+            groups.push(MemberListGroup {
                 id: MemberListGroupId::Online,
                 count: online_count,
-            },
-            MemberListGroup {
+            });
+        }
+
+        if offline_count > 0 {
+            groups.push(MemberListGroup {
                 id: MemberListGroupId::Offline,
                 count: offline_count,
-            },
-        ];
+            });
+        }
 
         self.push_sync(MessageSync::MemberListSync {
             user_id,
@@ -1045,8 +1185,57 @@ impl Connection {
         let session = self.state.session().ok_or(Error::MissingAuth)?;
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
         let srv = self.s.services();
+        let data = self.s.data();
 
         let members = self.get_member_list().await?;
+
+        let mut groups = vec![];
+        if let MemberListTarget::Room(room_id) = sub.target {
+            let all_roles = data
+                .role_list(
+                    room_id,
+                    types::PaginationQuery {
+                        from: None,
+                        to: None,
+                        dir: None,
+                        limit: Some(1024),
+                    },
+                )
+                .await?
+                .items;
+            let mut hoisted_roles: Vec<_> = all_roles.into_iter().filter(|r| r.hoist).collect();
+            hoisted_roles.sort_by_key(|r| r.position);
+
+            let roles_map: std::collections::HashMap<_, _> =
+                hoisted_roles.iter().map(|r| (r.id, r)).collect();
+
+            let get_highest_hoisted_role = |rm: &Option<types::RoomMember>| -> Option<&Role> {
+                rm.as_ref().and_then(|m| {
+                    m.roles
+                        .iter()
+                        .filter_map(|role_id| roles_map.get(role_id))
+                        .filter(|r| r.hoist)
+                        .min_by_key(|r| r.position)
+                        .map(|r| *r)
+                })
+            };
+
+            for role in &hoisted_roles {
+                let count = members
+                    .iter()
+                    .filter(|(rm, _, u)| {
+                        srv.users.is_online(u.id)
+                            && get_highest_hoisted_role(rm).map_or(false, |r| r.id == role.id)
+                    })
+                    .count();
+                if count > 0 {
+                    groups.push(MemberListGroup {
+                        id: MemberListGroupId::Role(role.id),
+                        count: count as u64,
+                    });
+                }
+            }
+        }
 
         let online_count = members
             .iter()
@@ -1054,16 +1243,19 @@ impl Connection {
             .count() as u64;
         let offline_count = members.len() as u64 - online_count;
 
-        let groups = vec![
-            MemberListGroup {
+        if online_count > 0 {
+            groups.push(MemberListGroup {
                 id: MemberListGroupId::Online,
                 count: online_count,
-            },
-            MemberListGroup {
+            });
+        }
+
+        if offline_count > 0 {
+            groups.push(MemberListGroup {
                 id: MemberListGroupId::Offline,
                 count: offline_count,
-            },
-        ];
+            });
+        }
 
         let mut ops = vec![];
 

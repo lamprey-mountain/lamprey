@@ -38,6 +38,9 @@ pub struct Role {
     /// tiebroken by id
     pub position: u64,
 
+    /// whether members with this role should be displayed separately
+    pub hoist: bool,
+
     pub member_count: u64,
 }
 
@@ -66,6 +69,9 @@ pub struct RoleCreate {
     /// if this role can be mentioned by members
     #[serde(default)]
     pub is_mentionable: bool,
+
+    #[serde(default)]
+    pub hoist: bool,
     // the main reason this doesn't exist yet is because i've seen in
     // discord how the ui can become extremely unreadable, cluttered, and
     // in general color vomit. plus there's the whole "illegable contrast
@@ -102,6 +108,7 @@ pub struct RolePatch {
 
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
+    pub hoist: Option<bool>,
 }
 
 /// apply and remove a role to many members at once
@@ -146,5 +153,6 @@ impl Diff<Role> for RolePatch {
             || self.is_self_applicable.changes(&other.is_self_applicable)
             || self.is_mentionable.changes(&other.is_mentionable)
             || self.permissions.changes(&other.permissions)
+            || self.hoist.changes(&other.hoist)
     }
 }
