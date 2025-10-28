@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch } from "solid-js/web";
+import { For, Match, render, Show, Switch } from "solid-js/web";
 import { type Attachment, useCtx } from "./context.ts";
 import type { MessageT, ThreadT } from "./types.ts";
 import { createEditor } from "./Editor.tsx";
@@ -97,6 +97,11 @@ export function Input(props: InputProps) {
 		}
 	};
 
+	function EditorUserMention(props: { id: string }) {
+		const user = api.users.fetch(() => props.id);
+		return <span class="mention-user">@{user()?.name ?? props.id}</span>;
+	}
+
 	const editor = createEditor({
 		keymap: {
 			ArrowUp: (state) => {
@@ -123,6 +128,9 @@ export function Input(props: InputProps) {
 
 				return false;
 			},
+		},
+		mentionRenderer: (node, userId) => {
+			render(() => <EditorUserMention id={userId} />, node);
 		},
 	});
 

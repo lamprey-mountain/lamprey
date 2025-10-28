@@ -1,6 +1,7 @@
 import type { Media } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
 import { useConfig } from "../config";
+import { Emoji } from "../api/emoji";
 
 export type MediaProps = VoidProps<{ media: Media }>;
 
@@ -65,6 +66,12 @@ export const getThumbFromId = (media_id: string, size?: number) => {
 	} else {
 		return `${config.cdn_url}/thumb/${media_id}`;
 	}
+};
+
+/** get the cdn url for an emoji */
+export const getEmojiUrl = (id: string) => {
+	const config = useConfig();
+	return `${config.cdn_url}/emoji/${id}`;
 };
 
 export function formatBytes(bytes: number): string {

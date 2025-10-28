@@ -5,7 +5,7 @@ import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { initTurndownService } from "./turndown.ts";
-import { decorate } from "./markdown.tsx";
+import { decorate, md } from "./markdown.tsx";
 
 const turndown = initTurndownService();
 
@@ -38,12 +38,15 @@ const schema = new Schema({
 			attrs: {
 				user: {},
 			},
+			leafText(node) {
+				return `<@${node.attrs.user}>`;
+			},
 			toDOM: (
 				n,
-			) => ["span", { "data-mention": n.attrs.user }, `${n.attrs.user}`],
+			) => ["span", { "data-user-id": n.attrs.user, "class": "mention" }],
 			parseDOM: [{
-				tag: "span[data-mention]",
-				getAttrs: (el) => ({ user: el.dataset.mention }),
+				tag: "span.mention[data-user-id]",
+				getAttrs: (el) => ({ user: (el as HTMLElement).dataset.userId }),
 			}],
 		},
 		emoji: {
@@ -105,6 +108,7 @@ type EditorProps = {
 	initialContent?: string;
 	keymap?: { [key: string]: Command };
 	initialSelection?: "start" | "end";
+	mentionRenderer?: (node: HTMLElement, userId: string) => void;
 };
 
 type EditorViewProps = {
@@ -123,9 +127,9 @@ export const createEditor = (opts: EditorProps) => {
 	const createState = () => {
 		let doc;
 		if (opts.initialContent) {
-			const p = document.createElement("p");
-			p.textContent = opts.initialContent;
-			doc = DOMParser.fromSchema(schema).parse(p);
+			const div = document.createElement("div");
+			div.innerHTML = md.parser(md.lexer(opts.initialContent));
+			doc = DOMParser.fromSchema(schema).parse(div);
 		}
 
 		let selection;
@@ -213,6 +217,18 @@ export const createEditor = (opts: EditorProps) => {
 					decorations(state) {
 						return decorate(state, props.placeholder);
 					},
+					nodeViews: {
+						mention: (node) => {
+							const dom = document.createElement("span");
+							dom.classList.add("mention");
+							if (opts.mentionRenderer) {
+								opts.mentionRenderer(dom, node.attrs.user);
+							} else {
+								dom.textContent = `@${node.attrs.user}`;
+							}
+							return { dom };
+						},
+					},
 					handlePaste(view, event, slice) {
 						const files = Array.from(event.clipboardData?.files ?? []);
 						if (files.length) {
@@ -234,30 +250,26 @@ export const createEditor = (opts: EditorProps) => {
 								),
 							);
 						} else {
-							// NOTE: is this correct? no, it isn't.
-							// console.log(slice)
-							// slice.content.
-							view.dispatch(
-								tr.replaceSelection(slice).scrollIntoView().setMeta(
-									"paste",
-									true,
-								)
-									.setMeta("uiEvent", "paste"),
+							const textToParse = slice.content.textBetween(
+								0,
+								slice.content.size,
+								"\n",
 							);
-							// view.dispatch(tr.deleteSelection().insertText(str).scrollIntoView().setMeta("paste", true).setMeta("uiEvent", "paste"));
+							const div = document.createElement("div");
+							div.innerHTML = md.parser(md.lexer(textToParse));
+							const newSlice = DOMParser.fromSchema(schema).parseSlice(div);
+							view.dispatch(
+								view.state.tr.replaceSelection(newSlice).scrollIntoView()
+									.setMeta("paste", true),
+							);
 						}
 						return true;
 					},
 					transformPastedHTML(html) {
-						console.group("turndown");
-						console.log("html", html);
-						const md = turndown.turndown(html);
-						console.log("markdown", md);
-						console.groupEnd();
-
-						const container = document.createElement("div");
-						container.innerText = md;
-						return container.outerHTML;
+						const markdown = turndown.turndown(html);
+						const div = document.createElement("div");
+						div.innerHTML = md.parser(md.lexer(markdown));
+						return div.innerHTML;
 					},
 					editable: () => !(props.disabled ?? false),
 					dispatchTransaction(tr) {

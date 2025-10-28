@@ -2,6 +2,7 @@ import { type Channel, getTimestampFromUUID, type Message, User } from "sdk";
 import { type MessageT, MessageType } from "./types.ts";
 import {
 	createEffect,
+	createResource,
 	createSignal,
 	For,
 	Match,
@@ -9,7 +10,6 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import sanitizeHtml from "sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import {
@@ -20,11 +20,12 @@ import {
 	VideoView,
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
-import { type MediaProps } from "./media/util.tsx";
+import { getEmojiUrl, type MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { createEditor } from "./Editor.tsx";
+import { render } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import twemoji from "twemoji";
 import { Reactions } from "./Reactions.tsx";
@@ -43,24 +44,96 @@ type MessageTextMarkdownProps = {
 	message: MessageT & { type: "DefaultMarkdown" };
 };
 
-const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
-	// transformTags: {
-	// 	del: "s",
-	// },
-	allowedTags: sanitizeHtml.defaults.allowedTags.concat(["ins", "del"]),
-};
-
 const contentToHtml = new WeakMap();
+
+function UserMention(props: { id: string }) {
+	const api = useApi();
+	const user = api.users.fetch(() => props.id);
+	return <span class="mention-user">@{user()?.name ?? "..."}</span>;
+}
+
+function RoleMention(props: { id: string; thread: Channel }) {
+	const api = useApi();
+	const [role] = createResource(() => props.thread.room_id, async (room_id) => {
+		if (!room_id) return null;
+		const roles = api.roles.list(() => room_id)();
+		return roles?.items.find((r) => r.id === props.id) ?? null;
+	});
+	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
+}
+
+function ChannelMention(props: { id: string }) {
+	const api = useApi();
+	const channel = api.channels.fetch(() => props.id);
+	return <span class="mention-channel">#{channel()?.name ?? "..."}</span>;
+}
+
+function Emoji(props: { id: string; name: string; animated: boolean }) {
+	const api = useApi();
+	// const emoji = api.emoji.fetch(() => props.id);
+	const url = () => {
+		return getEmojiUrl(props.id);
+	};
+	return (
+		<img
+			class="emoji"
+			src={url()}
+			alt={`:${props.name}:`}
+			title={`:${props.name}:`}
+		/>
+	);
+}
+
+function hydrateMentions(el: HTMLElement, thread: Channel) {
+	el.querySelectorAll<HTMLSpanElement>("span.mention[data-mention-type]")
+		.forEach((mentionEl) => {
+			const type = mentionEl.dataset.mentionType;
+			if (type === "user") {
+				const userId = mentionEl.dataset.userId!;
+				render(() => <UserMention id={userId} />, mentionEl);
+			} else if (type === "role") {
+				const roleId = mentionEl.dataset.roleId!;
+				render(() => <RoleMention id={roleId} thread={thread} />, mentionEl);
+			} else if (type === "channel") {
+				const channelId = mentionEl.dataset.channelId!;
+				render(() => <ChannelMention id={channelId} />, mentionEl);
+			} else if (type === "emoji") {
+				const emojiId = mentionEl.dataset.emojiId!;
+				const emojiName = mentionEl.dataset.emojiName!;
+				const emojiAnimated = mentionEl.dataset.emojiAnimated === "true";
+				render(
+					() => (
+						<Emoji id={emojiId} name={emojiName} animated={emojiAnimated} />
+					),
+					mentionEl,
+				);
+			}
+		});
+}
 
 function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 	function getHtml(): string {
 		const cached = contentToHtml.get(props.message);
 		if (cached) return cached;
-		// console.count("render_html");
-		const html = sanitizeHtml(
-			md.parse(props.message.content ?? "") as string,
-			sanitizeHtmlOptions,
-		).trim();
+
+		const content = props.message.content ?? "";
+
+		function escape(html: string) {
+			return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
+				/>/g,
+				"&gt;",
+			).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+		}
+
+		const tokens = md.lexer(content);
+		md.walkTokens(tokens, (token) => {
+			if (token.type === "html") {
+				(token as any).text = escape((token as any).text);
+			}
+		});
+
+		const html = (md.parser(tokens) as string).trim();
+
 		const twemojified = twemoji.parse(html, {
 			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
 			folder: "svg",
@@ -70,13 +143,14 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		return twemojified;
 	}
 
-	let highlightEl: HTMLDivElement;
+	let highlightEl!: HTMLDivElement;
+	const thread = useApi().channels.fetch(() => props.message.channel_id);
 	function highlight() {
 		getHtml();
 		import("highlight.js").then(({ default: hljs }) => {
 			// HACK: retain line numbers
 			// FIXME: use language if provided instead of guessing
-			for (const el of [...highlightEl!.querySelectorAll("pre")]) {
+			for (const el of [...highlightEl.querySelectorAll("pre")]) {
 				el.dataset.highlighted = "";
 				hljs.highlightElement(el);
 			}
@@ -84,6 +158,12 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 	}
 
 	createEffect(highlight);
+	createEffect(() => {
+		const t = thread();
+		if (t && highlightEl) {
+			hydrateMentions(highlightEl, t);
+		}
+	});
 
 	const ctx = useCtx();
 	const viewHistory = () => {

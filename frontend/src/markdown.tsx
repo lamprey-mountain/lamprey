@@ -2,9 +2,82 @@ import { marked, type Token } from "marked";
 import { EditorState } from "prosemirror-state";
 import { Decoration, DecorationAttrs, DecorationSet } from "prosemirror-view";
 
+const mentionExtension = {
+	name: "mention",
+	level: "inline" as const,
+	start(src: string) {
+		return src.indexOf("<");
+	},
+	tokenizer(src: string) {
+		const userMention =
+			/^<@([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/
+				.exec(src);
+		if (userMention) {
+			return {
+				type: "mention",
+				raw: userMention[0],
+				mention_type: "user",
+				id: userMention[1],
+			};
+		}
+		const roleMention =
+			/^<@&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/
+				.exec(src);
+		if (roleMention) {
+			return {
+				type: "mention",
+				raw: roleMention[0],
+				mention_type: "role",
+				id: roleMention[1],
+			};
+		}
+		const channelMention =
+			/^<#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/
+				.exec(src);
+		if (channelMention) {
+			return {
+				type: "mention",
+				raw: channelMention[0],
+				mention_type: "channel",
+				id: channelMention[1],
+			};
+		}
+		const emojiMention =
+			/^<(a?):(\w+):([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})>/
+				.exec(src);
+		if (emojiMention) {
+			return {
+				type: "mention",
+				raw: emojiMention[0],
+				mention_type: "emoji",
+				animated: !!emojiMention[1],
+				name: emojiMention[2],
+				id: emojiMention[3],
+			};
+		}
+		return undefined;
+	},
+	renderer(token: any) {
+		if (token.mention_type === "user") {
+			return `<span class="mention" data-mention-type="user" data-user-id="${token.id}"></span>`;
+		}
+		if (token.mention_type === "role") {
+			return `<span class="mention" data-mention-type="role" data-role-id="${token.id}"></span>`;
+		}
+		if (token.mention_type === "channel") {
+			return `<span class="mention" data-mention-type="channel" data-channel-id="${token.id}"></span>`;
+		}
+		if (token.mention_type === "emoji") {
+			return `<span class="mention" data-mention-type="emoji" data-emoji-id="${token.id}" data-emoji-name="${token.name}" data-emoji-animated="${token.animated}"></span>`;
+		}
+		return token.raw;
+	},
+};
+
 export const md = marked.use({
 	breaks: true,
 	gfm: true,
+	extensions: [mentionExtension],
 	renderer: {
 		del({ tokens }) {
 			return `<s>${this.parser.parseInline(tokens)}</s>`;
@@ -117,6 +190,13 @@ export function decorate(state: EditorState, placeholderText?: string) {
 						end: ast.raw.length,
 					},
 				];
+			}
+			case "mention": {
+				return [{
+					attrs: { class: "mention" },
+					start: 0,
+					end: ast.raw.length,
+				}];
 			}
 			// case "blockquote": {
 			// 	// // FIXME: breaks on multiline blockquotes "> foo\n> bar"

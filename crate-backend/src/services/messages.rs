@@ -1,14 +1,17 @@
 use moka::future::Cache;
+use std::collections::HashSet;
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::error;
 
 use common::v1::types::misc::Color;
-use common::v1::types::util::Diff;
+use common::v1::types::notifications::{Notification, NotificationReason};
+use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     ChannelId, ChannelPatch, Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId,
-    MessagePatch, MessageSync, MessageType, Permission, ThreadMembership,
+    MessagePatch, MessageSync, MessageType, NotificationId, PaginationQuery, Permission,
+    ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -103,12 +106,13 @@ impl ServiceMessages {
         let user = data.user_get(user_id).await?;
         let is_webhook = user.webhook.is_some();
 
+        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
+
         if !is_webhook {
             let perms = srv.perms.for_channel(user_id, thread_id).await?;
             perms.ensure(Permission::ViewChannel)?;
             perms.ensure(Permission::MessageCreate)?;
 
-            let thread = srv.channels.get(thread_id, Some(user_id)).await?;
             if thread.archived_at.is_some() {
                 srv.channels
                     .update(
@@ -148,6 +152,7 @@ impl ServiceMessages {
                 "at least one of content, attachments, or embeds must be defined",
             ));
         }
+
         let attachment_ids: Vec<_> = json.attachments.into_iter().map(|r| r.id).collect();
         for id in &attachment_ids {
             data.media_select(*id).await?;
@@ -157,6 +162,10 @@ impl ServiceMessages {
             }
         }
         let content = json.content.clone();
+        let parsed_mentions = dbg!(mentions::parse(
+            content.as_deref().unwrap_or_default(),
+            &json.mentions
+        ));
         let payload = MessageType::DefaultMarkdown(MessageDefaultMarkdown {
             content: json.content,
             attachments: vec![],
@@ -179,7 +188,7 @@ impl ServiceMessages {
                 message_type: payload,
                 edited_at: None,
                 created_at: json.created_at.map(|t| t.into()),
-                mentions: json.mentions,
+                mentions: parsed_mentions.clone(),
             })
             .await?;
         let message_uuid = message_id.into_inner();
@@ -222,6 +231,100 @@ impl ServiceMessages {
         };
         srv.channels.invalidate(thread_id).await; // message count
         s.broadcast_channel(thread_id, user_id, msg).await?;
+
+        let s_clone = self.state.clone();
+        let author_id = user_id;
+        let room_id = thread.room_id;
+
+        tokio::spawn(async move {
+            let mut notified_users = HashSet::new();
+
+            // Direct mentions
+            for user_id in parsed_mentions.users {
+                if user_id == author_id {
+                    continue;
+                }
+                if notified_users.insert(user_id) {
+                    let notification = Notification {
+                        id: NotificationId::new(),
+                        channel_id: thread_id,
+                        message_id,
+                        reason: NotificationReason::Mention,
+                        added_at: Time::now_utc(),
+                        read_at: None,
+                    };
+                    if let Err(e) = s_clone.data().notification_add(user_id, notification).await {
+                        error!(
+                            "Failed to add mention notification for user {}: {}",
+                            user_id, e
+                        );
+                    }
+                }
+            }
+
+            // Bulk mentions
+            if parsed_mentions.everyone {
+                let mut bulk_mention_users = Vec::new();
+                if let Some(room_id) = room_id {
+                    let mut after = None;
+                    loop {
+                        match s_clone
+                            .data()
+                            .room_member_list(
+                                room_id,
+                                PaginationQuery {
+                                    from: after,
+                                    limit: Some(1000),
+                                    ..Default::default()
+                                },
+                            )
+                            .await
+                        {
+                            Ok(page) => {
+                                if page.items.is_empty() {
+                                    break;
+                                }
+                                after = Some(page.items.last().unwrap().user_id.into());
+                                for member in page.items {
+                                    bulk_mention_users.push(member.user_id);
+                                }
+                                if !page.has_more {
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                error!("Failed to get room members for bulk mention: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                for user_id in bulk_mention_users {
+                    if user_id == author_id {
+                        continue;
+                    }
+                    if notified_users.insert(user_id) {
+                        let notification = Notification {
+                            id: NotificationId::new(),
+                            channel_id: thread_id,
+                            message_id,
+                            reason: NotificationReason::MentionBulk,
+                            added_at: Time::now_utc(),
+                            read_at: None,
+                        };
+                        if let Err(e) = s_clone.data().notification_add(user_id, notification).await
+                        {
+                            error!(
+                                "Failed to add bulk mention notification for user {}: {}",
+                                user_id, e
+                            );
+                        }
+                    }
+                }
+            }
+        });
+
         Ok(message)
     }
 
@@ -402,5 +505,119 @@ fn embed_from_create(value: common::v1::types::EmbedCreate) -> Embed {
         author_avatar: None,
         site_name: None,
         site_avatar: None,
+    }
+}
+
+pub mod mentions {
+    use common::v1::types::{EmojiId, Mentions, ParseMentions, RoleId, UserId};
+    use once_cell::sync::Lazy;
+    use regex::Regex;
+    use std::collections::HashSet;
+    use uuid::Uuid;
+
+    static USER_MENTION_RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r"<@([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>",
+        )
+        .unwrap()
+    });
+    static ROLE_MENTION_RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r"<@&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>",
+        )
+        .unwrap()
+    });
+    static CHANNEL_MENTION_RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r"<#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>",
+        )
+        .unwrap()
+    });
+    static EMOJI_MENTION_RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r"<a?:\w+:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})>",
+        )
+        .unwrap()
+    });
+    static EVERYONE_MENTION_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"@everyone").unwrap());
+
+    pub fn parse(content: &str, options: &ParseMentions) -> Mentions {
+        let users = options
+            .users
+            .as_ref()
+            .map(|allowed_users| {
+                USER_MENTION_RE
+                    .captures_iter(content)
+                    .filter_map(|cap| {
+                        let id = Uuid::parse_str(&cap[1]).ok()?.into();
+                        if allowed_users.contains(&id) {
+                            Some(id)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<HashSet<UserId>>()
+                    .into_iter()
+                    .collect()
+            })
+            .unwrap_or_else(|| {
+                USER_MENTION_RE
+                    .captures_iter(content)
+                    .filter_map(|cap| Uuid::parse_str(&cap[1]).ok().map(Into::into))
+                    .collect::<HashSet<UserId>>()
+                    .into_iter()
+                    .collect()
+            });
+
+        let roles = options
+            .roles
+            .as_ref()
+            .map(|allowed_roles| {
+                ROLE_MENTION_RE
+                    .captures_iter(content)
+                    .filter_map(|cap| {
+                        let id = Uuid::parse_str(&cap[1]).ok()?.into();
+                        if allowed_roles.contains(&id) {
+                            Some(id)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<HashSet<RoleId>>()
+                    .into_iter()
+                    .collect()
+            })
+            .unwrap_or_else(|| {
+                ROLE_MENTION_RE
+                    .captures_iter(content)
+                    .filter_map(|cap| Uuid::parse_str(&cap[1]).ok().map(Into::into))
+                    .collect::<HashSet<RoleId>>()
+                    .into_iter()
+                    .collect()
+            });
+
+        let channels = CHANNEL_MENTION_RE
+            .captures_iter(content)
+            .filter_map(|cap| Uuid::parse_str(&cap[1]).ok().map(Into::into))
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
+
+        let emojis = EMOJI_MENTION_RE
+            .captures_iter(content)
+            .filter_map(|cap| Uuid::parse_str(&cap[1]).ok().map(Into::into))
+            .collect::<HashSet<EmojiId>>()
+            .into_iter()
+            .collect();
+
+        let everyone = options.everyone && EVERYONE_MENTION_RE.is_match(content);
+
+        Mentions {
+            users,
+            roles,
+            threads: channels,
+            emojis,
+            everyone,
+        }
     }
 }

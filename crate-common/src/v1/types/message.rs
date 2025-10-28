@@ -9,11 +9,9 @@ use validator::Validate;
 use crate::v1::types::emoji::Emoji;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
-use crate::v1::types::util::some_option;
-use crate::v1::types::util::Diff;
-use crate::v1::types::util::Time;
-use crate::v1::types::RoomId;
+use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
+use crate::v1::types::{EmojiId, RoomId};
 
 use super::EmbedCreate;
 use super::{
@@ -92,6 +90,25 @@ pub struct PinsReorderItem {
     pub position: Option<Option<u16>>,
 }
 
+fn true_fn() -> bool {
+    true
+}
+
+/// what mentions to parse from the message content. mentions will only be parsed if the message content actually contains a mention pattern.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ParseMentions {
+    /// only parse mentions for these users. an empty vec disables all mentions, while None allows all mentions.
+    pub users: Option<Vec<UserId>>,
+
+    /// only parse mentions for these roles. an empty vec disables all mentions, while None allows all mentions.
+    pub roles: Option<Vec<RoleId>>,
+
+    /// whether to parse @everyone mentions from the content
+    #[serde(default = "true_fn")]
+    pub everyone: bool,
+}
+
 /// who/what this message notified on send
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -99,6 +116,9 @@ pub struct Mentions {
     pub users: Vec<UserId>,
     pub roles: Vec<RoleId>,
     pub threads: Vec<ChannelId>,
+
+    #[serde(default)]
+    pub emojis: Vec<EmojiId>,
 
     #[serde(default)]
     pub everyone: bool,
@@ -144,7 +164,7 @@ pub struct MessageCreate {
     pub created_at: Option<Time>,
 
     #[serde(default)]
-    pub mentions: Mentions,
+    pub mentions: ParseMentions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

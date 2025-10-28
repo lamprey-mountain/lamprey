@@ -533,6 +533,27 @@ pre {
 	white-space: pre;
 }
 
+.editor .mention, .markdown .mention {
+	background-color: hsl(220 50% 50% / 0.5);
+	border-radius: 3px;
+	padding: 0 2px;
+	color: white;
+}
+
+.markdown .mention {
+	cursor: pointer;
+}
+
+.markdown .mention:hover {
+	text-decoration: underline;
+}
+
+.markdown .emoji {
+	width: 1.5em;
+	height: 1.5em;
+	vertical-align: bottom;
+}
+
 a {
 	color: $link-500;
 	cursor: pointer;

@@ -61,6 +61,8 @@ base64 = "0.22.1"
 diff = "0.1.13"
 strum = { version = "0.27.2", features = ["derive"] }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+regex = "1.12.2"
+once_cell = "1.21.3"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }

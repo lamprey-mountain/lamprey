@@ -38,14 +38,12 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			const is_mentioned = () => {
 				const me = self();
 				if (!me) return false;
-				if (item.message.author_id === me.id) return false;
 
 				if (item.message.mentions.users.includes(me.id)) {
 					return true;
 				}
 				if (
-					item.message.mentions.everyone_room ||
-					item.message.mentions.everyone_thread
+					item.message.mentions.everyone
 				) {
 					return true;
 				}
