@@ -50,6 +50,16 @@ impl DataWebhook for Postgres {
         .execute(&mut *tx)
         .await?;
 
+        if let Some(avatar_id) = create.avatar {
+            sqlx::query!(
+                "INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')",
+                *avatar_id,
+                *webhook_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
         let token: String = Uuid::new_v4().to_string();
 
         sqlx::query!(
@@ -212,6 +222,12 @@ impl DataWebhook for Postgres {
                 .await?;
         }
         if let Some(avatar) = patch.avatar {
+            sqlx::query!("DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'", *webhook_id)
+                .execute(&mut *tx).await?;
+            if let Some(avatar_id) = avatar {
+                sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')", *avatar_id, *webhook_id)
+                    .execute(&mut *tx).await?;
+            }
             sqlx::query!(
                 "UPDATE usr SET avatar = $1 WHERE id = $2",
                 avatar.map(|i| *i),
@@ -270,6 +286,12 @@ impl DataWebhook for Postgres {
                 .await?;
         }
         if let Some(avatar) = patch.avatar {
+            sqlx::query!("DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'", *webhook_id)
+                .execute(&mut *tx).await?;
+            if let Some(avatar_id) = avatar {
+                sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')", *avatar_id, *webhook_id)
+                    .execute(&mut *tx).await?;
+            }
             sqlx::query!(
                 "UPDATE usr SET avatar = $1 WHERE id = $2",
                 avatar.map(|i| *i),
