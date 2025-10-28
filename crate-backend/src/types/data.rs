@@ -136,6 +136,7 @@ pub enum DbChannelType {
     Category,
     ThreadPublic,
     ThreadPrivate,
+    Calendar,
 }
 
 impl From<DbChannelType> for ChannelType {
@@ -149,6 +150,23 @@ impl From<DbChannelType> for ChannelType {
             DbChannelType::Category => ChannelType::Category,
             DbChannelType::ThreadPublic => ChannelType::ThreadPublic,
             DbChannelType::ThreadPrivate => ChannelType::ThreadPrivate,
+            DbChannelType::Calendar => ChannelType::Calendar,
+        }
+    }
+}
+
+impl From<ChannelType> for DbChannelType {
+    fn from(value: ChannelType) -> Self {
+        match value {
+            ChannelType::Text => DbChannelType::Text,
+            ChannelType::Forum => DbChannelType::Forum,
+            ChannelType::Voice => DbChannelType::Voice,
+            ChannelType::Dm => DbChannelType::Dm,
+            ChannelType::Gdm => DbChannelType::Gdm,
+            ChannelType::Category => DbChannelType::Category,
+            ChannelType::ThreadPublic => DbChannelType::ThreadPublic,
+            ChannelType::ThreadPrivate => DbChannelType::ThreadPrivate,
+            ChannelType::Calendar => DbChannelType::Calendar,
         }
     }
 }

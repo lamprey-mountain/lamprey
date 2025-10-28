@@ -245,6 +245,13 @@ impl DataChannel for Postgres {
             None => thread.archived_at.map(|t| *t),
         };
 
+        let new_parent_id = match patch.parent_id {
+            Some(id) => id.map(|i| i.into_inner()),
+            None => thread.parent_id.map(|i| i.into_inner()),
+        };
+
+        let new_ty: DbChannelType = patch.ty.map(Into::into).unwrap_or_else(|| thread.ty.into());
+
         query!(
             r#"
             UPDATE channel SET
@@ -257,7 +264,9 @@ impl DataChannel for Postgres {
                 owner_id = $8,
                 icon = $9,
                 locked = $10,
-                archived_at = $11
+                archived_at = $11,
+                type = $12,
+                parent_id = $13
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -277,6 +286,8 @@ impl DataChannel for Postgres {
             patch.icon.unwrap_or(thread.icon).map(|id| *id),
             patch.locked.unwrap_or(thread.locked),
             archived_at as _,
+            new_ty as _,
+            new_parent_id,
         )
         .execute(&mut *tx)
         .await?;
