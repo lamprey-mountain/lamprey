@@ -18,6 +18,7 @@ struct DbWebhook {
     id: Uuid,
     room_id: Option<Uuid>,
     channel_id: Uuid,
+    creator_id: Option<Uuid>,
     name: String,
     avatar: Option<Uuid>,
 }
@@ -83,7 +84,7 @@ impl DataWebhook for Postgres {
     async fn webhook_get(&self, webhook_id: WebhookId) -> Result<Webhook> {
         let row = sqlx::query!(
             r#"
-            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token
+            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
             FROM webhook w
             JOIN usr u ON w.id = u.id
             JOIN channel c ON w.channel_id = c.id
@@ -98,6 +99,7 @@ impl DataWebhook for Postgres {
             id: row.id.into(),
             room_id: row.room_id.map(Into::into),
             channel_id: row.channel_id.into(),
+            creator_id: row.creator_id.map(Into::into),
             name: row.name,
             avatar: row.avatar.map(Into::into),
             token: Some(row.token),
@@ -107,7 +109,7 @@ impl DataWebhook for Postgres {
     async fn webhook_get_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<Webhook> {
         let row = sqlx::query!(
             r#"
-            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar
+            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.creator_id
             FROM webhook w
             JOIN usr u ON w.id = u.id
             JOIN channel c ON w.channel_id = c.id
@@ -123,6 +125,7 @@ impl DataWebhook for Postgres {
             id: row.id.into(),
             room_id: row.room_id.map(Into::into),
             channel_id: row.channel_id.into(),
+            creator_id: row.creator_id.map(Into::into),
             name: row.name,
             avatar: row.avatar.map(Into::into),
             token: None,
@@ -142,7 +145,7 @@ impl DataWebhook for Postgres {
             sqlx::query_as!(
                 DbWebhook,
                 r#"
-                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar
+                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.creator_id
                 FROM webhook w
                 JOIN usr u ON w.id = u.id
                 JOIN channel c ON w.channel_id = c.id
@@ -163,6 +166,7 @@ impl DataWebhook for Postgres {
                 id: row.id.into(),
                 room_id: row.room_id.map(Into::into),
                 channel_id: row.channel_id.into(),
+                creator_id: row.creator_id.map(Into::into),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
                 token: None,
@@ -184,7 +188,7 @@ impl DataWebhook for Postgres {
             sqlx::query_as!(
                 DbWebhook,
                 r#"
-                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar
+                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.creator_id
                 FROM webhook w
                 JOIN usr u ON w.id = u.id
                 JOIN channel c ON w.channel_id = c.id
@@ -205,6 +209,7 @@ impl DataWebhook for Postgres {
                 id: row.id.into(),
                 room_id: row.room_id.map(Into::into),
                 channel_id: row.channel_id.into(),
+                creator_id: row.creator_id.map(Into::into),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
                 token: None,
@@ -222,8 +227,12 @@ impl DataWebhook for Postgres {
                 .await?;
         }
         if let Some(avatar) = patch.avatar {
-            sqlx::query!("DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'", *webhook_id)
-                .execute(&mut *tx).await?;
+            sqlx::query!(
+                "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'",
+                *webhook_id
+            )
+            .execute(&mut *tx)
+            .await?;
             if let Some(avatar_id) = avatar {
                 sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')", *avatar_id, *webhook_id)
                     .execute(&mut *tx).await?;
@@ -286,8 +295,12 @@ impl DataWebhook for Postgres {
                 .await?;
         }
         if let Some(avatar) = patch.avatar {
-            sqlx::query!("DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'", *webhook_id)
-                .execute(&mut *tx).await?;
+            sqlx::query!(
+                "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'",
+                *webhook_id
+            )
+            .execute(&mut *tx)
+            .await?;
             if let Some(avatar_id) = avatar {
                 sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')", *avatar_id, *webhook_id)
                     .execute(&mut *tx).await?;
