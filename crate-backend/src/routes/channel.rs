@@ -155,6 +155,7 @@ async fn channel_create_dm(
             user_limit: json.bitrate.map(|u| u as i32),
             parent_id: None,
             owner_id: Some(*auth_user.id),
+            invitable: json.invitable,
         })
         .await?;
 

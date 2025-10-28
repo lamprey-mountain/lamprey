@@ -192,6 +192,7 @@ impl ServiceRooms {
                     parent_id: None,
                     owner_id: None,
                     icon: None,
+                    invitable: false,
                 })
                 .await?;
             let welcome_channel = data.channel_get(welcome_channel_id).await?;

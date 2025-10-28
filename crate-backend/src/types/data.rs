@@ -100,6 +100,7 @@ pub struct DbChannel {
     pub user_limit: Option<i32>,
     pub tags: Option<serde_json::Value>,
     pub tags_available: Option<serde_json::Value>,
+    pub invitable: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -123,6 +124,7 @@ pub struct DbChannelCreate {
     pub bitrate: Option<i32>,
     pub user_limit: Option<i32>,
     pub parent_id: Option<Uuid>,
+    pub invitable: bool,
 }
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
@@ -205,6 +207,7 @@ impl From<DbChannel> for Channel {
             recipients: vec![],
             user_config: None,
             online_count: 0,
+            invitable: row.invitable,
 
             tags: row
                 .tags

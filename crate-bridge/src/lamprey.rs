@@ -416,6 +416,7 @@ impl LampreyHandle {
                     parent_id,
                     icon: None,
                     permission_overwrites: vec![],
+                    invitable: true,
                 },
             )
             .await?;

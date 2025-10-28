@@ -104,6 +104,10 @@ pub struct Channel {
 
     /// for gdm channels, a custom icon
     pub icon: Option<MediaId>,
+
+    /// whether users without ThreadManage can add other members to this thread
+    #[serde(default)]
+    pub invitable: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,6 +189,10 @@ pub struct ChannelCreate {
     // pub starter_message: MessageCreate,
     #[serde(default)]
     pub permission_overwrites: Vec<PermissionOverwrite>,
+
+    /// whether users without ThreadManage can add other members to this thread
+    #[serde(default)]
+    pub invitable: bool,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -231,6 +239,7 @@ pub struct ChannelPatch {
 
     pub archived: Option<bool>,
     pub locked: Option<bool>,
+    pub invitable: Option<bool>,
 }
 
 /// reorder some channels
@@ -270,6 +279,7 @@ impl Diff<Channel> for ChannelPatch {
             || self.ty.changes(&other.ty)
             || self.parent_id.changes(&other.parent_id)
             || self.locked.changes(&other.locked)
+            || self.invitable.changes(&other.invitable)
             || self
                 .archived
                 .is_some_and(|a| a != other.archived_at.is_some())

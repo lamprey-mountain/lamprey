@@ -39,6 +39,7 @@ select
     channel.user_limit,
     channel.owner_id,
     channel.icon,
+    channel.invitable,
     coalesce(message_count.count, 0) as "message_count!",
     coalesce(member_count.count, 0) as "member_count!",
     last_id.last_version_id as "last_version_id",

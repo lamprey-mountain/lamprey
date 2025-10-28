@@ -337,6 +337,7 @@ impl ServiceThreads {
                 parent_id: json.parent_id.map(|i| *i),
                 owner_id: None,
                 icon: None,
+                invitable: json.invitable,
             })
             .await?;
 
@@ -566,6 +567,7 @@ impl ServiceThreads {
                             .change("locked", &chan_old.locked, &chan_new.locked)
                             .change("tags", &chan_old.tags, &chan_new.tags)
                             .change("parent_id", &chan_old.parent_id, &chan_new.parent_id)
+                            .change("invitable", &chan_old.invitable, &chan_new.invitable)
                             .build(),
                     },
                 })

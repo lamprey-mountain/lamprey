@@ -117,11 +117,12 @@ pub async fn thread_member_add(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    if target_user_id != auth_user.id {
-        perms.ensure(Permission::MemberKick)?;
-    }
-
     let thread = srv.channels.get(thread_id, Some(auth_user.id)).await?;
+    if target_user_id != auth_user.id {
+        if !thread.invitable {
+            perms.ensure(Permission::MemberKick)?;
+        }
+    }
     if !thread.ty.has_members() {
         return Err(Error::BadStatic("cannot edit thread member list"));
     }

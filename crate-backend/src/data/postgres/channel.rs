@@ -39,8 +39,8 @@ impl DataChannel for Postgres {
 
         query!(
             "
-			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14)
         ",
             channel_id.into_inner(),
             channel_id.into_inner(),
@@ -55,6 +55,7 @@ impl DataChannel for Postgres {
             create.parent_id,
             create.owner_id,
             create.icon,
+            create.invitable,
         )
         .execute(&mut *tx)
         .await?;
@@ -265,8 +266,9 @@ impl DataChannel for Postgres {
                 icon = $9,
                 locked = $10,
                 archived_at = $11,
-                type = $12,
-                parent_id = $13
+                invitable = $12,
+                type = $13,
+                parent_id = $14
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -286,6 +288,7 @@ impl DataChannel for Postgres {
             patch.icon.unwrap_or(thread.icon).map(|id| *id),
             patch.locked.unwrap_or(thread.locked),
             archived_at as _,
+            patch.invitable.unwrap_or(thread.invitable),
             new_ty as _,
             new_parent_id,
         )
