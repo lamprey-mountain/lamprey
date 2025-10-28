@@ -108,6 +108,7 @@ pub struct DbChannelPrivate {
     pub ty: DbChannelType,
     pub last_read_id: Option<Uuid>,
     pub is_unread: bool,
+    pub mention_count: i64,
 }
 
 pub struct DbChannelCreate {

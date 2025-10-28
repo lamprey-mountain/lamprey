@@ -60,4 +60,33 @@ impl DataUnread for Postgres {
             })
             .collect())
     }
+
+    async fn unread_increment_mentions(
+        &self,
+        user_id: UserId,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+        count: u32,
+    ) -> Result<()> {
+        query!(
+            r#"
+            INSERT INTO unread (channel_id, user_id, message_id, version_id, mention_count, is_unread)
+            VALUES ($1, $2, $3, $4, $5, true)
+            ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET
+                mention_count = unread.mention_count + excluded.mention_count,
+                is_unread = true,
+                message_id = excluded.message_id,
+                version_id = excluded.version_id;
+            "#,
+            *channel_id,
+            *user_id,
+            *message_id,
+            *version_id,
+            count as i32
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
 }

@@ -517,6 +517,14 @@ pub trait DataUnread {
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<Vec<(ChannelId, MessageId, MessageVerId)>>;
+    async fn unread_increment_mentions(
+        &self,
+        user_id: UserId,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+        count: u32,
+    ) -> Result<()>;
 }
 
 #[async_trait]

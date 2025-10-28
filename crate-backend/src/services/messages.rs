@@ -235,88 +235,151 @@ impl ServiceMessages {
         let s_clone = self.state.clone();
         let author_id = user_id;
         let room_id = thread.room_id;
+        let channel_is_thread = thread.ty.is_thread();
 
         tokio::spawn(async move {
             let mut notified_users = HashSet::new();
 
-            // Direct mentions
+            // Direct user mentions
             for user_id in parsed_mentions.users {
                 if user_id == author_id {
                     continue;
                 }
+
+                if channel_is_thread {
+                    // Add user to thread if not already a member
+                    let member = s_clone.data().thread_member_get(thread_id, user_id).await;
+                    if member.is_err() || member.unwrap().membership == ThreadMembership::Leave {
+                        if s_clone
+                            .data()
+                            .thread_member_put(thread_id, user_id, Default::default())
+                            .await
+                            .is_ok()
+                        {
+                            if let Ok(thread_member) =
+                                s_clone.data().thread_member_get(thread_id, user_id).await
+                            {
+                                let msg = MessageSync::ThreadMemberUpsert {
+                                    member: thread_member,
+                                };
+                                if let Err(e) =
+                                    s_clone.broadcast_channel(thread_id, author_id, msg).await
+                                {
+                                    error!("Failed to broadcast thread member upsert: {}", e);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if notified_users.insert(user_id) {
-                    let notification = Notification {
-                        id: NotificationId::new(),
-                        channel_id: thread_id,
-                        message_id,
-                        reason: NotificationReason::Mention,
-                        added_at: Time::now_utc(),
-                        read_at: None,
-                    };
-                    if let Err(e) = s_clone.data().notification_add(user_id, notification).await {
+                    if let Err(e) = s_clone
+                        .data()
+                        .unread_increment_mentions(
+                            user_id,
+                            thread_id,
+                            message_id,
+                            message.version_id,
+                            1,
+                        )
+                        .await
+                    {
                         error!(
-                            "Failed to add mention notification for user {}: {}",
+                            "Failed to increment mention count for user {}: {}",
                             user_id, e
                         );
                     }
                 }
             }
 
-            // Bulk mentions
-            if parsed_mentions.everyone {
-                let mut bulk_mention_users = Vec::new();
-                if let Some(room_id) = room_id {
-                    let mut after = None;
-                    loop {
-                        match s_clone
-                            .data()
-                            .room_member_list(
-                                room_id,
-                                PaginationQuery {
-                                    from: after,
-                                    limit: Some(1000),
-                                    ..Default::default()
-                                },
-                            )
-                            .await
+            // Role mentions
+            if let Some(room_id) = room_id {
+                for role_id in parsed_mentions.roles {
+                    if let Ok(members) = s_clone
+                        .data()
+                        .role_member_list(role_id, Default::default())
+                        .await
+                    {
+                        if channel_is_thread
+                            && members.items.len()
+                                < crate::consts::MAX_ROLE_MENTION_MEMBERS_ADD as usize
                         {
-                            Ok(page) => {
-                                if page.items.is_empty() {
-                                    break;
-                                }
-                                after = Some(page.items.last().unwrap().user_id.into());
-                                for member in page.items {
-                                    bulk_mention_users.push(member.user_id);
-                                }
-                                if !page.has_more {
-                                    break;
+                            for member in &members.items {
+                                if let Err(e) = s_clone
+                                    .data()
+                                    .thread_member_put(
+                                        thread_id,
+                                        member.user_id,
+                                        Default::default(),
+                                    )
+                                    .await
+                                {
+                                    error!(
+                                        "Failed to add mentioned role member {} to thread {}: {}",
+                                        member.user_id, thread_id, e
+                                    );
                                 }
                             }
-                            Err(e) => {
-                                error!("Failed to get room members for bulk mention: {}", e);
-                                break;
+                        }
+
+                        for member in members.items {
+                            if member.user_id == author_id {
+                                continue;
+                            }
+                            if notified_users.insert(member.user_id) {
+                                if let Err(e) = s_clone
+                                    .data()
+                                    .unread_increment_mentions(
+                                        member.user_id,
+                                        thread_id,
+                                        message_id,
+                                        message.version_id,
+                                        1,
+                                    )
+                                    .await
+                                {
+                                    error!(
+                                        "Failed to increment mention count for user {}: {}",
+                                        member.user_id, e
+                                    );
+                                }
                             }
                         }
                     }
                 }
+            }
 
-                for user_id in bulk_mention_users {
+            // @everyone mentions
+            if parsed_mentions.everyone {
+                let mut users_to_notify = Vec::new();
+                if channel_is_thread {
+                    if let Ok(members) = s_clone.data().thread_member_list_all(thread_id).await {
+                        users_to_notify.extend(members.into_iter().map(|m| m.user_id));
+                    }
+                } else if let Some(room_id) = room_id {
+                    if let Ok(members) = s_clone.data().room_member_list_all(room_id).await {
+                        users_to_notify.extend(members.into_iter().map(|m| m.user_id));
+                    }
+                }
+
+                for user_id in users_to_notify {
                     if user_id == author_id {
                         continue;
                     }
                     if notified_users.insert(user_id) {
-                        let notification = Notification {
-                            id: NotificationId::new(),
-                            channel_id: thread_id,
-                            message_id,
-                            reason: NotificationReason::MentionBulk,
-                            added_at: Time::now_utc(),
-                            read_at: None,
-                        };
-                        if let Err(e) = s_clone.data().notification_add(user_id, notification).await
+                        if let Err(e) = s_clone
+                            .data()
+                            .unread_increment_mentions(
+                                user_id,
+                                thread_id,
+                                message_id,
+                                message.version_id,
+                                1,
+                            )
+                            .await
                         {
                             error!(
-                                "Failed to add bulk mention notification for user {}: {}",
+                                "Failed to increment mention count for user {}: {}",
                                 user_id, e
                             );
                         }

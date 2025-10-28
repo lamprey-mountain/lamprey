@@ -15,3 +15,6 @@ pub const MAX_CUSTOM_EMOJI: u32 = 1024;
 
 /// the maximum number of pinned messages per channel. clients should be able to fetch everything in one request.
 pub const MAX_PINNED_MESSAGES: u32 = 1024;
+
+/// the maximum number of role members to add to a thread when a role is mentioned.
+pub const MAX_ROLE_MENTION_MEMBERS_ADD: u32 = 50;

@@ -38,6 +38,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			const is_mentioned = () => {
 				const me = self();
 				if (!me) return false;
+				if (!item.message.mentions) return false;
 
 				if (item.message.mentions.users.includes(me.id)) {
 					return true;

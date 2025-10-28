@@ -114,7 +114,7 @@ impl ServiceThreads {
                 recipients,
                 is_unread: Some(private_data.is_unread),
                 last_read_id: private_data.last_read_id.map(Into::into),
-                mention_count: Some(0), // TODO
+                mention_count: Some(private_data.mention_count as u64),
                 user_config: Some(user_config),
                 ..thread
             }
@@ -208,7 +208,7 @@ impl ServiceThreads {
                 channel.recipients = recipients;
                 channel.is_unread = Some(private_data.is_unread);
                 channel.last_read_id = private_data.last_read_id.map(Into::into);
-                channel.mention_count = Some(0); // TODO
+                channel.mention_count = Some(private_data.mention_count as u64);
                 channel.user_config = Some(user_config);
             }
         }
