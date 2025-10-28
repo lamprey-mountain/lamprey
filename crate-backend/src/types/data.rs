@@ -98,6 +98,8 @@ pub struct DbChannel {
     pub position: Option<i32>,
     pub bitrate: Option<i32>,
     pub user_limit: Option<i32>,
+    pub tags: Option<serde_json::Value>,
+    pub tags_available: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -185,8 +187,12 @@ impl From<DbChannel> for Channel {
             user_config: None,
             online_count: 0,
 
-            // TODO: store or calculate the fields below
-            tags: Default::default(),
+            tags: row
+                .tags
+                .map(|v| serde_json::from_value(v).unwrap_or_default()),
+            tags_available: row
+                .tags_available
+                .map(|v| serde_json::from_value(v).unwrap_or_default()),
             root_message_count: None,
         }
     }

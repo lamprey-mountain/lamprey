@@ -217,6 +217,26 @@ impl DataChannel for Postgres {
             }
         }
 
+        if let Some(tags) = &patch.tags {
+            query!(
+                "DELETE FROM channel_tag WHERE channel_id = $1",
+                thread_id.into_inner()
+            )
+            .execute(&mut *tx)
+            .await?;
+
+            if !tags.is_empty() {
+                let tag_ids: Vec<_> = tags.iter().map(|t| t.into_inner()).collect();
+                query!(
+                    "INSERT INTO channel_tag (channel_id, tag_id) SELECT $1, * FROM UNNEST($2::uuid[])",
+                    thread_id.into_inner(),
+                    &tag_ids
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
         let version_id = ChannelVerId::new();
 
         let archived_at = match patch.archived {

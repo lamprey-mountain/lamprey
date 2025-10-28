@@ -199,7 +199,6 @@ genid!(Session, "00000000-0000-0000-0000-00000session");
 genid!(AuditLogEntry, "00000000-0000-0000-0000-0auditlogent");
 genid!(Embed, "00000000-0000-0000-0new-0000000embed");
 genid!(Tag, "00000000-0000-0000-0000-000000000tag");
-genid!(TagVer, "00000000-0000-0000-0ver-000000000tag");
 genid!(Report, "00000000-0000-0000-0000-000modreport");
 genid!(Redex, "00000000-0000-0000-0000-0000000redex");
 genid!(Call, "00000000-0000-0000-0000-00000000call");

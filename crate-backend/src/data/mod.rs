@@ -10,6 +10,7 @@ use common::v1::types::notifications::{
 };
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::{SearchChannelsRequest, SearchMessageRequest};
+use common::v1::types::tag::{Tag, TagCreate, TagPatch};
 use common::v1::types::user_config::{
     UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
 };
@@ -23,7 +24,7 @@ use common::v1::types::{
     PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch, RelationshipWithUserId,
     Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
     RoomMemberSearchAdvanced, RoomMemberSearchResponse, RoomMembership, RoomMetrics, SessionPatch,
-    SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
+    SessionStatus, SessionToken, Suspended, TagId, ThreadMember, ThreadMemberPut, ThreadMembership,
     UserListFilter, WebhookId,
 };
 
@@ -72,6 +73,7 @@ pub trait Data:
     + DataDm
     + DataNotification
     + DataWebhook
+    + DataTag
     + Send
     + Sync
 {
@@ -185,6 +187,15 @@ pub trait DataRoomMember {
         room_id: RoomId,
         paginate: PaginationQuery<ApplicationId>,
     ) -> Result<PaginationResponse<ApplicationId>>;
+}
+
+#[async_trait]
+pub trait DataTag {
+    async fn tag_create(&self, forum_channel_id: ChannelId, create: TagCreate) -> Result<Tag>;
+    async fn tag_update(&self, tag_id: TagId, patch: TagPatch) -> Result<Tag>;
+    async fn tag_delete(&self, tag_id: TagId) -> Result<()>;
+    async fn tag_get(&self, tag_id: TagId) -> Result<Tag>;
+    async fn tag_get_forum_id(&self, tag_id: TagId) -> Result<ChannelId>;
 }
 
 #[async_trait]

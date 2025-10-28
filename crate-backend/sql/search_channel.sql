@@ -54,7 +54,9 @@ select
     coalesce(message_count.count, 0) as "message_count!",
     coalesce(member_count.count, 0) as "member_count!",
     last_version_id as "last_version_id",
-    coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!"
+    coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!",
+    (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = channel.id) as tags,
+    (SELECT json_agg(tag.*) FROM tag WHERE channel_id = channel.id) as tags_available
 from channel
 join channel_viewer on channel.id = channel_viewer.id
 left join message_count on message_count.channel_id = channel.id

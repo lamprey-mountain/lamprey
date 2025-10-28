@@ -6,6 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::tag::Tag;
 use crate::v1::types::user_config::UserConfigChannel;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
@@ -49,10 +50,13 @@ pub struct Channel {
     /// number of people who are online in this room
     pub online_count: u64,
 
-    // TODO(#72): tags
     /// tags that are applied to this thread
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
-    pub tags: Vec<TagId>,
+    pub tags: Option<Vec<TagId>>,
+
+    /// the tags that are available in this forum. exists on Forum channels only.
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    pub tags_available: Option<Vec<Tag>>,
 
     // TODO: rename to removed_at
     pub deleted_at: Option<Time>,
@@ -302,5 +306,14 @@ impl ChannelType {
 
     pub fn has_voice(&self) -> bool {
         matches!(self, ChannelType::Voice)
+    }
+
+    /// for a thread to be taggable, it must be in a channel with has_tags
+    pub fn is_taggable(&self) -> bool {
+        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate)
+    }
+
+    pub fn has_tags(&self) -> bool {
+        matches!(self, ChannelType::Forum)
     }
 }

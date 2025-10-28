@@ -31,6 +31,7 @@ mod room;
 mod room_member;
 mod search;
 mod session;
+mod tag;
 mod thread;
 mod thread_member;
 mod unread;

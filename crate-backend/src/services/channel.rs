@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -331,6 +332,28 @@ impl ServiceThreads {
                 common::v1::types::MediaTrackInfo::Image(_)
             ) {
                 return Err(Error::BadStatic("media not an image"));
+            }
+        }
+
+        if let Some(tags) = &patch.tags {
+            if !chan_old.ty.is_taggable() {
+                return Err(Error::BadStatic("channel is not taggable"));
+            }
+            perms.ensure(Permission::TagApply)?;
+            // check if all tags are valid for this forum
+            let forum_id = chan_old
+                .parent_id
+                .ok_or(Error::BadStatic("thread has no parent forum"))?;
+
+            let forum_channel = self.get(forum_id, None).await?;
+            let available_tags = forum_channel.tags_available.unwrap_or_default();
+
+            let available_tag_ids: HashSet<_> = available_tags.iter().map(|t| t.id).collect();
+
+            for tag_id in tags {
+                if !available_tag_ids.contains(tag_id) {
+                    return Err(Error::BadStatic("invalid tag for this forum"));
+                }
             }
         }
 

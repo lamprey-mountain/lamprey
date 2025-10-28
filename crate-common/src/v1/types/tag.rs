@@ -6,16 +6,14 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{misc::Color, util::some_option, Channel, Room, RoomId, TagId, TagVerId};
+use crate::v1::types::{misc::Color, util::some_option, TagId};
 
-/// a tag that can be applied to things
+/// a tag that can be applied to a thread
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Tag {
     pub id: TagId,
-    pub version_id: TagVerId,
-    pub room_id: RoomId,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
@@ -29,46 +27,38 @@ pub struct Tag {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub color: Option<Color>,
 
-    /// whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists.
-    pub is_archived: bool,
-    // /// whether this tag is exclusive. functions similarly to forgejo
-    // pub is_exclusive: bool,
+    /// whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker.
+    pub archived: bool,
 
-    // /// restrict who can apply this tag. default: everyone
-    // pub restrict: Option<Vec<RoleId>>,
+    /// only members with ThreadEdit or ThreadManage can apply this tag
+    pub restricted: bool,
 
-    // /// if this tag includes other tags (composition). ie. tag `fruits` might include `apples` and `oranges`
-    // // maybe don't include it here..?
-    // pub includes: Option<Vec<TagId>>,
-    // pub thread_count: u64,
-    // pub active_thread_count: u64,
-    // /// threads with this tag are hidden by default. does NOT prevent people from viewing those threads though, ie. not a permission.
-    // pub is_default_hidden: bool,
+    /// total number of threads with this tag (excluding archived threads)
+    pub active_thread_count: u64,
+
+    /// total number of threads with this tag (including archived threads)
+    pub total_thread_count: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TagCreate {
-    pub room_id: RoomId,
-
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
-    /// the color of this tag
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub color: Option<Color>,
+
+    #[serde(default)]
+    pub restricted: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TagPatch {
@@ -84,40 +74,9 @@ pub struct TagPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    /// the color of this tag
     #[serde(default, deserialize_with = "some_option")]
     pub color: Option<Option<Color>>,
 
-    /// whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists.
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
-    pub is_archived: Option<bool>,
+    pub archived: Option<bool>,
+    pub restricted: Option<bool>,
 }
-
-/// something that can a tag can be applied to
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum Taggable {
-    Room(Room),
-    Thread(Channel),
-    Tag(Tag),
-}
-
-// // instead of the current system, i cold also do something closer to docker labels
-// mod next {
-//     pub struct Tag {
-//         pub id: TagId,
-//         pub name: String,
-//         pub description: Option<String>,
-//         pub color: Option<Color>,
-//         pub archived: bool,
-//         pub roles: Vec<RoleId>, // only these roles can apply this tag
-//         pub thread_count: u64,
-//     }
-
-//     pub struct TagApply {
-//         pub tag_id: TagId,
-//         pub value: Option<String>,
-//     }
-
-//     // when searching threads, you can filter by "tag exists" and "tag value = something"
-// }
