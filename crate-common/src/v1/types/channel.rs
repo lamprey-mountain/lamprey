@@ -304,6 +304,19 @@ impl ChannelType {
         )
     }
 
+    /// whether public threads can be created inside this channel
+    pub fn has_public_threads(&self) -> bool {
+        matches!(
+            self,
+            ChannelType::Text | ChannelType::Dm | ChannelType::Gdm | ChannelType::Forum
+        )
+    }
+
+    /// whether private threads can be created inside this channel
+    pub fn has_private_threads(&self) -> bool {
+        matches!(self, ChannelType::Text | ChannelType::Dm | ChannelType::Gdm)
+    }
+
     pub fn has_voice(&self) -> bool {
         matches!(self, ChannelType::Voice)
     }

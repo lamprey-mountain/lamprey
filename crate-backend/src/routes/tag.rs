@@ -6,12 +6,19 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::tag::{Tag, TagCreate, TagPatch};
-use common::v1::types::{ChannelId, TagId};
+use common::v1::types::{
+    tag::{Tag, TagCreate, TagPatch},
+    util::Changes,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, Permission, TagId,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::{error::Result, routes::util::Auth, types::Permission, Error, ServerState};
+use crate::{
+    error::Result,
+    routes::util::{Auth, HeaderReason},
+    Error, ServerState,
+};
 
 /// Create a tag
 #[utoipa::path(
@@ -27,6 +34,7 @@ pub async fn tag_create(
     Path(channel_id): Path<ChannelId>,
     State(s): State<Arc<ServerState>>,
     Auth(user): Auth,
+    HeaderReason(reason): HeaderReason,
     Json(create): Json<TagCreate>,
 ) -> Result<impl IntoResponse> {
     user.ensure_unsuspended()?;
@@ -40,7 +48,42 @@ pub async fn tag_create(
         return Err(Error::BadStatic("channel does not support tags"));
     }
 
+    let chan_old = srv.channels.get(channel_id, Some(user.id)).await?;
     let tag = s.data().tag_create(channel_id, create).await?;
+
+    srv.channels.invalidate(channel_id).await;
+    let chan_new = srv.channels.get(channel_id, Some(user.id)).await?;
+
+    if let Some(room_id) = chan_new.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: user.id,
+            session_id: None,
+            reason: reason.clone(), // No reason header here
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
+                channel_type: chan_new.ty,
+                changes: Changes::new()
+                    .change(
+                        "tags_available",
+                        &chan_old.tags_available,
+                        &chan_new.tags_available,
+                    )
+                    .build(),
+            },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        channel_id,
+        user.id,
+        MessageSync::ChannelUpdate {
+            channel: Box::new(chan_new),
+        },
+    )
+    .await?;
 
     Ok((StatusCode::CREATED, Json(tag)))
 }
@@ -62,6 +105,7 @@ pub async fn tag_update(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     State(s): State<Arc<ServerState>>,
     Auth(user): Auth,
+    HeaderReason(reason): HeaderReason,
     Json(patch): Json<TagPatch>,
 ) -> Result<impl IntoResponse> {
     user.ensure_unsuspended()?;
@@ -75,7 +119,42 @@ pub async fn tag_update(
         return Err(Error::NotFound);
     }
 
+    let chan_old = srv.channels.get(channel_id, Some(user.id)).await?;
     let tag = s.data().tag_update(tag_id, patch).await?;
+
+    srv.channels.invalidate(channel_id).await;
+    let chan_new = srv.channels.get(channel_id, Some(user.id)).await?;
+
+    if let Some(room_id) = chan_new.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
+                channel_type: chan_new.ty,
+                changes: Changes::new()
+                    .change(
+                        "tags_available",
+                        &chan_old.tags_available,
+                        &chan_new.tags_available,
+                    )
+                    .build(),
+            },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        channel_id,
+        user.id,
+        MessageSync::ChannelUpdate {
+            channel: Box::new(chan_new),
+        },
+    )
+    .await?;
 
     Ok((StatusCode::OK, Json(tag)))
 }
@@ -97,6 +176,7 @@ pub async fn tag_delete(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     State(s): State<Arc<ServerState>>,
     Auth(user): Auth,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     user.ensure_unsuspended()?;
     let srv = s.services();
@@ -108,7 +188,42 @@ pub async fn tag_delete(
         return Err(Error::NotFound);
     }
 
+    let chan_old = srv.channels.get(channel_id, Some(user.id)).await?;
     s.data().tag_delete(tag_id).await?;
+
+    srv.channels.invalidate(channel_id).await;
+    let chan_new = srv.channels.get(channel_id, Some(user.id)).await?;
+
+    if let Some(room_id) = chan_new.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
+                channel_type: chan_new.ty,
+                changes: Changes::new()
+                    .change(
+                        "tags_available",
+                        &chan_old.tags_available,
+                        &chan_new.tags_available,
+                    )
+                    .build(),
+            },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        channel_id,
+        user.id,
+        MessageSync::ChannelUpdate {
+            channel: Box::new(chan_new),
+        },
+    )
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

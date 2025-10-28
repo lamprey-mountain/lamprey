@@ -387,6 +387,7 @@ impl ServiceThreads {
                                 &chan_new.archived_at.is_some(),
                             )
                             .change("locked", &chan_old.locked, &chan_new.locked)
+                            .change("tags", &chan_old.tags, &chan_new.tags)
                             .build(),
                     },
                 })
