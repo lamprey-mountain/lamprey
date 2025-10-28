@@ -87,6 +87,11 @@ async fn friend_add(
 
     let data = s.data();
 
+    let target_user = data.user_get(target_user_id).await?;
+    if !target_user.can_friend() {
+        return Err(Error::BadStatic("cannot friend this user"));
+    }
+
     let existing = data
         .user_relationship_get(auth_user.id, target_user_id)
         .await?;

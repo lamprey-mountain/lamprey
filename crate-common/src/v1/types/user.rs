@@ -369,3 +369,15 @@ pub struct UserListParams {
 pub struct SuspendRequest {
     pub expires_at: Option<Time>,
 }
+
+impl User {
+    /// whether a direct message can be created with this user
+    pub fn can_dm(&self) -> bool {
+        self.webhook.is_none()
+    }
+
+    /// whether a friend request can be sent to this user
+    pub fn can_friend(&self) -> bool {
+        self.webhook.is_none() && self.bot.is_none() && self.puppet.is_none()
+    }
+}

@@ -35,6 +35,10 @@ async fn dm_init(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
+    let target_user = s.data().user_get(target_user_id).await?;
+    if !target_user.can_dm() {
+        return Err(Error::BadStatic("cannot dm this user"));
+    }
     let (thread, is_new) = srv.users.init_dm(auth_user.id, target_user_id).await?;
     s.broadcast(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
