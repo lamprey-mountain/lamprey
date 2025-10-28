@@ -4,17 +4,18 @@ use std::time::Duration;
 
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelId, ChannelPatch,
-    ChannelType, MessageSync, MessageThreadRename, MessageType, PaginationQuery, Permission,
-    RoomId, User, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
+    ChannelPatch, ChannelType, MessageSync, MessageThreadRename, MessageType, PaginationQuery,
+    Permission, RoomId, ThreadMemberPut, User, UserId,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
 use moka::future::Cache;
 use time::OffsetDateTime;
+use tracing::warn;
 
 use crate::error::{Error, Result};
-use crate::types::{DbChannelPrivate, DbMessageCreate};
+use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 use crate::ServerStateInner;
 
 // TODO: split caches more
@@ -245,6 +246,147 @@ impl ServiceThreads {
         self.cache_thread_private
             .invalidate(&(thread_id, user_id))
             .await
+    }
+
+    pub async fn create_channel(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+        reason: Option<String>,
+        json: ChannelCreate,
+    ) -> Result<Channel> {
+        let srv = self.state.services();
+        let data = self.state.data();
+        let perms = if let Some(parent_id) = json.parent_id {
+            srv.perms.for_channel(user_id, parent_id).await?
+        } else {
+            srv.perms.for_room(user_id, room_id).await?
+        };
+        perms.ensure(Permission::ViewChannel)?;
+        match json.ty {
+            ChannelType::Text | ChannelType::Forum | ChannelType::Voice | ChannelType::Category => {
+                perms.ensure(Permission::ChannelManage)?;
+            }
+            ChannelType::ThreadPublic => {
+                let parent_id = json
+                    .parent_id
+                    .ok_or(Error::BadStatic("threads must have a parent channel"))?;
+                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                if !matches!(parent.ty, ChannelType::Text | ChannelType::Forum) {
+                    return Err(Error::BadStatic(
+                        "threads can only be created in text or forum channels",
+                    ));
+                }
+                perms.ensure(Permission::ThreadCreatePublic)?;
+            }
+            ChannelType::ThreadPrivate => {
+                let parent_id = json
+                    .parent_id
+                    .ok_or(Error::BadStatic("threads must have a parent channel"))?;
+                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                if !matches!(parent.ty, ChannelType::Text | ChannelType::Forum) {
+                    return Err(Error::BadStatic(
+                        "threads can only be created in text or forum channels",
+                    ));
+                }
+                perms.ensure(Permission::ThreadCreatePrivate)?;
+            }
+            ChannelType::Calendar => return Err(Error::BadStatic("not yet implemented")),
+            ChannelType::Dm | ChannelType::Gdm => {
+                return Err(Error::BadStatic(
+                    "can't create a direct message thread in a room",
+                ))
+            }
+        };
+        if json.bitrate.is_some_and(|b| b > 393216) {
+            return Err(Error::BadStatic("bitrate is too high"));
+        }
+        if json.ty != ChannelType::Voice && json.bitrate.is_some() {
+            return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
+        }
+        if json.ty != ChannelType::Voice && json.user_limit.is_some() {
+            return Err(Error::BadStatic(
+                "cannot set user_limit for non voice thread",
+            ));
+        }
+        let channel_id = data
+            .channel_create(DbChannelCreate {
+                room_id: Some(room_id.into_inner()),
+                creator_id: user_id,
+                name: json.name.clone(),
+                description: json.description.clone(),
+                ty: match json.ty {
+                    ChannelType::Text => DbChannelType::Text,
+                    ChannelType::Forum => DbChannelType::Forum,
+                    ChannelType::Voice => DbChannelType::Voice,
+                    ChannelType::Category => DbChannelType::Category,
+                    ChannelType::ThreadPublic => DbChannelType::ThreadPublic,
+                    ChannelType::ThreadPrivate => DbChannelType::ThreadPrivate,
+                    ChannelType::Calendar => return Err(Error::BadStatic("not yet implemented")),
+                    ChannelType::Dm | ChannelType::Gdm => {
+                        // this should be unreachable due to the check above
+                        warn!("unreachable: dm/gdm thread creation in room");
+                        return Err(Error::BadStatic(
+                            "can't create a direct message thread in a room",
+                        ));
+                    }
+                },
+                nsfw: json.nsfw,
+                bitrate: json.bitrate.map(|b| b as i32),
+                user_limit: json.user_limit.map(|u| u as i32),
+                parent_id: json.parent_id.map(|i| *i),
+                owner_id: None,
+                icon: None,
+            })
+            .await?;
+
+        data.thread_member_put(channel_id, user_id, ThreadMemberPut {})
+            .await?;
+        let thread_member = data.thread_member_get(channel_id, user_id).await?;
+
+        let channel = srv.channels.get(channel_id, Some(user_id)).await?;
+        self.state
+            .audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::ChannelCreate {
+                    channel_id,
+                    channel_type: channel.ty,
+                    changes: Changes::new()
+                        .add("name", &channel.name)
+                        .add("description", &channel.description)
+                        .add("nsfw", &channel.nsfw)
+                        .add("user_limit", &channel.user_limit)
+                        .add("bitrate", &channel.bitrate)
+                        .add("type", &channel.ty)
+                        .build(),
+                },
+            })
+            .await?;
+
+        self.state
+            .broadcast_room(
+                room_id,
+                user_id,
+                MessageSync::ChannelCreate {
+                    channel: Box::new(channel.clone()),
+                },
+            )
+            .await?;
+        self.state
+            .broadcast_channel(
+                channel.id,
+                user_id,
+                MessageSync::ThreadMemberUpsert {
+                    member: thread_member,
+                },
+            )
+            .await?;
+
+        Ok(channel)
     }
 
     pub async fn update(

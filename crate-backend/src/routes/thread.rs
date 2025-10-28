@@ -4,9 +4,9 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelId, MessageMember,
-    MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission, ThreadMember,
-    ThreadMemberPut, ThreadMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
+    ChannelType, MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse,
+    Permission, ThreadCreate, ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -415,8 +415,70 @@ pub async fn thread_list_removed(
     Ok(Json(res))
 }
 
+/// Thread create
+#[utoipa::path(
+    post,
+    path = "/channel/{channel_id}/thread",
+    params(("channel_id", description = "Parent channel id")),
+    tags = [
+        "thread",
+        "badge.perm-opt.ThreadCreatePublic",
+        "badge.perm-opt.ThreadCreatePrivate",
+    ],
+    responses(
+        (status = CREATED, body = Channel, description = "Create thread success"),
+    )
+)]
+pub async fn thread_create(
+    Path(parent_id): Path<ChannelId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<ThreadCreate>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    json.validate()?;
+
+    if !matches!(
+        json.ty,
+        ChannelType::ThreadPublic | ChannelType::ThreadPrivate
+    ) {
+        return Err(Error::BadStatic("invalid thread type"));
+    }
+
+    let parent_channel = s
+        .services()
+        .channels
+        .get(parent_id, Some(auth_user.id))
+        .await?;
+    let room_id = parent_channel
+        .room_id
+        .ok_or(Error::BadStatic("Parent channel not in a room"))?;
+
+    let channel_create = ChannelCreate {
+        name: json.name,
+        description: json.description,
+        icon: None,
+        ty: json.ty,
+        tags: json.tags,
+        nsfw: json.nsfw,
+        recipients: None,
+        bitrate: None,
+        user_limit: None,
+        parent_id: Some(parent_id),
+    };
+
+    let channel = s
+        .services()
+        .channels
+        .create_channel(auth_user.id, room_id, reason, channel_create)
+        .await?;
+    Ok((StatusCode::CREATED, Json(channel)))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
+        .routes(routes!(thread_create))
         .routes(routes!(thread_member_list))
         .routes(routes!(thread_member_get))
         .routes(routes!(thread_member_add))

@@ -185,6 +185,34 @@ pub struct ChannelCreate {
     // pub starter_message: MessageCreate,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "validator", derive(Validate))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ThreadCreate {
+    #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    pub name: String,
+
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, max_length = 1, min_length = 2048)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
+    pub description: Option<String>,
+
+    /// The type of this thread. Must be ThreadPublic or ThreadPrivate.
+    #[serde(default, rename = "type")]
+    pub ty: ChannelType,
+
+    /// tags to apply to this thread (overwrite, not append)
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    pub tags: Option<Vec<TagId>>,
+
+    /// not safe for work
+    #[serde(default)]
+    pub nsfw: bool,
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
