@@ -6,10 +6,14 @@ use std::time::Duration;
 use tracing::error;
 
 use common::v1::types::misc::Color;
-use common::v1::types::util::Diff;
+
+use common::v1::types::notifications::{Notification, NotificationReason};
+
+use common::v1::types::util::{Diff, Time};
+
 use common::v1::types::{
     ChannelId, ChannelPatch, Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId,
-    MessagePatch, MessageSync, MessageType, Permission, ThreadMembership,
+    MessagePatch, MessageSync, MessageType, NotificationId, Permission, ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -287,6 +291,20 @@ impl ServiceMessages {
                             user_id, e
                         );
                     }
+                    let notification = Notification {
+                        id: NotificationId::new(),
+                        channel_id: thread_id,
+                        message_id,
+                        reason: NotificationReason::Mention,
+                        added_at: Time::now_utc(),
+                        read_at: None,
+                    };
+                    if let Err(e) = s_clone.data().notification_add(user_id, notification).await {
+                        error!(
+                            "Failed to add mention notification for user {}: {}",
+                            user_id, e
+                        );
+                    }
                 }
             }
 
@@ -341,6 +359,24 @@ impl ServiceMessages {
                                         member.user_id, e
                                     );
                                 }
+                                let notification = Notification {
+                                    id: NotificationId::new(),
+                                    channel_id: thread_id,
+                                    message_id,
+                                    reason: NotificationReason::Mention,
+                                    added_at: Time::now_utc(),
+                                    read_at: None,
+                                };
+                                if let Err(e) = s_clone
+                                    .data()
+                                    .notification_add(member.user_id, notification)
+                                    .await
+                                {
+                                    error!(
+                                        "Failed to add role mention notification for user {}: {}",
+                                        member.user_id, e
+                                    );
+                                }
                             }
                         }
                     }
@@ -381,11 +417,25 @@ impl ServiceMessages {
                                 user_id, e
                             );
                         }
+                        let notification = Notification {
+                            id: NotificationId::new(),
+                            channel_id: thread_id,
+                            message_id,
+                            reason: NotificationReason::MentionBulk,
+                            added_at: Time::now_utc(),
+                            read_at: None,
+                        };
+                        if let Err(e) = s_clone.data().notification_add(user_id, notification).await
+                        {
+                            error!(
+                                "Failed to add everyone mention notification for user {}: {}",
+                                user_id, e
+                            );
+                        }
                     }
                 }
             }
         });
-
         Ok(message)
     }
 
