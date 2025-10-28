@@ -415,6 +415,7 @@ impl LampreyHandle {
                     user_limit: None,
                     parent_id,
                     icon: None,
+                    permission_overwrites: vec![],
                 },
             )
             .await?;

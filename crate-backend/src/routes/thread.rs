@@ -6,7 +6,7 @@ use axum::{extract::State, Json};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
     ChannelType, MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse,
-    Permission, ThreadCreate, ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
+    Permission, ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -434,7 +434,7 @@ pub async fn thread_create(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<ThreadCreate>,
+    Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
@@ -455,24 +455,14 @@ pub async fn thread_create(
         .room_id
         .ok_or(Error::BadStatic("Parent channel not in a room"))?;
 
-    let channel_create = ChannelCreate {
-        name: json.name,
-        description: json.description,
-        icon: None,
-        ty: json.ty,
-        tags: json.tags,
-        nsfw: json.nsfw,
-        recipients: None,
-        bitrate: None,
-        user_limit: None,
-        parent_id: Some(parent_id),
-    };
+    json.parent_id = Some(parent_id);
 
     let channel = s
         .services()
         .channels
-        .create_channel(auth_user.id, room_id, reason, channel_create)
+        .create_channel(auth_user.id, room_id, reason, json)
         .await?;
+
     Ok((StatusCode::CREATED, Json(channel)))
 }
 

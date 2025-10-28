@@ -340,6 +340,17 @@ impl ServiceThreads {
             })
             .await?;
 
+        for overwrite in json.permission_overwrites {
+            data.permission_overwrite_upsert(
+                channel_id,
+                overwrite.id,
+                overwrite.ty,
+                overwrite.allow,
+                overwrite.deny,
+            )
+            .await?;
+        }
+
         data.thread_member_put(channel_id, user_id, ThreadMemberPut {})
             .await?;
         let thread_member = data.thread_member_get(channel_id, user_id).await?;
