@@ -1,10 +1,9 @@
 use async_trait::async_trait;
 use common::v1::types::{
     notifications::{
-        InboxChannelsParams, InboxListParams, Notification, NotificationFlush,
-        NotificationMarkRead, NotificationReason,
+        InboxListParams, Notification, NotificationFlush, NotificationMarkRead, NotificationReason,
     },
-    Channel, NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
+    NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use uuid::Uuid;
@@ -13,7 +12,7 @@ use crate::{
     data::DataNotification,
     error::Result,
     gen_paginate,
-    types::{ChannelId, DbChannel, DbChannelType, DbNotification, UserId},
+    types::{DbNotification, UserId},
 };
 
 use super::Postgres;
@@ -251,51 +250,5 @@ impl DataNotification for Postgres {
         .await?;
 
         Ok(())
-    }
-
-    async fn notification_list_channels(
-        &self,
-        user_id: UserId,
-        pagination: PaginationQuery<ChannelId>,
-        _params: InboxChannelsParams,
-        list_params: InboxListParams,
-    ) -> Result<PaginationResponse<Channel>> {
-        let p: super::Pagination<_> = pagination.try_into()?;
-
-        let room_ids: Vec<Uuid> = list_params
-            .room_id
-            .iter()
-            .map(|id| id.into_inner())
-            .collect();
-        let channel_ids: Vec<Uuid> = list_params
-            .channel_id
-            .iter()
-            .map(|id| id.into_inner())
-            .collect();
-
-        gen_paginate!(
-            p,
-            self.pool,
-            query_file_as!(
-                DbChannel,
-                "sql/notification_list_threads.sql",
-                user_id.into_inner(),
-                list_params.include_read,
-                &room_ids,
-                &channel_ids,
-                p.after.into_inner(),
-                p.before.into_inner(),
-                p.dir.to_string(),
-                (p.limit + 1) as i32,
-            ),
-            query_file_scalar!(
-                "sql/notification_list_threads_count.sql",
-                user_id.into_inner(),
-                list_params.include_read,
-                &room_ids,
-                &channel_ids,
-            ),
-            |i: &Channel| i.id.to_string()
-        )
     }
 }

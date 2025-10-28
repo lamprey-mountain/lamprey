@@ -6,7 +6,7 @@ use common::v1::types::calendar::{
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::{
-    InboxChannelsParams, InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
+    InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::{SearchChannelsRequest, SearchMessageRequest};
@@ -963,13 +963,6 @@ pub trait DataNotification {
         params: NotificationMarkRead,
     ) -> Result<()>;
     async fn notification_flush(&self, user_id: UserId, params: NotificationFlush) -> Result<()>;
-    async fn notification_list_channels(
-        &self,
-        user_id: UserId,
-        pagination: PaginationQuery<ChannelId>,
-        params: InboxChannelsParams,
-        list_params: InboxListParams,
-    ) -> Result<PaginationResponse<Channel>>;
 }
 
 #[async_trait]

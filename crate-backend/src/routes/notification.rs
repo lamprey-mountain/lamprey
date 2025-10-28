@@ -5,13 +5,10 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::notifications::{
-    InboxChannelsParams, InboxListParams, Notification, NotificationCreate, NotificationFlush,
-    NotificationMarkRead, NotificationPagination, NotificationReason,
+    InboxListParams, Notification, NotificationCreate, NotificationFlush, NotificationMarkRead,
+    NotificationPagination, NotificationReason,
 };
-use common::v1::types::PaginationResponse;
-use common::v1::types::{
-    util::Time, Channel, ChannelId, NotificationId, PaginationQuery, Permission,
-};
+use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -126,40 +123,6 @@ async fn inbox_post(
     Ok((StatusCode::CREATED, Json(notif)))
 }
 
-/// Inbox channels
-///
-/// Get a list of all unread channel
-#[utoipa::path(
-    get,
-    path = "/inbox/channels",
-    tags = ["inbox"],
-    params(PaginationQuery<ThreadId>, InboxListParams, InboxChannelsParams),
-    responses((status = OK, body = PaginationResponse<Channel>, description = "success"))
-)]
-#[deprecated]
-async fn inbox_channels(
-    Auth(auth_user): Auth,
-    Query(pagination): Query<PaginationQuery<ChannelId>>,
-    Query(inbox_params): Query<InboxListParams>,
-    Query(thread_params): Query<InboxChannelsParams>,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let mut res = s
-        .data()
-        .notification_list_channels(auth_user.id, pagination, thread_params, inbox_params)
-        .await?;
-
-    for thread in &mut res.items {
-        *thread = s
-            .services()
-            .channels
-            .get(thread.id, Some(auth_user.id))
-            .await?;
-    }
-
-    Ok(Json(res))
-}
-
 /// Inbox mark read
 #[utoipa::path(
     post,
@@ -216,7 +179,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(inbox_get))
         .routes(routes!(inbox_post))
-        .routes(routes!(inbox_channels))
         .routes(routes!(inbox_mark_read))
         .routes(routes!(inbox_mark_unread))
         .routes(routes!(inbox_flush))

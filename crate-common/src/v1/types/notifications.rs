@@ -242,33 +242,6 @@ pub struct NotificationFlush {
     pub include_unread: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-pub struct InboxChannelsParams {
-    /// the order to return inbox channels in
-    pub order: InboxChannelsOrder,
-    // /// only return threads instead of threads and channels
-    // pub threads: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename_all = "lowercase")]
-pub enum InboxChannelsOrder {
-    /// most active channels first (order by last_version_id desc)
-    Activity,
-
-    /// last active channels first (order by last_version_id asc)
-    // NOTE: not sure how useful this is, but including for completeness
-    Inactivity,
-
-    /// most recently created channels first (order by id desc)
-    Newest,
-
-    /// most recently created channels first (order by id desc)
-    Oldest,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotificationPagination {

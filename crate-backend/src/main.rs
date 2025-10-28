@@ -60,7 +60,6 @@ mod util;
         types::emoji::EmojiCustom,
         types::emoji::EmojiOwner,
         types::reaction::ReactionKey,
-        types::notifications::InboxChannelsOrder,
     )),
     info(
         title = "api doccery",
