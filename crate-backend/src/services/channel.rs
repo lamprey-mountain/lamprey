@@ -325,6 +325,20 @@ impl ServiceThreads {
                 "cannot set user_limit for non voice thread",
             ));
         }
+        if !json.ty.has_icon() && json.icon.is_some() {
+            return Err(Error::BadStatic("this channel type cannot have an icon"));
+        }
+
+        if let Some(icon) = json.icon {
+            let (media, _) = data.media_select(icon).await?;
+            if !matches!(
+                media.source.info,
+                common::v1::types::MediaTrackInfo::Image(_)
+            ) {
+                return Err(Error::BadStatic("media not an image"));
+            }
+        }
+
         let channel_id = data
             .channel_create(DbChannelCreate {
                 room_id: room_id.map(|id| id.into_inner()),
@@ -352,10 +366,19 @@ impl ServiceThreads {
                 user_limit: json.user_limit.map(|u| u as i32),
                 parent_id: json.parent_id.map(|i| *i),
                 owner_id: None,
-                icon: None,
+                icon: json.icon.map(|i| *i),
                 invitable: json.invitable,
             })
             .await?;
+
+        if let Some(icon) = json.icon {
+            data.media_link_create_exclusive(
+                icon,
+                *channel_id,
+                crate::types::MediaLinkType::IconThread,
+            )
+            .await?;
+        }
 
         for overwrite in json.permission_overwrites {
             data.permission_overwrite_upsert(
