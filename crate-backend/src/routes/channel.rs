@@ -563,6 +563,9 @@ struct AckReq {
 
     /// The last read id in this channel.
     version_id: MessageVerId,
+
+    /// The new mention count. Defaults to 0.
+    mention_count: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -609,8 +612,14 @@ async fn channel_ack(
             .await?
             .id
     };
-    data.unread_put(auth_user.id, channel_id, message_id, version_id)
-        .await?;
+    data.unread_ack(
+        auth_user.id,
+        channel_id,
+        message_id,
+        version_id,
+        json.mention_count,
+    )
+    .await?;
     s.services()
         .channels
         .invalidate_user(channel_id, auth_user.id)

@@ -505,12 +505,13 @@ pub trait DataChannel {
 
 #[async_trait]
 pub trait DataUnread {
-    async fn unread_put(
+    async fn unread_ack(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
+        mention_count: Option<u64>,
     ) -> Result<()>;
     async fn unread_put_all_in_room(
         &self,

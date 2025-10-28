@@ -6,12 +6,10 @@ use std::time::Duration;
 use tracing::error;
 
 use common::v1::types::misc::Color;
-use common::v1::types::notifications::{Notification, NotificationReason};
-use common::v1::types::util::{Diff, Time};
+use common::v1::types::util::Diff;
 use common::v1::types::{
     ChannelId, ChannelPatch, Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId,
-    MessagePatch, MessageSync, MessageType, NotificationId, PaginationQuery, Permission,
-    ThreadMembership,
+    MessagePatch, MessageSync, MessageType, Permission, ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -293,7 +291,7 @@ impl ServiceMessages {
             }
 
             // Role mentions
-            if let Some(room_id) = room_id {
+            if let Some(_room_id) = room_id {
                 for role_id in parsed_mentions.roles {
                     if let Ok(members) = s_clone
                         .data()

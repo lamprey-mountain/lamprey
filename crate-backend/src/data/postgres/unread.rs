@@ -11,25 +11,29 @@ use super::Postgres;
 
 #[async_trait]
 impl DataUnread for Postgres {
-    async fn unread_put(
+    async fn unread_ack(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
+        mention_count: Option<u64>,
     ) -> Result<()> {
+        let mention_count = mention_count.unwrap_or(0) as i32;
         query!(
             r#"
-			INSERT INTO unread (channel_id, user_id, message_id, version_id)
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO unread (channel_id, user_id, message_id, version_id, mention_count)
+			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET
     			message_id = excluded.message_id,
-    			version_id = excluded.version_id;
-        "#,
+    			version_id = excluded.version_id,
+            mention_count = excluded.mention_count;
+            "#,
             *channel_id,
             *user_id,
             *message_id,
-            *version_id
+            *version_id,
+            mention_count
         )
         .execute(&self.pool)
         .await?;
