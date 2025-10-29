@@ -85,7 +85,7 @@
               [ pkgs.dockerTools.caCertificates pkgs.ffmpeg-headless pkgs.file ];
             config = {
               Entrypoint =
-                [ "${pkgs.tini}/bin/tini" "--" "${backend}/bin/backend" ];
+                [ "${pkgs.tini}/bin/tini" "--" "${backend}/bin/lamprey" ];
             };
           };
 
