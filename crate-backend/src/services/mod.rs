@@ -11,12 +11,13 @@ use room::ServiceRooms;
 use sessions::ServiceSessions;
 use users::ServiceUsers;
 
-use crate::ServerStateInner;
+use crate::{services::members::ServiceMembers, ServerStateInner};
 
 pub mod channel;
 pub mod email;
 pub mod embed;
 pub mod media;
+pub mod members;
 pub mod messages;
 pub mod oauth2;
 pub mod permissions;
@@ -27,6 +28,7 @@ pub mod users;
 pub struct Services {
     pub(super) state: Arc<ServerStateInner>,
     pub media: ServiceMedia,
+    pub members: ServiceMembers,
     pub messages: ServiceMessages,
     pub perms: ServicePermissions,
     pub rooms: ServiceRooms,
@@ -43,6 +45,7 @@ impl Services {
         Self {
             embed: ServiceEmbed::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
+            members: ServiceMembers::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),
             perms: ServicePermissions::new(state.clone()),
             rooms: ServiceRooms::new(state.clone()),

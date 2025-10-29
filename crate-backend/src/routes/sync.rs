@@ -44,6 +44,19 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
 
     loop {
         tokio::select! {
+            member_list_res = conn.member_list.next() => {
+                match member_list_res {
+                    Ok(msg) => {
+                        if let Err(err) = conn.queue_message(Box::new(msg)).await {
+                            tracing::error!("failed to queue member list message: {err}");
+                        }
+                    }
+                    Err(err) => {
+                        let _ = ws.send(err.into()).await;
+                        break;
+                    }
+                }
+            }
             ws_msg = ws.recv() => {
                 match ws_msg {
                     Some(Ok(Message::Close(_))) => break,
