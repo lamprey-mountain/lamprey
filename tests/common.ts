@@ -182,6 +182,13 @@ export class SyncClient {
 			this.ws.close();
 		});
 	}
+
+	send(data: string | object) {
+		if (this.ws.readyState !== WebSocket.OPEN) {
+			throw new Error("WebSocket is not open");
+		}
+		this.ws.send(typeof data === "string" ? data : JSON.stringify(data));
+	}
 }
 
 export async function getSyncClient(token: string): Promise<SyncClient> {
