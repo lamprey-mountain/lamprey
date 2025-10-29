@@ -504,10 +504,13 @@ impl ServiceMembersInner {
             .count() as u64;
         let offline_count = members.len() as u64 - online_count;
 
-        if online_count > 0 {
+        let online_hoisted_count: u64 = groups.iter().map(|g| g.count).sum();
+        let online_unhoisted_count = online_count - online_hoisted_count;
+
+        if online_unhoisted_count > 0 {
             groups.push(MemberListGroup {
                 id: MemberListGroupId::Online,
-                count: online_count,
+                count: online_unhoisted_count,
             });
         }
 
