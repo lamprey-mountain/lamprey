@@ -461,9 +461,19 @@ impl ServiceMembersInner {
             let a_group = get_group(a_rm, a_user);
             let b_group = get_group(b_rm, b_user);
 
+            let a_display_name = a_rm
+                .as_ref()
+                .and_then(|m| m.override_name.as_deref())
+                .unwrap_or(&a_user.name);
+
+            let b_display_name = b_rm
+                .as_ref()
+                .and_then(|m| m.override_name.as_deref())
+                .unwrap_or(&b_user.name);
+
             a_group
                 .cmp(&b_group)
-                .then_with(|| a_user.name.cmp(&b_user.name))
+                .then_with(|| a_display_name.cmp(b_display_name))
         });
 
         let mut groups = vec![];

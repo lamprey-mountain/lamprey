@@ -22,7 +22,6 @@ pub struct MemberList {
     pub room_id: Option<RoomId>,
     pub sorted_members: Vec<MemberListItem>,
     pub groups: Vec<MemberListGroup>,
-    // #[serde(skip)]
     pub notifier: Arc<Notify>,
 }
 
