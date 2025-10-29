@@ -154,7 +154,7 @@ impl ServiceMembersSyncer {
 
                     let full_info = self
                         .inner
-                        .populate_full_members_info(&target, slice)
+                        .populate_full_members_info(&target, slice, Some(user_id))
                         .await?;
 
                     let mut room_members = vec![];
@@ -533,54 +533,62 @@ impl ServiceMembersInner {
         Ok(MemberList::new(room_id, sorted_members, groups))
     }
 
+    async fn get_room_member(&self, room_id: RoomId, user_id: UserId) -> Option<RoomMember> {
+        self.cache_room_member
+            .try_get_with(
+                (user_id, room_id),
+                self.state.data().room_member_get(room_id, user_id),
+            )
+            .await
+            .ok()
+    }
+
+    async fn get_thread_member(
+        &self,
+        thread_id: ChannelId,
+        user_id: UserId,
+    ) -> Option<ThreadMember> {
+        if let Ok(channel) = self.state.services().channels.get(thread_id, None).await {
+            if channel.ty.is_thread() {
+                return self
+                    .cache_thread_member
+                    .try_get_with(
+                        (user_id, thread_id),
+                        self.state.data().thread_member_get(thread_id, user_id),
+                    )
+                    .await
+                    .ok();
+            }
+        }
+        None
+    }
+
     async fn populate_full_member_info(
         &self,
         target: &MemberListTarget,
         user_id: UserId,
+        observer_id: Option<UserId>,
     ) -> Result<(Option<RoomMember>, Option<ThreadMember>, User)> {
         let srv = self.state.services();
-        let user = srv.users.get(user_id, Some(user_id)).await?;
+        // refetch user with relationships
+        let user = srv.users.get(user_id, observer_id).await?;
 
         let (room_id, channel_id) = match target {
             MemberListTarget::Room(room_id) => (Some(*room_id), None),
             MemberListTarget::Channel(channel_id) => {
-                let channel = srv.channels.get(*channel_id, Some(user_id)).await?;
+                let channel = srv.channels.get(*channel_id, observer_id).await?;
                 (channel.room_id, Some(*channel_id))
             }
         };
 
         let room_member = if let Some(room_id) = room_id {
-            self.cache_room_member
-                .try_get_with(
-                    (user_id, room_id),
-                    self.state.data().room_member_get(room_id, user_id),
-                )
-                .await
-                .map_err(|e| e.fake_clone())
-                .ok()
+            self.get_room_member(room_id, user_id).await
         } else {
             None
         };
 
         let thread_member = if let Some(channel_id) = channel_id {
-            let is_thread = srv
-                .channels
-                .get(channel_id, Some(user_id))
-                .await?
-                .ty
-                .is_thread();
-            if is_thread {
-                self.cache_thread_member
-                    .try_get_with(
-                        (user_id, channel_id),
-                        self.state.data().thread_member_get(channel_id, user_id),
-                    )
-                    .await
-                    .map_err(|e| e.fake_clone())
-                    .ok()
-            } else {
-                None
-            }
+            self.get_thread_member(channel_id, user_id).await
         } else {
             None
         };
@@ -592,10 +600,11 @@ impl ServiceMembersInner {
         &self,
         target: &MemberListTarget,
         items: &[MemberListItem],
+        observer_id: Option<UserId>,
     ) -> Result<Vec<(Option<RoomMember>, Option<ThreadMember>, User)>> {
         let mut fut = futures::stream::FuturesUnordered::new();
         for item in items {
-            fut.push(self.populate_full_member_info(target, item.user_id));
+            fut.push(self.populate_full_member_info(target, item.user_id, observer_id));
         }
 
         let mut full_info = Vec::with_capacity(items.len());
@@ -694,6 +703,7 @@ impl ServiceMembersInner {
                             .populate_full_member_info(
                                 &MemberListTarget::Channel(channel_id),
                                 *user_id,
+                                None,
                             )
                             .await?;
                         ops.push(MemberListOp::Insert {
@@ -752,7 +762,11 @@ impl ServiceMembersInner {
                             .position(|i| i.user_id == *user_id)
                             .unwrap();
                         let (room_member, thread_member, user) = self
-                            .populate_full_member_info(&MemberListTarget::Room(room_id), *user_id)
+                            .populate_full_member_info(
+                                &MemberListTarget::Room(room_id),
+                                *user_id,
+                                None,
+                            )
                             .await?;
                         ops.push(MemberListOp::Insert {
                             position: pos as u64,
