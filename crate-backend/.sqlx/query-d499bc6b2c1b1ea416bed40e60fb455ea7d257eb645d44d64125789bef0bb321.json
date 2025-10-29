@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO unread (channel_id, user_id, message_id, version_id, mention_count, is_unread)\n            VALUES ($1, $2, $3, $4, $5, true)\n            ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET\n                mention_count = unread.mention_count + excluded.mention_count,\n                is_unread = true,\n                message_id = excluded.message_id,\n                version_id = excluded.version_id;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d499bc6b2c1b1ea416bed40e60fb455ea7d257eb645d44d64125789bef0bb321"
+}

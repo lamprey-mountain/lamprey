@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH t AS (\n                UPDATE tag\n                SET\n                    name = $2,\n                    description = $3,\n                    color = $4,\n                    is_archived = $5,\n                    is_restricted = $6\n                WHERE id = $1\n                RETURNING id, name, description, color, is_archived, is_restricted\n            ),\n            active_threads AS (\n                SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = $1 AND c.archived_at IS NULL\n            ),\n            total_threads AS (\n                SELECT count(*) FROM channel_tag WHERE tag_id = $1\n            )\n            SELECT t.*, (SELECT count FROM active_threads) as \"active_thread_count!\", (SELECT count FROM total_threads) as \"total_thread_count!\" FROM t\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "is_archived",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_restricted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "active_thread_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "total_thread_count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "c8c0e6ecfc15ac91423f00abee4e3c93286a0a3ec33eaaba5d1874ff1ea80f93"
+}

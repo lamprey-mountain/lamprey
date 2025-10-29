@@ -1,0 +1,127 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,\n                               a.owner_id as \"app_owner_id?\", a.bridge as \"app_bridge?\", a.public as \"app_public?\",\n                               w.channel_id as \"webhook_channel_id?\", w.creator_id as \"webhook_creator_id?\", c.room_id as \"webhook_room_id?\"\n                        FROM usr u\n                        LEFT JOIN application a ON u.id = a.id\n                        LEFT JOIN webhook w ON u.id = w.id\n                        LEFT JOIN channel c ON w.channel_id = c.id\n                        WHERE u.id > $1 AND u.id < $2\n                          AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false\n                        ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4\n                        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "avatar",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "banner",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "puppet",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "system",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "registered_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 11,
+        "name": "suspended",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "app_owner_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 13,
+        "name": "app_bridge?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "app_public?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "webhook_channel_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 16,
+        "name": "webhook_creator_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 17,
+        "name": "webhook_room_id?",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "0178fb2aa89a9a79545f58824c0f86bb3337faadd407588114aabf66f4b0e0d4"
+}

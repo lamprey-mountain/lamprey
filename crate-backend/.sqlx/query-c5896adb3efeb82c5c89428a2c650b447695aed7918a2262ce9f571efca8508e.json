@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE channel SET\n                version_id = $2,\n                name = $3,\n                description = $4,\n                nsfw = $5,\n                bitrate = $6,\n                user_limit = $7,\n                owner_id = $8,\n                icon = $9,\n                locked = $10,\n                archived_at = $11,\n                invitable = $12,\n                type = $13,\n                parent_id = $14\n            WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Uuid",
+        "Uuid",
+        "Bool",
+        "Timestamp",
+        "Bool",
+        {
+          "Custom": {
+            "name": "channel_type",
+            "kind": {
+              "Enum": [
+                "Text",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm",
+                "Gdm",
+                "Category",
+                "ThreadPublic",
+                "ThreadPrivate",
+                "Calendar"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c5896adb3efeb82c5c89428a2c650b447695aed7918a2262ce9f571efca8508e"
+}

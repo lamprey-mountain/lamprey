@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8e09c5d234eaf5498240fccfb0bb4bb6500c3532d2c48848b1aafb06c30ce2e7"
+}
