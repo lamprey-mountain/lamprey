@@ -2995,7 +2995,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-backend"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-tempfile",
  "async-trait",
@@ -3054,7 +3054,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-bot"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -3076,7 +3076,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-bridge"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3103,7 +3103,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-common"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "lamprey-hakari",
  "mediatype",
@@ -3122,7 +3122,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-hakari"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arrayvec",
  "axum",
@@ -3193,7 +3193,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-media"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3225,7 +3225,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-sdk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3242,7 +3242,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-voice"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "dashmap 6.1.0",
