@@ -521,13 +521,10 @@ impl ServiceMembersInner {
         let sorted_members = members
             .into_iter()
             .map(|(rm, _tm, u)| {
-                let display_name = rm
-                    .as_ref()
-                    .and_then(|m| m.override_name.as_ref())
-                    .cloned()
-                    .unwrap_or_else(|| u.name.clone());
+                let user_id = u.id;
+                let display_name = rm.and_then(|m| m.override_name).unwrap_or(u.name);
                 MemberListItem {
-                    user_id: u.id,
+                    user_id,
                     display_name: display_name.into(),
                 }
             })
