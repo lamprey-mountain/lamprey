@@ -183,19 +183,57 @@ impl ServiceMessages {
             ));
         }
 
-        let attachment_ids: Vec<_> = json.attachments.into_iter().map(|r| r.id).collect();
+        let attachment_ids: Vec<_> = json.attachments.iter().map(|r| r.id).collect();
+        let mut all_media_ids = std::collections::HashSet::new();
         for id in &attachment_ids {
+            if !all_media_ids.insert(*id) {
+                return Err(Error::BadStatic("duplicate media id in request"));
+            }
+        }
+
+        if !json.embeds.is_empty() {
+            for embed in &json.embeds {
+                if let Some(m) = &embed.media {
+                    if !all_media_ids.insert(m.id) {
+                        return Err(Error::BadStatic("duplicate media id in request"));
+                    }
+                }
+                if let Some(m) = &embed.thumbnail {
+                    if !all_media_ids.insert(m.id) {
+                        return Err(Error::BadStatic("duplicate media id in request"));
+                    }
+                }
+                if let Some(m) = &embed.author_avatar {
+                    if !all_media_ids.insert(m.id) {
+                        return Err(Error::BadStatic("duplicate media id in request"));
+                    }
+                }
+            }
+        }
+
+        for id in &all_media_ids {
             data.media_select(*id).await?;
             let existing = data.media_link_select(*id).await?;
-            if !existing.is_empty() {
+            if existing
+                .iter()
+                .any(|l| l.link_type == MediaLinkType::Message)
+            {
                 return Err(Error::BadStatic("cant reuse media"));
             }
         }
+
+        let mut embeds = vec![];
+        if !json.embeds.is_empty() {
+            let mut embed_futs = Vec::new();
+            for embed_create in json.embeds.clone() {
+                embed_futs.push(embed_from_create(s.clone(), embed_create, user_id));
+            }
+            embeds = futures_util::future::try_join_all(embed_futs).await?;
+        }
+
         let content = json.content.clone();
-        let parsed_mentions = dbg!(mentions::parse(
-            content.as_deref().unwrap_or_default(),
-            &json.mentions
-        ));
+        let parsed_mentions =
+            mentions::parse(content.as_deref().unwrap_or_default(), &json.mentions);
         let payload = MessageType::DefaultMarkdown(MessageDefaultMarkdown {
             content: json.content,
             attachments: vec![],
@@ -204,17 +242,13 @@ impl ServiceMessages {
             reply_id: json.reply_id,
             override_name: json.override_name,
         });
+
         let message_id = data
             .message_create(DbMessageCreate {
                 channel_id: thread_id,
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
-                embeds: json
-                    .embeds
-                    .clone()
-                    .into_iter()
-                    .map(embed_from_create)
-                    .collect(),
+                embeds,
                 message_type: payload,
                 edited_at: None,
                 created_at: json.created_at.map(|t| t.into()),
@@ -222,7 +256,7 @@ impl ServiceMessages {
             })
             .await?;
         let message_uuid = message_id.into_inner();
-        for id in &attachment_ids {
+        for id in &all_media_ids {
             data.media_link_insert(*id, message_uuid, MediaLinkType::Message)
                 .await?;
             data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
@@ -535,6 +569,15 @@ impl ServiceMessages {
                 return Err(Error::BadStatic("cant reuse media"));
             }
         }
+        let mut embeds = vec![];
+        if let Some(embed_creates) = json.embeds.clone() {
+            let mut embed_futs = Vec::new();
+            for embed_create in embed_creates {
+                embed_futs.push(embed_from_create(s.clone(), embed_create, user_id));
+            }
+            embeds = futures_util::future::try_join_all(embed_futs).await?;
+        }
+
         let (content, payload) = match message.message_type.clone() {
             MessageType::DefaultMarkdown(msg) => {
                 let content = json.content.unwrap_or(msg.content);
@@ -543,13 +586,7 @@ impl ServiceMessages {
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content,
                         attachments: vec![],
-                        embeds: json
-                            .embeds
-                            .clone()
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(embed_from_create)
-                            .collect(),
+                        embeds: embeds.clone(),
                         metadata: json.metadata.unwrap_or(msg.metadata),
                         reply_id: json.reply_id.unwrap_or(msg.reply_id),
                         override_name: json.override_name.unwrap_or(msg.override_name),
@@ -566,13 +603,7 @@ impl ServiceMessages {
                     channel_id: thread_id,
                     attachment_ids: attachment_ids.clone(),
                     author_id: user_id,
-                    embeds: json
-                        .embeds
-                        .clone()
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(embed_from_create)
-                        .collect(),
+                    embeds,
                     message_type: payload,
                     edited_at: json.edited_at.map(|t| t.into()),
                     created_at: message.created_at.map(|t| t.into()),
@@ -598,14 +629,16 @@ impl ServiceMessages {
             }
         }
 
-        if let Some(embeds) = json.embeds {
-            match &mut message.message_type {
-                MessageType::DefaultMarkdown(m) => {
-                    m.embeds = embeds.into_iter().map(embed_from_create).collect()
-                }
-                _ => {}
-            }
-        }
+        // The embeds are already processed and included in the message via `embeds: embeds.clone()` above.
+        // This block is no longer needed.
+        // if let Some(embeds) = json.embeds {
+        //     match &mut message.message_type {
+        //         MessageType::DefaultMarkdown(m) => {
+        //             m.embeds = embeds.into_iter().map(embed_from_create).collect()
+        //         }
+        //         _ => {}
+        //     }
+        // }
 
         s.presign_message(&mut message).await?;
         s.broadcast_channel(
@@ -621,8 +654,40 @@ impl ServiceMessages {
     }
 }
 
-fn embed_from_create(value: common::v1::types::EmbedCreate) -> Embed {
-    Embed {
+async fn embed_from_create(
+    s: Arc<ServerStateInner>,
+    value: common::v1::types::EmbedCreate,
+    user_id: UserId,
+) -> Result<Embed> {
+    let media = if let Some(media_ref) = value.media {
+        let (media, owner_id) = s.data().media_select(media_ref.id).await?;
+        if owner_id != user_id {
+            return Err(Error::MissingPermissions);
+        }
+        Some(media)
+    } else {
+        None
+    };
+    let thumbnail = if let Some(media_ref) = value.thumbnail {
+        let (media, owner_id) = s.data().media_select(media_ref.id).await?;
+        if owner_id != user_id {
+            return Err(Error::MissingPermissions);
+        }
+        Some(media)
+    } else {
+        None
+    };
+    let author_avatar = if let Some(media_ref) = value.author_avatar {
+        let (media, owner_id) = s.data().media_select(media_ref.id).await?;
+        if owner_id != user_id {
+            return Err(Error::MissingPermissions);
+        }
+        Some(media)
+    } else {
+        None
+    };
+
+    Ok(Embed {
         id: common::v1::types::EmbedId::new(),
         ty: common::v1::types::EmbedType::Custom,
         url: value.url,
@@ -637,14 +702,14 @@ fn embed_from_create(value: common::v1::types::EmbedCreate) -> Embed {
             .ok()
             .flatten()
             .map(|c| Color::from_hex_string(c.to_css_hex())),
-        media: None,
-        thumbnail: None,
+        media,
+        thumbnail,
         author_name: value.author_name,
         author_url: value.author_url,
-        author_avatar: None,
+        author_avatar,
         site_name: None,
         site_avatar: None,
-    }
+    })
 }
 
 pub mod mentions {

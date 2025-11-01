@@ -31,7 +31,6 @@ pub struct ServiceThreads {
 
 impl ServiceThreads {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        tokio::spawn(Self::spawn_auto_archive_task(state.clone()));
         Self {
             state,
             cache_thread: Cache::builder()
@@ -710,6 +709,10 @@ impl ServiceThreads {
             .iter()
             .map(|(key, until)| (key.0, key.1, until))
             .collect()
+    }
+
+    pub fn start_background_tasks(&self) {
+        tokio::spawn(Self::spawn_auto_archive_task(self.state.clone()));
     }
 
     /// get all channels a user can see that are in rooms, along with whether the user has the ThreadManage permission. does not include dm channels

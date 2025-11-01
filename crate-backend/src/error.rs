@@ -1,5 +1,6 @@
 use std::num::{ParseFloatError, ParseIntError};
 
+use axum::extract::multipart::MultipartError;
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::error::Error as ApiError;
 use common::v1::types::{MessageEnvelope, MessagePayload};
@@ -112,6 +113,9 @@ pub enum Error {
 
     #[error("{0}")]
     ApiError(ApiError),
+
+    #[error("{0}")]
+    MultipartError(#[from] MultipartError),
 }
 
 impl From<sqlx::Error> for Error {
@@ -152,6 +156,7 @@ impl Error {
             Error::ApiError(err) => match err {
                 ApiError::UserSuspended => StatusCode::FORBIDDEN,
             },
+            Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

@@ -57,4 +57,9 @@ impl Services {
             state,
         }
     }
+
+    pub async fn start_background_tasks(&self) {
+        self.channels.start_background_tasks();
+        self.embed.start_workers().await;
+    }
 }

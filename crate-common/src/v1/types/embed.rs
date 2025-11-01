@@ -40,6 +40,7 @@ pub struct Embed {
     pub ty: EmbedType,
 
     /// the url this embed was requested for
+    // TODO: validate length
     pub url: Option<Url>,
 
     /// the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
@@ -62,6 +63,7 @@ pub struct Embed {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub author_name: Option<String>,
+    // TODO: validate length
     pub author_url: Option<Url>,
     pub author_avatar: Option<Media>,
 
@@ -90,7 +92,7 @@ pub struct EmbedRequest {
     pub url: Url,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmbedCreate {

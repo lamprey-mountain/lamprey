@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
         .finish();
     blobs.check().await?;
 
-    let state = Arc::new(ServerState::new(config, pool, blobs));
+    let state = Arc::new(ServerState::init(config, pool, blobs).await);
 
     let srv = state.services();
     let data = state.data();

@@ -8,9 +8,8 @@ use common::v1::types::{Embed, EmbedId};
 use common::v1::types::{Media, UserId};
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
-
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
 use url::Url;
@@ -29,9 +28,8 @@ pub struct ServiceEmbed {
     state: Arc<ServerStateInner>,
     cache: Cache<Url, Embed>,
     stop: broadcast::Sender<()>,
-    workers: Vec<JoinHandle<()>>,
+    workers: Mutex<Vec<JoinHandle<()>>>,
 }
-
 /// an opengraph type
 ///
 /// <https://ogp.me/#types>
@@ -141,11 +139,27 @@ impl From<OpenGraphType> for &'static str {
 impl ServiceEmbed {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         let (tx, _) = broadcast::channel(1);
-        let mut workers = Vec::new();
-        for i in 0..state.config.url_preview.max_parallel_jobs {
-            let state = state.clone();
-            let mut stop = tx.subscribe();
-            workers.push(tokio::spawn(async move {
+        Self {
+            state,
+            cache: Cache::builder()
+                .max_capacity(1000)
+                .time_to_live(MAX_EMBED_AGE)
+                .build(),
+            stop: tx,
+            workers: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub async fn start_workers(&self) {
+        let mut workers_guard = self.workers.lock().await;
+        if !workers_guard.is_empty() {
+            warn!("embed workers already started");
+            return;
+        }
+        for i in 0..self.state.config.url_preview.max_parallel_jobs {
+            let state = self.state.clone();
+            let mut stop = self.stop.subscribe();
+            workers_guard.push(tokio::spawn(async move {
                 info!("starting embed worker {i}");
                 loop {
                     tokio::select! {
@@ -161,22 +175,14 @@ impl ServiceEmbed {
                 }
             }));
         }
-        Self {
-            state,
-            cache: Cache::builder()
-                .max_capacity(1000)
-                .time_to_live(MAX_EMBED_AGE)
-                .build(),
-            stop: tx,
-            workers,
-        }
     }
 
     pub async fn stop(self) {
         if self.stop.send(()).is_err() {
             warn!("no embed workers to stop");
         }
-        for worker in self.workers {
+        let workers = self.workers.into_inner();
+        for worker in workers {
             if let Err(e) = worker.await {
                 error!("failed to stop embed worker: {e:?}");
             }

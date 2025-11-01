@@ -125,7 +125,7 @@ pub struct Mentions {
     pub everyone: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageCreate {
@@ -158,6 +158,11 @@ pub struct MessageCreate {
     #[serde(default)]
     pub override_name: Option<String>,
 
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 0, max_length = 32)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
     #[serde(default)]
     pub embeds: Vec<EmbedCreate>,
 

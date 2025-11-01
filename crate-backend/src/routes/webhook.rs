@@ -24,6 +24,10 @@ use crate::{
     ServerState,
 };
 
+mod discord;
+mod github;
+mod slack;
+
 /// Webhook create
 #[utoipa::path(
     post,
@@ -377,66 +381,6 @@ async fn webhook_execute(
     Ok((StatusCode::CREATED, Json(message)))
 }
 
-/// Webhook execute discord (TODO)
-#[utoipa::path(
-    post,
-    path = "/webhook/{webhook_id}/{token}/discord",
-    params(
-        ("webhook_id", description = "Webhook id"),
-        ("token", description = "Webhook token")
-    ),
-    tags = ["webhook"],
-    responses(
-        (status = NO_CONTENT, description = "Execute webhook success"),
-    )
-)]
-async fn webhook_execute_discord(
-    Path((_webhook_id, _token)): Path<(WebhookId, String)>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
-}
-
-/// Webhook execute github (TODO)
-#[utoipa::path(
-    post,
-    path = "/webhook/{webhook_id}/{token}/github",
-    params(
-        ("webhook_id", description = "Webhook id"),
-        ("token", description = "Webhook token")
-    ),
-    tags = ["webhook"],
-    responses(
-        (status = NO_CONTENT, description = "Execute webhook success"),
-    )
-)]
-async fn webhook_execute_github(
-    Path((_webhook_id, _token)): Path<(WebhookId, String)>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
-}
-
-/// Webhook execute slack (TODO)
-#[utoipa::path(
-    post,
-    path = "/webhook/{webhook_id}/{token}/slack",
-    params(
-        ("webhook_id", description = "Webhook id"),
-        ("token", description = "Webhook token")
-    ),
-    tags = ["webhook"],
-    responses(
-        (status = NO_CONTENT, description = "Execute webhook success"),
-    )
-)]
-async fn webhook_execute_slack(
-    Path((_webhook_id, _token)): Path<(WebhookId, String)>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(webhook_create))
@@ -449,7 +393,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(webhook_update))
         .routes(routes!(webhook_update_with_token))
         .routes(routes!(webhook_execute))
-        .routes(routes!(webhook_execute_discord))
-        .routes(routes!(webhook_execute_github))
-        .routes(routes!(webhook_execute_slack))
+        .routes(routes!(discord::webhook_execute_discord))
+        .routes(routes!(github::webhook_execute_github))
+        .routes(routes!(slack::webhook_execute_slack))
 }

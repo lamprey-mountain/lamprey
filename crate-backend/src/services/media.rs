@@ -411,6 +411,51 @@ impl ServiceMedia {
             }
         }
     }
+
+    pub async fn import_from_bytes(
+        &self,
+        user_id: UserId,
+        json: MediaCreate,
+        bytes: bytes::Bytes,
+    ) -> Result<Media> {
+        let max_size = self.state.config.media_max_size;
+        let filename = match &json.source {
+            MediaCreateSource::Upload { filename, .. } => filename,
+            MediaCreateSource::Download { .. } => unreachable!(),
+        };
+
+        if bytes.len() as u64 > max_size {
+            return Err(Error::TooBig);
+        }
+
+        let media_id = MediaId::new();
+        self.create_upload(media_id, user_id, json.clone()).await?;
+
+        let mut up = self.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
+
+        if let Err(err) = up.write(&bytes).await {
+            self.uploads.remove(&media_id);
+            return Err(err);
+        }
+
+        info!("finished stream download end_size={}", up.current_size);
+
+        trace!("flush media");
+        up.temp_writer.flush().await?;
+        trace!("flushed media");
+        drop(up);
+        trace!("dropped upload");
+        let (_, up) = self
+            .uploads
+            .remove(&media_id)
+            .expect("it was there a few milliseconds ago");
+        trace!("processing upload");
+        let media = self
+            .process_upload(up, media_id, user_id, &truncate_filename(filename, 256))
+            .await?;
+        debug!("finished processing media");
+        Ok(media)
+    }
 }
 
 #[tracing::instrument(skip(state, bytes))]

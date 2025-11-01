@@ -174,7 +174,7 @@ impl ServerStateInner {
 }
 
 impl ServerState {
-    pub fn new(config: Config, pool: PgPool, blobs: opendal::Operator) -> Self {
+    pub async fn init(config: Config, pool: PgPool, blobs: opendal::Operator) -> Self {
         // a bit hacky for now since i need to work around the existing ServerState
         // though i probably need some way to access global state/services from within them anyways
         let services = Arc::new_cyclic(|weak| {
@@ -193,6 +193,7 @@ impl ServerState {
             });
             Services::new(inner.clone())
         });
+        services.start_background_tasks().await;
         Self {
             inner: services.state.clone(),
             syncers: Arc::new(DashMap::new()),
