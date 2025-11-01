@@ -101,6 +101,9 @@ pub struct DbChannel {
     pub tags: Option<serde_json::Value>,
     pub tags_available: Option<serde_json::Value>,
     pub invitable: bool,
+    pub auto_archive_duration: Option<i64>,
+    pub default_auto_archive_duration: Option<i64>,
+    pub last_activity_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -125,6 +128,8 @@ pub struct DbChannelCreate {
     pub user_limit: Option<i32>,
     pub parent_id: Option<Uuid>,
     pub invitable: bool,
+    pub auto_archive_duration: Option<i64>,
+    pub default_auto_archive_duration: Option<i64>,
 }
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
@@ -208,6 +213,8 @@ impl From<DbChannel> for Channel {
             user_config: None,
             online_count: 0,
             invitable: row.invitable,
+            auto_archive_duration: row.auto_archive_duration.map(|i| i as u64),
+            default_auto_archive_duration: row.default_auto_archive_duration.map(|i| i as u64),
 
             tags: row
                 .tags

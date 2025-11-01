@@ -417,6 +417,8 @@ impl LampreyHandle {
                     icon: None,
                     permission_overwrites: vec![],
                     invitable: true,
+                    auto_archive_duration: None,
+                    default_auto_archive_duration: None,
                 },
             )
             .await?;

@@ -555,6 +555,8 @@ async fn thread_create_from_message(
         owner_id: None,
         icon: None,
         invitable: json.invitable,
+        auto_archive_duration: json.auto_archive_duration.map(|i| i as i64),
+        default_auto_archive_duration: json.default_auto_archive_duration.map(|i| i as i64),
     };
 
     data.channel_create_with_id(thread_id, create).await?;

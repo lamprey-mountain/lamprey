@@ -240,6 +240,8 @@ impl ServiceUsers {
                 owner_id: None,
                 icon: None,
                 invitable: false,
+                auto_archive_duration: None,
+                default_auto_archive_duration: None,
             })
             .await?;
         data.dm_put(user_id, other_id, thread_id).await?;

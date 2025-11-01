@@ -27,6 +27,7 @@ pub struct ServiceThreads {
     cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_thread_recipients: Cache<ChannelId, Vec<User>>,
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
+    // auto_archive_task: tokio::task::JoinHandle<()>,
 }
 
 impl ServiceThreads {
@@ -49,6 +50,7 @@ impl ServiceThreads {
                 .max_capacity(100_000)
                 .time_to_live(Duration::from_secs(10))
                 .build(),
+            // auto_archive_task: tokio::spawn(Self::spawn_auto_archive_task(state.clone())),
         }
     }
 
@@ -329,6 +331,16 @@ impl ServiceThreads {
             return Err(Error::BadStatic("this channel type cannot have an icon"));
         }
 
+        if json.default_auto_archive_duration.is_some() && !json.ty.has_threads() {
+            return Err(Error::BadStatic("channel does not have threads"));
+        }
+
+        if json.auto_archive_duration.is_some() && !json.ty.is_thread() {
+            return Err(Error::BadStatic(
+                "auto_archive_duration can only be set on threads",
+            ));
+        }
+
         if let Some(icon) = json.icon {
             let (media, _) = data.media_select(icon).await?;
             if !matches!(
@@ -368,6 +380,8 @@ impl ServiceThreads {
                 owner_id: None,
                 icon: json.icon.map(|i| *i),
                 invitable: json.invitable,
+                auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
+                default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
             })
             .await?;
 
@@ -588,6 +602,16 @@ impl ServiceThreads {
             }
         }
 
+        if patch.default_auto_archive_duration.is_some() && !chan_old.ty.has_threads() {
+            return Err(Error::BadStatic("channel does not have threads"));
+        }
+
+        if patch.auto_archive_duration.is_some() && !chan_old.ty.is_thread() {
+            return Err(Error::BadStatic(
+                "auto_archive_duration can only be set on threads",
+            ));
+        }
+
         // update and refetch
         data.channel_update(thread_id, patch.clone()).await?;
         self.invalidate(thread_id).await;
@@ -621,6 +645,16 @@ impl ServiceThreads {
                             .change("tags", &chan_old.tags, &chan_new.tags)
                             .change("parent_id", &chan_old.parent_id, &chan_new.parent_id)
                             .change("invitable", &chan_old.invitable, &chan_new.invitable)
+                            .change(
+                                "auto_archive_duration",
+                                &chan_old.auto_archive_duration,
+                                &chan_new.auto_archive_duration,
+                            )
+                            .change(
+                                "default_auto_archive_duration",
+                                &chan_old.default_auto_archive_duration,
+                                &chan_new.default_auto_archive_duration,
+                            )
                             .build(),
                     },
                 })
@@ -740,4 +774,63 @@ impl ServiceThreads {
         }
         Ok(out)
     }
+
+    // async fn spawn_auto_archive_task(state: Arc<ServerStateInner>) {
+    //     let mut interval = time::interval(Duration::from_secs(60)); // Check every minute
+    //     loop {
+    //         interval.tick().await;
+    //         let data = state.data();
+    //         let srv = state.services();
+
+    //         // Query for threads that need archiving
+    //         let threads_to_archive = match sqlx::query_as!(
+    //             DbChannel,
+    //             r#"
+    //             SELECT
+    //                 id, room_id, creator_id, owner_id, version_id, name, description, icon, type as "ty: DbChannelType", nsfw, locked, archived_at, deleted_at, parent_id, position, bitrate, user_limit, tags, tags_available, invitable, auto_archive_duration, default_auto_archive_duration, last_activity_at
+    //             FROM channel
+    //             WHERE
+    //                 archived_at IS NULL
+    //                 AND deleted_at IS NULL
+    //                 AND type IN ('ThreadPublic', 'ThreadPrivate')
+    //                 AND auto_archive_duration IS NOT NULL
+    //                 AND last_activity_at IS NOT NULL
+    //                 AND last_activity_at + (auto_archive_duration * INTERVAL '1 second') < NOW()
+    //             "#
+    //         )
+    //         .fetch_all(data.pool()).await {
+    //             Ok(threads) => threads,
+    //             Err(e) => {
+    //                 warn!("Failed to query threads for auto-archiving: {}", e);
+    //                 continue;
+    //             }
+    //         };
+
+    //         for db_channel in threads_to_archive {
+    //             let channel_id = db_channel.id;
+    //             let owner_id = db_channel
+    //                 .owner_id
+    //                 .map(Into::into)
+    //                 .unwrap_or(db_channel.creator_id);
+
+    //             // Archive the thread
+    //             match srv
+    //                 .channels
+    //                 .update(
+    //                     owner_id,
+    //                     channel_id,
+    //                     ChannelPatch {
+    //                         archived: Some(Some(true)),
+    //                         ..Default::default()
+    //                     },
+    //                     Some("Auto-archived due to inactivity".to_string()),
+    //                 )
+    //                 .await
+    //             {
+    //                 Ok(_) => info!("Auto-archived thread {}", channel_id),
+    //                 Err(e) => warn!("Failed to auto-archive thread {}: {}", channel_id, e),
+    //             }
+    //         }
+    //     }
+    // }
 }

@@ -156,6 +156,8 @@ async fn channel_create_dm(
             parent_id: None,
             owner_id: Some(*auth_user.id),
             invitable: json.invitable,
+            auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
+            default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
         })
         .await?;
 

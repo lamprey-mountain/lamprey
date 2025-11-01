@@ -112,6 +112,12 @@ pub struct Channel {
     /// The user's thread member object, if the channel is a thread and the user is a member.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thread_member: Option<Box<ThreadMember>>,
+
+    /// when to automatically archive this thread due to inactivity, in seconds
+    pub auto_archive_duration: Option<u64>,
+
+    /// the default auto archive duration in seconds to copy to threads created in this channel
+    pub default_auto_archive_duration: Option<u64>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -197,6 +203,10 @@ pub struct ChannelCreate {
     /// whether users without ThreadManage can add other members to this thread
     #[serde(default)]
     pub invitable: bool,
+
+    pub auto_archive_duration: Option<u64>,
+
+    pub default_auto_archive_duration: Option<u64>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -243,7 +253,14 @@ pub struct ChannelPatch {
 
     pub archived: Option<bool>,
     pub locked: Option<bool>,
+
     pub invitable: Option<bool>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub auto_archive_duration: Option<Option<u64>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub default_auto_archive_duration: Option<Option<u64>>,
 }
 
 /// reorder some channels
@@ -287,6 +304,12 @@ impl Diff<Channel> for ChannelPatch {
             || self
                 .archived
                 .is_some_and(|a| a != other.archived_at.is_some())
+            || self
+                .auto_archive_duration
+                .changes(&other.auto_archive_duration)
+            || self
+                .default_auto_archive_duration
+                .changes(&other.default_auto_archive_duration)
     }
 }
 
@@ -338,6 +361,10 @@ impl ChannelType {
     /// whether private threads can be created inside this channel
     pub fn has_private_threads(&self) -> bool {
         matches!(self, ChannelType::Text | ChannelType::Dm | ChannelType::Gdm)
+    }
+
+    pub fn has_threads(&self) -> bool {
+        self.has_public_threads() || self.has_private_threads()
     }
 
     pub fn has_voice(&self) -> bool {

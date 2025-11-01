@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
-use common::v1::types::{Embed, MessageDefaultMarkdown, MessageType, UserId};
+use common::v1::types::{ChannelType, Embed, MessageDefaultMarkdown, MessageType, UserId};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
@@ -9,8 +9,8 @@ use crate::consts::MAX_PINNED_MESSAGES;
 use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
-    ChannelId, DbMessageCreate, Message, MessageId, MessageVerId, PaginationDirection,
-    PaginationQuery, PaginationResponse,
+    ChannelId, DbChannelType, DbMessageCreate, Message, MessageId, MessageVerId,
+    PaginationDirection, PaginationQuery, PaginationResponse,
 };
 
 use crate::data::DataMessage;
@@ -149,6 +149,24 @@ impl DataMessage for Postgres {
         let message_id = Uuid::now_v7();
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
+
+        let channel_type: ChannelType = query_scalar!(
+            r#"SELECT type as "type: DbChannelType" FROM channel WHERE id = $1"#,
+            *create.channel_id
+        )
+        .fetch_one(&mut *tx)
+        .await?
+        .into();
+
+        if channel_type.is_thread() {
+            query!(
+                "UPDATE channel SET last_activity_at = NOW() WHERE id = $1",
+                *create.channel_id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
         let embeds = serde_json::to_value(create.embeds.clone())?;
         let mentions = serde_json::to_value(create.mentions.clone())?;
         query!(r#"

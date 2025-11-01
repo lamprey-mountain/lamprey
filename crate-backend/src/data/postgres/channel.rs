@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::util::Diff;
 use common::v1::types::ChannelReorder;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
@@ -48,8 +49,8 @@ impl DataChannel for Postgres {
 
         query!(
             "
-			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14, $15, $16)
         ",
             channel_id.into_inner(),
             channel_id.into_inner(),
@@ -65,6 +66,8 @@ impl DataChannel for Postgres {
             create.owner_id,
             create.icon,
             create.invitable,
+            create.auto_archive_duration,
+            create.default_auto_archive_duration,
         )
         .execute(&mut *tx)
         .await?;
@@ -203,10 +206,11 @@ impl DataChannel for Postgres {
         patch: ChannelPatch,
     ) -> Result<ChannelVerId> {
         let mut tx = self.pool.begin().await?;
-        let thread: Channel = query_file_as!(DbChannel, "sql/channel_get.sql", *thread_id)
+        let db_chan = query_file_as!(DbChannel, "sql/channel_get.sql", *thread_id)
             .fetch_one(&mut *tx)
-            .await?
-            .into();
+            .await?;
+        let mut last_activity_at = db_chan.last_activity_at;
+        let thread: Channel = db_chan.into();
 
         if patch.archived == Some(false) && thread.archived_at.is_some() {
             if let Some(room_id) = thread.room_id {
@@ -262,6 +266,16 @@ impl DataChannel for Postgres {
 
         let new_ty: DbChannelType = patch.ty.map(Into::into).unwrap_or_else(|| thread.ty.into());
 
+        if patch.archived == Some(false)
+            || patch
+                .auto_archive_duration
+                .changes(&thread.auto_archive_duration)
+        {
+            let now = time::OffsetDateTime::now_utc();
+            let now = time::PrimitiveDateTime::new(now.date(), now.time());
+            last_activity_at = Some(now);
+        }
+
         query!(
             r#"
             UPDATE channel SET
@@ -277,7 +291,10 @@ impl DataChannel for Postgres {
                 archived_at = $11,
                 invitable = $12,
                 type = $13,
-                parent_id = $14
+                parent_id = $14,
+                auto_archive_duration = $15,
+                default_auto_archive_duration = $16,
+                last_activity_at = $17
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -300,6 +317,15 @@ impl DataChannel for Postgres {
             patch.invitable.unwrap_or(thread.invitable),
             new_ty as _,
             new_parent_id,
+            patch
+                .auto_archive_duration
+                .unwrap_or(thread.auto_archive_duration)
+                .map(|i| i as i64),
+            patch
+                .default_auto_archive_duration
+                .unwrap_or(thread.default_auto_archive_duration)
+                .map(|i| i as i64),
+            last_activity_at as _,
         )
         .execute(&mut *tx)
         .await?;
