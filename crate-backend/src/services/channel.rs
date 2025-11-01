@@ -6,7 +6,7 @@ use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
     ChannelPatch, ChannelType, MessageSync, MessageThreadRename, MessageType, PaginationQuery,
-    Permission, RoomId, ThreadMemberPut, User, UserId,
+    Permission, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -27,11 +27,11 @@ pub struct ServiceThreads {
     cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_thread_recipients: Cache<ChannelId, Vec<User>>,
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
-    // auto_archive_task: tokio::task::JoinHandle<()>,
 }
 
 impl ServiceThreads {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
+        tokio::spawn(Self::spawn_auto_archive_task(state.clone()));
         Self {
             state,
             cache_thread: Cache::builder()
@@ -50,7 +50,6 @@ impl ServiceThreads {
                 .max_capacity(100_000)
                 .time_to_live(Duration::from_secs(10))
                 .build(),
-            // auto_archive_task: tokio::spawn(Self::spawn_auto_archive_task(state.clone())),
         }
     }
 
@@ -775,62 +774,37 @@ impl ServiceThreads {
         Ok(out)
     }
 
-    // async fn spawn_auto_archive_task(state: Arc<ServerStateInner>) {
-    //     let mut interval = time::interval(Duration::from_secs(60)); // Check every minute
-    //     loop {
-    //         interval.tick().await;
-    //         let data = state.data();
-    //         let srv = state.services();
+    pub async fn spawn_auto_archive_task(state: Arc<ServerStateInner>) {
+        let mut interval = tokio::time::interval(Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            let data = state.data();
+            let srv = state.services();
 
-    //         // Query for threads that need archiving
-    //         let threads_to_archive = match sqlx::query_as!(
-    //             DbChannel,
-    //             r#"
-    //             SELECT
-    //                 id, room_id, creator_id, owner_id, version_id, name, description, icon, type as "ty: DbChannelType", nsfw, locked, archived_at, deleted_at, parent_id, position, bitrate, user_limit, tags, tags_available, invitable, auto_archive_duration, default_auto_archive_duration, last_activity_at
-    //             FROM channel
-    //             WHERE
-    //                 archived_at IS NULL
-    //                 AND deleted_at IS NULL
-    //                 AND type IN ('ThreadPublic', 'ThreadPrivate')
-    //                 AND auto_archive_duration IS NOT NULL
-    //                 AND last_activity_at IS NOT NULL
-    //                 AND last_activity_at + (auto_archive_duration * INTERVAL '1 second') < NOW()
-    //             "#
-    //         )
-    //         .fetch_all(data.pool()).await {
-    //             Ok(threads) => threads,
-    //             Err(e) => {
-    //                 warn!("Failed to query threads for auto-archiving: {}", e);
-    //                 continue;
-    //             }
-    //         };
+            match data.thread_auto_archive().await {
+                Ok(archived_thread_ids) => {
+                    if !archived_thread_ids.is_empty() {
+                        tracing::info!("auto-archived {} threads", archived_thread_ids.len());
 
-    //         for db_channel in threads_to_archive {
-    //             let channel_id = db_channel.id;
-    //             let owner_id = db_channel
-    //                 .owner_id
-    //                 .map(Into::into)
-    //                 .unwrap_or(db_channel.creator_id);
+                        for thread_id in archived_thread_ids {
+                            srv.channels.invalidate(thread_id).await;
 
-    //             // Archive the thread
-    //             match srv
-    //                 .channels
-    //                 .update(
-    //                     owner_id,
-    //                     channel_id,
-    //                     ChannelPatch {
-    //                         archived: Some(Some(true)),
-    //                         ..Default::default()
-    //                     },
-    //                     Some("Auto-archived due to inactivity".to_string()),
-    //                 )
-    //                 .await
-    //             {
-    //                 Ok(_) => info!("Auto-archived thread {}", channel_id),
-    //                 Err(e) => warn!("Failed to auto-archive thread {}: {}", channel_id, e),
-    //             }
-    //         }
-    //     }
-    // }
+                            if let Ok(channel) = srv.channels.get(thread_id, None).await {
+                                if let Some(room_id) = channel.room_id {
+                                    let msg = MessageSync::ChannelUpdate {
+                                        channel: Box::new(channel),
+                                    };
+                                    let _ =
+                                        state.broadcast_room(room_id, SERVER_USER_ID, msg).await;
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("failed to auto-archive threads: {}", e);
+                }
+            }
+        }
+    }
 }

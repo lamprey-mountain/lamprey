@@ -689,6 +689,9 @@ pub trait DataThread {
         parent_id: ChannelId,
         include_all: bool,
     ) -> Result<PaginationResponse<Channel>>;
+
+    /// Archive threads that have been inactive beyond their auto-archive duration
+    async fn thread_auto_archive(&self) -> Result<Vec<ChannelId>>;
 }
 
 #[async_trait]

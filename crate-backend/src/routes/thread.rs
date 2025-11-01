@@ -446,7 +446,6 @@ pub async fn thread_create(
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
-    json.validate()?;
 
     if !matches!(
         json.ty,
@@ -462,7 +461,12 @@ pub async fn thread_create(
         .await?;
     let room_id = parent_channel.room_id;
 
+    if json.auto_archive_duration.is_none() {
+        json.auto_archive_duration = parent_channel.default_auto_archive_duration;
+    }
+
     json.parent_id = Some(parent_id);
+    json.validate()?;
 
     let channel = s
         .services()
@@ -540,7 +544,13 @@ async fn thread_create_from_message(
     // 4. Create the thread
     let room_id = parent_channel.room_id;
 
+    // 5. Set auto_archive_duration to parent's default if not provided
+    if json.auto_archive_duration.is_none() {
+        json.auto_archive_duration = parent_channel.default_auto_archive_duration;
+    }
+
     json.parent_id = Some(parent_channel_id);
+    json.validate()?;
 
     let create = DbChannelCreate {
         room_id: room_id.map(|id| id.into_inner()),

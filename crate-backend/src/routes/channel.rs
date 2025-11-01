@@ -51,9 +51,23 @@ async fn channel_create_room(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<ChannelCreate>,
+    Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
+
+    if json.ty.is_thread() {
+        if let Some(parent_id) = json.parent_id {
+            let parent_channel = s
+                .services()
+                .channels
+                .get(parent_id, Some(auth_user.id))
+                .await?;
+            if json.auto_archive_duration.is_none() {
+                json.auto_archive_duration = parent_channel.default_auto_archive_duration;
+            }
+        }
+    }
+
     json.validate()?;
     let channel = s
         .services()
