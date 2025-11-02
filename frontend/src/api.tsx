@@ -568,6 +568,14 @@ export function createApi(
 					}
 				}
 			}
+		} else if (msg.type === "RatelimitUpdate") {
+			const { channel_id, slowmode_message_expire_at } = msg;
+			if (slowmode_message_expire_at) {
+				const expireDate = new Date(slowmode_message_expire_at);
+				api.ctx.channel_slowmode_expire_at.set(channel_id, expireDate);
+			} else {
+				api.ctx.channel_slowmode_expire_at.set(channel_id, null);
+			}
 		} else if (msg.type === "InviteDelete") {
 			invites.cache.delete(msg.code);
 			if (msg.target.type === "Room") {

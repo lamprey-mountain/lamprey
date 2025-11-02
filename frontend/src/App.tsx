@@ -283,6 +283,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		uploads: new ReactiveMap(),
 		channel_edit_drafts: new ReactiveMap(),
 		channel_input_focus: new Map(),
+		channel_slowmode_expire_at: new ReactiveMap(),
 
 		editingMessage,
 

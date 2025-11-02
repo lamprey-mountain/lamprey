@@ -115,14 +115,14 @@ type EditorViewProps = {
 	placeholder?: string;
 	disabled?: boolean;
 	onUpload?: (file: File) => void;
-	onSubmit: (text: string) => void;
+	onSubmit: (text: string) => boolean;
 	onChange?: (state: EditorState) => void;
 };
 
 export const createEditor = (opts: EditorProps) => {
 	let editorRef!: HTMLDivElement;
 	let view: EditorView | undefined;
-	let onSubmit!: (content: string) => void | undefined;
+	let onSubmit!: (content: string) => boolean | undefined;
 
 	const createState = () => {
 		let doc;
@@ -162,22 +162,10 @@ export const createEditor = (opts: EditorProps) => {
 						return true;
 					},
 					"Enter": (state, dispatch) => {
-						// const html = (md(state.doc.textContent.trim()) as string).trim();
-						// console.log({
-						//   text: state.doc.textContent,
-						//   html,
-						// });
-						// FIXME: marked adds extra newlines
-						// i might need to write my own parser
-						// const res = onSubmit({
-						// 	text: state.doc.textContent.trim(),
-						// 	html,
-						// });
-						onSubmit?.(state.doc.textContent.trim());
-						// if (res !== false) dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
-						// return !!res;
-						// HACK: i don't know what this is, but i don't like it
-						dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
+						const shouldClear = onSubmit?.(state.doc.textContent.trim());
+						if (shouldClear) {
+							dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
+						}
 						return true;
 					},
 					"Backspace": (state, dispatch) => {

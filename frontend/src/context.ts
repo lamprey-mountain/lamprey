@@ -152,6 +152,7 @@ export type ChatCtx = {
 	uploads: ReactiveMap<string, Upload>;
 	channel_edit_drafts: ReactiveMap<string, string>;
 	channel_input_focus: Map<string, () => void>;
+	channel_slowmode_expire_at: ReactiveMap<string, Date | null>; // channel_id -> expiration time
 
 	editingMessage: ReactiveMap<
 		string,

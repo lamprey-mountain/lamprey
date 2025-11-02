@@ -5,7 +5,13 @@ import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
-import { createEffect, createMemo, onCleanup, onMount } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	onCleanup,
+	onMount,
+} from "solid-js";
 import { getMessageOverrideName } from "./util.tsx";
 import { EditorState } from "prosemirror-state";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -74,7 +80,10 @@ export function Input(props: InputProps) {
 	});
 
 	const onSubmit = (text: string) => {
+		// FIXME: dont clear input on submit if slowmode is active
+		if (slowmodeActive()) return false;
 		ctx.dispatch({ do: "thread.send", thread_id: props.channel.id, text });
+		return true;
 	};
 
 	const onEmojiPick = (emoji: string) => {
@@ -147,6 +156,21 @@ export function Input(props: InputProps) {
 		editor.focus();
 	});
 
+	createEffect(() => {
+		const expireAt = props.channel.slowmode_message_expire_at;
+		if (expireAt) {
+			const currentExpireAt = ctx.channel_slowmode_expire_at.get(
+				props.channel.id,
+			);
+			const newExpireAt = new Date(expireAt);
+			if (
+				!currentExpireAt || currentExpireAt.getTime() !== newExpireAt.getTime()
+			) {
+				ctx.channel_slowmode_expire_at.set(props.channel.id, newExpireAt);
+			}
+		}
+	});
+
 	const perms = usePermissions(
 		() => api.users.cache.get("@self")?.id ?? "",
 		() => props.channel.room_id ?? undefined,
@@ -156,6 +180,47 @@ export function Input(props: InputProps) {
 	const locked = () => {
 		return !perms.has("MessageCreate") ||
 			(props.channel.locked && !perms.has("ThreadLock"));
+	};
+
+	const [remainingTime, setRemainingTime] = createSignal(0);
+	const slowmodeRemaining = () => remainingTime();
+	const slowmodeActive = () => slowmodeRemaining() > 0;
+
+	createEffect(() => {
+		const expireAt = ctx.channel_slowmode_expire_at.get(props.channel.id);
+		if (expireAt) {
+			const updateTimer = () => {
+				const now = new Date().getTime();
+				const remaining = expireAt.getTime() - now;
+				setRemainingTime(Math.max(0, remaining));
+			};
+
+			updateTimer();
+			const interval = setInterval(updateTimer, 1000);
+			onCleanup(() => clearInterval(interval));
+		} else {
+			setRemainingTime(0);
+		}
+	});
+
+	const slowmodeFormatted = () => {
+		const remainingMs = slowmodeRemaining();
+		if (remainingMs <= 0) {
+			const channelSlowmode = props.channel.slowmode_message;
+			if (channelSlowmode) {
+				const mins = Math.floor(channelSlowmode / 60);
+				const secs = channelSlowmode % 60;
+				if (mins === 0) {
+					return `slowmode set to ${secs}s`;
+				} else {
+					return `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
+				}
+			} else return "no slowmode";
+		}
+		const seconds = Math.ceil(remainingMs / 1000);
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
 	return (
@@ -207,18 +272,18 @@ export function Input(props: InputProps) {
 			</div>
 			<footer>
 				<Show when={typingUsers().length}>
-					{/* TODO: bold names */}
 					<div class="typing">
+						{/* TODO: bold names */}
 						{fmt.format(typingUsers().map((i) => getName(i) || "someone"))}{" "}
 						{typingUsers().length === 1 ? "is" : "are"} typing
 					</div>
 				</Show>
-				<Show when={false}>
-					{/* TODO: show time left */}
+				<div style="flex:1"></div>
+				<Show when={props.channel.slowmode_message || slowmodeActive()}>
 					{/* TODO: tooltip showing slowmode ratelimit */}
 					{/* TODO: icon for slowmode indicator*/}
 					<div class="slowmode">
-						0:00
+						{slowmodeFormatted()}
 					</div>
 				</Show>
 			</footer>
