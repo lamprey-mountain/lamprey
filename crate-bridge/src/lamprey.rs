@@ -408,17 +408,8 @@ impl LampreyHandle {
                     name,
                     description: topic,
                     ty,
-                    tags: None,
-                    nsfw: false,
-                    recipients: None,
-                    bitrate: None,
-                    user_limit: None,
                     parent_id,
-                    icon: None,
-                    permission_overwrites: vec![],
-                    invitable: true,
-                    auto_archive_duration: None,
-                    default_auto_archive_duration: None,
+                    ..Default::default()
                 },
             )
             .await?;

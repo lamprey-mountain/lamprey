@@ -242,6 +242,9 @@ impl ServiceUsers {
                 invitable: false,
                 auto_archive_duration: None,
                 default_auto_archive_duration: None,
+                slowmode_thread: None,
+                slowmode_message: None,
+                default_slowmode_message: None,
             })
             .await?;
         data.dm_put(user_id, other_id, thread_id).await?;

@@ -211,11 +211,11 @@ pub enum MessageSync {
     },
 
     InviteCreate {
-        invite: InviteWithMetadata,
+        invite: Box<InviteWithMetadata>,
     },
 
     InviteUpdate {
-        invite: InviteWithMetadata,
+        invite: Box<InviteWithMetadata>,
     },
 
     InviteDelete {
@@ -413,6 +413,13 @@ pub enum MessageSync {
         webhook_id: WebhookId,
         room_id: Option<RoomId>,
         channel_id: ChannelId,
+    },
+
+    RatelimitUpdate {
+        channel_id: ChannelId,
+        user_id: UserId,
+        slowmode_thread_expire_at: Option<Time>,
+        slowmode_message_expire_at: Option<Time>,
     },
 }
 

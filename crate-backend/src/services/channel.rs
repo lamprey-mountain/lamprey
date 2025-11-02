@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use common::v1::types::util::{Changes, Diff};
+use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
     ChannelPatch, ChannelType, MessageSync, MessageThreadRename, MessageType, PaginationQuery,
@@ -279,6 +279,9 @@ impl ServiceThreads {
             ));
         };
         perms.ensure(Permission::ViewChannel)?;
+
+        let parent_id_opt = json.parent_id;
+
         match json.ty {
             ChannelType::Text | ChannelType::Forum | ChannelType::Voice | ChannelType::Category => {
                 perms.ensure(Permission::ChannelManage)?;
@@ -294,6 +297,33 @@ impl ServiceThreads {
                     ));
                 }
                 perms.ensure(Permission::ThreadCreatePublic)?;
+
+                if !perms.has(Permission::ChannelManage)
+                    && !perms.has(Permission::ThreadManage)
+                    && !perms.has(Permission::MemberTimeout)
+                {
+                    if let Some(parent_id) = parent_id_opt {
+                        if let Some(thread_slowmode_expire_at) = data
+                            .channel_get_thread_slowmode_expire_at(parent_id, user_id)
+                            .await?
+                        {
+                            if thread_slowmode_expire_at > Time::now_utc() {
+                                return Err(Error::BadStatic("slowmode in effect"));
+                            }
+                        }
+
+                        if let Some(slowmode_delay) = parent.slowmode_thread {
+                            let next_thread_time =
+                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                            data.channel_set_thread_slowmode_expire_at(
+                                parent_id,
+                                user_id,
+                                next_thread_time,
+                            )
+                            .await?;
+                        }
+                    }
+                }
             }
             ChannelType::ThreadPrivate => {
                 let parent_id = json
@@ -306,6 +336,33 @@ impl ServiceThreads {
                     ));
                 }
                 perms.ensure(Permission::ThreadCreatePrivate)?;
+
+                if !perms.has(Permission::ChannelManage)
+                    && !perms.has(Permission::ThreadManage)
+                    && !perms.has(Permission::MemberTimeout)
+                {
+                    if let Some(parent_id) = parent_id_opt {
+                        if let Some(thread_slowmode_expire_at) = data
+                            .channel_get_thread_slowmode_expire_at(parent_id, user_id)
+                            .await?
+                        {
+                            if thread_slowmode_expire_at > Time::now_utc() {
+                                return Err(Error::BadStatic("slowmode in effect"));
+                            }
+                        }
+
+                        if let Some(slowmode_delay) = parent.slowmode_thread {
+                            let next_thread_time =
+                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                            data.channel_set_thread_slowmode_expire_at(
+                                parent_id,
+                                user_id,
+                                next_thread_time,
+                            )
+                            .await?;
+                        }
+                    }
+                }
             }
             ChannelType::Calendar => return Err(Error::BadStatic("not yet implemented")),
             ChannelType::Dm | ChannelType::Gdm => {
@@ -380,6 +437,9 @@ impl ServiceThreads {
                 invitable: json.invitable,
                 auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
                 default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
+                slowmode_thread: json.slowmode_thread.map(|d| d as i64),
+                slowmode_message: json.slowmode_message.map(|d| d as i64),
+                default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
             })
             .await?;
 
@@ -652,6 +712,21 @@ impl ServiceThreads {
                                 "default_auto_archive_duration",
                                 &chan_old.default_auto_archive_duration,
                                 &chan_new.default_auto_archive_duration,
+                            )
+                            .change(
+                                "slowmode_thread",
+                                &chan_old.slowmode_thread,
+                                &chan_new.slowmode_thread,
+                            )
+                            .change(
+                                "slowmode_message",
+                                &chan_old.slowmode_message,
+                                &chan_new.slowmode_message,
+                            )
+                            .change(
+                                "default_slowmode_message",
+                                &chan_old.default_slowmode_message,
+                                &chan_new.default_slowmode_message,
                             )
                             .build(),
                     },

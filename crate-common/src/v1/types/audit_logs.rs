@@ -400,6 +400,13 @@ pub enum AuditLogEntryType {
     WebhookDelete {
         webhook_id: WebhookId,
     },
+
+    RatelimitUpdate {
+        channel_id: ChannelId,
+        user_id: UserId,
+        slowmode_thread_expire_at: Option<Time>,
+        slowmode_message_expire_at: Option<Time>,
+    },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,
 }

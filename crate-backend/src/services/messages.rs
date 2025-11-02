@@ -143,6 +143,31 @@ impl ServiceMessages {
             perms.ensure(Permission::ViewChannel)?;
             perms.ensure(Permission::MessageCreate)?;
 
+            if !perms.has(Permission::ChannelManage)
+                && !perms.has(Permission::ThreadManage)
+                && !perms.has(Permission::MemberTimeout)
+            {
+                if let Some(message_slowmode_expire_at) = data
+                    .channel_get_message_slowmode_expire_at(thread_id, user_id)
+                    .await?
+                {
+                    if message_slowmode_expire_at > Time::now_utc() {
+                        return Err(Error::BadStatic("slowmode in effect"));
+                    }
+                }
+
+                if let Some(slowmode_delay) = thread.slowmode_message {
+                    let next_message_time =
+                        Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                    data.channel_set_message_slowmode_expire_at(
+                        thread_id,
+                        user_id,
+                        next_message_time,
+                    )
+                    .await?;
+                }
+            }
+
             if thread.archived_at.is_some() {
                 srv.channels
                     .update(

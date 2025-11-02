@@ -198,6 +198,9 @@ impl ServiceRooms {
                     invitable: false,
                     auto_archive_duration: None,
                     default_auto_archive_duration: None,
+                    slowmode_thread: None,
+                    slowmode_message: None,
+                    default_slowmode_message: None,
                 })
                 .await?;
             let welcome_channel = data.channel_get(welcome_channel_id).await?;

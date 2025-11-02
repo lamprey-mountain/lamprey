@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelReorder, ChannelType,
-    MessageId, Room, RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
+    MessageId, RatelimitPut, Room, RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -172,6 +172,9 @@ async fn channel_create_dm(
             invitable: json.invitable,
             auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
             default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
+            slowmode_thread: json.slowmode_thread.map(|d| d as i64),
+            slowmode_message: json.slowmode_message.map(|d| d as i64),
+            default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
         })
         .await?;
 
@@ -875,6 +878,210 @@ async fn channel_transfer_ownership(
     Ok(Json(thread))
 }
 
+/// Ratelimit delete
+///
+/// Immediately expires a slowmode ratelimit, allowing the target user to send a message again
+/// Requires either ChannelManage, ThreadManage, or MemberTimeout
+#[utoipa::path(
+    delete,
+    path = "/channel/{channel_id}/ratelimit/{user_id}",
+    params(
+        ("channel_id", description = "Channel id"),
+        ("user_id", description = "User id")
+    ),
+    tags = [
+        "channel",
+        "badge.perm-opt.ChannelManage",
+        "badge.perm-opt.ThreadManage",
+        "badge.perm-opt.MemberTimeout",
+    ],
+    responses(
+        (status = NO_CONTENT, description = "Rate limit expired"),
+    )
+)]
+async fn channel_ratelimit_delete(
+    Path((channel_id, user_id)): Path<(ChannelId, UserId)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+
+    if !perms.has(Permission::ChannelManage)
+        && !perms.has(Permission::ThreadManage)
+        && !perms.has(Permission::MemberTimeout)
+    {
+        return Err(Error::MissingPermissions);
+    }
+
+    s.data()
+        .channel_set_message_slowmode_expire_at(
+            channel_id,
+            user_id,
+            (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1))).into(),
+        )
+        .await?;
+    s.data()
+        .channel_set_thread_slowmode_expire_at(
+            channel_id,
+            user_id,
+            (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1))).into(),
+        )
+        .await?;
+
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+
+    if let Some(room_id) = channel.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::RatelimitUpdate {
+                channel_id,
+                user_id,
+                slowmode_thread_expire_at: None,
+                slowmode_message_expire_at: None,
+            },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        channel_id,
+        auth_user.id,
+        MessageSync::RatelimitUpdate {
+            channel_id,
+            user_id,
+            slowmode_thread_expire_at: None,
+            slowmode_message_expire_at: None,
+        },
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Ratelimit update
+///
+/// Immediately creates a slowmode ratelimit
+/// Requires either ChannelManage or ThreadManage, or MemberTimeout
+#[utoipa::path(
+    put,
+    path = "/channel/{channel_id}/ratelimit/{user_id}",
+    params(
+        ("channel_id", description = "Channel id"),
+        ("user_id", description = "User id")
+    ),
+    request_body = RatelimitPut,
+    tags = [
+        "channel",
+        "badge.perm-opt.ChannelManage",
+        "badge.perm-opt.ThreadManage",
+        "badge.perm-opt.MemberTimeout",
+    ],
+    responses(
+        (status = OK, description = "Rate limit updated"),
+    )
+)]
+async fn channel_ratelimit_update(
+    Path((channel_id, user_id)): Path<(ChannelId, UserId)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<RatelimitPut>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+
+    if !perms.has(Permission::ChannelManage)
+        && !perms.has(Permission::ThreadManage)
+        && !perms.has(Permission::MemberTimeout)
+    {
+        return Err(Error::MissingPermissions);
+    }
+
+    let mut message_expire_at = None;
+    let mut thread_expire_at = None;
+
+    if let Some(expire_at_opt) = json.slowmode_message_expire_at {
+        if let Some(expire_at) = expire_at_opt {
+            s.data()
+                .channel_set_message_slowmode_expire_at(channel_id, user_id, expire_at)
+                .await?;
+            message_expire_at = Some(expire_at);
+        } else {
+            s.data()
+                .channel_set_message_slowmode_expire_at(
+                    channel_id,
+                    user_id,
+                    (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1)))
+                        .into(),
+                )
+                .await?;
+            message_expire_at = None;
+        }
+    }
+
+    if let Some(expire_at_opt) = json.slowmode_thread_expire_at {
+        if let Some(expire_at) = expire_at_opt {
+            s.data()
+                .channel_set_thread_slowmode_expire_at(channel_id, user_id, expire_at)
+                .await?;
+            thread_expire_at = Some(expire_at);
+        } else {
+            s.data()
+                .channel_set_thread_slowmode_expire_at(
+                    channel_id,
+                    user_id,
+                    (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1)))
+                        .into(),
+                )
+                .await?;
+            thread_expire_at = None;
+        }
+    }
+
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+
+    if let Some(room_id) = channel.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::RatelimitUpdate {
+                channel_id,
+                user_id,
+                slowmode_thread_expire_at: thread_expire_at,
+                slowmode_message_expire_at: message_expire_at,
+            },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        channel_id,
+        auth_user.id,
+        MessageSync::RatelimitUpdate {
+            channel_id,
+            user_id,
+            slowmode_thread_expire_at: thread_expire_at,
+            slowmode_message_expire_at: message_expire_at,
+        },
+    )
+    .await?;
+
+    Ok(StatusCode::OK)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(channel_create_room))
@@ -890,4 +1097,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(channel_typing))
         .routes(routes!(channel_upgrade))
         .routes(routes!(channel_transfer_ownership))
+        .routes(routes!(channel_ratelimit_update))
+        .routes(routes!(channel_ratelimit_delete))
 }

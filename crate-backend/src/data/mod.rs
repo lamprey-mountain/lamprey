@@ -502,6 +502,29 @@ pub trait DataChannel {
     async fn channel_undelete(&self, channel_id: ChannelId) -> Result<()>;
     async fn channel_reorder(&self, data: ChannelReorder) -> Result<()>;
     async fn channel_upgrade_gdm(&self, channel_id: ChannelId, room_id: RoomId) -> Result<()>;
+
+    async fn channel_get_message_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<Option<Time>>;
+    async fn channel_set_message_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        expires_at: Time,
+    ) -> Result<()>;
+    async fn channel_get_thread_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<Option<Time>>;
+    async fn channel_set_thread_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        expires_at: Time,
+    ) -> Result<()>;
 }
 
 #[async_trait]

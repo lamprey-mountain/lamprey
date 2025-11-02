@@ -103,6 +103,9 @@ pub struct DbChannel {
     pub invitable: bool,
     pub auto_archive_duration: Option<i64>,
     pub default_auto_archive_duration: Option<i64>,
+    pub slowmode_thread: Option<i32>,
+    pub slowmode_message: Option<i32>,
+    pub default_slowmode_message: Option<i32>,
     pub last_activity_at: Option<PrimitiveDateTime>,
 }
 
@@ -130,6 +133,9 @@ pub struct DbChannelCreate {
     pub invitable: bool,
     pub auto_archive_duration: Option<i64>,
     pub default_auto_archive_duration: Option<i64>,
+    pub slowmode_thread: Option<i64>,
+    pub slowmode_message: Option<i64>,
+    pub default_slowmode_message: Option<i64>,
 }
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
@@ -204,18 +210,9 @@ impl From<DbChannel> for Channel {
             bitrate: row.bitrate.map(|i| i as u64),
             user_limit: row.user_limit.map(|i| i as u64),
             owner_id: row.owner_id.map(|i| i.into()),
-
-            // these fields get filled in later
-            is_unread: None,
-            last_read_id: None,
-            mention_count: None,
-            recipients: vec![],
-            user_config: None,
-            online_count: 0,
             invitable: row.invitable,
             auto_archive_duration: row.auto_archive_duration.map(|i| i as u64),
             default_auto_archive_duration: row.default_auto_archive_duration.map(|i| i as u64),
-
             tags: row
                 .tags
                 .map(|v| serde_json::from_value(v).unwrap_or_default()),
@@ -224,6 +221,19 @@ impl From<DbChannel> for Channel {
                 .map(|v| serde_json::from_value(v).unwrap_or_default()),
             root_message_count: None,
             thread_member: None,
+            slowmode_thread: row.slowmode_thread.map(|v| v as u64),
+            slowmode_message: row.slowmode_message.map(|v| v as u64),
+            default_slowmode_message: row.default_slowmode_message.map(|v| v as u64),
+
+            // these fields get filled in later
+            is_unread: None,
+            last_read_id: None,
+            mention_count: None,
+            recipients: vec![],
+            user_config: None,
+            online_count: 0,
+            slowmode_thread_expire_at: None,
+            slowmode_message_expire_at: None,
         }
     }
 }

@@ -426,7 +426,7 @@ async fn invite_room_create(
         room_id,
         auth_user.id,
         MessageSync::InviteCreate {
-            invite: invite.clone(),
+            invite: Box::new(invite.clone()),
         },
     )
     .await?;
@@ -565,7 +565,7 @@ async fn invite_channel_create(
         channel_id,
         auth_user.id,
         MessageSync::InviteCreate {
-            invite: invite.clone(),
+            invite: Box::new(invite.clone()),
         },
     )
     .await?;
@@ -738,7 +738,7 @@ async fn invite_patch(
     }
 
     s.broadcast(MessageSync::InviteUpdate {
-        invite: updated_invite.clone(),
+        invite: Box::new(updated_invite.clone()),
     })?;
 
     Ok((StatusCode::OK, Json(updated_invite)))
@@ -800,7 +800,7 @@ async fn invite_server_create(
         SERVER_ROOM_ID,
         user.id,
         MessageSync::InviteCreate {
-            invite: invite.clone(),
+            invite: Box::new(invite.clone()),
         },
     )
     .await?;
@@ -905,7 +905,7 @@ async fn invite_user_create(
     .await?;
 
     s.broadcast(MessageSync::InviteCreate {
-        invite: invite.clone(),
+        invite: Box::new(invite.clone()),
     })?;
 
     Ok((StatusCode::CREATED, Json(invite)))

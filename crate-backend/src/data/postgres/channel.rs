@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Diff, Time};
 use common::v1::types::ChannelReorder;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
@@ -49,8 +49,8 @@ impl DataChannel for Postgres {
 
         query!(
             "
-			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14, $15, $16)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         ",
             channel_id.into_inner(),
             channel_id.into_inner(),
@@ -68,6 +68,9 @@ impl DataChannel for Postgres {
             create.invitable,
             create.auto_archive_duration,
             create.default_auto_archive_duration,
+            create.slowmode_thread.map(|s| s as i32),
+            create.slowmode_message.map(|s| s as i32),
+            create.default_slowmode_message.map(|s| s as i32),
         )
         .execute(&mut *tx)
         .await?;
@@ -294,7 +297,10 @@ impl DataChannel for Postgres {
                 parent_id = $14,
                 auto_archive_duration = $15,
                 default_auto_archive_duration = $16,
-                last_activity_at = $17
+                slowmode_thread = $17,
+                slowmode_message = $18,
+                default_slowmode_message = $19,
+                last_activity_at = $20
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -325,6 +331,18 @@ impl DataChannel for Postgres {
                 .default_auto_archive_duration
                 .unwrap_or(thread.default_auto_archive_duration)
                 .map(|i| i as i64),
+            patch
+                .slowmode_thread
+                .unwrap_or(thread.slowmode_thread)
+                .map(|i| i as i32),
+            patch
+                .slowmode_message
+                .unwrap_or(thread.slowmode_message)
+                .map(|i| i as i32),
+            patch
+                .default_slowmode_message
+                .unwrap_or(thread.default_slowmode_message)
+                .map(|i| i as i32),
             last_activity_at as _,
         )
         .execute(&mut *tx)
@@ -448,6 +466,84 @@ impl DataChannel for Postgres {
             *version_id,
             *room_id,
             ty as _,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn channel_get_message_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<Option<Time>> {
+        let row = query_scalar!(
+            "SELECT expires_at FROM channel_slowmode_message WHERE channel_id = $1 AND user_id = $2",
+            *channel_id,
+            *user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(Time::from))
+    }
+
+    async fn channel_set_message_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        expires_at: Time,
+    ) -> Result<()> {
+        query!(
+            "INSERT INTO channel_slowmode_message (channel_id, user_id, expires_at)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (channel_id, user_id)
+             DO UPDATE SET expires_at = $3",
+            *channel_id,
+            *user_id,
+            time::PrimitiveDateTime::new(
+                expires_at.into_inner().date(),
+                expires_at.into_inner().time()
+            )
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn channel_get_thread_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<Option<Time>> {
+        let row = query_scalar!(
+            "SELECT expires_at FROM channel_slowmode_thread WHERE channel_id = $1 AND user_id = $2",
+            *channel_id,
+            *user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(Time::from))
+    }
+
+    async fn channel_set_thread_slowmode_expire_at(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        expires_at: Time,
+    ) -> Result<()> {
+        query!(
+            "INSERT INTO channel_slowmode_thread (channel_id, user_id, expires_at)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (channel_id, user_id)
+             DO UPDATE SET expires_at = $3",
+            *channel_id,
+            *user_id,
+            time::PrimitiveDateTime::new(
+                expires_at.into_inner().date(),
+                expires_at.into_inner().time()
+            )
         )
         .execute(&self.pool)
         .await?;

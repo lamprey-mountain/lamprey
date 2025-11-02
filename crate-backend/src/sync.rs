@@ -568,6 +568,7 @@ impl Connection {
             MessageSync::WebhookDelete { channel_id, .. } => {
                 AuthCheck::ChannelPerm(*channel_id, Permission::IntegrationsManage)
             }
+            MessageSync::RatelimitUpdate { user_id, .. } => AuthCheck::User(*user_id),
         };
         let should_send = auth_check.should_send(&session, &self.s).await?;
         if should_send {

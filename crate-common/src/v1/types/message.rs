@@ -512,6 +512,16 @@ pub struct ContextQuery {
     pub limit: Option<u16>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RatelimitPut {
+    #[serde(default, deserialize_with = "some_option")]
+    pub slowmode_thread_expire_at: Option<Option<Time>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub slowmode_message_expire_at: Option<Option<Time>>,
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ContextResponse {

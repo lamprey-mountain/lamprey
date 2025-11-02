@@ -118,6 +118,29 @@ pub struct Channel {
 
     /// the default auto archive duration in seconds to copy to threads created in this channel
     pub default_auto_archive_duration: Option<u64>,
+
+    /// minimum delay in seconds between creating new threads
+    // can only be set on channels with has_threads
+    // must have ChannelManage/ThreadManage to change
+    pub slowmode_thread: Option<u64>,
+
+    /// minimum delay in seconds between creating new messages
+    // can only be set on channels with has_text
+    // must have ChannelManage/ThreadManage to change
+    pub slowmode_message: Option<u64>,
+
+    /// default slowmode_message for new threads
+    ///
+    /// this value is copied, changing this wont change old threads
+    // can only be set on channels with has_threads
+    // must have ChannelManage/ThreadManage to change
+    pub default_slowmode_message: Option<u64>,
+
+    /// when the current user can create a new thread
+    pub slowmode_thread_expire_at: Option<Time>,
+
+    /// when the current user can create a new message
+    pub slowmode_message_expire_at: Option<Time>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -154,7 +177,7 @@ pub enum ChannelType {
     Calendar,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "validator", derive(Validate))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ChannelCreate {
@@ -207,6 +230,12 @@ pub struct ChannelCreate {
     pub auto_archive_duration: Option<u64>,
 
     pub default_auto_archive_duration: Option<u64>,
+
+    pub slowmode_thread: Option<u64>,
+
+    pub slowmode_message: Option<u64>,
+
+    pub default_slowmode_message: Option<u64>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -261,6 +290,15 @@ pub struct ChannelPatch {
 
     #[serde(default, deserialize_with = "some_option")]
     pub default_auto_archive_duration: Option<Option<u64>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub slowmode_thread: Option<Option<u64>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub slowmode_message: Option<Option<u64>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub default_slowmode_message: Option<Option<u64>>,
 }
 
 /// reorder some channels
@@ -310,6 +348,11 @@ impl Diff<Channel> for ChannelPatch {
             || self
                 .default_auto_archive_duration
                 .changes(&other.default_auto_archive_duration)
+            || self.slowmode_thread.changes(&other.slowmode_thread)
+            || self.slowmode_message.changes(&other.slowmode_message)
+            || self
+                .default_slowmode_message
+                .changes(&other.default_slowmode_message)
     }
 }
 
