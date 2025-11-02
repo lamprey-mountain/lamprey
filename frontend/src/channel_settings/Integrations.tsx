@@ -74,7 +74,6 @@ export function Integrations(props: VoidProps<{ channel: Channel }>) {
 					params: { path: { channel_id: props.channel.id } },
 					body: {
 						name,
-						// Use default avatar for now
 					},
 				});
 				refetch();
@@ -96,10 +95,13 @@ export function Integrations(props: VoidProps<{ channel: Channel }>) {
 					create
 				</button>
 			</header>
-			{/* TODO: filter by name */}
 			<Show when={webhooks()}>
 				<ul>
-					<For each={webhooks()!.items}>
+					<For
+						each={webhooks()!.items.filter((i) =>
+							i.name.toLowerCase().includes(search().toLowerCase())
+						)}
+					>
 						{(i) => {
 							const creator = api.users.fetch(() => i.creator_id);
 							const [name, setName] = createSignal(i.name);
