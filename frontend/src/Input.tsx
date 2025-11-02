@@ -165,12 +165,6 @@ export function Input(props: InputProps) {
 				locked: locked(),
 			}}
 		>
-			<Show when={typingUsers().length}>
-				<div class="typing">
-					{fmt.format(typingUsers().map((i) => getName(i) || "someone"))}{" "}
-					{typingUsers().length === 1 ? "is" : "are"} typing
-				</div>
-			</Show>
 			<Show when={atts()?.length}>
 				<div class="attachments">
 					<header>
@@ -211,6 +205,23 @@ export function Input(props: InputProps) {
 				/>
 				<EmojiButton picked={onEmojiPick} />
 			</div>
+			<footer>
+				<Show when={typingUsers().length}>
+					{/* TODO: bold names */}
+					<div class="typing">
+						{fmt.format(typingUsers().map((i) => getName(i) || "someone"))}{" "}
+						{typingUsers().length === 1 ? "is" : "are"} typing
+					</div>
+				</Show>
+				<Show when={false}>
+					{/* TODO: show time left */}
+					{/* TODO: tooltip showing slowmode ratelimit */}
+					{/* TODO: icon for slowmode indicator*/}
+					<div class="slowmode">
+						0:00
+					</div>
+				</Show>
+			</footer>
 		</div>
 	);
 }

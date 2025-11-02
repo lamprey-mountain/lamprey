@@ -351,24 +351,24 @@ input[type="submit"] {
 		}
 	}
 
-	& > .typing {
-		background: $bg-400;
-		padding: 2px 4px;
-		border: solid $bg-400 1px;
-		border-bottom: none;
-		border-top-right-radius: 4px;
-		border-top-left-radius: 4px;
+	& > footer {
 		color: $fg-400;
+		height: 8px;
+		font-size: 0.8em;
+		padding: 2px 2px;
+		display: flex;
 
-		& ~ .text {
-			border-top-left-radius: 0;
-			border-top-right-radius: 0;
-			border-top: none;
+		.slowmode {
+			font-family: var(--font-mono);
 		}
 
-		&::after {
-			content: "";
-			animation: dots infinite 800ms;
+		& > .typing {
+			flex: 1;
+
+			&::after {
+				content: "";
+				animation: dots infinite 800ms;
+			}
 		}
 	}
 
@@ -533,7 +533,8 @@ pre {
 	white-space: pre;
 }
 
-.editor .mention, .markdown .mention {
+.editor .mention,
+.markdown .mention {
 	background-color: hsl(220 50% 50% / 0.5);
 	border-radius: 3px;
 	padding: 0 2px;
@@ -559,7 +560,8 @@ a {
 	cursor: pointer;
 	border-radius: 2px;
 
-	&:hover, &:focus {
+	&:hover,
+	&:focus {
 		background: #fff2;
 	}
 }
@@ -1682,6 +1684,7 @@ body.resizing {
 	&[data-side="right"] {
 		grid-area: sidebar;
 		border-left: solid $sep-300 1px;
+
 		.resize-handle {
 			left: -2px;
 		}
@@ -1690,6 +1693,7 @@ body.resizing {
 	&[data-side="left"] {
 		grid-area: nav;
 		border-right: solid $sep-300 1px;
+
 		.resize-handle {
 			right: -2px;
 		}
@@ -3095,7 +3099,8 @@ button.link {
 		border-radius: 2px;
 		padding: 0 2px;
 
-		&:hover, &:focus {
+		&:hover,
+		&:focus {
 			background: #fff2;
 		}
 	}
