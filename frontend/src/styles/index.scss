@@ -2610,6 +2610,17 @@ button.primary {
 	}
 }
 
+button.destructive {
+	border: solid $color-red 1px;
+	color: $color-red;
+
+	&:hover,
+	&:focus-visible {
+		background: $color-red;
+		color: $bg-200;
+	}
+}
+
 button.big {
 	padding: 0.3rem 0.5rem;
 	/* border-radius: 4px; */
@@ -3180,5 +3191,37 @@ button.link {
 	:is(.button:hover, .button.shown) .emoji {
 		filter: grayscale(0);
 		transform: scale(1.1);
+	}
+}
+
+.room-settings-integrations {
+	details {
+		background: $bg-150;
+		border: solid $sep-300 1px;
+		padding: 8px;
+		margin-bottom: 8px;
+	}
+
+	summary {
+		display: flex;
+		padding: 8px;
+
+		.avatar {
+			height: 32px;
+			width: 32px;
+		}
+	}
+
+	details[open] > summary {
+		border-bottom: solid $sep-300 1px;
+		margin-bottom: 8px;
+	}
+
+	.info {
+		display: flex;
+
+		& > .avatar {
+			margin-right: 4px;
+		}
 	}
 }

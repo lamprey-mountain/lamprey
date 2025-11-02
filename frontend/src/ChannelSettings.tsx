@@ -38,7 +38,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 					</For>
 				</ul>
 			</nav>
-			<main>
+			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">
 					<Dynamic
 						component={currentTab()?.component}
