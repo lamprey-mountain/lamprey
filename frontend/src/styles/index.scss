@@ -2667,37 +2667,34 @@ button.big {
 	}
 }
 
-.applications-savebar {
+.savebar {
 	display: flex;
-	position: absolute;
-	bottom: 4px;
-	width: 100%;
-	padding-right: calc(100% - 60ch + 4px);
-}
+	position: sticky;
+	bottom: 8px;
 
-.applications-savebar-inner {
-	background: $bg-100;
-	border-radius: 4px;
-	display: flex;
-	flex: 1;
-	padding: 0.25rem;
-	padding-left: 0.5rem;
-	gap: 0.25rem;
-	align-items: center;
-	border-radius: 4px;
-
-	& .warning {
-		flex: 1;
-	}
-
-	& .save {
-		background: $color-green;
-		color: $bg-300;
-	}
-
-	& button {
-		padding: 4px 8px;
+	& > .inner {
+		background: $bg-100;
 		border-radius: 4px;
+		display: flex;
+		flex: 1;
+		padding: 8px;
+		gap: 8px;
+		align-items: center;
+		border-radius: 4px;
+
+		& .warning {
+			flex: 1;
+		}
+
+		& .save {
+			background: $color-green;
+			color: $bg-300;
+		}
+
+		& button {
+			padding: 4px 8px;
+			border-radius: 4px;
+		}
 	}
 }
 

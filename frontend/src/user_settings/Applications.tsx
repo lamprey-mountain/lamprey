@@ -366,8 +366,8 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				</For>
 			</ul>
 			<Show when={hasUnsavedChanges()}>
-				<div class="applications-savebar">
-					<div class="applications-savebar-inner">
+				<div class="savebar">
+					<div class="inner">
 						<div class="warning">you have unsaved changes</div>
 						<button class="reset" onClick={cancelChanges}>
 							cancel
