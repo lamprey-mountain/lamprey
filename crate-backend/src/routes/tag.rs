@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -11,6 +11,7 @@ use common::v1::types::{
     util::Changes,
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, Permission, TagId,
 };
+use serde::Deserialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -19,6 +20,12 @@ use crate::{
     routes::util::{Auth, HeaderReason},
     Error, ServerState,
 };
+
+#[derive(Debug, Deserialize)]
+struct TagDeleteQuery {
+    #[serde(default)]
+    force: bool,
+}
 
 /// Create a tag
 #[utoipa::path(
@@ -30,7 +37,7 @@ use crate::{
         (status = CREATED, body = Tag, description = "Create tag success"),
     )
 )]
-pub async fn tag_create(
+async fn tag_create(
     Path(channel_id): Path<ChannelId>,
     State(s): State<Arc<ServerState>>,
     Auth(user): Auth,
@@ -101,7 +108,7 @@ pub async fn tag_create(
         (status = OK, body = Tag, description = "Update tag success"),
     )
 )]
-pub async fn tag_update(
+async fn tag_update(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     State(s): State<Arc<ServerState>>,
     Auth(user): Auth,
@@ -172,8 +179,9 @@ pub async fn tag_update(
         (status = NO_CONTENT, description = "Delete tag success"),
     )
 )]
-pub async fn tag_delete(
+async fn tag_delete(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
+    Query(query): Query<TagDeleteQuery>,
     State(s): State<Arc<ServerState>>,
     Auth(user): Auth,
     HeaderReason(reason): HeaderReason,
@@ -186,6 +194,12 @@ pub async fn tag_delete(
     let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
     if channel_id != tag_channel_id {
         return Err(Error::NotFound);
+    }
+
+    let tag = s.data().tag_get(tag_id).await?;
+
+    if tag.total_thread_count > 0 && !query.force {
+        return Ok(StatusCode::CONFLICT.into_response());
     }
 
     let chan_old = srv.channels.get(channel_id, Some(user.id)).await?;
@@ -225,7 +239,7 @@ pub async fn tag_delete(
     )
     .await?;
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
