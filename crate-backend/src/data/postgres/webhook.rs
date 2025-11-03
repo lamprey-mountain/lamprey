@@ -247,6 +247,31 @@ impl DataWebhook for Postgres {
             .await?;
         }
         if let Some(channel_id) = patch.channel_id {
+            let current_webhook = sqlx::query!(
+                r#"
+                SELECT c.room_id
+                FROM webhook w
+                JOIN channel c ON w.channel_id = c.id
+                WHERE w.id = $1
+                "#,
+                *webhook_id
+            )
+            .fetch_optional(&mut *tx)
+            .await?
+            .ok_or(Error::NotFound)?;
+
+            let new_channel_room =
+                sqlx::query!("SELECT room_id FROM channel WHERE id = $1", *channel_id)
+                    .fetch_optional(&mut *tx)
+                    .await?
+                    .ok_or(Error::NotFound)?;
+
+            if current_webhook.room_id != new_channel_room.room_id {
+                return Err(Error::BadRequest(
+                    "Cannot move webhook to a different room".to_string(),
+                ));
+            }
+
             sqlx::query!(
                 "UPDATE webhook SET channel_id = $1 WHERE id = $2",
                 *channel_id,
@@ -320,6 +345,20 @@ impl DataWebhook for Postgres {
             .await?;
         }
         if let Some(channel_id) = patch.channel_id {
+            // Get the room of the new channel
+            let new_channel_room =
+                sqlx::query!("SELECT room_id FROM channel WHERE id = $1", *channel_id)
+                    .fetch_optional(&mut *tx)
+                    .await?
+                    .ok_or(Error::NotFound)?;
+
+            // Ensure the new channel is in the same room as the webhook's current room
+            if original.room_id != new_channel_room.room_id {
+                return Err(Error::BadRequest(
+                    "Cannot move webhook to a different room".to_string(),
+                ));
+            }
+
             sqlx::query!(
                 "UPDATE webhook SET channel_id = $1 WHERE id = $2",
                 *channel_id,
@@ -347,7 +386,11 @@ impl DataWebhook for Postgres {
         Ok(Webhook {
             id: original.id.into(),
             room_id: original.room_id.map(Into::into),
-            channel_id: original.channel_id.into(),
+            channel_id: if patch.channel_id.is_some() {
+                patch.channel_id.unwrap().into()
+            } else {
+                original.channel_id.into()
+            },
             creator_id: original.creator_id.map(Into::into),
             name: if patch.name.is_some() {
                 patch.name.unwrap()
