@@ -813,6 +813,7 @@ input[type="url"] {
 article.message {
 	display: grid;
 	grid-template-columns: 128px 1fr max-content;
+	position: relative;
 
 	&.reply {
 		/* grid-template-rows: auto auto; */
@@ -3247,4 +3248,29 @@ button.link {
 		width: 32px;
 		margin: 0;
 	}
+}
+
+.message-toolbar {
+	background: $bg-150;
+	display: flex;
+	position: absolute;
+	top: -8px;
+	right: 8px;
+	border: solid $sep-400 1px;
+	box-shadow: 0 2px 8px $bg-100;
+	border-radius: 4px;
+	overflow: hidden;
+	visibility: hidden;
+
+	& > button {
+		display: grid;
+		place-items: center;
+		height: 24px;
+		width: 24px;
+		border: none;
+	}
+}
+
+article.message:hover > .message-toolbar {
+	visibility: visible;
 }

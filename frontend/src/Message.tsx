@@ -418,6 +418,7 @@ export function MessageView(props: MessageProps) {
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
 				</article>
 			);
 		} else if (props.message.type === "MemberRemove") {
@@ -459,6 +460,7 @@ export function MessageView(props: MessageProps) {
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
 				</article>
 			);
 		} else if (props.message.type === "MemberJoin") {
@@ -488,6 +490,7 @@ export function MessageView(props: MessageProps) {
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
 				</article>
 			);
 		} else if (props.message.type === "MessagePinned") {
@@ -517,6 +520,7 @@ export function MessageView(props: MessageProps) {
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
 				</article>
 			);
 		} else if (props.message.type === "ThreadRename") {
@@ -546,6 +550,7 @@ export function MessageView(props: MessageProps) {
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
 				</article>
 			);
 		} else if (props.message.type === "DefaultMarkdown") {
@@ -664,6 +669,7 @@ export function MessageView(props: MessageProps) {
 						</div>
 						<Time date={date} animGroup="message-ts" />
 					</Show>
+					<MessageToolbar message={props.message} />
 				</article>
 			);
 		} else {
@@ -674,6 +680,7 @@ export function MessageView(props: MessageProps) {
 					onClick={handleClick}
 				>
 					unknown message: {props.message.type}
+					<MessageToolbar message={props.message} />
 				</article>
 			);
 		}
@@ -867,3 +874,76 @@ function Actor(props: { user_id: string; thread: Channel }) {
 		</span>
 	);
 }
+
+const MessageToolbar = (props: { message: Message }) => {
+	const ctx = useCtx();
+	const api = useApi();
+
+	const isOwnMessage = () => {
+		const currentUser = api.users.cache.get("@self");
+		return currentUser && currentUser.id === props.message.author_id;
+	};
+
+	const canEditMessage = () => {
+		return props.message.type === "DefaultMarkdown" &&
+			!props.message.is_local &&
+			isOwnMessage();
+	};
+
+	const handleAddReaction = () => {
+		// TODO
+	};
+
+	const handleReply = () => {
+		ctx.channel_reply_id.set(props.message.channel_id, props.message.id);
+	};
+
+	const handleEdit = () => {
+		if (canEditMessage()) {
+			ctx.editingMessage.set(props.message.channel_id, {
+				message_id: props.message.id,
+				selection: "end",
+			});
+		}
+	};
+
+	const handleContextMenu = (e: MouseEvent) => {
+		e.preventDefault();
+
+		ctx.setMenu({
+			x: e.clientX,
+			y: e.clientY,
+			type: "message",
+			channel_id: props.message.channel_id,
+			message_id: props.message.id,
+			version_id: props.message.version_id,
+		});
+	};
+
+	return (
+		<div class="message-toolbar">
+			<button
+				onClick={handleAddReaction}
+				title="Add reaction"
+				aria-label="Add reaction"
+			>
+				+
+			</button>
+			<button onClick={handleReply} title="Reply" aria-label="Reply">
+				&gt;
+			</button>
+			<Show when={canEditMessage()}>
+				<button onClick={handleEdit} title="Edit" aria-label="Edit">
+					e
+				</button>
+			</Show>
+			<button
+				onClick={handleContextMenu}
+				title="More options"
+				aria-label="More options"
+			>
+				⋮
+			</button>
+		</div>
+	);
+};
