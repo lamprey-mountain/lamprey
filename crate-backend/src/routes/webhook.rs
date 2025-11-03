@@ -12,7 +12,8 @@ use common::v1::types::{
     sync::MessageSync,
     util::Changes,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    AuditLogEntryId, Message, MessageCreate, Permission, WebhookId,
+    AuditLogEntryId, Message, MessageCreate, MessageId, MessagePatch, Permission, UserId,
+    WebhookId,
 };
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -381,6 +382,128 @@ async fn webhook_execute(
     Ok((StatusCode::CREATED, Json(message)))
 }
 
+/// Webhook get message
+#[utoipa::path(
+    get,
+    path = "/webhook/{webhook_id}/{token}/message/{message_id}",
+    params(
+        ("webhook_id", description = "Webhook id"),
+        ("token", description = "Webhook token"),
+        ("message_id", description = "Message id")
+    ),
+    tags = ["webhook"],
+    responses(
+        (status = OK, body = Message, description = "Get webhook message success"),
+    )
+)]
+async fn webhook_message_get(
+    Path((webhook_id, token, message_id)): Path<(WebhookId, String, MessageId)>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
+    let channel_id = webhook.channel_id;
+    let webhook_user_id: UserId = (*webhook.id).into();
+
+    let mut message = s
+        .data()
+        .message_get(channel_id, message_id, webhook_user_id)
+        .await?;
+
+    if message.author_id != webhook_user_id {
+        return Err(Error::NotFound);
+    }
+
+    s.presign_message(&mut message).await?;
+
+    Ok(Json(message))
+}
+
+/// Webhook edit message
+#[utoipa::path(
+    patch,
+    path = "/webhook/{webhook_id}/{token}/message/{message_id}",
+    params(
+        ("webhook_id", description = "Webhook id"),
+        ("token", description = "Webhook token"),
+        ("message_id", description = "Message id")
+    ),
+    tags = ["webhook"],
+    responses(
+        (status = OK, body = Message, description = "Edit webhook message success"),
+    )
+)]
+async fn webhook_message_edit(
+    Path((webhook_id, token, message_id)): Path<(WebhookId, String, MessageId)>,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<MessagePatch>,
+) -> Result<impl IntoResponse> {
+    let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
+    let channel_id = webhook.channel_id;
+    let webhook_user_id: UserId = (*webhook.id).into();
+
+    let (status, message) = s
+        .services()
+        .messages
+        .edit(channel_id, message_id, webhook_user_id, None, json)
+        .await?;
+
+    Ok((status, Json(message)))
+}
+
+/// Webhook delete message
+#[utoipa::path(
+    delete,
+    path = "/webhook/{webhook_id}/{token}/message/{message_id}",
+    params(
+        ("webhook_id", description = "Webhook id"),
+        ("token", description = "Webhook token"),
+        ("message_id", description = "Message id")
+    ),
+    tags = ["webhook"],
+    responses(
+        (status = NO_CONTENT, description = "Delete webhook message success"),
+    )
+)]
+async fn webhook_message_delete(
+    Path((webhook_id, token, message_id)): Path<(WebhookId, String, MessageId)>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
+    let channel_id = webhook.channel_id;
+    let webhook_user_id: UserId = (*webhook.id).into();
+
+    let message = s
+        .data()
+        .message_get(channel_id, message_id, webhook_user_id)
+        .await?;
+
+    if message.author_id != webhook_user_id {
+        return Err(Error::NotFound);
+    }
+
+    if !message.message_type.is_deletable() {
+        return Err(Error::BadStatic("cant delete that message"));
+    }
+
+    s.data().message_delete(channel_id, message_id).await?;
+    s.data()
+        .media_link_delete_all(message_id.into_inner())
+        .await?;
+
+    s.broadcast_channel(
+        channel_id,
+        webhook_user_id,
+        MessageSync::MessageDelete {
+            channel_id,
+            message_id,
+        },
+    )
+    .await?;
+    s.services().channels.invalidate(channel_id).await;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(webhook_create))
@@ -393,6 +516,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(webhook_update))
         .routes(routes!(webhook_update_with_token))
         .routes(routes!(webhook_execute))
+        .routes(routes!(webhook_message_get))
+        .routes(routes!(webhook_message_edit))
+        .routes(routes!(webhook_message_delete))
         .routes(routes!(discord::webhook_execute_discord))
         .routes(routes!(github::webhook_execute_github))
         .routes(routes!(slack::webhook_execute_slack))

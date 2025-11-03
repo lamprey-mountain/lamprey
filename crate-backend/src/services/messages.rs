@@ -538,13 +538,36 @@ impl ServiceMessages {
         json.validate()?;
         let data = s.data();
         let srv = s.services();
-        let perms = s.services().perms.for_channel(user_id, thread_id).await?;
-        perms.ensure(Permission::ViewChannel)?;
-        let message = self.get(thread_id, message_id, user_id).await?;
+        let user = srv.users.get(user_id, None).await?;
+        let is_webhook = user.webhook.is_some();
+
+        let perms = if is_webhook {
+            None
+        } else {
+            Some(s.services().perms.for_channel(user_id, thread_id).await?)
+        };
+
+        if let Some(perms) = &perms {
+            perms.ensure(Permission::ViewChannel)?;
+        }
+
+        let message = match self.get(thread_id, message_id, user_id).await {
+            Ok(m) => m,
+            Err(e) => {
+                if is_webhook {
+                    return Err(Error::NotFound);
+                }
+                return Err(e);
+            }
+        };
+
         if !message.message_type.is_editable() {
             return Err(Error::BadStatic("cant edit that message"));
         }
         if message.author_id != user_id {
+            if is_webhook {
+                return Err(Error::NotFound);
+            }
             return Err(Error::BadStatic("cant edit other user's message"));
         }
         if json.content.is_none()
@@ -555,13 +578,20 @@ impl ServiceMessages {
                 "at least one of content, attachments, or embeds must be defined",
             ));
         }
-        if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
-            perms.ensure(Permission::MessageAttachments)?;
+
+        if let Some(perms) = &perms {
+            if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
+                perms.ensure(Permission::MessageAttachments)?;
+            }
+            if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
+                perms.ensure(Permission::MessageEmbeds)?;
+            }
         }
-        if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
-            perms.ensure(Permission::MessageEmbeds)?;
-        }
+
         if json.edited_at.is_some() {
+            if is_webhook {
+                return Err(Error::BadStatic("webhook cannot set edited_at"));
+            }
             let usr = data.user_get(user_id).await?;
             if let Some(puppet) = usr.puppet {
                 let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
@@ -649,21 +679,15 @@ impl ServiceMessages {
             .await?;
 
         if let Some(content) = &content {
-            if perms.has(Permission::MessageEmbeds) {
+            let can_embed = if let Some(perms) = &perms {
+                perms.has(Permission::MessageEmbeds)
+            } else {
+                is_webhook
+            };
+            if can_embed {
                 tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
             }
         }
-
-        // The embeds are already processed and included in the message via `embeds: embeds.clone()` above.
-        // This block is no longer needed.
-        // if let Some(embeds) = json.embeds {
-        //     match &mut message.message_type {
-        //         MessageType::DefaultMarkdown(m) => {
-        //             m.embeds = embeds.into_iter().map(embed_from_create).collect()
-        //         }
-        //         _ => {}
-        //     }
-        // }
 
         s.presign_message(&mut message).await?;
         s.broadcast_channel(
