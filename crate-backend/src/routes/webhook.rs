@@ -321,6 +321,12 @@ async fn webhook_update(
     };
     s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
 
+    let user_id: UserId = (*webhook_id).into();
+    let srv = s.services();
+    srv.users.invalidate(user_id).await;
+    let user = srv.users.get(user_id, None).await?;
+    s.broadcast(MessageSync::UserUpdate { user })?;
+
     Ok(Json(updated_webhook))
 }
 
@@ -346,6 +352,24 @@ async fn webhook_update_with_token(
         .data()
         .webhook_update_with_token(webhook_id, &token, json)
         .await?;
+
+    if let Some(room_id) = updated_webhook.room_id {
+        s.broadcast_room(
+            room_id,
+            UserId::default(),
+            MessageSync::WebhookUpdate {
+                webhook: updated_webhook.clone(),
+            },
+        )
+        .await?;
+    }
+
+    let user_id: UserId = (*webhook_id).into();
+    let srv = s.services();
+    srv.users.invalidate(user_id).await;
+    let user = srv.users.get(user_id, None).await?;
+    s.broadcast(MessageSync::UserUpdate { user })?;
+
     Ok(Json(updated_webhook))
 }
 
