@@ -136,6 +136,7 @@ pub struct DbChannelCreate {
     pub slowmode_thread: Option<i64>,
     pub slowmode_message: Option<i64>,
     pub default_slowmode_message: Option<i64>,
+    pub tags: Option<Vec<TagId>>,
 }
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]

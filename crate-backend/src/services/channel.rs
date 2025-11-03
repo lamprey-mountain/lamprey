@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -406,6 +406,37 @@ impl ServiceThreads {
             }
         }
 
+        if let Some(tags) = &json.tags {
+            if !json.ty.is_taggable() {
+                return Err(Error::BadStatic("channel type is not taggable"));
+            }
+
+            let parent_id = json.parent_id.ok_or(Error::BadStatic(
+                "threads must have a parent channel to have tags",
+            ))?;
+
+            let forum_channel = self.get(parent_id, None).await?;
+            let available_tags = forum_channel.tags_available.unwrap_or_default();
+
+            let available_tags_map: HashMap<_, _> =
+                available_tags.iter().map(|t| (t.id, t)).collect();
+
+            // check permissions for each tag
+            for tag_id in tags {
+                let Some(tag) = available_tags_map.get(tag_id) else {
+                    return Err(Error::BadStatic("invalid tag for this forum"));
+                };
+
+                if tag.restricted {
+                    if !perms.has(Permission::ThreadEdit) && !perms.has(Permission::ThreadManage) {
+                        return Err(Error::BadStatic(
+                            "missing permission to apply restricted tag",
+                        ));
+                    }
+                }
+            }
+        }
+
         let channel_id = data
             .channel_create(DbChannelCreate {
                 room_id: room_id.map(|id| id.into_inner()),
@@ -440,6 +471,7 @@ impl ServiceThreads {
                 slowmode_thread: json.slowmode_thread.map(|d| d as i64),
                 slowmode_message: json.slowmode_message.map(|d| d as i64),
                 default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
+                tags: json.tags,
             })
             .await?;
 
@@ -656,6 +688,31 @@ impl ServiceThreads {
             for tag_id in tags {
                 if !available_tag_ids.contains(tag_id) {
                     return Err(Error::BadStatic("invalid tag for this forum"));
+                }
+            }
+
+            // Enforce restricted tags
+            let old_tags: HashSet<_> = chan_old
+                .tags
+                .as_ref()
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .collect();
+            let new_tags: HashSet<_> = tags.iter().cloned().collect();
+            let added_tags = new_tags.difference(&old_tags);
+
+            for added_tag_id in added_tags {
+                let tag = available_tags
+                    .iter()
+                    .find(|t| t.id == *added_tag_id)
+                    .unwrap();
+                if tag.restricted {
+                    if !perms.has(Permission::ThreadEdit) && !perms.has(Permission::ThreadManage) {
+                        return Err(Error::BadStatic(
+                            "missing permission to apply restricted tag",
+                        ));
+                    }
                 }
             }
         }

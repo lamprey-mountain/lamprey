@@ -74,6 +74,20 @@ impl DataChannel for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+
+        if let Some(tags) = &create.tags {
+            if !tags.is_empty() {
+                let tag_ids: Vec<_> = tags.iter().map(|t| t.into_inner()).collect();
+                query!(
+                    "INSERT INTO channel_tag (channel_id, tag_id) SELECT $1, * FROM UNNEST($2::uuid[])",
+                    channel_id.into_inner(),
+                    &tag_ids
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
         tx.commit().await?;
         info!("inserted channel");
         Ok(())

@@ -201,6 +201,7 @@ impl ServiceRooms {
                     slowmode_thread: None,
                     slowmode_message: None,
                     default_slowmode_message: None,
+                    tags: None,
                 })
                 .await?;
             let welcome_channel = data.channel_get(welcome_channel_id).await?;

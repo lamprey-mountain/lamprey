@@ -245,6 +245,7 @@ impl ServiceUsers {
                 slowmode_thread: None,
                 slowmode_message: None,
                 default_slowmode_message: None,
+                tags: None,
             })
             .await?;
         data.dm_put(user_id, other_id, thread_id).await?;

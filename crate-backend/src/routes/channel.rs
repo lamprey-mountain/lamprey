@@ -175,6 +175,7 @@ async fn channel_create_dm(
             slowmode_thread: json.slowmode_thread.map(|d| d as i64),
             slowmode_message: json.slowmode_message.map(|d| d as i64),
             default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
+            tags: json.tags,
         })
         .await?;
 

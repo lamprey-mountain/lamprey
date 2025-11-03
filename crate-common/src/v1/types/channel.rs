@@ -199,7 +199,7 @@ pub struct ChannelCreate {
     pub ty: ChannelType,
 
     /// tags to apply to this thread (overwrite, not append)
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags: Option<Vec<TagId>>,
 
     /// not safe for work
@@ -258,7 +258,7 @@ pub struct ChannelPatch {
     pub icon: Option<Option<MediaId>>,
 
     /// tags to apply to this thread (overwrite, not append)
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags: Option<Vec<TagId>>,
 
     /// not safe for work
