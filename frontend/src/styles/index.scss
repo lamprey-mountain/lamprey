@@ -289,17 +289,17 @@ input[type="submit"] {
 				overflow-anchor: none;
 			}
 
-			&.selected {
+			&.selected > article.message {
 				box-shadow: 4px 0 0 -1px inset #67dc82;
 				background-color: #67dc8222;
 			}
 
-			&.context {
+			&.context > article.message {
 				box-shadow: 4px 0 0 -1px inset #cc1856;
 				background-color: #cc185622;
 			}
 
-			&.mentioned {
+			&.mentioned > article.message {
 				box-shadow: 4px 0 0 -1px inset $link-500;
 				background-color: oklch(var(--color-link-500) / 0.1);
 			}
