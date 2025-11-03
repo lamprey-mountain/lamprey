@@ -106,7 +106,6 @@ export function Integrations(props: VoidProps<{ channel: Channel }>) {
 							const creator = api.users.fetch(() => i.creator_id);
 							const [name, setName] = createSignal(i.name);
 
-							// Create a fake user object for the webhook avatar
 							const webhookUser = () => ({
 								id: i.id,
 								name: i.name,
@@ -114,7 +113,8 @@ export function Integrations(props: VoidProps<{ channel: Channel }>) {
 								banner: null,
 								description: null,
 								flags: 0,
-								status: { type: "Offline" as const },
+								presence: { status: "Offline" as const, activities: [] },
+								status: { status: "Offline" as const, activities: [] },
 								relationship: null,
 								user_config: null,
 							});
@@ -138,10 +138,9 @@ export function Integrations(props: VoidProps<{ channel: Channel }>) {
 							};
 
 							const copyWebhookUrl = () => {
-								// FIXME: return token in webhook response
-								// const webhookUrl =
-								//  `${config.api_url}/api/v1/webhook/${i.id}/${i.token}`;
-								// navigator.clipboard.writeText(webhookUrl);
+								const webhookUrl =
+									`${config.api_url}/api/v1/webhook/${i.id}/${i.token}`;
+								navigator.clipboard.writeText(webhookUrl);
 							};
 
 							return (

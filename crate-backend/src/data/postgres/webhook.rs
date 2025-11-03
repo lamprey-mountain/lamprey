@@ -21,6 +21,7 @@ struct DbWebhook {
     creator_id: Option<Uuid>,
     name: String,
     avatar: Option<Uuid>,
+    token: String,
 }
 
 #[async_trait]
@@ -109,7 +110,7 @@ impl DataWebhook for Postgres {
     async fn webhook_get_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<Webhook> {
         let row = sqlx::query!(
             r#"
-            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.creator_id
+            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
             FROM webhook w
             JOIN usr u ON w.id = u.id
             JOIN channel c ON w.channel_id = c.id
@@ -128,7 +129,7 @@ impl DataWebhook for Postgres {
             creator_id: row.creator_id.map(Into::into),
             name: row.name,
             avatar: row.avatar.map(Into::into),
-            token: None,
+            token: Some(row.token),
         })
     }
 
@@ -145,7 +146,7 @@ impl DataWebhook for Postgres {
             sqlx::query_as!(
                 DbWebhook,
                 r#"
-                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.creator_id
+                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
                 FROM webhook w
                 JOIN usr u ON w.id = u.id
                 JOIN channel c ON w.channel_id = c.id
@@ -169,7 +170,7 @@ impl DataWebhook for Postgres {
                 creator_id: row.creator_id.map(Into::into),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
-                token: None,
+                token: Some(row.token),
             },
             |i: &Webhook| i.id.to_string()
         )
@@ -188,7 +189,7 @@ impl DataWebhook for Postgres {
             sqlx::query_as!(
                 DbWebhook,
                 r#"
-                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.creator_id
+                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
                 FROM webhook w
                 JOIN usr u ON w.id = u.id
                 JOIN channel c ON w.channel_id = c.id
@@ -212,7 +213,7 @@ impl DataWebhook for Postgres {
                 creator_id: row.creator_id.map(Into::into),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
-                token: None,
+                token: Some(row.token),
             },
             |i: &Webhook| i.id.to_string()
         )
@@ -278,18 +279,23 @@ impl DataWebhook for Postgres {
         let mut tx = self.pool.begin().await?;
 
         let res = sqlx::query!(
-            "SELECT id FROM webhook WHERE id = $1 AND token = $2",
+            "SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
+             FROM webhook w
+             JOIN usr u ON w.id = u.id
+             JOIN channel c ON w.channel_id = c.id
+             WHERE w.id = $1 AND w.token = $2",
             *webhook_id,
             token
         )
         .fetch_optional(&mut *tx)
         .await?;
 
-        if res.is_none() {
-            return Err(Error::NotFound);
-        }
+        let original = match res {
+            Some(row) => row,
+            None => return Err(Error::NotFound),
+        };
 
-        if let Some(name) = patch.name {
+        if let Some(name) = &patch.name {
             sqlx::query!("UPDATE usr SET name = $1 WHERE id = $2", name, *webhook_id)
                 .execute(&mut *tx)
                 .await?;
@@ -322,7 +328,7 @@ impl DataWebhook for Postgres {
             .execute(&mut *tx)
             .await?;
         }
-        if patch.rotate_token {
+        let new_token = if patch.rotate_token {
             let new_token: String = Uuid::new_v4().to_string();
             sqlx::query!(
                 "UPDATE webhook SET token = $1 WHERE id = $2",
@@ -331,10 +337,30 @@ impl DataWebhook for Postgres {
             )
             .execute(&mut *tx)
             .await?;
-        }
+            Some(new_token)
+        } else {
+            Some(original.token.clone())
+        };
 
         tx.commit().await?;
-        self.webhook_get(webhook_id).await
+
+        Ok(Webhook {
+            id: original.id.into(),
+            room_id: original.room_id.map(Into::into),
+            channel_id: original.channel_id.into(),
+            creator_id: original.creator_id.map(Into::into),
+            name: if patch.name.is_some() {
+                patch.name.unwrap()
+            } else {
+                original.name
+            },
+            avatar: if patch.avatar.is_some() {
+                patch.avatar.unwrap()
+            } else {
+                original.avatar.map(Into::into)
+            },
+            token: new_token,
+        })
     }
 
     async fn webhook_delete(&self, webhook_id: WebhookId) -> Result<()> {
