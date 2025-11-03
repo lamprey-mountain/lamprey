@@ -56,7 +56,7 @@ impl Syncer {
             let hello = MessageClient::Hello {
                 token: self.token.clone(),
                 resume: resume.clone(),
-                status: None,
+                presence: None,
             };
             client
                 .send(WsMessage::text(serde_json::to_string(&hello)?))

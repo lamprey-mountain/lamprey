@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
+use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelType, MessageSync, MessageType,
@@ -55,9 +56,9 @@ impl ServiceRooms {
                 .state
                 .services()
                 .users
-                .status_get(member.user_id)
+                .presence_get(member.user_id)
                 .status
-                .is_online()
+                != Status::Offline
             {
                 online_count += 1;
             }

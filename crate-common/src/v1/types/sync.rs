@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Connection, user_status::StatusPatch, util::Time, webhook::Webhook, ApplicationId,
+    application::Connection, presence::Presence, util::Time, webhook::Webhook, ApplicationId,
     AuditLogEntry, CalendarEventId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan,
     ThreadMember, WebhookId,
 };
@@ -29,14 +29,14 @@ pub enum MessageClient {
     Hello {
         token: SessionToken,
 
-        status: Option<StatusPatch>,
+        presence: Option<Presence>,
 
         #[serde(flatten)]
         resume: Option<SyncResume>,
     },
 
-    /// set status
-    Status { status: StatusPatch },
+    /// set presence
+    Presence { presence: Presence },
 
     /// heartbeat
     Pong,
@@ -278,6 +278,11 @@ pub enum MessageSync {
 
     UserUpdate {
         user: User,
+    },
+
+    PresenceUpdate {
+        user_id: UserId,
+        presence: Presence,
     },
 
     // TODO: rename these UserConfig -> Config

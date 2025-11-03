@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
 use common::v1::types::emoji::EmojiOwner;
-use common::v1::types::user_status::Status;
+use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{self, SERVER_ROOM_ID};
@@ -112,7 +112,7 @@ impl Connection {
             MessageClient::Hello {
                 token,
                 resume: reconnect,
-                status,
+                presence,
             } => {
                 let srv = self.s.services();
                 let session = srv
@@ -124,7 +124,7 @@ impl Connection {
                         other => other,
                     })?;
 
-                // TODO: more forgiving reconnections
+                // TODO: more forgiving reconnections?
                 if let Some(r) = reconnect {
                     debug!("attempting to resume");
                     if let Some((_, mut conn)) = self.s.syncers.remove(&r.conn) {
@@ -156,12 +156,7 @@ impl Connection {
                     } else {
                         let user_with_new_status = srv
                             .users
-                            .status_set(
-                                user_id,
-                                status
-                                    .map(|s| s.apply(Status::offline()))
-                                    .unwrap_or(Status::online()),
-                            )
+                            .presence_set(user_id, presence.unwrap_or(Presence::online()))
                             .await?;
                         user.status = user_with_new_status.status;
                         Some(user)
@@ -185,7 +180,7 @@ impl Connection {
                 self.seq_server += 1;
 
                 if let Some(user_id) = session.user_id() {
-                    // Send typing states
+                    // send typing states
                     let typing_states = srv.channels.typing_list();
                     for (channel_id, typing_user_id, until) in typing_states {
                         if let Ok(perms) = srv.perms.for_channel(user_id, channel_id).await {
@@ -199,7 +194,7 @@ impl Connection {
                         }
                     }
 
-                    // Send voice states
+                    // send voice states
                     let voice_states = srv.users.voice_states_list();
                     for voice_state in voice_states {
                         if let Ok(perms) =
@@ -225,7 +220,7 @@ impl Connection {
                 self.member_list.set_user_id(session.user_id()).await;
                 self.state = ConnectionState::Authenticated { session };
             }
-            MessageClient::Status { status } => {
+            MessageClient::Presence { presence } => {
                 let session = match &self.state {
                     ConnectionState::Unauthed => return Err(Error::MissingAuth),
                     ConnectionState::Authenticated { session } => session,
@@ -237,9 +232,7 @@ impl Connection {
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 let user = srv.users.get(user_id, None).await?;
                 user.ensure_unsuspended()?;
-                srv.users
-                    .status_set(user_id, status.apply(Status::offline()))
-                    .await?;
+                srv.users.presence_set(user_id, presence).await?;
             }
             MessageClient::Pong => {
                 let session = match &self.state {
@@ -251,7 +244,7 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                srv.users.status_ping(user_id).await?;
+                srv.users.presence_ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
             MessageClient::MemberListSubscribe {
@@ -402,44 +395,16 @@ impl Connection {
             MessageSync::MessageCreate { message } => AuthCheck::Channel(message.channel_id),
             MessageSync::MessageUpdate { message } => AuthCheck::Channel(message.channel_id),
             MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
-            MessageSync::UserUpdate { user } => {
-                // FIXME
-                // if let Some(handler) = &self.member_list {
-                //     if let Some((_, _, old_user)) =
-                //         handler.cache.iter().find(|(_, _, u)| u.id == user.id)
-                //     {
-                //         let old_online = old_user.status.status.is_online();
-                //         let new_online = user.status.status.is_online();
-
-                //         if old_online != new_online {
-                //             self.diff_sync_member_list().await?;
-                //         }
-                //     }
-                // }
-                AuthCheck::UserMutual(user.id)
-            }
+            MessageSync::UserUpdate { user } => AuthCheck::UserMutual(user.id),
+            MessageSync::PresenceUpdate { user_id, .. } => AuthCheck::UserMutual(*user_id),
             MessageSync::UserConfigGlobal { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigRoom { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigChannel { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigUser { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RoomMemberUpsert { member } => {
-                // FIXME
-                // if self.member_list.as_ref().is_some_and(|h| {
-                //     todo!()
-                //     // h.target == member_list::MemberListTarget::Room(member.room_id)
-                // }) {
-                //     self.diff_sync_member_list().await?;
-                // }
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
             MessageSync::ThreadMemberUpsert { member } => {
-                // FIXME
-                // if self.member_list.as_ref().is_some_and(|h| {
-                //     todo!()
-                //     // h.target == member_list::MemberListTarget::Channel(member.thread_id)
-                // }) {
-                //     self.diff_sync_member_list().await?;
-                // }
                 AuthCheck::ChannelOrUser(member.thread_id, member.user_id)
             }
             MessageSync::SessionCreate {

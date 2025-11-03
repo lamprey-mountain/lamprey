@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 
+use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
@@ -141,9 +142,9 @@ impl ServiceThreads {
                 .state
                 .services()
                 .users
-                .status_get(member.user_id)
+                .presence_get(member.user_id)
                 .status
-                .is_online()
+                != Status::Offline
             {
                 online_count += 1;
             }
@@ -234,9 +235,9 @@ impl ServiceThreads {
                     .state
                     .services()
                     .users
-                    .status_get(member.user_id)
+                    .presence_get(member.user_id)
                     .status
-                    .is_online()
+                    != Status::Offline
                 {
                     online_count += 1;
                 }

@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
+use common::v1::types::presence::Presence;
 use common::v1::types::{
-    media::MediaCreated, misc::UserIdReq, user_status::StatusPatch, ApplicationId, Channel,
-    ChannelCreate, ChannelId, ChannelPatch, ChannelReorder, Media, MediaCreate, MediaId, Message,
-    MessageCreate, MessageId, MessageModerate, MessagePatch, MessageVerId, PinsReorder,
-    PuppetCreate, Room, RoomBan, RoomBanBulkCreate, RoomCreate, RoomId, RoomPatch, SessionToken,
-    ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
+    media::MediaCreated, misc::UserIdReq, ApplicationId, Channel, ChannelCreate, ChannelId,
+    ChannelPatch, ChannelReorder, Media, MediaCreate, MediaId, Message, MessageCreate, MessageId,
+    MessageModerate, MessagePatch, MessageVerId, PinsReorder, PuppetCreate, Room, RoomBan,
+    RoomBanBulkCreate, RoomCreate, RoomId, RoomPatch, SessionToken, ThreadMember, ThreadMemberPut,
+    User, UserId, UserPatch, UserWithRelationship,
 };
 use common::v1::types::{
     MessageMigrate, RoomBanCreate, RoomMember, RoomMemberPatch, RoomMemberPut, SuspendRequest,
@@ -16,7 +17,7 @@ use reqwest::{header::HeaderMap, StatusCode, Url};
 use serde_json::json;
 use tracing::error;
 
-const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
+use crate::consts::DEFAULT_API_URL;
 
 #[derive(Clone)]
 pub struct Http {
@@ -27,7 +28,7 @@ pub struct Http {
 
 impl Http {
     pub fn new(token: SessionToken) -> Self {
-        let base_url = Url::parse(DEFAULT_BASE).unwrap();
+        let base_url = Url::parse(DEFAULT_API_URL).unwrap();
         let mut h = HeaderMap::new();
         h.typed_insert(headers::Authorization::bearer(&token.0).unwrap());
         let client = reqwest::Client::builder()
@@ -262,9 +263,8 @@ route!(post   "/api/v1/channel/{channel_id}/typing"               => channel_typ
 route!(get    "/api/v1/user/{user_id}"                            => user_get(user_id: UserIdReq) -> UserWithRelationship);
 route!(put    "/api/v1/room/{room_id}/member/{user_id}"           => room_member_add(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPut);
 route!(patch  "/api/v1/room/{room_id}/member/{user_id}"           => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPatch);
-// route!(post   "/api/v1/user"                                      => user_create() -> User, UserCreate);
 route!(patch  "/api/v1/user/{user_id}"                            => user_update(user_id: UserIdReq) -> User, UserPatch);
-route!(post   "/api/v1/user/{user_id}/status"                     => user_set_status(user_id: UserIdReq), StatusPatch);
+route!(post   "/api/v1/user/{user_id}/presence"                   => user_set_presence(user_id: UserIdReq), Presence);
 route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"           => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);
 route!(post   "/api/v1/channel"                                   => channel_create_dm() -> Channel, ChannelCreate);
 route!(patch  "/api/v1/room/{room_id}/channel"                    => channel_reorder(room_id: RoomId), ChannelReorder);

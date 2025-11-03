@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
-use common::v1::types::user_status::{Status, StatusPatch};
+use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
@@ -596,21 +596,21 @@ async fn connection_revoke(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// User set status
+/// User presence set
 ///
 /// for puppets
 #[utoipa::path(
     post,
-    path = "/user/{user_id}/status",
+    path = "/user/{user_id}/presence",
     params(("user_id", description = "User id")),
     tags = ["user"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn user_set_status(
+async fn user_presence_set(
     Path((target_user_id,)): Path<(UserIdReq,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<StatusPatch>,
+    Json(json): Json<Presence>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
@@ -624,9 +624,7 @@ async fn user_set_status(
     }
 
     let srv = s.services();
-    srv.users
-        .status_set_manual(target_user_id, json.apply(Status::offline()))
-        .await?;
+    srv.users.presence_set_manual(target_user_id, json).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -680,6 +678,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(connection_list))
         .routes(routes!(connection_revoke))
         .routes(routes!(guest_create))
-        .routes(routes!(user_set_status))
+        .routes(routes!(user_presence_set))
         .routes(routes!(user_list))
 }

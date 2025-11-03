@@ -2,9 +2,6 @@
 // #![allow(deprecated)]
 
 // TODO(#242): make serde optional
-// maybe merge util and misc?
-
-// maybe rename self -> something else (@me instead of @self)
 
 pub mod application;
 pub mod audit_logs;
@@ -26,6 +23,7 @@ pub mod notifications;
 pub mod oauth;
 pub mod pagination;
 pub mod permission;
+pub mod presence;
 pub mod profile;
 pub mod reaction;
 pub mod role;
@@ -39,7 +37,6 @@ pub mod text;
 pub mod thread_member;
 pub mod user;
 pub mod user_config;
-pub mod user_status;
 pub mod util;
 pub mod visibility;
 pub mod voice;

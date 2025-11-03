@@ -8,8 +8,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::error::Error;
+use crate::v1::types::presence::Presence;
 use crate::v1::types::user_config::UserConfigUser;
-use crate::v1::types::user_status::Status;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::MediaId;
 
@@ -51,7 +51,7 @@ pub struct User {
     pub webhook: Option<UserWebhook>,
     pub suspended: Option<Suspended>,
     // TODO: rename to presence
-    pub status: Status,
+    pub status: Presence,
     pub registered_at: Option<Time>,
     pub deleted_at: Option<Time>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -717,6 +717,33 @@ export function createApi(
 					memberLists.set(id, { ...list, items: newItems });
 				}
 			}
+		} else if (msg.type === "PresenceUpdate") {
+			const { user_id, presence } = msg;
+			const user = users.cache.get(user_id);
+			if (user) {
+				const newUser = { ...user, presence };
+				users.cache.set(user_id, newUser);
+
+				if (user_id === users.cache.get("@self")?.id) {
+					users.cache.set("@self", newUser);
+				}
+
+				for (const [id, list] of memberLists.entries()) {
+					let wasUpdated = false;
+					const newItems = list.items.map((item) => {
+						if (item.user.id === user_id) {
+							wasUpdated = true;
+							const updatedUser = { ...item.user, presence };
+							return { ...item, user: updatedUser };
+						}
+						return item;
+					});
+
+					if (wasUpdated) {
+						memberLists.set(id, { ...list, items: newItems });
+					}
+				}
+			}
 		} else if (msg.type === "UserConfigGlobal") {
 			if (msg.user_id === session()?.user_id) {
 				if (!deepEqual(userConfig(), msg.config)) {

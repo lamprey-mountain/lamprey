@@ -5,7 +5,7 @@ use common::v1::types::{
     self,
     misc::UserIdReq,
     pagination::{PaginationQuery, PaginationResponse},
-    user_status, Channel, ChannelId, ChannelType, Media, MediaCreate, MediaCreateSource,
+    presence, Channel, ChannelId, ChannelType, Media, MediaCreate, MediaCreateSource,
     MessageCreate, MessageId, MessageSync, RoomId, RoomMemberPut, Session, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
@@ -347,14 +347,14 @@ impl LampreyHandle {
         Ok(res)
     }
 
-    pub async fn user_set_status(
+    pub async fn user_set_presence(
         &self,
         user_id: UserId,
-        patch: &user_status::StatusPatch,
+        patch: &presence::Presence,
     ) -> Result<()> {
         self.http
             .for_puppet(user_id)
-            .user_set_status(UserIdReq::UserId(user_id), patch)
+            .user_set_presence(UserIdReq::UserId(user_id), patch)
             .await?;
         Ok(())
     }

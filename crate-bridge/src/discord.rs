@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use common::v1::types::{ChannelId as LyChannelId, RoomId};
+use common::v1::types::{
+    presence::{Activity, Presence as LyPresence, Status},
+    ChannelId as LyChannelId, RoomId,
+};
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
@@ -27,7 +30,6 @@ use crate::{
     data::Data,
     portal::{Portal, PortalMessage},
 };
-use common::v1::types::user_status::{StatusPatch, StatusText, StatusTypePatch};
 
 struct GlobalsKey;
 
@@ -1009,36 +1011,28 @@ pub async fn process_presence_update(globals: Arc<Globals>, presence: Presence) 
     };
 
     let status = match presence.status {
-        OnlineStatus::Online => Some(StatusTypePatch::Online),
-        OnlineStatus::Idle => Some(StatusTypePatch::Away {}),
-        OnlineStatus::DoNotDisturb => Some(StatusTypePatch::Busy { dnd: true }),
-        OnlineStatus::Invisible | OnlineStatus::Offline => Some(StatusTypePatch::Offline),
-        _ => None,
+        OnlineStatus::Online => Status::Online,
+        OnlineStatus::Idle => Status::Away,
+        OnlineStatus::DoNotDisturb => Status::Busy,
+        OnlineStatus::Invisible | OnlineStatus::Offline => Status::Offline,
+        _ => Status::Online,
     };
 
-    let status_text = presence
+    let activities = presence
         .activities
         .iter()
-        .find(|a| a.kind == ActivityType::Custom)
-        .and_then(|a| a.state.clone())
-        .map(|text| {
-            Some(StatusText {
-                text,
-                clear_at: None,
-            })
-        });
+        .filter(|a| a.kind == ActivityType::Custom)
+        .filter_map(|a| a.state.clone())
+        .map(|text| Activity::Custom {
+            text,
+            clear_at: None,
+        })
+        .collect();
 
-    let patch = StatusPatch {
-        status,
-        status_text,
-    };
-
-    if patch.status.is_none() && patch.status_text.is_none() {
-        return Ok(());
-    }
+    let ly_presence = LyPresence { status, activities };
 
     let ly = globals.lamprey_handle().await?;
-    ly.user_set_status(puppet.id.into(), &patch).await?;
+    ly.user_set_presence(puppet.id.into(), &ly_presence).await?;
     info!("updated lamprey presence for {}", presence.user.id);
     Ok(())
 }

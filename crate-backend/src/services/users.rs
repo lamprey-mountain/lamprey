@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types::user_status::Status;
+use common::v1::types::presence::{Presence, Status};
 use common::v1::types::voice::{SfuCommand, SfuPermissions, VoiceState};
 use common::v1::types::{Channel, ChannelId, MessageSync, Permission, ThreadMemberPut};
 use common::v1::types::{User, UserId};
@@ -13,20 +13,21 @@ use tracing::{debug, error};
 use crate::types::{DbChannelCreate, DbChannelType};
 use crate::{Error, Result, ServerStateInner};
 
+/// when to expire presences from disconnected users
 // currently relies on sync heartbeat time
-const STATUS_EXPIRE: Duration = Duration::from_secs(40);
+const PRESENCE_EXPIRE: Duration = Duration::from_secs(40);
 
 pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
     cache_users: Cache<UserId, User>,
-    statuses: DashMap<UserId, OnlineState>,
+    presences: DashMap<UserId, OnlineState>,
     dm_lock: DashMap<(UserId, UserId), ()>,
     voice_states: DashMap<UserId, VoiceState>,
 }
 
 struct OnlineState {
     expire_handle: JoinHandle<Result<()>>,
-    status: Status,
+    presence: Presence,
 }
 
 impl ServiceUsers {
@@ -37,7 +38,7 @@ impl ServiceUsers {
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            statuses: DashMap::new(),
+            presences: DashMap::new(),
             dm_lock: DashMap::new(),
             voice_states: DashMap::new(),
         }
@@ -71,7 +72,7 @@ impl ServiceUsers {
             }
         }
 
-        let status = self.status_get(user_id);
+        let status = self.presence_get(user_id);
         usr.status = status;
         Ok(usr)
     }
@@ -90,14 +91,14 @@ impl ServiceUsers {
 
     /// keep the status for a user alive
     #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn status_ping(&self, user_id: UserId) -> Result<User> {
-        match self.statuses.remove(&user_id) {
+    pub async fn presence_ping(&self, user_id: UserId) -> Result<User> {
+        match self.presences.remove(&user_id) {
             Some((_, s)) => {
                 s.expire_handle.abort();
-                self.status_set_inner(user_id, s.status, true).await
+                self.presence_set_inner(user_id, s.presence, true).await
             }
             None => {
-                self.status_set_inner(user_id, Status::offline(), false)
+                self.presence_set_inner(user_id, Presence::offline(), false)
                     .await
             }
         }
@@ -105,60 +106,60 @@ impl ServiceUsers {
 
     /// set the status for a user
     #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn status_set(&self, user_id: UserId, status: Status) -> Result<User> {
-        self.status_set_inner(user_id, status, false).await
+    pub async fn presence_set(&self, user_id: UserId, status: Presence) -> Result<User> {
+        self.presence_set_inner(user_id, status, false).await
     }
 
     /// set the status for a user, with a longer expiration
     ///
     /// this is for manual status updates, not presence-based ones
     #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn status_set_manual(&self, user_id: UserId, status: Status) -> Result<User> {
-        self.status_set_inner_expire(user_id, status, false, Duration::from_secs(60 * 5))
+    pub async fn presence_set_manual(&self, user_id: UserId, status: Presence) -> Result<User> {
+        self.presence_set_inner_expire(user_id, status, false, Duration::from_secs(60 * 5))
             .await
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn status_set_inner(
+    async fn presence_set_inner(
         &self,
         user_id: UserId,
-        status: Status,
+        status: Presence,
         skip_broadcast: bool,
     ) -> Result<User> {
-        self.status_set_inner_expire(user_id, status, skip_broadcast, STATUS_EXPIRE)
+        self.presence_set_inner_expire(user_id, status, skip_broadcast, PRESENCE_EXPIRE)
             .await
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn status_set_inner_expire(
+    async fn presence_set_inner_expire(
         &self,
         user_id: UserId,
-        status: Status,
+        status: Presence,
         skip_broadcast: bool,
         expire: Duration,
     ) -> Result<User> {
         let s = self.state.clone();
         let handle = tokio::spawn(async move {
             tokio::time::sleep(expire).await;
-            let had = s.services().users.statuses.remove(&user_id);
+            let had = s.services().users.presences.remove(&user_id);
             debug!(
                 "expire status for {user_id}, had {:?}",
-                had.as_ref().map(|h| &h.1.status)
+                had.as_ref().map(|h| &h.1.presence)
             );
-            if had.is_none_or(|(_, s)| s.status != Status::offline()) {
-                let data = s.data();
-                let mut user = data.user_get(user_id).await?;
-                user.status = Status::offline();
-                s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
+            if had.is_none_or(|(_, s)| s.presence != Presence::offline()) {
+                s.broadcast(MessageSync::PresenceUpdate {
+                    user_id,
+                    presence: Presence::offline(),
+                })?;
             }
             Result::Ok(())
         });
 
-        let old = self.statuses.insert(
+        let old = self.presences.insert(
             user_id,
             OnlineState {
                 expire_handle: handle,
-                status: status.clone(),
+                presence: status.clone(),
             },
         );
 
@@ -169,27 +170,29 @@ impl ServiceUsers {
         let srv = self.state.services();
         let user = srv.users.get(user_id, None).await?;
 
-        if old.is_none_or(|s| s.status != status) && !skip_broadcast {
-            self.state
-                .broadcast(MessageSync::UserUpdate { user: user.clone() })?;
+        if old.is_none_or(|s| s.presence != status) && !skip_broadcast {
+            self.state.broadcast(MessageSync::PresenceUpdate {
+                user_id,
+                presence: status.clone(),
+            })?;
         }
 
         Ok(user)
     }
 
     /// get the status for a user
-    pub fn status_get(&self, user_id: UserId) -> Status {
-        if let Some(s) = self.statuses.get(&user_id) {
-            s.status.clone()
+    pub fn presence_get(&self, user_id: UserId) -> Presence {
+        if let Some(s) = self.presences.get(&user_id) {
+            s.presence.clone()
         } else {
-            Status::offline()
+            Presence::offline()
         }
     }
 
     pub fn is_online(&self, user_id: UserId) -> bool {
-        self.statuses
+        self.presences
             .get(&user_id)
-            .map(|s| s.status.status.is_online())
+            .map(|s| s.presence.status != Status::Offline)
             .unwrap_or(false)
     }
 

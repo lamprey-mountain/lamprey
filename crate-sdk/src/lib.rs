@@ -2,6 +2,7 @@ use common::v1::types::SessionToken;
 use handler::ErasedHandler;
 use syncer::Syncer;
 
+mod consts;
 mod handler;
 mod http;
 mod syncer;
