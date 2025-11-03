@@ -3236,3 +3236,15 @@ button.link {
 		}
 	}
 }
+
+#nav .nav-channel {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+
+	& > .avatar {
+		height: 32px;
+		width: 32px;
+		margin: 0;
+	}
+}

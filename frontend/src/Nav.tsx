@@ -419,7 +419,7 @@ const ItemChannel = (props: { channel: Channel }) => {
 	return (
 		<A
 			href={`/channel/${props.channel.id}`}
-			class="menu-channel"
+			class="menu-channel nav-channel"
 			classList={{
 				unread: props.channel.type !== "Voice" && !!props.channel.is_unread,
 			}}
@@ -433,7 +433,7 @@ const ItemChannel = (props: { channel: Channel }) => {
 					<ChannelIcon id={props.channel.id} icon={props.channel.icon} />
 				</Match>
 			</Switch>
-			<div style="pointer-events:none">
+			<div style="pointer-events:none;line-height:1">
 				<div
 					style={{
 						"text-overflow": "ellipsis",
