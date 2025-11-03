@@ -990,6 +990,30 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/message/{message_id}/thread": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Thread create from message
+		 * @description <div class="markdown-alert-permission-required">ThreadCreatePublic</div>
+		 *
+		 *     Starts a new thread from a message. Requires the channel the message was
+		 *     sent in to be threadable, ie. Text, Dm, Gdm. Forums will not work as threads
+		 *     can't be created inside of other threads.
+		 */
+		post: operations["thread_create_from_message"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/message/{message_id}/version": {
 		parameters: {
 			query?: never;
@@ -1128,6 +1152,40 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/ratelimit/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Ratelimit update
+		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadManage</div>
+		 *     <div class="markdown-alert-permission-optional">MemberTimeout</div>
+		 *
+		 *     Immediately creates a slowmode ratelimit
+		 *     Requires either ChannelManage or ThreadManage, or MemberTimeout
+		 */
+		put: operations["channel_ratelimit_update"];
+		post?: never;
+		/**
+		 * Ratelimit delete
+		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadManage</div>
+		 *     <div class="markdown-alert-permission-optional">MemberTimeout</div>
+		 *
+		 *     Immediately expires a slowmode ratelimit, allowing the target user to send a message again
+		 *     Requires either ChannelManage, ThreadManage, or MemberTimeout
+		 */
+		delete: operations["channel_ratelimit_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/remove": {
 		parameters: {
 			query?: never;
@@ -1196,6 +1254,50 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/tag": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Create a tag
+		 * @description <div class="markdown-alert-permission-required">TagManage</div>
+		 */
+		post: operations["tag_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/tag/{tag_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a tag
+		 * @description <div class="markdown-alert-permission-required">TagManage</div>
+		 */
+		delete: operations["tag_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a tag
+		 * @description <div class="markdown-alert-permission-required">TagManage</div>
+		 */
+		patch: operations["tag_update"];
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/thread": {
 		parameters: {
 			query?: never;
@@ -1209,7 +1311,12 @@ export interface paths {
 		 */
 		get: operations["thread_list"];
 		put?: never;
-		post?: never;
+		/**
+		 * Thread create
+		 * @description <div class="markdown-alert-permission-optional">ThreadCreatePublic</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadCreatePrivate</div>
+		 */
+		post: operations["thread_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1608,29 +1715,6 @@ export interface paths {
 		 *     Create a reminder for later
 		 */
 		post: operations["inbox_post"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/inbox/channels": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Inbox channels
-		 * @deprecated
-		 * @description
-		 *
-		 *     Get a list of all unread channel
-		 */
-		get: operations["inbox_channels"];
-		put?: never;
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3366,6 +3450,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/presence": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * User presence set
+		 * @description
+		 *
+		 *     for puppets
+		 */
+		post: operations["user_presence_set"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/{user_id}/room": {
 		parameters: {
 			query?: never;
@@ -3382,28 +3488,6 @@ export interface paths {
 		get: operations["user_room_list"];
 		put?: never;
 		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/user/{user_id}/status": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * User set status
-		 * @description
-		 *
-		 *     for puppets
-		 */
-		post: operations["user_set_status"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3610,7 +3694,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Webhook execute discord (TODO)
+		 * Webhook execute discord (WIP)
 		 * @description
 		 */
 		post: operations["webhook_execute_discord"];
@@ -3630,7 +3714,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Webhook execute github (TODO)
+		 * Webhook execute github (WIP)
 		 * @description
 		 */
 		post: operations["webhook_execute_github"];
@@ -3638,6 +3722,34 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/webhook/{webhook_id}/{token}/message/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Webhook get message
+		 * @description
+		 */
+		get: operations["webhook_message_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Webhook delete message
+		 * @description
+		 */
+		delete: operations["webhook_message_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Webhook edit message
+		 * @description
+		 */
+		patch: operations["webhook_message_edit"];
 		trace?: never;
 	};
 	"/api/v1/webhook/{webhook_id}/{token}/slack": {
@@ -3665,9 +3777,21 @@ export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
 		AckReq: {
+			/**
+			 * Format: int64
+			 * @description The new mention count. Defaults to 0.
+			 */
+			mention_count?: number | null;
 			message_id?: null | components["schemas"]["Id"];
 			/** @description The last read id in this channel. */
 			version_id: components["schemas"]["Id"];
+		};
+		Activity: {
+			/** @description custom activity */
+			Custom: {
+				clear_at?: null | components["schemas"]["Time"];
+				text: string;
+			};
 		};
 		AdminBroadcast: {
 			message: components["schemas"]["MessageCreate"];
@@ -4238,6 +4362,15 @@ export interface components {
 			};
 			/** @enum {string} */
 			type: "WebhookDelete";
+		} | {
+			metadata: {
+				channel_id: components["schemas"]["Id"];
+				slowmode_message_expire_at?: null | components["schemas"]["Time"];
+				slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "RatelimitUpdate";
 		};
 		AuthEmailComplete: {
 			code: string;
@@ -4390,14 +4523,33 @@ export interface components {
 			archived_at?: null | components["schemas"]["Time"];
 			/**
 			 * Format: int64
+			 * @description when to automatically archive this thread due to inactivity, in seconds
+			 */
+			auto_archive_duration?: number | null;
+			/**
+			 * Format: int64
 			 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 			 */
 			bitrate?: number | null;
 			creator_id: components["schemas"]["Id"];
+			/**
+			 * Format: int64
+			 * @description the default auto archive duration in seconds to copy to threads created in this channel
+			 */
+			default_auto_archive_duration?: number | null;
+			/**
+			 * Format: int64
+			 * @description default slowmode_message for new threads
+			 *
+			 *     this value is copied, changing this wont change old threads
+			 */
+			default_slowmode_message?: number | null;
 			deleted_at?: null | components["schemas"]["Time"];
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
+			/** @description whether users without ThreadManage can add other members to this thread */
+			invitable?: boolean;
 			is_unread?: boolean | null;
 			last_read_id?: null | components["schemas"]["Id"];
 			last_version_id?: null | components["schemas"]["Id"];
@@ -4439,8 +4591,23 @@ export interface components {
 			room_id?: null | components["schemas"]["Id"];
 			/** Format: int64 */
 			root_message_count?: number | null;
+			/**
+			 * Format: int64
+			 * @description minimum delay in seconds between creating new messages
+			 */
+			slowmode_message?: number | null;
+			slowmode_message_expire_at?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description minimum delay in seconds between creating new threads
+			 */
+			slowmode_thread?: number | null;
+			slowmode_thread_expire_at?: null | components["schemas"]["Time"];
 			/** @description tags that are applied to this thread */
-			tags: components["schemas"]["Id"][];
+			tags?: components["schemas"]["Id"][] | null;
+			/** @description the tags that are available in this forum. exists on Forum channels only. */
+			tags_available?: components["schemas"]["Tag"][] | null;
+			thread_member?: null | components["schemas"]["ThreadMember"];
 			/** @description type specific data for this channel */
 			type: components["schemas"]["ChannelType"];
 			user_config?: null | components["schemas"]["UserConfigChannel"];
@@ -4454,15 +4621,28 @@ export interface components {
 		};
 		ChannelCreate: {
 			/** Format: int64 */
+			auto_archive_duration?: number | null;
+			/** Format: int64 */
 			bitrate?: number | null;
+			/** Format: int64 */
+			default_auto_archive_duration?: number | null;
+			/** Format: int64 */
+			default_slowmode_message?: number | null;
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
+			/** @description whether users without ThreadManage can add other members to this thread */
+			invitable?: boolean;
 			name: string;
 			/** @description not safe for work */
 			nsfw?: boolean;
 			parent_id?: null | components["schemas"]["Id"];
+			permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 			/** @description the recipient(s) for this dm/gdm */
 			recipients?: components["schemas"]["Id"][] | null;
+			/** Format: int64 */
+			slowmode_message?: number | null;
+			/** Format: int64 */
+			slowmode_thread?: number | null;
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
 			/** @description The type of this channel */
@@ -4473,16 +4653,29 @@ export interface components {
 		ChannelPatch: {
 			archived?: boolean | null;
 			/** Format: int64 */
+			auto_archive_duration?: number | null;
+			/** Format: int64 */
 			bitrate?: number | null;
+			/** Format: int64 */
+			default_auto_archive_duration?: number | null;
+			/** Format: int64 */
+			default_slowmode_message?: number | null;
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
+			invitable?: boolean | null;
 			locked?: boolean | null;
 			name?: string | null;
 			/** @description not safe for work */
 			nsfw?: boolean | null;
 			owner_id?: null | components["schemas"]["Id"];
+			parent_id?: null | components["schemas"]["Id"];
+			/** Format: int64 */
+			slowmode_message?: number | null;
+			/** Format: int64 */
+			slowmode_thread?: number | null;
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
+			ty?: null | components["schemas"]["ChannelType"];
 			/** Format: int64 */
 			user_limit?: number | null;
 		};
@@ -4644,8 +4837,6 @@ export interface components {
 			/** Format: int64 */
 			width: number;
 		};
-		/** @enum {string} */
-		InboxChannelsOrder: "activity" | "inactivity" | "newest" | "oldest";
 		/** @description an application that is authorized to a room */
 		Integration: {
 			application: components["schemas"]["Application"];
@@ -4887,6 +5078,7 @@ export interface components {
 		};
 		/** @description who/what this message notified on send */
 		Mentions: {
+			emojis?: components["schemas"]["Id"][];
 			everyone?: boolean;
 			roles: components["schemas"]["Id"][];
 			threads: components["schemas"]["Id"][];
@@ -4906,6 +5098,7 @@ export interface components {
 			pinned?: null | components["schemas"]["Pinned"];
 			reactions?: components["schemas"]["ReactionCounts"];
 			removed_at?: null | components["schemas"]["Time"];
+			thread?: null | components["schemas"]["Channel"];
 			version_id: components["schemas"]["Id"];
 		};
 		MessageCall: {
@@ -4919,7 +5112,7 @@ export interface components {
 			content?: string | null;
 			created_at?: null | components["schemas"]["Time"];
 			embeds?: components["schemas"]["EmbedCreate"][];
-			mentions?: components["schemas"]["Mentions"];
+			mentions?: components["schemas"]["ParseMentions"];
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -5196,6 +5389,12 @@ export interface components {
 				user: components["schemas"]["User"];
 			}
 			| {
+				presence: components["schemas"]["Presence"];
+				/** @enum {string} */
+				type: "PresenceUpdate";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
 				config: components["schemas"]["UserConfigGlobal"];
 				/** @enum {string} */
 				type: "UserConfigGlobal";
@@ -5351,7 +5550,19 @@ export interface components {
 				/** @enum {string} */
 				type: "WebhookDelete";
 				webhook_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				slowmode_message_expire_at?: null | components["schemas"]["Time"];
+				slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+				/** @enum {string} */
+				type: "RatelimitUpdate";
+				user_id: components["schemas"]["Id"];
 			};
+		/** @description Information about a thread being created */
+		MessageThreadCreated: {
+			source_message_id?: null | components["schemas"]["Id"];
+		};
 		/** @description Information about the pingback */
 		MessageThreadPingback: {
 			source_channel_id: components["schemas"]["Id"];
@@ -5391,6 +5602,10 @@ export interface components {
 			| (components["schemas"]["MessageThreadRename"] & {
 				/** @enum {string} */
 				type: "ThreadRename";
+			})
+			| (components["schemas"]["MessageThreadCreated"] & {
+				/** @enum {string} */
+				type: "ThreadCreated";
 			})
 			| (components["schemas"]["MessageThreadPingback"] & {
 				/** @enum {string} */
@@ -5623,14 +5838,33 @@ export interface components {
 				archived_at?: null | components["schemas"]["Time"];
 				/**
 				 * Format: int64
+				 * @description when to automatically archive this thread due to inactivity, in seconds
+				 */
+				auto_archive_duration?: number | null;
+				/**
+				 * Format: int64
 				 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 				 */
 				bitrate?: number | null;
 				creator_id: components["schemas"]["Id"];
+				/**
+				 * Format: int64
+				 * @description the default auto archive duration in seconds to copy to threads created in this channel
+				 */
+				default_auto_archive_duration?: number | null;
+				/**
+				 * Format: int64
+				 * @description default slowmode_message for new threads
+				 *
+				 *     this value is copied, changing this wont change old threads
+				 */
+				default_slowmode_message?: number | null;
 				deleted_at?: null | components["schemas"]["Time"];
 				description?: string | null;
 				icon?: null | components["schemas"]["Id"];
 				id: components["schemas"]["Id"];
+				/** @description whether users without ThreadManage can add other members to this thread */
+				invitable?: boolean;
 				is_unread?: boolean | null;
 				last_read_id?: null | components["schemas"]["Id"];
 				last_version_id?: null | components["schemas"]["Id"];
@@ -5672,8 +5906,23 @@ export interface components {
 				room_id?: null | components["schemas"]["Id"];
 				/** Format: int64 */
 				root_message_count?: number | null;
+				/**
+				 * Format: int64
+				 * @description minimum delay in seconds between creating new messages
+				 */
+				slowmode_message?: number | null;
+				slowmode_message_expire_at?: null | components["schemas"]["Time"];
+				/**
+				 * Format: int64
+				 * @description minimum delay in seconds between creating new threads
+				 */
+				slowmode_thread?: number | null;
+				slowmode_thread_expire_at?: null | components["schemas"]["Time"];
 				/** @description tags that are applied to this thread */
-				tags: components["schemas"]["Id"][];
+				tags?: components["schemas"]["Id"][] | null;
+				/** @description the tags that are available in this forum. exists on Forum channels only. */
+				tags_available?: components["schemas"]["Tag"][] | null;
+				thread_member?: null | components["schemas"]["ThreadMember"];
 				/** @description type specific data for this channel */
 				type: components["schemas"]["ChannelType"];
 				user_config?: null | components["schemas"]["UserConfigChannel"];
@@ -5764,6 +6013,7 @@ export interface components {
 				pinned?: null | components["schemas"]["Pinned"];
 				reactions?: components["schemas"]["ReactionCounts"];
 				removed_at?: null | components["schemas"]["Time"];
+				thread?: null | components["schemas"]["Channel"];
 				version_id: components["schemas"]["Id"];
 			})[];
 			/** Format: int64 */
@@ -5810,6 +6060,8 @@ export interface components {
 			has_more: boolean;
 			items: {
 				description?: string | null;
+				/** @description whether members with this role should be displayed separately */
+				hoist: boolean;
 				id: components["schemas"]["Id"];
 				is_mentionable: boolean;
 				is_self_applicable: boolean;
@@ -5953,7 +6205,7 @@ export interface components {
 				name: string;
 				puppet?: null | components["schemas"]["Puppet"];
 				registered_at?: null | components["schemas"]["Time"];
-				status: components["schemas"]["Status"];
+				status: components["schemas"]["Presence"];
 				suspended?: null | components["schemas"]["Suspended"];
 				system: boolean;
 				user_config?: null | components["schemas"]["UserConfigUser"];
@@ -5969,6 +6221,7 @@ export interface components {
 			items: {
 				avatar?: null | components["schemas"]["Id"];
 				channel_id: components["schemas"]["Id"];
+				creator_id?: null | components["schemas"]["Id"];
 				id: components["schemas"]["Id"];
 				name: string;
 				room_id?: null | components["schemas"]["Id"];
@@ -5976,6 +6229,15 @@ export interface components {
 			}[];
 			/** Format: int64 */
 			total: number;
+		};
+		/** @description what mentions to parse from the message content. mentions will only be parsed if the message content actually contains a mention pattern. */
+		ParseMentions: {
+			/** @description whether to parse @everyone mentions from the content */
+			everyone?: boolean;
+			/** @description only parse mentions for these roles. an empty vec disables all mentions, while None allows all mentions. */
+			roles?: components["schemas"]["Id"][] | null;
+			/** @description only parse mentions for these users. an empty vec disables all mentions, while None allows all mentions. */
+			users?: components["schemas"]["Id"][] | null;
 		};
 		PasswordExec: components["schemas"]["PasswordExecIdent"] & {
 			password: string;
@@ -6089,6 +6351,11 @@ export interface components {
 			/** Format: int32 */
 			position?: number | null;
 		};
+		/** @description the current presence of the user */
+		Presence: {
+			activities: components["schemas"]["Activity"][];
+			status: components["schemas"]["Status"];
+		};
 		/** @description represents a user on another platform */
 		Puppet: {
 			alias_id?: null | components["schemas"]["Id"];
@@ -6113,6 +6380,10 @@ export interface components {
 			name: string;
 			/** @description if this is for the service itself. usually paired with bot: true */
 			system: boolean;
+		};
+		RatelimitPut: {
+			slowmode_message_expire_at?: null | components["schemas"]["Time"];
+			slowmode_thread_expire_at?: null | components["schemas"]["Time"];
 		};
 		/** @description the total reaction counts for a key */
 		ReactionCount: {
@@ -6202,6 +6473,8 @@ export interface components {
 			| "Other";
 		Role: {
 			description?: string | null;
+			/** @description whether members with this role should be displayed separately */
+			hoist: boolean;
 			id: components["schemas"]["Id"];
 			is_mentionable: boolean;
 			is_self_applicable: boolean;
@@ -6219,6 +6492,7 @@ export interface components {
 		};
 		RoleCreate: {
 			description?: string | null;
+			hoist?: boolean;
 			/** @description if this role can be mentioned by members */
 			is_mentionable?: boolean;
 			is_self_applicable?: boolean;
@@ -6234,6 +6508,7 @@ export interface components {
 		};
 		RolePatch: {
 			description?: string | null;
+			hoist?: boolean | null;
 			is_mentionable?: boolean | null;
 			is_self_applicable?: boolean | null;
 			name?: string | null;
@@ -6592,59 +6867,8 @@ export interface components {
 			/** @enum {string} */
 			type: "Reconnect";
 		};
-		/** @description the current status of the user */
-		Status:
-			& components["schemas"]["StatusType"]
-			& (null | components["schemas"]["StatusText"]);
-		/** @description an update to a user's status */
-		StatusPatch:
-			& (null | components["schemas"]["StatusTypePatch"])
-			& (null | components["schemas"]["StatusText"]);
-		StatusText: {
-			clear_at?: null | components["schemas"]["Time"];
-			text: string;
-		};
-		StatusType: {
-			/** @enum {string} */
-			type: "Offline";
-		} | {
-			/** @enum {string} */
-			type: "Online";
-		} | {
-			/** @enum {string} */
-			type: "Away";
-		} | {
-			/** @description busy might be set automatically when they look busy
-			 *     but it might not be that important
-			 *     this explicitly says "do not disturb" */
-			dnd: boolean;
-			/** @enum {string} */
-			type: "Busy";
-		} | {
-			/** @enum {string} */
-			type: "Available";
-		};
-		/** @description data user sends to update StatusType */
-		StatusTypePatch: {
-			/** @enum {string} */
-			type: "Offline";
-		} | {
-			/** @enum {string} */
-			type: "Online";
-		} | {
-			/** @enum {string} */
-			type: "Away";
-		} | {
-			/** @description busy might be set automatically when they look busy
-			 *     but it might not be that important
-			 *     this explicitly says "do not disturb" */
-			dnd: boolean;
-			/** @enum {string} */
-			type: "Busy";
-		} | {
-			/** @enum {string} */
-			type: "Available";
-		};
+		/** @enum {string} */
+		Status: "Offline" | "Online" | "Away" | "Busy" | "Available";
 		SuspendRequest: {
 			expires_at?: null | components["schemas"]["Time"];
 		};
@@ -6652,6 +6876,40 @@ export interface components {
 			created_at: components["schemas"]["Time"];
 			expires_at?: null | components["schemas"]["Time"];
 			reason?: string | null;
+		};
+		/** @description a tag that can be applied to a thread */
+		Tag: {
+			/**
+			 * Format: int64
+			 * @description total number of threads with this tag (excluding archived threads)
+			 */
+			active_thread_count: number;
+			/** @description whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker. */
+			archived: boolean;
+			color?: null | components["schemas"]["Color"];
+			description?: string | null;
+			id: components["schemas"]["Id"];
+			name: string;
+			/** @description only members with ThreadEdit or ThreadManage can apply this tag */
+			restricted: boolean;
+			/**
+			 * Format: int64
+			 * @description total number of threads with this tag (including archived threads)
+			 */
+			total_thread_count: number;
+		};
+		TagCreate: {
+			color?: null | components["schemas"]["Color"];
+			description?: string | null;
+			name: string;
+			restricted?: boolean;
+		};
+		TagPatch: {
+			archived?: boolean | null;
+			color?: null | components["schemas"]["Color"];
+			description?: string | null;
+			name?: string | null;
+			restricted?: boolean | null;
 		};
 		/** @description metadata for text */
 		Text: {
@@ -6742,7 +7000,7 @@ export interface components {
 			name: string;
 			puppet?: null | components["schemas"]["Puppet"];
 			registered_at?: null | components["schemas"]["Time"];
-			status: components["schemas"]["Status"];
+			status: components["schemas"]["Presence"];
 			suspended?: null | components["schemas"]["Suspended"];
 			system: boolean;
 			user_config?: null | components["schemas"]["UserConfigUser"];
@@ -6913,6 +7171,7 @@ export interface components {
 		Webhook: {
 			avatar?: null | components["schemas"]["Id"];
 			channel_id: components["schemas"]["Id"];
+			creator_id?: null | components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
 			name: string;
 			room_id?: null | components["schemas"]["Id"];
@@ -8481,6 +8740,42 @@ export interface operations {
 			};
 		};
 	};
+	thread_create_from_message: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Parent channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Source message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ChannelCreate"];
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+			/** @description A thread for this message already exists */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	message_version_list: {
 		parameters: {
 			query?: {
@@ -8714,6 +9009,56 @@ export interface operations {
 			};
 		};
 	};
+	channel_ratelimit_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RatelimitPut"];
+			};
+		};
+		responses: {
+			/** @description Rate limit updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_ratelimit_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Rate limit expired */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	channel_remove: {
 		parameters: {
 			query?: never;
@@ -8816,6 +9161,85 @@ export interface operations {
 			};
 		};
 	};
+	tag_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the forum channel to create the tag in. */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TagCreate"];
+			};
+		};
+		responses: {
+			/** @description Create tag success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Tag"];
+				};
+			};
+		};
+	};
+	tag_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the forum channel the tag belongs to. */
+				channel_id: components["schemas"]["Id"];
+				/** @description The ID of the tag to delete. */
+				tag_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete tag success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	tag_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the forum channel the tag belongs to. */
+				channel_id: components["schemas"]["Id"];
+				/** @description The ID of the tag to update. */
+				tag_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TagPatch"];
+			};
+		};
+		responses: {
+			/** @description Update tag success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Tag"];
+				};
+			};
+		};
+	};
 	thread_list: {
 		parameters: {
 			query?: {
@@ -8841,6 +9265,33 @@ export interface operations {
 				content: {
 					"application/json":
 						components["schemas"]["PaginationResponse_Channel"];
+				};
+			};
+		};
+	};
+	thread_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Parent channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ChannelCreate"];
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
 				};
 			};
 		};
@@ -9401,40 +9852,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Notification"];
-				};
-			};
-		};
-	};
-	inbox_channels: {
-		parameters: {
-			query: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-				/** @description only include notifications from these rooms */
-				room_id?: components["schemas"]["Id"][];
-				/** @description only include notifications from these channels */
-				channel_id?: components["schemas"]["Id"][];
-				/** @description include messages marked as read too */
-				include_read?: boolean;
-				/** @description the order to return inbox channels in */
-				order: components["schemas"]["InboxChannelsOrder"];
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Channel"];
 				};
 			};
 		};
@@ -12494,6 +12911,31 @@ export interface operations {
 			};
 		};
 	};
+	user_presence_set: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: components["schemas"]["UserIdReq"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["Presence"];
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	user_room_list: {
 		parameters: {
 			query?: {
@@ -12519,31 +12961,6 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["PaginationResponse_Room"];
 				};
-			};
-		};
-	};
-	user_set_status: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: components["schemas"]["UserIdReq"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["StatusPatch"];
-			};
-		};
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
 			};
 		};
 	};
@@ -12927,7 +13344,11 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"multipart/form-data": string;
+			};
+		};
 		responses: {
 			/** @description Execute webhook success */
 			204: {
@@ -12950,7 +13371,11 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": unknown;
+			};
+		};
 		responses: {
 			/** @description Execute webhook success */
 			204: {
@@ -12958,6 +13383,89 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	webhook_message_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get webhook message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
+			};
+		};
+	};
+	webhook_message_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete webhook message success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	webhook_message_edit: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessagePatch"];
+			};
+		};
+		responses: {
+			/** @description Edit webhook message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
 			};
 		};
 	};
