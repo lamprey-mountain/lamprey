@@ -24,7 +24,7 @@ async (action) => {
 		}
 
 		if (also_local) {
-			ctx.thread_read_marker_id.set(thread_id, version_id);
+			ctx.channel_read_marker_id.set(thread_id, version_id);
 		}
 		await api.channels.ack(thread_id, undefined, version_id);
 	} else {

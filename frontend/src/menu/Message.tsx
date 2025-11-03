@@ -7,7 +7,7 @@ import { Item, Menu, Separator } from "./Parts.tsx";
 // should i have a separate one for bulk messages?
 
 type MessageMenuProps = {
-	thread_id: string;
+	channel_id: string;
 	message_id: string;
 	version_id: string;
 };
@@ -16,7 +16,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
 	const message = api.messages.fetch(
-		() => props.thread_id,
+		() => props.channel_id,
 		() => props.message_id,
 	);
 
@@ -24,16 +24,16 @@ export function MessageMenu(props: MessageMenuProps) {
 
 	const copyLink = () => {
 		const url = new URL(location.origin);
-		url.pathname = `/thread/${props.thread_id}/message/${props.message_id}`;
+		url.pathname = `/channel/${props.channel_id}/message/${props.message_id}`;
 		navigator.clipboard.writeText(url.toString());
 	};
 
 	const setReply = () => {
-		ctx.thread_reply_id.set(props.thread_id, props.message_id);
+		ctx.channel_reply_id.set(props.channel_id, props.message_id);
 	};
 
 	function markUnread() {
-		const r = api.messages.cacheRanges.get(props.thread_id)!;
+		const r = api.messages.cacheRanges.get(props.channel_id)!;
 		const tl = r.find(props.message_id)?.items!;
 		const index = tl.findIndex((i) => i.id === props.message_id && !i.is_local);
 		const next = tl[index - 1];
@@ -41,7 +41,7 @@ export function MessageMenu(props: MessageMenuProps) {
 		const next_version_id = next?.version_id ?? props.version_id;
 		ctx.dispatch({
 			do: "thread.mark_read",
-			thread_id: props.thread_id,
+			thread_id: props.channel_id,
 			version_id: next_version_id,
 			message_id: next_id,
 			also_local: true,
@@ -50,9 +50,9 @@ export function MessageMenu(props: MessageMenuProps) {
 
 	const togglePin = () => {
 		if (message()?.pinned) {
-			api.messages.unpin(props.thread_id, props.message_id);
+			api.messages.unpin(props.channel_id, props.message_id);
 		} else {
-			api.messages.pin(props.thread_id, props.message_id);
+			api.messages.pin(props.channel_id, props.message_id);
 		}
 	};
 
@@ -63,11 +63,11 @@ export function MessageMenu(props: MessageMenuProps) {
 			cont: (conf) => {
 				if (!conf) return;
 				api.client.http.DELETE(
-					"/api/v1/thread/{thread_id}/message/{message_id}",
+					"/api/v1/channel/{channel_id}/message/{message_id}",
 					{
 						params: {
 							path: {
-								thread_id: props.thread_id,
+								channel_id: props.channel_id,
 								message_id: props.message_id,
 							},
 						},
@@ -78,15 +78,15 @@ export function MessageMenu(props: MessageMenuProps) {
 	}
 
 	const edit = () => {
-		ctx.editingMessage.set(props.thread_id, {
+		ctx.editingMessage.set(props.channel_id, {
 			message_id: props.message_id,
 			selection: "end",
 		});
 	};
 
 	const selectMessage = () => {
-		ctx.selectMode.set(props.thread_id, true);
-		ctx.selectedMessages.set(props.thread_id, [props.message_id]);
+		ctx.selectMode.set(props.channel_id, true);
+		ctx.selectedMessages.set(props.channel_id, [props.message_id]);
 	};
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
