@@ -17,6 +17,13 @@ export function usePermissions(
 		const finalPermissions = new Set<Permission>();
 		const rid = room_id();
 
+		const user = api.users.fetch(() => user_id()!)();
+		if (user?.webhook) {
+			finalPermissions.add("MessageCreate");
+			finalPermissions.add("MessageEmbeds");
+			return { permissions: finalPermissions, rank: 0 };
+		}
+
 		if (!rid) {
 			console.log("[perms] no room id");
 			const defaultPermissions: Permission[] = [
