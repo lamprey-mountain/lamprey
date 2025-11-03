@@ -158,7 +158,7 @@ impl Connection {
                             .users
                             .presence_set(user_id, presence.unwrap_or(Presence::online()))
                             .await?;
-                        user.status = user_with_new_status.status;
+                        user.presence = user_with_new_status.presence;
                         Some(user)
                     }
                 } else {

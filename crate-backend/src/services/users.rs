@@ -73,7 +73,7 @@ impl ServiceUsers {
         }
 
         let status = self.presence_get(user_id);
-        usr.status = status;
+        usr.presence = status;
         Ok(usr)
     }
 

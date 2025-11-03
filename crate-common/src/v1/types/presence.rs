@@ -42,6 +42,7 @@ pub enum Status {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
 pub enum Activity {
     /// custom activity
     Custom {

@@ -50,8 +50,7 @@ pub struct User {
     pub puppet: Option<Puppet>,
     pub webhook: Option<UserWebhook>,
     pub suspended: Option<Suspended>,
-    // TODO: rename to presence
-    pub status: Presence,
+    pub presence: Presence,
     pub registered_at: Option<Time>,
     pub deleted_at: Option<Time>,
     #[serde(skip_serializing_if = "Option::is_none")]
