@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.creator_id\n                FROM webhook w\n                JOIN usr u ON w.id = u.id\n                JOIN channel c ON w.channel_id = c.id\n                WHERE w.channel_id = $1 AND w.id > $2 AND w.id < $3\n                ORDER BY (CASE WHEN $4 = 'f' THEN w.id END), w.id DESC LIMIT $5\n                ",
+  "query": "\n                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id\n                FROM webhook w\n                JOIN usr u ON w.id = u.id\n                JOIN channel c ON w.channel_id = c.id\n                WHERE w.channel_id = $1 AND w.id > $2 AND w.id < $3\n                ORDER BY (CASE WHEN $4 = 'f' THEN w.id END), w.id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -30,6 +30,11 @@
       },
       {
         "ordinal": 5,
+        "name": "token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
         "name": "creator_id",
         "type_info": "Uuid"
       }
@@ -49,8 +54,9 @@
       false,
       false,
       true,
+      false,
       true
     ]
   },
-  "hash": "6e8a2a26279c987eafa6e0d43e80a0c17689e6dac14fc530878b04a03ac76647"
+  "hash": "6bfad637b3c94bead1889a2f79c083fbf98c925dc96278ed5d25b1b58084d12a"
 }
