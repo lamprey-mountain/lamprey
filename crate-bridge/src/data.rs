@@ -7,7 +7,7 @@ use serenity::all::{
 use sqlx::{query, query_as};
 use uuid::Uuid;
 
-use crate::common::{Globals, PortalConfig, RealmConfig};
+use crate::bridge_common::{Globals, PortalConfig, RealmConfig};
 
 struct PortalConfigRow {
     pub lamprey_thread_id: String,

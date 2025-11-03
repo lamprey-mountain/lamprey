@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tracing::{error, info};
 
 use crate::{
-    common::{Globals, PortalConfig},
+    bridge_common::{Globals, PortalConfig},
     data::Data,
     discord,
     portal::Portal,

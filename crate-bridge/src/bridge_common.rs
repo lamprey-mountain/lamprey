@@ -3,9 +3,8 @@ use std::time::Instant;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::{ApplicationId, ChannelId, MessageId, RoomId};
+use common::v1::types::{ChannelId, MessageId, RoomId};
 use dashmap::DashMap;
-use serde::Deserialize;
 use serenity::all::{
     ChannelId as DcChannelId, GuildId as DcGuildId, MessageId as DcMessageId, Presence,
     User as DcUser, UserId as DcUserId,
@@ -13,6 +12,7 @@ use serenity::all::{
 use tokio::sync::{mpsc, oneshot};
 
 use crate::bridge::BridgeMessage;
+use crate::config::Config;
 use crate::data::Data;
 use crate::lamprey::LampreyHandle;
 use crate::portal::{Portal, PortalMessage};
@@ -36,19 +36,6 @@ pub struct Globals {
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<LampreyMessage>,
     pub bridge_chan: mpsc::UnboundedSender<BridgeMessage>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Config {
-    pub database_url: String,
-    pub lamprey_token: String,
-    pub lamprey_base_url: Option<String>,
-    pub lamprey_ws_url: Option<String>,
-    pub lamprey_cdn_url: Option<String>,
-    pub lamprey_application_id: ApplicationId,
-    pub discord_token: String,
-    pub otel_trace_endpoint: Option<String>,
-    pub rust_log: String,
 }
 
 /// defines a single chatroom bridged together

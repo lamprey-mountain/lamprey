@@ -14,7 +14,7 @@ use tracing::{debug, error, info};
 
 use crate::{
     bridge::BridgeMessage,
-    common::{Globals, GlobalsTrait},
+    bridge_common::{Globals, GlobalsTrait},
     data::Data,
     portal::PortalMessage,
 };

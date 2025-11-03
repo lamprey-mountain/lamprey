@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::common::{Globals, PortalConfig};
+use crate::bridge_common::{Globals, PortalConfig};
 use crate::data::{AttachmentMetadata, Data, MessageMetadata, Puppet};
 use crate::discord::DiscordMessage;
 

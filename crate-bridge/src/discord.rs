@@ -26,7 +26,7 @@ use tracing::{debug, error, info, trace, warn, Instrument};
 
 use crate::{
     bridge::BridgeMessage,
-    common::{Globals, GlobalsTrait, PortalConfig, RealmConfig, WEBHOOK_NAME},
+    bridge_common::{Globals, GlobalsTrait, PortalConfig, RealmConfig, WEBHOOK_NAME},
     data::Data,
     portal::{Portal, PortalMessage},
 };
@@ -447,7 +447,7 @@ impl EventHandler for Handler {
                 Ok(user) => {
                     globals.discord_user_cache.insert(
                         user_id,
-                        crate::common::UserCacheEntry {
+                        crate::bridge_common::UserCacheEntry {
                             user: user.clone(),
                             fetched_at: std::time::Instant::now(),
                         },

@@ -1,6 +1,6 @@
 use ::common::v1::types::{PaginationDirection, PaginationQuery};
 use anyhow::Result;
-use common::{Config, Globals};
+use bridge_common::Globals;
 use dashmap::DashMap;
 use data::Data;
 use discord::Discord;
@@ -14,11 +14,14 @@ use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 use crate::{
     bridge::{Bridge, BridgeMessage},
-    common::GlobalsTrait,
+    bridge_common::GlobalsTrait,
+    config::Config,
 };
 
 mod bridge;
-mod common;
+// TODO: rename this to avoid conflicts
+mod bridge_common;
+mod config;
 mod data;
 mod discord;
 mod lamprey;
