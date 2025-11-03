@@ -1104,7 +1104,7 @@ impl Discord {
             while let Some(msg) = self.recv.recv().await {
                 match self.handle(msg, &http).await {
                     Ok(_) => {}
-                    Err(err) => error!("{err}"),
+                    Err(err) => error!("error handling event: {err}"),
                 };
             }
         });
@@ -1122,12 +1122,17 @@ impl Discord {
                 response,
             } => {
                 let hook = self.get_hook(url, http).await?;
+
                 let msg = hook
                     .execute(http, true, payload)
                     .await?
                     .expect("wait should return message");
-                response.send(msg).unwrap();
+
+                if response.send(msg).is_err() {
+                    error!("failed to send response to portal: receiver dropped");
+                }
             }
+
             DiscordMessage::WebhookMessageEdit {
                 url,
                 message_id,
@@ -1135,8 +1140,12 @@ impl Discord {
                 response,
             } => {
                 let hook = self.get_hook(url, http).await?;
+
                 let msg = hook.edit_message(http, message_id, payload).await?;
-                response.send(msg).unwrap();
+
+                if response.send(msg).is_err() {
+                    error!("failed to send response to portal: receiver dropped");
+                }
             }
             DiscordMessage::WebhookMessageDelete {
                 url,
@@ -1145,8 +1154,12 @@ impl Discord {
                 response,
             } => {
                 let hook = self.get_hook(url, http).await?;
+
                 hook.delete_message(http, thread_id, message_id).await?;
-                response.send(()).unwrap();
+
+                if response.send(()).is_err() {
+                    error!("failed to send response to portal: receiver dropped");
+                }
             }
             DiscordMessage::MessageGet {
                 message_id,
@@ -1154,7 +1167,10 @@ impl Discord {
                 response,
             } => {
                 let message = http.get_message(channel_id, message_id).await?;
-                response.send(message).unwrap();
+
+                if response.send(message).is_err() {
+                    error!("failed to send response to portal: receiver dropped");
+                }
             }
             DiscordMessage::ChannelCreate {
                 guild_id,
@@ -1165,13 +1181,19 @@ impl Discord {
             } => {
                 let mut channel = CreateChannel::new(name).kind(match ty {
                     common::v1::types::ChannelType::Category => ChannelType::Category,
+
                     _ => ChannelType::Text,
                 });
+
                 if let Some(parent_id) = parent_id {
                     channel = channel.category(parent_id);
                 }
+
                 let channel = guild_id.create_channel(http, channel).await?;
-                response.send(channel.id).unwrap();
+
+                if response.send(channel.id).is_err() {
+                    error!("failed to send response to portal: receiver dropped");
+                }
             }
             DiscordMessage::WebhookCreate {
                 channel_id,
@@ -1181,7 +1203,10 @@ impl Discord {
                 let hook = channel_id
                     .create_webhook(http, CreateWebhook::new(name))
                     .await?;
-                response.send(hook).unwrap();
+
+                if response.send(hook).is_err() {
+                    error!("failed to send response to portal: receiver dropped");
+                }
             }
         }
         Ok(())

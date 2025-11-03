@@ -97,9 +97,10 @@ impl Portal {
     async fn activate(mut self) {
         while let Some(msg) = self.recv.recv().await {
             if let Err(err) = self.handle(msg).await {
-                error!("{err}")
+                error!(portal = ?self.config, "error handling portal message: {err:?}");
             }
         }
+        error!(portal = ?self.config, "portal channel closed, shutting down");
     }
 
     #[tracing::instrument(
