@@ -437,24 +437,26 @@ impl EventHandler for Handler {
         let mut message_with_full_author = message.clone();
         let user_id = message.author.id;
 
-        let cached_user = globals.discord_user_cache.get(&user_id);
-        if cached_user.is_some()
-            && cached_user.as_ref().unwrap().fetched_at.elapsed().as_secs() < 300
-        {
-            message_with_full_author.author = cached_user.unwrap().user.clone();
-        } else {
-            match ctx.http.get_user(user_id).await {
-                Ok(user) => {
-                    globals.discord_user_cache.insert(
-                        user_id,
-                        crate::bridge_common::UserCacheEntry {
-                            user: user.clone(),
-                            fetched_at: std::time::Instant::now(),
-                        },
-                    );
-                    message_with_full_author.author = user;
+        if message.webhook_id.is_none() {
+            let cached_user = globals.discord_user_cache.get(&user_id);
+            if cached_user.is_some()
+                && cached_user.as_ref().unwrap().fetched_at.elapsed().as_secs() < 300
+            {
+                message_with_full_author.author = cached_user.unwrap().user.clone();
+            } else {
+                match ctx.http.get_user(user_id).await {
+                    Ok(user) => {
+                        globals.discord_user_cache.insert(
+                            user_id,
+                            crate::bridge_common::UserCacheEntry {
+                                user: user.clone(),
+                                fetched_at: std::time::Instant::now(),
+                            },
+                        );
+                        message_with_full_author.author = user;
+                    }
+                    Err(e) => error!("Failed to fetch full user object for {}: {}", user_id, e),
                 }
-                Err(e) => error!("Failed to fetch full user object for {}: {}", user_id, e),
             }
         }
 
