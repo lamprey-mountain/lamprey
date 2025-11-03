@@ -3787,11 +3787,10 @@ export interface components {
 			version_id: components["schemas"]["Id"];
 		};
 		Activity: {
-			/** @description custom activity */
-			Custom: {
-				clear_at?: null | components["schemas"]["Time"];
-				text: string;
-			};
+			clear_at?: null | components["schemas"]["Time"];
+			text: string;
+			/** @enum {string} */
+			type: "Custom";
 		};
 		AdminBroadcast: {
 			message: components["schemas"]["MessageCreate"];
@@ -6203,9 +6202,9 @@ export interface components {
 				emails?: components["schemas"]["EmailInfo"][] | null;
 				id: components["schemas"]["Id"];
 				name: string;
+				presence: components["schemas"]["Presence"];
 				puppet?: null | components["schemas"]["Puppet"];
 				registered_at?: null | components["schemas"]["Time"];
-				status: components["schemas"]["Presence"];
 				suspended?: null | components["schemas"]["Suspended"];
 				system: boolean;
 				user_config?: null | components["schemas"]["UserConfigUser"];
@@ -6998,9 +6997,9 @@ export interface components {
 			emails?: components["schemas"]["EmailInfo"][] | null;
 			id: components["schemas"]["Id"];
 			name: string;
+			presence: components["schemas"]["Presence"];
 			puppet?: null | components["schemas"]["Puppet"];
 			registered_at?: null | components["schemas"]["Time"];
-			status: components["schemas"]["Presence"];
 			suspended?: null | components["schemas"]["Suspended"];
 			system: boolean;
 			user_config?: null | components["schemas"]["UserConfigUser"];
