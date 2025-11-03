@@ -409,7 +409,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 	return (
 		<svg
 			class="avatar status-indicator"
-			data-status={props.user?.status.type ?? "Offline"}
+			data-status={props.user?.presence.status ?? "Offline"}
 			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
 			role="img"
 			style={{ "--pad": `${pad()}px` }}

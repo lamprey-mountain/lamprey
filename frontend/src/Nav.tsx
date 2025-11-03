@@ -443,7 +443,11 @@ const ItemChannel = (props: { channel: Channel }) => {
 				>
 					{name()}
 				</div>
-				<Show when={otherUser()?.status.text}>
+				<Show
+					when={otherUser()?.presence.activities.find((a) =>
+						a.type === "Custom"
+					)?.text}
+				>
 					{(t) => <div class="dim">{t()}</div>}
 				</Show>
 			</div>

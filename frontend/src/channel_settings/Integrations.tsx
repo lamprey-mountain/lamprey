@@ -114,7 +114,6 @@ export function Integrations(props: VoidProps<{ channel: Channel }>) {
 								description: null,
 								flags: 0,
 								presence: { status: "Offline" as const, activities: [] },
-								status: { status: "Offline" as const, activities: [] },
 								relationship: null,
 								user_config: null,
 							});
