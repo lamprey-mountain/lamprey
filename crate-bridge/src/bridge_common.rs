@@ -3,13 +3,13 @@ use std::time::Instant;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::{ChannelId, MessageId, RoomId};
+use common::v1::types::{ChannelId, MessageId, RoomId, UserId};
 use dashmap::DashMap;
 use serenity::all::{
     ChannelId as DcChannelId, GuildId as DcGuildId, MessageId as DcMessageId, Presence,
     User as DcUser, UserId as DcUserId,
 };
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, RwLock};
 
 use crate::bridge::BridgeMessage;
 use crate::config::Config;
@@ -36,6 +36,8 @@ pub struct Globals {
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<LampreyMessage>,
     pub bridge_chan: mpsc::UnboundedSender<BridgeMessage>,
+    pub lamprey_user_id: Arc<RwLock<Option<UserId>>>,
+    pub recently_created_discord_channels: Arc<DashMap<DcChannelId, ()>>,
 }
 
 /// defines a single chatroom bridged together

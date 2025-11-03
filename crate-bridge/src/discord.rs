@@ -593,6 +593,15 @@ impl EventHandler for Handler {
         let ctx_data = ctx.data.read().await;
         let globals = ctx_data.get::<GlobalsKey>().unwrap();
 
+        if globals
+            .recently_created_discord_channels
+            .remove(&channel.id)
+            .is_some()
+        {
+            info!("ignoring discord channel create from bridge");
+            return;
+        }
+
         if !matches!(
             channel.kind,
             ChannelType::Text | ChannelType::News | ChannelType::Category
@@ -605,8 +614,7 @@ impl EventHandler for Handler {
         if globals
             .get_portal_by_discord_channel(channel.id)
             .await
-            .unwrap()
-            .is_some()
+            .is_ok_and(|p| p.is_some())
         {
             return;
         }
@@ -1183,16 +1191,15 @@ impl Discord {
             } => {
                 let mut channel = CreateChannel::new(name).kind(match ty {
                     common::v1::types::ChannelType::Category => ChannelType::Category,
-
                     _ => ChannelType::Text,
                 });
-
                 if let Some(parent_id) = parent_id {
                     channel = channel.category(parent_id);
                 }
-
                 let channel = guild_id.create_channel(http, channel).await?;
-
+                self.globals
+                    .recently_created_discord_channels
+                    .insert(channel.id, ());
                 if response.send(channel.id).is_err() {
                     error!("failed to send response to portal: receiver dropped");
                 }

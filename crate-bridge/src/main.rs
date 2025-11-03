@@ -8,7 +8,7 @@ use figment::providers::{Env, Format, Toml};
 use lamprey::Lamprey;
 use opentelemetry_otlp::WithExportConfig;
 use std::{str::FromStr, sync::Arc};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLock};
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
@@ -83,6 +83,8 @@ async fn main() -> Result<()> {
         dc_chan: dc_chan.0,
         ch_chan: ch_chan.0,
         bridge_chan: bridge_chan.0,
+        lamprey_user_id: Arc::new(RwLock::new(None)),
+        recently_created_discord_channels: Arc::new(DashMap::new()),
     });
 
     for config in globals.get_portals().await? {

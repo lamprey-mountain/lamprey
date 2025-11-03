@@ -38,7 +38,11 @@ struct Handle {
 impl EventHandler for Handle {
     type Error = Error;
 
-    async fn ready(&mut self, _user: Option<User>, _session: Session) -> Result<()> {
+    async fn ready(&mut self, user: Option<User>, _session: Session) -> Result<()> {
+        if let Some(user) = user {
+            *self.globals.lamprey_user_id.write().await = Some(user.id);
+            info!("lamprey ready, user id: {}", user.id);
+        }
         Ok(())
     }
 
@@ -50,6 +54,13 @@ impl EventHandler for Handle {
     async fn sync(&mut self, msg: MessageSync) -> Result<()> {
         match msg {
             MessageSync::ChannelCreate { channel: thread } => {
+                if let Some(lamprey_user_id) = *self.globals.lamprey_user_id.read().await {
+                    if lamprey_user_id == thread.creator_id {
+                        info!("ignoring channel create from bridge itself");
+                        return Ok(());
+                    }
+                }
+
                 info!("chat upsert thread");
                 let Ok(realms) = self.globals.get_realms().await else {
                     return Ok(());
