@@ -21,7 +21,7 @@ import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.ts";
-import { Placement } from "@floating-ui/dom";
+import { Placement, ReferenceElement } from "@floating-ui/dom";
 
 export type Slice = {
 	start: number;
@@ -126,6 +126,14 @@ export type Popout = {
 	placement?: Placement;
 } | {};
 
+export type AutocompleteState = {
+	type: "mention";
+	query: string;
+	ref: ReferenceElement;
+	onSelect: (userId: string, userName: string) => void;
+	channelId: string;
+} | null;
+
 export type ChatCtx = {
 	client: Client;
 	data: Data;
@@ -137,6 +145,8 @@ export type ChatCtx = {
 	setMenu: Setter<Menu | null>;
 	popout: Accessor<Popout>;
 	setPopout: Setter<Popout>;
+	autocomplete: Accessor<AutocompleteState>;
+	setAutocomplete: Setter<AutocompleteState>;
 	userView: Accessor<UserViewData | null>;
 	setUserView: Setter<UserViewData | null>;
 	channel_anchor: ReactiveMap<string, MessageListAnchor>;

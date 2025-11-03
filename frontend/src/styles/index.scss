@@ -3222,3 +3222,17 @@ button.link {
 		}
 	}
 }
+
+.autocomplete {
+	background: $bg-150;
+	border: solid $sep-300 1px;
+	box-shadow: 0 2px 8px $bg-100;
+
+	& > .item {
+		padding: 2px 4px;
+
+		&:hover, &.hovered {
+			background: #fff2;
+		}
+	}
+}

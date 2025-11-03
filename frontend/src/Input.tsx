@@ -263,6 +263,7 @@ export function Input(props: InputProps) {
 					onSubmit={onSubmit}
 					onChange={onChange}
 					onUpload={handleUpload}
+					channelId={props.channel.id}
 					placeholder={locked()
 						? "you cannot send messages here"
 						: `send a message...`}

@@ -78,6 +78,8 @@ import { useVoice, VoiceProvider } from "./voice-provider.tsx";
 import { Config, ConfigProvider, useConfig } from "./config.tsx";
 import { UserView } from "./User.tsx";
 import { EmojiPicker } from "./EmojiPicker.tsx";
+import { Autocomplete } from "./Autocomplete.tsx";
+import { AutocompleteState } from "./context.ts";
 
 const App: Component = () => {
 	return (
@@ -232,6 +234,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
 	const [menu, setMenu] = createSignal<Menu | null>(null);
 	const [popout, setPopout] = createSignal<Popout>({});
+	const [autocomplete, setAutocomplete] = createSignal<AutocompleteState>(null);
 	const [userView, setUserView] = createSignal<UserViewData | null>(null);
 	const editingMessage = new ReactiveMap<
 		string,
@@ -268,6 +271,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		setMenu,
 		popout,
 		setPopout,
+		autocomplete,
+		setAutocomplete,
 		userView,
 		setUserView,
 		channel_anchor: new ReactiveMap(),
@@ -566,6 +571,32 @@ function Overlay() {
 		onCleanup(cleanup);
 	});
 
+	const [autocompleteRef, setAutocompleteRef] = createSignal<HTMLElement>();
+	const [autocompleteFloating, setAutocompleteFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
+	});
+
+	createEffect(() => {
+		const reference = ctx.autocomplete()?.ref;
+		const floating = autocompleteRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(
+			reference,
+			floating,
+			() => {
+				computePosition(reference, floating, {
+					// middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+					placement: "top-start",
+				}).then(({ x, y, strategy }) => {
+					setAutocompleteFloating({ x, y, strategy });
+				});
+			},
+		);
+		onCleanup(cleanup);
+	});
+
 	const [userViewRef, setUserViewRef] = createSignal<HTMLElement>();
 	const [userViewFloating, setUserViewFloating] = createStore({
 		x: 0,
@@ -733,6 +764,21 @@ function Overlay() {
 						room_member={userViewData()!.room_member() ?? undefined}
 						thread_member={userViewData()!.thread_member() ?? undefined}
 					/>
+				</div>
+			</Show>
+			<Show when={ctx.autocomplete()}>
+				<div
+					ref={setAutocompleteRef}
+					style={{
+						position: autocompleteFloating.strategy,
+						top: "0px",
+						left: "0px",
+						translate:
+							`${autocompleteFloating.x}px ${autocompleteFloating.y}px`,
+						"z-index": 100,
+					}}
+				>
+					<Autocomplete />
 				</div>
 			</Show>
 		</>

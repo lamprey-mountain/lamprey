@@ -6,6 +6,7 @@ import { keymap } from "prosemirror-keymap";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { initTurndownService } from "./turndown.ts";
 import { decorate, md } from "./markdown.tsx";
+import { useCtx } from "./context";
 
 const turndown = initTurndownService();
 
@@ -117,9 +118,12 @@ type EditorViewProps = {
 	onUpload?: (file: File) => void;
 	onSubmit: (text: string) => boolean;
 	onChange?: (state: EditorState) => void;
+	channelId?: string; // Needed for autocomplete
 };
 
 export const createEditor = (opts: EditorProps) => {
+	const ctx = useCtx();
+
 	let editorRef!: HTMLDivElement;
 	let view: EditorView | undefined;
 	let onSubmit!: (content: string) => boolean | undefined;
@@ -199,6 +203,8 @@ export const createEditor = (opts: EditorProps) => {
 			});
 
 			onMount(() => {
+				const ctx = useCtx(); // Access context inside mount since we're in a Solid component
+
 				view = new EditorView(editorRef!, {
 					domParser: DOMParser.fromSchema(schema),
 					state: createState(),
@@ -253,6 +259,142 @@ export const createEditor = (opts: EditorProps) => {
 						}
 						return true;
 					},
+					handleKeyDown(view, event) {
+						// TODO: use actual css line height here
+						const LINE_HEIGHT = 18;
+						const refElement = () => {
+							const cursorPos = view.coordsAtPos(view.state.selection.from);
+							return {
+								getBoundingClientRect() {
+									return {
+										x: cursorPos.left,
+										y: cursorPos.bottom - LINE_HEIGHT,
+										left: cursorPos.left,
+										right: cursorPos.right,
+										top: cursorPos.bottom - LINE_HEIGHT,
+										bottom: cursorPos.bottom,
+										width: 0,
+										height: LINE_HEIGHT,
+									};
+								},
+							};
+						};
+
+						// if the @ character was pressed, open the menu
+						if (event.key === "@") {
+							ctx.setAutocomplete({
+								type: "mention",
+								query: "",
+								ref: refElement() as any,
+								onSelect: (userId: string, _userName: string) => {
+									const state = view.state;
+									const from = Math.max(0, state.selection.from - 1);
+									const to = state.selection.to;
+
+									let mentionStart = from;
+									while (mentionStart > 0) {
+										const char = state.doc.textBetween(
+											mentionStart - 1,
+											mentionStart,
+										);
+										if (char === "@" || /\w/.test(char)) {
+											mentionStart--;
+										} else {
+											break;
+										}
+									}
+
+									const tr = state.tr.replaceWith(
+										mentionStart,
+										to,
+										schema.nodes.mention.create({ user: userId }),
+									).insertText(" ", state.selection.to);
+
+									view.dispatch(tr);
+
+									ctx.setAutocomplete(null);
+								},
+								channelId: props.channelId || "",
+							});
+
+							return false;
+						}
+
+						// autocomplete navigation and selection
+						if (ctx?.autocomplete()) {
+							if (
+								event.key === "ArrowUp" || event.key === "ArrowDown" ||
+								event.key === "Enter" || event.key === "Tab" ||
+								event.key === "Escape"
+							) {
+								// handled by the autocomplete component
+								return false;
+							}
+						}
+
+						if (ctx?.autocomplete()) {
+							if (event.key === " " || event.key === "Enter") {
+								ctx.setAutocomplete(null);
+							} else {
+								const state = view.state;
+								const cursorPos = state.selection.from;
+
+								let mentionStart = -1;
+								// search backward for @ symbol
+								for (let i = cursorPos - 1; i >= 0; i--) {
+									const char = state.doc.textBetween(i, i + 1);
+									if (char === "@") {
+										mentionStart = i;
+										break;
+									}
+
+									// invalid characters for a mention query
+									if (char === " " || char === "\n" || char === "\t") {
+										ctx.setAutocomplete(null);
+										return false;
+									}
+								}
+
+								if (!ctx.autocomplete()) {
+									return false;
+								}
+
+								if (mentionStart === -1) {
+									ctx.setAutocomplete(null);
+									return false;
+								}
+
+								const currentQuery = state.doc.textBetween(
+									mentionStart + 1,
+									cursorPos,
+								);
+
+								let newQuery;
+								if (event.key === "Backspace") {
+									if (cursorPos <= mentionStart + 1) {
+										ctx.setAutocomplete(null);
+										return false;
+									}
+									newQuery = currentQuery.slice(0, -1);
+								} else if (
+									event.key.length === 1 && !event.ctrlKey && !event.metaKey &&
+									!event.altKey
+								) {
+									newQuery = currentQuery + event.key;
+								} else {
+									return false;
+								}
+
+								ctx.setAutocomplete({
+									...ctx.autocomplete()!,
+									query: newQuery,
+									ref: refElement() as any,
+								});
+							}
+						}
+
+						return false;
+					},
 					transformPastedHTML(html) {
 						const markdown = turndown.turndown(html);
 						const div = document.createElement("div");
@@ -267,7 +409,6 @@ export const createEditor = (opts: EditorProps) => {
 					},
 				});
 
-				// console.log("editor mounted", editorRef, view);
 				view.focus();
 			});
 
