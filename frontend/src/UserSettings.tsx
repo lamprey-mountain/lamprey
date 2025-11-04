@@ -1,24 +1,29 @@
-import { For, Show } from "solid-js";
+import { For, Match, Show, Switch } from "solid-js";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {
+	Appearance,
 	Applications,
 	AuditLog,
+	Authentication,
 	Blocked,
-	Email,
-	Info,
+	Notifications,
+	Profile,
 	Sessions,
-	Todo,
 } from "./user_settings/mod.tsx";
 import type { User } from "sdk";
 
 const tabs = [
-	{ name: "info", path: "", component: Info },
+	{ category: "account" },
+	{ name: "profile", path: "profile", component: Profile },
+	{ name: "authentication", path: "authentication", component: Authentication },
 	{ name: "sessions", path: "sessions", component: Sessions },
 	{ name: "audit log", path: "audit-log", component: AuditLog },
-	{ name: "notifications", path: "notifications", component: Todo },
 	{ name: "blocked users", path: "blocks", component: Blocked },
-	{ name: "email", path: "email", component: Email },
+	{ category: "application" },
+	{ name: "appearance", path: "", component: Appearance },
+	{ name: "notifications", path: "notifications", component: Notifications },
+	{ category: "developer" },
 	{
 		name: "applications",
 		path: "applications",
@@ -38,12 +43,27 @@ export const UserSettings = (props: { user: User; page: string }) => {
 			<nav>
 				<ul>
 					<For each={tabs}>
-						{(tab) => (
-							<li>
-								<A href={`/settings/${tab.path}`}>
-									{tab.name}
-								</A>
-							</li>
+						{(tab, idx) => (
+							<Switch>
+								<Match when={tab.category}>
+									<div
+										class="dim"
+										style={{
+											"margin-top": idx() === 0 ? "" : "12px",
+											"margin": "2px 8px",
+										}}
+									>
+										{tab.category}
+									</div>
+								</Match>
+								<Match when={tab.name}>
+									<li>
+										<A href={`/settings/${tab.path}`}>
+											{tab.name}
+										</A>
+									</li>
+								</Match>
+							</Switch>
 						)}
 					</For>
 				</ul>

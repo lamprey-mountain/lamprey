@@ -3274,3 +3274,34 @@ button.link {
 article.message:hover > .message-toolbar {
 	visibility: visible;
 }
+
+.user-settings-auth {
+	h3 {
+		font-size: 1.2em;
+	}
+
+	.email-list {
+		border: solid $sep-300 1px;
+		background: $bg-150;
+
+		& > .email {
+			display: flex;
+			padding: 4px 8px;
+
+			&:hover {
+				background: #0004;
+			}
+
+			& > menu {
+				display: flex;
+				gap: 8px;
+			}
+		}
+	}
+
+	.email-add {
+		padding: 8px;
+		display: flex;
+		justify-content: end;
+	}
+}

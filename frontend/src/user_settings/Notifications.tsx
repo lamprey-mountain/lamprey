@@ -1,10 +1,10 @@
 import { type VoidProps } from "solid-js";
 import { type User } from "sdk";
 
-export function Todo(_props: VoidProps<{ user: User }>) {
+export function Notifications(_props: VoidProps<{ user: User }>) {
 	return (
 		<>
-			<h2>todo</h2>
+			<h2>notifications</h2>
 		</>
 	);
 }
