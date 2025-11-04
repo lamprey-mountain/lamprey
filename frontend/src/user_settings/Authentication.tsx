@@ -151,8 +151,8 @@ function Oauth() {
 		return data?.oauth_providers;
 	});
 
-	// TODO: button to connect provider
-	// TODO: button to disconnect provider
+	// TODO(#722): button to connect provider
+	// TODO(#723): button to disconnect provider
 	return (
 		<div>
 			<For each={oauthProviders()}>
