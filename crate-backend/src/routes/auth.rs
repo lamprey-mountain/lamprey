@@ -13,8 +13,8 @@ use common::v1::types::auth::{
 use common::v1::types::email::EmailAddr;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, SessionStatus,
-    UserId,
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, RoomMemberPut,
+    SessionStatus, UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -86,6 +86,11 @@ async fn auth_oauth_redirect(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
+    let provider_config = s
+        .config
+        .oauth_provider
+        .get(&provider)
+        .ok_or(Error::Unimplemented)?;
     match provider.as_str() {
         "discord" => {
             let (auth, session_id) = srv.oauth.exchange_code_for_token(q.state, q.code).await?;
@@ -95,8 +100,39 @@ async fn auth_oauth_redirect(
                 .auth_oauth_get_remote("discord".into(), u.user.id.clone())
                 .await
             {
-                Ok(user_id) => user_id,
+                Ok(user_id) => {
+                    let user = srv.users.get(user_id, None).await?;
+                    if provider_config.autoregister && user.registered_at.is_none() {
+                        data.user_set_registered(user.id, Some(Time::now_utc()), None)
+                            .await?;
+                        data.room_member_put(
+                            SERVER_ROOM_ID,
+                            user.id,
+                            None,
+                            RoomMemberPut::default(),
+                        )
+                        .await?;
+                        srv.users.invalidate(user.id).await;
+                        let updated_user = srv.users.get(user.id, None).await?;
+                        s.audit_log_append(AuditLogEntry {
+                            id: AuditLogEntryId::new(),
+                            room_id: SERVER_ROOM_ID,
+                            user_id: user.id,
+                            session_id: Some(session_id),
+                            reason: Some("oauth_autoregister".to_string()),
+                            ty: AuditLogEntryType::UserRegistered { user_id: user.id },
+                        })
+                        .await?;
+                        s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
+                    }
+                    user_id
+                }
                 Err(Error::NotFound) => {
+                    let registered_at = if provider_config.autoregister {
+                        Some(Time::now_utc())
+                    } else {
+                        None
+                    };
                     let user = data
                         .user_create(DbUserCreate {
                             id: None,
@@ -104,10 +140,28 @@ async fn auth_oauth_redirect(
                             name: u.user.global_name.unwrap_or(u.user.username),
                             description: None,
                             puppet: None,
-                            registered_at: None,
+                            registered_at,
                             system: false,
                         })
                         .await?;
+                    if provider_config.autoregister {
+                        data.room_member_put(
+                            SERVER_ROOM_ID,
+                            user.id,
+                            None,
+                            RoomMemberPut::default(),
+                        )
+                        .await?;
+                        s.audit_log_append(AuditLogEntry {
+                            id: AuditLogEntryId::new(),
+                            room_id: SERVER_ROOM_ID,
+                            user_id: user.id,
+                            session_id: Some(session_id),
+                            reason: Some("oauth_autoregister".to_string()),
+                            ty: AuditLogEntryType::UserRegistered { user_id: user.id },
+                        })
+                        .await?;
+                    }
                     data.auth_oauth_put("discord".into(), user.id, u.user.id, true)
                         .await?;
                     user.id
@@ -143,8 +197,39 @@ async fn auth_oauth_redirect(
                 .auth_oauth_get_remote("github".into(), u.id.to_string())
                 .await
             {
-                Ok(user_id) => user_id,
+                Ok(user_id) => {
+                    let user = srv.users.get(user_id, None).await?;
+                    if provider_config.autoregister && user.registered_at.is_none() {
+                        data.user_set_registered(user.id, Some(Time::now_utc()), None)
+                            .await?;
+                        data.room_member_put(
+                            SERVER_ROOM_ID,
+                            user.id,
+                            None,
+                            RoomMemberPut::default(),
+                        )
+                        .await?;
+                        srv.users.invalidate(user.id).await;
+                        let updated_user = srv.users.get(user.id, None).await?;
+                        s.audit_log_append(AuditLogEntry {
+                            id: AuditLogEntryId::new(),
+                            room_id: SERVER_ROOM_ID,
+                            user_id: user.id,
+                            session_id: Some(session_id),
+                            reason: Some("oauth_autoregister".to_string()),
+                            ty: AuditLogEntryType::UserRegistered { user_id: user.id },
+                        })
+                        .await?;
+                        s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
+                    }
+                    user_id
+                }
                 Err(Error::NotFound) => {
+                    let registered_at = if provider_config.autoregister {
+                        Some(Time::now_utc())
+                    } else {
+                        None
+                    };
                     let user = data
                         .user_create(DbUserCreate {
                             id: None,
@@ -152,10 +237,28 @@ async fn auth_oauth_redirect(
                             name: u.name.unwrap_or(u.login),
                             description: u.bio,
                             puppet: None,
-                            registered_at: None,
+                            registered_at,
                             system: false,
                         })
                         .await?;
+                    if provider_config.autoregister {
+                        data.room_member_put(
+                            SERVER_ROOM_ID,
+                            user.id,
+                            None,
+                            RoomMemberPut::default(),
+                        )
+                        .await?;
+                        s.audit_log_append(AuditLogEntry {
+                            id: AuditLogEntryId::new(),
+                            room_id: SERVER_ROOM_ID,
+                            user_id: user.id,
+                            session_id: Some(session_id),
+                            reason: Some("oauth_autoregister".to_string()),
+                            ty: AuditLogEntryType::UserRegistered { user_id: user.id },
+                        })
+                        .await?;
+                    }
                     data.auth_oauth_put("github".into(), user.id, u.id.to_string(), true)
                         .await?;
                     user.id

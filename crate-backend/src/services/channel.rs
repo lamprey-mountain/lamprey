@@ -138,14 +138,7 @@ impl ServiceThreads {
 
         let mut online_count = 0;
         for member in members {
-            if self
-                .state
-                .services()
-                .presence
-                .get(member.user_id)
-                .status
-                != Status::Offline
-            {
+            if self.state.services().presence.get(member.user_id).status != Status::Offline {
                 online_count += 1;
             }
         }
@@ -231,14 +224,7 @@ impl ServiceThreads {
             let members = self.state.data().thread_member_list_all(channel.id).await?;
             let mut online_count = 0;
             for member in members {
-                if self
-                    .state
-                    .services()
-                    .presence
-                    .get(member.user_id)
-                    .status
-                    != Status::Offline
-                {
+                if self.state.services().presence.get(member.user_id).status != Status::Offline {
                     online_count += 1;
                 }
             }

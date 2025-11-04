@@ -52,14 +52,7 @@ impl ServiceRooms {
 
         let mut online_count = 0;
         for member in members {
-            if self
-                .state
-                .services()
-                .presence
-                .get(member.user_id)
-                .status
-                != Status::Offline
-            {
+            if self.state.services().presence.get(member.user_id).status != Status::Offline {
                 online_count += 1;
             }
         }

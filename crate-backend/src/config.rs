@@ -66,6 +66,10 @@ pub struct ConfigOauthProvider {
     pub authorization_url: String,
     pub token_url: String,
     pub revocation_url: String,
+
+    /// automatically mark users as registered if they create an account or link their account with this provider
+    #[serde(default)]
+    pub autoregister: bool,
 }
 
 #[derive(Debug, Deserialize)]
