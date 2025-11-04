@@ -551,7 +551,7 @@ async fn channel_remove(
     }
     data.channel_delete(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
-    srv.users.disconnect_everyone_from_thread(channel_id)?;
+    srv.voice.disconnect_everyone(channel_id)?;
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {

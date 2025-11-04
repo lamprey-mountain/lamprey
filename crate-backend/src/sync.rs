@@ -155,8 +155,8 @@ impl Connection {
                         Some(user)
                     } else {
                         let user_with_new_status = srv
-                            .users
-                            .presence_set(user_id, presence.unwrap_or(Presence::online()))
+                            .presence
+                            .set(user_id, presence.unwrap_or(Presence::online()))
                             .await?;
                         user.presence = user_with_new_status.presence;
                         Some(user)
@@ -195,7 +195,7 @@ impl Connection {
                     }
 
                     // send voice states
-                    let voice_states = srv.users.voice_states_list();
+                    let voice_states = srv.voice.state_list();
                     for voice_state in voice_states {
                         if let Ok(perms) =
                             srv.perms.for_channel(user_id, voice_state.thread_id).await
@@ -232,7 +232,7 @@ impl Connection {
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 let user = srv.users.get(user_id, None).await?;
                 user.ensure_unsuspended()?;
-                srv.users.presence_set(user_id, presence).await?;
+                srv.presence.set(user_id, presence).await?;
             }
             MessageClient::Pong => {
                 let session = match &self.state {
@@ -244,7 +244,7 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                srv.users.presence_ping(user_id).await?;
+                srv.presence.ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
             MessageClient::MemberListSubscribe {
@@ -316,7 +316,7 @@ impl Connection {
                             state.mute = rm.mute;
                             state.deaf = rm.deaf;
                         }
-                        self.s.alloc_sfu(state.thread_id).await?;
+                        srv.voice.alloc_sfu(state.thread_id).await?;
                         if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
                             user_id,
                             state: Some(state),

@@ -62,7 +62,7 @@ impl SfuConnection {
     }
 
     async fn spawn(self, mut socket: WebSocket) {
-        self.s.sfus.insert(self.id, ());
+        self.s.services().voice.sfus.insert(self.id, ());
 
         let mut outbox = self.s.sushi_sfu.subscribe();
 
@@ -102,23 +102,27 @@ impl SfuConnection {
 
     async fn shutdown(&self) {
         // when this sfu gets shut down all clients connected to it need to reconnect
-        self.s.sfus.remove(&self.id);
+        self.s.services().voice.sfus.remove(&self.id);
         let mut needs_reconnect = HashSet::new();
-        self.s.thread_to_sfu.retain(|thread_id, sfu_id| {
-            if sfu_id == &self.id {
-                needs_reconnect.insert(*thread_id);
-                false
-            } else {
-                true
-            }
-        });
+        self.s
+            .services()
+            .voice
+            .channel_to_sfu
+            .retain(|thread_id, sfu_id| {
+                if sfu_id == &self.id {
+                    needs_reconnect.insert(*thread_id);
+                    false
+                } else {
+                    true
+                }
+            });
         for thread_id in &needs_reconnect {
-            if self.s.alloc_sfu(*thread_id).await.is_err() {
+            if self.s.services().voice.alloc_sfu(*thread_id).await.is_err() {
                 warn!("no sfu exists");
                 // clients will be told to reconnect anyways to trigger a client error
             }
         }
-        for state in self.s.services.users.voice_states_list() {
+        for state in self.s.services.voice.state_list() {
             if needs_reconnect.contains(&state.thread_id) {
                 if let Err(err) = self.s.broadcast(MessageSync::VoiceDispatch {
                     user_id: state.user_id,
@@ -143,9 +147,9 @@ impl SfuConnection {
                 debug!("change voice state {user_id} {old:?} {state:?}");
                 let srv = self.s.services();
                 if let Some(state) = &state {
-                    srv.users.voice_state_put(state.clone());
+                    srv.voice.state_put(state.clone());
                 } else {
-                    srv.users.voice_state_remove(&user_id);
+                    srv.voice.state_remove(&user_id);
                 }
 
                 self.s.broadcast(MessageSync::VoiceState {
@@ -163,7 +167,7 @@ impl SfuConnection {
         let should_send = match &msg {
             SfuCommand::Ready { .. } => true,
             SfuCommand::Signalling { user_id, inner: _ } => {
-                let state = self.s.services.users.voice_state_get(*user_id);
+                let state = self.s.services.voice.state_get(*user_id);
                 state.is_some_and(|s| self.is_ours(s.thread_id))
             }
             SfuCommand::VoiceState {
@@ -171,7 +175,7 @@ impl SfuConnection {
                 state,
                 permissions: _,
             } => {
-                let old = self.s.services.users.voice_state_get(*user_id);
+                let old = self.s.services.voice.state_get(*user_id);
                 let old_is_ours = old.is_some_and(|s| self.is_ours(s.thread_id));
                 let new_is_ours = state.as_ref().is_some_and(|s| self.is_ours(s.thread_id));
                 old_is_ours || new_is_ours
@@ -189,7 +193,13 @@ impl SfuConnection {
 
     /// if this thread is managed by us
     fn is_ours(&self, thread_id: ChannelId) -> bool {
-        self.s.thread_to_sfu.get(&thread_id).map(|i| *i) == Some(self.id)
+        self.s
+            .services()
+            .voice
+            .channel_to_sfu
+            .get(&thread_id)
+            .map(|i| *i)
+            == Some(self.id)
     }
 }
 

@@ -1,33 +1,19 @@
 use std::cmp::Ordering;
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
-use common::v1::types::presence::{Presence, Status};
-use common::v1::types::voice::{SfuCommand, SfuPermissions, VoiceState};
-use common::v1::types::{Channel, ChannelId, MessageSync, Permission, ThreadMemberPut};
+use common::v1::types::{Channel, Permission, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
-use tokio::task::JoinHandle;
-use tracing::{debug, error};
+use tracing::debug;
 
 use crate::types::{DbChannelCreate, DbChannelType};
 use crate::{Error, Result, ServerStateInner};
 
-/// when to expire presences from disconnected users
-// currently relies on sync heartbeat time
-const PRESENCE_EXPIRE: Duration = Duration::from_secs(40);
-
 pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
     cache_users: Cache<UserId, User>,
-    presences: DashMap<UserId, OnlineState>,
     dm_lock: DashMap<(UserId, UserId), ()>,
-    voice_states: DashMap<UserId, VoiceState>,
-}
-
-struct OnlineState {
-    expire_handle: JoinHandle<Result<()>>,
-    presence: Presence,
 }
 
 impl ServiceUsers {
@@ -38,9 +24,7 @@ impl ServiceUsers {
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            presences: DashMap::new(),
             dm_lock: DashMap::new(),
-            voice_states: DashMap::new(),
         }
     }
 
@@ -72,7 +56,7 @@ impl ServiceUsers {
             }
         }
 
-        let status = self.presence_get(user_id);
+        let status = self.state.services().presence.get(user_id);
         usr.presence = status;
         Ok(usr)
     }
@@ -87,132 +71,6 @@ impl ServiceUsers {
 
     pub async fn invalidate(&self, user_id: UserId) {
         self.cache_users.invalidate(&user_id).await
-    }
-
-    /// keep the status for a user alive
-    #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn presence_ping(&self, user_id: UserId) -> Result<User> {
-        match self.presences.remove(&user_id) {
-            Some((_, s)) => {
-                s.expire_handle.abort();
-                self.presence_set_inner(user_id, s.presence, true).await
-            }
-            None => {
-                self.presence_set_inner(user_id, Presence::offline(), false)
-                    .await
-            }
-        }
-    }
-
-    /// set the status for a user
-    #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn presence_set(&self, user_id: UserId, status: Presence) -> Result<User> {
-        self.presence_set_inner(user_id, status, false).await
-    }
-
-    /// set the status for a user, with a longer expiration
-    ///
-    /// this is for manual status updates, not presence-based ones
-    #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn presence_set_manual(&self, user_id: UserId, status: Presence) -> Result<User> {
-        self.presence_set_inner_expire(user_id, status, false, Duration::from_secs(60 * 5))
-            .await
-    }
-
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn presence_set_inner(
-        &self,
-        user_id: UserId,
-        status: Presence,
-        skip_broadcast: bool,
-    ) -> Result<User> {
-        self.presence_set_inner_expire(user_id, status, skip_broadcast, PRESENCE_EXPIRE)
-            .await
-    }
-
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn presence_set_inner_expire(
-        &self,
-        user_id: UserId,
-        status: Presence,
-        skip_broadcast: bool,
-        expire: Duration,
-    ) -> Result<User> {
-        let s = self.state.clone();
-        let handle = tokio::spawn(async move {
-            tokio::time::sleep(expire).await;
-            let had = s.services().users.presences.remove(&user_id);
-            debug!(
-                "expire status for {user_id}, had {:?}",
-                had.as_ref().map(|h| &h.1.presence)
-            );
-            if had.is_none_or(|(_, s)| s.presence != Presence::offline()) {
-                s.broadcast(MessageSync::PresenceUpdate {
-                    user_id,
-                    presence: Presence::offline(),
-                })?;
-            }
-            Result::Ok(())
-        });
-
-        let old = self.presences.insert(
-            user_id,
-            OnlineState {
-                expire_handle: handle,
-                presence: status.clone(),
-            },
-        );
-
-        if let Some(old) = &old {
-            old.expire_handle.abort();
-        }
-
-        let srv = self.state.services();
-        let user = srv.users.get(user_id, None).await?;
-
-        if old.is_none_or(|s| s.presence != status) && !skip_broadcast {
-            self.state.broadcast(MessageSync::PresenceUpdate {
-                user_id,
-                presence: status.clone(),
-            })?;
-        }
-
-        Ok(user)
-    }
-
-    /// get the status for a user
-    pub fn presence_get(&self, user_id: UserId) -> Presence {
-        if let Some(s) = self.presences.get(&user_id) {
-            s.presence.clone()
-        } else {
-            Presence::offline()
-        }
-    }
-
-    pub fn is_online(&self, user_id: UserId) -> bool {
-        self.presences
-            .get(&user_id)
-            .map(|s| s.presence.status != Status::Offline)
-            .unwrap_or(false)
-    }
-
-    pub fn voice_state_put(&self, state: VoiceState) {
-        self.voice_states.insert(state.user_id, state);
-    }
-
-    pub fn voice_state_remove(&self, user_id: &UserId) {
-        self.voice_states.remove(user_id);
-    }
-
-    pub fn voice_state_get(&self, user_id: UserId) -> Option<VoiceState> {
-        self.voice_states.get(&user_id).map(|s| s.to_owned())
-    }
-
-    pub fn voice_states_list(&self) -> Vec<VoiceState> {
-        self.voice_states
-            .iter()
-            .map(|r| r.value().clone())
-            .collect()
     }
 
     pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Channel, bool)> {
@@ -258,27 +116,6 @@ impl ServiceUsers {
             .await?;
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         Ok((thread, true))
-    }
-
-    pub fn disconnect_everyone_from_thread(&self, thread_id: ChannelId) -> Result<()> {
-        for s in &self.voice_states {
-            if s.thread_id == thread_id {
-                let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {
-                    user_id: s.user_id,
-                    state: None,
-                    permissions: SfuPermissions {
-                        speak: false,
-                        video: false,
-                        priority: false,
-                    },
-                });
-                if let Err(err) = r {
-                    error!("failed to disconnect user from thread: {err}");
-                }
-            }
-        }
-        self.voice_states.retain(|_, s| s.thread_id != thread_id);
-        Ok(())
     }
 }
 

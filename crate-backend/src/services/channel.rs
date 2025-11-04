@@ -141,8 +141,8 @@ impl ServiceThreads {
             if self
                 .state
                 .services()
-                .users
-                .presence_get(member.user_id)
+                .presence
+                .get(member.user_id)
                 .status
                 != Status::Offline
             {
@@ -234,8 +234,8 @@ impl ServiceThreads {
                 if self
                     .state
                     .services()
-                    .users
-                    .presence_get(member.user_id)
+                    .presence
+                    .get(member.user_id)
                     .status
                     != Status::Offline
                 {

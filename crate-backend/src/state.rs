@@ -4,14 +4,13 @@ use std::{
 };
 
 use common::v1::types::{
-    voice::SfuCommand, AuditLogEntry, ChannelId, Media, Message, RoomId, SfuId, UserId,
+    voice::SfuCommand, AuditLogEntry, ChannelId, Media, Message, RoomId, UserId,
 };
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 
 use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
-use tracing::error;
 use url::Url;
 
 use crate::{
@@ -19,7 +18,7 @@ use crate::{
     data::{postgres::Postgres, Data},
     services::Services,
     sync::Connection,
-    Error, Result,
+    Result,
 };
 
 pub struct ServerStateInner {
@@ -34,9 +33,6 @@ pub struct ServerStateInner {
 
     // TODO: write a wrapper around this (media is kind of like this?)
     pub blobs: opendal::Operator,
-
-    pub sfus: DashMap<SfuId, ()>,
-    pub thread_to_sfu: DashMap<ChannelId, SfuId>,
 }
 
 pub struct ServerState {
@@ -66,6 +62,7 @@ impl ServerStateInner {
     //     })
     // }
 
+    /// emit a message to everyone in a room
     pub async fn broadcast_room(
         &self,
         _room_id: RoomId,
@@ -76,16 +73,25 @@ impl ServerStateInner {
         Ok(())
     }
 
+    /// emit a message to everyone in a channel
+    // TODO: remove?
     pub async fn broadcast_channel(
         &self,
         _thread_id: ChannelId,
-        _user_id: UserId,
+        _user_id: UserId, // TODO: remove
         msg: MessageSync,
     ) -> Result<()> {
         let _ = self.sushi.send(msg);
         Ok(())
     }
 
+    /// emit a message to a user
+    pub async fn broadcast_user(&self, _user_id: UserId, msg: MessageSync) -> Result<()> {
+        let _ = self.sushi.send(msg);
+        Ok(())
+    }
+
+    /// emit a message to everyone
     pub fn broadcast(&self, msg: MessageSync) -> Result<()> {
         let _ = self.sushi.send(msg);
         Ok(())
@@ -139,38 +145,6 @@ impl ServerStateInner {
         }
         Ok(())
     }
-
-    /// select the "best" sfu and pair it with this thread id. return the existing sfu id if it exists.
-    ///
-    /// currently "best" means the sfu with least load in terms of # of threads using it
-    pub async fn alloc_sfu(&self, thread_id: ChannelId) -> Result<SfuId> {
-        if let Some(existing) = self.thread_to_sfu.get(&thread_id) {
-            return Ok(*existing);
-        }
-
-        let sfu_thread_counts = DashMap::<SfuId, u64>::new();
-        for i in &self.sfus {
-            sfu_thread_counts.insert(*i.key(), 0);
-        }
-        for i in &self.thread_to_sfu {
-            *sfu_thread_counts.get_mut(i.value()).unwrap() += 1;
-        }
-        let mut sorted: Vec<_> = sfu_thread_counts.into_iter().collect();
-        sorted.sort_by_key(|(_, count)| *count);
-        if let Some((chosen, _)) = sorted.first() {
-            self.thread_to_sfu.insert(thread_id, *chosen);
-            let thread = self.services().channels.get(thread_id, None).await?;
-            self.sushi_sfu
-                .send(SfuCommand::Thread {
-                    thread: thread.into(),
-                })
-                .unwrap();
-            Ok(*chosen)
-        } else {
-            error!("no available sfu");
-            Err(Error::BadStatic("no available sfu"))
-        }
-    }
 }
 
 impl ServerState {
@@ -187,9 +161,6 @@ impl ServerState {
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
                 sushi_sfu: tokio::sync::broadcast::channel(100).0,
-
-                sfus: DashMap::new(),
-                thread_to_sfu: DashMap::new(),
             });
             Services::new(inner.clone())
         });

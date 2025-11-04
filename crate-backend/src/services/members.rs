@@ -443,7 +443,7 @@ impl ServiceMembersInner {
         };
 
         let get_group = |rm: &Option<RoomMember>, user: &User| {
-            if srv.users.is_online(user.id) {
+            if srv.presence.is_online(user.id) {
                 if let Some(role) = get_highest_hoisted_role(rm) {
                     MemberGroup::Hoisted {
                         role_id: role.id,
@@ -485,7 +485,7 @@ impl ServiceMembersInner {
                 let count = members
                     .iter()
                     .filter(|(rm, _, u)| {
-                        srv.users.is_online(u.id)
+                        srv.presence.is_online(u.id)
                             && get_highest_hoisted_role(rm).map_or(false, |r| r.id == role.id)
                     })
                     .count();
@@ -500,7 +500,7 @@ impl ServiceMembersInner {
 
         let online_count = members
             .iter()
-            .filter(|(_, _, u)| srv.users.is_online(u.id))
+            .filter(|(_, _, u)| srv.presence.is_online(u.id))
             .count() as u64;
         let offline_count = members.len() as u64 - online_count;
 

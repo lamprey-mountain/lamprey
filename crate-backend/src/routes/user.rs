@@ -624,7 +624,7 @@ async fn user_presence_set(
     }
 
     let srv = s.services();
-    srv.users.presence_set_manual(target_user_id, json).await?;
+    srv.presence.set_manual(target_user_id, json).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
