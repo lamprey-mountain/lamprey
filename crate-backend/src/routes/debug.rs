@@ -165,9 +165,7 @@ struct ServerVersion {
     get,
     path = "/debug/info",
     tags = ["debug"],
-    responses(
-        (status = OK, body = ServerVersion, description = "success"),
-    )
+    responses((status = OK, body = ServerInfo, description = "success")),
 )]
 pub async fn debug_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     Ok(Json(ServerInfo {
