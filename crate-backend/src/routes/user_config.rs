@@ -7,6 +7,7 @@ use common::v1::types::user_config::{
     UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
 };
 use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
+use tower_http::limit::RequestBodyLimitLayer;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -178,11 +179,19 @@ async fn user_config_user_get(
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new()
+    let global_config_put_routes = OpenApiRouter::new()
         .routes(routes!(user_config_global_put))
+        .layer(RequestBodyLimitLayer::new(65536)); // 64KiB
+
+    let other_config_put_routes = OpenApiRouter::new()
         .routes(routes!(user_config_room_put))
         .routes(routes!(user_config_channel_put))
         .routes(routes!(user_config_user_put))
+        .layer(RequestBodyLimitLayer::new(16384)); // 16KiB
+
+    OpenApiRouter::new()
+        .merge(global_config_put_routes)
+        .merge(other_config_put_routes)
         .routes(routes!(user_config_global_get))
         .routes(routes!(user_config_room_get))
         .routes(routes!(user_config_channel_get))

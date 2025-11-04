@@ -3146,7 +3146,6 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "hashbrown 0.14.5",
- "hashbrown 0.15.5",
  "hmac",
  "hyper 1.7.0",
  "hyper-util",
@@ -3169,11 +3168,13 @@ dependencies = [
  "rustls-webpki 0.103.7",
  "semver",
  "serde",
+ "serde_core",
  "serde_json",
  "sha1",
  "sha2",
  "simd-adler32",
  "smallvec",
+ "spin",
  "sqlx",
  "sqlx-core",
  "sqlx-macros",
@@ -3191,6 +3192,7 @@ dependencies = [
  "tracing-core",
  "uuid",
  "winnow",
+ "zerocopy",
 ]
 
 [[package]]

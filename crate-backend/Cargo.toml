@@ -29,7 +29,7 @@ sqlx = { version = "0.8.3", features = ["runtime-tokio", "postgres", "uuid", "ti
 thiserror = "2.0.11"
 time = { version = "0.3.37", features = ["serde"] }
 tokio = { version = "1.42.0", features = ["macros", "process", "rt-multi-thread"] }
-tower-http = { version = "0.6.2", features = ["catch-panic", "cors", "propagate-header", "sensitive-headers", "trace"] }
+tower-http = { version = "0.6.2", features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
