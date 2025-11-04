@@ -1,6 +1,7 @@
 import {
 	createEffect,
 	createMemo,
+	createResource,
 	createSignal,
 	For,
 	Match,
@@ -15,7 +16,6 @@ import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import twemoji from "twemoji";
-import emojis from "emojibase-data/en/compact.json";
 
 type Emoji = {
 	group?: number;
@@ -47,14 +47,35 @@ export const Autocomplete = () => {
 	const ctx = useCtx();
 	const api = useApi();
 
-	const processedUnicodeEmoji = createMemo(() => {
-		return (emojis as Emoji[]).map((e) => ({
+	const [unicodeEmoji] = createResource(async () => {
+		const [
+			{ default: emojis },
+			{ default: shortJoypixels },
+			{ default: shortEmojibase },
+		] = await Promise.all([
+			import("emojibase-data/en/compact.json"),
+			import("emojibase-data/en/shortcodes/joypixels.json"),
+			import("emojibase-data/en/shortcodes/emojibase.json"),
+		]);
+
+		const getShortcodes = (hex: string) => {
+			const codes1 = (shortJoypixels as Record<string, string | string[]>)[hex];
+			const codes2 = (shortEmojibase as Record<string, string | string[]>)[hex];
+			const all_codes = [];
+			if (codes1) {
+				all_codes.push(...(Array.isArray(codes1) ? codes1 : [codes1]));
+			}
+			if (codes2) {
+				all_codes.push(...(Array.isArray(codes2) ? codes2 : [codes2]));
+			}
+			return all_codes;
+		};
+
+		return (emojis as any[]).map((e: any) => ({
 			char: e.unicode,
 			name: e.label,
 			id: `unicode:${e.label.replace(/ /g, "_")}`,
-			shortcodes: e.shortcode
-				? (Array.isArray(e.shortcode) ? e.shortcode : [e.shortcode])
-				: [],
+			shortcodes: getShortcodes(e.hexcode) ?? [],
 		}));
 	});
 
@@ -106,8 +127,8 @@ export const Autocomplete = () => {
 			if (customEmoji?.items) {
 				combined.push(...customEmoji.items);
 			}
-			if (processedUnicodeEmoji()) {
-				combined.push(...(processedUnicodeEmoji() as any));
+			if (unicodeEmoji()) {
+				combined.push(...(unicodeEmoji() as any));
 			}
 			setAllEmoji(combined);
 		}

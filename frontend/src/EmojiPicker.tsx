@@ -1,9 +1,6 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import twemoji from "twemoji";
 import fuzzysort from "fuzzysort";
-import shortJoypixels from "emojibase-data/en/shortcodes/joypixels.json";
-import shortEmojibase from "emojibase-data/en/shortcodes/emojibase.json";
-import emojis from "emojibase-data/en/compact.json";
 import { Search } from "./atoms/Search";
 
 type Emoji = {
@@ -17,6 +14,7 @@ type Emoji = {
 };
 
 const parseEmoji = async () => {
+	const { default: emojis } = await import("emojibase-data/en/compact.json");
 	const groups: Emoji[][] = [[], [], [], [], [], [], [], [], [], []];
 	for (let emoji of emojis as Emoji[]) {
 		if (emoji.group === 2) continue;
@@ -50,7 +48,12 @@ const getGroupName = (id: number) => {
 	}
 };
 
-const getShortcode = (hex: string) => {
+const getShortcode = async (hex: string) => {
+	const [{ default: shortJoypixels }, { default: shortEmojibase }] =
+		await Promise.all([
+			import("emojibase-data/en/shortcodes/joypixels.json"),
+			import("emojibase-data/en/shortcodes/emojibase.json"),
+		]);
 	const codes = (shortJoypixels as Record<string, string | string[]>)[hex] ??
 		(shortEmojibase as Record<string, string | string[]>)[hex];
 	return Array.isArray(codes) ? codes[0] : codes;
@@ -73,6 +76,10 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 	const [search, setSearch] = createSignal("");
 	const [hover, setHover] = createSignal<Emoji>();
 	const [groupsResource] = createResource(parseEmoji);
+	const [shortcode] = createResource(hover, async (h) => {
+		if (!h) return "";
+		return getShortcode(h.hexcode);
+	});
 
 	const filtered = () => {
 		const groups = groupsResource();
@@ -193,7 +200,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 					{(h) => (
 						<>
 							<div innerHTML={getTwemoji(h().unicode)}></div>
-							<b>:{getShortcode(h().hexcode)}:</b>
+							<b>:{shortcode()}:</b>
 							{/* <span style="color: var(--fg-dim)">{h().tags?.join(", ")}</span> */}
 						</>
 					)}
