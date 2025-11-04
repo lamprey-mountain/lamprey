@@ -7,8 +7,9 @@ use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
-    RoomMemberSearch, RoomMemberSearchAdvanced, RoomMemberSearchResponse, RoomMembership, UserId,
+    PaginationResponse, Permission, PruneBegin, PruneResponse, RoomId, RoomMember, RoomMemberPatch,
+    RoomMemberPut, RoomMemberSearch, RoomMemberSearchAdvanced, RoomMemberSearchResponse,
+    RoomMembership, UserId,
 };
 use common::v1::types::{
     RoleId, RoomBan, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
@@ -613,6 +614,34 @@ async fn room_member_search_advanced(
     Ok(Json(res))
 }
 
+/// Room member prune (TODO)
+///
+/// bulk remove users. useful for keping a room's member count below the room member limit.
+#[utoipa::path(
+    post,
+    path = "/room/{room_id}/prune",
+    request_body = PruneBegin,
+    tags = ["room_member", "badge.perm.MemberKick", "badge.perm.RoomManage"],
+    responses(
+        (status = OK, body = PruneResponse, description = "success"),
+        (status = ACCEPTED, description = "prune started"),
+    )
+)]
+async fn room_member_prune(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<PruneBegin>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    json.validate()?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::MemberKick)?;
+    perms.ensure(Permission::RoomManage)?;
+
+    Ok(Error::Unimplemented)
+}
+
 /// Room ban create
 #[utoipa::path(
     put,
@@ -942,7 +971,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_member_add))
         .routes(routes!(room_member_update))
         .routes(routes!(room_member_delete))
-        .routes(routes!(room_member_search, room_member_search_advanced))
+        .routes(routes!(room_member_search))
+        .routes(routes!(room_member_search_advanced))
+        .routes(routes!(room_member_prune))
         .routes(routes!(room_ban_create_bulk))
         .routes(routes!(room_ban_create))
         .routes(routes!(room_ban_remove))

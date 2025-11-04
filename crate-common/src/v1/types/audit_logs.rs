@@ -173,6 +173,11 @@ pub enum AuditLogEntryType {
         user_id: UserId,
     },
 
+    MemberPrune {
+        /// number of pruned users
+        pruned: u64,
+    },
+
     MemberUpdate {
         // TODO: remove (redundant)
         room_id: RoomId,

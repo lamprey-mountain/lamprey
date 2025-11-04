@@ -13,6 +13,10 @@ use crate::v1::types::{
     InviteCode,
 };
 
+fn bool_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -211,6 +215,37 @@ pub struct RoomBanBulkCreate {
 
     /// when the ban expires
     pub expires_at: Option<Time>,
+}
+
+/// Room member prune
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct PruneBegin {
+    /// include users with these roles
+    #[serde(default)]
+    pub include_roles: Vec<RoleId>,
+
+    /// prune users inactive for this many days
+    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 90)))]
+    pub days: u8,
+
+    /// whether to return the number of pruned users in the response
+    // endpoint 202 accepted if false, 200 ok if true
+    #[serde(default = "bool_true")]
+    pub calculate_total: bool,
+
+    /// whether to actually prune or to
+    #[serde(default = "bool_true")]
+    pub dry_run: bool,
+}
+
+/// response for PruneBegin
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PruneResponse {
+    /// number of pruned users
+    pub pruned: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
