@@ -29,6 +29,7 @@ pub mod reaction;
 pub mod role;
 pub mod room;
 pub mod room_member;
+pub mod room_template;
 pub mod search;
 pub mod session;
 pub mod sync;

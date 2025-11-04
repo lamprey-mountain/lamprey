@@ -29,9 +29,15 @@ pub struct Role {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
+    /// the permissions to grant for this role
+    // TODO(#702): rename `permissions` to `allow`
     #[serde(deserialize_with = "deserialize_sorted")]
     pub permissions: Vec<Permission>,
 
+    // // TODO(#702): deny permissions
+    // /// the permissions to deny for this role
+    // #[serde(deserialize_with = "deserialize_sorted")]
+    // pub deny: Vec<Permission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
 

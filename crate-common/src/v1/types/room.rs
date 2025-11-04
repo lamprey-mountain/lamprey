@@ -106,6 +106,8 @@ pub struct RoomCreate {
 
     pub icon: Option<MediaId>,
     pub public: Option<bool>,
+    // /// the template to create this room from
+    // pub snapshot: Option<RoomTemplateSnapshot>,
 }
 
 /// An update to a room

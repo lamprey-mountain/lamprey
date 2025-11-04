@@ -26,6 +26,7 @@ mod relationship;
 mod role;
 mod room;
 mod room_member;
+mod room_template;
 mod search;
 mod session;
 mod sync;
@@ -61,6 +62,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(role::routes())
         .merge(room::routes())
         .merge(room_member::routes())
+        .merge(room_template::routes())
         .merge(search::routes())
         .merge(session::routes())
         .merge(sync::routes())
