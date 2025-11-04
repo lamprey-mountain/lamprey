@@ -376,7 +376,7 @@ impl DataRoomMember for Postgres {
             query!(
                 r#"
             UPDATE room_member
-        	SET membership = $3, left_at = now(), joined_at = null
+        	SET membership = $3, left_at = now()
             WHERE room_id = $1 AND user_id = $2
             "#,
                 *room_id,
