@@ -3,6 +3,7 @@ import type { RoomT } from "../types.ts";
 import { useApi } from "../api.tsx";
 import { formatBytes } from "../media/util.tsx";
 
+// TODO: merge with Info?
 export function Metrics(props: VoidProps<{ room: RoomT }>) {
 	const api = useApi();
 
