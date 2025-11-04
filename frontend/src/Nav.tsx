@@ -49,10 +49,17 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 	// update list when room changes
 	createEffect(() => {
-		const channels = [...api.channels.cache.values()]
-			.filter((c) =>
-				props.room_id ? c.room_id === props.room_id : c.room_id === null
-			);
+		const allChannels = [...api.channels.cache.values()].filter((c) =>
+			props.room_id ? c.room_id === props.room_id : c.room_id === null
+		);
+
+		const threads = allChannels.filter(
+			(c) => c.type === "ThreadPublic" || c.type === "ThreadPrivate",
+		);
+		const channels = allChannels.filter(
+			(c) => c.type !== "ThreadPublic" && c.type !== "ThreadPrivate",
+		);
+
 		if (props.room_id) {
 			// sort by id
 			channels.sort((a, b) => {
@@ -70,8 +77,29 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			);
 		}
 
-		const categories = new Map<string | null, Array<Channel>>();
+		const channelMap = new Map<string, Channel & { threads: Channel[] }>();
 		for (const c of channels) {
+			channelMap.set(c.id, { ...c, threads: [] });
+		}
+
+		for (const thread of threads) {
+			const parent = channelMap.get(thread.parent_id!);
+			if (parent) {
+				parent.threads.push(thread);
+			}
+		}
+
+		for (const c of channelMap.values()) {
+			if (c.threads.length > 1) {
+				c.threads.sort((a, b) => a.id.localeCompare(b.id));
+			}
+		}
+
+		const categories = new Map<
+			string | null,
+			Array<Channel & { threads: Channel[] }>
+		>();
+		for (const c of channelMap.values()) {
 			if (c.type === "Category") {
 				const cat = categories.get(c.id) ?? [];
 				categories.set(c.id, cat);
@@ -108,7 +136,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 				return p;
 			});
-		setCategories(list);
+		setCategories(list as any);
 	});
 
 	const previewedCategories = createMemo(() => {
@@ -345,6 +373,24 @@ export const ChannelNav = (props: { room_id?: string }) => {
 										}}
 									>
 										<ItemChannel channel={channel} />
+										<Show when={(channel as any).threads?.length > 0}>
+											<ul class="threads">
+												<For each={(channel as any).threads}>
+													{(thread: Channel) => (
+														<li
+															data-channel-id={thread.id}
+															draggable={false}
+															classList={{
+																unread: thread.type !== "Voice" &&
+																	!!thread.is_unread,
+															}}
+														>
+															<ItemChannel channel={thread} />
+														</li>
+													)}
+												</For>
+											</ul>
+										</Show>
 										<For
 											each={[...api.voiceStates.values()].filter((i) =>
 												i.channel_id === channel.id

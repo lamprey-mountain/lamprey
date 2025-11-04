@@ -101,7 +101,7 @@
 		opacity: 0.5;
 	}
 
-	&.unread {
+	&.unread > a {
 		font-weight: bold;
 		color: $fg-200;
 		position: relative;
@@ -136,6 +136,14 @@
 		.avatar {
 			height: 20px;
 			width: 20px;
+		}
+	}
+
+	.threads {
+		margin-left: -8px;
+
+		& > li > a {
+			padding-left: 24px;
 		}
 	}
 }
