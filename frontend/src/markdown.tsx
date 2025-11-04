@@ -191,13 +191,6 @@ export function decorate(state: EditorState, placeholderText?: string) {
 					},
 				];
 			}
-			case "mention": {
-				return [{
-					attrs: { class: "mention" },
-					start: 0,
-					end: ast.raw.length,
-				}];
-			}
 			// case "blockquote": {
 			// 	// // FIXME: breaks on multiline blockquotes "> foo\n> bar"
 			// 	// const synLen = ast.raw.length - ast.text.length;

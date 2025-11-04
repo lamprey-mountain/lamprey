@@ -50,6 +50,25 @@ const schema = new Schema({
 				getAttrs: (el) => ({ user: (el as HTMLElement).dataset.userId }),
 			}],
 		},
+		mentionChannel: {
+			group: "inline",
+			atom: true,
+			inline: true,
+			selectable: false,
+			attrs: {
+				channel: {},
+			},
+			leafText(node) {
+				return `<#${node.attrs.channel}>`;
+			},
+			toDOM: (
+				n,
+			) => ["span", { "data-channel-id": n.attrs.channel, "class": "mention" }],
+			parseDOM: [{
+				tag: "span.mention[data-channel-id]",
+				getAttrs: (el) => ({ channel: (el as HTMLElement).dataset.channelId }),
+			}],
+		},
 		emoji: {
 			group: "inline",
 			atom: true,
@@ -57,14 +76,23 @@ const schema = new Schema({
 			selectable: false,
 			attrs: {
 				id: {},
-				shortname: {},
+				name: {},
+			},
+			leafText(node) {
+				return `<:${node.attrs.name}:${node.attrs.id}>`;
 			},
 			toDOM: (
 				n,
-			) => ["span", { "data-emoji-id": n.attrs.id }, `:${n.attrs.name}:`],
+			) => ["span", {
+				"data-emoji-id": n.attrs.id,
+				"data-emoji-name": n.attrs.name,
+			}, `:${n.attrs.name}:`],
 			parseDOM: [{
-				tag: "span[data-emoji]",
-				getAttrs: (el) => ({ id: el.dataset.id, shortname: el.dataset.emoji }),
+				tag: "span[data-emoji-id][data-emoji-name]",
+				getAttrs: (el) => ({
+					id: (el as HTMLElement).dataset.emojiId,
+					name: (el as HTMLElement).dataset.emojiName,
+				}),
 			}],
 		},
 		text: {
@@ -110,6 +138,7 @@ type EditorProps = {
 	keymap?: { [key: string]: Command };
 	initialSelection?: "start" | "end";
 	mentionRenderer?: (node: HTMLElement, userId: string) => void;
+	mentionChannelRenderer?: (node: HTMLElement, channelId: string) => void;
 };
 
 type EditorViewProps = {
@@ -222,6 +251,16 @@ export const createEditor = (opts: EditorProps) => {
 							}
 							return { dom };
 						},
+						mentionChannel: (node) => {
+							const dom = document.createElement("span");
+							dom.classList.add("mention");
+							if (opts.mentionChannelRenderer) {
+								opts.mentionChannelRenderer(dom, node.attrs.channel);
+							} else {
+								dom.textContent = `#${node.attrs.channel}`;
+							}
+							return { dom };
+						},
 					},
 					handlePaste(view, event, slice) {
 						const files = Array.from(event.clipboardData?.files ?? []);
@@ -304,11 +343,16 @@ export const createEditor = (opts: EditorProps) => {
 										}
 									}
 
-									const tr = state.tr.replaceWith(
+									let tr = state.tr.replaceWith(
 										mentionStart,
 										to,
 										schema.nodes.mention.create({ user: userId }),
-									).insertText(" ", state.selection.to);
+									);
+									const posAfter = tr.mapping.map(to);
+									tr = tr.insert(posAfter, schema.text(" ", []));
+									tr = tr.setSelection(
+										TextSelection.create(tr.doc, posAfter + 1),
+									);
 
 									view.dispatch(tr);
 
@@ -317,6 +361,98 @@ export const createEditor = (opts: EditorProps) => {
 								channelId: props.channelId || "",
 							});
 
+							return false;
+						}
+
+						if (event.key === "#") {
+							ctx.setAutocomplete({
+								type: "channel",
+								query: "",
+								ref: refElement() as any,
+								onSelect: (channelId: string, _channelName: string) => {
+									const state = view.state;
+									const from = Math.max(0, state.selection.from - 1);
+									const to = state.selection.to;
+
+									let mentionStart = from;
+									while (mentionStart > 0) {
+										const char = state.doc.textBetween(
+											mentionStart - 1,
+											mentionStart,
+										);
+										if (char === "#" || /\w/.test(char)) {
+											mentionStart--;
+										} else {
+											break;
+										}
+									}
+
+									let tr = state.tr.replaceWith(
+										mentionStart,
+										to,
+										schema.nodes.mentionChannel.create({ channel: channelId }),
+									);
+									const posAfter = tr.mapping.map(to);
+									tr = tr.insert(posAfter, schema.text(" ", []));
+									tr = tr.setSelection(
+										TextSelection.create(tr.doc, posAfter + 1),
+									);
+
+									view.dispatch(tr);
+
+									ctx.setAutocomplete(null);
+								},
+								channelId: props.channelId || "",
+							});
+
+							return false;
+						}
+
+						if (event.key === ":") {
+							ctx.setAutocomplete({
+								type: "emoji",
+								query: "",
+								ref: refElement() as any,
+								onSelect: (id: string, name: string, char?: string) => {
+									const state = view.state;
+									const from = Math.max(0, state.selection.from - 1);
+									const to = state.selection.to;
+
+									let mentionStart = from;
+									while (mentionStart > 0) {
+										const char = state.doc.textBetween(
+											mentionStart - 1,
+											mentionStart,
+										);
+										if (char === ":" || /[\w_]/.test(char)) {
+											mentionStart--;
+										} else {
+											break;
+										}
+									}
+
+									let tr = state.tr;
+									if (char) { // unicode
+										tr = tr.replaceWith(mentionStart, to, schema.text(char));
+									} else { // custom
+										tr = tr.replaceWith(
+											mentionStart,
+											to,
+											schema.nodes.emoji.create({ id, name }),
+										);
+									}
+
+									const posAfter = tr.mapping.map(to);
+									tr = tr.insert(posAfter, schema.text(" ", []));
+									tr = tr.setSelection(
+										TextSelection.create(tr.doc, posAfter + 1),
+									);
+
+									view.dispatch(tr);
+									ctx.setAutocomplete(null);
+								},
+								channelId: props.channelId || "",
+							});
 							return false;
 						}
 
@@ -339,11 +475,16 @@ export const createEditor = (opts: EditorProps) => {
 								const state = view.state;
 								const cursorPos = state.selection.from;
 
+								const triggerChar = ctx.autocomplete()!.type === "mention"
+									? "@"
+									: ctx.autocomplete()!.type === "channel"
+									? "#"
+									: ":";
 								let mentionStart = -1;
 								// search backward for @ symbol
 								for (let i = cursorPos - 1; i >= 0; i--) {
 									const char = state.doc.textBetween(i, i + 1);
-									if (char === "@") {
+									if (char === triggerChar) {
 										mentionStart = i;
 										break;
 									}

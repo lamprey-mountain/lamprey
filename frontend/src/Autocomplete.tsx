@@ -1,14 +1,68 @@
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Match,
+	on,
+	onCleanup,
+	Show,
+	Switch,
+} from "solid-js";
 import { useCtx } from "./context";
 import { useApi } from "./api";
 import { go } from "fuzzysort";
-import { type User } from "sdk";
+import { type Channel, type EmojiCustom, type User } from "sdk";
+import { getEmojiUrl } from "./media/util";
+import twemoji from "twemoji";
+import emojis from "emojibase-data/en/compact.json";
+
+type Emoji = {
+	group?: number;
+	label: string;
+	hexcode: string;
+	order: number;
+	unicode: string;
+	tags?: string[];
+	shortcode?: string | string[];
+};
+
+type UnicodeEmoji = {
+	char: string;
+	name: string;
+	id: string;
+	shortcodes: string[];
+};
+
+const getTwemoji = (unicode: string) => {
+	return twemoji.parse(unicode, {
+		base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+		attributes: () => ({ loading: "lazy" }),
+		folder: "svg",
+		ext: ".svg",
+	});
+};
 
 export const Autocomplete = () => {
 	const ctx = useCtx();
 	const api = useApi();
 
+	const processedUnicodeEmoji = createMemo(() => {
+		return (emojis as Emoji[]).map((e) => ({
+			char: e.unicode,
+			name: e.label,
+			id: `unicode:${e.label.replace(/ /g, "_")}`,
+			shortcodes: e.shortcode
+				? (Array.isArray(e.shortcode) ? e.shortcode : [e.shortcode])
+				: [],
+		}));
+	});
+
 	const [allUsers, setAllUsers] = createSignal<User[]>([]);
+	const [allChannels, setAllChannels] = createSignal<Channel[]>([]);
+	const [allEmoji, setAllEmoji] = createSignal<(EmojiCustom | UnicodeEmoji)[]>(
+		[],
+	);
 
 	createEffect(on(ctx.autocomplete, (state) => {
 		console.log(state);
@@ -31,32 +85,83 @@ export const Autocomplete = () => {
 			) as User[];
 			setAllUsers(users);
 			console.log("all users", users);
+		} else if (state?.type === "channel") {
+			const channels = [...api.channels.cache.values()].filter(
+				(c) => c.type !== "Category",
+			);
+			setAllChannels(channels);
+		} else if (state?.type === "emoji") {
+			const channelId = state.channelId;
+			const channel = api.channels.cache.get(channelId);
+			const roomId = channel?.room_id;
+
+			const customEmojiResource = roomId
+				? api.emoji.list(() => roomId!)
+				: undefined;
+			const customEmoji = customEmojiResource
+				? customEmojiResource()
+				: undefined;
+
+			const combined = [];
+			if (customEmoji?.items) {
+				combined.push(...customEmoji.items);
+			}
+			if (processedUnicodeEmoji()) {
+				combined.push(...(processedUnicodeEmoji() as any));
+			}
+			setAllEmoji(combined);
 		}
 	}));
 
-	const [filtered, setFiltered] = createSignal<Fuzzysort.KeyResult<User>[]>([]);
+	const [filtered, setFiltered] = createSignal<
+		Fuzzysort.KeyResult<User | Channel | EmojiCustom | UnicodeEmoji>[]
+	>([]);
 	const [hoveredIndex, setHoveredIndex] = createSignal(0);
 	const hovered = () => filtered()[hoveredIndex()]?.obj;
 
 	createEffect(() => {
 		const state = ctx.autocomplete();
+		let results: Fuzzysort.KeyResults<
+			User | Channel | EmojiCustom | UnicodeEmoji
+		>;
 		if (state?.type === "mention") {
-			const results = go(state.query, allUsers(), {
+			results = go(state.query, allUsers(), {
 				key: "name",
 				limit: 10,
 				all: true,
 			});
-			setFiltered(results as any);
-			if (hoveredIndex() >= results.length) {
-				setHoveredIndex(0);
-			}
+		} else if (state?.type === "channel") {
+			results = go(state.query, allChannels(), {
+				key: "name",
+				limit: 10,
+				all: true,
+			});
+		} else if (state?.type === "emoji") {
+			results = go(state.query, allEmoji(), {
+				keys: ["name", "shortcodes"],
+				limit: 10,
+				all: true,
+			});
+		} else {
+			results = [];
+		}
+		setFiltered(results as any);
+		if (hoveredIndex() >= results.length) {
+			setHoveredIndex(0);
 		}
 	});
 
-	const select = (user: User) => {
+	const select = (item: User | Channel | EmojiCustom | UnicodeEmoji) => {
 		const state = ctx.autocomplete();
-		if (state?.type === "mention") {
-			state.onSelect(user.id, user.name);
+		if (state) {
+			if (state.type === "emoji") {
+				const name = item.name;
+				const id = item.id;
+				const char = "char" in item ? item.char : undefined;
+				state.onSelect(id, name, char);
+			} else {
+				state.onSelect(item.id, item.name);
+			}
 			ctx.setAutocomplete(null);
 		}
 	};
@@ -75,9 +180,9 @@ export const Autocomplete = () => {
 		} else if (e.key === "Enter" || e.key === "Tab") {
 			e.preventDefault();
 			e.stopPropagation();
-			const user = hovered();
-			if (user) {
-				select(user);
+			const item = hovered();
+			if (item) {
+				select(item);
 			}
 		} else if (e.key === "Escape") {
 			e.preventDefault();
@@ -113,6 +218,20 @@ export const Autocomplete = () => {
 								select(result.obj);
 							}}
 						>
+							<Switch>
+								<Match when={"char" in result.obj}>
+									<span
+										innerHTML={getTwemoji((result.obj as UnicodeEmoji).char)}
+									>
+									</span>
+								</Match>
+								<Match when={"media_id" in result.obj}>
+									<img
+										src={getEmojiUrl((result.obj as EmojiCustom).id)}
+										class="emoji-img"
+									/>
+								</Match>
+							</Switch>
 							{result.obj.name}
 						</div>
 					)}

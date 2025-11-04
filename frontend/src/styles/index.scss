@@ -3236,6 +3236,9 @@ button.link {
 	background: $bg-150;
 	border: solid $sep-300 1px;
 	box-shadow: 0 2px 8px $bg-100;
+	width: max-content;
+	min-width: 120px;
+	max-width: 360px;
 
 	& > .item {
 		padding: 2px 4px;
@@ -3243,6 +3246,11 @@ button.link {
 		&:hover, &.hovered {
 			background: #fff2;
 		}
+	}
+
+	.emoji-img {
+		height: 1em;
+		width: 1em;
 	}
 }
 
