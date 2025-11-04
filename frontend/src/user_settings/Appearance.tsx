@@ -19,6 +19,18 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 		});
 	};
 
+	// TODO(#429): auto, light, dark mode themes
+	// TODO(#429): theme accent color
+	// TODO(#429): high contrast mode
+	// TODO: preview messages
+	// TODO: show send message button
+	// TODO: compact/cozy message style
+	// TODO: message group spacing
+	// TODO: chat font scale
+	// TODO: application scale
+	// TODO: saturation
+	// TODO: reduced motion (sync with computer, autoplay gifs, emoji)
+
 	return (
 		<div class="user-settings-info">
 			<h2>appearance</h2>

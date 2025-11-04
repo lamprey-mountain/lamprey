@@ -11,7 +11,6 @@ import { useApi } from "../api";
 import { Modal } from "../modal/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
-	const api = useApi();
 	const ctx = useCtx();
 
 	return (
@@ -23,6 +22,12 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 			<Email user={props.user} />
 			<h3>oauth</h3>
 			<Oauth />
+			<br />
+			<h3>totp</h3>
+			<div>todo</div>
+			<br />
+			<h3>webauthn</h3>
+			<div>todo</div>
 			<br />
 			<div class="danger">
 				<h3>danger zone</h3>
@@ -38,6 +43,11 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 						change password
 					</button>
 					<span style="margin-left:8px">change your password</span>
+				</label>
+				<div style="height: 4px"></div>
+				<label>
+					<button onClick={() => alert("todo")}>disable</button>
+					<span style="margin-left:8px">this will disable your account</span>
 				</label>
 				<div style="height: 4px"></div>
 				<label>
@@ -96,6 +106,8 @@ function Email(_props: VoidProps<{ user: User }>) {
 		);
 	}
 
+	// TODO: button to make email primary
+
 	return (
 		<>
 			<div class="email-list">
@@ -105,6 +117,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 							<div style="flex:1">
 								<b>{email.email}</b>
 								{email.is_verified ? " (verified)" : " (unverified)"}
+								{email.is_primary && " (primary)"}
 							</div>
 							<menu>
 								<Show when={!email.is_verified}>

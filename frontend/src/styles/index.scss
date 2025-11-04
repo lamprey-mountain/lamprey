@@ -3305,3 +3305,30 @@ article.message:hover > .message-toolbar {
 		justify-content: end;
 	}
 }
+
+.user-settings-lang {
+	.langs {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		.lang {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			padding: 4px;
+			background: $bg-150;
+			border: solid $sep-300 1px;
+
+			&:hover {
+				background: $bg-100;
+			}
+		}
+	}
+
+	.radio {
+		height: 24px;
+		width: 24px;
+		color: $fg-400;
+	}
+}
