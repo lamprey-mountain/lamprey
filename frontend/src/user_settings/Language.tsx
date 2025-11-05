@@ -51,7 +51,7 @@ const RadioDot = (props: { checked?: boolean }) => {
 				cx="8"
 				cy="8"
 				r="6"
-				fill="none"
+				fill={props.checked ? "oklch(var(--color-link-200))" : "none"}
 				stroke="currentColor"
 				stroke-width="1"
 			/>
