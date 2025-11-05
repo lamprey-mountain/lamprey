@@ -363,6 +363,7 @@ export function Dropdown<T>(
 
 	// TODO: maybe use click instead of mousedown?
 	// TODO: automatically show dropdown items on hover?
+	// TODO: show chevron arrow
 
 	return (
 		<>

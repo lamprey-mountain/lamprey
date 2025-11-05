@@ -1,0 +1,159 @@
+@use "./util.scss" as *;
+
+.user-settings-info {
+	.profile {
+		display: grid;
+		grid-template-rows: auto 1fr;
+		grid-template-columns: auto 1fr;
+		grid-template-areas: "avatar name" "avatar description";
+		gap: 4px;
+
+		.name {
+			grid-area: name;
+			font-weight: bold;
+			font-size: 1.2em;
+			cursor: pointer;
+		}
+
+		.description {
+			grid-area: description;
+		}
+
+		.avatar {
+			grid-area: avatar;
+		}
+	}
+}
+
+.user-settings-auth {
+	h3 {
+		font-size: 1.2em;
+	}
+
+	.email-list {
+		border: solid $sep-300 1px;
+		background: $bg-150;
+
+		& > .email {
+			display: flex;
+			padding: 4px 8px;
+
+			&:hover {
+				background: #0004;
+			}
+
+			& > menu {
+				display: flex;
+				gap: 8px;
+			}
+		}
+	}
+
+	.email-add {
+		padding: 8px;
+		display: flex;
+		justify-content: end;
+	}
+}
+
+.user-settings-lang {
+	.langs {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		.lang {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			padding: 4px;
+			background: $bg-150;
+			border: solid $sep-300 1px;
+
+			&:hover {
+				background: $bg-100;
+			}
+		}
+	}
+}
+
+.user-settings-keybinds {
+	h3 {
+		color: $fg-500;
+		font-size: 1em;
+		font-weight: bold;
+		margin-top: 1em;
+		margin-bottom: 4px;
+	}
+
+	ul {
+		border: solid $sep-500 1px;
+		background: $bg-300;
+	}
+
+	li {
+		display: flex;
+		justify-content: space-between;
+		margin: 0 8px;
+		padding: 8px 0;
+
+		& + li {
+			border-top: solid $sep-400 1px;
+		}
+	}
+}
+
+.user-settings-notifications {
+	input[type="checkbox"] {
+		display: none;
+	}
+
+	.options {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.option {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding: 4px;
+		cursor: pointer;
+
+		&:hover {
+			background: $bg-150;
+		}
+	}
+}
+
+.user-settings-connections {
+	.connection {
+		background: $bg-150;
+		border: solid $sep-300 1px;
+
+		& > header {
+			display: flex;
+			background: $bg-100;
+			padding: 8px;
+			gap: 8px;
+			align-items: center;
+
+			& > .name {
+				flex: 1;
+				font-weight: bold;
+			}
+		}
+
+		& > .info {
+			padding: 8px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+	}
+
+	ul {
+		list-style: disc inside;
+	}
+}

@@ -31,6 +31,8 @@ export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
 export type MessageSync = components["schemas"]["MessageSync"];
 export type RoomBan = components["schemas"]["RoomBan"];
 export type Notification = components["schemas"]["Notification"];
+export type Connection = components["schemas"]["Connection"];
+export type Scope = components["schemas"]["Scope"];
 
 export type OauthInfo = {
 	application: Application;
