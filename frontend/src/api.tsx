@@ -49,6 +49,7 @@ import { Reactions } from "./api/reactions.ts";
 import { Dms } from "./api/dms.ts";
 import { Auth } from "./api/auth.ts";
 import { Sessions } from "./api/sessions.ts";
+import { notificationPermission } from "./notification.ts";
 import { deepEqual } from "./utils/deepEqual.ts";
 import { Inbox } from "./api/inbox.ts";
 
@@ -259,6 +260,54 @@ export function createApi(
 			// TODO
 		} else if (msg.type === "MessageCreate") {
 			const m = msg.message;
+
+			const me = users.cache.get("@self");
+			if (
+				me && m.author_id !== me.id && m.type === "DefaultMarkdown" &&
+				notificationPermission() === "granted"
+			) {
+				const mentions = m.mentions;
+				let is_mentioned = false;
+				if (mentions) {
+					if (mentions.users.includes(me.id)) {
+						is_mentioned = true;
+					}
+					if (!is_mentioned && mentions.everyone) {
+						is_mentioned = true;
+					}
+					if (!is_mentioned && mentions.roles.length > 0) {
+						const channel = channels.cache.get(m.channel_id);
+						if (channel?.room_id) {
+							const room_member = room_members.cache.get(channel.room_id)?.get(
+								me.id,
+							);
+							if (room_member) {
+								for (const role_id of mentions.roles) {
+									if (room_member.roles.some((r) => r.id === role_id)) {
+										is_mentioned = true;
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (is_mentioned) {
+					const author = users.cache.get(m.author_id);
+					const channel = channels.cache.get(m.channel_id);
+					const title = `${author?.name ?? "Someone"} in #${
+						channel?.name ?? "channel"
+					}`;
+					const body = (m.content ?? "").substring(0, 200);
+					const notification = new Notification(title, { body });
+					notification.onclick = () => {
+						window.focus();
+						location.href = `/channel/${m.channel_id}/message/${m.id}`;
+					};
+				}
+			}
+
 			const r = messages.cacheRanges.get(m.channel_id);
 			let is_new = false;
 			let is_unread = true;

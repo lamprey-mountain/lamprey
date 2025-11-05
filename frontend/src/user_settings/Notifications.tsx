@@ -1,6 +1,7 @@
-import { createSignal, type VoidProps } from "solid-js";
+import { createSignal, Show, type VoidProps } from "solid-js";
 import { type User } from "sdk";
 import { Checkbox } from "../icons";
+import { notificationPermission } from "../notification";
 
 export function Notifications(_props: VoidProps<{ user: User }>) {
 	// TODO: enable/disable desktop notifications
@@ -14,6 +15,17 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 	return (
 		<div class="user-settings-notifications">
 			<h2>notifications</h2>
+			<Show when={notificationPermission() !== "granted"}>
+				<div class="permission">
+					You haven't given lamprey permission to send notifications
+					<button
+						class="primary"
+						onClick={() => Notification.requestPermission()}
+					>
+						Allow notifications
+					</button>
+				</div>
+			</Show>
 			<div class="options">
 				<label class="option">
 					<input

@@ -69,6 +69,8 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 		});
 	}
 
+	// TODO: redo styles
+
 	return (
 		<>
 			<h2>sessions</h2>
