@@ -211,6 +211,7 @@ pub struct UserPatch {
 //     Server,
 // }
 
+// TODO: remove?
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum BotAccess {
@@ -226,6 +227,7 @@ pub enum BotAccess {
 }
 
 // TODO: move to bridge info rather than per puppet?
+// TODO: remove?
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(untagged)]
