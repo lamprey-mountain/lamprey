@@ -12,6 +12,7 @@ import {
 } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
+import { useNavigate } from "@solidjs/router";
 import {
 	AudioView,
 	FileView,
@@ -86,8 +87,19 @@ function RoleMention(props: { id: string; thread: Channel }) {
 
 function ChannelMention(props: { id: string }) {
 	const api = useApi();
+	const navigate = useNavigate();
 	const channel = api.channels.fetch(() => props.id);
-	return <span class="mention-channel">#{channel()?.name ?? "..."}</span>;
+	return (
+		<span
+			class="mention-channel"
+			onClick={(e) => {
+				e.stopPropagation();
+				navigate(`/channel/${props.id}`);
+			}}
+		>
+			#{channel()?.name ?? "..."}
+		</span>
+	);
 }
 
 function Emoji(props: { id: string; name: string; animated: boolean }) {
