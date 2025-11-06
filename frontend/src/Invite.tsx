@@ -45,12 +45,27 @@ export const RouteInviteInner = (props: { code: string }) => {
 		}
 	};
 
-	const join = () => {
-		ctx.client.http.POST("/api/v1/invite/{invite_code}", {
+	const join = async () => {
+		await ctx.client.http.POST("/api/v1/invite/{invite_code}", {
 			params: {
 				path: { invite_code: props.code },
 			},
 		});
+		const target = invite()!.target;
+		switch (target.type) {
+			case "User":
+				return nav(`/user/${target.user.id}`);
+			case "Room":
+				return nav(
+					target.channel
+						? `/channel/${target.channel.id}`
+						: `/room/${target.room.id}`,
+				);
+			case "Gdm":
+				return nav(`/channel/${target.channel.id}`);
+			case "Server":
+				return nav("/");
+		}
 	};
 
 	const reject = () => {
