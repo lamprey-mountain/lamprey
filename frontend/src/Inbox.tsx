@@ -93,18 +93,20 @@ export const Inbox = () => {
 				</Show>
 			</div>
 			<div class="inner">
-				<For each={inboxItems()?.items} fallback={<div>loading...</div>}>
-					{(it) => (
-						<NotificationItem
-							notification={it}
-							allData={inboxItems()}
-							selected={selected().includes(it.id)}
-							onSelect={toggleSelection}
-							refetch={refetch}
-							include_read={params().include_read}
-						/>
-					)}
-				</For>
+				<Show when={!inboxItems.loading} fallback={<div>loading...</div>}>
+					<For each={inboxItems()?.items} fallback={<div>no entries</div>}>
+						{(it) => (
+							<NotificationItem
+								notification={it}
+								allData={inboxItems()}
+								selected={selected().includes(it.id)}
+								onSelect={toggleSelection}
+								refetch={refetch}
+								include_read={params().include_read}
+							/>
+						)}
+					</For>
+				</Show>
 			</div>
 		</div>
 	);
