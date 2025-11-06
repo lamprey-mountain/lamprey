@@ -2172,6 +2172,7 @@ table {
 .voice-tray {
 	padding: 8px;
 	border-top: solid $bg-300 1px;
+	border-right: solid $bg-300 1px;
 	background: $bg-100;
 	grid-area: tray;
 
