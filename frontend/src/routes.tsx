@@ -35,6 +35,53 @@ const Title = (props: { title?: string }) => {
 	return undefined;
 };
 
+type LayoutDefaultProps = {
+	title?: string;
+	children: any;
+	showChannelNav?: boolean;
+	channelNavRoomId?: string;
+	showVoiceTray?: boolean;
+	showMembers?: boolean;
+	memberComponent?: any;
+	showMembersWidth?: number;
+};
+
+export const LayoutDefault = (props: LayoutDefaultProps) => {
+	const { t } = useCtx();
+
+	return (
+		<>
+			<Title title={props.title ?? t("loading")} />
+			<RoomNav />
+			<Show when={props.showChannelNav !== false}>
+				<Resizable
+					storageKey="channel-nav-width"
+					side="left"
+					initialWidth={256}
+					minWidth={180}
+					maxWidth={500}
+				>
+					<ChannelNav room_id={props.channelNavRoomId} />
+				</Resizable>
+			</Show>
+			{props.children}
+			<Show when={props.showMembers}>
+				<Resizable
+					storageKey="room-members-width"
+					initialWidth={props.showMembersWidth ?? 198}
+					minWidth={180}
+					maxWidth={500}
+				>
+					{props.memberComponent}
+				</Resizable>
+			</Show>
+			<Show when={props.showVoiceTray !== false}>
+				<VoiceTray />
+			</Show>
+		</>
+	);
+};
+
 export const RoomNav = () => {
 	const api = useApi();
 	const rooms = api.rooms.list();
@@ -77,39 +124,22 @@ export const RouteRoom = (p: RouteSectionProps) => {
 	const api = useApi();
 	const room = api.rooms.fetch(() => p.params.room_id);
 	return (
-		<>
-			<Title title={room() ? room()!.name : t("loading")} />
-			<RoomNav />
-			<Resizable
-				storageKey="channel-nav-width"
-				side="left"
-				initialWidth={256}
-				minWidth={180}
-				maxWidth={500}
-			>
-				<ChannelNav room_id={p.params.room_id} />
-			</Resizable>
+		<LayoutDefault
+			title={room() ? room()!.name : t("loading")}
+			showChannelNav={true}
+			channelNavRoomId={p.params.room_id}
+			showVoiceTray={true}
+			showMembers={flags.has("room_member_list") &&
+				ctx.userConfig().frontend.showMembers !== false}
+			memberComponent={room() ? <RoomMembers room={room()!} /> : undefined}
+		>
 			<header>
 				<b>home</b>
 			</header>
 			<Show when={room()}>
 				<RoomHome room={room()!} />
-				<Show
-					when={flags.has("room_member_list") &&
-						ctx.userConfig().frontend.showMembers !== false}
-				>
-					<Resizable
-						storageKey="room-members-width"
-						initialWidth={198}
-						minWidth={180}
-						maxWidth={500}
-					>
-						<RoomMembers room={room()!} />
-					</Resizable>
-				</Show>
 			</Show>
-			<VoiceTray />
-		</>
+		</LayoutDefault>
 	);
 };
 
@@ -231,18 +261,12 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	};
 
 	return (
-		<>
-			<Title title={title()} />
-			<RoomNav />
-			<Resizable
-				storageKey="channel-nav-width"
-				side="left"
-				initialWidth={256}
-				minWidth={180}
-				maxWidth={500}
-			>
-				<ChannelNav room_id={channel()?.room_id ?? undefined} />
-			</Resizable>
+		<LayoutDefault
+			title={title()}
+			showChannelNav={true}
+			channelNavRoomId={channel()?.room_id ?? undefined}
+			showVoiceTray={true}
+		>
 			<Show when={channel()}>
 				<Show when={channel()!.type !== "Voice"}>
 					<ChatHeader channel={channel()!} />
@@ -266,61 +290,46 @@ export const RouteChannel = (p: RouteSectionProps) => {
 					<Category channel={channel()!} />
 				</Show>
 				<ChannelSidebar channel={channel()!} />
-				<VoiceTray />
 			</Show>
-		</>
+		</LayoutDefault>
 	);
 };
 export const RouteHome = () => {
 	const { t } = useCtx();
 	return (
-		<>
-			<Title title={t("page.home")} />
-			<RoomNav />
-			<Resizable
-				storageKey="channel-nav-width"
-				side="left"
-				initialWidth={256}
-				minWidth={180}
-				maxWidth={500}
-			>
-				<ChannelNav />
-			</Resizable>
+		<LayoutDefault
+			title={t("page.home")}
+			showChannelNav={true}
+			showVoiceTray={true}
+		>
 			<Home />
-			<VoiceTray />
-		</>
+		</LayoutDefault>
 	);
 };
 
 export const RouteFeed = () => {
 	return (
-		<>
-			<Title title="feed" />
-			<RoomNav />
+		<LayoutDefault
+			title="feed"
+			showChannelNav={false}
+			showVoiceTray={true}
+		>
 			<Feed />
-			<VoiceTray />
-		</>
+		</LayoutDefault>
 	);
 };
 
 export const RouteInvite = (p: RouteSectionProps) => {
 	return (
-		<>
-			<Show when={p.params.code}>
-				<RoomNav />
-				<Resizable
-					storageKey="channel-nav-width"
-					side="left"
-					initialWidth={256}
-					minWidth={180}
-					maxWidth={500}
-				>
-					<ChannelNav room_id={p.params.room_id} />
-				</Resizable>
+		<Show when={p.params.code}>
+			<LayoutDefault
+				showChannelNav={true}
+				channelNavRoomId={p.params.room_id}
+				showVoiceTray={true}
+			>
 				<RouteInviteInner code={p.params.code!} />
-				<VoiceTray />
-			</Show>
-		</>
+			</LayoutDefault>
+		</Show>
 	);
 };
 
@@ -329,45 +338,32 @@ export const RouteUser = (p: RouteSectionProps) => {
 	const user = api.users.fetch(() => p.params.user_id);
 
 	return (
-		<>
-			<Title title={user()?.name ?? "loading..."} />
-			<RoomNav />
-			<Resizable
-				storageKey="channel-nav-width"
-				side="left"
-				initialWidth={256}
-				minWidth={180}
-				maxWidth={500}
-			>
-				<ChannelNav room_id={p.params.room_id} />
-			</Resizable>
+		<LayoutDefault
+			title={user()?.name ?? "loading..."}
+			showChannelNav={true}
+			channelNavRoomId={p.params.room_id}
+			showVoiceTray={true}
+		>
 			<header class="chat-header">
 				<b>{user()?.name}</b>
 			</header>
 			<Show when={user()}>
 				<UserProfile user={user()!} />
 			</Show>
-			<VoiceTray />
-		</>
+		</LayoutDefault>
 	);
 };
 
 export function RouteInbox(p: RouteSectionProps) {
 	return (
-		<>
-			<Title title="inbox" />
-			<RoomNav />
-			<Resizable
-				storageKey="channel-nav-width"
-				side="left"
-				initialWidth={256}
-				minWidth={180}
-				maxWidth={500}
-			>
-				<ChannelNav room_id={p.params.room_id} />
-			</Resizable>
+		<LayoutDefault
+			title="inbox"
+			showChannelNav={true}
+			channelNavRoomId={p.params.room_id}
+			showVoiceTray={false}
+		>
 			<Inbox />
-		</>
+		</LayoutDefault>
 	);
 }
 
@@ -391,9 +387,11 @@ export function RouteFriends() {
 	};
 
 	return (
-		<>
-			<Title title="friends" />
-			<RoomNav />
+		<LayoutDefault
+			title="friends"
+			showChannelNav={false}
+			showVoiceTray={false}
+		>
 			<div class="friends" style="padding:8px">
 				todo!
 				<ul>
@@ -404,6 +402,6 @@ export function RouteFriends() {
 				<pre>{JSON.stringify(friends())}</pre>
 				<button onClick={sendRequest}>send request</button>
 			</div>
-		</>
+		</LayoutDefault>
 	);
 }
