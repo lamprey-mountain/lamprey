@@ -9,7 +9,7 @@ import {
 import { useApi } from "./api";
 import { useCtx } from "./context";
 import type { ThreadT } from "./types";
-import type { ThreadSearch } from "./context";
+import type { ChannelSearch } from "./context";
 import { User } from "sdk";
 import { UUID } from "uuidv7";
 import { EditorState, Plugin } from "prosemirror-state";
@@ -286,15 +286,15 @@ function syntaxHighlightingPlugin() {
 
 const AutocompleteDropdown = (props: {
 	filter: { type: string; query: string };
-	thread: ThreadT;
+	channel: ThreadT;
 	onSelect: (node: Node) => void;
 	onSelectFilter: (text: string) => void;
 }) => {
 	const api = useApi();
-	const threadMembers = api.thread_members.list(() => props.thread.id);
-	const roomMembers = api.room_members.list(() => props.thread.room_id ?? "");
-	const roomThreads = api.channels.list(() => props.thread.room_id ?? "");
-	const roomRoles = api.roles.list(() => props.thread.room_id ?? "");
+	const threadMembers = api.thread_members.list(() => props.channel.id);
+	const roomMembers = api.room_members.list(() => props.channel.room_id ?? "");
+	const roomThreads = api.channels.list(() => props.channel.room_id ?? "");
+	const roomRoles = api.roles.list(() => props.channel.room_id ?? "");
 
 	const authorSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
@@ -622,7 +622,7 @@ function autocompletePlugin(
 	});
 }
 
-export const SearchInput = (props: { thread: ThreadT }) => {
+export const SearchInput = (props: { channel: ThreadT }) => {
 	const api = useApi();
 	const ctx = useCtx();
 	let editorRef: HTMLDivElement | undefined;
@@ -648,7 +648,7 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 	const handleSubmit = async () => {
 		const queryString = serializeToQuery(view.state);
 		if (!queryString) {
-			ctx.thread_search.delete(props.thread.id);
+			ctx.channel_search.delete(props.channel.id);
 			return;
 		}
 
@@ -673,17 +673,17 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 		}
 		const textQuery = textQueryParts.join(" ");
 
-		const existing = ctx.thread_search.get(props.thread.id);
-		const searchState: ThreadSearch = {
+		const existing = ctx.channel_search.get(props.channel.id);
+		const searchState: ChannelSearch = {
 			query: queryString,
 			results: existing?.results ?? null,
 			loading: true,
 			author: filters.author,
 			before: filters.before?.[0],
 			after: filters.after?.[0],
-			thread: filters.thread,
+			channel: filters.channel,
 		};
-		ctx.thread_search.set(props.thread.id, searchState);
+		ctx.channel_search.set(props.channel.id, searchState);
 
 		const body: {
 			query?: string;
@@ -708,15 +708,15 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 
 		if (filters.author) body.user_id = filters.author;
 
-		if (props.thread.type === "Dm" || props.thread.type === "Gdm") {
-			body.thread_id = [props.thread.id];
+		if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
+			body.thread_id = [props.channel.id];
 		} else if (filters.thread) {
 			body.thread_id = filters.thread;
-			if (props.thread.room_id) body.room_id = [props.thread.room_id];
-		} else if (props.thread.room_id) {
-			body.room_id = [props.thread.room_id];
+			if (props.channel.room_id) body.room_id = [props.channel.room_id];
+		} else if (props.channel.room_id) {
+			body.room_id = [props.channel.room_id];
 		} else {
-			body.thread_id = [props.thread.id];
+			body.thread_id = [props.channel.id];
 		}
 
 		if (filters.before?.[0]) {
@@ -764,13 +764,13 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 			params,
 		});
 		if (res.data) {
-			ctx.thread_search.set(props.thread.id, {
+			ctx.channel_search.set(props.channel.id, {
 				...searchState,
 				results: res.data,
 				loading: false,
 			});
 		} else {
-			ctx.thread_search.set(props.thread.id, {
+			ctx.channel_search.set(props.channel.id, {
 				...searchState,
 				results: null,
 				loading: false,
@@ -824,8 +824,8 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 							return true;
 						}
 
-						if (ctx.thread_search.has(props.thread.id)) {
-							ctx.thread_search.delete(props.thread.id);
+						if (ctx.channel_search.has(props.channel.id)) {
+							ctx.channel_search.delete(props.channel.id);
 						} else {
 							const chatInput = document.querySelector(
 								".chat .ProseMirror",
@@ -923,7 +923,7 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 					>
 						<AutocompleteDropdown
 							filter={activeFilter()!}
-							thread={props.thread}
+							thread={props.channel}
 							onSelect={insertNode}
 							onSelectFilter={insertFilter}
 						/>
