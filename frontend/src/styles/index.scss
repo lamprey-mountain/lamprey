@@ -150,6 +150,14 @@
 	}
 }
 
+#nav .category {
+	cursor: pointer;
+}
+
+#nav .category-toggle {
+	margin-right: 4px;
+}
+
 button,
 input[type="submit"] {
 	background-color: $bg-300;

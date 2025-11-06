@@ -31,6 +31,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		null,
 	);
 
+	// track collapsed categories
+	const [collapsedCategories, setCollapsedCategories] = createSignal<
+		Set<string>
+	>(new Set());
+
 	const [categories, setCategories] = createSignal<
 		Array<{ category: Channel | null; channels: Array<Channel> }>
 	>([]);
@@ -342,99 +347,120 @@ export const ChannelNav = (props: { room_id?: string }) => {
 										setDragging(null);
 										setTarget(null);
 									}}
-									onClick={[nav, `/channel/${category!.id}`]}
+									onClick={() => {
+										setCollapsedCategories((prev) => {
+											const newSet = new Set(prev);
+											if (newSet.has(category!.id)) {
+												newSet.delete(category!.id);
+											} else {
+												newSet.add(category!.id);
+											}
+											return newSet;
+										});
+									}}
 									classList={{
 										dragging: dragging() === category!.id,
+										collapsed: collapsedCategories().has(category!.id),
+										category: true,
 									}}
 								>
+									<span class="category-toggle">
+										{collapsedCategories().has(category!.id) ? "▶" : "▼"}
+									</span>
 									{category!.name}
 								</div>
 							</Show>
-							<For
-								each={channels}
-								fallback={
-									<div class="dim" style="margin-left: 16px">(no channels)</div>
-								}
+							<Show
+								when={!category || !collapsedCategories().has(category!.id)}
 							>
-								{(channel) => (
-									<li
-										data-channel-id={channel.id}
-										draggable="true"
-										onDragStart={handleDragStart}
-										onDragOver={handleDragOver}
-										onDrop={handleDrop}
-										onDragEnd={() => {
-											setDragging(null);
-											setTarget(null);
-										}}
-										classList={{
-											dragging: dragging() === channel.id,
-											unread: channel.type !== "Voice" && !!channel.is_unread,
-										}}
-									>
-										<ItemChannel channel={channel} />
-										<Show when={(channel as any).threads?.length > 0}>
-											<ul class="threads">
-												<For each={(channel as any).threads}>
-													{(thread: Channel) => (
-														<li
-															data-channel-id={thread.id}
-															draggable={false}
-															classList={{
-																unread: thread.type !== "Voice" &&
-																	!!thread.is_unread,
-															}}
-														>
-															<ItemChannel channel={thread} />
-														</li>
-													)}
-												</For>
-											</ul>
-										</Show>
-										<For
-											each={[...api.voiceStates.values()].filter((i) =>
-												i.channel_id === channel.id
-											).sort((a, b) =>
-												Date.parse(a.joined_at) - Date.parse(b.joined_at)
-											)}
-										>
-											{(s) => {
-												const user = api.users.fetch(() => s.user_id);
-												const room_member = props.room_id
-													? api.room_members.fetch(
-														() => props.room_id!,
-														() => s.user_id,
-													)
-													: () => null;
-												const name = () =>
-													room_member()?.override_name || user()?.name ||
-													"unknown user";
-												// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
-												// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
-												// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
-												// </svg>
-
-												return (
-													<div
-														class="voice-participant menu-user"
-														classList={{
-															speaking:
-																((voice.rtc?.speaking.get(s.user_id)?.flags ??
-																	0) &
-																	1) === 1,
-														}}
-														data-channel-id={s.channel_id}
-														data-user-id={s.user_id}
-													>
-														<Avatar user={user()} />
-														{name()}
-													</div>
-												);
+								<For
+									each={channels}
+									fallback={
+										<div class="dim" style="margin-left: 16px">
+											(no channels)
+										</div>
+									}
+								>
+									{(channel) => (
+										<li
+											data-channel-id={channel.id}
+											draggable="true"
+											onDragStart={handleDragStart}
+											onDragOver={handleDragOver}
+											onDrop={handleDrop}
+											onDragEnd={() => {
+												setDragging(null);
+												setTarget(null);
 											}}
-										</For>
-									</li>
-								)}
-							</For>
+											classList={{
+												dragging: dragging() === channel.id,
+												unread: channel.type !== "Voice" && !!channel.is_unread,
+											}}
+										>
+											<ItemChannel channel={channel} />
+											<Show when={(channel as any).threads?.length > 0}>
+												<ul class="threads">
+													<For each={(channel as any).threads}>
+														{(thread: Channel) => (
+															<li
+																data-channel-id={thread.id}
+																draggable={false}
+																classList={{
+																	unread: thread.type !== "Voice" &&
+																		!!thread.is_unread,
+																}}
+															>
+																<ItemChannel channel={thread} />
+															</li>
+														)}
+													</For>
+												</ul>
+											</Show>
+											<For
+												each={[...api.voiceStates.values()].filter((i) =>
+													i.channel_id === channel.id
+												).sort((a, b) =>
+													Date.parse(a.joined_at) - Date.parse(b.joined_at)
+												)}
+											>
+												{(s) => {
+													const user = api.users.fetch(() => s.user_id);
+													const room_member = props.room_id
+														? api.room_members.fetch(
+															() => props.room_id!,
+															() => s.user_id,
+														)
+														: () => null;
+													const name = () =>
+														room_member()?.override_name || user()?.name ||
+														"unknown user";
+													// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
+													// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
+													// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
+													// </svg>
+
+													return (
+														<div
+															class="voice-participant menu-user"
+															classList={{
+																speaking:
+																	((voice.rtc?.speaking.get(s.user_id)?.flags ??
+																		0) &
+																		1) === 1,
+															}}
+															data-channel-id={s.channel_id}
+															data-user-id={s.user_id}
+														>
+															<Avatar user={user()} />
+															{name()}
+														</div>
+													);
+												}}
+											</For>
+										</li>
+									)}
+								</For>
+							</Show>
 						</>
 					)}
 				</For>
