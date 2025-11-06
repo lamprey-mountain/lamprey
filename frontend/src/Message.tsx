@@ -46,10 +46,32 @@ type MessageTextMarkdownProps = {
 
 const contentToHtml = new WeakMap();
 
-function UserMention(props: { id: string }) {
+function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
+	const ctx = useCtx();
 	const user = api.users.fetch(() => props.id);
-	return <span class="mention-user">@{user()?.name ?? "..."}</span>;
+	return (
+		<span
+			class="mention-user"
+			onClick={(e) => {
+				e.stopPropagation();
+				const currentTarget = e.currentTarget as HTMLElement;
+				if (ctx.userView()?.ref === currentTarget) {
+					ctx.setUserView(null);
+				} else {
+					ctx.setUserView({
+						user_id: props.id,
+						room_id: props.channel.room_id,
+						thread_id: props.channel.id,
+						ref: currentTarget,
+						source: "message",
+					});
+				}
+			}}
+		>
+			@{user()?.name ?? "..."}
+		</span>
+	);
 }
 
 function RoleMention(props: { id: string; thread: Channel }) {
@@ -90,7 +112,7 @@ function hydrateMentions(el: HTMLElement, thread: Channel) {
 			const type = mentionEl.dataset.mentionType;
 			if (type === "user") {
 				const userId = mentionEl.dataset.userId!;
-				render(() => <UserMention id={userId} />, mentionEl);
+				render(() => <UserMention channel={thread} id={userId} />, mentionEl);
 			} else if (type === "role") {
 				const roleId = mentionEl.dataset.roleId!;
 				render(() => <RoleMention id={roleId} thread={thread} />, mentionEl);
