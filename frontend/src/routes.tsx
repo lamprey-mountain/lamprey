@@ -4,7 +4,14 @@ import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ChannelNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import { createEffect, For, Match, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	For,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ChannelSettings } from "./ChannelSettings.tsx";
 import { ChatHeader, ChatMain, SearchResults } from "./Chat.tsx";
@@ -20,6 +27,7 @@ import { type Channel, SERVER_ROOM_ID } from "sdk";
 import { PinnedMessages } from "./menu/PinnedMessages.tsx";
 import { Resizable } from "./Resizable.tsx";
 import { UserProfile } from "./UserProfile.tsx";
+import { Inbox } from "./Inbox.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -324,7 +332,15 @@ export const RouteUser = (p: RouteSectionProps) => {
 		<>
 			<Title title={user()?.name ?? "loading..."} />
 			<RoomNav />
-			<ChannelNav />
+			<Resizable
+				storageKey="channel-nav-width"
+				side="left"
+				initialWidth={256}
+				minWidth={180}
+				maxWidth={500}
+			>
+				<ChannelNav room_id={p.params.room_id} />
+			</Resizable>
 			<header class="chat-header">
 				<b>{user()?.name}</b>
 			</header>
@@ -335,3 +351,59 @@ export const RouteUser = (p: RouteSectionProps) => {
 		</>
 	);
 };
+
+export function RouteInbox(p: RouteSectionProps) {
+	return (
+		<>
+			<Title title="inbox" />
+			<RoomNav />
+			<Resizable
+				storageKey="channel-nav-width"
+				side="left"
+				initialWidth={256}
+				minWidth={180}
+				maxWidth={500}
+			>
+				<ChannelNav room_id={p.params.room_id} />
+			</Resizable>
+			<Inbox />
+		</>
+	);
+}
+
+export function RouteFriends() {
+	const api = useApi();
+
+	const [friends] = createResource(async () => {
+		const { data } = await api.client.http.GET(
+			"/api/v1/user/{user_id}/friend",
+			{ params: { path: { user_id: "@self" } } },
+		);
+		return data;
+	});
+
+	const sendRequest = () => {
+		const target_id = prompt("target_id");
+		if (!target_id) return;
+		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
+			params: { path: { target_id } },
+		});
+	};
+
+	return (
+		<>
+			<Title title="friends" />
+			<RoomNav />
+			<div class="friends" style="padding:8px">
+				todo!
+				<ul>
+					<li>foo</li>
+					<li>bar</li>
+					<li>baz</li>
+				</ul>
+				<pre>{JSON.stringify(friends())}</pre>
+				<button onClick={sendRequest}>send request</button>
+			</div>
+		</>
+	);
+}

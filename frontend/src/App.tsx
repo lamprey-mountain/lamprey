@@ -63,7 +63,9 @@ import {
 	RouteChannel,
 	RouteChannelSettings,
 	RouteFeed,
+	RouteFriends,
 	RouteHome,
+	RouteInbox,
 	RouteInvite,
 	RouteRoom,
 	RouteRoomSettings,
@@ -80,6 +82,7 @@ import { UserView } from "./User.tsx";
 import { EmojiPicker } from "./EmojiPicker.tsx";
 import { Autocomplete } from "./Autocomplete.tsx";
 import { AutocompleteState } from "./context.ts";
+import { Resizable } from "./Resizable.tsx";
 
 const App: Component = () => {
 	return (
@@ -479,54 +482,6 @@ function RouteSettings(p: RouteSectionProps) {
 			<Show when={user()}>
 				<UserSettings user={user()!} page={p.params.page} />
 			</Show>
-		</>
-	);
-}
-
-function RouteInbox() {
-	return (
-		<>
-			<Title title="inbox" />
-			<RoomNav />
-			<ChannelNav />
-			<Inbox />
-		</>
-	);
-}
-
-function RouteFriends() {
-	const api = useApi();
-
-	const [friends] = createResource(async () => {
-		const { data } = await api.client.http.GET(
-			"/api/v1/user/{user_id}/friend",
-			{ params: { path: { user_id: "@self" } } },
-		);
-		return data;
-	});
-
-	const sendRequest = () => {
-		const target_id = prompt("target_id");
-		if (!target_id) return;
-		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
-			params: { path: { target_id } },
-		});
-	};
-
-	return (
-		<>
-			<Title title="friends" />
-			<RoomNav />
-			<div class="friends" style="padding:8px">
-				todo!
-				<ul>
-					<li>foo</li>
-					<li>bar</li>
-					<li>baz</li>
-				</ul>
-				<pre>{JSON.stringify(friends())}</pre>
-				<button onClick={sendRequest}>send request</button>
-			</div>
 		</>
 	);
 }
