@@ -16,6 +16,7 @@ import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import twemoji from "twemoji";
+import { type Command, commands } from "./slash-commands";
 
 type Emoji = {
 	group?: number;
@@ -84,9 +85,9 @@ export const Autocomplete = () => {
 	const [allEmoji, setAllEmoji] = createSignal<(EmojiCustom | UnicodeEmoji)[]>(
 		[],
 	);
+	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
 
 	createEffect(on(ctx.autocomplete, (state) => {
-		console.log(state);
 		if (state?.type === "mention") {
 			const channelId = state.channelId;
 			const channel = api.channels.cache.get(channelId);
@@ -105,7 +106,6 @@ export const Autocomplete = () => {
 				Boolean,
 			) as User[];
 			setAllUsers(users);
-			console.log("all users", users);
 		} else if (state?.type === "channel") {
 			const channels = [...api.channels.cache.values()].filter(
 				(c) => c.type !== "Category",
@@ -131,11 +131,13 @@ export const Autocomplete = () => {
 				combined.push(...(unicodeEmoji() as any));
 			}
 			setAllEmoji(combined);
+		} else if (state?.type === "command") {
+			setAllCommands(commands);
 		}
 	}));
 
 	const [filtered, setFiltered] = createSignal<
-		Fuzzysort.KeyResult<User | Channel | EmojiCustom | UnicodeEmoji>[]
+		Fuzzysort.KeyResult<User | Channel | EmojiCustom | UnicodeEmoji | Command>[]
 	>([]);
 	const [hoveredIndex, setHoveredIndex] = createSignal(0);
 	const hovered = () => filtered()[hoveredIndex()]?.obj;
@@ -143,7 +145,7 @@ export const Autocomplete = () => {
 	createEffect(() => {
 		const state = ctx.autocomplete();
 		let results: Fuzzysort.KeyResults<
-			User | Channel | EmojiCustom | UnicodeEmoji
+			User | Channel | EmojiCustom | UnicodeEmoji | Command
 		>;
 		if (state?.type === "mention") {
 			results = go(state.query, allUsers(), {
@@ -163,6 +165,12 @@ export const Autocomplete = () => {
 				limit: 10,
 				all: true,
 			});
+		} else if (state?.type === "command") {
+			results = go(state.query, allCommands(), {
+				key: "name",
+				limit: 10,
+				all: true,
+			});
 		} else {
 			results = [];
 		}
@@ -172,7 +180,9 @@ export const Autocomplete = () => {
 		}
 	});
 
-	const select = (item: User | Channel | EmojiCustom | UnicodeEmoji) => {
+	const select = (
+		item: User | Channel | EmojiCustom | UnicodeEmoji | Command,
+	) => {
 		const state = ctx.autocomplete();
 		if (state) {
 			if (state.type === "emoji") {
@@ -180,6 +190,8 @@ export const Autocomplete = () => {
 				const id = item.id;
 				const char = "char" in item ? item.char : undefined;
 				state.onSelect(id, name, char);
+			} else if (state.type === "command") {
+				state.onSelect(item.name);
 			} else {
 				state.onSelect(item.id, item.name);
 			}
@@ -221,10 +233,6 @@ export const Autocomplete = () => {
 		}
 	});
 
-	createEffect(() => {
-		console.log("autocomplete", ctx.autocomplete(), filtered());
-	});
-
 	return (
 		<Show when={ctx.autocomplete() && filtered().length > 0}>
 			<div class="autocomplete">
@@ -252,8 +260,18 @@ export const Autocomplete = () => {
 										class="emoji-img"
 									/>
 								</Match>
+								<Match when={ctx.autocomplete()?.type === "command"}>
+									<div class="command">
+										<div class="name">{(result.obj as Command).name}</div>
+										<div class="description dim">
+											{(result.obj as Command).description}
+										</div>
+									</div>
+								</Match>
+								<Match when={true}>
+									{result.obj.name}
+								</Match>
 							</Switch>
-							{result.obj.name}
 						</div>
 					)}
 				</For>

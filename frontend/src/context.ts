@@ -126,13 +126,36 @@ export type Popout = {
 	placement?: Placement;
 } | {};
 
-export type AutocompleteState = {
-	type: "mention";
-	query: string;
-	ref: ReferenceElement;
-	onSelect: (userId: string, userName: string) => void;
-	channelId: string;
-} | null;
+export type AutocompleteState =
+	| {
+		type: "mention";
+		query: string;
+		ref: ReferenceElement;
+		onSelect: (userId: string, userName: string) => void;
+		channelId: string;
+	}
+	| {
+		type: "channel";
+		query: string;
+		ref: ReferenceElement;
+		onSelect: (channelId: string, channelName: string) => void;
+		channelId: string;
+	}
+	| {
+		type: "emoji";
+		query: string;
+		ref: ReferenceElement;
+		onSelect: (id: string, name: string, char?: string) => void;
+		channelId: string;
+	}
+	| {
+		type: "command";
+		query: string;
+		ref: ReferenceElement;
+		onSelect: (command: string) => void;
+		channelId: string;
+	}
+	| null;
 
 export type ChatCtx = {
 	client: Client;

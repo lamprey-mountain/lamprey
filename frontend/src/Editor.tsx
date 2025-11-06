@@ -319,6 +319,38 @@ export const createEditor = (opts: EditorProps) => {
 							};
 						};
 
+						if (event.key === "/") {
+							const state = view.state;
+							if (state.selection.from === 1) {
+								ctx.setAutocomplete({
+									type: "command",
+									query: "",
+									ref: refElement() as any,
+									onSelect: (command: string) => {
+										const state = view.state;
+										const from = 0;
+										const to = state.selection.to;
+
+										let tr = state.tr.replaceWith(
+											from,
+											to,
+											schema.text(`/${command} `),
+										);
+										const posAfter = tr.mapping.map(to);
+										tr = tr.setSelection(
+											TextSelection.create(tr.doc, posAfter + 1),
+										);
+
+										view.dispatch(tr);
+										ctx.setAutocomplete(null);
+									},
+									channelId: props.channelId || "",
+								});
+							}
+
+							return false;
+						}
+
 						// if the @ character was pressed, open the menu
 						if (event.key === "@") {
 							ctx.setAutocomplete({
@@ -479,9 +511,12 @@ export const createEditor = (opts: EditorProps) => {
 									? "@"
 									: ctx.autocomplete()!.type === "channel"
 									? "#"
+									: ctx.autocomplete()!.type === "command"
+									? "/"
 									: ":";
 								let mentionStart = -1;
-								// search backward for @ symbol
+
+								// search backward for trigger symbol
 								for (let i = cursorPos - 1; i >= 0; i--) {
 									const char = state.doc.textBetween(i, i + 1);
 									if (char === triggerChar) {
