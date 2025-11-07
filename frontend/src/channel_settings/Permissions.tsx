@@ -4,6 +4,8 @@ import { useApi } from "../api.tsx";
 import { createStore, produce } from "solid-js/store";
 import { Copyable } from "../util.tsx";
 import { permissions } from "../permissions.ts";
+import { PermissionSelector } from "../components/PermissionSelector";
+import { Resizable } from "../Resizable";
 
 type PermState = "allow" | "deny" | "inherit";
 
@@ -110,46 +112,55 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		roles()?.items.filter((r) => !overwrites.some((o) => o.id === r.id));
 
 	return (
-		<>
-			<h2>Permissions</h2>
-			<div class="permission-overwrites">
-				<div style="display: flex; flex-direction: column; gap: 1rem;">
-					<div>
-						<ul>
-							<For each={overwrites}>
-								{(o) => (
-									<li
-										style={editingId() === o.id ? "font-weight: bold" : ""}
-										onClick={() => setEditingId(o.id)}
-									>
-										{roleName(o.id) ?? <Copyable>{o.id}</Copyable>}
-									</li>
-								)}
-							</For>
-						</ul>
-					</div>
-					<div>
-						<Show when={availableRoles()?.length}>
-							<select
-								onChange={(e) => {
-									if (e.currentTarget.value) addRole(e.currentTarget.value);
-									e.currentTarget.value = "";
-								}}
-							>
-								<option value="">Add role...</option>
-								<For each={availableRoles()}>
-									{(r) => <option value={r.id}>{r.name}</option>}
+		<div class="channel-settings-permissions">
+			<div class="main">
+				<h2>Permissions</h2>
+				<div class="permission-overwrites">
+					<div class="permissions-layout">
+						<div>
+							<ul>
+								<For each={overwrites}>
+									{(o) => (
+										<li
+											class={editingId() === o.id ? "editing" : ""}
+											onClick={() => setEditingId(o.id)}
+										>
+											{roleName(o.id) ?? <Copyable>{o.id}</Copyable>}
+										</li>
+									)}
 								</For>
-							</select>
-						</Show>
-						{/* <button onClick={()}>add user</button> */}
+							</ul>
+						</div>
+						<div>
+							<Show when={availableRoles()?.length}>
+								<select
+									onChange={(e) => {
+										if (e.currentTarget.value) addRole(e.currentTarget.value);
+										e.currentTarget.value = "";
+									}}
+								>
+									<option value="">Add role...</option>
+									<For each={availableRoles()}>
+										{(r) => <option value={r.id}>{r.name}</option>}
+									</For>
+								</select>
+							</Show>
+							{/* <button onClick={()}>add user</button> */}
+						</div>
 					</div>
 				</div>
-				<Show when={editingOverwrite()} keyed>
-					{(overwrite) => (
-						<div style="width: 500px">
-							<div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem">
-								<h3 style="margin: 0">
+			</div>
+			<Show when={editingOverwrite()} keyed>
+				{(overwrite) => (
+					<Resizable
+						storageKey="channel-permissions-panel-width"
+						initialWidth={500}
+						minWidth={300}
+						maxWidth={800}
+					>
+						<div class="edit">
+							<div class="permissions-header">
+								<h3 class="editing-title">
 									Editing{" "}
 									{overwrite.type === "Role" ? roleName(overwrite.id) : "user"}
 									{" "}
@@ -158,48 +169,19 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 								<button onClick={save}>save</button>
 								<button onClick={remove}>delete</button>
 							</div>
-							<ul>
-								<For each={permissions}>
-									{(p) => {
-										const state = () => getPermState(overwrite, p.id);
-										return (
-											<li style="display: flex; justify-content: space-between; align-items: center; background-color: #111111; padding: 4px; margin-bottom: 4px">
-												<span>{p.id}</span>
-												<div class="controls">
-													<button
-														style={state() === "allow"
-															? "background-color: green"
-															: ""}
-														onClick={() => setPerm(p.id, "allow")}
-													>
-														✓
-													</button>
-													<button
-														style={state() === "inherit"
-															? "background-color: grey"
-															: ""}
-														onClick={() => setPerm(p.id, "inherit")}
-													>
-														/
-													</button>
-													<button
-														style={state() === "deny"
-															? "background-color: red"
-															: ""}
-														onClick={() => setPerm(p.id, "deny")}
-													>
-														X
-													</button>
-												</div>
-											</li>
-										);
-									}}
-								</For>
-							</ul>
+							<PermissionSelector
+								permissions={permissions}
+								permStates={permissions.reduce((acc, p) => {
+									acc[p.id] = getPermState(overwrite, p.id);
+									return acc;
+								}, {} as Record<Permission, PermState>)}
+								onPermChange={setPerm}
+								showDescriptions={true}
+							/>
 						</div>
-					)}
-				</Show>
-			</div>
-		</>
+					</Resizable>
+				)}
+			</Show>
+		</div>
 	);
 }

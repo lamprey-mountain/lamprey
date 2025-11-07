@@ -104,13 +104,22 @@ export function formatChanges(
 	if ("changes" in ent.metadata) {
 		const changes = (ent as any).metadata.changes as AuditLogChange[];
 		for (const c of changes) {
-			if (ent.type === "RoleUpdate" && c.key === "permissions") {
+			if (ent.type === "RoleUpdate" && c.key === "allow") {
 				formatted.push(
 					...renderPermissionDiff(
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
 						"granted permission",
 						"revoked permission",
+					),
+				);
+			} else if (ent.type === "RoleUpdate" && c.key === "deny") {
+				formatted.push(
+					...renderPermissionDiff(
+						(c.old ?? []) as Array<string>,
+						(c.new ?? []) as Array<string>,
+						"denied permission",
+						"unset permission",
 					),
 				);
 			} else if (ent.type === "ThreadOverwriteSet" && c.key === "allow") {

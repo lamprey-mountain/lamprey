@@ -76,8 +76,12 @@ export function usePermissions(
 		}
 
 		for (const role of memberRoles) {
-			for (const p of role.permissions) {
+			for (const p of role.allow) {
 				finalPermissions.add(p);
+			}
+
+			for (const p of role.deny) {
+				finalPermissions.delete(p);
 			}
 		}
 

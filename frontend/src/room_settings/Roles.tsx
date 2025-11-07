@@ -14,25 +14,35 @@ import type { RoomT } from "../types.ts";
 import type { Pagination, Permission, Role } from "sdk";
 import { Copyable } from "../util.tsx";
 import { createStore, produce } from "solid-js/store";
-import { moderatorPermissions, permissionGroups } from "../permissions.ts";
-import { Resizable } from "../Resizable.tsx";
+import {
+	moderatorPermissions,
+	permissionGroups,
+	permissions,
+} from "../permissions.ts";
+import { Resizable } from "../Resizable";
 import { md } from "../markdown.tsx";
+import { PermissionSelector } from "../components/PermissionSelector";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));
 }
 
 function isDirty(a: Role, b: Role): boolean {
-	const permsA = new Set(a.permissions);
-	const permsB = new Set(b.permissions);
-	const diff1 = setDifference(permsA, permsB);
-	const diff2 = setDifference(permsB, permsA);
+	const allowA = new Set(a.allow);
+	const allowB = new Set(b.allow);
+	const denyA = new Set(a.deny);
+	const denyB = new Set(b.deny);
+
+	const allowDiff1 = setDifference(allowA, allowB);
+	const allowDiff2 = setDifference(allowB, allowA);
+	const denyDiff1 = setDifference(denyA, denyB);
+	const denyDiff2 = setDifference(denyB, denyA);
 
 	return a.name !== b.name ||
 		a.description !== b.description ||
 		a.is_self_applicable !== b.is_self_applicable ||
 		a.is_mentionable !== b.is_mentionable ||
-		diff1.size + diff2.size > 0;
+		allowDiff1.size + allowDiff2.size + denyDiff1.size + denyDiff2.size > 0;
 }
 
 export function Roles(props: VoidProps<{ room: RoomT }>) {
@@ -323,23 +333,23 @@ const RoleList = (
 							<div class="member-count">{i.member_count} members</div>
 							<div class="divider"></div>
 							<Switch>
-								<Match when={i.permissions.includes("Admin")}>
+								<Match when={i.allow.includes("Admin")}>
 									<div class="perm-admin">admin!</div>
 								</Match>
-								<Match when={i.permissions.length === 0}>
+								<Match when={i.allow.length === 0 && i.deny.length === 0}>
 									<div>cosmetic</div>
 								</Match>
 								<Match when={true}>
 									<div>
 										<span class="perm-safe">
-											{i.permissions.filter(
+											{i.allow.filter(
 												(perm: Permission) =>
 													!(moderatorPermissions as string[]).includes(perm),
 											).length}
 										</span>
 										+
 										<span class="perm-mod">
-											{i.permissions.filter((perm) =>
+											{i.allow.filter((perm) =>
 												(moderatorPermissions as string[]).includes(perm)
 											).length}
 										</span>{" "}
@@ -394,7 +404,8 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 			body: {
 				name: r.name,
 				description: r.description,
-				permissions: r.permissions,
+				allow: r.allow,
+				deny: r.deny,
 				is_mentionable: r.is_mentionable,
 				is_self_applicable: r.is_self_applicable,
 			},
@@ -543,62 +554,51 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				/>
 			</div>
 
-			<For
-				each={filteredPermissionGroups().groups}
-			>
-				{(group) => {
-					const permsForGroup = () =>
-						filteredPermissionGroups().filtered[group];
-					return (
-						<Show when={permsForGroup().length > 0}>
-							<>
-								<h3>{group} permissions</h3>
-								<ul>
-									<For each={permsForGroup()}>
-										{(perm) => {
-											const perms = () => props.edit.role.permissions ?? [];
-											return (
-												<li>
-													<label>
-														<input
-															type="checkbox"
-															checked={perms().includes(perm.id)}
-															onInput={(e) => {
-																const { checked } = e
-																	.target as HTMLInputElement;
-																props.edit.setRole(
-																	"permissions",
-																	(
-																		p,
-																	) =>
-																		checked
-																			? [...p, perm.id]
-																			: p.filter((x) => x !== perm.id),
-																);
-															}}
-														/>
-														<div>
-															<div class="name">
-																{perm.name}
-															</div>
-															<div
-																class="description"
-																innerHTML={md.parseInline(
-																	perm.description ?? "",
-																) as string}
-															/>
-														</div>
-													</label>
-												</li>
-											);
-										}}
-									</For>
-								</ul>
-							</>
-						</Show>
-					);
-				}}
-			</For>
+			{() => {
+				const searchQuery = permSearch().toLowerCase();
+				const allPermissions = permissions.filter((perm) =>
+					!searchQuery ||
+					perm.name.toLowerCase().includes(searchQuery) ||
+					perm.description.toLowerCase().includes(searchQuery) ||
+					perm.id.toLowerCase().includes(searchQuery)
+				);
+
+				const permStates = allPermissions.reduce((acc, perm) => {
+					const role = props.edit.role;
+					if (role.allow?.includes(perm.id)) acc[perm.id] = "allow";
+					else if (role.deny?.includes(perm.id)) acc[perm.id] = "deny";
+					else acc[perm.id] = "inherit";
+					return acc;
+				}, {} as Record<Permission, "allow" | "deny" | "inherit">);
+
+				const handlePermChange = (
+					permId: Permission,
+					newState: "allow" | "deny" | "inherit",
+				) => {
+					props.edit.setRole((prev) => {
+						const newRole = { ...prev };
+						newRole.allow = (newRole.allow || []).filter((p) => p !== permId);
+						newRole.deny = (newRole.deny || []).filter((p) => p !== permId);
+
+						if (newState === "allow") {
+							newRole.allow.push(permId);
+						} else if (newState === "deny") {
+							newRole.deny.push(permId);
+						}
+
+						return newRole;
+					});
+				};
+
+				return (
+					<PermissionSelector
+						permissions={allPermissions}
+						permStates={permStates}
+						onPermChange={handlePermChange}
+						showDescriptions={true}
+					/>
+				);
+			}}
 		</div>
 	);
 };

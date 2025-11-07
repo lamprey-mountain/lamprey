@@ -12,7 +12,12 @@ import {
 const tabs = [
 	{ name: "info", path: "", component: Info },
 	{ name: "invites", path: "invites", component: Invites },
-	{ name: "permissions", path: "permissions", component: Permissions },
+	{
+		name: "permissions",
+		path: "permissions",
+		component: Permissions,
+		noPad: true,
+	},
 	{ name: "webhooks", path: "webhooks", component: Webhooks },
 ];
 

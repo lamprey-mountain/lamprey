@@ -3110,23 +3110,109 @@ kbd {
 	color: $fg-600;
 }
 
+.permission-selector-list {
+	list-style: none;
+	padding: 0;
+
+	.permission-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background-color: #111;
+		padding: 8px;
+		margin-bottom: 4px;
+		border-radius: 4px;
+		flex-wrap: wrap;
+
+		.permission-info {
+			flex: 1;
+			min-width: 0;
+
+			.permission-name {
+				/* font-weight: bold; */
+			}
+
+			.permission-description {
+				color: #aaa;
+				font-size: 0.9em;
+				margin-top: 4px;
+			}
+		}
+
+		.permission-controls {
+			display: flex;
+			margin-left: 16px;
+			border: solid $sep-500 1px;
+			background-color: $bg-200;
+
+			.perm-state-button {
+				display: flex;
+				border: none;
+				height: 24px;
+				width: 24px;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+				color: white;
+
+				&:hover {
+					background-color: $bg-300;
+				}
+
+				&.state-allow {
+					background-color: #28a745;
+				}
+
+				&.state-deny {
+					background-color: #dc3545;
+				}
+
+				&.state-inherit {
+					background-color: #6c757d;
+				}
+			}
+		}
+	}
+}
+
 .permission-overwrites {
 	display: flex;
 	gap: 1rem;
 
-	.controls {
+	.permissions-layout {
 		display: flex;
-		border: solid $sep-500 1px;
-		border-radius: 4px;
-		overflow: hidden;
+		flex-direction: column;
+		gap: 1rem;
 
-		button {
-			border: none;
-			height: 24px;
-			width: 24px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
+		li {
+			&.editing {
+				font-weight: bold;
+			}
 		}
+	}
+
+	.permissions-header {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-bottom: 1rem;
+
+		.editing-title {
+			margin: 0;
+		}
+	}
+}
+
+.channel-settings-permissions {
+	display: flex;
+	height: 100%;
+
+	& .main {
+		flex: 1;
+	}
+
+	& .main, .edit {
+		padding: 0.5rem;
+		overflow-y: auto;
 	}
 }

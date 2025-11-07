@@ -332,5 +332,3 @@ for (const p of permissions) {
 		permissionGroups.set(p.group ?? "other", [p]);
 	}
 }
-
-console.log(permissionGroups);
