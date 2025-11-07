@@ -1196,12 +1196,6 @@ summary {
 			gap: 8px;
 		}
 
-		& h3 {
-			font-size: 1em;
-			font-weight: bold;
-			margin-top: 8px;
-		}
-
 		& textarea,
 		input[type="text"] {
 			border: solid $sep-500 1px;
@@ -3169,6 +3163,14 @@ kbd {
 				}
 			}
 		}
+	}
+
+	h3 {
+		font-size: 1em;
+		font-weight: bold;
+		color: $fg-600;
+		margin-top: 16px;
+		text-transform: capitalize;
 	}
 }
 

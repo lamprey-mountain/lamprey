@@ -1,5 +1,12 @@
 import type { Channel, Permission, PermissionOverwrite } from "sdk";
-import { batch, createMemo, createSignal, For, Show, type VoidProps } from "solid-js";
+import {
+	batch,
+	createMemo,
+	createSignal,
+	For,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useApi } from "../api.tsx";
 import { createStore, produce } from "solid-js/store";
 import { Copyable } from "../util.tsx";
@@ -9,7 +16,10 @@ import { Resizable } from "../Resizable";
 
 type PermState = "allow" | "deny" | "inherit";
 
-function getPermState(overwrite: PermissionOverwrite, perm: Permission): PermState {
+function getPermState(
+	overwrite: PermissionOverwrite,
+	perm: Permission,
+): PermState {
 	if (overwrite.allow.includes(perm)) return "allow";
 	if (overwrite.deny.includes(perm)) return "deny";
 	return "inherit";
@@ -28,6 +38,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();
 	const roles = api.roles.list(() => props.channel.room_id);
 	const users = api.room_members.list(() => props.channel.room_id);
+	const room = api.rooms.fetch(() => props.channel.room_id);
 
 	const [overwrites, setOverwrites] = createStore(
 		structuredClone(props.channel.permission_overwrites),
@@ -35,13 +46,15 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 
 	const overwritesWithEveryone = createMemo(() => {
 		const roomId = props.channel.room_id;
-		const hasEveryone = overwrites.some(o => isEveryoneRole(o.id, roomId));
+		const hasEveryone = overwrites.some((o) => isEveryoneRole(o.id, roomId));
 		return hasEveryone
 			? overwrites
 			: [...overwrites, createDefaultOverwrite(roomId)];
 	});
 
-	const [editingId, setEditingId] = createSignal<string | null>(props.channel.room_id);
+	const [editingId, setEditingId] = createSignal<string | null>(
+		props.channel.room_id,
+	);
 
 	const editingOverwrite = () => {
 		const id = editingId();
@@ -61,7 +74,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		const id = editingId();
 		if (!id) return;
 
-		const existsInStore = overwrites.some(o => o.id === id);
+		const existsInStore = overwrites.some((o) => o.id === id);
 
 		if (existsInStore) {
 			setOverwrites(
@@ -81,7 +94,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 				if (state === "allow") newAllow.push(perm);
 				else if (state === "deny") newDeny.push(perm);
 
-				const exists = overwrites.some(o => o.id === id);
+				const exists = overwrites.some((o) => o.id === id);
 				if (exists) {
 					setOverwrites(
 						(o) => o.id === id,
@@ -106,19 +119,22 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		const overwrite = editingOverwrite();
 		if (!overwrite) return;
 
-		api.client.http.PUT("/api/v1/channel/{channel_id}/permission/{overwrite_id}", {
-			params: {
-				path: {
-					channel_id: props.channel.id,
-					overwrite_id: overwrite.id,
+		api.client.http.PUT(
+			"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
+			{
+				params: {
+					path: {
+						channel_id: props.channel.id,
+						overwrite_id: overwrite.id,
+					},
+				},
+				body: {
+					type: "Role",
+					allow: overwrite.allow,
+					deny: overwrite.deny,
 				},
 			},
-			body: {
-				type: "Role",
-				allow: overwrite.allow,
-				deny: overwrite.deny,
-			},
-		});
+		);
 	};
 
 	const remove = () => {
@@ -126,16 +142,19 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		if (!id) return;
 
 		if (isEveryoneRole(id, props.channel.room_id)) {
-			api.client.http.DELETE("/api/v1/channel/{channel_id}/permission/{overwrite_id}", {
-				params: {
-					path: {
-						channel_id: props.channel.id,
-						overwrite_id: id,
+			api.client.http.DELETE(
+				"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
+				{
+					params: {
+						path: {
+							channel_id: props.channel.id,
+							overwrite_id: id,
+						},
 					},
 				},
-			});
+			);
 
-			const existingIndex = overwrites.findIndex(o => o.id === id);
+			const existingIndex = overwrites.findIndex((o) => o.id === id);
 			if (existingIndex !== -1) {
 				setOverwrites(
 					(o) => o.id === id,
@@ -150,14 +169,17 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 			return;
 		}
 
-		api.client.http.DELETE("/api/v1/channel/{channel_id}/permission/{overwrite_id}", {
-			params: {
-				path: {
-					channel_id: props.channel.id,
-					overwrite_id: id,
+		api.client.http.DELETE(
+			"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
+			{
+				params: {
+					path: {
+						channel_id: props.channel.id,
+						overwrite_id: id,
+					},
 				},
 			},
-		});
+		);
 		setEditingId(null);
 	};
 
@@ -168,7 +190,8 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		});
 	};
 
-	const roleName = (id: string) => roles()?.items.find((r) => r.id === id)?.name;
+	const roleName = (id: string) =>
+		roles()?.items.find((r) => r.id === id)?.name;
 
 	const availableRoles = () =>
 		roles()?.items.filter((r) =>
@@ -226,7 +249,9 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 						<div class="edit">
 							<div class="permissions-header">
 								<h3 class="editing-title">
-									Editing {overwrite.type === "Role" ? roleName(overwrite.id) : "user"}{" "}
+									Editing{" "}
+									{overwrite.type === "Role" ? roleName(overwrite.id) : "user"}
+									{" "}
 								</h3>
 								<button onClick={() => setEditingId(null)}>close</button>
 								<button onClick={save}>save</button>
@@ -240,6 +265,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 								}, {} as Record<Permission, PermState>)}
 								onPermChange={setPerm}
 								showDescriptions={true}
+								roomType={room()?.type || "Default"}
 							/>
 						</div>
 					</Resizable>

@@ -412,41 +412,6 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 		});
 	};
 
-	// Filter permissions based on search query
-	const filteredPermissionGroups = createMemo(() => {
-		const searchQuery = permSearch().toLowerCase();
-		const groups = props.room.type === "Default"
-			? ["room", "members", "messages", "threads", "voice", "dangerous"]
-			: [
-				"server",
-				"room",
-				"server members",
-				"messages",
-				"threads",
-				"dangerous",
-			];
-
-		const filtered: Record<
-			string,
-			{ id: string; name: string; description: string }[]
-		> = {};
-
-		for (const group of groups) {
-			const allPerms = permissionGroups.get(group) || [];
-			if (searchQuery) {
-				filtered[group] = allPerms.filter((perm) =>
-					perm.name.toLowerCase().includes(searchQuery) ||
-					perm.description.toLowerCase().includes(searchQuery) ||
-					perm.id.toLowerCase().includes(searchQuery)
-				);
-			} else {
-				filtered[group] = allPerms;
-			}
-		}
-
-		return { groups, filtered };
-	});
-
 	return (
 		<div class="role-edit">
 			<div class="toolbar">
@@ -589,6 +554,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 						permStates={permStates}
 						onPermChange={handlePermChange}
 						showDescriptions={true}
+						roomType={props.room.type}
 					/>
 				);
 			}}

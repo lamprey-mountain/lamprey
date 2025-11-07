@@ -6,7 +6,7 @@ import {
 	For,
 	type JSX,
 } from "solid-js";
-import { permissions } from "../permissions.ts";
+import { permissionGroups, permissions } from "../permissions.ts";
 
 type PermState = "allow" | "deny" | "inherit";
 type PermissionItem = {
@@ -21,6 +21,7 @@ interface PermissionSelectorProps {
 	permStates: Record<Permission, PermState>;
 	onPermChange: (perm: Permission, state: PermState) => void;
 	showDescriptions?: boolean;
+	roomType?: "Default" | "Server";
 }
 
 export const PermissionSelector: Component<PermissionSelectorProps> = (
@@ -38,6 +39,46 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 		);
 	});
 
+	const groupedPermissions = createMemo(() => {
+		const filtered = filteredPermissions();
+		const groups = new Map<string, PermissionItem[]>();
+
+		const groupOrder = props.roomType === "Default"
+			? [
+				"room",
+				"members",
+				"messages",
+				"channels",
+				"voice",
+				"calendar",
+				"dangerous",
+			]
+			: [
+				"server",
+				"server members",
+				"room",
+				"members",
+				"messages",
+				"channels",
+				"voice",
+				"calendar",
+				"dangerous",
+			];
+
+		groupOrder.forEach((group) => {
+			groups.set(group, []);
+		});
+
+		for (const perm of filtered) {
+			const group = perm.group;
+			if (group && groups.has(group)) {
+				groups.get(group)!.push(perm);
+			}
+		}
+
+		return { groups, groupOrder };
+	});
+
 	return (
 		<div class="permission-selector">
 			<input
@@ -47,65 +88,80 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 				onInput={(e) => setSearch(e.currentTarget.value)}
 				class="permission-search-input"
 			/>
-			<ul class="permission-selector-list">
-				<For each={filteredPermissions()}>
-					{(p) => {
-						const state = () => props.permStates[p.id] || "inherit";
-						const [isExpanded, setIsExpanded] = createSignal(false);
+			<div class="permission-selector-list">
+				<For each={groupedPermissions().groupOrder}>
+					{(groupName) => {
+						const groupPerms = groupedPermissions().groups.get(groupName);
+						if (!groupPerms || groupPerms.length === 0) return null;
 
 						return (
-							<li class="permission-item">
-								<div class="permission-info">
-									<div class="permission-name">{p.name}</div>
-									{props.showDescriptions && (
-										<div
-											class="permission-description"
-											onClick={() => setIsExpanded(!isExpanded())}
-										>
-											{isExpanded()
-												? p.description
-												: p.description.substring(0, 100) +
-													(p.description.length > 100 ? "..." : "")}
-										</div>
-									)}
-								</div>
-								<div class="permission-controls">
-									<button
-										class="perm-state-button"
-										classList={{
-											"state-allow": state() === "allow",
+							<div class="permission-group">
+								<h3>{groupName}</h3>
+								<ul>
+									<For each={groupPerms}>
+										{(p) => {
+											const state = () => props.permStates[p.id] || "inherit";
+											const [isExpanded, setIsExpanded] = createSignal(false);
+
+											return (
+												<li class="permission-item">
+													<div class="permission-info">
+														<div class="permission-name">{p.name}</div>
+														{props.showDescriptions && (
+															<div
+																class="permission-description"
+																onClick={() => setIsExpanded(!isExpanded())}
+															>
+																{isExpanded()
+																	? p.description
+																	: p.description.substring(0, 100) +
+																		(p.description.length > 100 ? "..." : "")}
+															</div>
+														)}
+													</div>
+													<div class="permission-controls">
+														<button
+															class="perm-state-button"
+															classList={{
+																"state-allow": state() === "allow",
+															}}
+															onClick={() => props.onPermChange(p.id, "allow")}
+															title="Allow"
+														>
+															✓
+														</button>
+														<button
+															class="perm-state-button"
+															classList={{
+																"state-inherit": state() === "inherit",
+															}}
+															onClick={() =>
+																props.onPermChange(p.id, "inherit")}
+															title="Default"
+														>
+															/
+														</button>
+														<button
+															class="perm-state-button"
+															classList={{
+																"state-deny": state() === "deny",
+															}}
+															onClick={() => props.onPermChange(p.id, "deny")}
+															title="Deny"
+														>
+															X
+														</button>
+													</div>
+												</li>
+											);
 										}}
-										onClick={() => props.onPermChange(p.id, "allow")}
-										title="Allow"
-									>
-										✓
-									</button>
-									<button
-										class="perm-state-button"
-										classList={{
-											"state-inherit": state() === "inherit",
-										}}
-										onClick={() => props.onPermChange(p.id, "inherit")}
-										title="Default"
-									>
-										/
-									</button>
-									<button
-										class="perm-state-button"
-										classList={{
-											"state-deny": state() === "deny",
-										}}
-										onClick={() => props.onPermChange(p.id, "deny")}
-										title="Deny"
-									>
-										X
-									</button>
-								</div>
-							</li>
+									</For>
+								</ul>
+							</div>
 						);
 					}}
 				</For>
-			</ul>
+			</div>
 		</div>
 	);
 };
