@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
-import type { Channel } from "sdk";
+import type { Channel, Room } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { Avatar } from "../User.tsx";
 import { Time } from "../Time.tsx";
@@ -20,15 +20,17 @@ import { getTimestampFromUUID, type Webhook } from "sdk";
 import { Dropdown } from "../Dropdown.tsx";
 import { useConfig } from "../config.tsx";
 
-export function Integrations(props: VoidProps<{ channel: Channel }>) {
+// TODO(#750): group webhooks by channel
+
+export function Webhooks(props: VoidProps<{ room: Room }>) {
 	const ctx = useCtx();
 	const api = useApi();
 	const config = useConfig();
 
 	const [webhooks, { refetch }] = createResource(async () => {
 		const { data } = await api.client.http.GET(
-			"/api/v1/channel/{channel_id}/webhook",
-			{ params: { path: { channel_id: props.channel.id } } },
+			"/api/v1/room/{room_id}/webhook",
+			{ params: { path: { room_id: props.room.id } } },
 		);
 		return data;
 	});
@@ -83,7 +85,7 @@ export function Integrations(props: VoidProps<{ channel: Channel }>) {
 
 	return (
 		<div class="room-settings-integrations">
-			<h2>integrations</h2>
+			<h2>webhooks</h2>
 			<header class="applications-header">
 				<input
 					type="search"

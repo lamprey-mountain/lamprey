@@ -18,7 +18,7 @@ import { useFloating } from "solid-floating-ui";
 import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../hooks/usePermissions.ts";
 
-export function Integrations(props: VoidProps<{ room: RoomT }>) {
+export function Bots(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 	const api = useApi();
 
@@ -66,7 +66,7 @@ export function Integrations(props: VoidProps<{ room: RoomT }>) {
 
 	return (
 		<div class="room-settings-members">
-			<h2>integrations</h2>
+			<h2>bots</h2>
 			<header>
 				<div class="name">name</div>
 				<div class="joined">joined</div>

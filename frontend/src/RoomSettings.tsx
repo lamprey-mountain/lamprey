@@ -4,13 +4,14 @@ import { Dynamic } from "solid-js/web";
 import {
 	AuditLog,
 	Bans,
+	Bots,
 	Emoji,
 	Info,
-	Integrations,
 	Invites,
 	Members,
 	Metrics,
 	Roles,
+	Webhooks,
 } from "./room_settings/mod.tsx";
 import * as Admin from "./admin_settings/mod.tsx";
 import { SERVER_ROOM_ID } from "sdk";
@@ -21,11 +22,13 @@ const tabs = [
 	{ name: "info", path: "", component: Info },
 	{ name: "emoji", path: "emoji", component: Emoji },
 	{ name: "metrics", path: "metrics", component: Metrics },
+	{ category: "integrations" },
+	{ name: "bots", path: "bots", component: Bots },
+	{ name: "webhooks", path: "webhooks", component: Webhooks },
 	{ category: "access" },
 	{ name: "invites", path: "invites", component: Invites },
 	{ name: "roles", path: "roles", component: Roles, noPad: true },
 	{ name: "members", path: "members", component: Members },
-	{ name: "integrations", path: "integrations", component: Integrations },
 	{ category: "moderation" },
 	{ name: "bans", path: "bans", component: Bans },
 	{ name: "audit log", path: "logs", component: AuditLog },

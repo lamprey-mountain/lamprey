@@ -4,16 +4,16 @@ import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {
 	Info,
-	Integrations,
 	Invites,
 	Permissions,
+	Webhooks,
 } from "./channel_settings/mod.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
 	{ name: "invites", path: "invites", component: Invites },
 	{ name: "permissions", path: "permissions", component: Permissions },
-	{ name: "integrations", path: "integrations", component: Integrations },
+	{ name: "webhooks", path: "webhooks", component: Webhooks },
 ];
 
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {
