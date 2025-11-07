@@ -405,6 +405,7 @@ export const RoomNav = () => {
 		<li
 			draggable="true"
 			class="menu-room room-item"
+			data-id={props.room.id}
 			data-room-id={props.room.id}
 			data-type="room"
 			onDragStart={(e) => handleDragStart(e, "room")}
