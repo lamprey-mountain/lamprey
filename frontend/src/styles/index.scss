@@ -3118,7 +3118,7 @@ kbd {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		background-color: #111;
+		background: $bg-200;
 		padding: 8px;
 		margin-bottom: 4px;
 		border-radius: 4px;
@@ -3207,12 +3207,16 @@ kbd {
 	display: flex;
 	height: 100%;
 
+	& .main, .edit {
+		padding: 0.5rem;
+		overflow-y: auto;
+	}
+
 	& .main {
 		flex: 1;
 	}
 
-	& .main, .edit {
-		padding: 0.5rem;
-		overflow-y: auto;
+	& .edit {
+		background: $bg-100;
 	}
 }
