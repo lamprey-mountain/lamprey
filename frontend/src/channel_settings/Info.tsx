@@ -53,8 +53,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	return (
 		<div>
 			<h2>info</h2>
-			name
-			<br />
+			<div class="dim">name</div>
 			<input
 				value={editingName()}
 				type="text"
@@ -62,8 +61,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			/>
 			<br />
 			<br />
-			description
-			<br />
+			<div class="dim">description</div>
 			<textarea
 				value={editingDescription()}
 				onInput={(e) => setEditingDescription(e.target.value)}
