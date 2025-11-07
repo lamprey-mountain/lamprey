@@ -1,10 +1,18 @@
 import { A, useNavigate, useParams } from "@solidjs/router";
 import type { Channel } from "sdk";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
 import { useApi } from "./api";
 import { useConfig } from "./config";
 import { flags } from "./flags";
-import { Avatar } from "./User";
+import { Avatar, AvatarWithStatus, ChannelIcon } from "./User";
 import { useVoice } from "./voice-provider";
 
 export const ChannelNav = (props: { room_id?: string }) => {
