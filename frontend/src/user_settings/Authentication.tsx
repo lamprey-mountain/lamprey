@@ -159,24 +159,47 @@ function Oauth() {
 		return data?.features.oauth.providers;
 	});
 
-	const [enabledOauthProviders] = createResource(async () => {
-		const { data } = await api.client.http.GET("/api/v1/auth");
-		return data?.oauth_providers;
-	});
+	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =
+		createResource(async () => {
+			const { data } = await api.client.http.GET("/api/v1/auth");
+			return data?.oauth_providers;
+		});
 
-	// TODO(#722): button to connect provider
-	// TODO(#723): button to disconnect provider
+	const connectOauth = async (id: string) => {
+		const url = await api.auth.oauthUrl(id);
+		globalThis.open(url);
+		// FIXME(#751): auth state update sync event
+		// refetchOauthProviders();
+	};
+
+	const disconnectOauth = async (id: string) => {
+		await api.client.http.DELETE("/api/v1/auth/oauth/{provider}", {
+			params: { path: { provider: id } },
+		});
+		refetchOauthProviders();
+	};
+
 	return (
-		<div>
+		<div class="oauth">
 			<For each={oauthProviders()}>
-				{(provider) => (
-					<div>
-						{provider.name}
-						<Show when={enabledOauthProviders()?.includes(provider.id)}>
-							{" (enabled)"}
-						</Show>
-					</div>
-				)}
+				{(provider) => {
+					const connected = () =>
+						enabledOauthProviders()?.includes(provider.id);
+					return (
+						<div class="provider">
+							<div style="flex:1">{provider.name}</div>
+							<button
+								onClick={() =>
+									connected()
+										? disconnectOauth(provider.id)
+										: connectOauth(provider.id)}
+								classList={{ danger: connected() }}
+							>
+								{connected() ? "disconnect" : "connect"}
+							</button>
+						</div>
+					);
+				}}
 			</For>
 		</div>
 	);

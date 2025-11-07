@@ -54,6 +54,21 @@
 		display: flex;
 		justify-content: end;
 	}
+
+	.oauth {
+		border: solid $sep-300 1px;
+		background: $bg-150;
+
+		.provider {
+			display: flex;
+			padding: 4px 8px;
+			align-items: center;
+
+			&:hover {
+				background: #0004;
+			}
+		}
+	}
 }
 
 .user-settings-lang {
