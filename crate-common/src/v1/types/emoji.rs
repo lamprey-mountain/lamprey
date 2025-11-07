@@ -62,3 +62,18 @@ pub struct EmojiCustomPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub name: Option<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct EmojiLookup {
+    pub id: EmojiId,
+    pub name: String,
+
+    /// not returned unless you're in the room this emoji is in
+    pub creator_id: Option<UserId>,
+
+    /// not returned unless you're in the room this emoji is in and owner is a room
+    pub room_id: Option<RoomId>,
+
+    pub animated: bool,
+}

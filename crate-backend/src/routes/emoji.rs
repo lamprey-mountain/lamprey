@@ -3,15 +3,14 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
-use common::v1::types::UserId;
+use common::v1::types::emoji::{
+    EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiLookup, EmojiOwner,
+};
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync,
     PaginationQuery, PaginationResponse, Permission, RoomId,
 };
 use http::StatusCode;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
@@ -302,20 +301,6 @@ async fn emoji_lookup(
             animated: emoji.animated,
         })),
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct EmojiLookup {
-    pub id: EmojiId,
-    pub name: String,
-
-    /// not returned unless you're in the room this emoji is in
-    pub creator_id: Option<UserId>,
-
-    /// not returned unless you're in the room this emoji is in and owner is a room
-    pub room_id: Option<RoomId>,
-
-    pub animated: bool,
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
