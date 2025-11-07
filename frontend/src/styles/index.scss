@@ -3304,3 +3304,24 @@ kbd {
 	width: 24px;
 	color: $fg-600;
 }
+
+.permission-overwrites {
+	display: flex;
+	gap: 1rem;
+
+	.controls {
+		display: flex;
+		border: solid $sep-500 1px;
+		border-radius: 4px;
+		overflow: hidden;
+
+		button {
+			border: none;
+			height: 24px;
+			width: 24px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+	}
+}

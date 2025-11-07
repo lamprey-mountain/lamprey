@@ -112,7 +112,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	return (
 		<>
 			<h2>Permissions</h2>
-			<div style="display:flex; gap: 1rem">
+			<div class="permission-overwrites">
 				<div style="display: flex; flex-direction: column; gap: 1rem;">
 					<div>
 						<ul>
@@ -165,7 +165,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 										return (
 											<li style="display: flex; justify-content: space-between; align-items: center; background-color: #111111; padding: 4px; margin-bottom: 4px">
 												<span>{p.id}</span>
-												<div style="display: flex; gap: 0.25rem;">
+												<div class="controls">
 													<button
 														style={state() === "allow"
 															? "background-color: green"
