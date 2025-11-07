@@ -29,7 +29,7 @@
 #root {
 	display: grid;
 	grid-template-areas:
-		"nav2 nav header header" "nav2 nav main sidebar" "tray tray main sidebar" "footer footer footer footer";
+		"room-nav channel-nav header header" "room-nav channel-nav main sidebar" "tray tray main sidebar" "footer footer footer footer";
 	grid-template-rows: auto 1fr auto auto;
 	grid-template-columns: auto auto 1fr auto;
 	height: 100vh;
@@ -1595,7 +1595,7 @@ body.resizing {
 	}
 
 	&[data-side="left"] {
-		grid-area: nav;
+		grid-area: channel-nav;
 		border-right: solid $sep-300 1px;
 
 		.resize-handle {

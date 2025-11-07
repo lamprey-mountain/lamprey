@@ -296,7 +296,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	};
 
 	return (
-		<nav id="nav">
+		<nav id="channel-nav">
 			<Show when={flags.has("nav_header")}>
 				<header>
 					{props.room_id ? (room()?.name ?? "loading...") : "home"}

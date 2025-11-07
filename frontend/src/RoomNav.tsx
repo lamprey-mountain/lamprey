@@ -438,7 +438,7 @@ export const RoomNav = () => {
 
 	return (
 		<Show when={flags.has("two_tier_nav")}>
-			<nav class="nav2">
+			<nav id="room-nav">
 				<ul>
 					<li class="home-item">
 						<A href="/" end>
