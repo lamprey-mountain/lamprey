@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE role SET\n                version_id = $2,\n                name = $3,\n                description = $4,\n                allow = $5,\n                deny = $6,\n                is_mentionable = $7,\n                is_self_applicable = $8,\n                hoist = $9\n            WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Bool",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a34213c7d609bd5633339a530fd687ad2b4df1464a31b7ab42f197edb73d4129"
+}

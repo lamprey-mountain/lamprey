@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO role_member (user_id, role_id, room_id) SELECT unnest($1::uuid[]), $2, $3 ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "eea33c6f7cdc386d5ce165806691306db87cced96cf8df38d549a5ce61c98930"
+}

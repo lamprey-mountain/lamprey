@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE room_member\n        \tSET membership = $3, left_at = now(), joined_at = null\n            WHERE room_id = $1 AND user_id = $2\n            ",
+  "query": "\n            UPDATE room_member\n        \tSET membership = $3, left_at = now()\n            WHERE room_id = $1 AND user_id = $2\n            ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -23,5 +23,5 @@
     },
     "nullable": []
   },
-  "hash": "867dad2d18428f7c2a96440c89d1c1db49ceaa003f40b88f69a365dbb9c38ed6"
+  "hash": "d1837b8f243fc2e49784afa02158573fd06c33e9d132000ea1582fe4048aefa4"
 }

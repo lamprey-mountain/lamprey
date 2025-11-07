@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            with ro as (\n                select user_id, array_agg(role_id) as roles from role_member\n                join role on role.room_id = $1 and role_member.role_id = role.id\n                group by user_id\n            )\n        \tSELECT\n            \tr.user_id,\n            \tr.room_id,\n                r.membership as \"membership: _\",\n                r.override_name,\n                r.override_description,\n                r.joined_at,\n                r.origin,\n                r.mute,\n                r.deaf,\n                r.timeout_until,\n            \tcoalesce(ro.roles, '{}') as \"roles!\"\n            FROM role_member AS m\n            JOIN role ON role.id = m.role_id\n            JOIN room_member r ON r.room_id = role.room_id AND r.user_id = m.user_id\n            left join ro on ro.user_id = m.user_id\n        \tWHERE m.role_id = $1 AND r.user_id > $2 AND r.user_id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN r.user_id END), r.user_id DESC LIMIT $5\n        ",
+  "query": "\n            with ro as (\n                select user_id, array_agg(role_id) as roles from role_member\n                where role_member.room_id = (select room_id from role where id = $1)\n                group by user_id\n            )\n        \tSELECT\n            \tr.user_id,\n            \tr.room_id,\n                r.membership as \"membership: _\",\n                r.override_name,\n                r.override_description,\n                r.joined_at,\n                r.origin,\n                r.mute,\n                r.deaf,\n                r.timeout_until,\n            \tcoalesce(ro.roles, '{}') as \"roles!\"\n            FROM role_member AS m\n            JOIN room_member r ON r.room_id = m.room_id AND r.user_id = m.user_id\n            left join ro on ro.user_id = m.user_id\n        \tWHERE m.role_id = $1 AND r.user_id > $2 AND r.user_id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN r.user_id END), r.user_id DESC LIMIT $5\n        ",
   "describe": {
     "columns": [
       {
@@ -93,5 +93,5 @@
       null
     ]
   },
-  "hash": "780f92455adbe96afd5a905117e1e5dbb92b45f09503306c3100318fd62db6e9"
+  "hash": "e2cad064860cd4dafd48740fac7a81eef74fc7fb7bc9387693413224f1175c25"
 }

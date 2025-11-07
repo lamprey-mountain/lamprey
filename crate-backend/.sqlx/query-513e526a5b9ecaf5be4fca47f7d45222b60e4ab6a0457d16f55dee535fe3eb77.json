@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                r.id, r.version_id, r.room_id, r.name, r.description, r.permissions as \"permissions: _\",\n                r.is_mentionable, r.is_self_applicable,\n                coalesce(rm.count, 0) as \"member_count!\",\n                r.position,\n                r.hoist\n            FROM role r\n            LEFT JOIN (\n                SELECT role_id, count(*) as count\n                FROM role_member\n                GROUP BY role_id\n            ) rm ON rm.role_id = r.id\n            WHERE r.room_id = $1 AND r.id = $2\n        ",
+  "query": "\n            SELECT\n                r.id, r.version_id, r.room_id, r.name, r.description, r.allow as \"allow: _\",\n                r.deny as \"deny: _\", r.is_mentionable, r.is_self_applicable,\n                coalesce(rm.count, 0) as \"member_count!\",\n                r.position,\n                r.hoist\n            FROM role r\n            LEFT JOIN (\n                SELECT role_id, count(*) as count\n                FROM role_member\n                GROUP BY role_id\n            ) rm ON rm.role_id = r.id\n            WHERE r.room_id = $1 AND r.id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -30,7 +30,7 @@
       },
       {
         "ordinal": 5,
-        "name": "permissions: _",
+        "name": "allow: _",
         "type_info": {
           "Custom": {
             "name": "permission[]",
@@ -98,26 +98,94 @@
       },
       {
         "ordinal": 6,
+        "name": "deny: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
         "name": "is_mentionable",
         "type_info": "Bool"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "is_self_applicable",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "member_count!",
         "type_info": "Int8"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "position",
         "type_info": "Int4"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "hoist",
         "type_info": "Bool"
       }
@@ -137,10 +205,11 @@
       false,
       false,
       false,
+      false,
       null,
       false,
       false
     ]
   },
-  "hash": "fcf1aeeaa000fbae7bc4b032893823768c5b75cb08c198de477f4aed338f8c1f"
+  "hash": "513e526a5b9ecaf5be4fca47f7d45222b60e4ab6a0457d16f55dee535fe3eb77"
 }

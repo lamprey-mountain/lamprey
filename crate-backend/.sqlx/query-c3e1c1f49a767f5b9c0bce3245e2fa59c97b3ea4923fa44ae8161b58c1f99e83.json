@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id, version_id, room_id, name, description, permissions as \"permissions: _\",\n                is_mentionable, is_self_applicable, 0 as \"member_count!\", position, hoist\n            FROM role\n            WHERE room_id = $1 AND id = $2\n            FOR UPDATE\n        ",
+  "query": "\n            SELECT\n                id, version_id, room_id, name, description, allow as \"allow: _\",\n                deny as \"deny: _\", is_mentionable, is_self_applicable, 0 as \"member_count!\", position, hoist\n            FROM role\n            WHERE room_id = $1 AND id = $2\n            FOR UPDATE\n        ",
   "describe": {
     "columns": [
       {
@@ -30,7 +30,7 @@
       },
       {
         "ordinal": 5,
-        "name": "permissions: _",
+        "name": "allow: _",
         "type_info": {
           "Custom": {
             "name": "permission[]",
@@ -98,26 +98,94 @@
       },
       {
         "ordinal": 6,
+        "name": "deny: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
         "name": "is_mentionable",
         "type_info": "Bool"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "is_self_applicable",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "member_count!",
         "type_info": "Int4"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "position",
         "type_info": "Int4"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "hoist",
         "type_info": "Bool"
       }
@@ -137,10 +205,11 @@
       false,
       false,
       false,
+      false,
       null,
       false,
       false
     ]
   },
-  "hash": "b4b8cd0e92fcfe9171efb1a23edfc2a959551c69cb3f83844765d665297258e2"
+  "hash": "c3e1c1f49a767f5b9c0bce3245e2fa59c97b3ea4923fa44ae8161b58c1f99e83"
 }
