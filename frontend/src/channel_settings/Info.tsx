@@ -12,6 +12,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		props.channel.description,
 	);
 
+	const isDirty = () =>
+		editingName() !== props.channel.name ||
+		editingDescription() !== props.channel.description ||
+		editingNsfw() !== props.channel.nsfw;
+
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
 			params: { path: { channel_id: props.channel.id } },
@@ -39,11 +44,15 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		}
 	};
 
+	const reset = () => {
+		setEditingName(props.channel.name);
+		setEditingDescription(props.channel.description);
+		setEditingNsfw(props.channel.nsfw);
+	};
+
 	return (
-		<>
+		<div>
 			<h2>info</h2>
-			<button onClick={save}>save changes</button>
-			<br />
 			name
 			<br />
 			<input
@@ -55,9 +64,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			<br />
 			description
 			<br />
-			<textarea onInput={(e) => setEditingDescription(e.target.value)}>
-				{editingDescription()}
-			</textarea>
+			<textarea
+				value={editingDescription()}
+				onInput={(e) => setEditingDescription(e.target.value)}
+			/>
 			<br />
 			<br />
 			<div>
@@ -77,7 +87,6 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</label>
 			</div>
 			<div>(todo) tags</div>
-			<div>(todo) visibility</div>
 			<br />
 			{/* TODO: add padding to all settings */}
 			<div class="danger" style="margin:0 2px">
@@ -114,6 +123,19 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</label>
 				<br />
 			</div>
-		</>
+			{isDirty() && (
+				<div class="savebar">
+					<div class="inner">
+						<div class="warning">you have unsaved changes</div>
+						<button class="reset" onClick={reset}>
+							cancel
+						</button>
+						<button class="save" onClick={save}>
+							save
+						</button>
+					</div>
+				</div>
+			)}
+		</div>
 	);
 }

@@ -50,6 +50,10 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		props.room.description,
 	);
 
+	const isDirty = () =>
+		editingName() !== props.room.name ||
+		editingDescription() !== props.room.description;
+
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
@@ -72,11 +76,14 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
+	const reset = () => {
+		setEditingName(props.room.name);
+		setEditingDescription(props.room.description);
+	};
+
 	return (
 		<>
 			<h2>info</h2>
-			<button onClick={save}>save changes</button>
-			<br />
 			name
 			<br />
 			<input
@@ -88,11 +95,25 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<br />
 			description
 			<br />
-			<textarea onInput={(e) => setEditingDescription(e.target.value)}>
-				{editingDescription()}
-			</textarea>
+			<textarea
+				value={editingDescription()}
+				onInput={(e) => setEditingDescription(e.target.value)}
+			/>
 			<br />
 			<br />
+			{isDirty() && (
+				<div class="savebar">
+					<div class="inner">
+						<div class="warning">you have unsaved changes</div>
+						<button class="reset" onClick={reset}>
+							cancel
+						</button>
+						<button class="save" onClick={save}>
+							save
+						</button>
+					</div>
+				</div>
+			)}
 			<div>
 				room avatar (click to upload):
 				<Show
@@ -130,8 +151,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				</li>
 			</ul>
 			<br />
-			<div>(todo) visibility</div>
-			<div>(todo) order, layout</div>
+			<div>(todo) make public/private</div>
 			<br />
 			<div class="danger">
 				<h3>danger zone</h3>

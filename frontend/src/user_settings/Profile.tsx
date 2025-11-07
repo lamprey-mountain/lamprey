@@ -1,41 +1,42 @@
-import { Show, type VoidProps } from "solid-js";
+import { createSignal, Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
 import { useApi } from "../api";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
+import { Copyable } from "../util";
 
-// TODO: allow uploading banner
+// TODO(#753): allow uploading banner
 
 export function Profile(props: VoidProps<{ user: User }>) {
 	const api = useApi();
 	const ctx = useCtx();
 
-	const setName = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont(name) {
-				if (!name) return;
-				ctx.client.http.PATCH("/api/v1/user/{user_id}", {
-					params: { path: { user_id: "@self" } },
-					body: { name },
-				});
+	const [editingName, setEditingName] = createSignal(props.user.name);
+	const [editingDescription, setEditingDescription] = createSignal(
+		props.user.description,
+	);
+	const [editingAvatar, setEditingAvatar] = createSignal(props.user.avatar);
+
+	const isDirty = () =>
+		editingName() !== props.user.name ||
+		editingDescription() !== props.user.description ||
+		editingAvatar() !== props.user.avatar;
+
+	const save = () => {
+		ctx.client.http.PATCH("/api/v1/user/{user_id}", {
+			params: { path: { user_id: "@self" } },
+			body: {
+				name: editingName(),
+				description: editingDescription(),
+				avatar: editingAvatar(),
 			},
 		});
 	};
 
-	const setDescription = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "description?",
-			cont(description) {
-				if (typeof description !== "string") return;
-				ctx.client.http.PATCH("/api/v1/user/{user_id}", {
-					params: { path: { user_id: "@self" } },
-					body: { description },
-				});
-			},
-		});
+	const reset = () => {
+		setEditingName(props.user.name);
+		setEditingDescription(props.user.description);
+		setEditingAvatar(props.user.avatar);
 	};
 
 	const setAvatar = async (f: File) => {
@@ -44,10 +45,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 				client: api.client,
 				file: f,
 				onComplete(media) {
-					api.client.http.PATCH("/api/v1/user/{user_id}", {
-						params: { path: { user_id: "@self" } },
-						body: { avatar: media.id },
-					});
+					setEditingAvatar(media.id);
 				},
 				onFail(_error) {},
 				onPause() {},
@@ -60,10 +58,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 				text: "remove avatar?",
 				cont(conf) {
 					if (!conf) return;
-					ctx.client.http.PATCH("/api/v1/user/{user_id}", {
-						params: { path: { user_id: "@self" } },
-						body: { avatar: null },
-					});
+					setEditingAvatar(null);
 				},
 			});
 		}
@@ -79,22 +74,19 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		<div class="user-settings-info">
 			<h2>profile</h2>
 			<div class="box profile">
-				<div
+				<input
 					class="name"
-					onClick={setName}
-				>
-					{props.user.name}
-				</div>
-				<div class="description" onClick={setDescription}>
-					<Show
-						when={props.user.description}
-						fallback={<em style="color:#aaa">click to add description</em>}
-					>
-						{props.user.description}
-					</Show>
-				</div>
+					type="text"
+					value={editingName()}
+					onInput={(e) => setEditingName(e.target.value)}
+				/>
+				<textarea
+					class="description"
+					value={editingDescription()}
+					onInput={(e) => setEditingDescription(e.target.value)}
+				/>
 				<Show
-					when={props.user.avatar}
+					when={editingAvatar()}
 					fallback={
 						<div
 							onClick={openAvatarPicker}
@@ -105,14 +97,27 @@ export function Profile(props: VoidProps<{ user: User }>) {
 				>
 					<img
 						onClick={openAvatarPicker}
-						src={getThumbFromId(props.user.avatar!, 64)}
+						src={getThumbFromId(editingAvatar()!, 64)}
 						class="avatar"
 					/>
 				</Show>
 			</div>
 			<div>
-				id: <code class="select-all">{props.user.id}</code>
+				user id: <Copyable>{props.user.id}</Copyable>
 			</div>
+			{isDirty() && (
+				<div class="savebar">
+					<div class="inner">
+						<div class="warning">you have unsaved changes</div>
+						<button class="reset" onClick={reset}>
+							cancel
+						</button>
+						<button class="save" onClick={save}>
+							save
+						</button>
+					</div>
+				</div>
+			)}
 			<input
 				style="display:none"
 				ref={avatarInputEl}
