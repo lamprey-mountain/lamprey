@@ -545,13 +545,6 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 
 			<div class="perm-search-container">
 				<h3>permissions</h3>
-				<input
-					type="search"
-					placeholder="Search permissions..."
-					value={permSearch()}
-					onInput={(e) => setPermSearch(e.target.value)}
-					class="perm-search-input"
-				/>
 			</div>
 
 			{() => {
