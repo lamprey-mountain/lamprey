@@ -91,6 +91,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 	return (
 		<Menu>
+			{/* TODO: recursively mark as read for categories */}
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<Show when={channel()}>
@@ -102,13 +103,19 @@ export function ChannelMenu(props: { channel_id: string }) {
 			<Separator />
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
-				<Item>permissions</Item>
+				<Item onClick={settings("/permissions")}>permissions</Item>
+				<Item onClick={settings("/invites")}>invites</Item>
+				<Item onClick={settings("/webhooks")}>webhooks</Item>
+			</Submenu>
+			<Show when={false}>
+				{/* TODO: show for threads, populate with available_tags */}
 				<Submenu content={"tags"}>
 					<Item>foo</Item>
 					<Item>bar</Item>
 					<Item>baz</Item>
 				</Submenu>
-			</Submenu>
+			</Show>
+			{/* TODO: only show archive menu for threads */}
 			<Switch>
 				<Match when={!channel()?.archived_at}>
 					<Item onClick={archiveChannel}>archive</Item>
