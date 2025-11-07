@@ -4,7 +4,7 @@ use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 
 use crate::error::Result;
-use crate::types::{RoleId, UserId};
+use crate::types::{RoleId, RoomId, UserId};
 
 use crate::data::DataRoleMember;
 
@@ -13,12 +13,18 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataRoleMember for Postgres {
-    async fn role_member_put(&self, user_id: UserId, role_id: RoleId) -> Result<()> {
+    async fn role_member_put(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        role_id: RoleId,
+    ) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         query!(
-            "INSERT INTO role_member (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            "INSERT INTO role_member (user_id, role_id, room_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
             user_id.into_inner(),
-            role_id.into_inner()
+            role_id.into_inner(),
+            room_id.into_inner()
         )
         .execute(&mut *conn)
         .await?;
@@ -26,10 +32,16 @@ impl DataRoleMember for Postgres {
         Ok(())
     }
 
-    async fn role_member_delete(&self, user_id: UserId, role_id: RoleId) -> Result<()> {
+    async fn role_member_delete(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        role_id: RoleId,
+    ) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         query!(
-            "DELETE FROM role_member WHERE role_id = $1 AND user_id = $2",
+            "DELETE FROM role_member WHERE room_id = $1 AND role_id = $2 AND user_id = $3",
+            room_id.into_inner(),
             role_id.into_inner(),
             user_id.into_inner(),
         )
@@ -52,7 +64,7 @@ impl DataRoleMember for Postgres {
             r#"
             with ro as (
                 select user_id, array_agg(role_id) as roles from role_member
-                join role on role.room_id = $1 and role_member.role_id = role.id
+                where role_member.room_id = (select room_id from role where id = $1)
                 group by user_id
             )
         	SELECT
@@ -68,8 +80,7 @@ impl DataRoleMember for Postgres {
                 r.timeout_until,
             	coalesce(ro.roles, '{}') as "roles!"
             FROM role_member AS m
-            JOIN role ON role.id = m.role_id
-            JOIN room_member r ON r.room_id = role.room_id AND r.user_id = m.user_id
+            JOIN room_member r ON r.room_id = m.room_id AND r.user_id = m.user_id
             left join ro on ro.user_id = m.user_id
         	WHERE m.role_id = $1 AND r.user_id > $2 AND r.user_id < $3
         	ORDER BY (CASE WHEN $4 = 'f' THEN r.user_id END), r.user_id DESC LIMIT $5
@@ -107,9 +118,10 @@ impl DataRoleMember for Postgres {
         })
     }
 
-    async fn role_member_count(&self, role_id: RoleId) -> Result<u64> {
+    async fn role_member_count(&self, room_id: RoomId, role_id: RoleId) -> Result<u64> {
         let total = query_scalar!(
-            "SELECT count(*) FROM role_member WHERE role_id = $1",
+            "SELECT count(*) FROM role_member WHERE room_id = $1 AND role_id = $2",
+            room_id.into_inner(),
             role_id.into_inner()
         )
         .fetch_one(&self.pool)
@@ -119,6 +131,7 @@ impl DataRoleMember for Postgres {
 
     async fn role_member_bulk_edit(
         &self,
+        room_id: RoomId,
         role_id: RoleId,
         apply_user_ids: &[UserId],
         remove_user_ids: &[UserId],
@@ -129,9 +142,10 @@ impl DataRoleMember for Postgres {
             let apply_user_ids: Vec<uuid::Uuid> =
                 apply_user_ids.iter().map(|id| id.into_inner()).collect();
             query!(
-                "INSERT INTO role_member (user_id, role_id) SELECT unnest($1::uuid[]), $2 ON CONFLICT DO NOTHING",
+                "INSERT INTO role_member (user_id, role_id, room_id) SELECT unnest($1::uuid[]), $2, $3 ON CONFLICT DO NOTHING",
                 &apply_user_ids,
-                role_id.into_inner()
+                role_id.into_inner(),
+                room_id.into_inner()
             )
             .execute(&mut *tx)
             .await?;
@@ -141,7 +155,8 @@ impl DataRoleMember for Postgres {
             let remove_user_ids: Vec<uuid::Uuid> =
                 remove_user_ids.iter().map(|id| id.into_inner()).collect();
             query!(
-                "DELETE FROM role_member WHERE role_id = $1 AND user_id = ANY($2::uuid[])",
+                "DELETE FROM role_member WHERE room_id = $1 AND role_id = $2 AND user_id = ANY($3::uuid[])",
+                room_id.into_inner(),
                 role_id.into_inner(),
                 &remove_user_ids,
             )

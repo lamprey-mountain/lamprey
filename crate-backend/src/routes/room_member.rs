@@ -226,16 +226,17 @@ async fn room_member_add(
             let new = HashSet::<RoleId>::from_iter(r.iter().copied());
             // removed roles
             for role_id in old.difference(&new) {
-                d.role_member_delete(target_user_id, *role_id).await?;
+                d.role_member_delete(room_id, target_user_id, *role_id)
+                    .await?;
             }
 
             // added roles
             for role_id in new.difference(&old) {
-                d.role_member_put(target_user_id, *role_id).await?;
+                d.role_member_put(room_id, target_user_id, *role_id).await?;
             }
         } else {
             for role_id in r {
-                d.role_member_put(target_user_id, role_id).await?;
+                d.role_member_put(room_id, target_user_id, role_id).await?;
             }
         }
     }
@@ -389,12 +390,13 @@ async fn room_member_update(
 
         // removed roles
         for role_id in old.difference(&new) {
-            d.role_member_delete(target_user_id, *role_id).await?;
+            d.role_member_delete(room_id, target_user_id, *role_id)
+                .await?;
         }
 
         // added roles
         for role_id in new.difference(&old) {
-            d.role_member_put(target_user_id, *role_id).await?;
+            d.role_member_put(room_id, target_user_id, *role_id).await?;
         }
     }
 

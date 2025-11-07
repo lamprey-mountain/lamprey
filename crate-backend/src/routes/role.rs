@@ -357,7 +357,7 @@ async fn role_member_add(
         return Err(Error::BadStatic("your rank is too low"));
     }
 
-    d.role_member_put(target_user_id, role_id).await?;
+    d.role_member_put(room_id, target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(member.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
@@ -420,7 +420,8 @@ async fn role_member_remove(
         return Err(Error::BadStatic("your rank is too low"));
     }
 
-    d.role_member_delete(target_user_id, role_id).await?;
+    d.role_member_delete(room_id, target_user_id, role_id)
+        .await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(member.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
@@ -515,7 +516,7 @@ async fn role_member_bulk_edit(
         }
     }
 
-    d.role_member_bulk_edit(role_id, &body.apply, &body.remove)
+    d.role_member_bulk_edit(room_id, role_id, &body.apply, &body.remove)
         .await?;
 
     for user_id in all_user_ids {

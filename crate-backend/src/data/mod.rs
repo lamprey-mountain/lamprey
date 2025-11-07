@@ -220,16 +220,27 @@ pub trait DataRole {
 
 #[async_trait]
 pub trait DataRoleMember {
-    async fn role_member_put(&self, user_id: UserId, role_id: RoleId) -> Result<()>;
-    async fn role_member_delete(&self, user_id: UserId, role_id: RoleId) -> Result<()>;
+    async fn role_member_put(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        role_id: RoleId,
+    ) -> Result<()>;
+    async fn role_member_delete(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        role_id: RoleId,
+    ) -> Result<()>;
     async fn role_member_list(
         &self,
         role_id: RoleId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>>;
-    async fn role_member_count(&self, role_id: RoleId) -> Result<u64>;
+    async fn role_member_count(&self, room_id: RoomId, role_id: RoleId) -> Result<u64>;
     async fn role_member_bulk_edit(
         &self,
+        room_id: RoomId,
         role_id: RoleId,
         apply_user_ids: &[UserId],
         remove_user_ids: &[UserId],

@@ -207,7 +207,8 @@ async fn main() -> Result<()> {
                     },
                 )
                 .await?;
-            data.role_member_put(*user_id, roles.items[1].id).await?;
+            data.role_member_put(SERVER_ROOM_ID, *user_id, roles.items[1].id)
+                .await?;
         }
     }
 
