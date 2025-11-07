@@ -58,7 +58,6 @@ import {
 	UserMenu,
 } from "./menu/mod.ts";
 import {
-	RoomNav,
 	RouteAuthorize,
 	RouteChannel,
 	RouteChannelSettings,
@@ -71,11 +70,12 @@ import {
 	RouteRoomSettings,
 	RouteUser,
 } from "./routes.tsx";
+import { RoomNav } from "./RoomNav.tsx";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 import { UserProfile } from "./UserProfile.tsx";
 import { useContextMenu } from "./hooks/useContextMenu.ts";
 import { Inbox } from "./Inbox.tsx";
-import { ChannelNav } from "./Nav.tsx";
+import { ChannelNav } from "./ChannelNav.tsx";
 import { useVoice, VoiceProvider } from "./voice-provider.tsx";
 import { Config, ConfigProvider, useConfig } from "./config.tsx";
 import { UserView } from "./User.tsx";

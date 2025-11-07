@@ -1,17 +1,10 @@
-import { A, Navigate, RouteSectionProps } from "@solidjs/router";
+import { Navigate, RouteSectionProps } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
-import { ChannelNav } from "./Nav.tsx";
+import { ChannelNav } from "./ChannelNav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import {
-	createEffect,
-	createResource,
-	For,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
+import { createEffect, createResource, Match, Show, Switch } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ChannelSettings } from "./ChannelSettings.tsx";
 import { ChatHeader, ChatMain, SearchResults } from "./Chat.tsx";
@@ -19,7 +12,6 @@ import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
 import { Voice, VoiceTray } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
-import { getThumbFromId } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
 import { Forum } from "./Forum.tsx";
 import { Category } from "./Category.tsx";
@@ -28,6 +20,7 @@ import { PinnedMessages } from "./menu/PinnedMessages.tsx";
 import { Resizable } from "./Resizable.tsx";
 import { UserProfile } from "./UserProfile.tsx";
 import { Inbox } from "./Inbox.tsx";
+import { RoomNav } from "./RoomNav.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -79,42 +72,6 @@ export const LayoutDefault = (props: LayoutDefaultProps) => {
 				<VoiceTray />
 			</Show>
 		</>
-	);
-};
-
-export const RoomNav = () => {
-	const api = useApi();
-	const rooms = api.rooms.list();
-
-	return (
-		<Show when={flags.has("two_tier_nav")}>
-			<nav class="nav2">
-				<ul>
-					<li>
-						<A href="/" end>
-							home
-						</A>
-					</li>
-					<For each={rooms()?.items}>
-						{(room) => (
-							<li draggable="true" class="menu-room" data-room-id={room.id}>
-								<A draggable="false" href={`/room/${room.id}`} class="nav">
-									<Show
-										when={room.icon}
-										fallback={<div class="avatar">{room.name}</div>}
-									>
-										<img
-											src={getThumbFromId(room.icon!, 64)}
-											class="avatar"
-										/>
-									</Show>
-								</A>
-							</li>
-						)}
-					</For>
-				</ul>
-			</nav>
-		</Show>
 	);
 };
 
@@ -294,6 +251,7 @@ export const RouteChannel = (p: RouteSectionProps) => {
 		</LayoutDefault>
 	);
 };
+
 export const RouteHome = () => {
 	const { t } = useCtx();
 	return (

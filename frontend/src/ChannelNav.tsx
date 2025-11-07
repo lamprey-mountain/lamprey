@@ -1,20 +1,11 @@
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { useApi } from "./api.tsx";
 import type { Channel } from "sdk";
-import { flags } from "./flags.ts";
-import { useVoice } from "./voice-provider.tsx";
-import { useConfig } from "./config.tsx";
-import { Avatar, AvatarWithStatus, ChannelIcon } from "./User.tsx";
-import { getThumbFromId } from "./media/util.tsx";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { useApi } from "./api";
+import { useConfig } from "./config";
+import { flags } from "./flags";
+import { Avatar } from "./User";
+import { useVoice } from "./voice-provider";
 
 export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
@@ -438,7 +429,6 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
 													// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
 													// </svg>
-
 													return (
 														<div
 															class="voice-participant menu-user"
@@ -470,7 +460,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	);
 };
 
-const ItemChannel = (props: { channel: Channel }) => {
+export const ItemChannel = (props: { channel: Channel }) => {
 	const api = useApi();
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
