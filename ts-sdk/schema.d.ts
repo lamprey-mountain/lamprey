@@ -2112,6 +2112,82 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room-template": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Room template list (TODO)
+		 * @description
+		 *
+		 *     list room templates you have created
+		 */
+		get: operations["room_template_list"];
+		put?: never;
+		/**
+		 * Room template create (TODO)
+		 * @description
+		 *
+		 *     create a new reusable room template from an existing room
+		 */
+		post: operations["room_template_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room-template/{code}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Room template get (TODO)
+		 * @description
+		 */
+		get: operations["room_template_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Room template delete (TODO)
+		 * @description
+		 */
+		delete: operations["room_template_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Room template edit (TODO)
+		 * @description
+		 */
+		patch: operations["room_template_edit"];
+		trace?: never;
+	};
+	"/api/v1/room-template/{code}/sync": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Room template sync (TODO)
+		 * @description
+		 */
+		post: operations["room_template_sync"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}": {
 		parameters: {
 			query?: never;
@@ -2575,6 +2651,29 @@ export interface paths {
 		get: operations["room_metrics"];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/prune": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Room member prune (TODO)
+		 * @description <div class="markdown-alert-permission-required">MemberKick</div>
+		 *     <div class="markdown-alert-permission-required">RoomManage</div>
+		 *
+		 *     bulk remove users. useful for keping a room's member count below the room member limit.
+		 */
+		post: operations["room_member_prune"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4037,6 +4136,16 @@ export interface components {
 			type: "MemberUnban";
 		} | {
 			metadata: {
+				/**
+				 * Format: int64
+				 * @description number of pruned users
+				 */
+				pruned: number;
+			};
+			/** @enum {string} */
+			type: "MemberPrune";
+		} | {
+			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
 				room_id: components["schemas"]["Id"];
 				user_id: components["schemas"]["Id"];
@@ -4511,6 +4620,7 @@ export interface components {
 			/** Format: uri */
 			url?: string | null;
 		};
+		Captcha: Record<string, never>;
 		CaptchaChallenge: {
 			code: string;
 		};
@@ -4716,6 +4826,7 @@ export interface components {
 			total: number;
 		};
 		Cron: string;
+		Email: Record<string, never>;
 		/**
 		 * Format: email
 		 * @description an email address
@@ -4815,6 +4926,7 @@ export interface components {
 		};
 		/** @description a single unicode emoji */
 		EmojiUnicode: string;
+		Experiments: Record<string, never>;
 		ExternalPlatform: null | string;
 		/** @description webrtc ice candidate */
 		IceCandidate: string;
@@ -5712,6 +5824,10 @@ export interface components {
 			mute?: null | components["schemas"]["Mute"];
 			threads?: null | components["schemas"]["NotifAction"];
 		};
+		/** @description log in with xyz */
+		Oauth: {
+			providers: components["schemas"]["OauthProvider"][];
+		};
 		OauthAuthorizeInfo: {
 			application: components["schemas"]["Application"];
 			auth_user: components["schemas"]["User"];
@@ -5735,6 +5851,12 @@ export interface components {
 			/** @description this is specified to be "human readable", but in practice it would be
 			 *     simpler and more useful to return the unique id of the user */
 			username: components["schemas"]["Id"];
+		};
+		OauthProvider: {
+			/** @description api name */
+			id: string;
+			/** @description friendly name */
+			name: string;
 		};
 		OauthTokenRequest: {
 			client_id?: null | components["schemas"]["Id"];
@@ -6058,6 +6180,10 @@ export interface components {
 			cursor?: string | null;
 			has_more: boolean;
 			items: {
+				/** @description the permissions to grant for this role */
+				allow: components["schemas"]["Permission"][];
+				/** @description the permissions to deny for this role */
+				deny?: components["schemas"]["Permission"][];
 				description?: string | null;
 				/** @description whether members with this role should be displayed separately */
 				hoist: boolean;
@@ -6067,7 +6193,6 @@ export interface components {
 				/** Format: int64 */
 				member_count: number;
 				name: string;
-				permissions: components["schemas"]["Permission"][];
 				/**
 				 * Format: int64
 				 * @description tiebroken by id
@@ -6157,6 +6282,28 @@ export interface components {
 				room_id: components["schemas"]["Id"];
 				timeout_until?: null | components["schemas"]["Time"];
 				user_id: components["schemas"]["Id"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
+		PaginationResponse_RoomTemplate: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				/** @description unique identifier for this template */
+				code: components["schemas"]["RoomTemplateCode"];
+				created_at: components["schemas"]["Time"];
+				/** @description user who created this template */
+				creator: components["schemas"]["User"];
+				description: string;
+				/** @description if the source room and the template have diverged */
+				dirty?: boolean | null;
+				/** @description name for this template */
+				name: string;
+				snapshot: components["schemas"]["RoomTemplateSnapshot"];
+				source_room_id?: null | components["schemas"]["Id"];
+				/** @description updated whenever template is edited or synced */
+				updated_at: components["schemas"]["Time"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -6355,6 +6502,28 @@ export interface components {
 			activities: components["schemas"]["Activity"][];
 			status: components["schemas"]["Status"];
 		};
+		/** @description Room member prune */
+		PruneBegin: {
+			/** @description whether to return the number of pruned users in the response */
+			calculate_total?: boolean;
+			/**
+			 * Format: int32
+			 * @description prune users inactive for this many days
+			 */
+			days: number;
+			/** @description whether to actually prune or to */
+			dry_run?: boolean;
+			/** @description include users with these roles */
+			include_roles?: components["schemas"]["Id"][];
+		};
+		/** @description response for PruneBegin */
+		PruneResponse: {
+			/**
+			 * Format: int64
+			 * @description number of pruned users
+			 */
+			pruned: number;
+		};
 		/** @description represents a user on another platform */
 		Puppet: {
 			alias_id?: null | components["schemas"]["Id"];
@@ -6414,6 +6583,7 @@ export interface components {
 				/** @enum {string} */
 				type: "Exclude";
 			});
+		Registration: Record<string, never>;
 		Relationship: (null | components["schemas"]["Ignore"]) & {
 			relation?: null | components["schemas"]["RelationshipType"];
 		};
@@ -6471,6 +6641,10 @@ export interface components {
 			| "Underage"
 			| "Other";
 		Role: {
+			/** @description the permissions to grant for this role */
+			allow: components["schemas"]["Permission"][];
+			/** @description the permissions to deny for this role */
+			deny?: components["schemas"]["Permission"][];
 			description?: string | null;
 			/** @description whether members with this role should be displayed separately */
 			hoist: boolean;
@@ -6480,7 +6654,6 @@ export interface components {
 			/** Format: int64 */
 			member_count: number;
 			name: string;
-			permissions: components["schemas"]["Permission"][];
 			/**
 			 * Format: int64
 			 * @description tiebroken by id
@@ -6490,13 +6663,14 @@ export interface components {
 			version_id: components["schemas"]["Id"];
 		};
 		RoleCreate: {
+			allow?: components["schemas"]["Permission"][];
+			deny?: components["schemas"]["Permission"][];
 			description?: string | null;
 			hoist?: boolean;
 			/** @description if this role can be mentioned by members */
 			is_mentionable?: boolean;
 			is_self_applicable?: boolean;
 			name: string;
-			permissions?: components["schemas"]["Permission"][];
 		};
 		/** @description apply and remove a role to many members at once */
 		RoleMemberBulkPatch: {
@@ -6506,12 +6680,13 @@ export interface components {
 			remove?: components["schemas"]["Id"][];
 		};
 		RolePatch: {
+			allow?: components["schemas"]["Permission"][] | null;
+			deny?: components["schemas"]["Permission"][] | null;
 			description?: string | null;
 			hoist?: boolean | null;
 			is_mentionable?: boolean | null;
 			is_self_applicable?: boolean | null;
 			name?: string | null;
-			permissions?: components["schemas"]["Permission"][] | null;
 		};
 		/** @description reorder some roles */
 		RoleReorder: {
@@ -6727,6 +6902,54 @@ export interface components {
 			public?: boolean | null;
 			welcome_channel_id?: null | components["schemas"]["Id"];
 		};
+		/** @description A template for creating rooms. */
+		RoomTemplate: {
+			/** @description unique identifier for this template */
+			code: components["schemas"]["RoomTemplateCode"];
+			created_at: components["schemas"]["Time"];
+			/** @description user who created this template */
+			creator: components["schemas"]["User"];
+			description: string;
+			/** @description if the source room and the template have diverged */
+			dirty?: boolean | null;
+			/** @description name for this template */
+			name: string;
+			snapshot: components["schemas"]["RoomTemplateSnapshot"];
+			source_room_id?: null | components["schemas"]["Id"];
+			/** @description updated whenever template is edited or synced */
+			updated_at: components["schemas"]["Time"];
+		};
+		RoomTemplateChannel: components["schemas"]["ChannelCreate"] & {
+			/**
+			 * Format: uuid
+			 * @description temporary placeholder id, for use in parent_id
+			 */
+			id: string;
+		};
+		/** @description a short, unique identifier for a room template. */
+		RoomTemplateCode: string;
+		RoomTemplateCreate: {
+			description: string;
+			name: string;
+			room_id: components["schemas"]["Id"];
+		};
+		RoomTemplatePatch: {
+			description?: string | null;
+			name?: string | null;
+		};
+		RoomTemplateRole: components["schemas"]["RoleCreate"] & {
+			/**
+			 * Format: uuid
+			 * @description temporary placeholder id, for use in permission overwrites
+			 */
+			id: string;
+		};
+		/** @description a snapshot of a room */
+		RoomTemplateSnapshot: {
+			channels: components["schemas"]["RoomTemplateChannel"][];
+			roles: components["schemas"]["RoomTemplateRole"][];
+			welcome_channel_id?: null | components["schemas"]["Id"];
+		};
 		/** @enum {string} */
 		RoomType: "Default" | "Server";
 		/**
@@ -6782,6 +7005,27 @@ export interface components {
 		SearchRoomsRequest: {
 			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
 			query?: string;
+		};
+		/** @description shows some parts of config */
+		ServerFeatures: {
+			catptcha?: null | components["schemas"]["Captcha"];
+			email?: null | components["schemas"]["Email"];
+			experiments?: null | components["schemas"]["Experiments"];
+			media?: null | components["schemas"]["Media"];
+			oauth?: null | components["schemas"]["Oauth"];
+			registration?: null | components["schemas"]["Registration"];
+			url_embed?: null | components["schemas"]["UrlEmbed"];
+			voice?: null | components["schemas"]["Voice"];
+		};
+		ServerInfo: {
+			/** Format: uri */
+			api_url: string;
+			/** Format: uri */
+			cdn_url: string;
+			features: components["schemas"]["ServerFeatures"];
+			/** Format: uri */
+			html_url: string;
+			version: components["schemas"]["ServerVersion"];
 		};
 		ServerVersion: {
 			debug: boolean;
@@ -6988,6 +7232,7 @@ export interface components {
 		TransferOwnership: {
 			owner_id: components["schemas"]["Id"];
 		};
+		UrlEmbed: Record<string, never>;
 		User: {
 			avatar?: null | components["schemas"]["Id"];
 			banner?: null | components["schemas"]["Id"];
@@ -7104,6 +7349,7 @@ export interface components {
 			/** Format: int64 */
 			width: number;
 		};
+		Voice: Record<string, never>;
 		/** @description voice config the local user can set on someone else */
 		VoiceConfig: {
 			/** @description whether to mute voice */
@@ -9709,7 +9955,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["ServerVersion"];
+					"application/json": components["schemas"]["ServerInfo"];
 				};
 			};
 		};
@@ -10414,6 +10660,150 @@ export interface operations {
 			};
 		};
 		responses: never;
+	};
+	room_template_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Paginate templates */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RoomTemplate"];
+				};
+			};
+		};
+	};
+	room_template_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoomTemplateCreate"];
+			};
+		};
+		responses: {
+			/** @description Template created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RoomTemplate"];
+				};
+			};
+		};
+	};
+	room_template_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Template code */
+				code: components["schemas"]["RoomTemplateCode"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get template success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RoomTemplate"];
+				};
+			};
+		};
+	};
+	room_template_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Template code */
+				code: components["schemas"]["RoomTemplateCode"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete template success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_template_edit: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Template code */
+				code: components["schemas"]["RoomTemplateCode"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoomTemplatePatch"];
+			};
+		};
+		responses: {
+			/** @description Edit template success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RoomTemplate"];
+				};
+			};
+		};
+	};
+	room_template_sync: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Template code */
+				code: components["schemas"]["RoomTemplateCode"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Sync template success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RoomTemplate"];
+				};
+			};
+		};
 	};
 	room_get: {
 		parameters: {
@@ -11388,6 +11778,37 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["RoomMetrics"];
 				};
+			};
+		};
+	};
+	room_member_prune: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PruneBegin"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PruneResponse"];
+				};
+			};
+			/** @description prune started */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
