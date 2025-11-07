@@ -14,20 +14,21 @@ use super::Postgres;
 #[async_trait]
 impl DataPermission for Postgres {
     async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
-        let perms: Permissions = query_scalar!(
+        // Get allowed permissions from roles
+        let allowed_perms: Vec<DbPermission> = query_scalar!(
             r#"
-            WITH perms AS (
-                SELECT m.room_id, m.user_id, unnest(role.permissions) AS permission
+            WITH allow_perms AS (
+                SELECT m.room_id, m.user_id, unnest(role.allow) AS permission
                 FROM room_member AS m
                 JOIN role_member AS r ON r.user_id = m.user_id
                 JOIN role ON r.role_id = role.id AND role.room_id = m.room_id
                 UNION
-                SELECT m.room_id, m.user_id, unnest(role.permissions) as permission
+                SELECT m.room_id, m.user_id, unnest(role.allow) as permission
                 FROM room_member AS m
                 JOIN role ON role.id = m.room_id
             )
             SELECT permission as "permission!: DbPermission"
-            FROM perms
+            FROM allow_perms
             WHERE user_id = $1 AND room_id = $2
         "#,
             *user_id,
@@ -38,6 +39,38 @@ impl DataPermission for Postgres {
         .into_iter()
         .map(Into::into)
         .collect();
+
+        // Get denied permissions from roles
+        let denied_perms: Vec<DbPermission> = query_scalar!(
+            r#"
+            WITH deny_perms AS (
+                SELECT m.room_id, m.user_id, unnest(role.deny) AS permission
+                FROM room_member AS m
+                JOIN role_member AS r ON r.user_id = m.user_id
+                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id
+                UNION
+                SELECT m.room_id, m.user_id, unnest(role.deny) as permission
+                FROM room_member AS m
+                JOIN role ON role.id = m.room_id
+            )
+            SELECT permission as "permission!: DbPermission"
+            FROM deny_perms
+            WHERE user_id = $1 AND room_id = $2
+        "#,
+            *user_id,
+            *room_id,
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect();
+
+        let mut perms: Permissions = allowed_perms.into_iter().map(Into::into).collect();
+
+        for perm in denied_perms {
+            perms.remove(perm.into());
+        }
 
         Ok(perms)
     }

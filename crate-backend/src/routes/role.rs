@@ -46,7 +46,7 @@ async fn role_create(
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::RoleManage)?;
 
-    for p in &json.permissions {
+    for p in &json.allow {
         perms.ensure(*p)?;
     }
 
@@ -65,7 +65,8 @@ async fn role_create(
                 room_id,
                 name: json.name,
                 description: json.description,
-                permissions: json.permissions,
+                allow: json.allow,
+                deny: json.deny,
                 is_self_applicable: json.is_self_applicable,
                 is_mentionable: json.is_mentionable,
                 hoist: json.hoist,
@@ -77,7 +78,8 @@ async fn role_create(
     let changes = Changes::new()
         .add("name", &role.name)
         .add("description", &role.description)
-        .add("permissions", &role.permissions)
+        .add("allow", &role.allow)
+        .add("deny", &role.deny)
         .add("is_self_applicable", &role.is_self_applicable)
         .add("is_mentionable", &role.is_mentionable)
         .add("hoist", &role.hoist)
@@ -136,11 +138,19 @@ async fn role_update(
         return Err(Error::BadStatic("your rank is too low"));
     }
 
-    if let Some(new_perms) = &json.permissions {
-        let new_perms_set: HashSet<Permission> = new_perms.iter().cloned().collect();
-        let old_perms_set: HashSet<Permission> = start_role.permissions.iter().cloned().collect();
+    if let Some(new_allow) = &json.allow {
+        let new_allow_set: HashSet<Permission> = new_allow.iter().cloned().collect();
+        let old_allow_set: HashSet<Permission> = start_role.allow.iter().cloned().collect();
 
-        for p in new_perms_set.symmetric_difference(&old_perms_set) {
+        for p in new_allow_set.symmetric_difference(&old_allow_set) {
+            perms.ensure(*p)?;
+        }
+    }
+    if let Some(new_deny) = &json.deny {
+        let new_deny_set: HashSet<Permission> = new_deny.iter().cloned().collect();
+        let old_deny_set: HashSet<Permission> = start_role.deny.iter().cloned().collect();
+
+        for p in new_deny_set.symmetric_difference(&old_deny_set) {
             perms.ensure(*p)?;
         }
     }
@@ -154,11 +164,8 @@ async fn role_update(
             &start_role.description,
             &end_role.description,
         )
-        .change(
-            "permissions",
-            &start_role.permissions,
-            &end_role.permissions,
-        )
+        .change("allow", &start_role.allow, &end_role.allow)
+        .change("deny", &start_role.deny, &end_role.deny)
         .change(
             "is_self_applicable",
             &start_role.is_self_applicable,
@@ -184,7 +191,7 @@ async fn role_update(
     let msg = MessageSync::RoleUpdate {
         role: end_role.clone(),
     };
-    if end_role.permissions != start_role.permissions {
+    if end_role.allow != start_role.allow || end_role.deny != start_role.deny {
         s.services().perms.invalidate_room_all(room_id);
     }
     s.broadcast_room(room_id, auth_user.id, msg).await?;

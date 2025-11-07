@@ -305,7 +305,8 @@ pub struct DbRoleCreate {
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,
-    pub permissions: Vec<Permission>,
+    pub allow: Vec<Permission>,
+    pub deny: Vec<Permission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
     pub hoist: bool,
@@ -361,7 +362,7 @@ impl DbMessageCreate {
 
 macro_rules! impl_perms {
     ($($e:ident,)*) => {
-        #[derive(Debug, sqlx::Type, PartialEq, Eq)]
+        #[derive(Debug, Clone, Copy, sqlx::Type, PartialEq, Eq)]
         #[sqlx(type_name = "permission")]
         pub enum DbPermission {
             $($e,)*

@@ -21,7 +21,8 @@ pub struct DbRole {
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,
-    pub permissions: Vec<DbPermission>,
+    pub allow: Vec<DbPermission>,
+    pub deny: Vec<DbPermission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
     pub member_count: i64,
@@ -37,7 +38,8 @@ impl From<DbRole> for Role {
             room_id: row.room_id,
             name: row.name,
             description: row.description,
-            permissions: row.permissions.into_iter().map(Into::into).collect(),
+            allow: row.allow.into_iter().map(Into::into).collect(),
+            deny: row.deny.into_iter().map(Into::into).collect(),
             is_self_applicable: row.is_self_applicable,
             is_mentionable: row.is_mentionable,
             member_count: row.member_count as u64,
@@ -51,7 +53,8 @@ impl From<DbRole> for Role {
 impl DataRole for Postgres {
     async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role> {
         let role_id = *create.id;
-        let perms: Vec<DbPermission> = create.permissions.into_iter().map(Into::into).collect();
+        let allow_perms: Vec<DbPermission> = create.allow.into_iter().map(Into::into).collect();
+        let deny_perms: Vec<DbPermission> = create.deny.into_iter().map(Into::into).collect();
         let mut tx = self.pool.begin().await?;
 
         // lock all roles to prevent race conditions
@@ -82,15 +85,16 @@ impl DataRole for Postgres {
         .execute(&mut *tx)
         .await?;
         let role = query_as!(DbRole, r#"
-            INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable, position, hoist)
-            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
+            INSERT INTO role (id, version_id, room_id, name, description, allow, deny, is_mentionable, is_self_applicable, position, hoist)
+            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id, version_id, room_id, name, description, allow as "allow: _", deny as "deny: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
         "#,
             role_id,
             *create.room_id,
             create.name,
             create.description,
-            perms as _,
+            allow_perms as _,
+            deny_perms as _,
             create.is_mentionable,
             create.is_self_applicable,
             position as i64,
@@ -119,7 +123,8 @@ impl DataRole for Postgres {
                 	r.id,
                 	r.description,
                 	r.is_mentionable,
-                	r.permissions as "permissions: _",
+                	r.allow as "allow: _",
+                	r.deny as "deny: _",
                 	r.version_id,
                 	r.room_id,
                 	r.is_self_applicable,
@@ -171,8 +176,8 @@ impl DataRole for Postgres {
             DbRole,
             r#"
             SELECT
-                r.id, r.version_id, r.room_id, r.name, r.description, r.permissions as "permissions: _",
-                r.is_mentionable, r.is_self_applicable,
+                r.id, r.version_id, r.room_id, r.name, r.description, r.allow as "allow: _",
+                r.deny as "deny: _", r.is_mentionable, r.is_self_applicable,
                 coalesce(rm.count, 0) as "member_count!",
                 r.position,
                 r.hoist
@@ -200,15 +205,24 @@ impl DataRole for Postgres {
     ) -> Result<RoleVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let perms = patch
-            .permissions
-            .map(|p| p.into_iter().map(Into::into).collect::<Vec<DbPermission>>());
+        let allow_perms = patch.allow.as_ref().map(|p| {
+            p.iter()
+                .cloned()
+                .map(Into::into)
+                .collect::<Vec<DbPermission>>()
+        });
+        let deny_perms = patch.deny.as_ref().map(|p| {
+            p.iter()
+                .cloned()
+                .map(Into::into)
+                .collect::<Vec<DbPermission>>()
+        });
         let role = query_as!(
             DbRole,
             r#"
             SELECT
-                id, version_id, room_id, name, description, permissions as "permissions: _",
-                is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
+                id, version_id, room_id, name, description, allow as "allow: _",
+                deny as "deny: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
             FROM role
             WHERE room_id = $1 AND id = $2
             FOR UPDATE
@@ -225,17 +239,21 @@ impl DataRole for Postgres {
                 version_id = $2,
                 name = $3,
                 description = $4,
-                permissions = $5,
-                is_mentionable = $6,
-                is_self_applicable = $7,
-                hoist = $8
+                allow = $5,
+                deny = $6,
+                is_mentionable = $7,
+                is_self_applicable = $8,
+                hoist = $9
             WHERE id = $1
         "#,
             *role_id,
             *version_id,
-            patch.name.unwrap_or(role.name),
+            patch.name.unwrap_or_else(|| role.name.clone()),
             patch.description.unwrap_or(role.description),
-            perms.unwrap_or(role.permissions.into_iter().map(|p| p.into()).collect()) as _,
+            allow_perms.unwrap_or_else(|| role.allow.iter().cloned().map(|p| p.into()).collect())
+                as _,
+            deny_perms.unwrap_or_else(|| role.deny.iter().cloned().map(|p| p.into()).collect())
+                as _,
             patch.is_mentionable.unwrap_or(role.is_mentionable),
             patch.is_self_applicable.unwrap_or(role.is_self_applicable),
             patch.hoist.unwrap_or(role.hoist),

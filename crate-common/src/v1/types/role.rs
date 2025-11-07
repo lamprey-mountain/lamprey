@@ -30,14 +30,13 @@ pub struct Role {
     pub description: Option<String>,
 
     /// the permissions to grant for this role
-    // TODO(#702): rename `permissions` to `allow`
-    #[serde(deserialize_with = "deserialize_sorted")]
-    pub permissions: Vec<Permission>,
+    #[serde(deserialize_with = "deserialize_sorted", alias = "permissions")]
+    pub allow: Vec<Permission>,
 
-    // // TODO(#702): deny permissions
-    // /// the permissions to deny for this role
-    // #[serde(deserialize_with = "deserialize_sorted")]
-    // pub deny: Vec<Permission>,
+    /// the permissions to deny for this role
+    #[serde(default, deserialize_with = "deserialize_sorted")]
+    pub deny: Vec<Permission>,
+
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
 
@@ -67,7 +66,10 @@ pub struct RoleCreate {
     pub description: Option<String>,
 
     #[serde(default)]
-    pub permissions: Vec<Permission>,
+    pub allow: Vec<Permission>,
+
+    #[serde(default)]
+    pub deny: Vec<Permission>,
 
     #[serde(default)]
     pub is_self_applicable: bool,
@@ -110,7 +112,10 @@ pub struct RolePatch {
     pub description: Option<Option<String>>,
 
     #[serde(default, deserialize_with = "deserialize_sorted_option")]
-    pub permissions: Option<Vec<Permission>>,
+    pub allow: Option<Vec<Permission>>,
+
+    #[serde(default, deserialize_with = "deserialize_sorted_option")]
+    pub deny: Option<Vec<Permission>>,
 
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
@@ -158,7 +163,8 @@ impl Diff<Role> for RolePatch {
             || self.description.changes(&other.description)
             || self.is_self_applicable.changes(&other.is_self_applicable)
             || self.is_mentionable.changes(&other.is_mentionable)
-            || self.permissions.changes(&other.permissions)
+            || self.allow.changes(&other.allow)
+            || self.deny.changes(&other.deny)
             || self.hoist.changes(&other.hoist)
     }
 }
