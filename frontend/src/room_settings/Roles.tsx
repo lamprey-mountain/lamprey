@@ -496,6 +496,11 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 						name: "Self applicable",
 						description: "Anyone can apply this role to themselves",
 					},
+					{
+						key: "hoist",
+						name: "Hoisted",
+						description: "Display this role separately from other members",
+					},
 				] as const}
 			>
 				{(i) => (
