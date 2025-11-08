@@ -9,7 +9,7 @@ use axum::{
 use axum_extra::TypedHeader;
 use common::v1::types::{
     application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    RoomMetrics, RoomType, TransferOwnership, SERVER_ROOM_ID,
+    AuditLogFilter, RoomMetrics, RoomType, TransferOwnership, SERVER_ROOM_ID,
 };
 use headers::ETag;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -324,7 +324,8 @@ async fn room_undelete(
     get,
     path = "/room/{room_id}/audit-logs",
     params(
-        PaginationQuery<AuditLogId>,
+        PaginationQuery<AuditLogEntryId>,
+        AuditLogFilter,
         ("room_id", description = "Room id"),
     ),
     tags = ["room", "badge.perm.ViewAuditLog"],
@@ -335,13 +336,16 @@ async fn room_undelete(
 async fn room_audit_logs(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
+    Query(filter): Query<AuditLogFilter>,
     Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(user.id, room_id).await?;
     perms.ensure(Permission::ViewAuditLog)?;
-    let logs = data.audit_logs_room_fetch(room_id, paginate).await?;
+    let logs = data
+        .audit_logs_room_fetch(room_id, paginate, filter)
+        .await?;
     Ok(Json(logs))
 }
 

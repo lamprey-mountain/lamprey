@@ -10,7 +10,7 @@ use common::v1::types::{
     MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus,
     User, UserCreate, UserId, UserPatch, UserWithRelationship,
 };
-use common::v1::types::{Permission, SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID};
+use common::v1::types::{AuditLogFilter, Permission, SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID};
 use http::StatusCode;
 use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -339,6 +339,8 @@ async fn user_room_list(
     get,
     path = "/user/{user_id}/audit-logs",
     params(
+        PaginationQuery<AuditLogEntryId>,
+        AuditLogFilter,
         ("user_id", description = "User id"),
     ),
     tags = ["user"],
@@ -349,6 +351,7 @@ async fn user_room_list(
 async fn user_audit_logs(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
+    Query(filter): Query<AuditLogFilter>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -363,7 +366,7 @@ async fn user_audit_logs(
 
     let data = s.data();
     let logs = data
-        .audit_logs_room_fetch(target_user_id.into_inner().into(), paginate)
+        .audit_logs_room_fetch(target_user_id.into_inner().into(), paginate, filter)
         .await?;
     Ok(Json(logs))
 }

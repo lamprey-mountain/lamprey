@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use utoipa::ToSchema;
 use uuid::Uuid;
+
+#[cfg(feature = "utoipa")]
+use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     application::Scope, email::EmailAddr, role::RoleReorderItem, util::Time, ApplicationId,
@@ -414,4 +416,16 @@ pub enum AuditLogEntryType {
     },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct AuditLogFilter {
+    /// only return audit log entries from these users
+    #[serde(default)]
+    pub user_id: Vec<UserId>,
+
+    /// only return audit log entries with these types
+    #[serde(default, rename = "type")]
+    pub ty: Vec<String>,
 }

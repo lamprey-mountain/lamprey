@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, PaginationDirection, PaginationQuery, PaginationResponse,
-    RoomId,
+    AuditLogEntry, AuditLogEntryId, AuditLogFilter, PaginationDirection, PaginationQuery,
+    PaginationResponse, RoomId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
@@ -26,8 +26,13 @@ impl DataAuditLogs for Postgres {
         &self,
         room_id: RoomId,
         paginate: PaginationQuery<AuditLogEntryId>,
+        filter: AuditLogFilter,
     ) -> Result<PaginationResponse<AuditLogEntry>> {
         let p: Pagination<_> = paginate.try_into()?;
+
+        let user_ids: Vec<Uuid> = filter.user_id.into_iter().map(|id| *id).collect();
+        let types = filter.ty;
+
         gen_paginate!(
             p,
             self.pool,
@@ -36,17 +41,27 @@ impl DataAuditLogs for Postgres {
                 "
                 SELECT id, room_id, user_id, session_id, reason, data FROM audit_log
                 WHERE room_id = $1 AND id > $2 AND id < $3
+                AND (cardinality($6::uuid[]) = 0 OR user_id = ANY($6))
+                AND (cardinality($7::text[]) = 0 OR data->>'type' = ANY($7))
                 ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
                 ",
                 *room_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
-                (p.limit + 1) as i32
+                (p.limit + 1) as i32,
+                &user_ids,
+                &types,
             ),
             query_scalar!(
-                "SELECT count(*) FROM audit_log WHERE room_id = $1",
-                *room_id
+                "SELECT count(*) FROM audit_log
+                WHERE room_id = $1
+                AND (cardinality($2::uuid[]) = 0 OR user_id = ANY($2))
+                AND (cardinality($3::text[]) = 0 OR data->>'type' = ANY($3))
+                ",
+                *room_id,
+                &user_ids,
+                &types,
             ),
             |row: DbAuditLogEntry| {
                 AuditLogEntry {

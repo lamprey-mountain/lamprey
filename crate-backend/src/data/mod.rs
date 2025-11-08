@@ -18,7 +18,7 @@ use common::v1::types::util::Time;
 use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
 
 use common::v1::types::{
-    ApplicationId, AuditLogEntry, AuditLogEntryId, CalendarEventId, Channel, ChannelId,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, CalendarEventId, Channel, ChannelId,
     ChannelPatch, ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, NotificationId, PaginationQuery, PaginationResponse, Permission,
     PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch, RelationshipWithUserId,
@@ -666,6 +666,7 @@ pub trait DataAuditLogs {
         &self,
         room_id: RoomId,
         paginate: PaginationQuery<AuditLogEntryId>,
+        filter: AuditLogFilter,
     ) -> Result<PaginationResponse<AuditLogEntry>>;
     async fn audit_logs_room_append(&self, entry: AuditLogEntry) -> Result<()>;
 }
