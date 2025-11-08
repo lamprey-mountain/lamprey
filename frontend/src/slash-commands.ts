@@ -55,8 +55,8 @@ export const commands: Command[] = [
 		options: [],
 	},
 	{
-		id: "desc",
-		name: "desc",
+		id: "topic",
+		name: "topic",
 		description: "Set the description of the current thread",
 		options: [
 			{
@@ -68,35 +68,9 @@ export const commands: Command[] = [
 		],
 	},
 	{
-		id: "name",
-		name: "name",
+		id: "tname",
+		name: "tname",
 		description: "Set the name of the current thread",
-		options: [
-			{
-				name: "name",
-				description: "The new name",
-				type: "string",
-				required: true,
-			},
-		],
-	},
-	{
-		id: "desc-room",
-		name: "desc-room",
-		description: "Set the description of the current room",
-		options: [
-			{
-				name: "description",
-				description: "The new description",
-				type: "string",
-				required: true,
-			},
-		],
-	},
-	{
-		id: "name-room",
-		name: "name-room",
-		description: "Set the name of the current room",
 		options: [
 			{
 				name: "name",
@@ -308,7 +282,7 @@ export async function handleSlashCommand(
 			});
 			break;
 		}
-		case "desc": {
+		case "topic": {
 			const description = args.join(" ");
 			await ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
 				params: { path: { channel_id: channel_id } },
@@ -318,32 +292,11 @@ export async function handleSlashCommand(
 			});
 			break;
 		}
-		case "name": {
+		case "tname": {
 			const name = args.join(" ");
 			if (!name) return;
 			await ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
 				params: { path: { channel_id: channel_id } },
-				body: { name },
-			});
-			break;
-		}
-		case "desc-room": {
-			if (!room_id) return;
-			const description = args.join(" ");
-			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {
-				params: { path: { room_id } },
-				body: {
-					description: description || null,
-				},
-			});
-			break;
-		}
-		case "name-room": {
-			if (!room_id) return;
-			const name = args.join(" ");
-			if (!name) return;
-			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {
-				params: { path: { room_id } },
 				body: { name },
 			});
 			break;
