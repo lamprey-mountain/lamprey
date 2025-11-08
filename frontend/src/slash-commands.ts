@@ -1,6 +1,7 @@
-import { Channel } from "sdk";
+import { Channel, ChannelType } from "sdk";
 import type { Api } from "./api.tsx";
 import type { ChatCtx } from "./context.ts";
+import { usePermissions } from "./hooks/usePermissions.ts";
 
 export type CommandOption = {
 	name: string;

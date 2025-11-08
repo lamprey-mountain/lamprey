@@ -2,6 +2,7 @@ import type { components } from "./schema.d.ts";
 
 export type Room = components["schemas"]["Room"];
 export type Channel = components["schemas"]["Channel"];
+export type ChannelType = components["schemas"]["ChannelType"];
 export type User = components["schemas"]["User"];
 export type Message = components["schemas"]["Message"] & { is_local?: true };
 export type Role = components["schemas"]["Role"];

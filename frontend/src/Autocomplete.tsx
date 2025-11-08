@@ -17,6 +17,7 @@ import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import twemoji from "twemoji";
 import { type Command, commands } from "./slash-commands";
+import { canUseCommand } from "./hooks/useCommandPermissions";
 
 type Emoji = {
 	group?: number;
@@ -132,7 +133,11 @@ export const Autocomplete = () => {
 			}
 			setAllEmoji(combined);
 		} else if (state?.type === "command") {
-			setAllCommands(commands);
+			const channel = api.channels.cache.get(state.channelId);
+			const filteredCommands = commands.filter(cmd => 
+				canUseCommand(api, channel?.room_id, channel, cmd.name)
+			);
+			setAllCommands(filteredCommands);
 		}
 	}));
 
