@@ -350,9 +350,12 @@ export async function handleSlashCommand(
 			const userId = args[0];
 			const message = args.slice(1).join(" ");
 			if (!userId || !message) return;
-			const { data: dm, error } = await ctx.client.http.POST("/api/v1/user/@self/dm/{target_id}", {
-				params: { path: { target_id: userId } },
-			});
+			const { data: dm, error } = await ctx.client.http.POST(
+				"/api/v1/user/@self/dm/{target_id}",
+				{
+					params: { path: { target_id: userId } },
+				},
+			);
 
 			if (!dm) {
 				console.error(error);
@@ -383,7 +386,10 @@ export async function handleSlashCommand(
 			await ctx.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
 				params: { path: { room_id, user_id: userId } },
 				headers: reason ? { "X-Reason": reason } : {},
-				body: { timeout_until: new Date(Date.now() + (parseInt(duration) * 1000)).toISOString() },
+				body: {
+					timeout_until: new Date(Date.now() + (parseInt(duration) * 1000))
+						.toISOString(),
+				},
 			});
 			break;
 		}
