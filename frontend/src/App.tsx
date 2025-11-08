@@ -83,6 +83,8 @@ import { EmojiPicker } from "./EmojiPicker.tsx";
 import { Autocomplete } from "./Autocomplete.tsx";
 import { AutocompleteState } from "./context.ts";
 import { Resizable } from "./Resizable.tsx";
+import { SlashCommands, SlashCommandsContext } from "./slash-commands.ts";
+import { registerDefaultSlashCommands } from "./default-slash-commands.ts";
 
 const App: Component = () => {
 	return (
@@ -244,6 +246,9 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		{ message_id: string; selection?: "start" | "end" }
 	>();
 
+	const slashCommands = new SlashCommands();
+	registerDefaultSlashCommands(slashCommands);
+
 	let userConfigLoaded = false;
 
 	(async () => {
@@ -311,6 +316,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 
 		selectMode: new ReactiveMap(),
 		selectedMessages: new ReactiveMap(),
+
+		slashCommands,
 	};
 	createEffect(() => {
 		const loc = useLocation();
@@ -354,7 +361,11 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
 				<VoiceProvider>
-					<Root3 setMenu={setMenu} dispatch={dispatch}>{props.children}</Root3>
+					<SlashCommandsContext.Provider value={slashCommands}>
+						<Root3 setMenu={setMenu} dispatch={dispatch}>
+							{props.children}
+						</Root3>
+					</SlashCommandsContext.Provider>
 				</VoiceProvider>
 			</chatctx.Provider>
 		</api.Provider>

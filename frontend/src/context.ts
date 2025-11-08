@@ -22,6 +22,7 @@ import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.ts";
 import { Placement, ReferenceElement } from "@floating-ui/dom";
+import { SlashCommands } from "./slash-commands.ts";
 
 export type Slice = {
 	start: number;
@@ -205,7 +206,10 @@ export type ChatCtx = {
 
 	selectMode: ReactiveMap<string, boolean>; // channel_id -> boolean
 	selectedMessages: ReactiveMap<string, string[]>; // channel_id -> message_id[]
+
+	slashCommands: SlashCommands;
 };
+
 export type MediaCtx = {
 	media: Media;
 	element: HTMLMediaElement;

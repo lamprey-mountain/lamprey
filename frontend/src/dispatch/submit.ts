@@ -1,7 +1,6 @@
 import type { ChatCtx, Data } from "../context.ts";
 import type { SetStoreFunction } from "solid-js/store";
 import type { Api } from "../api.tsx";
-import { handleSlashCommand } from "../slash-commands.ts";
 
 // TODO: implement a retry queue
 // TODO: show when messages fail to send
@@ -14,7 +13,7 @@ export async function handleSubmit(
 	atts_thread_id?: string,
 ) {
 	if (text.startsWith("/")) {
-		await handleSlashCommand(ctx, api, thread_id, text);
+		await ctx.slashCommands.run(ctx, api, thread_id, text);
 		return;
 	}
 

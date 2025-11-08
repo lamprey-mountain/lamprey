@@ -16,8 +16,8 @@ import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import twemoji from "twemoji";
-import { type Command, commands } from "./slash-commands";
-import { canUseCommand } from "./hooks/useCommandPermissions";
+import { type Command } from "./slash-commands";
+import { useSlashCommands } from "./slash-commands";
 
 type Emoji = {
 	group?: number;
@@ -133,10 +133,20 @@ export const Autocomplete = () => {
 			}
 			setAllEmoji(combined);
 		} else if (state?.type === "command") {
+			const slashCommands = useSlashCommands();
+			const allCommands = slashCommands.getAll();
 			const channel = api.channels.cache.get(state.channelId);
-			const filteredCommands = commands.filter((cmd) =>
-				canUseCommand(api, channel?.room_id, channel, cmd.name)
-			);
+
+			// Filter commands based on whether they can be used in the current context
+			const filteredCommands = allCommands.filter((cmd) => {
+				// If the command has a canUse function, use it to check permissions
+				if (cmd.canUse) {
+					return cmd.canUse(api, channel?.room_id, channel!);
+				}
+				// If no canUse function is defined, assume the command can be used
+				return true;
+			});
+
 			setAllCommands(filteredCommands);
 		}
 	}));
@@ -267,7 +277,7 @@ export const Autocomplete = () => {
 								</Match>
 								<Match when={ctx.autocomplete()?.type === "command"}>
 									<div class="command">
-										<div class="name">{(result.obj as Command).name}</div>
+										<div class="name">/{(result.obj as Command).name}</div>
 										<div class="description dim">
 											{(result.obj as Command).description}
 										</div>
