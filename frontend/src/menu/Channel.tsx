@@ -115,7 +115,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 					<Item>baz</Item>
 				</Submenu>
 			</Show>
-			{/* TODO: only show archive menu for threads */}
+			{/* TODO(#773): only show archive menu for threads */}
 			<Switch>
 				<Match when={!channel()?.archived_at}>
 					<Item onClick={archiveChannel}>archive</Item>

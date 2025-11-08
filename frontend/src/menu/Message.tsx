@@ -56,7 +56,7 @@ export function MessageMenu(props: MessageMenuProps) {
 		}
 	};
 
-	function redact() {
+	function deleteMessage() {
 		ctx.dispatch({
 			do: "modal.confirm",
 			text: "really delete?",
@@ -99,7 +99,7 @@ export function MessageMenu(props: MessageMenuProps) {
 			<Item onClick={edit}>edit</Item>
 			<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
 			<Item onClick={selectMessage}>select</Item>
-			<Item onClick={redact} color="danger">redact</Item>
+			<Item onClick={deleteMessage} color="danger">delete</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
