@@ -4,7 +4,12 @@ import type { Api } from "../api";
 /**
  * Helper function to check user's permission in a channel/room
  */
-export function hasPermission(api: Api, room_id: string | undefined, channel_id: string, permission: string): boolean {
+export function hasPermission(
+	api: Api,
+	room_id: string | undefined,
+	channel_id: string,
+	permission: string,
+): boolean {
 	if (!room_id) {
 		// For non-room channels (DMs, GDMS), we'll allow some basic permissions
 		const defaultPermissions = [
@@ -110,7 +115,12 @@ export function hasPermission(api: Api, room_id: string | undefined, channel_id:
 /**
  * Check if a command should be available based on channel type and permissions
  */
-export function canUseCommand(api: Api, room_id: string | undefined, channel: any, commandName: string): boolean {
+export function canUseCommand(
+	api: Api,
+	room_id: string | undefined,
+	channel: any,
+	commandName: string,
+): boolean {
 	const channelType = channel?.ty;
 
 	switch (commandName) {

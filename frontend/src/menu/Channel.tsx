@@ -125,7 +125,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 				</Match>
 			</Switch>
 			<Item onClick={toggleLock}>{channel()?.locked ? "unlock" : "lock"}</Item>
-			<Item onClick={removeChannel}>remove</Item>
+			<Item onClick={removeChannel} color="danger">remove</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>

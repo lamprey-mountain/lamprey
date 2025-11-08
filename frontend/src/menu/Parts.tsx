@@ -106,8 +106,12 @@ export function Submenu(
 	);
 }
 
+type ItemColor = "danger";
+
 export function Item(
-	props: ParentProps<{ onClick?: (e: MouseEvent) => void; disabled?: boolean }>,
+	props: ParentProps<
+		{ onClick?: (e: MouseEvent) => void; disabled?: boolean; color?: ItemColor }
+	>,
 ) {
 	const ctx = useContext(chatctx)!;
 
@@ -142,6 +146,7 @@ export function Item(
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}
 				disabled={props.disabled ?? false}
+				classList={{ ["color-" + props.color]: !!props.color }}
 			>
 				{props.children}
 			</button>

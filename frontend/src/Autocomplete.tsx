@@ -134,7 +134,7 @@ export const Autocomplete = () => {
 			setAllEmoji(combined);
 		} else if (state?.type === "command") {
 			const channel = api.channels.cache.get(state.channelId);
-			const filteredCommands = commands.filter(cmd => 
+			const filteredCommands = commands.filter((cmd) =>
 				canUseCommand(api, channel?.room_id, channel, cmd.name)
 			);
 			setAllCommands(filteredCommands);

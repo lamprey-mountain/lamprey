@@ -62,7 +62,7 @@ export function RoomMenu(props: { room_id: string }) {
 				<Item onClick={settings("/logs")}>audit log</Item>
 				<Item onClick={settings("/metrics")}>metrics</Item>
 			</Submenu>
-			<Item onClick={leave}>leave</Item>
+			<Item onClick={leave} color="danger">leave</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>

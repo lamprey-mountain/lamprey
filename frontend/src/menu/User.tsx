@@ -389,10 +389,10 @@ export function UserMenu(props: UserMenuProps) {
 							<Item onClick={changeNickname}>change nickname</Item>
 						</Show>
 						<Show when={hasPermission("MemberKick") && canModerate()}>
-							<Item onClick={kickRoom}>kick</Item>
+							<Item onClick={kickRoom} color="danger">kick</Item>
 						</Show>
 						<Show when={hasPermission("MemberBan") && canModerate()}>
-							<Item onClick={ban}>ban</Item>
+							<Item onClick={ban} color="danger">ban</Item>
 						</Show>
 						<Show when={false}>
 							<Item>timeout</Item>
@@ -484,7 +484,7 @@ export function UserMenu(props: UserMenuProps) {
 						<Show when={!user()?.suspended}>
 							<Item onClick={suspendUser}>suspend user</Item>
 						</Show>
-						<Item onClick={deleteUser}>delete user</Item>
+						<Item onClick={deleteUser} color="danger">delete user</Item>
 					</Show>
 				</Match>
 			</Switch>

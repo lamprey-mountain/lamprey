@@ -611,6 +611,10 @@ em {
 		&:focus {
 			background-color: oklch(var(--color-bg1) / 0.5);
 		}
+
+		&.color-danger {
+			color: $color-red;
+		}
 	}
 
 	& .submenu {
