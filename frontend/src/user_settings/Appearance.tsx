@@ -3,6 +3,7 @@ import { createUpload, type User } from "sdk";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 import { getThumbFromId } from "../media/util.tsx";
+import { Checkbox } from "../icons";
 
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const api = useApi();
@@ -32,26 +33,33 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 	// TODO: reduced motion (sync with computer, autoplay gifs, emoji)
 
 	return (
-		<div class="user-settings-info">
+		<div class="user-settings-appearance">
 			<h2>appearance</h2>
 			<br />
-			<label>
-				<input
-					type="checkbox"
-					checked={ctx.userConfig().frontend["message_pfps"] === "yes"}
-					onInput={toggle("message_pfps")}
-				/>{" "}
-				show pfps in messages (experimental)
-			</label>
-			<br />
-			<label>
-				<input
-					type="checkbox"
-					checked={ctx.userConfig().frontend["underline_links"] === "yes"}
-					onInput={toggle("underline_links")}
-				/>{" "}
-				always underline links
-			</label>
+			<div class="options">
+				<label class="option">
+					<input
+						type="checkbox"
+						checked={ctx.userConfig().frontend["message_pfps"] === "yes"}
+						onInput={toggle("message_pfps")}
+					/>
+					<Checkbox
+						checked={ctx.userConfig().frontend["message_pfps"] === "yes"}
+					/>
+					<span>show pfps in messages (experimental)</span>
+				</label>
+				<label class="option">
+					<input
+						type="checkbox"
+						checked={ctx.userConfig().frontend["underline_links"] === "yes"}
+						onInput={toggle("underline_links")}
+					/>
+					<Checkbox
+						checked={ctx.userConfig().frontend["underline_links"] === "yes"}
+					/>
+					<span>always underline links</span>
+				</label>
+			</div>
 		</div>
 	);
 }

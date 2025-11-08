@@ -5,6 +5,7 @@ import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { useVoice } from "../voice-provider.tsx";
 import { useNavigate } from "@solidjs/router";
+import { Checkbox } from "../icons";
 
 type UserMenuProps = {
 	user_id: string;
@@ -278,6 +279,7 @@ export function UserMenu(props: UserMenuProps) {
 							onClick={(e) => {
 								e.stopPropagation();
 								if (room_member()?.roles.includes(role.id)) {
+									console.log("remove role");
 									api.client.http.DELETE(
 										"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 										{
@@ -291,6 +293,7 @@ export function UserMenu(props: UserMenuProps) {
 										},
 									);
 								} else {
+									console.log("add role");
 									api.client.http.PUT(
 										"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 										{
@@ -310,9 +313,10 @@ export function UserMenu(props: UserMenuProps) {
 								<input
 									type="checkbox"
 									checked={room_member()?.roles.includes(role.id)}
-									style="margin-top:4px"
+									style="display: none;"
 								/>
-								<div>
+								<Checkbox checked={room_member()?.roles.includes(role.id)} />
+								<div style="margin: 2px 0">
 									<div
 										classList={{ has: room_member()?.roles.includes(role.id) }}
 									>

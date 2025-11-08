@@ -21,7 +21,7 @@ import type { User } from "sdk";
 
 const tabs = [
 	{ category: "account" },
-	{ name: "profile", path: "profile", component: Profile },
+	{ name: "profile", path: "", component: Profile },
 	{ name: "authentication", path: "authentication", component: Authentication },
 	{ name: "sessions", path: "sessions", component: Sessions },
 	{ name: "audit log", path: "audit-log", component: AuditLog },
@@ -29,7 +29,7 @@ const tabs = [
 	{ name: "connections", path: "connections", component: Connections },
 	{ name: "data", path: "data", component: Data },
 	{ category: "application" },
-	{ name: "appearance", path: "", component: Appearance },
+	{ name: "appearance", path: "appearance", component: Appearance },
 	{ name: "notifications", path: "notifications", component: Notifications },
 	{ name: "voice", path: "voice", component: Voice },
 	{ name: "chat", path: "chat", component: Chat },

@@ -30,7 +30,9 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<label class="option">
 					<input
 						type="checkbox"
+						checked={desktop()}
 						onInput={(e) => setDesktop(e.target.checked)}
+						style="display: none;"
 					/>
 					<Checkbox checked={desktop()} />
 					<div>
@@ -41,7 +43,9 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<label class="option">
 					<input
 						type="checkbox"
+						checked={push()}
 						onInput={(e) => setPush(e.target.checked)}
+						style="display: none;"
 					/>
 					<Checkbox checked={push()} />
 					<div>
@@ -52,7 +56,9 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<label class="option">
 					<input
 						type="checkbox"
+						checked={tts()}
 						onInput={(e) => setTts(e.target.checked)}
+						style="display: none;"
 					/>
 					<Checkbox checked={tts()} />
 					<div>

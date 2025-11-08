@@ -40,7 +40,9 @@ Deno.test("room audit log with filter", async () => {
 	const { tester: alice, testerWithUser: createBob } = await createTester(
 		"alice-room-audit-filter",
 	);
-	const { tester: bob, user: bobUser } = await createBob("bob-room-audit-filter");
+	const { tester: bob, user: bobUser } = await createBob(
+		"bob-room-audit-filter",
+	);
 
 	const room = await alice({
 		url: "/room",
@@ -98,7 +100,11 @@ Deno.test("room audit log with filter", async () => {
 		status: 200,
 	});
 
-	const aliceUser = await alice({ url: "/users/@me", method: "GET", status: 200 });
+	const aliceUser = await alice({
+		url: "/users/@me",
+		method: "GET",
+		status: 200,
+	});
 
 	// fetch logs with alice's user_id
 	const aliceLogs = await alice({

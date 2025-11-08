@@ -183,3 +183,27 @@
 		list-style: disc inside;
 	}
 }
+
+.user-settings-appearance {
+	input[type="checkbox"] {
+		display: none;
+	}
+
+	.options {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.option {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding: 4px;
+		cursor: pointer;
+
+		&:hover {
+			background: $bg-150;
+		}
+	}
+}
