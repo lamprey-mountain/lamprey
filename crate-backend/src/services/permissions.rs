@@ -315,4 +315,23 @@ impl ServicePermissions {
             .await
             .map_err(|err| err.fake_clone())
     }
+
+    /// get default permissions for the @everyone role
+    ///
+    /// for public room joining
+    pub async fn default_for_room(&self, room_id: RoomId) -> Result<Permissions> {
+        let data = self.state.data();
+
+        let everyone_role_id = room_id.into_inner().into();
+        let role = data.role_select(room_id, everyone_role_id).await?;
+        let mut perms = Permissions::empty();
+        for p in role.allow {
+            perms.add(p);
+        }
+        for p in role.deny {
+            perms.remove(p);
+        }
+
+        Ok(perms)
+    }
 }

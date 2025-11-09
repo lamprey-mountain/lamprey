@@ -4,7 +4,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, Permission, PruneBegin, PruneResponse, RoomId, RoomMember, RoomMemberPatch,
@@ -97,7 +97,9 @@ async fn room_member_get(
 // FIXME: only return 304 not modified if an etag is sent
 /// Room member add
 ///
-/// Only `Puppet` users can be added to rooms (via MemberBridge permission)
+/// - Bots can add puppet users via MemberBridge permission
+/// - Users can join public rooms by specifying themselves as the target
+/// - Only registered users (not guests) can join public rooms
 #[utoipa::path(
     put,
     path = "/room/{room_id}/member/{user_id}",
@@ -127,13 +129,130 @@ async fn room_member_add(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure(Permission::MemberBridge)?;
-    let auth_user = srv.users.get(auth_user.id, None).await?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
+
+    // handle joining public rooms
+    if target_user_id == auth_user.id {
+        let room = srv.rooms.get(room_id, None).await?;
+        if room.public {
+            if auth_user.registered_at.is_none() {
+                return Err(Error::BadStatic("guests cannot join public rooms"));
+            }
+
+            if let Ok(ban) = s.data().room_ban_get(room_id, target_user_id).await {
+                if let Some(expires_at) = ban.expires_at {
+                    if expires_at > Time::now_utc() {
+                        return Err(Error::BadStatic("banned"));
+                    }
+                } else {
+                    return Err(Error::BadStatic("banned"));
+                }
+            }
+
+            let d = s.data();
+            let existing = d.room_member_get(room_id, target_user_id).await;
+            let perms = if existing.is_ok() {
+                // User already exists, get their actual permissions
+                s.services().perms.for_room(auth_user.id, room_id).await?
+            } else {
+                // User doesn't exist yet, get default room permissions
+                s.services().perms.default_for_room(room_id).await?
+            };
+
+            if let Ok(start) = &existing {
+                // already exists
+                if json.mute.is_some_and(|m| m != start.mute) {
+                    perms.ensure(Permission::VoiceMute)?;
+                }
+                if json.deaf.is_some_and(|m| m != start.deaf) {
+                    perms.ensure(Permission::VoiceDeafen)?;
+                }
+                if json.override_name.is_some() && json.override_name != start.override_name {
+                    perms.ensure(Permission::MemberNickname)?;
+                }
+                if let Some(r) = &mut json.roles {
+                    // TODO: let users add self applicable roles to themselves
+                    // TODO: also handle if @everyone has RoleApply permissions
+                    if !r.is_empty() {
+                        return Err(Error::BadStatic("cannot add roles to yourself"));
+                    }
+                }
+            } else {
+                // joining for the first time
+                if json.mute == Some(true) {
+                    perms.ensure(Permission::VoiceMute)?;
+                }
+                if json.deaf == Some(true) {
+                    perms.ensure(Permission::VoiceDeafen)?;
+                }
+                if json.override_name.is_some() {
+                    perms.ensure(Permission::MemberNickname)?;
+                }
+                if let Some(r) = &mut json.roles {
+                    // TODO: let users add self applicable roles to themselves
+                    // TODO: also handle if @everyone has RoleApply permissions
+                    if !r.is_empty() {
+                        return Err(Error::BadStatic("cannot add roles to yourself"));
+                    }
+                }
+            }
+
+            let origin = RoomMemberOrigin::PublicJoin;
+            d.room_member_put(room_id, target_user_id, Some(origin), json.clone())
+                .await?;
+
+            s.services()
+                .perms
+                .invalidate_room(target_user_id, room_id)
+                .await;
+            s.services().perms.invalidate_is_mutual(target_user_id);
+            let res = d.room_member_get(room_id, target_user_id).await?;
+
+            let is_new_join = existing.is_err();
+
+            // handle role updates if any
+            if let Some(r) = json.roles {
+                if let Ok(ref existing) = existing {
+                    let old = HashSet::<RoleId>::from_iter(existing.roles.iter().copied());
+                    let new = HashSet::<RoleId>::from_iter(r.iter().copied());
+                    // removed roles
+                    for role_id in old.difference(&new) {
+                        d.role_member_delete(room_id, target_user_id, *role_id)
+                            .await?;
+                    }
+
+                    // added roles
+                    for role_id in new.difference(&old) {
+                        d.role_member_put(room_id, target_user_id, *role_id).await?;
+                    }
+                } else {
+                    for role_id in r {
+                        d.role_member_put(room_id, target_user_id, role_id).await?;
+                    }
+                }
+            }
+
+            if is_new_join {
+                s.broadcast_room(
+                    room_id,
+                    auth_user.id,
+                    MessageSync::RoomMemberUpsert {
+                        member: res.clone(),
+                    },
+                )
+                .await?;
+            }
+
+            return Ok(Json(res));
+        }
+    }
+
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::MemberBridge)?;
+    let auth_user = srv.users.get(auth_user.id, None).await?;
     let target_user = srv.users.get(target_user_id, None).await?;
     let Some(puppet) = target_user.puppet else {
         return Err(Error::BadStatic("can't add that user"));

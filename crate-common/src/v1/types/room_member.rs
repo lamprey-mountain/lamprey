@@ -181,6 +181,9 @@ pub enum RoomMemberOrigin {
 
     /// Upgraded from group dm
     GdmUpgrade,
+
+    /// User joined public room directly
+    PublicJoin,
 }
 
 // in the future, there will be multiple types of bans. right now there are just user bans.

@@ -10,7 +10,9 @@ use common::v1::types::{
     MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus,
     User, UserCreate, UserId, UserPatch, UserWithRelationship,
 };
-use common::v1::types::{AuditLogFilter, Permission, SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID};
+use common::v1::types::{
+    AuditLogFilter, Permission, SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID,
+};
 use http::StatusCode;
 use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
