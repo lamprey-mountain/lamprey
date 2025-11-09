@@ -90,7 +90,12 @@ export const RouteRoom = (p: RouteSectionProps) => {
 				ctx.userConfig().frontend.showMembers !== false}
 			memberComponent={room() ? <RoomMembers room={room()!} /> : undefined}
 		>
-			<header>
+			<header
+				classList={{
+					"menu-room": !!p.params.room_id,
+				}}
+				data-room-id={p.params.room_id}
+			>
 				<b>home</b>
 			</header>
 			<Show when={room()}>

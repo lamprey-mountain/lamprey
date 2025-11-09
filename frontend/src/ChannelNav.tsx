@@ -12,6 +12,7 @@ import {
 import { useApi } from "./api";
 import { useConfig } from "./config";
 import { flags } from "./flags";
+import { useCtx } from "./context";
 import { Avatar, AvatarWithStatus, ChannelIcon } from "./User";
 import { useVoice } from "./voice-provider";
 
@@ -19,6 +20,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
 	const api = useApi();
 	const [voice] = useVoice();
+	const ctx = useCtx();
 	const params = useParams();
 	const nav = useNavigate();
 
@@ -298,7 +300,24 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	return (
 		<nav id="channel-nav">
 			<Show when={flags.has("nav_header")}>
-				<header>
+				<header
+					classList={{
+						"menu-room": !!props.room_id,
+					}}
+					data-room-id={props.room_id}
+					onClick={(e) => {
+						if (props.room_id) {
+							queueMicrotask(() => {
+								ctx.setMenu({
+									x: e.clientX,
+									y: e.clientY,
+									type: "room",
+									room_id: props.room_id,
+								});
+							});
+						}
+					}}
+				>
 					{props.room_id ? (room()?.name ?? "loading...") : "home"}
 				</header>
 			</Show>
