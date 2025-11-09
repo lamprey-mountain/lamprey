@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, room_id, user_id, session_id, reason, data FROM audit_log\n                WHERE room_id = $1 AND id > $2 AND id < $3\n                ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
+  "query": "\n                SELECT id, room_id, user_id, session_id, reason, data FROM audit_log\n                WHERE room_id = $1 AND id > $2 AND id < $3\n                AND (cardinality($6::uuid[]) = 0 OR user_id = ANY($6))\n                AND (cardinality($7::text[]) = 0 OR data->>'type' = ANY($7))\n                ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -40,7 +40,9 @@
         "Uuid",
         "Uuid",
         "Text",
-        "Int8"
+        "Int8",
+        "UuidArray",
+        "TextArray"
       ]
     },
     "nullable": [
@@ -52,5 +54,5 @@
       true
     ]
   },
-  "hash": "2c0be776e659fcd0c234d75f831876b0c946b51a4018f555eecfbfb480d435ee"
+  "hash": "3d2f3cb5632f9f838872658adce29fe325481d8a825e2250cbe206a8c9202887"
 }

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM audit_log\n                WHERE room_id = $1\n                AND (cardinality($2::uuid[]) = 0 OR user_id = ANY($2))\n                AND (cardinality($3::text[]) = 0 OR data->>'type' = ANY($3))\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "628e1247204d42ebdcd1810b3c9100616810f8943dc7393b3f013b4b098fa7a7"
+}
