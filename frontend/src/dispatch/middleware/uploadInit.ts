@@ -11,8 +11,8 @@ export const uploadInit: Middleware = (
 async (action) => {
 	if (action.do === "upload.init") {
 		const { local_id, thread_id, file } = action as UploadAction;
-		const atts = ctx.thread_attachments.get(thread_id) ?? [];
-		ctx.thread_attachments.set(thread_id, [...atts, {
+		const atts = ctx.channel_attachments.get(thread_id) ?? [];
+		ctx.channel_attachments.set(thread_id, [...atts, {
 			status: "uploading",
 			file,
 			local_id,
@@ -23,7 +23,7 @@ async (action) => {
 			file,
 			client: ctx.client,
 			onProgress(progress) {
-				const atts = ctx.thread_attachments.get(thread_id)!;
+				const atts = ctx.channel_attachments.get(thread_id)!;
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
 				const att: Attachment = {
@@ -33,17 +33,17 @@ async (action) => {
 					progress,
 					paused: false,
 				};
-				ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
+				ctx.channel_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 			},
 			onFail(error) {
-				const atts = ctx.thread_attachments.get(thread_id)!;
+				const atts = ctx.channel_attachments.get(thread_id)!;
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
-				ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1));
+				ctx.channel_attachments.set(thread_id, atts.toSpliced(idx, 1));
 				ctx.dispatch({ do: "modal.alert", text: error.message });
 			},
 			onComplete(media) {
-				const atts = ctx.thread_attachments.get(thread_id)!;
+				const atts = ctx.channel_attachments.get(thread_id)!;
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
 				const att: Attachment = {
@@ -52,27 +52,27 @@ async (action) => {
 					local_id,
 					file,
 				};
-				ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
+				ctx.channel_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 			},
 			onPause() {
-				const atts = ctx.thread_attachments.get(thread_id)!;
+				const atts = ctx.channel_attachments.get(thread_id)!;
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
 				const att = {
 					...atts[idx],
 					paused: true,
 				};
-				ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
+				ctx.channel_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 			},
 			onResume() {
-				const atts = ctx.thread_attachments.get(thread_id)!;
+				const atts = ctx.channel_attachments.get(thread_id)!;
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
 				const att = {
 					...atts[idx],
 					paused: false,
 				};
-				ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
+				ctx.channel_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 			},
 		});
 		ctx.uploads.set(local_id, up);
