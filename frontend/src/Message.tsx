@@ -214,7 +214,7 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 			modal: {
 				type: "message_edits",
 				message_id: props.message.id,
-				thread_id: props.message.channel_id,
+				channel_id: props.message.channel_id,
 			},
 		});
 	};

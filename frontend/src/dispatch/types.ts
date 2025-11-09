@@ -34,7 +34,7 @@ export type Modal = {
 	cont: (confirmed: boolean) => void;
 } | {
 	type: "message_edits";
-	thread_id: string;
+	channel_id: string;
 	message_id: string;
 };
 
