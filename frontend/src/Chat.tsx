@@ -10,7 +10,7 @@ import {
 } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
-import type { Channel } from "sdk";
+import type { Channel, Room } from "sdk";
 import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
@@ -468,6 +468,41 @@ export const ChatHeader = (
 	);
 };
 
+export const RoomHeader = (
+	props: { room: Room },
+) => {
+	const ctx = useCtx();
+
+	const toggleMembers = () => {
+		const c = ctx.userConfig();
+		ctx.setUserConfig({
+			...c,
+			frontend: {
+				...c.frontend,
+				showMembers: !(c.frontend.showMembers ?? true),
+			},
+		});
+	};
+
+	return (
+		<header
+			class="chat-header menu-room"
+			style="display:flex"
+			data-room-id={props.room.id}
+		>
+			<b>home</b>
+			<div style="flex:1"></div>
+			<SearchInput room={props.room} />
+			<button
+				onClick={toggleMembers}
+				title="Show members"
+			>
+				<img class="icon" src={icMembers} />
+			</button>
+		</header>
+	);
+};
+
 const SearchResultItem = (props: {
 	message: Message;
 	prevMessage?: Message;
@@ -494,15 +529,21 @@ const SearchResultItem = (props: {
 };
 
 export const SearchResults = (props: {
-	channel: Channel;
+	channel?: Channel;
+	room?: Room;
 	search: ThreadSearch;
 }) => {
 	const ctx = useCtx();
 	const navigate = useNavigate();
 
+	const searchId = () => props.channel?.id ?? props.room?.id;
+
 	const onResultClick = (message: Message) => {
 		navigate(`/channel/${message.channel_id}/message/${message.id}`);
-		ctx.channel_search.delete(props.channel.id);
+		const id = searchId();
+		if (id) {
+			ctx.channel_search.delete(id);
+		}
 	};
 
 	return (
@@ -511,7 +552,14 @@ export const SearchResults = (props: {
 				<Show when={!props.search.loading} fallback={<>Searching...</>}>
 					{props.search.results?.total ?? 0} results
 				</Show>
-				<button onClick={() => ctx.channel_search.delete(props.channel.id)}>
+				<button
+					onClick={() => {
+						const id = searchId();
+						if (id) {
+							ctx.channel_search.delete(id);
+						}
+					}}
+				>
 					Clear
 				</button>
 			</header>

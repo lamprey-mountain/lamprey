@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { useApi } from "./api";
 import { useCtx } from "./context";
-import type { ThreadT } from "./types";
+import type { RoomT, ThreadT } from "./types";
 import type { ChannelSearch } from "./context";
 import { User } from "sdk";
 import { UUID } from "uuidv7";
@@ -287,15 +287,22 @@ function syntaxHighlightingPlugin() {
 
 const AutocompleteDropdown = (props: {
 	filter: { type: string; query: string };
-	channel: ThreadT;
+	channel?: ThreadT;
+	room?: RoomT;
 	onSelect: (node: Node) => void;
 	onSelectFilter: (text: string) => void;
 }) => {
 	const api = useApi();
-	const threadMembers = api.thread_members.list(() => props.channel.id);
-	const roomMembers = api.room_members.list(() => props.channel.room_id ?? "");
-	const roomThreads = api.channels.list(() => props.channel.room_id ?? "");
-	const roomRoles = api.roles.list(() => props.channel.room_id ?? "");
+	const threadMembers = api.thread_members.list(() => props.channel?.id);
+	const roomMembers = api.room_members.list(() =>
+		props.channel?.room_id ?? props.room?.id ?? ""
+	);
+	const roomThreads = api.channels.list(() =>
+		props.channel?.room_id ?? props.room?.id ?? ""
+	);
+	const roomRoles = api.roles.list(() =>
+		props.channel?.room_id ?? props.room?.id ?? ""
+	);
 
 	const authorSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
@@ -623,7 +630,7 @@ function autocompletePlugin(
 	});
 }
 
-export const SearchInput = (props: { channel: ThreadT }) => {
+export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 	const api = useApi();
 	const ctx = useCtx();
 	let editorRef: HTMLDivElement | undefined;
@@ -649,7 +656,7 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 	const handleSubmit = async () => {
 		const queryString = serializeToQuery(view.state);
 		if (!queryString) {
-			ctx.channel_search.delete(props.channel.id);
+			ctx.channel_search.delete(props.channel?.id ?? props.room?.id);
 			return;
 		}
 
@@ -674,7 +681,9 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 		}
 		const textQuery = textQueryParts.join(" ");
 
-		const existing = ctx.channel_search.get(props.channel.id);
+		const existing = ctx.channel_search.get(
+			props.channel?.id ?? props.room?.id,
+		);
 		const searchState: ChannelSearch = {
 			query: queryString,
 			results: existing?.results ?? null,
@@ -684,7 +693,7 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 			after: filters.after?.[0],
 			channel: filters.channel,
 		};
-		ctx.channel_search.set(props.channel.id, searchState);
+		ctx.channel_search.set(props.channel?.id ?? props.room?.id, searchState);
 
 		const body: {
 			query?: string;
@@ -709,15 +718,19 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 
 		if (filters.author) body.user_id = filters.author;
 
-		if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
-			body.thread_id = [props.channel.id];
-		} else if (filters.thread) {
-			body.thread_id = filters.thread;
-			if (props.channel.room_id) body.room_id = [props.channel.room_id];
-		} else if (props.channel.room_id) {
-			body.room_id = [props.channel.room_id];
-		} else {
-			body.thread_id = [props.channel.id];
+		if (props.channel) {
+			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
+				body.thread_id = [props.channel.id];
+			} else if (filters.thread) {
+				body.thread_id = filters.thread;
+				if (props.channel.room_id) body.room_id = [props.channel.room_id];
+			} else if (props.channel.room_id) {
+				body.room_id = [props.channel.room_id];
+			} else {
+				body.thread_id = [props.channel.id];
+			}
+		} else if (props.room) {
+			body.room_id = [props.room.id];
 		}
 
 		if (filters.before?.[0]) {
@@ -765,13 +778,13 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 			params,
 		});
 		if (res.data) {
-			ctx.channel_search.set(props.channel.id, {
+			ctx.channel_search.set(props.channel?.id ?? props.room?.id, {
 				...searchState,
 				results: res.data,
 				loading: false,
 			});
 		} else {
-			ctx.channel_search.set(props.channel.id, {
+			ctx.channel_search.set(props.channel?.id ?? props.room?.id, {
 				...searchState,
 				results: null,
 				loading: false,
@@ -825,8 +838,8 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 							return true;
 						}
 
-						if (ctx.channel_search.has(props.channel.id)) {
-							ctx.channel_search.delete(props.channel.id);
+						if (ctx.channel_search.has(props.channel?.id ?? props.room?.id)) {
+							ctx.channel_search.delete(props.channel?.id ?? props.room?.id);
 						} else {
 							const chatInput = document.querySelector(
 								".chat .ProseMirror",
@@ -925,6 +938,7 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 						<AutocompleteDropdown
 							filter={activeFilter()!}
 							channel={props.channel}
+							room={props.room}
 							onSelect={insertNode}
 							onSelectFilter={insertFilter}
 						/>

@@ -7,7 +7,7 @@ import { RoomHome, RoomMembers } from "./Room.tsx";
 import { createEffect, createResource, Match, Show, Switch } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ChannelSettings } from "./ChannelSettings.tsx";
-import { ChatHeader, ChatMain, SearchResults } from "./Chat.tsx";
+import { ChatHeader, ChatMain, RoomHeader, SearchResults } from "./Chat.tsx";
 import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
 import { Voice, VoiceTray } from "./Voice.tsx";
@@ -75,31 +75,50 @@ export const LayoutDefault = (props: LayoutDefaultProps) => {
 	);
 };
 
+const RoomSidebar = (props: { room: RoomT }) => {
+	const ctx = useCtx();
+	const search = () => ctx.channel_search.get(props.room.id);
+	const showMembers = () =>
+		flags.has("room_member_list") &&
+		ctx.userConfig().frontend.showMembers !== false;
+
+	return (
+		<Switch>
+			<Match when={search()}>
+				<Resizable storageKey="search-sidebar-width" initialWidth={320}>
+					<SearchResults room={props.room} search={search()!} />
+				</Resizable>
+			</Match>
+			<Match when={showMembers()}>
+				<Resizable
+					storageKey="room-members-width"
+					initialWidth={198}
+					minWidth={180}
+					maxWidth={500}
+				>
+					<RoomMembers room={props.room} />
+				</Resizable>
+			</Match>
+		</Switch>
+	);
+};
+
 export const RouteRoom = (p: RouteSectionProps) => {
 	const { t } = useCtx();
-	const ctx = useCtx();
 	const api = useApi();
 	const room = api.rooms.fetch(() => p.params.room_id);
+
 	return (
 		<LayoutDefault
 			title={room() ? room()!.name : t("loading")}
 			showChannelNav={true}
 			channelNavRoomId={p.params.room_id}
 			showVoiceTray={true}
-			showMembers={flags.has("room_member_list") &&
-				ctx.userConfig().frontend.showMembers !== false}
-			memberComponent={room() ? <RoomMembers room={room()!} /> : undefined}
 		>
-			<header
-				classList={{
-					"menu-room": !!p.params.room_id,
-				}}
-				data-room-id={p.params.room_id}
-			>
-				<b>home</b>
-			</header>
 			<Show when={room()}>
+				<RoomHeader room={room()!} />
 				<RoomHome room={room()!} />
+				<RoomSidebar room={room()!} />
 			</Show>
 		</LayoutDefault>
 	);
