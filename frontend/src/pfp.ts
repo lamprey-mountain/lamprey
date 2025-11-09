@@ -15,7 +15,8 @@ pfpsImg.onload = () => {
 
 const pfpCache = new Map<string, string>();
 
-function LCG(seed: number) {
+/** linear congruential generator */
+export function LCG(seed: number) {
 	let state = seed;
 	return function () {
 		state = (1103515245 * state + 12345) % 2147483648;

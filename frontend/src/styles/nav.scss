@@ -146,12 +146,20 @@
 	.nav-channel {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		padding: 4px 8px;
 
 		& > .avatar {
 			height: 32px;
 			width: 32px;
 			margin: 0;
+			margin-right: 8px;
+		}
+
+		& > .icon {
+			height: 16px;
+			width: 16px;
+			margin-right: 4px;
+			filter: invert(0.6);
 		}
 	}
 }
