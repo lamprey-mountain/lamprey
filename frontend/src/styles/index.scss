@@ -2811,6 +2811,38 @@ article.message.oneline {
 	.item {
 		padding: 2px 4px;
 		border-radius: 2px;
+		display: flex;
+		align-items: center;
+		cursor: pointer;
+		margin: 4px 0;
+	}
+
+	.item-icon {
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-right: 4px;
+
+		.icon {
+			width: 16px;
+			height: 16px;
+			filter: invert(0.7);
+		}
+
+		.avatar {
+			width: 24px;
+			height: 24px;
+		}
+
+		.avatar.fake {
+			font-size: 10px;
+			line-height: 16px;
+			text-align: center;
+			vertical-align: center;
+			background: $bg-300;
+		}
 	}
 
 	.item.selected,

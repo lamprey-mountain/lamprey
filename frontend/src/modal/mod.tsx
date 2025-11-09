@@ -16,6 +16,9 @@ import { MessageView } from "../Message.tsx";
 import { diffChars } from "diff";
 import { useNavigate } from "@solidjs/router";
 import { ModalResetPassword } from "../user_settings/mod.tsx";
+import { ChannelIcon } from "../User.tsx";
+import { getThumbFromId } from "../media/util.tsx";
+import type { Channel, Room } from "sdk";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -258,6 +261,8 @@ const ModalPalette = () => {
 		id: string;
 		name: string;
 		action: () => void;
+		channel?: Channel;
+		room?: Room;
 	};
 
 	const allItems = createMemo((): PaletteItem[] => {
@@ -266,12 +271,14 @@ const ModalPalette = () => {
 			id: room.id,
 			name: room.name,
 			action: () => navigate(`/room/${room.id}`),
+			room: room,
 		}));
 		const threads = [...api.channels.cache.values()].map((thread) => ({
 			type: "thread" as const,
 			id: thread.id,
 			name: thread.name,
 			action: () => navigate(`/channel/${thread.id}`),
+			channel: thread,
 		}));
 
 		const staticItems: PaletteItem[] = [
@@ -315,6 +322,7 @@ const ModalPalette = () => {
 				id: thread.id,
 				name: thread.name,
 				action: () => navigate(`/thread/${thread.id}`),
+				channel: thread,
 			}));
 	});
 
@@ -378,6 +386,28 @@ const ModalPalette = () => {
 								}}
 								onMouseEnter={() => setSelectedIndex(i())}
 							>
+								<Show when={item.type === "thread" && item.channel} keyed>
+									<div class="item-icon">
+										<ChannelIcon channel={item.channel!} />
+									</div>
+								</Show>
+								<Show when={item.type === "room" && item.room} keyed>
+									<div class="item-icon">
+										<Show
+											when={item.room!.icon}
+											fallback={
+												<div class="avatar fake">
+													{item.room!.name.substring(0, 2)}
+												</div>
+											}
+										>
+											<img
+												src={getThumbFromId(item.room!.icon!, 64)}
+												class="avatar"
+											/>
+										</Show>
+									</div>
+								</Show>
 								<span>{item.name}</span>
 							</div>
 						)}
