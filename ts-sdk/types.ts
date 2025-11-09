@@ -27,6 +27,10 @@ export type RelationshipWithUserId =
 export type UserWithRelationship =
 	components["schemas"]["UserWithRelationship"];
 export type UserConfig = components["schemas"]["UserConfigGlobal"];
+export type UserConfigGlobal = components["schemas"]["UserConfigGlobal"];
+export type UserConfigUser = components["schemas"]["UserConfigUser"];
+export type UserConfigRoom = components["schemas"]["UserConfigRoom"];
+export type UserConfigChannel = components["schemas"]["UserConfigChannel"];
 export type Application = components["schemas"]["Application"];
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
 export type MessageSync = components["schemas"]["MessageSync"];

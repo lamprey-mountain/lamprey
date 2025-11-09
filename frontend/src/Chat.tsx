@@ -337,6 +337,7 @@ export const ChatMain = (props: ChatProps) => {
 };
 
 import { usePermissions } from "./hooks/usePermissions.ts";
+import { ChannelIcon } from "./User.tsx";
 
 export const ChatHeader = (
 	props: ChatProps & { showMembersButton?: boolean },
@@ -417,6 +418,7 @@ export const ChatHeader = (
 			when={inSelectMode()}
 			fallback={
 				<header class="chat-header" style="display:flex">
+					<ChannelIcon channel={props.channel} />
 					<b>{name()}</b>
 					<Show when={props.channel.description}>
 						<span class="dim" style="white-space:pre;font-size:1em">
@@ -449,6 +451,7 @@ export const ChatHeader = (
 			}
 		>
 			<header class="chat-header select-mode-header" style="display:flex">
+				<ChannelIcon channel={props.channel} />
 				<span>{selected().length} selected</span>
 				<div style="flex:1"></div>
 				<Show when={canDelete()}>

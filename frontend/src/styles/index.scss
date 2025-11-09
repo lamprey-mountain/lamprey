@@ -2943,6 +2943,24 @@ button.link {
 	}
 }
 
+.chat-header {
+	display: flex;
+	align-items: center;
+
+	& > .icon, & > .avatar {
+		margin-right: 4px;
+	}
+
+	& > .icon {
+		filter: invert(0.7);
+	}
+
+	& > .avatar {
+		height: 32px;
+		width: 32px;
+	}
+}
+
 .chat-header.select-mode-header {
 	background-color: $bg-400;
 	gap: 8px;
