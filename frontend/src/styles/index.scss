@@ -331,6 +331,12 @@ input[type="submit"] {
 
 		button {
 			border: none;
+			border-radius: 4px;
+			height: 24px;
+			width: 24px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 	}
 
@@ -2629,7 +2635,7 @@ article.message.oneline {
 	grid-template-columns: 48px 1fr max-content;
 
 	.icon.main {
-		filter: invert(.7);
+		filter: invert(0.7);
 		margin-left: 28px;
 		margin-top: 2px;
 	}
@@ -2902,6 +2908,15 @@ button.link {
 .search-container {
 	position: relative;
 	z-index: 1;
+	display: flex;
+	align-items: center;
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
+
+	& > .icon {
+		position: absolute;
+		right: 4px;
+	}
 }
 
 .search-autocomplete {
@@ -2913,12 +2928,10 @@ button.link {
 }
 
 .search-input {
-	background-color: $bg-300;
-	border: solid 1px $sep-500;
-	padding: 4px;
 	min-width: 200px;
 	white-space: pre-wrap;
 	caret-color: $fg-400;
+	padding: 2px 4px;
 
 	& .placeholder {
 		position: absolute;
@@ -2999,6 +3012,26 @@ button.link {
 	& > .avatar {
 		height: 32px;
 		width: 32px;
+	}
+
+	& > button {
+		border: none;
+		background: none;
+		width: 32px;
+		height: 32px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+
+		& > .icon {
+			filter: invert(0.7);
+			width: 18px;
+			height: 18px;
+		}
+
+		&:hover > .icon {
+			filter: invert(0.95);
+		}
 	}
 }
 

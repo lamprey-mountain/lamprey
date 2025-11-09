@@ -26,6 +26,8 @@ import { useNavigate } from "@solidjs/router";
 import type { ThreadSearch } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 import { SearchInput } from "./SearchInput.tsx";
+import icPin from "./assets/pin.png";
+import icMembers from "./assets/members.png";
 
 type ChatProps = {
 	channel: Channel;
@@ -437,14 +439,14 @@ export const ChatHeader = (
 						classList={{ active: isShowingPinned() }}
 						title="Show pinned messages"
 					>
-						pins
+						<img class="icon" src={icPin} />
 					</button>
 					<Show when={props.showMembersButton ?? true}>
 						<button
 							onClick={toggleMembers}
 							title="Show members"
 						>
-							members
+							<img class="icon" src={icMembers} />
 						</button>
 					</Show>
 				</header>

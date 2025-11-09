@@ -545,7 +545,7 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 				>
-					<img class="icon main" src={icPin } />
+					<img class="icon main" src={icPin} />
 					<div class="content">
 						<div
 							class="body markdown"

@@ -20,6 +20,7 @@ import { history, redo, undo } from "prosemirror-history";
 import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
+import icSearch from "./assets/search.png";
 
 const schema = new Schema({
 	nodes: {
@@ -923,13 +924,14 @@ export const SearchInput = (props: { channel: ThreadT }) => {
 					>
 						<AutocompleteDropdown
 							filter={activeFilter()!}
-							thread={props.channel}
+							channel={props.channel}
 							onSelect={insertNode}
 							onSelectFilter={insertFilter}
 						/>
 					</div>
 				</Show>
 			</Portal>
+			<img class="icon" src={icSearch} />
 		</div>
 	);
 };

@@ -19,6 +19,7 @@ import cancelIc from "./assets/x.png";
 import { createTooltip } from "./Tooltip.tsx";
 import { EmojiButton } from "./atoms/EmojiButton.tsx";
 import { Channel } from "sdk";
+import icDelete from "./assets/delete.png";
 
 type InputProps = {
 	channel: Channel;
@@ -379,7 +380,7 @@ export function RenderUploadItem(
 								</Match>
 							</Switch>
 							<button onClick={() => removeAttachment(props.att.local_id)}>
-								🗑️
+								<img class="icon" src={icDelete} />
 							</button>
 						</menu>
 					</div>
