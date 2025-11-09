@@ -16,7 +16,7 @@ import { RouteInviteInner } from "./Invite.tsx";
 import { Forum } from "./Forum.tsx";
 import { Category } from "./Category.tsx";
 import { type Channel, SERVER_ROOM_ID } from "sdk";
-import { PinnedMessages } from "./menu/PinnedMessages.tsx";
+import { PinnedMessages } from "./PinnedMessages.tsx";
 import { Resizable } from "./Resizable.tsx";
 import { UserProfile } from "./UserProfile.tsx";
 import { Inbox } from "./Inbox.tsx";

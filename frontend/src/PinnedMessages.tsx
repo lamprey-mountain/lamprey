@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Channel } from "sdk";
-import { useApi } from "../api.tsx";
-import { MessageView } from "../Message.tsx";
+import { useApi } from "./api.tsx";
+import { MessageView } from "./Message.tsx";
 import type { Message } from "sdk";
 
 type PinnedMessagesProps = {
