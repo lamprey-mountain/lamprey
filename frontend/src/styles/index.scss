@@ -2948,6 +2948,10 @@ button.link {
 	gap: 8px;
 }
 
+#root > header {
+	height: 48px;
+}
+
 .chat > .list > li.message-selected {
 	background-color: oklch(var(--color-blue) / 0.3);
 	box-shadow: 4px 0 0 -1px inset oklch(var(--color-blue));
