@@ -2803,9 +2803,12 @@ article.message.oneline {
 }
 
 .palette {
+	width: 300px;
+
 	input {
 		padding: 2px 4px;
 		margin-bottom: 8px;
+		width: 100%;
 	}
 
 	.item {
@@ -2815,9 +2818,14 @@ article.message.oneline {
 		align-items: center;
 		cursor: pointer;
 		margin: 4px 0;
+
+		& > span {
+			@include truncate;
+		}
 	}
 
 	.item-icon {
+		min-width: 24px;
 		width: 24px;
 		height: 24px;
 		display: flex;
