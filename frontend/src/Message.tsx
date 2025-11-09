@@ -31,6 +31,14 @@ import { uuidv7 } from "uuidv7";
 import twemoji from "twemoji";
 import { Reactions } from "./Reactions.tsx";
 import { md } from "./markdown.tsx";
+import icReply from "./assets/reply.png";
+import icReactionAdd from "./assets/reaction-add.png";
+import icEdit from "./assets/edit.png";
+import icMore from "./assets/more.png";
+import icMemberAdd from "./assets/member-add.png";
+import icMemberRemove from "./assets/member-remove.png";
+import icMemberJoin from "./assets/member-join.png";
+import icPin from "./assets/pin.png";
 
 type MessageProps = {
 	message: MessageT;
@@ -410,7 +418,6 @@ export function MessageView(props: MessageProps) {
 			props.message.edited_at ?? props.message.created_at ??
 				new Date().toString(),
 		);
-		// TODO: replace emoji with actual icons
 		// FIXME: spacing between MessageDefault and oneline is missing
 		if (props.message.type === "MemberAdd") {
 			return (
@@ -424,7 +431,7 @@ export function MessageView(props: MessageProps) {
 					onClick={handleClick}
 					onMouseDown={onMouseDown}
 				>
-					<div class="emojiicon">&#x1f465;</div>
+					<img class="icon main" src={icMemberAdd} />
 					<div class="content">
 						<div
 							class="body markdown"
@@ -466,7 +473,7 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 				>
-					<div class="emojiicon">&#x1f465;</div>
+					<img class="icon main" src={icMemberRemove} />
 					<div class="content">
 						<div
 							class="body markdown"
@@ -508,7 +515,7 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 				>
-					<div class="emojiicon">&#x1F44B;</div>
+					<img class="icon main" src={icMemberJoin} />
 					<div class="content">
 						<div
 							class="body markdown"
@@ -538,7 +545,7 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 				>
-					<div class="emojiicon">&#x1F4CC;</div>
+					<img class="icon main" src={icPin } />
 					<div class="content">
 						<div
 							class="body markdown"
@@ -568,7 +575,7 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 				>
-					<div class="emojiicon">&#x270F;&#xFE0F;</div>
+					<img class="icon main" src={icEdit} />
 					<div class="content">
 						<div
 							class="body markdown"
@@ -961,14 +968,14 @@ const MessageToolbar = (props: { message: Message }) => {
 				title="Add reaction"
 				aria-label="Add reaction"
 			>
-				+
+				<img class="icon" src={icReactionAdd} />
 			</button>
 			<button onClick={handleReply} title="Reply" aria-label="Reply">
-				&gt;
+				<img class="icon" src={icReply} />
 			</button>
 			<Show when={canEditMessage()}>
 				<button onClick={handleEdit} title="Edit" aria-label="Edit">
-					e
+					<img class="icon" src={icEdit} />
 				</button>
 			</Show>
 			<button
@@ -976,7 +983,7 @@ const MessageToolbar = (props: { message: Message }) => {
 				title="More options"
 				aria-label="More options"
 			>
-				⋮
+				<img class="icon" src={icMore} />
 			</button>
 		</div>
 	);

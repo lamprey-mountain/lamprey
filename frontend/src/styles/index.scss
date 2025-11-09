@@ -2628,9 +2628,10 @@ button.big {
 article.message.oneline {
 	grid-template-columns: 48px 1fr max-content;
 
-	.emojiicon {
-		text-align: right;
-		margin: 0 6px;
+	.icon.main {
+		filter: invert(.7);
+		margin-left: 28px;
+		margin-top: 2px;
 	}
 
 	.author {
