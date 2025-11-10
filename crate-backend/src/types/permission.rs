@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use common::v1::types::{defaults::ADMIN_ROOM, Permission};
+use common::v1::types::{defaults::ADMIN_ROOM, Permission, PermissionOverwrite};
 
 use crate::error::{Error, Result};
 
@@ -52,6 +52,16 @@ impl Permissions {
                 return Err(Error::NotFound);
             }
             Err(Error::MissingPermissions)
+        }
+    }
+
+    pub fn apply_overwrite(&mut self, ow: &PermissionOverwrite) {
+        for p in &ow.allow {
+            self.p.insert(*p);
+        }
+
+        for p in &ow.deny {
+            self.p.remove(p);
         }
     }
 }

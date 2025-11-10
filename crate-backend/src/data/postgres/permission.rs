@@ -11,6 +11,7 @@ use crate::{
 
 use super::Postgres;
 
+// TODO: remove this trait and move all permission calculations into permissions.rs
 #[async_trait]
 impl DataPermission for Postgres {
     async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
@@ -67,6 +68,10 @@ impl DataPermission for Postgres {
         .collect();
 
         let mut perms: Permissions = allowed_perms.into_iter().map(Into::into).collect();
+
+        if perms.has(Permission::Admin) {
+            return Ok(perms);
+        }
 
         for perm in denied_perms {
             perms.remove(perm.into());

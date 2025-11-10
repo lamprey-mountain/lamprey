@@ -76,6 +76,7 @@ impl ServicePermissions {
         }
     }
 
+    /// calculate the permissions a user has in a room
     pub async fn for_room(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
         let srv = self.state.services();
         let data = self.state.data();
@@ -83,6 +84,8 @@ impl ServicePermissions {
         self.cache_perm_room
             .try_get_with((user_id, room_id), async {
                 let room = srv.rooms.get(room_id, None).await?;
+
+                // 1. if the user is the owner, they have all permissions
                 if room.owner_id == Some(user_id) {
                     let mut p = Permissions::empty();
                     p.add(Permission::ViewChannel);
@@ -90,7 +93,10 @@ impl ServicePermissions {
                     return Result::Ok(p);
                 }
 
+                // this handles 2, 3, 4
                 let mut perms = data.permission_room_get(user_id, room_id).await?;
+
+                // handle timed out members
                 if let Ok(member) = data.room_member_get(room_id, user_id).await {
                     if let Some(timeout_until) = member.timeout_until {
                         if timeout_until > Time::now_utc() {
@@ -107,92 +113,86 @@ impl ServicePermissions {
             .map_err(|err| err.fake_clone())
     }
 
+    /// actually calculate the permissions a user has in a channel
     async fn for_channel_inner(
         &self,
         user_id: UserId,
-        thread_id: ChannelId,
+        channel_id: ChannelId,
     ) -> Result<Permissions> {
         let srv = self.state.services();
         let data = self.state.data();
-        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
-        let (mut perms, roles) = if let Some(room_id) = thread.room_id {
-            let room = srv.rooms.get(room_id, None).await?;
-            if room.owner_id == Some(user_id) {
-                let mut p = Permissions::empty();
-                p.add(Permission::ViewChannel);
-                p.add(Permission::Admin);
-                return Ok(p);
-            }
+        let chan = srv.channels.get(channel_id, Some(user_id)).await?;
 
-            let member = data.room_member_get(room_id, user_id).await?;
-            (self.for_room(user_id, room_id).await?, member.roles)
+        // 1. start with parent_id channel (or room) permissions
+        let mut perms = if let Some(parent_id) = chan.parent_id {
+            Box::pin(self.for_channel(user_id, parent_id)).await?
+        } else if let Some(room_id) = chan.room_id {
+            self.for_room(user_id, room_id).await?
         } else {
-            data.thread_member_get(thread_id, user_id).await?;
             let mut p = Permissions::empty();
             p.add(Permission::ViewChannel);
             for a in EVERYONE_TRUSTED {
                 p.add(*a);
             }
-            (p, vec![])
+
+            // permission overwrites dont exist outside of rooms
+            return Ok(p);
         };
 
-        // admins always have full permissions and ignore overwrites
-        if !perms.has(Permission::Admin) {
-            let mut parents = Vec::new();
-            let mut current_parent_id = thread.parent_id;
-            while let Some(parent_id) = current_parent_id {
-                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
-                current_parent_id = parent.parent_id;
-                parents.push(parent);
+        // 2. if the user has Admin, return all permissions
+        if perms.has(Permission::Admin) {
+            return Ok(perms);
+        }
+
+        // NOTE: fix this when threads in dms/gdms are implemented
+        let room_id = chan
+            .room_id
+            .expect("only channels in rooms can have permission overwrites set");
+        let member = data.room_member_get(room_id, user_id).await?;
+        let roles = member.roles;
+
+        // 3. add all allow permissions for everyone
+        // 4. remove all deny permissions for everyone
+        for ow in &chan.permission_overwrites {
+            if ow.id != *room_id {
+                continue;
             }
 
-            // apply overwrites from top-most parent down to the direct parent
-            for parent in parents.into_iter().rev() {
-                for o in parent.permission_overwrites {
-                    if o.ty == PermissionOverwriteType::User {
-                        if o.id != *user_id {
-                            continue;
-                        }
-                    } else if o.ty == PermissionOverwriteType::Role {
-                        if !roles.contains(&o.id.into())
-                            && thread.room_id.is_none_or(|room_id| *room_id != o.id)
-                        {
-                            continue;
-                        }
-                    }
-                    for p in o.allow {
-                        perms.add(p);
-                    }
-                    for p in o.deny {
-                        perms.remove(p);
-                    }
-                }
+            perms.apply_overwrite(ow);
+        }
+
+        // 5. add all allow permissions for roles
+        // 6. remove all deny permissions for roles
+        for ow in &chan.permission_overwrites {
+            if ow.ty != PermissionOverwriteType::Role {
+                continue;
             }
 
-            for o in thread.permission_overwrites {
-                if o.ty == PermissionOverwriteType::User {
-                    if o.id != *user_id {
-                        continue;
-                    }
-                } else if o.ty == PermissionOverwriteType::Role {
-                    if !roles.contains(&o.id.into())
-                        && thread.room_id.is_none_or(|room_id| *room_id != o.id)
-                    {
-                        continue;
-                    }
-                }
-                for p in o.allow {
-                    perms.add(p);
-                }
-                for p in o.deny {
-                    perms.remove(p);
-                }
+            if !roles.contains(&ow.id.into()) {
+                continue;
             }
+
+            perms.apply_overwrite(ow);
+        }
+
+        // 7. add all allow permissions for users
+        // 8. remove all deny permissions for users
+        for ow in &chan.permission_overwrites {
+            if ow.ty != PermissionOverwriteType::User {
+                continue;
+            }
+
+            if ow.id != *user_id {
+                continue;
+            }
+
+            perms.apply_overwrite(ow);
         }
 
         Ok(perms)
     }
 
+    /// calculate the permissions a user has in a channel
     pub async fn for_channel(&self, user_id: UserId, thread_id: ChannelId) -> Result<Permissions> {
         let srv = self.state.services();
         let t = srv.channels.get(thread_id, Some(user_id)).await?;

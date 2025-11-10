@@ -259,7 +259,6 @@ pub trait DataPermission {
         allow: Vec<Permission>,
         deny: Vec<Permission>,
     ) -> Result<()>;
-
     async fn permission_overwrite_delete(
         &self,
         channel_id: ChannelId,
