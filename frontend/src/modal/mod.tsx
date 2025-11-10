@@ -4,6 +4,7 @@ import { ModalResetPassword } from "../user_settings/mod.tsx";
 import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
 import { ModalMedia } from "./ModalMedia.tsx";
+import { ModalChannelCreate } from "./ModalChannelCreate";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -47,6 +48,14 @@ export function getModal(modal: ContextModal) {
 		}
 		case "palette": {
 			return <ModalPalette />;
+		}
+		case "channel_create": {
+			return (
+				<ModalChannelCreate
+					room_id={modal.room_id}
+					cont={modal.cont}
+				/>
+			);
 		}
 	}
 }

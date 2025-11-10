@@ -96,6 +96,13 @@ export type Modal =
 	}
 	| {
 		type: "palette";
+	}
+	| {
+		type: "channel_create";
+		room_id: string;
+		cont: (
+			data: { name: string; type: "Text" | "Voice" | "Category" } | null,
+		) => void;
 	};
 
 export type AttachmentCreateT = {

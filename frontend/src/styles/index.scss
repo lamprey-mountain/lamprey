@@ -3331,3 +3331,28 @@ kbd {
 		background: $bg-100;
 	}
 }
+
+.new-channel {
+	margin-top: 8px;
+
+	.type {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		label {
+			display: flex;
+			gap: 2px;
+			cursor: pointer;
+			padding: 2px 0;
+
+			&:hover {
+				background: $bg-300;
+			}
+
+			input[type="radio"] {
+				display: none;
+			}
+		}
+	}
+}

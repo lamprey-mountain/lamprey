@@ -170,16 +170,22 @@ export const RoomHome = (props: { room: RoomT }) => {
 
 	function createThread(room_id: string) {
 		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont(name) {
-				if (!name) return;
-				ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
-					params: {
-						path: { room_id },
-					},
-					body: { name },
-				});
+			do: "modal.open",
+			modal: {
+				type: "channel_create",
+				room_id: room_id,
+				cont: (data) => {
+					if (!data) return;
+					ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
+						params: {
+							path: { room_id },
+						},
+						body: {
+							name: data.name,
+							type: data.type,
+						},
+					});
+				},
 			},
 		});
 	}
