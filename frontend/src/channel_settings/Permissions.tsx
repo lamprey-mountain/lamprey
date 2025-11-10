@@ -379,7 +379,9 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 										<span class="dirty-indicator">*</span>
 									</Show>
 								</h3>
-								<Show when={!isEveryoneRole(overwrite.id, props.channel.room_id!)}>
+								<Show
+									when={!isEveryoneRole(overwrite.id, props.channel.room_id!)}
+								>
 									<button onClick={() => remove(overwrite.id)}>delete</button>
 								</Show>
 							</div>

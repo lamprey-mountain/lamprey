@@ -129,7 +129,9 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 								<ul>
 									<For each={perms}>
 										{(p) => {
-											const state = createMemo(() => props.permStates[p.id] || "inherit");
+											const state = createMemo(() =>
+												props.permStates[p.id] || "inherit"
+											);
 											const [isExpanded, setIsExpanded] = createSignal(false);
 
 											return (
