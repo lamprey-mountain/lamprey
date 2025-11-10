@@ -4,6 +4,7 @@ import type { RoomT } from "../types.ts";
 import { getThumbFromId, getUrl } from "../media/util.tsx";
 import { createUpload } from "sdk";
 import { useApi } from "../api.tsx";
+import { Checkbox } from "../icons";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -49,15 +50,21 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const [editingDescription, setEditingDescription] = createSignal(
 		props.room.description,
 	);
+	const [editingPublic, setEditingPublic] = createSignal(props.room.public);
 
 	const isDirty = () =>
 		editingName() !== props.room.name ||
-		editingDescription() !== props.room.description;
+		editingDescription() !== props.room.description ||
+		editingPublic() !== props.room.public;
 
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
-			body: { name: editingName(), description: editingDescription() },
+			body: {
+				name: editingName(),
+				description: editingDescription(),
+				public: editingPublic(),
+			},
 		});
 	};
 
@@ -79,6 +86,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const reset = () => {
 		setEditingName(props.room.name);
 		setEditingDescription(props.room.description);
+		setEditingPublic(props.room.public);
 	};
 
 	return (
@@ -149,7 +157,16 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				</li>
 			</ul>
 			<br />
-			<div>(todo) make public/private</div>
+			<label class="option">
+				<input
+					type="checkbox"
+					checked={editingPublic()}
+					onChange={(e) => setEditingPublic(e.target.checked)}
+					style="display: none;"
+				/>
+				<Checkbox checked={editingPublic()} />
+				<span>Make this room public (anyone can join and view)</span>
+			</label>
 			<br />
 			<div class="danger">
 				<h3>danger zone</h3>

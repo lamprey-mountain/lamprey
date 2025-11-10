@@ -2520,6 +2520,18 @@ button.big {
 	}
 }
 
+.option {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px;
+	cursor: pointer;
+
+	&:hover {
+		background: $bg-150;
+	}
+}
+
 .applications-settings {
 	padding-right: calc(100% - 60ch);
 	padding-left: 0.25rem;
