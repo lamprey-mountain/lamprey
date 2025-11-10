@@ -1,10 +1,15 @@
-import { ReactiveSet } from "@solid-primitives/set";
 import { Message, Pagination } from "sdk";
-import { Accessor, createContext, Setter, useContext } from "solid-js";
+import {
+	createContext,
+	useContext,
+	ParentComponent,
+	ParentProps,
+} from "solid-js";
 import { MessageListAnchor } from "./api/messages";
 import { Attachment } from "./context";
 import { EditorState } from "prosemirror-state";
-import { createStore } from "solid-js/store";
+import { createStore, SetStoreFunction, Store } from "solid-js/store";
+import { useCtx } from "./context";
 
 export type ChannelSearch = {
 	query: string;
@@ -16,8 +21,8 @@ export type ChannelSearch = {
 	channel?: string[];
 };
 
-export type ChannelContext = {
-	anchor: MessageListAnchor;
+export type ChannelState = {
+	anchor?: MessageListAnchor;
 	attachments: Array<Attachment>;
 	editor_state?: EditorState;
 	highlight?: string;
@@ -37,18 +42,21 @@ export type ChannelContext = {
 	selectedMessages: Array<string>;
 };
 
-export const channelctx = createContext<ChannelContext>();
-export const useChannel = () => useContext(channelctx)!;
+export function createInitialChannelState(): ChannelState {
+	return {
+		attachments: [],
+		pinned_view: false,
+		voice_chat_sidebar_open: false,
+		slowmode_expire_at: null,
+		selectMode: false,
+		selectedMessages: [],
+	};
+}
 
-export const defaultChannelState = (anchor: MessageListAnchor) =>
-	createStore<ChannelContext>(
-		{
-			anchor,
-			attachments: [],
-			pinned_view: false,
-			voice_chat_sidebar_open: false,
-			slowmode_expire_at: null,
-			selectMode: false,
-			selectedMessages: [],
-		},
-	);
+export type ChannelContextT = [
+	Store<ChannelState>,
+	SetStoreFunction<ChannelState>,
+];
+
+export const ChannelContext = createContext<ChannelContextT>();
+export const useChannel = () => useContext(ChannelContext)!;

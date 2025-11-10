@@ -85,6 +85,7 @@ import { AutocompleteState } from "./context.ts";
 import { Resizable } from "./Resizable.tsx";
 import { SlashCommands, SlashCommandsContext } from "./slash-commands.ts";
 import { registerDefaultSlashCommands } from "./default-slash-commands.ts";
+import { ChannelContext, createInitialChannelState } from "./channelctx.tsx";
 
 const App: Component = () => {
 	return (
@@ -357,16 +358,30 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	(globalThis as any).api = api;
 	(globalThis as any).flags = flags;
 
+	const channelContexts = new Map();
+
+	const channelContext = () => {
+		const channelId = "todo";
+		const c = channelContexts.get(channelId)
+		if (c) return c;
+
+		const ctx = createInitialChannelState();
+		channelContexts.set(channelId, ctx);
+		return ctx;
+	}
+
 	return (
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
-				<VoiceProvider>
-					<SlashCommandsContext.Provider value={slashCommands}>
-						<Root3 setMenu={setMenu} dispatch={dispatch}>
-							{props.children}
-						</Root3>
-					</SlashCommandsContext.Provider>
-				</VoiceProvider>
+				<ChannelContext.Provider value={channelContext()}>
+					<VoiceProvider>
+						<SlashCommandsContext.Provider value={slashCommands}>
+							<Root3 setMenu={setMenu} dispatch={dispatch}>
+								{props.children}
+							</Root3>
+						</SlashCommandsContext.Provider>
+					</VoiceProvider>
+				</ChannelContext.Provider>
 			</chatctx.Provider>
 		</api.Provider>
 	);
