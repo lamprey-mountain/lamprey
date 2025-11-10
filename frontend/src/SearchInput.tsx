@@ -21,6 +21,7 @@ import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import icSearch from "./assets/search.png";
+import { useChannel } from "./channelctx";
 
 const schema = new Schema({
 	nodes: {
@@ -653,10 +654,12 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		},
 	);
 
+	const [ch, chUpdate] = useChannel()!;
+
 	const handleSubmit = async () => {
 		const queryString = serializeToQuery(view.state);
 		if (!queryString) {
-			ctx.channel_search.delete(props.channel?.id ?? props.room?.id);
+			chUpdate("search", undefined);
 			return;
 		}
 
@@ -681,9 +684,7 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		}
 		const textQuery = textQueryParts.join(" ");
 
-		const existing = ctx.channel_search.get(
-			props.channel?.id ?? props.room?.id,
-		);
+		const existing = ch.search;
 		const searchState: ChannelSearch = {
 			query: queryString,
 			results: existing?.results ?? null,
@@ -693,7 +694,7 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			after: filters.after?.[0],
 			channel: filters.channel,
 		};
-		ctx.channel_search.set(props.channel?.id ?? props.room?.id, searchState);
+		chUpdate("search", searchState);
 
 		const body: {
 			query?: string;
@@ -778,13 +779,13 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			params,
 		});
 		if (res.data) {
-			ctx.channel_search.set(props.channel?.id ?? props.room?.id, {
+			chUpdate("search", {
 				...searchState,
 				results: res.data,
 				loading: false,
 			});
 		} else {
-			ctx.channel_search.set(props.channel?.id ?? props.room?.id, {
+			chUpdate("search", {
 				...searchState,
 				results: null,
 				loading: false,
@@ -838,8 +839,8 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 							return true;
 						}
 
-						if (ctx.channel_search.has(props.channel?.id ?? props.room?.id)) {
-							ctx.channel_search.delete(props.channel?.id ?? props.room?.id);
+						if (ch.search) {
+							chUpdate("search", undefined);
 						} else {
 							const chatInput = document.querySelector(
 								".chat .ProseMirror",

@@ -20,6 +20,8 @@ import { createTooltip } from "./Tooltip.tsx";
 import { EmojiButton } from "./atoms/EmojiButton.tsx";
 import { Channel } from "sdk";
 import icDelete from "./assets/delete.png";
+import { useChannel } from "./channelctx.tsx";
+import { handleSubmit } from "./dispatch/submit.ts";
 
 type InputProps = {
 	channel: Channel;
@@ -28,7 +30,8 @@ type InputProps = {
 export function Input(props: InputProps) {
 	const ctx = useCtx();
 	const api = useApi();
-	const reply_id = () => ctx.channel_reply_id.get(props.channel.id);
+	const [ch, chUpdate] = useChannel()!;
+	const reply_id = () => ch.reply_id;
 	const reply = () => api.messages.cache.get(reply_id()!);
 
 	function handleUpload(file: File) {
@@ -50,7 +53,7 @@ export function Input(props: InputProps) {
 		}
 	}
 
-	const atts = () => ctx.channel_attachments.get(props.channel.id);
+	const atts = () => ch.attachments;
 
 	const sendTyping = leading(throttle, () => {
 		api.channels.typing(props.channel.id);
@@ -81,24 +84,23 @@ export function Input(props: InputProps) {
 	});
 
 	const onSubmit = (text: string) => {
-		// FIXME: dont clear input on submit if slowmode is active
 		if (slowmodeActive()) return false;
-		ctx.dispatch({ do: "thread.send", thread_id: props.channel.id, text });
+		handleSubmit(ctx, [ch, chUpdate], props.channel.id, text, null as any, api);
 		return true;
 	};
 
 	const onEmojiPick = (emoji: string) => {
-		const editorState = ctx.channel_editor_state.get(props.channel.id);
+		const editorState = ch.editor_state;
 		if (editorState) {
 			const { from, to } = editorState.selection;
 			const tr = editorState.tr.insertText(emoji, from, to);
 			const newState = editorState.apply(tr);
-			ctx.channel_editor_state.set(props.channel.id, newState);
+			chUpdate("editor_state", newState);
 		}
 	};
 
 	const onChange = (state: EditorState) => {
-		ctx.channel_editor_state.set(props.channel.id, state);
+		chUpdate("editor_state", state);
 		const hasContent = state.doc.textContent.trim().length > 0;
 		if (hasContent) {
 			sendTyping();
@@ -133,7 +135,7 @@ export function Input(props: InputProps) {
 				for (let i = ranges.live.items.length - 1; i >= 0; i--) {
 					const msg = ranges.live.items[i];
 					if (msg.author_id === self_id && msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.channel.id, {
+						chUpdate("editingMessage", {
 							message_id: msg.id,
 							selection: "end",
 						});
@@ -153,14 +155,14 @@ export function Input(props: InputProps) {
 	});
 
 	onMount(() => {
-		ctx.channel_input_focus.set(props.channel.id, () => editor.focus());
+		chUpdate("input_focus", () => editor.focus());
 		onCleanup(() => {
-			ctx.channel_input_focus.delete(props.channel.id);
+			chUpdate("input_focus", undefined);
 		});
 	});
 
 	createEffect(() => {
-		const state = ctx.channel_editor_state.get(props.channel.id);
+		const state = ch.editor_state;
 		editor.setState(state);
 		editor.focus();
 	});
@@ -168,14 +170,12 @@ export function Input(props: InputProps) {
 	createEffect(() => {
 		const expireAt = props.channel.slowmode_message_expire_at;
 		if (expireAt) {
-			const currentExpireAt = ctx.channel_slowmode_expire_at.get(
-				props.channel.id,
-			);
+			const currentExpireAt = ch.slowmode_expire_at;
 			const newExpireAt = new Date(expireAt);
 			if (
 				!currentExpireAt || currentExpireAt.getTime() !== newExpireAt.getTime()
 			) {
-				ctx.channel_slowmode_expire_at.set(props.channel.id, newExpireAt);
+				chUpdate("slowmode_expire_at", newExpireAt);
 			}
 		}
 	});
@@ -196,7 +196,7 @@ export function Input(props: InputProps) {
 	const slowmodeActive = () => slowmodeRemaining() > 0;
 
 	createEffect(() => {
-		const expireAt = ctx.channel_slowmode_expire_at.get(props.channel.id);
+		const expireAt = ch.slowmode_expire_at;
 		if (expireAt) {
 			const updateTimer = () => {
 				const now = new Date().getTime();
@@ -391,9 +391,9 @@ export function RenderUploadItem(
 }
 
 const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
-	const ctx = useCtx();
 	const api = useApi();
 	const tip = createTooltip({ tip: () => "remove reply" });
+	const [_ch, chUpdate] = useChannel()!;
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
 		const room_id = props.thread.room_id;
@@ -417,7 +417,7 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 		<div class="reply">
 			<button
 				class="cancel"
-				onClick={() => ctx.channel_reply_id.delete(props.thread.id)}
+				onClick={() => chUpdate("reply_id", undefined)}
 				ref={tip.content}
 			>
 				<img class="icon" src={cancelIc} />

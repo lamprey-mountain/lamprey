@@ -19,6 +19,7 @@ export function MessageMenu(props: MessageMenuProps) {
 		() => props.channel_id,
 		() => props.message_id,
 	);
+	const [ch, chUpdate] = ctx.channel_contexts.get(props.channel_id)!;
 
 	const copyId = () => navigator.clipboard.writeText(props.message_id);
 
@@ -29,7 +30,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	};
 
 	const setReply = () => {
-		ctx.channel_reply_id.set(props.channel_id, props.message_id);
+		chUpdate("reply_id", props.message_id);
 	};
 
 	function markUnread() {
@@ -78,15 +79,15 @@ export function MessageMenu(props: MessageMenuProps) {
 	}
 
 	const edit = () => {
-		ctx.editingMessage.set(props.channel_id, {
+		chUpdate("editingMessage", {
 			message_id: props.message_id,
 			selection: "end",
 		});
 	};
 
 	const selectMessage = () => {
-		ctx.selectMode.set(props.channel_id, true);
-		ctx.selectedMessages.set(props.channel_id, [props.message_id]);
+		chUpdate("selectMode", true);
+		chUpdate("selectedMessages", [props.message_id]);
 	};
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));

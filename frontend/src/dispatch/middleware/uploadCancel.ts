@@ -12,11 +12,12 @@ export const uploadCancel: Middleware = (
 		const upload = ctx.uploads.get(local_id);
 		if (!upload) return;
 		upload.abort();
+		const [ch, chUpdate] = ctx.channel_contexts.get(thread_id)!;
 		ctx.uploads.delete(local_id);
-		const atts = ctx.thread_attachments.get(thread_id)!;
+		const atts = ch.attachments;
 		const idx = atts.findIndex((i) => i.local_id === local_id)!;
 		if (idx !== -1) {
-			ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1));
+			chUpdate("attachments", atts.toSpliced(idx, 1));
 		}
 	} else {
 		next(action);

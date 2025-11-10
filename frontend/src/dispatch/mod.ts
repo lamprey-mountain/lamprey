@@ -11,7 +11,6 @@ import { uploadCancel } from "./middleware/uploadCancel";
 import { uploadInit } from "./middleware/uploadInit";
 import { uploadPause } from "./middleware/uploadPause";
 import { uploadResume } from "./middleware/uploadResume";
-import { threadSend } from "./middleware/threadSend";
 
 function combine(
 	state: Data,
@@ -90,7 +89,6 @@ export function createDispatcher(
 			uploadInit,
 			uploadPause,
 			uploadResume,
-			threadSend,
 		],
 		ctx,
 		api,

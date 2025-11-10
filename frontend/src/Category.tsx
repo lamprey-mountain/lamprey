@@ -12,6 +12,7 @@ import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { useChannel } from "./channelctx.tsx";
 
 export const Category = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -171,6 +172,7 @@ const QuickCreate = (
 	const ctx = useCtx();
 	const api = useApi();
 	const n = useNavigate();
+	const [ch, chUpdate] = useChannel()!;
 
 	const editor = createEditor({});
 
@@ -206,10 +208,10 @@ const QuickCreate = (
 	};
 
 	const onChange = (state: EditorState) => {
-		ctx.channel_editor_state.set(props.channel.id, state);
+		chUpdate("editor_state", state);
 	};
 
-	const atts = () => ctx.channel_attachments.get(props.channel.id);
+	const atts = () => ch.attachments;
 	return (
 		<div class="message-input quick-create">
 			<div style="margin-bottom: 2px">quick create thread</div>

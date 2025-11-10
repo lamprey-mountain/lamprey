@@ -5,13 +5,7 @@ import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { AvatarWithStatus } from "./User.tsx";
-import { createEditor } from "./Editor.tsx";
-import { uuidv7 } from "uuidv7";
-import { EditorState } from "prosemirror-state";
-import { RenderUploadItem } from "./Input.tsx";
-import { handleSubmit } from "./dispatch/submit.ts";
 import { Time } from "./Time.tsx";
-import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -225,11 +219,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 					</A>
 				</div>
 			</div>
-			<Show when={flags.has("thread_quick_create")}>
-				<br />
-				<QuickCreate room={props.room} />
-				<br />
-			</Show>
 			<div style="display:flex; align-items:center">
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
 					{threadsResource()?.()?.total ?? getThreads().length} {threadFilter()}
@@ -308,100 +297,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 				</For>
 			</ul>
 			<div ref={setBottom}></div>
-		</div>
-	);
-};
-
-// NOTE the room id is reused as the thread id for draft messages and attachments
-const QuickCreate = (
-	props: { room: RoomT },
-) => {
-	const ctx = useCtx();
-	const api = useApi();
-	const n = useNavigate();
-
-	const editor = createEditor({});
-
-	function uploadFile(e: InputEvent) {
-		const target = e.target! as HTMLInputElement;
-		const files = Array.from(target.files!);
-		for (const file of files) {
-			handleUpload(file);
-		}
-	}
-
-	function handleUpload(file: File) {
-		console.log(file);
-		const local_id = uuidv7();
-		ctx.dispatch({
-			do: "upload.init",
-			file,
-			local_id,
-			thread_id: props.room.id,
-		});
-	}
-
-	const onSubmit = async (text: string) => {
-		if (!text) return;
-		const t = await ctx.client.http.POST(
-			"/api/v1/room/{room_id}/channel",
-			{
-				params: {
-					path: { room_id: props.room.id },
-				},
-				body: { name: "thread" },
-			},
-		);
-
-		if (!t.data) return;
-		handleSubmit(ctx, t.data.id, text, null as any, api, props.room.id);
-		n(`/thread/${t.data.id}`);
-	};
-
-	const onChange = (state: EditorState) => {
-		// reuse room id as the thread id for draft messages
-		ctx.channel_editor_state.set(props.room.id, state);
-	};
-
-	const atts = () => ctx.channel_attachments.get(props.room.id);
-	return (
-		<div class="message-input quick-create">
-			<div style="margin-bottom: 2px">quick create thread</div>
-			<Show when={atts()?.length}>
-				<div class="attachments">
-					<header>
-						{atts()?.length}{" "}
-						{atts()?.length === 1 ? "attachment" : "attachments"}
-					</header>
-					<ul>
-						<For each={atts()}>
-							{(att) => (
-								<RenderUploadItem
-									thread_id={props.room.id}
-									att={att}
-								/>
-							)}
-						</For>
-					</ul>
-				</div>
-			</Show>
-			<div class="text">
-				<label class="upload">
-					+
-					<input
-						multiple
-						type="file"
-						onInput={uploadFile}
-						value="upload file"
-					/>
-				</label>
-				<editor.View
-					onSubmit={onSubmit}
-					onChange={onChange}
-					onUpload={handleUpload}
-					placeholder={"send a message..."}
-				/>
-			</div>
 		</div>
 	);
 };

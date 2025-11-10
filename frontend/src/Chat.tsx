@@ -28,6 +28,7 @@ import { MessageView } from "./Message.tsx";
 import { SearchInput } from "./SearchInput.tsx";
 import icPin from "./assets/pin.png";
 import icMembers from "./assets/members.png";
+import { useChannel } from "./channelctx.tsx";
 
 type ChatProps = {
 	channel: Channel;
@@ -37,11 +38,12 @@ export const ChatMain = (props: ChatProps) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const { t } = useCtx();
+	const [channelState, setChannelState] = useChannel()!;
 
-	const read_marker_id = () => ctx.channel_read_marker_id.get(props.channel.id);
+	const read_marker_id = () => channelState.read_marker_id;
 
 	const anchor = (): MessageListAnchor => {
-		const a = ctx.channel_anchor.get(props.channel.id);
+		const a = channelState.anchor;
 		const r = read_marker_id();
 		if (a) return a;
 		if (r) return { type: "context", limit: 50, message_id: r };
@@ -103,13 +105,13 @@ export const ChatMain = (props: ChatProps) => {
 			const msgs = messages()!;
 			if (dir === "forwards") {
 				if (msgs.has_forward) {
-					ctx.channel_anchor.set(channel_id, {
+					setChannelState("anchor", {
 						type: "forwards",
 						limit: SLICE_LEN,
 						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
 					});
 				} else {
-					ctx.channel_anchor.set(channel_id, {
+					setChannelState("anchor", {
 						type: "backwards",
 						limit: SLICE_LEN,
 					});
@@ -117,7 +119,7 @@ export const ChatMain = (props: ChatProps) => {
 					if (list.isAtBottom()) markRead();
 				}
 			} else {
-				ctx.channel_anchor.set(channel_id, {
+				setChannelState("anchor", {
 					type: "backwards",
 					limit: SLICE_LEN,
 					message_id: messages()?.items[PAGINATE_LEN]?.id,
@@ -138,7 +140,7 @@ export const ChatMain = (props: ChatProps) => {
 						behavior: "instant",
 						block: "center",
 					});
-					const hl = ctx.channel_highlight.get(props.channel.id);
+					const hl = channelState.highlight;
 					if (hl) scrollAndHighlight(hl);
 					return true;
 				} else {
@@ -146,7 +148,7 @@ export const ChatMain = (props: ChatProps) => {
 					return false;
 				}
 			} else if (last_thread_id !== props.channel.id) {
-				const pos = ctx.channel_scroll_pos.get(props.channel.id);
+				const pos = channelState.scroll_pos;
 				console.log("scroll restore: load pos", pos);
 				if (pos === undefined || pos === -1) {
 					list.scrollTo(999999);
@@ -193,15 +195,15 @@ export const ChatMain = (props: ChatProps) => {
 	createEffect(on(() => props.channel.id, (channel_id) => {
 		const last_read_id = props.channel.last_read_id ??
 			props.channel.last_version_id;
-		if (ctx.channel_read_marker_id.has(channel_id)) return;
+		if (channelState.read_marker_id) return;
 		if (!last_read_id) return; // no messages in the channel
-		ctx.channel_read_marker_id.set(channel_id, last_read_id);
+		setChannelState("read_marker_id", last_read_id);
 	}));
 
 	// effect to update saved scroll position
 	const setPos = throttle(() => {
 		const pos = list.isAtBottom() ? -1 : list.scrollPos();
-		ctx.channel_scroll_pos.set(props.channel.id, pos);
+		setChannelState("scroll_pos", pos);
 	}, 300);
 
 	// called both during reanchor and when thread_highlight changes
@@ -228,11 +230,11 @@ export const ChatMain = (props: ChatProps) => {
 			block: "center",
 		});
 		highlight(target);
-		ctx.channel_highlight.delete(props.channel.id);
+		setChannelState("highlight", undefined);
 	}
 
 	createEffect(
-		on(() => ctx.channel_highlight.get(props.channel.id), scrollAndHighlight),
+		on(() => channelState.highlight, scrollAndHighlight),
 	);
 
 	createEffect(on(list.scrollPos, setPos));
@@ -262,7 +264,7 @@ export const ChatMain = (props: ChatProps) => {
 					// messages are approx. 20 px high, show 3 pages of messages
 					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
 
-					ctx.channel_anchor.set(channel_id, {
+					setChannelState("anchor", {
 						type: "backwards",
 						limit: SLICE_LEN,
 					});
@@ -346,9 +348,10 @@ export const ChatHeader = (
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const [channelState, setChannelState] = useChannel()!;
 
-	const selected = () => ctx.selectedMessages.get(props.channel.id) ?? [];
-	const inSelectMode = () => ctx.selectMode.get(props.channel.id) ?? false;
+	const selected = () => channelState.selectedMessages;
+	const inSelectMode = () => channelState.selectMode;
 
 	const { has: hasPermission } = usePermissions(
 		() => api.users.cache.get("@self")?.id,
@@ -359,8 +362,8 @@ export const ChatHeader = (
 	const canRemove = () => hasPermission("MessageRemove");
 
 	const exitSelectMode = () => {
-		ctx.selectMode.set(props.channel.id, false);
-		ctx.selectedMessages.set(props.channel.id, []);
+		setChannelState("selectMode", false);
+		setChannelState("selectedMessages", []);
 	};
 
 	const deleteSelected = () => {
@@ -398,11 +401,10 @@ export const ChatHeader = (
 		});
 	};
 
-	const isShowingPinned = () =>
-		ctx.channel_pinned_view.get(props.channel.id) ?? false;
+	const isShowingPinned = () => channelState.pinned_view;
 
 	const togglePinned = () => {
-		ctx.channel_pinned_view.set(props.channel.id, !isShowingPinned());
+		setChannelState("pinned_view", (v) => !v);
 	};
 
 	const name = () => {
@@ -534,6 +536,7 @@ export const SearchResults = (props: {
 	search: ThreadSearch;
 }) => {
 	const ctx = useCtx();
+	const [channelCtx, setChannelState] = useChannel()!;
 	const navigate = useNavigate();
 
 	const searchId = () => props.channel?.id ?? props.room?.id;
@@ -542,7 +545,9 @@ export const SearchResults = (props: {
 		navigate(`/channel/${message.channel_id}/message/${message.id}`);
 		const id = searchId();
 		if (id) {
-			ctx.channel_search.delete(id);
+			if (props.channel) {
+				setChannelState("search", undefined);
+			}
 		}
 	};
 
@@ -556,7 +561,10 @@ export const SearchResults = (props: {
 					onClick={() => {
 						const id = searchId();
 						if (id) {
-							ctx.channel_search.delete(id);
+							if (props.channel && channelCtx) {
+								const [, setChannelState] = channelCtx;
+								setChannelState("search", undefined);
+							}
 						}
 					}}
 				>

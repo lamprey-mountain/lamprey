@@ -4,6 +4,7 @@ import { useApi } from "./api.tsx";
 import type { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
+import { useChannel } from "./channelctx.tsx";
 
 // const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
 
@@ -28,6 +29,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		case "message": {
 			const ctx = useCtx();
 			const api = useApi();
+			const [ch] = useChannel()!;
 			const self = () => api.users.cache.get("@self");
 			const room_member = createMemo(() => {
 				const me = self();
@@ -59,14 +61,14 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 				return false;
 			};
 			const isSelected = () => {
-				const selected = ctx.selectedMessages.get(thread.id);
+				const selected = ch.selectedMessages;
 				return selected?.includes(item.message.id) ?? false;
 			};
 			return (
 				<li
 					class="message"
 					classList={{
-						selected: item.message.id === ctx.channel_reply_id.get(thread.id),
+						selected: item.message.id === ch.reply_id,
 						"message-selected": isSelected(),
 						mentioned: is_mentioned(),
 					}}

@@ -165,6 +165,8 @@ export type AutocompleteState =
 	}
 	| null;
 
+import type { ChannelContextT } from "./channelctx";
+
 export type ChatCtx = {
 	client: Client;
 	data: Data;
@@ -176,28 +178,6 @@ export type ChatCtx = {
 	setMenu: Setter<Menu | null>;
 	popout: Accessor<Popout>;
 	setPopout: Setter<Popout>;
-
-	// TODO: === remove ===
-	channel_anchor: ReactiveMap<string, MessageListAnchor>;
-	channel_attachments: ReactiveMap<string, Array<Attachment>>;
-	channel_editor_state: Map<string, EditorState>;
-	channel_highlight: Map<string, string>;
-	channel_read_marker_id: ReactiveMap<string, string>;
-	channel_reply_id: ReactiveMap<string, string>;
-	channel_scroll_pos: Map<string, number>;
-	channel_search: ReactiveMap<string, ChannelSearch>;
-	channel_pinned_view: ReactiveMap<string, boolean>; // channel_id -> showing_pinned
-	voice_chat_sidebar_open: ReactiveMap<string, boolean>;
-	channel_edit_drafts: ReactiveMap<string, string>;
-	channel_input_focus: Map<string, () => void>;
-	channel_slowmode_expire_at: ReactiveMap<string, Date | null>; // channel_id -> expiration time
-	editingMessage: ReactiveMap<
-		string,
-		{ message_id: string; selection?: "start" | "end" }
-	>;
-	selectMode: ReactiveMap<string, boolean>; // channel_id -> boolean
-	selectedMessages: ReactiveMap<string, string[]>; // channel_id -> message_id[]
-	// === end remove ===
 
 	autocomplete: Accessor<AutocompleteState>;
 	setAutocomplete: Setter<AutocompleteState>;
@@ -212,6 +192,7 @@ export type ChatCtx = {
 	setUserConfig: Setter<UserConfig>;
 	scrollToChatList: (pos: number) => void;
 	slashCommands: SlashCommands;
+	channel_contexts: ReactiveMap<string, ChannelContextT>;
 };
 
 export type MediaCtx = {

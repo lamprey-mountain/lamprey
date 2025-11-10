@@ -21,6 +21,10 @@ import { Resizable } from "./Resizable.tsx";
 import { UserProfile } from "./UserProfile.tsx";
 import { Inbox } from "./Inbox.tsx";
 import { RoomNav } from "./RoomNav.tsx";
+import { ChannelContext, useChannel } from "./channelctx.tsx";
+import { createInitialChannelState } from "./channelctx.tsx";
+import { createStore } from "solid-js/store";
+import { RoomT } from "./types.ts";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -77,7 +81,9 @@ export const LayoutDefault = (props: LayoutDefaultProps) => {
 
 const RoomSidebar = (props: { room: RoomT }) => {
 	const ctx = useCtx();
-	const search = () => ctx.channel_search.get(props.room.id);
+	// FIXME: searching in rooms
+	// const search = () => ctx.channel_search.get(props.room.id);
+	const search = () => null;
 	const showMembers = () =>
 		flags.has("room_member_list") &&
 		ctx.userConfig().frontend.showMembers !== false;
@@ -158,16 +164,16 @@ export const RouteChannelSettings = (p: RouteSectionProps) => {
 
 const ChannelSidebar = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const search = () => ctx.channel_search.get(props.channel.id);
+	const [ch] = useChannel()!;
+	const search = () => ch.search;
 	const showMembers = () =>
 		props.channel.type !== "Voice" &&
 		flags.has("channel_member_list") &&
 		ctx.userConfig().frontend.showMembers !== false;
-	const showPinned = () =>
-		ctx.channel_pinned_view.get(props.channel.id) ?? false;
+	const showPinned = () => ch.pinned_view ?? false;
 	const showVoiceChat = () =>
 		props.channel.type === "Voice" &&
-		ctx.voice_chat_sidebar_open.get(props.channel.id);
+		ch.voice_chat_sidebar_open;
 
 	return (
 		<Switch>
@@ -209,19 +215,37 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	const channel = api.channels.fetch(() => p.params.channel_id);
 	const room = api.rooms.fetch(() => channel()?.room_id!);
 
+	const getOrCreateChannelContext = () => {
+		const channelId = p.params.channel_id;
+		if (!channelId) return null;
+
+		if (!ctx.channel_contexts.has(channelId)) {
+			const store = createStore(createInitialChannelState());
+			ctx.channel_contexts.set(channelId, store);
+		}
+
+		return ctx.channel_contexts.get(channelId)!;
+	};
+
+	const channelCtx = getOrCreateChannelContext();
+
+	// Handle message anchor logic
 	createEffect(() => {
 		const { channel_id, message_id } = p.params;
+		if (!channelCtx) return;
+
+		const [, setChannelState] = channelCtx;
+
 		if (channel_id && message_id) {
-			ctx.channel_anchor.set(channel_id, {
+			setChannelState("anchor", {
 				type: "context",
 				limit: 50,
 				message_id: message_id,
 			});
-			ctx.channel_highlight.set(channel_id, message_id);
+			setChannelState("highlight", message_id);
 		} else if (channel_id) {
-			const current_anchor = ctx.channel_anchor.get(channel_id);
-			if (current_anchor?.type === "context") {
-				ctx.channel_anchor.delete(channel_id);
+			if (channelCtx[0].anchor?.type === "context") {
+				setChannelState("anchor", undefined);
 			}
 		}
 	});
@@ -242,37 +266,41 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	};
 
 	return (
-		<LayoutDefault
-			title={title()}
-			showChannelNav={true}
-			channelNavRoomId={channel()?.room_id ?? undefined}
-			showVoiceTray={true}
-		>
-			<Show when={channel()}>
-				<Show when={channel()!.type !== "Voice"}>
-					<ChatHeader channel={channel()!} />
-				</Show>
-				<Show
-					when={channel()!.type === "Text" ||
-						channel()!.type === "Dm" ||
-						channel()!.type === "Gdm" ||
-						channel()!.type === "ThreadPublic" ||
-						channel()!.type === "ThreadPrivate"}
+		<Show when={channelCtx} fallback={<div>Loading channel...</div>}>
+			<ChannelContext.Provider value={channelCtx}>
+				<LayoutDefault
+					title={title()}
+					showChannelNav={true}
+					channelNavRoomId={channel()?.room_id ?? undefined}
+					showVoiceTray={true}
 				>
-					<ChatMain channel={channel()!} />
-				</Show>
-				<Show when={channel()!.type === "Voice"}>
-					<Voice channel={channel()!} />
-				</Show>
-				<Show when={channel()!.type === "Forum"}>
-					<Forum channel={channel()!} />
-				</Show>
-				<Show when={channel()!.type === "Category"}>
-					<Category channel={channel()!} />
-				</Show>
-				<ChannelSidebar channel={channel()!} />
-			</Show>
-		</LayoutDefault>
+					<Show when={channel()}>
+						<Show when={channel()!.type !== "Voice"}>
+							<ChatHeader channel={channel()!} />
+						</Show>
+						<Show
+							when={channel()!.type === "Text" ||
+								channel()!.type === "Dm" ||
+								channel()!.type === "Gdm" ||
+								channel()!.type === "ThreadPublic" ||
+								channel()!.type === "ThreadPrivate"}
+						>
+							<ChatMain channel={channel()!} />
+						</Show>
+						<Show when={channel()!.type === "Voice"}>
+							<Voice channel={channel()!} />
+						</Show>
+						<Show when={channel()!.type === "Forum"}>
+							<Forum channel={channel()!} />
+						</Show>
+						<Show when={channel()!.type === "Category"}>
+							<Category channel={channel()!} />
+						</Show>
+						<ChannelSidebar channel={channel()!} />
+					</Show>
+				</LayoutDefault>
+			</ChannelContext.Provider>
+		</Show>
 	);
 };
 

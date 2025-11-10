@@ -1,15 +1,11 @@
 import { Message, Pagination } from "sdk";
-import {
-	createContext,
-	useContext,
-	ParentComponent,
-	ParentProps,
-} from "solid-js";
+import { createContext, useContext } from "solid-js";
 import { MessageListAnchor } from "./api/messages";
 import { Attachment } from "./context";
 import { EditorState } from "prosemirror-state";
 import { createStore, SetStoreFunction, Store } from "solid-js/store";
 import { useCtx } from "./context";
+import { ReactiveMap } from "@solid-primitives/map";
 
 export type ChannelSearch = {
 	query: string;
@@ -40,6 +36,8 @@ export type ChannelState = {
 	};
 	selectMode: boolean;
 	selectedMessages: Array<string>;
+	edit_draft?: string;
+	input_focus?: () => void;
 };
 
 export function createInitialChannelState(): ChannelState {
@@ -59,4 +57,4 @@ export type ChannelContextT = [
 ];
 
 export const ChannelContext = createContext<ChannelContextT>();
-export const useChannel = () => useContext(ChannelContext)!;
+export const useChannel = () => useContext(ChannelContext);

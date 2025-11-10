@@ -13,6 +13,7 @@ import {
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { useNavigate } from "@solidjs/router";
+import { useChannel } from "./channelctx.tsx";
 import {
 	AudioView,
 	FileView,
@@ -238,15 +239,14 @@ function MessageEditor(
 ) {
 	const ctx = useCtx();
 	const api = useApi();
+	const [ch, chUpdate] = useChannel()!;
 
-	const [draft, setDraft] = createSignal(
-		ctx.channel_edit_drafts.get(props.message.id) ?? props.message.content ??
-			"",
-	);
+	// TODO: save edit draft per message?
+	const [draft, setDraft] = createSignal(props.message.content ?? "");
 
 	const editor = createEditor({
 		initialContent: draft(),
-		initialSelection: ctx.editingMessage.get(props.message.channel_id)
+		initialSelection: ch.editingMessage
 			?.selection,
 		keymap: {
 			ArrowUp: (state) => {
@@ -264,7 +264,7 @@ function MessageEditor(
 				for (let i = currentIndex - 1; i >= 0; i--) {
 					const msg = messages[i];
 					if (msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.message.channel_id, {
+						chUpdate("editingMessage", {
 							message_id: msg.id,
 							selection: "end",
 						});
@@ -289,7 +289,7 @@ function MessageEditor(
 				for (let i = currentIndex + 1; i < messages.length; i++) {
 					const msg = messages[i];
 					if (msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.message.channel_id, {
+						chUpdate("editingMessage", {
 							message_id: msg.id,
 							selection: "start",
 						});
@@ -298,8 +298,8 @@ function MessageEditor(
 				}
 
 				// No next message, focus main input
-				ctx.editingMessage.delete(props.message.channel_id);
-				ctx.channel_input_focus.get(props.message.channel_id)?.();
+				chUpdate("editingMessage", undefined);
+				ch.input_focus?.();
 				return true;
 			},
 		},
@@ -307,11 +307,11 @@ function MessageEditor(
 
 	const save = async (content: string) => {
 		if (content.trim() === (props.message.content ?? "").trim()) {
-			ctx.editingMessage.delete(props.message.channel_id);
+			chUpdate("editingMessage", undefined);
 			return;
 		}
 		if (content.trim().length === 0) {
-			ctx.editingMessage.delete(props.message.channel_id);
+			chUpdate("editingMessage", undefined);
 			return;
 		}
 		try {
@@ -323,12 +323,12 @@ function MessageEditor(
 		} catch (e) {
 			console.error("failed to edit message", e);
 		}
-		ctx.editingMessage.delete(props.message.channel_id);
+		chUpdate("editingMessage", undefined);
 	};
 
 	const cancel = () => {
-		ctx.editingMessage.delete(props.message.channel_id);
-		ctx.channel_input_focus.get(props.message.channel_id)?.();
+		chUpdate("editingMessage", undefined);
+		ch.input_focus?.();
 	};
 
 	let containerRef: HTMLDivElement | undefined;
@@ -353,7 +353,7 @@ function MessageEditor(
 				onChange={(state) => {
 					const text = state.doc.textContent;
 					setDraft(text);
-					ctx.channel_edit_drafts.set(props.message.id, text);
+					chUpdate("edit_draft", text);
 				}}
 			/>
 			<div class="edit-info dim">
@@ -368,9 +368,9 @@ export function MessageView(props: MessageProps) {
 	const api = useApi();
 	const ctx = useCtx();
 	const thread = api.channels.fetch(() => props.message.channel_id);
+	const [ch, chUpdate] = useChannel()!;
 
-	const inSelectMode = () =>
-		ctx.selectMode.get(props.message.channel_id) ?? false;
+	const inSelectMode = () => ch.selectMode;
 
 	const onMouseDown = (e: MouseEvent) => {
 		if (inSelectMode() && e.shiftKey) {
@@ -385,7 +385,7 @@ export function MessageView(props: MessageProps) {
 
 		const thread_id = props.message.channel_id;
 		const message_id = props.message.id;
-		const selected = ctx.selectedMessages.get(thread_id) ?? [];
+		const selected = ch.selectedMessages;
 
 		if (e.shiftKey && selected.length > 0) {
 			const lastSelected = selected[selected.length - 1];
@@ -399,16 +399,16 @@ export function MessageView(props: MessageProps) {
 				const end = Math.max(lastIndex, currentIndex);
 				const rangeIds = messages.slice(start, end + 1).map((m) => m.id);
 				const newSelected = [...new Set([...selected, ...rangeIds])];
-				ctx.selectedMessages.set(thread_id, newSelected);
+				chUpdate("selectedMessages", newSelected);
 			}
 		} else {
 			if (selected.includes(message_id)) {
-				ctx.selectedMessages.set(
-					thread_id,
+				chUpdate(
+					"selectedMessages",
 					selected.filter((id) => id !== message_id),
 				);
 			} else {
-				ctx.selectedMessages.set(thread_id, [...selected, message_id]);
+				chUpdate("selectedMessages", [...selected, message_id]);
 			}
 		}
 	};
@@ -605,8 +605,9 @@ export function MessageView(props: MessageProps) {
 				});
 			};
 			const ctx = useCtx();
+			const [ch] = useChannel()!;
 			const isEditing = () => {
-				return ctx.editingMessage.get(props.message.channel_id)?.message_id ===
+				return ch.editingMessage?.message_id ===
 					props.message.id;
 			};
 			const withAvatar = ctx.userConfig().frontend["message_pfps"] === "yes";
@@ -741,6 +742,7 @@ function ReplyView(props: ReplyProps) {
 	const api = useApi();
 	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
 	const thread = api.channels.fetch(() => props.thread_id);
+	const [ch, chUpdate] = useChannel()!;
 
 	const content = () => {
 		const r = reply();
@@ -753,12 +755,12 @@ function ReplyView(props: ReplyProps) {
 
 	const scrollToReply = () => {
 		// if (!props.reply) return;
-		ctx.channel_anchor.set(props.thread_id, {
+		chUpdate("anchor", {
 			type: "context",
 			limit: 50, // TODO: calc dynamically
 			message_id: props.reply_id,
 		});
-		ctx.channel_highlight.set(props.thread_id, props.reply_id);
+		chUpdate("highlight", props.reply_id);
 	};
 
 	return (
@@ -935,13 +937,15 @@ const MessageToolbar = (props: { message: Message }) => {
 		// TODO
 	};
 
+	const [ch, chUpdate] = useChannel()!;
+
 	const handleReply = () => {
-		ctx.channel_reply_id.set(props.message.channel_id, props.message.id);
+		chUpdate("reply_id", props.message.id);
 	};
 
 	const handleEdit = () => {
 		if (canEditMessage()) {
-			ctx.editingMessage.set(props.message.channel_id, {
+			chUpdate("editingMessage", {
 				message_id: props.message.id,
 				selection: "end",
 			});

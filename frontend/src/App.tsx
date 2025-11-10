@@ -20,7 +20,7 @@ import {
 	type UserViewData,
 } from "./context.ts";
 import { type Dispatcher } from "./dispatch/types.ts";
-import { createStore } from "solid-js/store";
+import { createStore, SetStoreFunction, Store } from "solid-js/store";
 import { createDispatcher } from "./dispatch/mod.ts";
 import { createClient, type UserConfig } from "sdk";
 import { createApi, useApi } from "./api.tsx";
@@ -85,7 +85,12 @@ import { AutocompleteState } from "./context.ts";
 import { Resizable } from "./Resizable.tsx";
 import { SlashCommands, SlashCommandsContext } from "./slash-commands.ts";
 import { registerDefaultSlashCommands } from "./default-slash-commands.ts";
-import { ChannelContext, createInitialChannelState } from "./channelctx.tsx";
+import {
+	ChannelContext,
+	ChannelContextT,
+	ChannelState,
+	createInitialChannelState,
+} from "./channelctx.tsx";
 
 const App: Component = () => {
 	return (
@@ -242,10 +247,6 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	const [popout, setPopout] = createSignal<Popout>({});
 	const [autocomplete, setAutocomplete] = createSignal<AutocompleteState>(null);
 	const [userView, setUserView] = createSignal<UserViewData | null>(null);
-	const editingMessage = new ReactiveMap<
-		string,
-		{ message_id: string; selection?: "start" | "end" }
-	>();
 
 	const slashCommands = new SlashCommands();
 	registerDefaultSlashCommands(slashCommands);
@@ -284,42 +285,21 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		setAutocomplete,
 		userView,
 		setUserView,
-		channel_anchor: new ReactiveMap(),
-		channel_attachments: new ReactiveMap(),
-		channel_editor_state: new Map(),
-		channel_highlight: new ReactiveMap(),
-		channel_read_marker_id: new ReactiveMap(),
-		channel_reply_id: new ReactiveMap(),
-		channel_scroll_pos: new Map(),
-		channel_search: new ReactiveMap(),
-		channel_pinned_view: new ReactiveMap(),
-		voice_chat_sidebar_open: new ReactiveMap(),
 		uploads: new ReactiveMap(),
-		channel_edit_drafts: new ReactiveMap(),
-		channel_input_focus: new Map(),
-		channel_slowmode_expire_at: new ReactiveMap(),
-
-		editingMessage,
-
 		recentChannels,
 		setRecentChannels,
-
 		currentMedia,
 		setCurrentMedia,
-
 		userConfig,
 		setUserConfig,
-
 		scrollToChatList: (pos: number) => {
 			// TODO: Implement actual scroll logic if needed
 			console.log("scrollToChatList called with position:", pos);
 		},
-
-		selectMode: new ReactiveMap(),
-		selectedMessages: new ReactiveMap(),
-
 		slashCommands,
+		channel_contexts: new ReactiveMap(),
 	};
+
 	createEffect(() => {
 		const loc = useLocation();
 		const path = loc.pathname.match(/^\/(channel)\/([^/]+)/);
@@ -358,30 +338,35 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	(globalThis as any).api = api;
 	(globalThis as any).flags = flags;
 
-	const channelContexts = new Map();
+	const channelContexts = new Map<
+		string,
+		[Store<ChannelState>, SetStoreFunction<ChannelState>]
+	>();
 
-	const channelContext = () => {
-		const channelId = "todo";
-		const c = channelContexts.get(channelId)
-		if (c) return c;
+	const getChannelState = (channelId: string) => {
+		let c = channelContexts.get(channelId);
+		if (!c) {
+			return null;
+		}
+		return c;
+	};
 
-		const ctx = createInitialChannelState();
-		channelContexts.set(channelId, ctx);
-		return ctx;
-	}
+	const createChannelState = (channelId: string) => {
+		const store = createStore(createInitialChannelState());
+		channelContexts.set(channelId, store);
+		return store;
+	};
 
 	return (
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
-				<ChannelContext.Provider value={channelContext()}>
-					<VoiceProvider>
-						<SlashCommandsContext.Provider value={slashCommands}>
-							<Root3 setMenu={setMenu} dispatch={dispatch}>
-								{props.children}
-							</Root3>
-						</SlashCommandsContext.Provider>
-					</VoiceProvider>
-				</ChannelContext.Provider>
+				<VoiceProvider>
+					<SlashCommandsContext.Provider value={slashCommands}>
+						<Root3 setMenu={setMenu} dispatch={dispatch}>
+							{props.children}
+						</Root3>
+					</SlashCommandsContext.Provider>
+				</VoiceProvider>
 			</chatctx.Provider>
 		</api.Provider>
 	);
