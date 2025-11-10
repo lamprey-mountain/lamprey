@@ -176,10 +176,8 @@ export type ChatCtx = {
 	setMenu: Setter<Menu | null>;
 	popout: Accessor<Popout>;
 	setPopout: Setter<Popout>;
-	autocomplete: Accessor<AutocompleteState>;
-	setAutocomplete: Setter<AutocompleteState>;
-	userView: Accessor<UserViewData | null>;
-	setUserView: Setter<UserViewData | null>;
+
+	// TODO: === remove ===
 	channel_anchor: ReactiveMap<string, MessageListAnchor>;
 	channel_attachments: ReactiveMap<string, Array<Attachment>>;
 	channel_editor_state: Map<string, EditorState>;
@@ -190,30 +188,29 @@ export type ChatCtx = {
 	channel_search: ReactiveMap<string, ChannelSearch>;
 	channel_pinned_view: ReactiveMap<string, boolean>; // channel_id -> showing_pinned
 	voice_chat_sidebar_open: ReactiveMap<string, boolean>;
-	uploads: ReactiveMap<string, Upload>;
 	channel_edit_drafts: ReactiveMap<string, string>;
 	channel_input_focus: Map<string, () => void>;
 	channel_slowmode_expire_at: ReactiveMap<string, Date | null>; // channel_id -> expiration time
-
 	editingMessage: ReactiveMap<
 		string,
 		{ message_id: string; selection?: "start" | "end" }
-	>; // channel_id -> message_id
-
-	recentChannels: Accessor<Array<string>>;
-	setRecentChannels: Setter<Array<string>>;
-
-	currentMedia: Accessor<MediaCtx | null>;
-	setCurrentMedia: Setter<MediaCtx | null>;
-
-	userConfig: Accessor<UserConfig>;
-	setUserConfig: Setter<UserConfig>;
-
-	scrollToChatList: (pos: number) => void;
-
+	>;
 	selectMode: ReactiveMap<string, boolean>; // channel_id -> boolean
 	selectedMessages: ReactiveMap<string, string[]>; // channel_id -> message_id[]
+	// === end remove ===
 
+	autocomplete: Accessor<AutocompleteState>;
+	setAutocomplete: Setter<AutocompleteState>;
+	userView: Accessor<UserViewData | null>;
+	setUserView: Setter<UserViewData | null>;
+	uploads: ReactiveMap<string, Upload>;
+	recentChannels: Accessor<Array<string>>;
+	setRecentChannels: Setter<Array<string>>;
+	currentMedia: Accessor<MediaCtx | null>;
+	setCurrentMedia: Setter<MediaCtx | null>;
+	userConfig: Accessor<UserConfig>;
+	setUserConfig: Setter<UserConfig>;
+	scrollToChatList: (pos: number) => void;
 	slashCommands: SlashCommands;
 };
 

@@ -1,12 +1,36 @@
 import type { Permission } from "sdk";
-import {
-	type Component,
-	createMemo,
-	createSignal,
-	For,
-	type JSX,
-} from "solid-js";
-import { permissionGroups, permissions } from "../permissions.ts";
+import { type Component, createMemo, createSignal, For } from "solid-js";
+import icCheck1 from "../assets/check-1.png";
+import icCheck2 from "../assets/check-2.png";
+import icCheck3 from "../assets/check-3.png";
+import icCheck4 from "../assets/check-4.png";
+import icSlash1 from "../assets/slash-1.png";
+import icSlash2 from "../assets/slash-2.png";
+import icSlash3 from "../assets/slash-3.png";
+import icSlash4 from "../assets/slash-4.png";
+import icX1 from "../assets/x-1.png";
+import icX2 from "../assets/x-2.png";
+import icX3 from "../assets/x-3.png";
+import icX4 from "../assets/x-4.png";
+import { cyrb53 } from "../colors.ts";
+import { LCG } from "../pfp.ts";
+import { permissions } from "../permissions.ts";
+
+const icon = (type: "x" | "slash" | "check", seed: string) => {
+	const rand = LCG(cyrb53(seed));
+	function rnd<T>(arr: T[]): T {
+		return arr[Math.floor(rand() * arr.length)];
+	}
+
+	switch (type) {
+		case "x":
+			return rnd([icX1, icX2, icX3, icX4]);
+		case "slash":
+			return rnd([icSlash1, icSlash2, icSlash3, icSlash4]);
+		case "check":
+			return rnd([icCheck1, icCheck2, icCheck3, icCheck4]);
+	}
+};
 
 type PermState = "allow" | "deny" | "inherit";
 type PermissionItem = {
@@ -17,6 +41,7 @@ type PermissionItem = {
 };
 
 interface PermissionSelectorProps {
+	seed: string;
 	permissions: PermissionItem[];
 	permStates: Record<Permission, PermState>;
 	onPermChange: (perm: Permission, state: PermState) => void;
@@ -76,7 +101,14 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 			}
 		}
 
-		return { groups, groupOrder };
+		const list = [];
+		for (const group of groupOrder) {
+			const ps = groups.get(group);
+			if (ps?.length === 0) continue;
+			list.push({ group, perms: ps });
+		}
+
+		return list;
 	});
 
 	return (
@@ -89,18 +121,15 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 				class="permission-search-input"
 			/>
 			<div class="permission-selector-list">
-				<For each={groupedPermissions().groupOrder}>
-					{(groupName) => {
-						const groupPerms = groupedPermissions().groups.get(groupName);
-						if (!groupPerms || groupPerms.length === 0) return null;
-
+				<For each={groupedPermissions()}>
+					{({ group, perms }) => {
 						return (
 							<div class="permission-group">
-								<h3>{groupName}</h3>
+								<h3>{group}</h3>
 								<ul>
-									<For each={groupPerms}>
+									<For each={perms}>
 										{(p) => {
-											const state = () => props.permStates[p.id] || "inherit";
+											const state = createMemo(() => props.permStates[p.id] || "inherit");
 											const [isExpanded, setIsExpanded] = createSignal(false);
 
 											return (
@@ -128,7 +157,10 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															onClick={() => props.onPermChange(p.id, "allow")}
 															title="Allow"
 														>
-															✓
+															<img
+																class="icon"
+																src={icon("check", props.seed + p.id)}
+															/>
 														</button>
 														<button
 															class="perm-state-button"
@@ -139,7 +171,10 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 																props.onPermChange(p.id, "inherit")}
 															title="Default"
 														>
-															/
+															<img
+																class="icon"
+																src={icon("slash", props.seed + p.id)}
+															/>
 														</button>
 														<button
 															class="perm-state-button"
@@ -149,7 +184,10 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															onClick={() => props.onPermChange(p.id, "deny")}
 															title="Deny"
 														>
-															X
+															<img
+																class="icon"
+																src={icon("x", props.seed + p.id)}
+															/>
 														</button>
 													</div>
 												</li>
