@@ -15,6 +15,8 @@ import { flags } from "./flags";
 import { useCtx } from "./context";
 import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
 import { useVoice } from "./voice-provider";
+import icHome from "./assets/home.png";
+import icInbox from "./assets/inbox.png";
 
 export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
@@ -326,11 +328,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				<li>
 					<A
 						href={props.room_id ? `/room/${props.room_id}` : "/"}
-						class="menu-channel"
+						class="menu-channel nav-channel"
 						draggable={false}
 						end
 					>
-						home
+						<img src={icHome} class="icon" /> home
 					</A>
 				</li>
 
@@ -339,11 +341,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						<li>
 							<A
 								href="/inbox"
-								class="menu-channel"
+								class="menu-channel nav-channel"
 								draggable={false}
 								end
 							>
-								inbox
+								<img src={icInbox} class="icon" /> inbox
 							</A>
 						</li>
 					</Show>
