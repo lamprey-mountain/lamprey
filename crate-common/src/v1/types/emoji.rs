@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
@@ -8,7 +9,8 @@ use utoipa::ToSchema;
 // WARN: this is an *extreme* work in progress
 // at this point in time, custom emoji is still very tentative. i'm still not
 // sure if i'll implement custom emoji or not.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(untagged)]
 pub enum Emoji {
@@ -17,7 +19,8 @@ pub enum Emoji {
 }
 
 /// a single unicode emoji
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EmojiUnicode(pub String);
 

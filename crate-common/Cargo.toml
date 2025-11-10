@@ -7,8 +7,8 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.135"
+serde = { version = "1.0.217", features = ["derive"], optional = true }
+serde_json = { version = "1.0.135", optional = true }
 time = { version = "0.3.37", features = ["formatting", "parsing", "serde"] }
 url = { version = "2.5.4", features = ["serde"] }
 utoipa = { version = "5.3.0", features = ["axum_extras", "url", "uuid", "time"], optional = true }
@@ -22,9 +22,9 @@ str0m = { version = "0.10.0", optional = true }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 
 [features]
-# serde = []
+serde = ["dep:serde", "dep:serde_json"]
 utoipa = ["dep:utoipa"]
-validator = ["dep:validator"]
+validator = ["dep:validator", "serde"]
 str0m = ["dep:str0m"]
 feat_thread_type_forums = []
 feat_forward_threads = []

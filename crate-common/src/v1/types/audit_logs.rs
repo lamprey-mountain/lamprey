@@ -1,4 +1,6 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -15,7 +17,8 @@ use crate::v1::types::{
 // TODO: coalesce multiple events into one event, if possible
 // eg. multiple FooUpdates from the same user
 // or add bulk kick/ban audit log events and merge everything there
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuditLogEntry {
     /// Unique id idenfitying this entry

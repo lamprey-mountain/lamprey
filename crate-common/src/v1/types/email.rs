@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -8,7 +9,8 @@ use utoipa::ToSchema;
 use validator::{Validate, ValidationErrors};
 
 /// An email address
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[serde(transparent)]
 pub struct EmailAddr(String);
 

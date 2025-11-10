@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -10,7 +11,8 @@ use super::Mime;
 
 /// A unique "view" of this piece of media. Could be the source, an
 /// audio/video track, a thumbnail, other metadata, etc.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MediaTrack {
     /// Extra metadata about this track

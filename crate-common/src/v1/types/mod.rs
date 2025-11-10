@@ -1,7 +1,7 @@
 // TEMP: suppress warnings before i remove everything
 // #![allow(deprecated)]
 
-// TODO(#242): make serde optional
+
 
 pub mod application;
 pub mod audit_logs;

@@ -3,6 +3,7 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, PrimitiveDateTime};
 
@@ -11,7 +12,8 @@ use utoipa::ToSchema;
 
 // TODO: swap all date/time types to this
 /// A date, time, and timezone. Serialized to rfc3339.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Time(
     #[serde(

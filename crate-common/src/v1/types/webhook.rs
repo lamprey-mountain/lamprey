@@ -1,9 +1,11 @@
 use crate::v1::types::{util::some_option, ChannelId, MediaId, RoomId, UserId, WebhookId};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Webhook {

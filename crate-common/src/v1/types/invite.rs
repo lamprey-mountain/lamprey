@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -14,11 +15,13 @@ use crate::v1::types::{ChannelId, PaginationKey, RoomId, UserId};
 use super::{Channel, Room, User};
 
 /// a short, unique identifier. knowing the code grants access to the invite's target.
-#[derive(Debug, Hash, Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("a1b2c3")))]
 pub struct InviteCode(pub String);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Invite {
     /// the invite code for this invite

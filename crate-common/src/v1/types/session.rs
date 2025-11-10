@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr};
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -16,7 +17,8 @@ use crate::v1::types::{
 use super::{ids::SessionId, UserId};
 
 // TODO(#250): verify Hash here is timing safe?
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(
     feature = "utoipa",
     derive(ToSchema),

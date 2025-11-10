@@ -2,10 +2,12 @@ use core::ops::Deref;
 use std::{fmt::Display, str::FromStr};
 
 use mediatype::{MediaTypeBuf, MediaTypeError};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// A mime/media type
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Mime(String);
 
 impl Mime {

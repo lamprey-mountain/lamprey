@@ -1,9 +1,13 @@
 use crate::v1::types::{reaction::ReactionKey, AutomodRuleId, ChannelId, RoleId, RoomId};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
+#[cfg(feature = "validator")]
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct AutomodRule {

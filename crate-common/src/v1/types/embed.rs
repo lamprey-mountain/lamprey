@@ -2,6 +2,7 @@ use crate::v1::types::{
     media::Media, misc::Color, util::truncate::truncate_with_ellipsis, EmbedId,
 };
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -14,7 +15,8 @@ use validator::Validate;
 use super::media::MediaRef;
 
 // maybe allow iframes for some sites? probably could be done client side though
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum EmbedType {
     /// this is a piece of media, ie. an image, video, or audio

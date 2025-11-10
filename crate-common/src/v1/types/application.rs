@@ -1,6 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
@@ -14,7 +15,8 @@ use crate::v1::types::{util::Time, RoomMember, User};
 
 use super::{util::Diff, ApplicationId, UserId};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Application {

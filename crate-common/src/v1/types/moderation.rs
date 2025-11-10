@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::v1::types::{ChannelId, ReportId, UserId};
@@ -9,7 +10,8 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 /// moderation report
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Report {
     pub id: ReportId,

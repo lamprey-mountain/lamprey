@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -13,7 +14,8 @@ use utoipa::ToSchema;
 use crate::v1::types::notifications::{NotifsChannel, NotifsGlobal, NotifsRoom};
 
 /// configuration for a user
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserConfigGlobal {
     // TODO: implement notifications

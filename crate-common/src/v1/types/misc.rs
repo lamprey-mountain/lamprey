@@ -2,6 +2,7 @@
 
 use std::fmt::Display;
 
+#[cfg(feature = "serde")]
 use serde::Deserialize;
 
 #[cfg(feature = "utoipa")]
@@ -14,7 +15,9 @@ pub use time::Time;
 
 use super::{ApplicationId, SessionId, UserId};
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(untagged)]
 pub enum UserIdReq {
     #[serde(deserialize_with = "const_self")]

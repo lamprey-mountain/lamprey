@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -17,7 +18,8 @@ use super::email::EmailInfo;
 use super::user_config::UserConfigGlobal;
 use super::{ChannelId, RoomId, UserId, UserVerId};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserWebhook {
     pub room_id: Option<RoomId>,

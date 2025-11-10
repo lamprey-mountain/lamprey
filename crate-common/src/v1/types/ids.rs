@@ -1,4 +1,5 @@
 use core::fmt;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::str::FromStr;

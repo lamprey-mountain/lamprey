@@ -5,10 +5,12 @@
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// who can view this room or thread
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Visibility {
     /// nobody can read except members

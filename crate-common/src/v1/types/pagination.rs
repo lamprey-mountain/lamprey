@@ -1,5 +1,6 @@
 use std::fmt::{self, Display};
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -10,7 +11,8 @@ pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
     fn max() -> Self;
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PaginationQuery<K: PaginationKey> {
     /// The key to start paginating from. Not inclusive. Optional.

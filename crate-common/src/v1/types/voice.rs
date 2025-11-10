@@ -7,6 +7,7 @@
 
 use std::ops::Deref;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -17,7 +18,8 @@ use crate::v1::types::{util::Time, Channel, SessionId, SfuId, UserId};
 use super::ChannelId;
 
 /// webrtc session description
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SessionDescription(pub String);
 
