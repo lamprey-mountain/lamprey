@@ -378,6 +378,17 @@ export const ChannelNav = (props: { room_id?: string }) => {
 											return newSet;
 										});
 									}}
+									onContextMenu={(e) => {
+										e.preventDefault();
+										queueMicrotask(() => {
+											ctx.setMenu({
+												x: e.clientX,
+												y: e.clientY,
+												type: "channel",
+												channel_id: category!.id,
+											});
+										});
+									}}
 									classList={{
 										dragging: dragging() === category!.id,
 										collapsed: collapsedCategories().has(category!.id),
