@@ -14,7 +14,7 @@ import { getThumbFromId } from "./media/util";
 import { useCtx } from "./context";
 import type { Room } from "sdk";
 
-type RoomNavItem =
+export type RoomNavItem =
 	| {
 		type: "room";
 		room_id: string;
@@ -472,6 +472,17 @@ export const RoomNav = () => {
 											<div
 												class="folder-header"
 												onClick={() => toggleFolder(folder.id)}
+												onContextMenu={(e) => {
+													e.preventDefault();
+													queueMicrotask(() => {
+														ctx.setMenu({
+															x: e.clientX,
+															y: e.clientY,
+															type: "folder",
+															folder_id: folder.id,
+														});
+													});
+												}}
 											>
 												{folder.name}
 											</div>

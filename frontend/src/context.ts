@@ -68,6 +68,7 @@ export type Menu =
 			room_id?: string;
 			admin: boolean;
 		}
+		| { type: "folder"; folder_id: string }
 	);
 
 export type Modal =

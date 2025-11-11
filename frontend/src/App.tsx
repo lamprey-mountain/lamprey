@@ -52,6 +52,7 @@ import { createResource } from "solid-js";
 import type en from "./i18n/en.ts";
 import {
 	ChannelMenu,
+	FolderMenu,
 	MessageMenu,
 	RoomMenu,
 	UserAdminMenu,
@@ -664,6 +665,9 @@ function Overlay() {
 						admin={menu.admin}
 					/>
 				);
+			}
+			case "folder": {
+				return <FolderMenu folder_id={menu.folder_id} />;
 			}
 		}
 	}

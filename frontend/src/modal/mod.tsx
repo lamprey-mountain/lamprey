@@ -122,7 +122,7 @@ const ModalPrompt = (
 					ctx.dispatch({ do: "modal.close" });
 				}}
 			>
-				<input type="text" name="text" use:autofocus autofocus />
+				<input type="text" name="text" autofocus />
 				<div class="bottom">
 					<input type="submit" value="done!"></input>{" "}
 					<button
