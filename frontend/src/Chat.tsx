@@ -26,6 +26,7 @@ import { useNavigate } from "@solidjs/router";
 import type { ThreadSearch } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 import { SearchInput } from "./SearchInput.tsx";
+import { md } from "./markdown.tsx";
 import icPin from "./assets/pin.png";
 import icMembers from "./assets/members.png";
 import { useChannel } from "./channelctx.tsx";
@@ -428,7 +429,11 @@ export const ChatHeader = (
 						<span class="dim" style="white-space:pre;font-size:1em">
 							{"  -  "}
 						</span>
-						{props.channel.description}
+						<span
+							class="markdown"
+							innerHTML={md(props.channel.description ?? "") as string}
+						>
+						</span>
 					</Show>
 					<Switch>
 						<Match when={props.channel.deleted_at}>{" (removed)"}</Match>

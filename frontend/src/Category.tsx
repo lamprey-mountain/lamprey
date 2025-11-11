@@ -12,6 +12,7 @@ import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { md } from "./markdown.tsx";
 import { useChannel } from "./channelctx.tsx";
 
 export const Category = (props: { channel: Channel }) => {
@@ -73,7 +74,11 @@ export const Category = (props: { channel: Channel }) => {
 			<div style="display:flex">
 				<div style="flex:1">
 					<h2>{props.channel.name}</h2>
-					<p>{props.channel.description}</p>
+					<p
+						class="markdown"
+						innerHTML={md(props.channel.description ?? "") as string}
+					>
+					</p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<A
@@ -149,8 +154,10 @@ export const Category = (props: { channel: Channel }) => {
 											/>
 										</div>
 										<Show when={thread.description}>
-											<div class="description">
-												{thread.description}
+											<div
+												class="description markdown"
+												innerHTML={md(thread.description ?? "") as string}
+											>
 											</div>
 										</Show>
 									</div>

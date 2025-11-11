@@ -3,6 +3,7 @@ import { createMemo, Match, Show, Switch } from "solid-js";
 import { useApi } from "./api.tsx";
 import type { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
+import { md } from "./markdown.tsx";
 import { MessageView } from "./Message.tsx";
 import { useChannel } from "./channelctx.tsx";
 
@@ -82,7 +83,14 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 				<li class="header">
 					<header>
 						<h1>{thread.name}</h1>
-						<p>This is the start of {thread.name}. {thread.description}</p>
+						<p>
+							This is the start of {thread.name}.{" "}
+							<span
+								class="markdown"
+								innerHTML={md(thread.description ?? "") as string}
+							>
+							</span>
+						</p>
 					</header>
 				</li>
 			);

@@ -25,6 +25,7 @@ import { useNavigate } from "@solidjs/router";
 import { VoiceDebug } from "./VoiceDebug.tsx";
 import { createPopup } from "./popup.tsx";
 import { useCtx } from "./context.ts";
+import { md } from "./markdown.tsx";
 import { getColor } from "./colors.ts";
 
 export const Voice = (p: { channel: Channel }) => {
@@ -203,7 +204,11 @@ export const Voice = (p: { channel: Channel }) => {
 					<span class="dim" style="white-space:pre;font-size:1em">
 						{"  -  "}
 					</span>
-					{p.channel.description}
+					<span
+						class="markdown"
+						innerHTML={md(p.channel.description ?? "") as string}
+					>
+					</span>
 				</Show>
 				<Switch>
 					<Match when={p.channel.deleted_at}>{" (removed)"}</Match>

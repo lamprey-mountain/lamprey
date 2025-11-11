@@ -8,6 +8,7 @@ import { AvatarWithStatus } from "./User.tsx";
 import { Time } from "./Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { md } from "./markdown.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 
 export const RoomMembers = (props: { room: RoomT }) => {
@@ -285,8 +286,10 @@ export const RoomHome = (props: { room: RoomT }) => {
 											/>
 										</div>
 										<Show when={thread.description}>
-											<div class="description">
-												{thread.description}
+											<div
+												class="description markdown"
+												innerHTML={md(thread.description ?? "") as string}
+											>
 											</div>
 										</Show>
 									</div>
