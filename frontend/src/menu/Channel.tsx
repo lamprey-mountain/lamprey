@@ -1,6 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
+import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { Match, Show, Switch } from "solid-js";
 import { timeAgo } from "../Time.tsx";
@@ -14,6 +15,12 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 	const self_id = () => api.users.cache.get("@self")!.id;
 	const channel = api.channels.fetch(() => props.channel_id);
+	
+	const { has: hasPermission } = usePermissions(
+		self_id,
+		() => channel()?.room_id ?? undefined,
+		() => props.channel_id
+	);
 	const self_channel_member = api.thread_members.fetch(
 		() => props.channel_id,
 		self_id,
@@ -135,7 +142,9 @@ export function ChannelMenu(props: { channel_id: string }) {
 					</Match>
 				</Switch>
 			</Show>
-			<Item onClick={toggleLock}>{channel()?.locked ? "unlock" : "lock"}</Item>
+			<Show when={hasPermission("ThreadLock")}>
+				<Item onClick={toggleLock}>{channel()?.locked ? "unlock" : "lock"}</Item>
+			</Show>
 			<Item onClick={removeChannel} color="danger">remove</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
