@@ -152,16 +152,42 @@ impl ServicePermissions {
         let roles = member.roles;
 
         // 3. add all allow permissions for everyone
+        for ow in &chan.permission_overwrites {
+            if ow.id != *room_id {
+                continue;
+            }
+
+            for p in &ow.allow {
+                perms.add(*p);
+            }
+        }
+
         // 4. remove all deny permissions for everyone
         for ow in &chan.permission_overwrites {
             if ow.id != *room_id {
                 continue;
             }
 
-            perms.apply_overwrite(ow);
+            for p in &ow.deny {
+                perms.remove(*p);
+            }
         }
 
         // 5. add all allow permissions for roles
+        for ow in &chan.permission_overwrites {
+            if ow.ty != PermissionOverwriteType::Role {
+                continue;
+            }
+
+            if !roles.contains(&ow.id.into()) {
+                continue;
+            }
+
+            for p in &ow.allow {
+                perms.add(*p);
+            }
+        }
+
         // 6. remove all deny permissions for roles
         for ow in &chan.permission_overwrites {
             if ow.ty != PermissionOverwriteType::Role {
@@ -172,10 +198,26 @@ impl ServicePermissions {
                 continue;
             }
 
-            perms.apply_overwrite(ow);
+            for p in &ow.deny {
+                perms.remove(*p);
+            }
         }
 
         // 7. add all allow permissions for users
+        for ow in &chan.permission_overwrites {
+            if ow.ty != PermissionOverwriteType::User {
+                continue;
+            }
+
+            if ow.id != *user_id {
+                continue;
+            }
+
+            for p in &ow.allow {
+                perms.add(*p);
+            }
+        }
+
         // 8. remove all deny permissions for users
         for ow in &chan.permission_overwrites {
             if ow.ty != PermissionOverwriteType::User {
@@ -186,7 +228,9 @@ impl ServicePermissions {
                 continue;
             }
 
-            perms.apply_overwrite(ow);
+            for p in &ow.deny {
+                perms.remove(*p);
+            }
         }
 
         Ok(perms)
