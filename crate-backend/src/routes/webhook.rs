@@ -348,9 +348,16 @@ async fn webhook_update_with_token(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<WebhookUpdate>,
 ) -> Result<impl IntoResponse> {
+    let json_filtered = WebhookUpdate {
+        channel_id: None,
+        name: json.name,
+        avatar: json.avatar,
+        rotate_token: json.rotate_token,
+    };
+
     let updated_webhook = s
         .data()
-        .webhook_update_with_token(webhook_id, &token, json)
+        .webhook_update_with_token(webhook_id, &token, json_filtered)
         .await?;
 
     if let Some(room_id) = updated_webhook.room_id {
