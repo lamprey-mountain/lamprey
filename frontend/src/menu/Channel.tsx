@@ -145,7 +145,13 @@ export function ChannelMenu(props: { channel_id: string }) {
 			<Show when={hasPermission("ThreadLock")}>
 				<Item onClick={toggleLock}>{channel()?.locked ? "unlock" : "lock"}</Item>
 			</Show>
-			<Item onClick={removeChannel} color="danger">remove</Item>
+			<Show when={
+				(channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate") 
+					? hasPermission("ThreadManage") 
+					: hasPermission("ChannelManage")
+			}>
+				<Item onClick={removeChannel} color="danger">remove</Item>
+			</Show>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
