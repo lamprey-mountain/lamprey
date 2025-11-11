@@ -52,6 +52,31 @@ export function RoomMenu(props: { room_id: string }) {
 				{(r) => <RoomNotificationMenu room={r()} />}
 			</Show>
 			<Separator />
+			<Item
+				onClick={() => {
+					ctx.dispatch({
+						do: "modal.open",
+						modal: {
+							type: "channel_create",
+							room_id: props.room_id,
+							cont: (data) => {
+								if (!data) return;
+								ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
+									params: {
+										path: { room_id: props.room_id },
+									},
+									body: {
+										name: data.name,
+										type: data.type,
+									},
+								});
+							},
+						},
+					});
+				}}
+			>
+				create channel
+			</Item>
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
 				<Item onClick={settings("/invites")}>invites</Item>
