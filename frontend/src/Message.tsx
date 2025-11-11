@@ -753,6 +753,144 @@ function ReplyView(props: ReplyProps) {
 				: undefined);
 	};
 
+	// Function to render content with inline markdown and mentions
+	const ReplyContent = () => {
+		const r = reply();
+		if (!r || !r.content) return <>{content()}</>;
+
+		let contentStr = r.content;
+
+		// Replace mentions with HTML spans that won't be affected by markdown processing
+		// We'll use HTML that will be recognized by the markdown parser but styled appropriately
+		contentStr = contentStr.replace(
+			/<@([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
+			(match, userId) => {
+				const user = api.users.fetch(() => userId)();
+				return `<span class="mention-user" data-user-id="${userId}">@${
+					user?.name || "..."
+				}</span>`;
+			},
+		);
+
+		contentStr = contentStr.replace(
+			/<#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
+			(match, channelId) => {
+				const channel = api.channels.fetch(() => channelId)();
+				return `<span class="mention-channel" data-channel-id="${channelId}">#${
+					channel?.name || "..."
+				}</span>`;
+			},
+		);
+
+		contentStr = contentStr.replace(
+			/<@&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
+			(match, roleId) => {
+				const role = thread()?.room_id
+					? api.roles.fetch(() => thread()!.room_id, () => roleId)()
+					: null;
+				return `<span class="mention-role" data-role-id="${roleId}">@${
+					role?.name || "..."
+				}</span>`;
+			},
+		);
+
+		contentStr = contentStr.replace(
+			/<a?:([^:]+):([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
+			(match, emojiName) => {
+				return `<span class="mention-emoji">:${emojiName}:</span>`;
+			},
+		);
+
+		// Process the content with markdown, now that mentions are replaced with proper HTML
+		const processedHTML = md(contentStr);
+
+		// Create a ref to allow post-processing of the rendered content
+		let contentRef: HTMLSpanElement | undefined;
+
+		// Post-process to make mentions interactive
+		createEffect(() => {
+			if (!contentRef) return;
+
+			// Add click handlers to make mentions interactive
+			const userMentions = contentRef.querySelectorAll(
+				".mention-user[data-user-id]",
+			);
+			userMentions.forEach((mention) => {
+				const userId = mention.getAttribute("data-user-id");
+				if (userId) {
+					mention.addEventListener("click", (e) => {
+						e.stopPropagation();
+						// Open user profile modal or similar
+						ctx.setUserView({
+							user_id: userId,
+							room_id: thread()?.room_id,
+							thread_id: props.thread_id,
+							ref: mention as HTMLElement,
+							source: "reply",
+						});
+					});
+				}
+			});
+
+			const channelMentions = contentRef.querySelectorAll(
+				".mention-channel[data-channel-id]",
+			);
+			channelMentions.forEach((mention) => {
+				const channelId = mention.getAttribute("data-channel-id");
+				if (channelId) {
+					mention.addEventListener("click", (e) => {
+						e.stopPropagation();
+						// Navigate to channel
+						location.href = `/channel/${channelId}`;
+					});
+				}
+			});
+		});
+
+		return <span ref={contentRef} innerHTML={processedHTML as string} />;
+	};
+
+	// Components for different types of mentions
+	const UserMentionContent = (props: { userId: string }) => {
+		const user = api.users.fetch(() => props.userId)();
+		return (
+			<span class="mention-user">
+				@{user?.name || "..."}
+			</span>
+		);
+	};
+
+	const ChannelMentionContent = (props: { channelId: string }) => {
+		const channel = api.channels.fetch(() => props.channelId)();
+		return (
+			<span class="mention-channel">
+				#{channel?.name || "..."}
+			</span>
+		);
+	};
+
+	const RoleMentionContent = (props: { roleId: string; threadId: string }) => {
+		const thread = api.channels.fetch(() => props.threadId)();
+		const role = thread?.room_id
+			? api.roles.fetch(() => thread.room_id, () => props.roleId)()
+			: null;
+		return (
+			<span class="mention-role">
+				@{role?.name || "..."}
+			</span>
+		);
+	};
+
+	const EmojiMentionContent = (
+		props: { emojiName: string; emojiId: string },
+	) => {
+		return (
+			<span class="mention-emoji">
+				:{props.emojiName}:
+			</span>
+		);
+	};
+
 	const scrollToReply = () => {
 		// if (!props.reply) return;
 		chUpdate("anchor", {
@@ -781,7 +919,7 @@ function ReplyView(props: ReplyProps) {
 						/>
 					</svg>
 				</div>
-				<div class="content" onClick={scrollToReply}>
+				<div class="content" style="display:flex" onClick={scrollToReply}>
 					<Show when={!reply.loading} fallback="loading...">
 						<Show
 							when={reply() && thread()}
@@ -789,7 +927,7 @@ function ReplyView(props: ReplyProps) {
 						>
 							<Author message={reply()!} thread={thread()!} />
 						</Show>
-						{content()}
+						{reply()?.content ? <ReplyContent /> : <>{content()}</>}
 					</Show>
 				</div>
 			</div>

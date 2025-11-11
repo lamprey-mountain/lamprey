@@ -299,7 +299,12 @@ export function createApi(
 					const title = `${author?.name ?? "Someone"} in #${
 						channel?.name ?? "channel"
 					}`;
-					const body = (m.content ?? "").substring(0, 200);
+					const rawContent = m.content ?? "";
+					const processedContent = stripMarkdownAndResolveMentions(
+						rawContent,
+						m.channel_id,
+					);
+					const body = processedContent.substring(0, 200);
 					const notification = new Notification(title, { body });
 					notification.onclick = () => {
 						window.focus();
@@ -1054,6 +1059,84 @@ export function createApi(
 		client.start(session.token);
 	}
 
+	const stripMarkdownAndResolveMentions = (
+		content: string,
+		thread_id: string,
+	) => {
+		let processedContent = content;
+		console.log("content", content);
+
+		// Replace user mentions <@user-id> with user names
+		const userMentionRegex =
+			/<@([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
+		processedContent = processedContent.replace(
+			userMentionRegex,
+			(match, userId) => {
+				console.log("found", match, userId);
+				const user = users.cache.get(userId);
+				return user ? `@${user.name}` : match; // Keep original if user not found
+			},
+		);
+
+		// Replace channel mentions <#channel-id> with channel names
+		const channelMentionRegex =
+			/<#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
+		processedContent = processedContent.replace(
+			channelMentionRegex,
+			(match, channelId) => {
+				const channel = channels.cache.get(channelId);
+				return channel ? `#${channel.name}` : match; // Keep original if channel not found
+			},
+		);
+
+		// Replace role mentions <@&role-id> with role names
+		const roleMentionRegex =
+			/<@&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
+		processedContent = processedContent.replace(
+			roleMentionRegex,
+			(match, roleId) => {
+				const thread = channels.cache.get(thread_id);
+				if (!thread?.room_id) return match; // Need room_id to get role
+				const role = roles.cache.get(roleId);
+				return role ? `@${role.name}` : match; // Keep original if role not found
+			},
+		);
+
+		// Replace emoji mentions <:name:id> with emoji name
+		const emojiMentionRegex =
+			/<:(\w+):[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}>/g;
+		processedContent = processedContent.replace(
+			emojiMentionRegex,
+			(match, emojiName) => {
+				return `:${emojiName}:`;
+			},
+		);
+
+		// Remove basic markdown formatting
+		// Bold: **text** -> text
+		processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, "$1");
+		// Italic: *text* or _text_ -> text
+		processedContent = processedContent.replace(/([*_])(.*?)\1/g, "$2");
+		// Strikethrough: ~~text~~ -> text
+		processedContent = processedContent.replace(/~~(.*?)~~/g, "$1");
+		// Code: `text` -> text
+		processedContent = processedContent.replace(/`(.*?)`/g, "$1");
+		// Code blocks: ```language\ntext\n``` -> text
+		processedContent = processedContent.replace(
+			/```(?:\w+\n)?\n?([\s\S]*?)\n?```/g,
+			"$1",
+		);
+		// Blockquotes: > text on new lines -> text
+		processedContent = processedContent.replace(/^ *>(.*)$/gm, "$1");
+		// Links: [text](url) -> text
+		processedContent = processedContent.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+
+		// Clean up extra whitespace
+		processedContent = processedContent.replace(/\s+/g, " ").trim();
+
+		return processedContent;
+	};
+
 	const api: Api = {
 		rooms,
 		channels,
@@ -1083,6 +1166,7 @@ export function createApi(
 		voiceStates,
 		voiceState,
 		memberLists,
+		stripMarkdownAndResolveMentions,
 		Provider(props: ParentProps) {
 			return (
 				<ApiContext.Provider value={api}>
@@ -1157,6 +1241,12 @@ export type Api = {
 		sync: MessageSync;
 		ready: MessageReady;
 	}>;
+
+	// Utilities
+	stripMarkdownAndResolveMentions: (
+		content: string,
+		thread_id: string,
+	) => string;
 };
 
 export type Listing<T> = {
