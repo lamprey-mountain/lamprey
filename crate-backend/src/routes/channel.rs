@@ -544,7 +544,12 @@ async fn channel_remove(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelManage)?;
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if channel.ty.is_thread() {
+        perms.ensure(Permission::ThreadManage)?;
+    } else {
+        perms.ensure(Permission::ChannelManage)?;
+    }
     let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if chan_before.deleted_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
@@ -599,7 +604,12 @@ async fn channel_restore(
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelManage)?;
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if channel.ty.is_thread() {
+        perms.ensure(Permission::ThreadManage)?;
+    } else {
+        perms.ensure(Permission::ChannelManage)?;
+    }
     let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if chan_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
