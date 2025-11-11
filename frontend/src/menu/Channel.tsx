@@ -97,9 +97,15 @@ export function ChannelMenu(props: { channel_id: string }) {
 			<Show when={channel()}>
 				{(c) => <ChannelNotificationMenu channel={c()} />}
 			</Show>
-			<Item onClick={joinOrLeaveChannel}>
-				{self_channel_member()?.membership === "Leave" ? "join" : "leave"}
-			</Item>
+			<Show
+				when={channel() &&
+					(channel()!.type === "ThreadPublic" ||
+						channel()!.type === "ThreadPrivate")}
+			>
+				<Item onClick={joinOrLeaveChannel}>
+					{self_channel_member()?.membership === "Leave" ? "join" : "leave"}
+				</Item>
+			</Show>
 			<Separator />
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
@@ -115,15 +121,20 @@ export function ChannelMenu(props: { channel_id: string }) {
 					<Item>baz</Item>
 				</Submenu>
 			</Show>
-			{/* TODO(#773): only show archive menu for threads */}
-			<Switch>
-				<Match when={!channel()?.archived_at}>
-					<Item onClick={archiveChannel}>archive</Item>
-				</Match>
-				<Match when={channel()?.archived_at}>
-					<Item onClick={unarchiveChannel}>unarchive</Item>
-				</Match>
-			</Switch>
+			<Show
+				when={channel() &&
+					(channel()!.type === "ThreadPublic" ||
+						channel()!.type === "ThreadPrivate")}
+			>
+				<Switch>
+					<Match when={!channel()?.archived_at}>
+						<Item onClick={archiveChannel}>archive</Item>
+					</Match>
+					<Match when={channel()?.archived_at}>
+						<Item onClick={unarchiveChannel}>unarchive</Item>
+					</Match>
+				</Switch>
+			</Show>
 			<Item onClick={toggleLock}>{channel()?.locked ? "unlock" : "lock"}</Item>
 			<Item onClick={removeChannel} color="danger">remove</Item>
 			<Separator />
