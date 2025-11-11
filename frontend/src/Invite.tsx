@@ -1,6 +1,7 @@
 import { createEffect, Show } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
+import { md } from "./markdown.tsx";
 import { useNavigate } from "@solidjs/router";
 import { getThumbFromId } from "./media/util.tsx";
 
@@ -94,7 +95,13 @@ export const RouteInviteInner = (props: { code: string }) => {
 										{name()}
 									</div>
 									<Show when={invite()?.target.type === "Room"}>
-										<div>{invite()?.target.room.description}</div>
+										<div
+											class="markdown"
+											innerHTML={md(
+												invite()?.target.room.description ?? "",
+											) as string}
+										>
+										</div>
 										<div class="dim">
 											{invite()?.target.room.member_count} members,{" "}
 											{invite()?.target.room.online_count} online

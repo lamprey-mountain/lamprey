@@ -211,7 +211,11 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<div style="display:flex">
 				<div style="flex:1">
 					<h2>{props.room.name}</h2>
-					<p>{props.room.description}</p>
+					<p
+						class="markdown"
+						innerHTML={md(props.room.description ?? "") as string}
+					>
+					</p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<button onClick={() => leaveRoom(room_id())}>leave room</button>
