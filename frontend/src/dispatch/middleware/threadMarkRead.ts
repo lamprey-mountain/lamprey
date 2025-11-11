@@ -23,8 +23,9 @@ async (action) => {
 			return;
 		}
 
+		const [_ch, chUpdate] = ctx.channel_contexts.get(thread_id)!;
 		if (also_local) {
-			ctx.channel_read_marker_id.set(thread_id, version_id);
+			chUpdate("read_marker_id", version_id);
 		}
 		await api.channels.ack(thread_id, undefined, version_id);
 	} else {
