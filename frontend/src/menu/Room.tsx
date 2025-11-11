@@ -3,6 +3,7 @@ import { createResource, Show } from "solid-js";
 import { timeAgo } from "../Time.tsx";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
+import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for rooms
@@ -11,6 +12,13 @@ export function RoomMenu(props: { room_id: string }) {
 	const api = useApi();
 	const nav = useNavigate();
 	const room = api.rooms.fetch(() => props.room_id);
+
+	const self_id = () => api.users.cache.get("@self")?.id;
+	const { has: hasPermission } = usePermissions(
+		self_id,
+		() => props.room_id,
+		() => undefined,
+	);
 
 	const copyId = () => navigator.clipboard.writeText(props.room_id);
 
@@ -52,31 +60,33 @@ export function RoomMenu(props: { room_id: string }) {
 				{(r) => <RoomNotificationMenu room={r()} />}
 			</Show>
 			<Separator />
-			<Item
-				onClick={() => {
-					ctx.dispatch({
-						do: "modal.open",
-						modal: {
-							type: "channel_create",
-							room_id: props.room_id,
-							cont: (data) => {
-								if (!data) return;
-								ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
-									params: {
-										path: { room_id: props.room_id },
-									},
-									body: {
-										name: data.name,
-										type: data.type,
-									},
-								});
+			<Show when={hasPermission("ChannelManage")}>
+				<Item
+					onClick={() => {
+						ctx.dispatch({
+							do: "modal.open",
+							modal: {
+								type: "channel_create",
+								room_id: props.room_id,
+								cont: (data) => {
+									if (!data) return;
+									ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
+										params: {
+											path: { room_id: props.room_id },
+										},
+										body: {
+											name: data.name,
+											type: data.type,
+										},
+									});
+								},
 							},
-						},
-					});
-				}}
-			>
-				create channel
-			</Item>
+						});
+					}}
+				>
+					create channel
+				</Item>
+			</Show>
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
 				<Item onClick={settings("/invites")}>invites</Item>
