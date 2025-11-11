@@ -15,12 +15,16 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 	const self_id = () => api.users.cache.get("@self")!.id;
 	const channel = api.channels.fetch(() => props.channel_id);
-	
+
 	const { has: hasPermission } = usePermissions(
 		self_id,
 		() => channel()?.room_id ?? undefined,
-		() => props.channel_id
+		() => props.channel_id,
 	);
+
+	const isThread = () =>
+		channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate";
+
 	const self_channel_member = api.thread_members.fetch(
 		() => props.channel_id,
 		self_id,
@@ -104,11 +108,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 			<Show when={channel()}>
 				{(c) => <ChannelNotificationMenu channel={c()} />}
 			</Show>
-			<Show
-				when={channel() &&
-					(channel()!.type === "ThreadPublic" ||
-						channel()!.type === "ThreadPrivate")}
-			>
+			<Show when={channel() && isThread()}>
 				<Item onClick={joinOrLeaveChannel}>
 					{self_channel_member()?.membership === "Leave" ? "join" : "leave"}
 				</Item>
@@ -128,11 +128,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 					<Item>baz</Item>
 				</Submenu>
 			</Show>
-			<Show
-				when={channel() &&
-					(channel()!.type === "ThreadPublic" ||
-						channel()!.type === "ThreadPrivate")}
-			>
+			<Show when={channel() && isThread()}>
 				<Switch>
 					<Match when={!channel()?.archived_at}>
 						<Item onClick={archiveChannel}>archive</Item>
@@ -143,13 +139,15 @@ export function ChannelMenu(props: { channel_id: string }) {
 				</Switch>
 			</Show>
 			<Show when={hasPermission("ThreadLock")}>
-				<Item onClick={toggleLock}>{channel()?.locked ? "unlock" : "lock"}</Item>
+				<Item onClick={toggleLock}>
+					{channel()?.locked ? "unlock" : "lock"}
+				</Item>
 			</Show>
-			<Show when={
-				(channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate") 
-					? hasPermission("ThreadManage") 
-					: hasPermission("ChannelManage")
-			}>
+			<Show
+				when={isThread()
+					? hasPermission("ThreadManage")
+					: hasPermission("ChannelManage")}
+			>
 				<Item onClick={removeChannel} color="danger">remove</Item>
 			</Show>
 			<Separator />
