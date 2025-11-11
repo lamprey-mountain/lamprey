@@ -24,6 +24,7 @@ import { Copyable } from "./util";
 import { getThumbFromId } from "./media/util";
 import { createStore } from "solid-js/store";
 import { useCtx } from "./context.ts";
+import { md } from "./markdown.tsx";
 import {
 	autoUpdate,
 	computePosition,
@@ -335,8 +336,10 @@ export function UserView(props: UserProps) {
 				<Show when={props.user.description}>
 					<div class="description">
 						<h3 class="dim">About Me</h3>
-						<div class="markdown">
-							<p>{props.user.description}</p>
+						<div
+							class="markdown"
+							innerHTML={md(props.user.description ?? "") as string}
+						>
 						</div>
 					</div>
 				</Show>
