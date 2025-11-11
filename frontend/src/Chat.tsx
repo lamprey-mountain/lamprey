@@ -494,7 +494,7 @@ export const RoomHeader = (
 		>
 			<b>home</b>
 			<div style="flex:1"></div>
-			<SearchInput room={props.room} />
+			{/* <SearchInput room={props.room} /> */}
 			<button
 				onClick={toggleMembers}
 				title="Show members"
