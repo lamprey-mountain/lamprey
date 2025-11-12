@@ -2,11 +2,14 @@ import { createSignal, For, type ParentProps } from "solid-js";
 import { Modal } from "./mod";
 import { useCtx } from "../context";
 import { RadioDot } from "../icons";
+import { flags } from "../flags";
 
 export type ChannelTypeOption =
 	| "Text"
 	| "Voice"
-	| "Category";
+	| "Category"
+	| "Forum"
+	| "Calendar";
 
 interface ModalChannelCreateProps {
 	room_id: string;
@@ -59,6 +62,20 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 								type: "Category",
 								description: "group other channels",
 							},
+							...(flags.has("channel_forum")
+								? [{
+									label: "forum channel",
+									type: "Forum",
+									description: "thread only channel",
+								}]
+								: []),
+							...(flags.has("channel_calendar")
+								? [{
+									label: "calendar channel",
+									type: "Calendar",
+									description: "experiment, may be removed later",
+								}]
+								: []),
 						]}
 					>
 						{(c) => (
