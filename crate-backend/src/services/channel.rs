@@ -270,7 +270,11 @@ impl ServiceThreads {
         let parent_id_opt = json.parent_id;
 
         match json.ty {
-            ChannelType::Text | ChannelType::Forum | ChannelType::Voice | ChannelType::Category => {
+            ChannelType::Text
+            | ChannelType::Forum
+            | ChannelType::Voice
+            | ChannelType::Category
+            | ChannelType::Calendar => {
                 perms.ensure(Permission::ChannelManage)?;
             }
             ChannelType::ThreadPublic => {
@@ -351,7 +355,6 @@ impl ServiceThreads {
                     }
                 }
             }
-            ChannelType::Calendar => return Err(Error::BadStatic("not yet implemented")),
             ChannelType::Dm | ChannelType::Gdm => {
                 return Err(Error::BadStatic(
                     "can't create a direct message thread in a room",
