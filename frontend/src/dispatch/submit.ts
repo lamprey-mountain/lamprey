@@ -13,6 +13,7 @@ export async function handleSubmit(
 	_update: SetStoreFunction<Data>,
 	api: Api,
 	atts_thread_id?: string,
+	bypassSlowmode?: boolean,
 ) {
 	if (text.startsWith("/")) {
 		await ctx.slashCommands.run(ctx, api, thread_id, text);
@@ -34,7 +35,7 @@ export async function handleSubmit(
 		embeds: [],
 	});
 
-	if (channel?.slowmode_message) {
+	if (channel?.slowmode_message && !bypassSlowmode) {
 		const now = new Date();
 		const expireAt = new Date(now.getTime() + channel.slowmode_message * 1000);
 		chUpdate("slowmode_expire_at", expireAt);

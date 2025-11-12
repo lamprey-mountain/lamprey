@@ -85,7 +85,16 @@ export function Input(props: InputProps) {
 
 	const onSubmit = (text: string) => {
 		if (slowmodeActive()) return false;
-		handleSubmit(ctx, [ch, chUpdate], props.channel.id, text, null as any, api);
+		handleSubmit(
+			ctx,
+			[ch, chUpdate],
+			props.channel.id,
+			text,
+			null as any,
+			api,
+			undefined,
+			bypassSlowmode(),
+		);
 		return true;
 	};
 
@@ -191,6 +200,11 @@ export function Input(props: InputProps) {
 			(props.channel.locked && !perms.has("ThreadLock"));
 	};
 
+	const bypassSlowmode = () =>
+		perms.has("ChannelManage") ||
+		perms.has("ThreadManage") ||
+		perms.has("MemberTimeout");
+
 	const [remainingTime, setRemainingTime] = createSignal(0);
 	const slowmodeRemaining = () => remainingTime();
 	const slowmodeActive = () => slowmodeRemaining() > 0;
@@ -214,16 +228,17 @@ export function Input(props: InputProps) {
 
 	const slowmodeFormatted = () => {
 		const remainingMs = slowmodeRemaining();
-		if (remainingMs <= 0) {
+		if (remainingMs <= 0 || bypassSlowmode()) {
 			const channelSlowmode = props.channel.slowmode_message;
 			if (channelSlowmode) {
 				const mins = Math.floor(channelSlowmode / 60);
 				const secs = channelSlowmode % 60;
-				if (mins === 0) {
-					return `slowmode set to ${secs}s`;
-				} else {
-					return `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
-				}
+				const time = mins === 0
+					? `slowmode set to ${secs}s`
+					: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
+				return `slowmode set to ${time}${
+					bypassSlowmode() ? " (bypassed)" : ""
+				}`;
 			} else return "no slowmode";
 		}
 		const seconds = Math.ceil(remainingMs / 1000);
@@ -289,6 +304,7 @@ export function Input(props: InputProps) {
 					</div>
 				</Show>
 				<div style="flex:1"></div>
+
 				<Show when={props.channel.slowmode_message || slowmodeActive()}>
 					{/* TODO: tooltip showing slowmode ratelimit */}
 					{/* TODO: icon for slowmode indicator*/}
