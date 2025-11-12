@@ -634,7 +634,27 @@ export function MessageView(props: MessageProps) {
 					</Show>
 					<Show when={withAvatar}>
 						<Show when={props.separate}>
-							<Avatar user={user()} />
+							<div
+								class="avatar-wrap menu-user"
+								data-user-id={props.message.author_id}
+								onClick={(e) => {
+									e.stopPropagation();
+									const currentTarget = e.currentTarget as HTMLElement;
+									if (ctx.userView()?.ref === currentTarget) {
+										ctx.setUserView(null);
+									} else {
+										ctx.setUserView({
+											user_id: props.message.author_id,
+											room_id: thread()?.room_id,
+											thread_id: props.message.channel_id,
+											ref: currentTarget,
+											source: "message",
+										});
+									}
+								}}
+							>
+								<Avatar user={user()} />
+							</div>
 							<div
 								class="author"
 								classList={{ "override-name": !!props.message.override_name }}

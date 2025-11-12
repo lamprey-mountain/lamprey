@@ -1804,9 +1804,16 @@ table {
 		}
 	}
 
-	& > .avatar {
+	& > .avatar-wrap {
 		grid-area: avatar;
 		padding-top: 4px;
+		margin: initial;
+
+		& > .avatar {
+			height: 36px;
+			width: 36px;
+			margin-left: 8px;
+		}
 	}
 
 	& > .author {
@@ -1831,13 +1838,6 @@ table {
 		& > .author > time {
 			visibility: visible;
 		}
-	}
-
-	& .avatar {
-		height: 36px;
-		width: 36px;
-		margin: initial;
-		margin-left: 8px;
 	}
 
 	& > .content {
