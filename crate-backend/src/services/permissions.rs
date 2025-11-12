@@ -93,18 +93,31 @@ impl ServicePermissions {
                     return Result::Ok(p);
                 }
 
+                let Ok(member) = data.room_member_get(room_id, user_id).await else {
+                    if room.public {
+                        // public rooms
+                        let default_perms = self.default_for_room(room_id).await?;
+                        let mut perms = Permissions::empty();
+                        for p in [Permission::ViewChannel, Permission::ViewAuditLog] {
+                            if default_perms.has(p) {
+                                perms.add(p);
+                            }
+                        }
+
+                        return Ok(perms);
+                    }
+
+                    return Result::Err(Error::NotFound);
+                };
+
                 // this handles 2, 3, 4
                 let mut perms = data.permission_room_get(user_id, room_id).await?;
 
                 // handle timed out members
-                if let Ok(member) = data.room_member_get(room_id, user_id).await {
-                    if let Some(timeout_until) = member.timeout_until {
-                        if timeout_until > Time::now_utc() {
-                            perms.set_timed_out(true);
-                        }
+                if let Some(timeout_until) = member.timeout_until {
+                    if timeout_until > Time::now_utc() {
+                        perms.set_timed_out(true);
                     }
-                } else {
-                    return Result::Err(Error::NotFound);
                 }
 
                 Result::Ok(perms)
