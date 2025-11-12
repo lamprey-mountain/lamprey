@@ -20,19 +20,19 @@ export const Forum = (props: { channel: Channel }) => {
 	const api = useApi();
 	const nav = useNavigate();
 	const room_id = () => props.channel.room_id!;
+	const forum_id = () => props.channel.id;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
 	const fetchMore = () => {
-		// const filter = threadFilter();
-		return api.channels.list(room_id);
-		// if (filter === "active") {
-		// 	return api.threads.list(room_id);
-		// } else if (filter === "archived") {
-		// 	return api.threads.listArchived(room_id);
-		// } else if (filter === "removed") {
-		// 	return api.threads.listRemoved(room_id);
-		// }
+		const filter = threadFilter();
+		if (filter === "active") {
+			return api.threads.listForChannel(forum_id);
+		} else if (filter === "archived") {
+			return api.threads.listArchivedForChannel(forum_id);
+		} else if (filter === "removed") {
+			return api.threads.listRemovedForChannel(forum_id);
+		}
 	};
 
 	const threadsResource = createMemo(fetchMore);
@@ -64,6 +64,7 @@ export const Forum = (props: { channel: Channel }) => {
 				api.channels.create(room_id, {
 					name,
 					parent_id: props.channel.id,
+					type: "ThreadPublic",
 				});
 			},
 		});
@@ -210,6 +211,7 @@ const QuickCreate = (
 		const t = await api.channels.create(props.channel.room_id!, {
 			name: "thread",
 			parent_id: props.channel.id,
+			type: "ThreadPublic",
 		});
 
 		if (!t.data) return;
