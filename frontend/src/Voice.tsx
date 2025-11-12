@@ -27,12 +27,14 @@ import { createPopup } from "./popup.tsx";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown.tsx";
 import { getColor } from "./colors.ts";
+import { useChannel } from "./channelctx.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
 	const config = useConfig();
 	const api = useApi();
 	const [voice, actions] = useVoice();
 	const ctx = useCtx();
+	const [ch, chUpdate] = useChannel()!;
 
 	createEffect(on(() => p.channel.id, (tid) => {
 		if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
@@ -85,10 +87,9 @@ export const Voice = (p: { channel: Channel }) => {
 		clearTimeout(controlsTimeout);
 	});
 
-	const isChatOpen = () =>
-		ctx.voice_chat_sidebar_open.get(p.channel.id) ?? false;
+	const isChatOpen = () => ch.voice_chat_sidebar_open;
 	const toggleChat = () => {
-		ctx.voice_chat_sidebar_open.set(p.channel.id, !isChatOpen());
+		chUpdate("voice_chat_sidebar_open", (o) => !o);
 	};
 
 	return (
