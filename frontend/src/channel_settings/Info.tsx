@@ -1,5 +1,5 @@
 import type { Channel } from "sdk";
-import { createSignal, type VoidProps } from "solid-js";
+import { createSignal, For, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 
@@ -84,7 +84,52 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					<div>mark this channel as not safe for work</div>
 				</label>
 			</div>
-			<div>(todo) tags</div>
+			<Show when={props.channel.type === "Forum"}>
+				<div class="tags">
+					<h3 class="dim">Tags</h3>
+					<div class="tag-list">
+						<For each={props.channel.tags_available!}>
+							{(tag) => (
+								<div
+									class="tag-item"
+									style={{
+										background: tag.color,
+										opacity: tag.archived ? 0.6 : 1,
+									}}
+									onClick={() => {
+										ctx.dispatch({
+											do: "modal.open",
+											modal: {
+												type: "tag_editor",
+												forumChannelId: props.channel.id,
+												tag: tag,
+											},
+										});
+									}}
+								>
+									<span class="tag-name">{tag.name}</span>
+									<span class="tag-count">{tag.active_thread_count}</span>
+								</div>
+							)}
+						</For>
+					</div>
+					<button
+						class="secondary small"
+						onClick={() => {
+							ctx.dispatch({
+								do: "modal.open",
+								modal: {
+									type: "tag_editor",
+									forumChannelId: props.channel.id,
+								},
+							});
+						}}
+					>
+						Add New Tag
+					</button>
+				</div>
+			</Show>
+			{/* TODO: add/remove tags from thread channels */}
 			<br />
 			{/* TODO: add padding to all settings */}
 			<div class="danger" style="margin:0 2px">

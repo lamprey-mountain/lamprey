@@ -5,6 +5,7 @@ import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
 import { ModalMedia } from "./ModalMedia.tsx";
 import { ModalChannelCreate } from "./ModalChannelCreate";
+import { ModalTagEditor } from "./ModalTagEditor.tsx";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -54,6 +55,16 @@ export function getModal(modal: ContextModal) {
 				<ModalChannelCreate
 					room_id={modal.room_id}
 					cont={modal.cont}
+				/>
+			);
+		}
+		case "tag_editor": {
+			return (
+				<ModalTagEditor
+					forumChannelId={modal.forumChannelId}
+					tag={modal.tag}
+					onSave={modal.onSave}
+					onClose={modal.onClose}
 				/>
 			);
 		}

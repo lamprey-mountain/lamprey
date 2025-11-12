@@ -3,7 +3,7 @@ import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
-import { Match, Show, Switch } from "solid-js";
+import { For, Match, Show, Switch } from "solid-js";
 import { timeAgo } from "../Time.tsx";
 import { Channel } from "sdk";
 
@@ -15,6 +15,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 	const self_id = () => api.users.cache.get("@self")!.id;
 	const channel = api.channels.fetch(() => props.channel_id);
+	const parentChan = api.channels.fetch(() => channel()?.parent_id);
 
 	const { has: hasPermission } = usePermissions(
 		self_id,
@@ -120,12 +121,23 @@ export function ChannelMenu(props: { channel_id: string }) {
 				<Item onClick={settings("/invites")}>invites</Item>
 				<Item onClick={settings("/webhooks")}>webhooks</Item>
 			</Submenu>
-			<Show when={false}>
-				{/* TODO: show for threads, populate with available_tags */}
+			<Show
+				when={channel() && isThread()}
+			>
 				<Submenu content={"tags"}>
-					<Item>foo</Item>
-					<Item>bar</Item>
-					<Item>baz</Item>
+					<For each={parentChan()!.tags_available}>
+						{(tag) => (
+							<Item
+								onClick={() => {
+									// TODO: add the tag
+								}}
+							>
+								{tag.name}
+							</Item>
+						)}
+					</For>
+					{/* TODO: show placeholders when there are no tags */}
+					{/* TODO: show option to create new tag */}
 				</Submenu>
 			</Show>
 			<Show when={channel() && isThread()}>

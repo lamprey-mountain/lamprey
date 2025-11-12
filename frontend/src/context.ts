@@ -104,6 +104,13 @@ export type Modal =
 		cont: (
 			data: { name: string; type: "Text" | "Voice" | "Category" } | null,
 		) => void;
+	}
+	| {
+		type: "tag_editor";
+		forumChannelId: string;
+		tag?: import("sdk").Tag;
+		onSave?: (tag: import("sdk").Tag) => void;
+		onClose?: () => void;
 	};
 
 export type AttachmentCreateT = {

@@ -1,4 +1,4 @@
-import type { Channel, Pagination } from "sdk";
+import type { Channel, Pagination, Tag, TagCreate } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
@@ -397,5 +397,51 @@ export class Channels {
 			params: { path: { channel_id: channel_id } },
 			body: { archived: false },
 		});
+	}
+
+	async createTag(
+		channel_id: string,
+		body: TagCreate,
+	): Promise<Tag> {
+		const { data, error } = await this.api.client.http.POST(
+			"/api/v1/channel/{channel_id}/tag",
+			{
+				params: { path: { channel_id } },
+				body: body,
+			},
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	async updateTag(
+		channel_id: string,
+		tag_id: string,
+		body: import("sdk").TagPatch,
+	): Promise<import("sdk").Tag> {
+		const { data, error } = await this.api.client.http.PATCH(
+			"/api/v1/channel/{channel_id}/tag/{tag_id}",
+			{
+				params: { path: { channel_id, tag_id } },
+				body: body,
+			},
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	async deleteTag(
+		channel_id: string,
+		tag_id: string,
+		force: boolean = false,
+	): Promise<void> {
+		const { error } = await this.api.client.http.DELETE(
+			"/api/v1/channel/{channel_id}/tag/{tag_id}",
+			{
+				params: { path: { channel_id, tag_id } },
+				query: { force },
+			},
+		);
+		if (error) throw error;
 	}
 }
