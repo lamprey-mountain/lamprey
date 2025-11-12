@@ -438,14 +438,14 @@ export function MessageView(props: MessageProps) {
 							classList={{ local: props.message.is_local }}
 						>
 							<span
-								class="author menu-user"
+								class="author"
 								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
 							</span>
 							{" added "}
 							<span
-								class="author menu-user"
+								class="author"
 								data-user-id={props.message.target_user_id}
 							>
 								<Show when={thread()}>
@@ -480,14 +480,14 @@ export function MessageView(props: MessageProps) {
 							classList={{ local: props.message.is_local }}
 						>
 							<span
-								class="author menu-user"
+								class="author"
 								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
 							</span>
 							{" removed "}
 							<span
-								class="author menu-user"
+								class="author"
 								data-user-id={props.message.target_user_id}
 							>
 								<Show when={thread()}>
@@ -522,7 +522,7 @@ export function MessageView(props: MessageProps) {
 							classList={{ local: props.message.is_local }}
 						>
 							<span
-								class="author menu-user"
+								class="author"
 								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
@@ -552,7 +552,7 @@ export function MessageView(props: MessageProps) {
 							classList={{ local: props.message.is_local }}
 						>
 							<span
-								class="author menu-user"
+								class="author"
 								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
@@ -582,7 +582,7 @@ export function MessageView(props: MessageProps) {
 							classList={{ local: props.message.is_local }}
 						>
 							<span
-								class="author menu-user"
+								class="author"
 								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
@@ -636,9 +636,8 @@ export function MessageView(props: MessageProps) {
 						<Show when={props.separate}>
 							<Avatar user={user()} />
 							<div
-								class="author menu-user"
+								class="author"
 								classList={{ "override-name": !!props.message.override_name }}
-								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
 								<Time date={date} animGroup="message-ts" />
@@ -676,7 +675,7 @@ export function MessageView(props: MessageProps) {
 					<Show when={!withAvatar}>
 						<div class="author-wrap">
 							<div
-								class="author sticky menu-user"
+								class="author sticky"
 								classList={{ "override-name": !!props.message.override_name }}
 								ref={set_w}
 								data-user-id={props.message.author_id}
@@ -1003,7 +1002,7 @@ function Author(props: { message: Message; thread?: Channel }) {
 
 	return (
 		<span
-			class="user"
+			class="user menu-user"
 			classList={{ "override-name": !!props.message.override_name }}
 			data-user-id={props.message.author_id}
 			onClick={(e) => {
