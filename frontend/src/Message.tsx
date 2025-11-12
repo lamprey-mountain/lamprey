@@ -1092,13 +1092,18 @@ const MessageToolbar = (props: { message: Message }) => {
 	const handleContextMenu = (e: MouseEvent) => {
 		e.preventDefault();
 
-		ctx.setMenu({
-			x: e.clientX,
-			y: e.clientY,
-			type: "message",
-			channel_id: props.message.channel_id,
-			message_id: props.message.id,
-			version_id: props.message.version_id,
+		const button = e.currentTarget as HTMLButtonElement;
+		const rect = button.getBoundingClientRect();
+
+		queueMicrotask(() => {
+			ctx.setMenu({
+				x: rect.left,
+				y: rect.bottom,
+				type: "message",
+				channel_id: props.message.channel_id,
+				message_id: props.message.id,
+				version_id: props.message.version_id,
+			});
 		});
 	};
 
