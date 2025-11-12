@@ -624,11 +624,12 @@ export function createApi(
 			}
 		} else if (msg.type === "RatelimitUpdate") {
 			const { channel_id, slowmode_message_expire_at } = msg;
+			const [_ch, chUpdate] = api.ctx.channel_contexts.get(channel_id)!;
 			if (slowmode_message_expire_at) {
 				const expireDate = new Date(slowmode_message_expire_at);
-				api.ctx.channel_slowmode_expire_at.set(channel_id, expireDate);
+				chUpdate("slowmode_expire_at", expireDate);
 			} else {
-				api.ctx.channel_slowmode_expire_at.set(channel_id, null);
+				chUpdate("slowmode_expire_at", undefined);
 			}
 		} else if (msg.type === "InviteDelete") {
 			invites.cache.delete(msg.code);

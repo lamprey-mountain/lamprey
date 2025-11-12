@@ -358,6 +358,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		return store;
 	};
 
+	api.ctx = ctx;
+
 	return (
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
