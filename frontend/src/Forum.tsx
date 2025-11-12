@@ -61,7 +61,10 @@ export const Forum = (props: { channel: Channel }) => {
 			text: "name?",
 			cont(name) {
 				if (!name) return;
-				api.channels.create(room_id, { name });
+				api.channels.create(room_id, {
+					name,
+					parent_id: props.channel.id,
+				});
 			},
 		});
 	}
