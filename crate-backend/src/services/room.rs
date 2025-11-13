@@ -14,7 +14,7 @@ use crate::error::Result;
 use crate::types::{
     DbChannelCreate, DbChannelType, DbMessageCreate, DbRoleCreate, DbRoomCreate, MediaLinkType,
 };
-use crate::ServerStateInner;
+use crate::{Error, ServerStateInner};
 
 pub struct ServiceRooms {
     state: Arc<ServerStateInner>,
@@ -73,6 +73,7 @@ impl ServiceRooms {
         reason: Option<String>,
     ) -> Result<Room> {
         let data = self.state.data();
+        let srv = self.state.services();
         let start = data.room_get(room_id).await?;
         if !patch.changes(&start) {
             return Ok(start);
@@ -85,6 +86,13 @@ impl ServiceRooms {
             if let Some(media_id) = icon {
                 data.media_link_insert(*media_id, *room_id, MediaLinkType::AvatarRoom)
                     .await?;
+            }
+        }
+
+        if let Some(Some(chan_id)) = patch.welcome_channel_id {
+            let chan = srv.channels.get(chan_id, None).await?;
+            if chan.ty != ChannelType::Text {
+                return Err(Error::BadStatic("welcome channel must be text"));
             }
         }
 
