@@ -55,6 +55,16 @@ impl Permissions {
         }
     }
 
+    pub fn mask(&mut self, perms: &[Permission]) {
+        let mut new = HashSet::new();
+        for p in perms {
+            if self.has(*p) {
+                new.insert(*p);
+            }
+        }
+        self.p = new;
+    }
+
     pub fn apply_overwrite(&mut self, ow: &PermissionOverwrite) {
         for p in &ow.allow {
             self.p.insert(*p);

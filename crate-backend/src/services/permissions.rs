@@ -96,14 +96,8 @@ impl ServicePermissions {
                 let Ok(member) = data.room_member_get(room_id, user_id).await else {
                     if room.public {
                         // public rooms
-                        let default_perms = self.default_for_room(room_id).await?;
-                        let mut perms = Permissions::empty();
-                        for p in [Permission::ViewChannel, Permission::ViewAuditLog] {
-                            if default_perms.has(p) {
-                                perms.add(p);
-                            }
-                        }
-
+                        let mut perms = self.default_for_room(room_id).await?;
+                        perms.mask(&[Permission::ViewChannel, Permission::ViewAuditLog]);
                         return Ok(perms);
                     }
 
