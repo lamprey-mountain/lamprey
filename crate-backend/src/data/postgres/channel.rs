@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::util::{Diff, Time};
-use common::v1::types::ChannelReorder;
+use common::v1::types::{ChannelReorder, RoomVerId};
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 
@@ -369,6 +369,21 @@ impl DataChannel for Postgres {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let version_id = ChannelVerId::new();
+        let room_version_id = RoomVerId::new();
+
+        query!(
+            r#"
+            UPDATE room SET
+                version_id = $2,
+                welcome_channel_id = NULL
+            WHERE welcome_channel_id = $1
+            "#,
+            *thread_id,
+            *room_version_id,
+        )
+        .execute(&mut *tx)
+        .await?;
+
         query!(
             r#"
             UPDATE channel SET
