@@ -368,15 +368,14 @@ export const ChatHeader = (
 	};
 
 	const deleteSelected = () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: `Are you sure you want to delete ${selected().length} messages?`,
-			cont: (confirmed) => {
+		modalctl.confirm(
+			`Are you sure you want to delete ${selected().length} messages?`,
+			(confirmed) => {
 				if (!confirmed) return;
 				api.messages.deleteBulk(props.channel.id, selected());
 				exitSelectMode();
 			},
-		});
+		);
 	};
 
 	const removeSelected = () => {

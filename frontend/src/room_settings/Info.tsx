@@ -5,9 +5,11 @@ import { getThumbFromId, getUrl } from "../media/util.tsx";
 import { createUpload } from "sdk";
 import { useApi } from "../api.tsx";
 import { Checkbox } from "../icons";
+import { useModals } from "../contexts/modal";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
+	const [, modalCtl] = useModals();
 
 	let avatarInputEl!: HTMLInputElement;
 	const openAvatarPicker = () => {
@@ -32,16 +34,12 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				onProgress(_progress) {},
 			});
 		} else {
-			ctx.dispatch({
-				do: "modal.confirm",
-				text: "remove avatar?",
-				cont(conf) {
-					if (!conf) return;
-					ctx.client.http.PATCH("/api/v1/room/{room_id}", {
-						params: { path: { room_id: props.room.id } },
-						body: { icon: null },
-					});
-				},
+			modalCtl.confirm("remove avatar?", (conf) => {
+				if (!conf) return;
+				ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+					params: { path: { room_id: props.room.id } },
+					body: { icon: null },
+				});
 			});
 		}
 	};
@@ -70,16 +68,12 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const threads = api.channels.list(() => props.room.id);
 	const archiveAllThreads = () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "really archive everything?",
-			cont(confirmed) {
-				if (!confirmed) return;
-				console.log(threads());
-				for (const thread of threads()?.items ?? []) {
-					api.channels.archive(thread.id);
-				}
-			},
+		modalCtl.confirm("really archive everything?", (confirmed) => {
+			if (!confirmed) return;
+			console.log(threads());
+			for (const thread of threads()?.items ?? []) {
+				api.channels.archive(thread.id);
+			}
 		});
 	};
 

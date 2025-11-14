@@ -4,31 +4,28 @@ import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { createUpload } from "sdk";
 import { useConfig } from "../config.tsx";
+import { useModals } from "../contexts/modal";
 
 export function Emoji(props: VoidProps<{ room: RoomT }>) {
 	const config = useConfig();
 	const api = useApi();
-	const ctx = useCtx();
+	const [, modalCtl] = useModals();
 	const emoji = api.emoji.list(() => props.room.id);
 
 	function create() {
 	}
 
 	function remove(emoji_id: string) {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "really remove?",
-			cont(confirmed) {
-				if (!confirmed) return;
-				api.client.http.DELETE("/api/v1/room/{room_id}/emoji/{emoji_id}", {
-					params: {
-						path: {
-							room_id: props.room.id,
-							emoji_id,
-						},
+		modalCtl.confirm("really remove?", (confirmed) => {
+			if (!confirmed) return;
+			api.client.http.DELETE("/api/v1/room/{room_id}/emoji/{emoji_id}", {
+				params: {
+					path: {
+						room_id: props.room.id,
+						emoji_id,
 					},
-				});
-			},
+				},
+			});
 		});
 	}
 

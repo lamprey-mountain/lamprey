@@ -22,6 +22,7 @@ import {
 import { Resizable } from "../Resizable";
 import { md } from "../markdown.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
+import { useModals } from "../contexts/modal";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));
@@ -46,9 +47,9 @@ function isDirty(a: Role, b: Role): boolean {
 }
 
 export function Roles(props: VoidProps<{ room: RoomT }>) {
-	const ctx = useCtx();
 	const api = useApi();
 	const roles = api.roles.list(() => props.room.id);
+	const [, modalCtl] = useModals();
 
 	const [localRoles, setLocalRoles] = createStore<Role[]>([]);
 	const [isOrderDirty, setIsOrderDirty] = createSignal(false);
@@ -83,16 +84,12 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	});
 
 	const createRole = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "role name?",
-			cont(name) {
-				if (!name) return;
-				api.client.http.POST("/api/v1/room/{room_id}/role", {
-					params: { path: { room_id: props.room.id } },
-					body: { name },
-				});
-			},
+		modalCtl.prompt("role name?", (name) => {
+			if (!name) return;
+			api.client.http.POST("/api/v1/room/{room_id}/role", {
+				params: { path: { room_id: props.room.id } },
+				body: { name },
+			});
 		});
 	};
 
@@ -377,17 +374,14 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const api = useApi();
 	const ctx = useCtx();
 	const [permSearch, setPermSearch] = createSignal("");
+	const [, modalCtl] = useModals();
 
 	const deleteRole = (role_id: string) => () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "are you sure?",
-			cont(confirmed) {
-				if (!confirmed) return;
-				api.client.http.DELETE("/api/v1/room/{room_id}/role/{role_id}", {
-					params: { path: { room_id: props.room.id, role_id } },
-				});
-			},
+		modalCtl.confirm("are you sure?", (confirmed) => {
+			if (!confirmed) return;
+			api.client.http.DELETE("/api/v1/room/{room_id}/role/{role_id}", {
+				params: { path: { room_id: props.room.id, role_id } },
+			});
 		});
 	};
 

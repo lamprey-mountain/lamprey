@@ -19,11 +19,13 @@ import { usePermissions } from "../hooks/usePermissions.ts";
 import { getTimestampFromUUID, type Webhook } from "sdk";
 import { Dropdown } from "../Dropdown.tsx";
 import { useConfig } from "../config.tsx";
+import { useModals } from "../contexts/modal";
 
 export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
 	const api = useApi();
 	const config = useConfig();
+	const [, modalCtl] = useModals();
 
 	const [webhooks, { refetch }] = createResource(async () => {
 		const { data } = await api.client.http.GET(
@@ -34,10 +36,9 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 	});
 
 	const removeWebhook = (webhook_id: string) => () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "Are you sure you want to delete this webhook?",
-			cont(conf) {
+		modalCtl.confirm(
+			"Are you sure you want to delete this webhook?",
+			(conf) => {
 				if (!conf) return;
 				api.client.http.DELETE(
 					"/api/v1/webhook/{webhook_id}",
@@ -46,7 +47,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 					refetch();
 				});
 			},
-		});
+		);
 	};
 
 	const fetchMore = () => {
@@ -65,19 +66,15 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 	// TODO: use fuzzysort here
 
 	const create = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "New webhook name?",
-			cont: async (name) => {
-				if (!name) return;
-				await api.client.http.POST("/api/v1/channel/{channel_id}/webhook", {
-					params: { path: { channel_id: props.channel.id } },
-					body: {
-						name,
-					},
-				});
-				refetch();
-			},
+		modalCtl.prompt("New webhook name?", async (name) => {
+			if (!name) return;
+			await api.client.http.POST("/api/v1/channel/{channel_id}/webhook", {
+				params: { path: { channel_id: props.channel.id } },
+				body: {
+					name,
+				},
+			});
+			refetch();
 		});
 	};
 

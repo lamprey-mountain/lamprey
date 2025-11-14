@@ -6,11 +6,13 @@ import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
 import { ChannelIcon } from "../User";
 import { Modal } from "./mod";
+import { useModals } from "../contexts/modal";
 
 export const ModalPalette = () => {
 	const api = useApi();
 	const ctx = useCtx();
 	const navigate = useNavigate();
+	const [, modalCtl] = useModals();
 
 	const [query, setQuery] = createSignal("");
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
@@ -123,12 +125,14 @@ export const ModalPalette = () => {
 			const item = filteredItems()[selectedIndex()];
 			if (item) {
 				item.action();
-				ctx.dispatch({ do: "modal.close" });
+				modalCtl.close();
 			}
 		}
 	};
 
-	const close = () => ctx.dispatch({ do: "modal.close" });
+	const close = () => {
+		modalCtl.close();
+	};
 
 	return (
 		<Modal>

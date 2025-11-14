@@ -4,6 +4,7 @@ import { useApi } from "../api.tsx";
 import { createResource } from "solid-js";
 import { Avatar } from "../User.tsx";
 import { useCtx } from "../context.ts";
+import { useModals } from "../contexts/modal";
 
 function BlockedUserEntry(
 	props: {
@@ -29,7 +30,7 @@ function BlockedUserEntry(
 
 export function Blocked(_props: VoidProps<{ user: User }>) {
 	const api = useApi();
-	const ctx = useCtx();
+	const [, modalCtl] = useModals();
 
 	const [blockedUsers, { refetch }] = createResource(async () => {
 		const { data, error } = await api.client.http.GET(
@@ -48,10 +49,9 @@ export function Blocked(_props: VoidProps<{ user: User }>) {
 	});
 
 	const unblockUser = (userId: string) => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "Are you sure you want to unblock this user?",
-			cont: async (confirmed) => {
+		modalCtl.confirm(
+			"Are you sure you want to unblock this user?",
+			async (confirmed) => {
 				if (confirmed) {
 					await api.client.http.DELETE(
 						"/api/v1/user/@self/block/{target_id}",
@@ -62,7 +62,7 @@ export function Blocked(_props: VoidProps<{ user: User }>) {
 					refetch();
 				}
 			},
-		});
+		);
 	};
 
 	return (

@@ -73,12 +73,12 @@ export function getModal(modal: ContextModal) {
 }
 
 const ModalAlert = (props: { text: string }) => {
-	const ctx = useCtx()!;
+	const [, modalCtl] = useModals();
 	return (
 		<Modal>
 			<p>{props.text}</p>
 			<div class="bottom">
-				<button onClick={() => ctx.dispatch({ do: "modal.close" })}>
+				<button onClick={modalCtl.close}>
 					okay!
 				</button>
 			</div>
@@ -89,7 +89,6 @@ const ModalAlert = (props: { text: string }) => {
 const ModalConfirm = (
 	props: { text: string; cont: (bool: boolean) => void },
 ) => {
-	const ctx = useCtx()!;
 	const [, modalCtl] = useModals();
 	return (
 		<Modal>

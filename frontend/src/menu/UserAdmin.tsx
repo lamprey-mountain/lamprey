@@ -2,6 +2,7 @@ import { Show } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
+import { useModals } from "../contexts/modal";
 
 type UserAdminMenuProps = {
 	user_id: string;
@@ -11,57 +12,48 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
 	const user = api.users.fetch(() => props.user_id);
+	const [, modalCtl] = useModals();
 
 	const copyUserId = () => navigator.clipboard.writeText(props.user_id);
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(user())));
 
 	const suspendUser = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "suspend reason",
-			cont: (reason) => {
-				if (!reason) return;
-				api.client.http.POST("/api/v1/user/{user_id}/suspend", {
-					params: {
-						path: {
-							user_id: props.user_id,
-						},
+		modalCtl.prompt("suspend reason", (reason) => {
+			if (!reason) return;
+			api.client.http.POST("/api/v1/user/{user_id}/suspend", {
+				params: {
+					path: {
+						user_id: props.user_id,
 					},
-					headers: {
-						"X-Reason": reason,
-					},
-					body: {},
-				});
-			},
+				},
+				headers: {
+					"X-Reason": reason,
+				},
+				body: {},
+			});
 		});
 	};
 
 	const unsuspendUser = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "unsuspend reason",
-			cont: (reason) => {
-				if (!reason) return;
-				api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
-					params: {
-						path: {
-							user_id: props.user_id,
-						},
+		modalCtl.prompt("unsuspend reason", (reason) => {
+			if (!reason) return;
+			api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
+				params: {
+					path: {
+						user_id: props.user_id,
 					},
-					headers: {
-						"X-Reason": reason,
-					},
-				});
-			},
+				},
+				headers: {
+					"X-Reason": reason,
+				},
+			});
 		});
 	};
 
 	const deleteUser = () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text:
-				"Are you sure you want to delete this user? This action cannot be undone.",
-			cont: (confirmed) => {
+		modalCtl.confirm(
+			"Are you sure you want to delete this user? This action cannot be undone.",
+			(confirmed) => {
 				if (!confirmed) return;
 				api.client.http.DELETE("/api/v1/user/{user_id}", {
 					params: {
@@ -71,7 +63,7 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 					},
 				});
 			},
-		});
+		);
 	};
 
 	return (

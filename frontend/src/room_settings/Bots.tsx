@@ -17,10 +17,12 @@ import { Time } from "../Time.tsx";
 import { useFloating } from "solid-floating-ui";
 import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../hooks/usePermissions.ts";
+import { useModals } from "../contexts/modal";
 
 export function Bots(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 	const api = useApi();
+	const [, modalCtl] = useModals();
 
 	const editRolesClear = () => setEditRoles();
 	document.addEventListener("click", editRolesClear);
@@ -35,16 +37,12 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 	});
 
 	const removeRole = (user_id: string, role_id: string) => () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "really remove?",
-			cont(conf) {
-				if (!conf) return;
-				api.client.http.DELETE(
-					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
-					{ params: { path: { room_id: props.room.id, role_id, user_id } } },
-				);
-			},
+		modalCtl.confirm("really remove?", (conf) => {
+			if (!conf) return;
+			api.client.http.DELETE(
+				"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
+				{ params: { path: { room_id: props.room.id, role_id, user_id } } },
+			);
 		});
 	};
 

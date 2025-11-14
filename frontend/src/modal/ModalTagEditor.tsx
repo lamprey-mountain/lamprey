@@ -3,6 +3,7 @@ import { Modal } from "./mod";
 import { useCtx } from "../context";
 import { Tag, TagCreate, TagPatch } from "sdk";
 import { useApi } from "../api";
+import { useModals } from "../contexts/modal";
 
 interface ModalTagEditorProps {
 	tag?: Tag;
@@ -14,6 +15,8 @@ interface ModalTagEditorProps {
 export const ModalTagEditor = (props: ModalTagEditorProps) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const [, modalCtl] = useModals();
+
 	const [name, setName] = createSignal(props.tag?.name || "");
 	const [description, setDescription] = createSignal(
 		props.tag?.description || "",
@@ -54,7 +57,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 				} as TagCreate);
 				props.onSave?.(result);
 			}
-			ctx.dispatch({ do: "modal.close" });
+			modalCtl.close();
 		} catch (err) {
 			console.error("Error saving tag:", err);
 			setError(err instanceof Error ? err.message : "Failed to save tag");
@@ -122,10 +125,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 				)}
 
 				<div class="bottom">
-					<button
-						type="button"
-						onClick={() => ctx.dispatch({ do: "modal.close" })}
-					>
+					<button type="button" onClick={modalCtl.close}>
 						Cancel
 					</button>
 					<button type="submit" class="primary" disabled={loading()}>

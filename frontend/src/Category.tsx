@@ -15,11 +15,12 @@ import { createIntersectionObserver } from "@solid-primitives/intersection-obser
 import { md } from "./markdown.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
+import { useModals } from "./contexts/modal";
 
 export const Category = (props: { channel: Channel }) => {
-	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
+	const [, modalCtl] = useModals();
 	const room_id = () => props.channel.room_id!;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
@@ -57,13 +58,9 @@ export const Category = (props: { channel: Channel }) => {
 	};
 
 	function createThread(room_id: string) {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont(name) {
-				if (!name) return;
-				api.channels.create(room_id, { name });
-			},
+		modalCtl.prompt("name?", (name) => {
+			if (!name) return;
+			api.channels.create(room_id, { name });
 		});
 	}
 

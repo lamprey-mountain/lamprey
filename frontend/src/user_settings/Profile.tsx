@@ -4,12 +4,14 @@ import { useApi } from "../api";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
 import { Copyable } from "../util";
+import { useModals } from "../contexts/modal";
 
 // TODO(#753): allow uploading banner
 
 export function Profile(props: VoidProps<{ user: User }>) {
 	const api = useApi();
 	const ctx = useCtx();
+	const [, modalCtl] = useModals();
 
 	const [editingName, setEditingName] = createSignal(props.user.name);
 	const [editingDescription, setEditingDescription] = createSignal(
@@ -53,13 +55,9 @@ export function Profile(props: VoidProps<{ user: User }>) {
 				onProgress(_progress) {},
 			});
 		} else {
-			ctx.dispatch({
-				do: "modal.confirm",
-				text: "remove avatar?",
-				cont(conf) {
-					if (!conf) return;
-					setEditingAvatar(null);
-				},
+			modalCtl.confirm("remove avatar?", (conf) => {
+				if (!conf) return;
+				setEditingAvatar(null);
 			});
 		}
 	};

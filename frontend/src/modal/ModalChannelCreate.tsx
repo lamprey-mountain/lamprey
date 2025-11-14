@@ -3,6 +3,7 @@ import { Modal } from "./mod";
 import { useCtx } from "../context";
 import { RadioDot } from "../icons";
 import { flags } from "../flags";
+import { useModals } from "../contexts/modal";
 
 export type ChannelTypeOption =
 	| "Text"
@@ -17,9 +18,9 @@ interface ModalChannelCreateProps {
 }
 
 export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
-	const ctx = useCtx()!;
 	const [channelName, setChannelName] = createSignal("");
 	const [channelType, setChannelType] = createSignal<ChannelTypeOption>("Text");
+	const [, modalCtl] = useModals();
 
 	const handleSubmit = (e: SubmitEvent) => {
 		e.preventDefault();
@@ -29,12 +30,12 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 			name: channelName().trim(),
 			type: channelType(),
 		});
-		ctx.dispatch({ do: "modal.close" });
+		modalCtl.close();
 	};
 
 	const handleCancel = () => {
 		props.cont(null);
-		ctx.dispatch({ do: "modal.close" });
+		modalCtl.close();
 	};
 
 	return (
