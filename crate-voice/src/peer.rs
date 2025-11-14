@@ -288,7 +288,7 @@ impl Peer {
                     peer_id: t.peer_id,
                     source_mid: t.source_mid,
                     enabled: false,
-                    thread_id: t.thread_id,
+                    channel_id: t.channel_id,
                     key: t.key,
                 });
             }
@@ -353,7 +353,7 @@ impl Peer {
             }
         }
         self.emit(PeerEvent::Signalling(SignallingMessage::Have {
-            thread_id: self.voice_state.thread_id,
+            channel_id: self.voice_state.channel_id,
             user_id,
             tracks: out,
         }))?;
@@ -479,7 +479,7 @@ impl Peer {
                 TrackIn {
                     kind: track.kind.into(),
                     state,
-                    thread_id: self.voice_state.thread_id,
+                    channel_id: self.voice_state.channel_id,
                     key: track.key,
                 },
             );
@@ -599,7 +599,7 @@ impl Peer {
                     kind: track.kind,
                     peer_id: self.user_id,
                     key: track.key.clone(),
-                    thread_id: track.thread_id,
+                    channel_id: track.channel_id,
                 }));
 
                 tracks_metadata.push(TrackMetadataServer {
@@ -626,7 +626,7 @@ impl Peer {
 
             events.push(PeerEvent::Signalling(SignallingMessage::Have {
                 user_id: self.user_id,
-                thread_id: self.voice_state.thread_id,
+                channel_id: self.voice_state.channel_id,
                 tracks: self
                     .tracks_metadata
                     .iter()

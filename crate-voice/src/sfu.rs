@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use common::v1::types::{
-    voice::{SfuCommand, SfuEvent, SfuPermissions, SfuThread, VoiceState},
+    voice::{SfuChannel, SfuCommand, SfuEvent, SfuPermissions, VoiceState},
     ChannelId, SfuId, UserId,
 };
 use dashmap::DashMap;
@@ -24,7 +24,7 @@ pub struct Sfu {
     tracks: Vec<TrackMetadataSfu>,
     tracks_by_user: DashMap<UserId, Vec<TrackMetadataServer>>,
     // TODO: cleanup unused threads
-    threads: DashMap<ChannelId, SfuThread>,
+    threads: DashMap<ChannelId, SfuChannel>,
     config: Config,
     backend_tx: UnboundedSender<SfuEvent>,
 
@@ -105,7 +105,7 @@ impl Sfu {
                 self.handle_voice_state(user_id, state, permissions, peer_send)
                     .await?
             }
-            SfuCommand::Thread { thread } => {
+            SfuCommand::Channel { channel: thread } => {
                 self.threads.insert(thread.id, thread);
             }
         }
@@ -162,7 +162,7 @@ impl Sfu {
                 continue;
             };
 
-            if state.thread_id != other.state.thread_id {
+            if state.channel_id != other.state.channel_id {
                 continue;
             }
 
@@ -185,7 +185,7 @@ impl Sfu {
                 continue;
             };
 
-            if state.thread_id != other.state.thread_id {
+            if state.channel_id != other.state.channel_id {
                 continue;
             }
 
@@ -344,7 +344,7 @@ impl Sfu {
                 continue;
             };
 
-            if voice.state.thread_id != other.state.thread_id {
+            if voice.state.channel_id != other.state.channel_id {
                 continue;
             }
 
@@ -406,7 +406,7 @@ impl Sfu {
                 continue;
             };
 
-            if voice.state.thread_id != my_voice.state.thread_id {
+            if voice.state.channel_id != my_voice.state.channel_id {
                 continue;
             }
 

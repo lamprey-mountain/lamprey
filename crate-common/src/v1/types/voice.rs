@@ -1,10 +1,3 @@
-// TODO: either copy thread/voice.rs to this or copy this to thread/voice.rs
-// TODO: standardize terminology - everything is pretty loose right now
-
-// current model:
-// voice threads can have an associated call. calls have voicemembers. sfus
-// exist in servers and regions
-
 use std::ops::Deref;
 
 #[cfg(feature = "serde")]
@@ -57,12 +50,12 @@ impl Deref for TrackId {
     }
 }
 
-/// represents a user that is connected to a voice thread (older docs call this a "voice connection")
+/// represents a user that is connected to a voice channel (older docs call this a "voice connection")
 ///
 /// connection limits:
-/// - users can only have one active connection across all threads
-/// - bots can connect to multiple threads with any connection strategy
-/// - both users and bots can only have one connection per thread
+/// - users can only have one active connection across all channels
+/// - bots can connect to multiple channels with any connection strategy
+/// - both users and bots can only have one connection per channel
 // TODO: enforce the constraints listed above
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -70,10 +63,10 @@ pub struct VoiceState {
     /// the user this state belongs to
     pub user_id: UserId,
 
-    /// the thread this user is connected to
-    pub thread_id: ChannelId,
+    /// the channel this user is connected to
+    pub channel_id: ChannelId,
 
-    /// the session that's being used to connect to this voice thread
+    /// the session that's being used to connect to this voice channel
     /// this is only be returned for the user this state belongs to
     pub session_id: Option<SessionId>,
 
@@ -100,7 +93,7 @@ pub struct VoiceState {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceStateUpdate {
-    pub thread_id: ChannelId,
+    pub channel_id: ChannelId,
     pub self_deaf: bool,
     pub self_mute: bool,
     pub self_video: bool,
@@ -151,7 +144,7 @@ pub enum SignallingMessage {
 
     /// mapping of media ids to streams. sent by server only
     Have {
-        thread_id: ChannelId,
+        channel_id: ChannelId,
         user_id: UserId,
         tracks: Vec<TrackMetadata>,
     },
@@ -245,9 +238,9 @@ pub enum SfuCommand {
         permissions: SfuPermissions,
     },
 
-    /// upsert thread
-    Thread {
-        thread: SfuThread,
+    /// upsert channel
+    Channel {
+        channel: SfuChannel,
     },
 }
 
@@ -282,16 +275,16 @@ pub struct SfuPermissions {
     pub priority: bool,
 }
 
-/// thread config that the sfu needs to know about
+/// channel config that the sfu needs to know about
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SfuThread {
+pub struct SfuChannel {
     pub id: ChannelId,
     pub name: String,
     pub bitrate: Option<u64>,
     pub user_limit: Option<u64>,
 }
 
-impl From<Channel> for SfuThread {
+impl From<Channel> for SfuChannel {
     fn from(value: Channel) -> Self {
         Self {
             id: value.id,

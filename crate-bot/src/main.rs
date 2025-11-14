@@ -235,7 +235,7 @@ impl Handle {
 
         self.send_signalling(SignallingMessage::VoiceState {
             state: Some(VoiceStateUpdate {
-                thread_id: author_voice_state.thread_id,
+                channel_id: author_voice_state.channel_id,
                 self_deaf: true,
                 self_mute: false,
                 self_video: false,

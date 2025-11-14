@@ -48,7 +48,7 @@ impl ServiceVoice {
 
     pub fn disconnect_everyone(&self, channel_id: ChannelId) -> Result<()> {
         for s in &self.voice_states {
-            if s.thread_id == channel_id {
+            if s.channel_id == channel_id {
                 let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {
                     user_id: s.user_id,
                     state: None,
@@ -63,7 +63,7 @@ impl ServiceVoice {
                 }
             }
         }
-        self.voice_states.retain(|_, s| s.thread_id != channel_id);
+        self.voice_states.retain(|_, s| s.channel_id != channel_id);
         Ok(())
     }
 
@@ -89,8 +89,8 @@ impl ServiceVoice {
             let channel = self.state.services().channels.get(channel_id, None).await?;
             self.state
                 .sushi_sfu
-                .send(SfuCommand::Thread {
-                    thread: channel.into(),
+                .send(SfuCommand::Channel {
+                    channel: channel.into(),
                 })
                 .unwrap();
             Ok(*chosen)

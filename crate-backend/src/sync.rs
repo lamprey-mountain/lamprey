@@ -198,7 +198,7 @@ impl Connection {
                     let voice_states = srv.voice.state_list();
                     for voice_state in voice_states {
                         if let Ok(perms) =
-                            srv.perms.for_channel(user_id, voice_state.thread_id).await
+                            srv.perms.for_channel(user_id, voice_state.channel_id).await
                         {
                             let is_ours = self.state.session().and_then(|s| s.user_id())
                                 == Some(voice_state.user_id);
@@ -286,10 +286,10 @@ impl Connection {
 
                 match &payload {
                     SignallingMessage::VoiceState { state: Some(state) } => {
-                        let perms = srv.perms.for_channel(user_id, state.thread_id).await?;
+                        let perms = srv.perms.for_channel(user_id, state.channel_id).await?;
                         perms.ensure(Permission::ViewChannel)?;
                         perms.ensure(Permission::VoiceConnect)?;
-                        let thread = srv.channels.get(state.thread_id, Some(user_id)).await?;
+                        let thread = srv.channels.get(state.channel_id, Some(user_id)).await?;
                         if thread.archived_at.is_some() {
                             return Err(Error::BadStatic("thread is archived"));
                         }
@@ -301,7 +301,7 @@ impl Connection {
                         }
                         let mut state = VoiceState {
                             user_id,
-                            thread_id: state.thread_id,
+                            channel_id: state.channel_id,
                             session_id: Some(session.id),
                             joined_at: Time::now_utc(),
                             mute: false,
@@ -316,7 +316,7 @@ impl Connection {
                             state.mute = rm.mute;
                             state.deaf = rm.deaf;
                         }
-                        srv.voice.alloc_sfu(state.thread_id).await?;
+                        srv.voice.alloc_sfu(state.channel_id).await?;
                         if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
                             user_id,
                             state: Some(state),
@@ -489,9 +489,9 @@ impl Connection {
                 old_state,
             } => match (state, old_state) {
                 (None, None) => AuthCheck::User(*user_id),
-                (None, Some(o)) => AuthCheck::Channel(o.thread_id),
-                (Some(s), None) => AuthCheck::Channel(s.thread_id),
-                (Some(s), Some(o)) => AuthCheck::EitherChannel(s.thread_id, o.thread_id),
+                (None, Some(o)) => AuthCheck::Channel(o.channel_id),
+                (Some(s), None) => AuthCheck::Channel(s.channel_id),
+                (Some(s), Some(o)) => AuthCheck::EitherChannel(s.channel_id, o.channel_id),
             },
             MessageSync::EmojiCreate { emoji } => match emoji.owner {
                 EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
@@ -589,7 +589,7 @@ impl Connection {
                             .s
                             .services()
                             .perms
-                            .for_channel(user_id, s.thread_id)
+                            .for_channel(user_id, s.channel_id)
                             .await?;
                         if !perms.has(Permission::ViewChannel) {
                             state = None;

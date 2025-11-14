@@ -154,7 +154,7 @@ async fn voice_state_move(
     };
 
     let state = VoiceState {
-        thread_id: json.target_id,
+        channel_id: json.target_id,
         ..old
     };
 
@@ -180,7 +180,7 @@ async fn voice_state_move(
             ty: AuditLogEntryType::MemberMove {
                 user_id: target_user_id,
                 changes: Changes::new()
-                    .change("thread_id", &old.thread_id, &state.thread_id)
+                    .change("thread_id", &old.channel_id, &state.channel_id)
                     .build(),
             },
         })
@@ -218,7 +218,7 @@ async fn voice_state_list(
         .voice
         .state_list()
         .into_iter()
-        .filter(|s| s.thread_id == thread_id)
+        .filter(|s| s.channel_id == thread_id)
         .collect();
     // this endpoint doesn't support pagination, but the results are returned in
     // a PaginationResponse anyways for consistency

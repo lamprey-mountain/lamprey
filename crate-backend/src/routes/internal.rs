@@ -123,7 +123,7 @@ impl SfuConnection {
             }
         }
         for state in self.s.services.voice.state_list() {
-            if needs_reconnect.contains(&state.thread_id) {
+            if needs_reconnect.contains(&state.channel_id) {
                 if let Err(err) = self.s.broadcast(MessageSync::VoiceDispatch {
                     user_id: state.user_id,
                     payload: SignallingMessage::Reconnect,
@@ -168,7 +168,7 @@ impl SfuConnection {
             SfuCommand::Ready { .. } => true,
             SfuCommand::Signalling { user_id, inner: _ } => {
                 let state = self.s.services.voice.state_get(*user_id);
-                state.is_some_and(|s| self.is_ours(s.thread_id))
+                state.is_some_and(|s| self.is_ours(s.channel_id))
             }
             SfuCommand::VoiceState {
                 user_id,
@@ -176,11 +176,11 @@ impl SfuConnection {
                 permissions: _,
             } => {
                 let old = self.s.services.voice.state_get(*user_id);
-                let old_is_ours = old.is_some_and(|s| self.is_ours(s.thread_id));
-                let new_is_ours = state.as_ref().is_some_and(|s| self.is_ours(s.thread_id));
+                let old_is_ours = old.is_some_and(|s| self.is_ours(s.channel_id));
+                let new_is_ours = state.as_ref().is_some_and(|s| self.is_ours(s.channel_id));
                 old_is_ours || new_is_ours
             }
-            SfuCommand::Thread { thread } => self.is_ours(thread.id),
+            SfuCommand::Channel { channel: thread } => self.is_ours(thread.id),
         };
 
         if should_send {
