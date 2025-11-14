@@ -14,6 +14,7 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { md } from "./markdown.tsx";
 import { useChannel } from "./channelctx.tsx";
+import { useUploads } from "./contexts/uploads.tsx";
 
 export const Category = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -191,15 +192,12 @@ const QuickCreate = (
 		}
 	}
 
+	const uploads = useUploads();
+
 	function handleUpload(file: File) {
 		console.log(file);
 		const local_id = uuidv7();
-		ctx.dispatch({
-			do: "upload.init",
-			file,
-			local_id,
-			channel_id: props.channel.id,
-		});
+		uploads.init(local_id, props.channel.id, file);
 	}
 
 	const onSubmit = async (text: string) => {

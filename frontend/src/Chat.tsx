@@ -250,6 +250,8 @@ export const ChatMain = (props: ChatProps) => {
 		return user_ids;
 	};
 
+	const uploads = useUploads();
+
 	return (
 		<div
 			ref={chatRef}
@@ -312,12 +314,7 @@ export const ChatMain = (props: ChatProps) => {
 				for (const file of Array.from(e.dataTransfer?.files ?? [])) {
 					console.log(file);
 					const local_id = uuidv7();
-					ctx.dispatch({
-						do: "upload.init",
-						file,
-						local_id,
-						channel_id: props.channel.id,
-					});
+					uploads.init(local_id, props.channel.id, file);
 				}
 			}}
 		>
@@ -343,6 +340,7 @@ export const ChatMain = (props: ChatProps) => {
 
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { ChannelIcon } from "./User.tsx";
+import { useUploads } from "./contexts/uploads.tsx";
 
 export const ChatHeader = (
 	props: ChatProps & { showMembersButton?: boolean },

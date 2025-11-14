@@ -94,6 +94,7 @@ import {
 	createInitialChannelState,
 } from "./channelctx.tsx";
 import { ModalsProvider } from "./contexts/modal";
+import { UploadsProvider } from "./contexts/uploads.tsx";
 
 const App: Component = () => {
 	return (
@@ -351,13 +352,15 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
 				<ModalsProvider>
-					<VoiceProvider>
-						<SlashCommandsContext.Provider value={slashCommands}>
-							<Root3 setMenu={setMenu} dispatch={dispatch}>
-								{props.children}
-							</Root3>
-						</SlashCommandsContext.Provider>
-					</VoiceProvider>
+					<UploadsProvider ctx={ctx}>
+						<VoiceProvider>
+							<SlashCommandsContext.Provider value={slashCommands}>
+								<Root3 setMenu={setMenu} dispatch={dispatch}>
+									{props.children}
+								</Root3>
+							</SlashCommandsContext.Provider>
+						</VoiceProvider>
+					</UploadsProvider>
 				</ModalsProvider>
 			</chatctx.Provider>
 		</api.Provider>

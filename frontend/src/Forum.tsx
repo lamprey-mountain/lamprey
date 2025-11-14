@@ -15,6 +15,7 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { md } from "./markdown.tsx";
 import { useChannel } from "./channelctx.tsx";
+import { useUploads } from "./contexts/uploads.tsx";
 
 export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -182,6 +183,7 @@ const QuickCreate = (
 	const api = useApi();
 	const n = useNavigate();
 	const [ch, chUpdate] = useChannel()!;
+	const uploads = useUploads();
 
 	const editor = createEditor({});
 
@@ -196,12 +198,7 @@ const QuickCreate = (
 	function handleUpload(file: File) {
 		console.log(file);
 		const local_id = uuidv7();
-		ctx.dispatch({
-			do: "upload.init",
-			file,
-			local_id,
-			channel_id: props.channel.id,
-		});
+		uploads.init(local_id, props.channel.id, file);
 	}
 
 	const onSubmit = async (text: string) => {

@@ -60,12 +60,6 @@ export type ThreadAction =
 	}
 	| { do: "thread.send"; thread_id: string; text: string };
 
-export type UploadAction =
-	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
-	| { do: "upload.pause"; local_id: string }
-	| { do: "upload.resume"; local_id: string }
-	| { do: "upload.cancel"; local_id: string; thread_id: string };
-
 export type WindowAction = { do: "window.mouse_move"; e: MouseEvent };
 
 export type Dispatcher = (action: Action) => void;

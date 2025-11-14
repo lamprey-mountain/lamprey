@@ -22,6 +22,7 @@ import { Channel } from "sdk";
 import icDelete from "./assets/delete.png";
 import { useChannel } from "./channelctx.tsx";
 import { handleSubmit } from "./dispatch/submit.ts";
+import { useUploads } from "./contexts/uploads.tsx";
 
 type InputProps = {
 	channel: Channel;
@@ -33,16 +34,12 @@ export function Input(props: InputProps) {
 	const [ch, chUpdate] = useChannel()!;
 	const reply_id = () => ch.reply_id;
 	const reply = () => api.messages.cache.get(reply_id()!);
+	const uploads = useUploads();
 
 	function handleUpload(file: File) {
 		console.log(file);
 		const local_id = uuidv7();
-		ctx.dispatch({
-			do: "upload.init",
-			file,
-			local_id,
-			thread_id: props.channel.id,
-		});
+		uploads.init(local_id, props.channel.id, file);
 	}
 
 	function uploadFile(e: InputEvent) {
@@ -321,6 +318,7 @@ export function RenderUploadItem(
 	props: { thread_id: string; att: Attachment },
 ) {
 	const ctx = useCtx();
+	const uploads = useUploads();
 	const thumbUrl = URL.createObjectURL(props.att.file);
 	onCleanup(() => {
 		URL.revokeObjectURL(thumbUrl);
@@ -349,21 +347,15 @@ export function RenderUploadItem(
 	}
 
 	function removeAttachment(local_id: string) {
-		ctx.dispatch({ do: "upload.cancel", local_id, thread_id: props.thread_id });
+		uploads.cancel(local_id, props.thread_id);
 	}
 
 	function pause() {
-		ctx.dispatch({
-			do: "upload.pause",
-			local_id: props.att.local_id,
-		});
+		uploads.pause(props.att.local_id);
 	}
 
 	function resume() {
-		ctx.dispatch({
-			do: "upload.resume",
-			local_id: props.att.local_id,
-		});
+		uploads.resume(props.att.local_id);
 	}
 
 	return (
