@@ -3361,3 +3361,30 @@ kbd {
 .tags {
 	margin-top: 16px;
 }
+
+.slider {
+	width: 200px;
+	height: 6px;
+	border-radius: 3px;
+	/* background: $bg-200; */
+	/* outline: solid $sep-400 1px; */
+	/* -webkit-appearance: none; */
+
+	/* &::-webkit-slider-thumb { */
+	/* -webkit-appearance: none; */
+	/* width: 16px; */
+	/* height: 16px; */
+	/* border-radius: 50%; */
+	/* background: $fg-500; */
+	/* cursor: pointer; */
+	/* } */
+
+	/* &::-moz-range-thumb { */
+	/* width: 16px; */
+	/* height: 16px; */
+	/* border-radius: 50%; */
+	/* background: $fg-500; */
+	/* cursor: pointer; */
+	/* border: none; */
+	/* } */
+}

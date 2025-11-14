@@ -10,6 +10,8 @@ type NotifAction = "Notify" | "Watching" | "Ignore";
 export function Notifications(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
 
+	// TODO: option to disable mention sound
+
 	const setNotifConfig = (
 		field: keyof UserConfig["notifs"],
 		value: NotifAction,
