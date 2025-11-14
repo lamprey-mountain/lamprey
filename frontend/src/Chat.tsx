@@ -341,6 +341,7 @@ export const ChatMain = (props: ChatProps) => {
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { ChannelIcon } from "./User.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
+import { useModals } from "./contexts/modal.tsx";
 
 export const ChatHeader = (
 	props: ChatProps & { showMembersButton?: boolean },
@@ -348,6 +349,7 @@ export const ChatHeader = (
 	const ctx = useCtx();
 	const api = useApi();
 	const [channelState, setChannelState] = useChannel()!;
+	const [, modalctl] = useModals();
 
 	const selected = () => channelState.selectedMessages;
 	const inSelectMode = () => channelState.selectMode;
@@ -378,15 +380,14 @@ export const ChatHeader = (
 	};
 
 	const removeSelected = () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: `Are you sure you want to remove ${selected().length} messages?`,
-			cont: (confirmed) => {
+		modalctl.confirm(
+			`Are you sure you want to remove ${selected().length} messages?`,
+			(confirmed) => {
 				if (!confirmed) return;
 				api.messages.removeBulk(props.channel.id, selected());
 				exitSelectMode();
 			},
-		});
+		);
 	};
 
 	const toggleMembers = () => {

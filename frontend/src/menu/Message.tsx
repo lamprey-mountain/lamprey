@@ -3,6 +3,7 @@
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
+import { useModals } from "../contexts/modal";
 
 // should i have a separate one for bulk messages?
 
@@ -58,23 +59,20 @@ export function MessageMenu(props: MessageMenuProps) {
 	};
 
 	function deleteMessage() {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "really delete?",
-			cont: (conf) => {
-				if (!conf) return;
-				api.client.http.DELETE(
-					"/api/v1/channel/{channel_id}/message/{message_id}",
-					{
-						params: {
-							path: {
-								channel_id: props.channel_id,
-								message_id: props.message_id,
-							},
+		const [, modalCtl] = useModals();
+		modalCtl.confirm("really delete?", (conf) => {
+			if (!conf) return;
+			api.client.http.DELETE(
+				"/api/v1/channel/{channel_id}/message/{message_id}",
+				{
+					params: {
+						path: {
+							channel_id: props.channel_id,
+							message_id: props.message_id,
 						},
 					},
-				);
-			},
+				},
+			);
 		});
 	}
 

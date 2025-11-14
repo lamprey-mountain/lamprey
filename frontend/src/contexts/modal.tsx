@@ -2,12 +2,22 @@ import { createContext, ParentProps, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { Modal } from "../context";
 
-const ModalsContext = createContext();
+export type ModalsController = {
+	close: () => void;
+	open: (modal: Modal) => void;
+	alert: (text: string) => void;
+	prompt: (text: string, cont: (text: string | null) => void) => void;
+	confirm: (text: string, cont: (confirmed: boolean) => void) => void;
+};
+
+type ModalsContextType = [Modal[], ModalsController];
+
+const ModalsContext = createContext<ModalsContextType>();
 
 export const ModalsProvider = (p: ParentProps) => {
 	const [modals, setModals] = createStore<Modal[]>([]);
 
-	const controller = {
+	const controller: ModalsController = {
 		close() {
 			setModals((prev) => prev.slice(1));
 		},
@@ -42,6 +52,10 @@ export const ModalsProvider = (p: ParentProps) => {
 	);
 };
 
-export const useModals = () => {
-	return useContext(ModalsContext)!;
+export const useModals = (): ModalsContextType => {
+	const context = useContext(ModalsContext);
+	if (!context) {
+		throw new Error("useModals must be used within a ModalsProvider");
+	}
+	return context;
 };

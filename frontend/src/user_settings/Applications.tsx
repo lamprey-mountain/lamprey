@@ -15,10 +15,11 @@ import { useCtx } from "../context.ts";
 import { useFloating } from "solid-floating-ui";
 import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../hooks/usePermissions.ts";
+import { useModals } from "../contexts/modal";
 
 const SessionList = (props: { appId: string }) => {
 	const api = useApi();
-	const ctx = useCtx();
+	const [, modalctl] = useModals();
 
 	const [sessions, { refetch }] = createResource(async () => {
 		const { data } = await api.client.http.GET("/api/v1/session", {
@@ -28,10 +29,9 @@ const SessionList = (props: { appId: string }) => {
 	});
 
 	const revokeSession = (sessionId: string) => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "Are you sure you want to revoke this session?",
-			cont: async (confirmed) => {
+		modalctl.confirm(
+			"Are you sure you want to revoke this session?",
+			async (confirmed) => {
 				if (confirmed) {
 					await api.client.http.DELETE("/api/v1/session/{session_id}", {
 						params: { path: { session_id: sessionId } },
@@ -39,21 +39,17 @@ const SessionList = (props: { appId: string }) => {
 					refetch();
 				}
 			},
-		});
+		);
 	};
 
 	const renameSession = (sessionId: string) => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "New session name?",
-			cont: async (name) => {
-				if (name === null) return;
-				await api.client.http.PATCH("/api/v1/session/{session_id}", {
-					params: { path: { session_id: sessionId } },
-					body: { name: name || null },
-				});
-				refetch();
-			},
+		modalctl.prompt("New session name?", async (name) => {
+			if (name === null) return;
+			await api.client.http.PATCH("/api/v1/session/{session_id}", {
+				params: { path: { session_id: sessionId } },
+				body: { name: name || null },
+			});
+			refetch();
 		});
 	};
 
@@ -88,22 +84,19 @@ const SessionList = (props: { appId: string }) => {
 // TODO: in create session and rotate oauth token, make the secret Copyable
 export function Applications(_props: VoidProps<{ user: User }>) {
 	const api = useApi();
+	const [, modalctl] = useModals();
 
 	async function create() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "New app name?",
-			cont: async (name) => {
-				if (!name) return;
-				await api.client.http.POST("/api/v1/app", {
-					body: {
-						name,
-						bridge: false,
-						public: false,
-					},
-				});
-				refetch();
-			},
+		modalctl.prompt("New app name?", async (name) => {
+			if (!name) return;
+			await api.client.http.POST("/api/v1/app", {
+				body: {
+					name,
+					bridge: false,
+					public: false,
+				},
+			});
+			refetch();
 		});
 	}
 
@@ -173,10 +166,10 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				params: { path: { app_id } },
 			},
 		);
-		ctx.dispatch({
-			do: "modal.alert",
-			text: `your secret is ${data?.oauth_secret} (this can only be seen once)`,
-		});
+		const [, modalCtl] = useModals();
+		modalCtl.alert(
+			`your secret is ${data?.oauth_secret} (this can only be seen once)`,
+		);
 	};
 
 	const [inviteApp, setInviteApp] = createSignal<
@@ -194,10 +187,10 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				body: { name: "session" },
 			},
 		);
-		ctx.dispatch({
-			do: "modal.alert",
-			text: `your secret is ${data?.token} (this can only be seen once)`,
-		});
+		const [, modalCtl] = useModals();
+		modalCtl.alert(
+			`your secret is ${data?.token} (this can only be seen once)`,
+		);
 	};
 
 	const [search, setSearch] = createSignal("");

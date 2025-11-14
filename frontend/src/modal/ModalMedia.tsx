@@ -2,6 +2,7 @@ import type { Media } from "sdk";
 import { createEffect, createSignal } from "solid-js";
 import { useCtx } from "../context";
 import { getHeight, getUrl, getWidth, Resize } from "../media/util";
+import { useModals } from "../contexts/modal";
 
 // currently only supports images!
 // though, it doesn't make much sense for video/audio/other media?
@@ -11,11 +12,12 @@ export const ModalMedia = (props: { media: Media }) => {
 	const [loaded, setLoaded] = createSignal(false);
 	const height = () => getHeight(props.media);
 	const width = () => getWidth(props.media);
+	const [, modalctl] = useModals();
 
 	createEffect(() => console.log("loaded", loaded()));
 	return (
 		<div class="modal modal-media">
-			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
+			<div class="bg" onClick={modalctl.close}></div>
 			<div class="content">
 				<div class="base"></div>
 				<div class="inner" role="dialog" aria-modal>

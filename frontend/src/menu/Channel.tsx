@@ -6,12 +6,14 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { For, Match, Show, Switch } from "solid-js";
 import { timeAgo } from "../Time.tsx";
 import { Channel } from "sdk";
+import { useModals } from "../contexts/modal";
 
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
+	const [, modalCtl] = useModals();
 
 	const self_id = () => api.users.cache.get("@self")!.id;
 	const channel = api.channels.fetch(() => props.channel_id);
@@ -44,10 +46,9 @@ export function ChannelMenu(props: { channel_id: string }) {
 	};
 
 	const removeChannel = () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "are you sure you want to remove this channel?",
-			cont(confirmed) {
+		modalCtl.confirm(
+			"are you sure you want to remove this channel?",
+			(confirmed) => {
 				if (!confirmed) return;
 				ctx.client.http.PUT("/api/v1/channel/{channel_id}/remove", {
 					params: {
@@ -55,7 +56,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 					},
 				});
 			},
-		});
+		);
 	};
 
 	const copyLink = () => {

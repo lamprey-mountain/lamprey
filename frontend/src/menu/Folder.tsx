@@ -2,6 +2,7 @@ import { Item, Menu, Separator } from "./Parts.tsx";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 import type { RoomNavItem } from "../RoomNav.tsx";
+import { useModals } from "../contexts/modal";
 
 type FolderMenuProps = {
 	folder_id: string;
@@ -32,30 +33,27 @@ export function FolderMenu(props: FolderMenuProps) {
 	};
 
 	const renameFolder = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "new folder name",
-			cont: (name) => {
-				if (!name) return;
+		const [, modalCtl] = useModals();
+		modalCtl.prompt("new folder name", (name) => {
+			if (!name) return;
 
-				const currentConfig = ctx.userConfig().frontend
-					.roomNav as RoomNavItem[];
-				const newConfig = currentConfig.map((item: RoomNavItem) => {
-					if (item.type === "folder" && item.id === props.folder_id) {
-						return { ...item, name };
-					}
-					return item;
-				});
+			const currentConfig = ctx.userConfig().frontend
+				.roomNav as RoomNavItem[];
+			const newConfig = currentConfig.map((item: RoomNavItem) => {
+				if (item.type === "folder" && item.id === props.folder_id) {
+					return { ...item, name };
+				}
+				return item;
+			});
 
-				const c = ctx.userConfig();
-				ctx.setUserConfig({
-					...c,
-					frontend: {
-						...c.frontend,
-						roomNav: newConfig,
-					},
-				});
-			},
+			const c = ctx.userConfig();
+			ctx.setUserConfig({
+				...c,
+				frontend: {
+					...c.frontend,
+					roomNav: newConfig,
+				},
+			});
 		});
 	};
 
