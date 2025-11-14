@@ -4,12 +4,14 @@ import { useApi } from "./api.tsx";
 import { AvatarWithStatus } from "./User.tsx";
 import { useCtx } from "./context.ts";
 import { ReactiveMap } from "@solid-primitives/map";
+import { useMemberList } from "./contexts/memberlist.tsx";
 
 export const ThreadMembers = (props: { thread: Channel }) => {
 	const api = useApi();
+	const memberLists = useMemberList();
 	const thread_id = () => props.thread.id;
 	const room_id = () => props.thread.room_id;
-	const list = () => api.memberLists.get(thread_id());
+	const list = () => memberLists.get(thread_id());
 	const [collapsedGroups, setCollapsedGroups] = createSignal(
 		new ReactiveMap<string, boolean>(),
 	);
@@ -35,10 +37,6 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 			offset += group.count;
 		}
 		return rows;
-	});
-
-	createEffect(() => {
-		api.thread_members.subscribeList(thread_id(), [[0, 199]]);
 	});
 
 	const getGroupName = (group: any) => {

@@ -11,11 +11,13 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { md } from "./markdown.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
+import { useMemberList } from "./contexts/memberlist.tsx";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
+	const memberLists = useMemberList();
 	const room_id = () => props.room.id;
-	const list = () => api.memberLists.get(room_id());
+	const list = () => memberLists.get(room_id());
 	const [collapsedGroups, setCollapsedGroups] = createSignal(
 		new ReactiveMap<string, boolean>(),
 	);
@@ -41,10 +43,6 @@ export const RoomMembers = (props: { room: RoomT }) => {
 			offset += group.count;
 		}
 		return rows;
-	});
-
-	createEffect(() => {
-		api.room_members.subscribeList(room_id(), [[0, 199]]);
 	});
 
 	const getGroupName = (group: any) => {

@@ -114,7 +114,6 @@ export function createApi(
 	const inbox = new Inbox();
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
-	const memberLists = new ReactiveMap<string, MemberList>();
 
 	events.on("sync", (msg) => {
 		if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
@@ -471,16 +470,6 @@ export function createApi(
 					});
 				}
 			}
-			const list = memberLists.get(m.room_id);
-			if (list) {
-				const newItems = list.items.map((item) => {
-					if (item.user.id === m.user_id) {
-						return { ...item, room_member: m };
-					}
-					return item;
-				});
-				memberLists.set(m.room_id, { ...list, items: newItems });
-			}
 		} else if (msg.type === "ThreadMemberUpsert") {
 			const m = msg.member;
 			const c = thread_members.cache.get(m.thread_id);
@@ -506,16 +495,6 @@ export function createApi(
 						total: p.total + 1,
 					});
 				}
-			}
-			const list = memberLists.get(m.thread_id);
-			if (list) {
-				const newItems = list.items.map((item) => {
-					if (item.user.id === m.user_id) {
-						return { ...item, thread_member: m };
-					}
-					return item;
-				});
-				memberLists.set(m.thread_id, { ...list, items: newItems });
 			}
 		} else if (msg.type === "RoleCreate") {
 			const r = msg.role;
@@ -757,21 +736,6 @@ export function createApi(
 			if (msg.user.id === users.cache.get("@self")?.id) {
 				users.cache.set("@self", updatedUser);
 			}
-
-			for (const [id, list] of memberLists.entries()) {
-				let wasUpdated = false;
-				const newItems = list.items.map((item) => {
-					if (item.user.id === msg.user.id) {
-						wasUpdated = true;
-						return { ...item, user: msg.user };
-					}
-					return item;
-				});
-
-				if (wasUpdated) {
-					memberLists.set(id, { ...list, items: newItems });
-				}
-			}
 		} else if (msg.type === "PresenceUpdate") {
 			const { user_id, presence } = msg;
 			const user = users.cache.get(user_id);
@@ -781,22 +745,6 @@ export function createApi(
 
 				if (user_id === users.cache.get("@self")?.id) {
 					users.cache.set("@self", newUser);
-				}
-
-				for (const [id, list] of memberLists.entries()) {
-					let wasUpdated = false;
-					const newItems = list.items.map((item) => {
-						if (item.user.id === user_id) {
-							wasUpdated = true;
-							const updatedUser = { ...item.user, presence };
-							return { ...item, user: updatedUser };
-						}
-						return item;
-					});
-
-					if (wasUpdated) {
-						memberLists.set(id, { ...list, items: newItems });
-					}
 				}
 			}
 		} else if (msg.type === "UserConfigGlobal") {
@@ -932,38 +880,6 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "MemberListSync") {
-			const { room_id, channel_id: thread_id, ops, groups } = msg;
-			const id = room_id ?? thread_id;
-			if (!id) return;
-
-			let list = memberLists.get(id);
-			if (!list) {
-				list = { groups: [], items: [] };
-				memberLists.set(id, list);
-			}
-
-			for (const op of ops) {
-				if (op.type === "Sync") {
-					const items = op.users.map((user, i) => ({
-						user,
-						room_member: op.room_members?.[i] ?? null,
-						thread_member: op.thread_members?.[i] ?? null,
-					}));
-					list.items.splice(op.position, items.length, ...items);
-				} else if (op.type === "Insert") {
-					const item = {
-						user: op.user,
-						room_member: op.room_member ?? null,
-						thread_member: op.thread_member ?? null,
-					};
-					list.items.splice(op.position, 0, item);
-				} else if (op.type === "Delete") {
-					list.items.splice(op.position, op.count);
-				}
-			}
-			list.groups = groups;
-			memberLists.set(id, { ...list });
 		} else if (msg.type === "WebhookCreate") {
 			const { webhook } = msg;
 			webhooks.cache.set(webhook.id, webhook);
@@ -1166,7 +1082,6 @@ export function createApi(
 		inbox,
 		voiceStates,
 		voiceState,
-		memberLists,
 		stripMarkdownAndResolveMentions,
 		Provider(props: ParentProps) {
 			return (
@@ -1232,7 +1147,6 @@ export type Api = {
 	typing: ReactiveMap<string, Set<string>>;
 	voiceState: Accessor<VoiceState | null>;
 	voiceStates: ReactiveMap<string, VoiceState>;
-	memberLists: ReactiveMap<string, MemberList>;
 	tempCreateSession: () => void;
 	client: Client;
 	clientState: Accessor<ClientState>;
