@@ -17,6 +17,8 @@ import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
 import { useVoice } from "./voice-provider";
 import icHome from "./assets/home.png";
 import icInbox from "./assets/inbox.png";
+import icSettings from "./assets/settings.png";
+import icMemberAdd from "./assets/member-add.png";
 
 export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
@@ -502,6 +504,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 export const ItemChannel = (props: { channel: Channel }) => {
 	const api = useApi();
+	const nav = useNavigate();
+
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
 			const selfId = api.users.cache.get("@self")!.id;
@@ -548,6 +552,21 @@ export const ItemChannel = (props: { channel: Channel }) => {
 			</div>
 			<Show when={props.channel.mention_count}>
 				<div class="mentions">{props.channel.mention_count}</div>
+			</Show>
+			<Show when={true}>
+				<button onClick={() => {/* TODO: show invite modal */}}>
+					<img class="icon" src={icMemberAdd} />
+				</button>
+				<button
+					onClick={(e) => {
+						nav(`/channel/${props.channel.id}/settings`);
+						e.preventDefault();
+						e.stopPropagation();
+						e.stopImmediatePropagation();
+					}}
+				>
+					<img class="icon" src={icSettings} />
+				</button>
 			</Show>
 		</A>
 	);
