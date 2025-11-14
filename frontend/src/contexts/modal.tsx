@@ -9,13 +9,13 @@ export const ModalsProvider = (p: ParentProps) => {
 
 	const controller = {
 		close() {
-			setModals(prev => prev.slice(1));
+			setModals((prev) => prev.slice(1));
 		},
 		open(modal: Modal) {
-			setModals(prev => [...prev, modal]);
+			setModals((prev) => [...prev, modal]);
 		},
 		alert(text: string) {
-			setModals(prev => [{ type: "alert", text } as Modal, ...prev]);
+			setModals((prev) => [{ type: "alert", text } as Modal, ...prev]);
 		},
 		prompt(text: string, cont: (text: string | null) => void) {
 			const modal = {
@@ -23,7 +23,7 @@ export const ModalsProvider = (p: ParentProps) => {
 				text,
 				cont,
 			};
-			setModals(prev => [modal as Modal, ...prev]);
+			setModals((prev) => [modal as Modal, ...prev]);
 		},
 		confirm(text: string, cont: (confirmed: boolean) => void) {
 			const modal = {
@@ -31,7 +31,7 @@ export const ModalsProvider = (p: ParentProps) => {
 				text,
 				cont,
 			};
-			setModals(prev => [modal as Modal, ...prev]);
+			setModals((prev) => [modal as Modal, ...prev]);
 		},
 	};
 

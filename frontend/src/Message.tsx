@@ -209,10 +209,9 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		}
 	});
 
-	const ctx = useCtx();
+	const [, modalctl] = useModals();
 	const viewHistory = () => {
-		const [, controller] = useModals();
-		controller.open({
+		modalctl.open({
 			type: "message_edits",
 			message_id: props.message.id,
 			channel_id: props.message.channel_id,

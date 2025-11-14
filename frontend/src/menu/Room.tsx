@@ -13,6 +13,7 @@ export function RoomMenu(props: { room_id: string }) {
 	const api = useApi();
 	const nav = useNavigate();
 	const room = api.rooms.fetch(() => props.room_id);
+	const [, modalctl] = useModals();
 
 	const self_id = () => api.users.cache.get("@self")?.id;
 	const { has: hasPermission } = usePermissions(
@@ -31,8 +32,7 @@ export function RoomMenu(props: { room_id: string }) {
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(room())));
 
 	const leave = () => {
-		const [, controller] = useModals();
-		controller.confirm("are you sure you want to leave?", (confirm) => {
+		modalctl.confirm("are you sure you want to leave?", (confirm) => {
 			if (!confirm) return;
 			ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
 				params: {
@@ -61,8 +61,7 @@ export function RoomMenu(props: { room_id: string }) {
 			<Show when={hasPermission("ChannelManage")}>
 				<Item
 					onClick={() => {
-						const [, controller] = useModals();
-						controller.open({
+						modalctl.open({
 							type: "channel_create",
 							room_id: props.room_id,
 							cont: (data) => {

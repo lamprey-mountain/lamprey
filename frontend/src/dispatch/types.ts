@@ -39,19 +39,11 @@ export type Modal = {
 };
 
 export type Action =
-	| ModalAction
 	| ServerAction
 	| ThreadAction
 	| UploadAction
 	| WindowAction
 	| { do: "menu.preview"; id: string | null };
-
-export type ModalAction =
-	| { do: "modal.open"; modal: Modal }
-	| { do: "modal.close" }
-	| { do: "modal.alert"; text: string }
-	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
-	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void };
 
 export type ServerAction =
 	| { do: "server.init_session" }

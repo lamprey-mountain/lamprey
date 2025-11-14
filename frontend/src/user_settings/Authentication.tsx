@@ -12,7 +12,7 @@ import { useModals } from "../contexts/modal";
 import { Modal } from "../modal/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
-	const ctx = useCtx();
+	const [, modalctl] = useModals();
 
 	return (
 		<div class="user-settings-auth">
@@ -36,8 +36,7 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				<label>
 					<button
 						onClick={() => {
-							const [, controller] = useModals();
-							controller.open({ type: "settings", user_id: props.user.id });
+							modalctl.open({ type: "settings", user_id: props.user.id });
 						}}
 					>
 						change password
@@ -61,7 +60,7 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 
 function Email(_props: VoidProps<{ user: User }>) {
 	const api = useApi();
-	const ctx = useCtx();
+	const [, modalctl] = useModals();
 
 	// TODO: use props.user.emails when sync events are implemented
 	const [emails, { refetch }] = createResource(async () => {
@@ -72,8 +71,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 	});
 
 	function addEmail() {
-		const [, controller] = useModals();
-		controller.prompt("email?", (email: string | null) => {
+		modalctl.prompt("email?", (email: string | null) => {
 			if (!email) return;
 			api.client.http.PUT("/api/v1/user/{user_id}/email/{addr}", {
 				params: { path: { user_id: "@self", addr: email } },
@@ -82,8 +80,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 	}
 
 	function deleteEmail(email: string) {
-		const [, controller] = useModals();
-		controller.confirm("delete email?", (conf: boolean) => {
+		modalctl.confirm("delete email?", (conf: boolean) => {
 			if (!conf) return;
 			api.client.http.DELETE("/api/v1/user/{user_id}/email/{addr}", {
 				params: { path: { user_id: "@self", addr: email } },
@@ -203,22 +200,22 @@ export const ModalResetPassword = () => {
 	const [password, setPassword] = createSignal("");
 	const [confirmPassword, setConfirmPassword] = createSignal("");
 	const ctx = useCtx();
+	const [, modalctl] = useModals();
 
 	async function handlePasswordSet(e: SubmitEvent) {
 		e.preventDefault();
-		const [, controller] = useModals();
 
 		if (!password()) {
-			controller.alert("missing password");
+			modalctl.alert("missing password");
 			return;
 		}
 		if (!confirmPassword()) {
-			controller.alert("missing confirmPassword");
+			modalctl.alert("missing confirmPassword");
 			return;
 		}
 
 		if (password() !== confirmPassword()) {
-			controller.alert("password !== confirmPassword");
+			modalctl.alert("password !== confirmPassword");
 			return;
 		}
 

@@ -19,7 +19,7 @@ type ImageViewProps = MediaProps & {
 
 export const ImageView = (props: ImageViewProps) => {
 	const ctx = useCtx();
-	const [, controller] = useModals();
+	const [, modalctl] = useModals();
 	const [loaded, setLoaded] = createSignal(false);
 	const thumbUrl = () => getThumb(props.media, props.thumb_width ?? 320)!;
 
@@ -47,7 +47,7 @@ export const ImageView = (props: ImageViewProps) => {
 				class="image"
 				onClick={(e) => {
 					e.stopPropagation();
-					controller.open({ type: "media", media: props.media });
+					modalctl.open({ type: "media", media: props.media });
 				}}
 			>
 				<Loader loaded={loaded()} />

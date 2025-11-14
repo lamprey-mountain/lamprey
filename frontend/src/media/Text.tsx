@@ -9,6 +9,7 @@ import {
 import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 import { useCtx } from "../context.ts";
 import { debounce } from "@solid-primitives/scheduled";
+import { useModals } from "../contexts/modal";
 
 // 16KiB
 const MAX_PREVIEW_SIZE = 16384;
@@ -40,7 +41,8 @@ export const TextView = (props: MediaProps) => {
 			navigator.clipboard.writeText(t);
 			unsetCopied();
 		} else {
-			ctx.dispatch({ do: "modal.alert", text: "file not loaded yet" });
+			const [, modalCtl] = useModals();
+			modalCtl.alert("file not loaded yet");
 		}
 	};
 

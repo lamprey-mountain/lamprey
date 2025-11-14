@@ -8,6 +8,7 @@ import {
 import { useFloating } from "solid-floating-ui";
 import { autoUpdate, flip } from "@floating-ui/dom";
 import { chatctx, useCtx } from "../context.ts";
+import { useModals } from "../contexts/modal";
 
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 	const ctx = useCtx();
@@ -141,7 +142,10 @@ export function Item(
 			<button
 				onClick={(e) => {
 					props.onClick?.(e);
-					if (!props.onClick) ctx.dispatch({ do: "modal.alert", text: "todo" });
+					if (!props.onClick) {
+						const [, modalCtl] = useModals();
+						modalCtl.alert("todo");
+					}
 				}}
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}

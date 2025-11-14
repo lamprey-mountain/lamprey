@@ -6,6 +6,7 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { useVoice } from "../voice-provider.tsx";
 import { useNavigate } from "@solidjs/router";
 import { Checkbox } from "../icons";
+import { useModals } from "../contexts/modal";
 
 type UserMenuProps = {
 	user_id: string;
@@ -74,23 +75,20 @@ export function UserMenu(props: UserMenuProps) {
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(user())));
 
 	const kickRoom = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "kick reason",
-			cont: (reason) => {
-				if (!reason) return;
-				api.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
-					params: {
-						path: {
-							room_id: props.room_id!,
-							user_id: props.user_id,
-						},
+		const [, modalCtl] = useModals();
+		modalCtl.prompt("kick reason", (reason) => {
+			if (!reason) return;
+			api.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
+				params: {
+					path: {
+						room_id: props.room_id!,
+						user_id: props.user_id,
 					},
-					headers: {
-						"X-Reason": reason,
-					},
-				});
-			},
+				},
+				headers: {
+					"X-Reason": reason,
+				},
+			});
 		});
 	};
 
@@ -109,64 +107,54 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const ban = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "ban reason",
-			cont: (reason) => {
-				if (!reason) return;
-				api.client.http.PUT("/api/v1/room/{room_id}/ban/{user_id}", {
+		const [, modalCtl] = useModals();
+		modalCtl.prompt("ban reason", (reason) => {
+			if (!reason) return;
+			api.client.http.PUT("/api/v1/room/{room_id}/ban/{user_id}", {
+				params: {
+					path: {
+						room_id: props.room_id!,
+						user_id: props.user_id,
+					},
+				},
+				headers: {
+					"X-Reason": reason,
+				},
+				body: {},
+			});
+		});
+	};
+
+	const changeNickname = () => {
+		const [, modalCtl] = useModals();
+		if (user()?.webhook) {
+			modalCtl.prompt("new name", (name) => {
+				if (name === null) return;
+				api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
+					params: {
+						path: {
+							webhook_id: props.user_id,
+						},
+					},
+					body: {
+						name: name,
+					},
+				});
+			});
+		} else {
+			modalCtl.prompt("new nickname", (nick) => {
+				if (nick === null) return;
+				api.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
 					params: {
 						path: {
 							room_id: props.room_id!,
 							user_id: props.user_id,
 						},
 					},
-					headers: {
-						"X-Reason": reason,
+					body: {
+						override_name: nick || null,
 					},
-					body: {},
 				});
-			},
-		});
-	};
-
-	const changeNickname = () => {
-		if (user()?.webhook) {
-			ctx.dispatch({
-				do: "modal.prompt",
-				text: "new name",
-				cont: (name) => {
-					if (name === null) return;
-					api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
-						params: {
-							path: {
-								webhook_id: props.user_id,
-							},
-						},
-						body: {
-							name: name,
-						},
-					});
-				},
-			});
-		} else {
-			ctx.dispatch({
-				do: "modal.prompt",
-				text: "new nickname",
-				cont: (nick) => {
-					if (nick === null) return;
-					api.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
-						params: {
-							path: {
-								room_id: props.room_id!,
-								user_id: props.user_id,
-							},
-						},
-						body: {
-							override_name: nick || null,
-						},
-					});
-				},
 			});
 		}
 	};
@@ -210,52 +198,45 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const suspendUser = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "suspend reason",
-			cont: (reason) => {
-				if (!reason) return;
-				api.client.http.POST("/api/v1/user/{user_id}/suspend", {
-					params: {
-						path: {
-							user_id: props.user_id,
-						},
+		const [, modalCtl] = useModals();
+		modalCtl.prompt("suspend reason", (reason) => {
+			if (!reason) return;
+			api.client.http.POST("/api/v1/user/{user_id}/suspend", {
+				params: {
+					path: {
+						user_id: props.user_id,
 					},
-					headers: {
-						"X-Reason": reason,
-					},
-					body: {},
-				});
-			},
+				},
+				headers: {
+					"X-Reason": reason,
+				},
+				body: {},
+			});
 		});
 	};
 
 	const unsuspendUser = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "unsuspend reason",
-			cont: (reason) => {
-				if (!reason) return;
-				api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
-					params: {
-						path: {
-							user_id: props.user_id,
-						},
+		const [, modalCtl] = useModals();
+		modalCtl.prompt("unsuspend reason", (reason) => {
+			if (!reason) return;
+			api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
+				params: {
+					path: {
+						user_id: props.user_id,
 					},
-					headers: {
-						"X-Reason": reason,
-					},
-				});
-			},
+				},
+				headers: {
+					"X-Reason": reason,
+				},
+			});
 		});
 	};
 
 	const deleteUser = () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text:
-				"Are you sure you want to delete this user? This action cannot be undone.",
-			cont: (confirmed) => {
+		const [, modalCtl] = useModals();
+		modalCtl.confirm(
+			"Are you sure you want to delete this user? This action cannot be undone.",
+			(confirmed) => {
 				if (!confirmed) return;
 				api.client.http.DELETE("/api/v1/user/{user_id}", {
 					params: {
@@ -264,8 +245,8 @@ export function UserMenu(props: UserMenuProps) {
 						},
 					},
 				});
-			},
-		});
+			}
+		);
 	};
 
 	const roles = api.roles.list(() => props.room_id);

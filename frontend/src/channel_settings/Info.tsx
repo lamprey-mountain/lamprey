@@ -7,6 +7,7 @@ import { useModals } from "../contexts/modal";
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
 	const api = useApi();
+	const [, modalctl] = useModals();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
 	const [editingName, setEditingName] = createSignal(props.channel.name);
 	const [editingDescription, setEditingDescription] = createSignal(
@@ -98,8 +99,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 										opacity: tag.archived ? 0.6 : 1,
 									}}
 									onClick={() => {
-										const [, controller] = useModals();
-										controller.open({
+										modalctl.open({
 											type: "tag_editor",
 											forumChannelId: props.channel.id,
 											tag: tag,
@@ -115,8 +115,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					<button
 						class="secondary small"
 						onClick={() => {
-							const [, controller] = useModals();
-							controller.open({
+							modalctl.open({
 								type: "tag_editor",
 								forumChannelId: props.channel.id,
 							});

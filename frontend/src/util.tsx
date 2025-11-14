@@ -37,10 +37,10 @@ export function getMessageContent(message: Message | undefined) {
 
 export const Copyable = (props: { children: string }) => {
 	const ctx = useCtx();
-	const [, controller] = useModals();
+	const [, modalctl] = useModals();
 	const copy = () => {
 		navigator.clipboard.writeText(props.children);
-		controller.alert("copied!");
+		modalctl.alert("copied!");
 	};
 
 	return <code class="copyable" onClick={copy}>{props.children}</code>;

@@ -8,6 +8,7 @@ import { ResourceFetcherInfo } from "solid-js";
 export function Sessions(props: VoidProps<{ user: UserT }>) {
 	const ctx = useCtx();
 	const api = useApi();
+	const [, modalctl] = useModals();
 
 	// FIXME: live update sessions
 	const [sessions, { refetch: fetchSessions }] = createResource<
@@ -44,8 +45,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 	);
 
 	function renameSession(session_id: string) {
-		const [, controller] = useModals();
-		controller.prompt("name?", (name: string | null) => {
+		modalctl.prompt("name?", (name: string | null) => {
 			if (!name) return;
 			ctx.client.http.PATCH("/api/v1/session/{session_id}", {
 				params: { path: { session_id } },
@@ -55,8 +55,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 	}
 
 	function revokeSession(session_id: string) {
-		const [, controller] = useModals();
-		controller.confirm("really delete this session?", (confirmed: boolean) => {
+		modalctl.confirm("really delete this session?", (confirmed: boolean) => {
 			if (!confirmed) return;
 			ctx.client.http.DELETE("/api/v1/session/{session_id}", {
 				params: { path: { session_id } },

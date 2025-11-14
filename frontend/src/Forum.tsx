@@ -20,6 +20,7 @@ export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
+	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
 	const forum_id = () => props.channel.id;
 
@@ -57,8 +58,7 @@ export const Forum = (props: { channel: Channel }) => {
 	};
 
 	function createThread(room_id: string) {
-		const [, controller] = useModals();
-		controller.prompt("name?", (name) => {
+		modalctl.prompt("name?", (name) => {
 			if (!name) return;
 			api.channels.create(room_id, {
 				name,

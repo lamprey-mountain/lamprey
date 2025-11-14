@@ -6,23 +6,21 @@ import { useModals } from "./contexts/modal";
 import { flags } from "./flags.ts";
 
 export const Home = () => {
-	const ctx = useCtx();
 	const api = useApi();
 	const [email, setEmail] = createSignal("");
 	const [password, setPassword] = createSignal("");
 	const [confirmPassword, setConfirmPassword] = createSignal("");
+	const [, modalctl] = useModals();
 
 	function createRoom() {
-		const [, controller] = useModals();
-		controller.prompt("name?", (name: string | null) => {
+		modalctl.prompt("name?", (name: string | null) => {
 			if (!name) return;
 			api.rooms.create({ name });
 		});
 	}
 
 	function useInvite() {
-		const [, controller] = useModals();
-		controller.prompt("invite code?", (invite_code: string | null) => {
+		modalctl.prompt("invite code?", (invite_code: string | null) => {
 			if (!invite_code) return;
 			api.invites.use(invite_code);
 		});
@@ -46,15 +44,14 @@ export const Home = () => {
 
 	async function handleAuthSubmit(e: SubmitEvent) {
 		e.preventDefault();
-		const [, controller] = useModals();
 
 		if (!email()) {
-			controller.alert("missing email");
+			modalctl.alert("missing email");
 			return;
 		}
 
 		if (!password()) {
-			controller.alert("missing password");
+			modalctl.alert("missing password");
 			return;
 		}
 
@@ -66,8 +63,7 @@ export const Home = () => {
 	}
 
 	async function createGuest() {
-		const [, controller] = useModals();
-		controller.prompt("name?", (name) => {
+		modalctl.prompt("name?", (name) => {
 			if (!name) return;
 			api.users.createGuest(name).then(() => {
 				location.reload();
