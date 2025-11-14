@@ -254,7 +254,10 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
             "/api/docs",
             get(|| async { Html(include_str!("scalar.html")) }),
         )
-        .route("/", get(|| async { "it works!" }))
+        .route("/", get(|| async { "it works!" }));
+    #[cfg(feature = "embed-frontend")]
+    let router = router.fallback_service(axum::routing::get(frontend::frontend_handler));
+    let router = router
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
         .layer(cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
@@ -360,4 +363,62 @@ async fn gc_all(state: Arc<ServerState>) -> Result<()> {
     gc_messages(state.clone()).await?;
     gc_sessions(state.clone()).await?;
     Ok(())
+}
+
+#[cfg(feature = "embed-frontend")]
+mod frontend {
+    use axum::{
+        body::Body,
+        http::{header, StatusCode, Uri},
+        response::{IntoResponse, Response},
+    };
+    use rust_embed::RustEmbed;
+
+    #[derive(RustEmbed)]
+    #[folder = "$RUST_EMBED_FRONTEND_PATH"]
+    struct Asset;
+
+    pub async fn frontend_handler(uri: Uri) -> impl IntoResponse {
+        let mut path = uri.path().trim_start_matches('/').to_string();
+        if path.is_empty() {
+            path = "index.html".to_string();
+        }
+
+        match Asset::get(path.as_str()) {
+            Some(content) => {
+                let mime = mime_from_ext(path.as_str());
+                Response::builder()
+                    .header(header::CONTENT_TYPE, mime)
+                    .body(Body::from(content.data))
+                    .unwrap()
+            }
+            None => {
+                if let Some(content) = Asset::get("index.html") {
+                    Response::builder()
+                        .header(header::CONTENT_TYPE, "text/html")
+                        .body(Body::from(content.data))
+                        .unwrap()
+                } else {
+                    Response::builder()
+                        .status(StatusCode::NOT_FOUND)
+                        .body(Body::empty())
+                        .unwrap()
+                }
+            }
+        }
+    }
+
+    fn mime_from_ext(path: &str) -> &'static str {
+        match path.split('.').last() {
+            Some("html") => "text/html",
+            Some("css") => "text/css",
+            Some("js") => "application/javascript",
+            Some("wasm") => "application/wasm",
+            Some("svg") => "image/svg+xml",
+            Some("png") => "image/png",
+            Some("jpg") => "image/jpeg",
+            Some("ico") => "image/x-icon",
+            _ => "application/octet-stream",
+        }
+    }
 }

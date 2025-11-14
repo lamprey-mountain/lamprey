@@ -43,7 +43,15 @@
             };
           });
 
-        backend = mkCrate "lamprey-backend";
+        backend = craneLib.buildPackage (common // {
+            inherit cargoArtifacts;
+            pname = "lamprey-backend";
+            cargoExtraArgs = "-p lamprey-backend --features lamprey-backend/embed-frontend";
+            env = {
+              VERGEN_GIT_SHA = self.rev or self.dirtyRev;
+              FRONTEND_DIST = frontend;
+            };
+        });
         bridge = mkCrate "lamprey-bridge";
         voice = mkCrate "lamprey-voice";
         media = mkCrate "lamprey-media";
