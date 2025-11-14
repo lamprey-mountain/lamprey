@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE room SET\n                version_id = $2,\n                welcome_channel_id = NULL\n            WHERE welcome_channel_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "17270711980e515722602d4d5f2d3bacfcaf24ae2c3879b43a40ebc66ea6301c"
+}
