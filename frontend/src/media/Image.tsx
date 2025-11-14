@@ -1,5 +1,6 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal } from "solid-js";
 import { useCtx } from "../context.ts";
+import { useModals } from "../contexts/modal";
 import {
 	formatBytes,
 	getThumb,
@@ -18,6 +19,7 @@ type ImageViewProps = MediaProps & {
 
 export const ImageView = (props: ImageViewProps) => {
 	const ctx = useCtx();
+	const [, controller] = useModals();
 	const [loaded, setLoaded] = createSignal(false);
 	const thumbUrl = () => getThumb(props.media, props.thumb_width ?? 320)!;
 
@@ -45,10 +47,7 @@ export const ImageView = (props: ImageViewProps) => {
 				class="image"
 				onClick={(e) => {
 					e.stopPropagation();
-					ctx.dispatch({
-						do: "modal.open",
-						modal: { type: "media", media: props.media },
-					});
+					controller.open({ type: "media", media: props.media });
 				}}
 			>
 				<Loader loaded={loaded()} />

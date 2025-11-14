@@ -2,6 +2,7 @@ import type { Channel } from "sdk";
 import { createSignal, For, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
+import { useModals } from "../contexts/modal";
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
@@ -97,13 +98,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 										opacity: tag.archived ? 0.6 : 1,
 									}}
 									onClick={() => {
-										ctx.dispatch({
-											do: "modal.open",
-											modal: {
-												type: "tag_editor",
-												forumChannelId: props.channel.id,
-												tag: tag,
-											},
+										const [, controller] = useModals();
+										controller.open({
+											type: "tag_editor",
+											forumChannelId: props.channel.id,
+											tag: tag,
 										});
 									}}
 								>
@@ -116,12 +115,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					<button
 						class="secondary small"
 						onClick={() => {
-							ctx.dispatch({
-								do: "modal.open",
-								modal: {
-									type: "tag_editor",
-									forumChannelId: props.channel.id,
-								},
+							const [, controller] = useModals();
+							controller.open({
+								type: "tag_editor",
+								forumChannelId: props.channel.id,
 							});
 						}}
 					>

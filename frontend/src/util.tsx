@@ -1,5 +1,6 @@
 import { getTimestampFromUUID, type Message } from "sdk";
 import { useCtx } from "./context";
+import { useModals } from "./contexts/modal";
 
 export function createWeaklyMemoized<T extends object, U>(
 	fn: (_: T) => U,
@@ -36,9 +37,10 @@ export function getMessageContent(message: Message | undefined) {
 
 export const Copyable = (props: { children: string }) => {
 	const ctx = useCtx();
+	const [, controller] = useModals();
 	const copy = () => {
 		navigator.clipboard.writeText(props.children);
-		ctx.dispatch({ do: "modal.alert", text: "copied!" });
+		controller.alert("copied!");
 	};
 
 	return <code class="copyable" onClick={copy}>{props.children}</code>;

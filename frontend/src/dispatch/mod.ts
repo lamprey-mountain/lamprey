@@ -4,7 +4,7 @@ import { handleSubmit } from "./submit.ts";
 import type { Api } from "../api.tsx";
 import type { ChatCtx } from "../context.ts";
 import type { SetStoreFunction } from "solid-js/store";
-import { Action, Data, Middleware, Modal } from "./types";
+import { Action, Data, Middleware } from "./types";
 import { threadMarkRead } from "./middleware/threadMarkRead";
 import { serverInitSession } from "./middleware/serverInitSession";
 import { uploadCancel } from "./middleware/uploadCancel";
@@ -22,39 +22,6 @@ function combine(
 	let _dispatch = (_action: Action) => {};
 	const dispatch = (action: Action) => {
 		switch (action.do) {
-			case "modal.close": {
-				update("modals", (modals) => modals.slice(1));
-				break;
-			}
-			case "modal.open": {
-				update("modals", (modals) => [...modals, action.modal]);
-				break;
-			}
-			case "modal.alert": {
-				update(
-					"modals",
-					(modals) => [{ type: "alert", text: action.text }, ...modals],
-				);
-				break;
-			}
-			case "modal.prompt": {
-				const modal = {
-					type: "prompt" as const,
-					text: action.text,
-					cont: action.cont,
-				};
-				update("modals", (modals) => [modal, ...modals]);
-				break;
-			}
-			case "modal.confirm": {
-				const modal = {
-					type: "confirm" as const,
-					text: action.text,
-					cont: action.cont,
-				};
-				update("modals", (modals) => [modal, ...modals]);
-				break;
-			}
 			case "menu.preview": {
 				update("cursor", "preview", action.id);
 				break;

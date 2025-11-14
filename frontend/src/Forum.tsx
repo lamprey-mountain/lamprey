@@ -1,5 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
+import { useModals } from "./contexts/modal";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
@@ -56,17 +57,14 @@ export const Forum = (props: { channel: Channel }) => {
 	};
 
 	function createThread(room_id: string) {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont(name) {
-				if (!name) return;
-				api.channels.create(room_id, {
-					name,
-					parent_id: props.channel.id,
-					type: "ThreadPublic",
-				});
-			},
+		const [, controller] = useModals();
+		controller.prompt("name?", (name) => {
+			if (!name) return;
+			api.channels.create(room_id, {
+				name,
+				parent_id: props.channel.id,
+				type: "ThreadPublic",
+			});
 		});
 	}
 

@@ -12,6 +12,7 @@ import {
 } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
+import { useModals } from "./contexts/modal";
 import { useNavigate } from "@solidjs/router";
 import { useChannel } from "./channelctx.tsx";
 import {
@@ -210,13 +211,11 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 
 	const ctx = useCtx();
 	const viewHistory = () => {
-		ctx.dispatch({
-			do: "modal.open",
-			modal: {
-				type: "message_edits",
-				message_id: props.message.id,
-				channel_id: props.message.channel_id,
-			},
+		const [, controller] = useModals();
+		controller.open({
+			type: "message_edits",
+			message_id: props.message.id,
+			channel_id: props.message.channel_id,
 		});
 	};
 

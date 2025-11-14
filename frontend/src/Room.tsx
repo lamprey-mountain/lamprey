@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
+import { useModals } from "./contexts/modal";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
@@ -130,6 +131,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
+	const [, modalCtl] = useModals();
 	const room_id = () => props.room.id;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
@@ -164,42 +166,35 @@ export const RoomHome = (props: { room: RoomT }) => {
 	};
 
 	function createThread(room_id: string) {
-		ctx.dispatch({
-			do: "modal.open",
-			modal: {
-				type: "channel_create",
-				room_id: room_id,
-				cont: (data) => {
-					if (!data) return;
-					ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
-						params: {
-							path: { room_id },
-						},
-						body: {
-							name: data.name,
-							type: data.type,
-						},
-					});
-				},
+		modalCtl.open({
+			type: "channel_create",
+			room_id: room_id,
+			cont: (data) => {
+				if (!data) return;
+				ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
+					params: {
+						path: { room_id },
+					},
+					body: {
+						name: data.name,
+						type: data.type,
+					},
+				});
 			},
 		});
 	}
 
 	function leaveRoom(_room_id: string) {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "are you sure you want to leave?",
-			cont(confirmed) {
-				if (!confirmed) return;
-				ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
-					params: {
-						path: {
-							room_id: props.room.id,
-							user_id: api.users.cache.get("@self")!.id,
-						},
+		modalCtl.confirm("are you sure you want to leave?", (confirmed) => {
+			if (!confirmed) return;
+			ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
+				params: {
+					path: {
+						room_id: props.room.id,
+						user_id: api.users.cache.get("@self")!.id,
 					},
-				});
-			},
+				},
+			});
 		});
 	}
 

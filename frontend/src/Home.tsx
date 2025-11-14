@@ -2,6 +2,7 @@ import { createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
+import { useModals } from "./contexts/modal";
 import { flags } from "./flags.ts";
 
 export const Home = () => {
@@ -12,24 +13,18 @@ export const Home = () => {
 	const [confirmPassword, setConfirmPassword] = createSignal("");
 
 	function createRoom() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont: (name: string | null) => {
-				if (!name) return;
-				api.rooms.create({ name });
-			},
+		const [, controller] = useModals();
+		controller.prompt("name?", (name: string | null) => {
+			if (!name) return;
+			api.rooms.create({ name });
 		});
 	}
 
 	function useInvite() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "invite code?",
-			cont(invite_code: string | null) {
-				if (!invite_code) return;
-				api.invites.use(invite_code);
-			},
+		const [, controller] = useModals();
+		controller.prompt("invite code?", (invite_code: string | null) => {
+			if (!invite_code) return;
+			api.invites.use(invite_code);
 		});
 	}
 
@@ -51,19 +46,16 @@ export const Home = () => {
 
 	async function handleAuthSubmit(e: SubmitEvent) {
 		e.preventDefault();
+		const [, controller] = useModals();
 
 		if (!email()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "missing email",
-			});
+			controller.alert("missing email");
+			return;
 		}
 
 		if (!password()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "missing password",
-			});
+			controller.alert("missing password");
+			return;
 		}
 
 		api.auth.passwordLogin({
@@ -74,15 +66,12 @@ export const Home = () => {
 	}
 
 	async function createGuest() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont(name) {
-				if (!name) return;
-				api.users.createGuest(name).then(() => {
-					location.reload();
-				});
-			},
+		const [, controller] = useModals();
+		controller.prompt("name?", (name) => {
+			if (!name) return;
+			api.users.createGuest(name).then(() => {
+				location.reload();
+			});
 		});
 	}
 

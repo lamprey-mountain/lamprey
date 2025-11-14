@@ -8,6 +8,7 @@ import {
 import { type User } from "sdk";
 import { useCtx } from "../context";
 import { useApi } from "../api";
+import { useModals } from "../contexts/modal";
 import { Modal } from "../modal/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
@@ -34,11 +35,10 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				<div style="height: 4px"></div>
 				<label>
 					<button
-						onClick={() =>
-							ctx.dispatch({
-								do: "modal.open",
-								modal: { type: "settings", user_id: props.user.id },
-							})}
+						onClick={() => {
+							const [, controller] = useModals();
+							controller.open({ type: "settings", user_id: props.user.id });
+						}}
 					>
 						change password
 					</button>
@@ -72,28 +72,22 @@ function Email(_props: VoidProps<{ user: User }>) {
 	});
 
 	function addEmail() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "email?",
-			cont(email: string | null) {
-				if (!email) return;
-				api.client.http.PUT("/api/v1/user/{user_id}/email/{addr}", {
-					params: { path: { user_id: "@self", addr: email } },
-				}).then(refetch);
-			},
+		const [, controller] = useModals();
+		controller.prompt("email?", (email: string | null) => {
+			if (!email) return;
+			api.client.http.PUT("/api/v1/user/{user_id}/email/{addr}", {
+				params: { path: { user_id: "@self", addr: email } },
+			}).then(refetch);
 		});
 	}
 
 	function deleteEmail(email: string) {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "delete email?",
-			cont(conf: boolean) {
-				if (!conf) return;
-				api.client.http.DELETE("/api/v1/user/{user_id}/email/{addr}", {
-					params: { path: { user_id: "@self", addr: email } },
-				}).then(refetch);
-			},
+		const [, controller] = useModals();
+		controller.confirm("delete email?", (conf: boolean) => {
+			if (!conf) return;
+			api.client.http.DELETE("/api/v1/user/{user_id}/email/{addr}", {
+				params: { path: { user_id: "@self", addr: email } },
+			}).then(refetch);
 		});
 	}
 
@@ -212,25 +206,20 @@ export const ModalResetPassword = () => {
 
 	async function handlePasswordSet(e: SubmitEvent) {
 		e.preventDefault();
+		const [, controller] = useModals();
 
 		if (!password()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "missing password",
-			});
+			controller.alert("missing password");
+			return;
 		}
 		if (!confirmPassword()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "missing confirmPassword",
-			});
+			controller.alert("missing confirmPassword");
+			return;
 		}
 
 		if (password() !== confirmPassword()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "password !== confirmPassword",
-			});
+			controller.alert("password !== confirmPassword");
+			return;
 		}
 
 		ctx.client.http.PUT("/api/v1/auth/password", {

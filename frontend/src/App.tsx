@@ -39,6 +39,7 @@ import {
 } from "@solidjs/router";
 import { UserSettings } from "./UserSettings.tsx";
 import { getModal } from "./modal/mod.tsx";
+import { useModals } from "./contexts/modal";
 import {
 	autoUpdate,
 	type ClientRectObject,
@@ -92,6 +93,7 @@ import {
 	ChannelState,
 	createInitialChannelState,
 } from "./channelctx.tsx";
+import { ModalsProvider } from "./contexts/modal";
 
 const App: Component = () => {
 	return (
@@ -228,7 +230,6 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	});
 
 	const [data, update] = createStore<Data>({
-		modals: [],
 		cursor: {
 			pos: [],
 			vel: 0,
@@ -344,32 +345,20 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		[Store<ChannelState>, SetStoreFunction<ChannelState>]
 	>();
 
-	const getChannelState = (channelId: string) => {
-		let c = channelContexts.get(channelId);
-		if (!c) {
-			return null;
-		}
-		return c;
-	};
-
-	const createChannelState = (channelId: string) => {
-		const store = createStore(createInitialChannelState());
-		channelContexts.set(channelId, store);
-		return store;
-	};
-
 	api.ctx = ctx;
 
 	return (
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
-				<VoiceProvider>
-					<SlashCommandsContext.Provider value={slashCommands}>
-						<Root3 setMenu={setMenu} dispatch={dispatch}>
-							{props.children}
-						</Root3>
-					</SlashCommandsContext.Provider>
-				</VoiceProvider>
+				<ModalsProvider>
+					<VoiceProvider>
+						<SlashCommandsContext.Provider value={slashCommands}>
+							<Root3 setMenu={setMenu} dispatch={dispatch}>
+								{props.children}
+							</Root3>
+						</SlashCommandsContext.Provider>
+					</VoiceProvider>
+				</ModalsProvider>
 			</chatctx.Provider>
 		</api.Provider>
 	);
@@ -377,6 +366,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 
 export const Root3 = (props: any) => {
 	const ctx = useCtx();
+	const [modals, modalCtl] = useModals();
 	const [voice] = useVoice();
 
 	const state = from(ctx.client.state);
@@ -407,15 +397,15 @@ export const Root3 = (props: any) => {
 
 	const handleKeypress = (e: KeyboardEvent) => {
 		if (e.key === "Escape") {
-			if (ctx.data.modals.length) {
-				props.dispatch({ do: "modal.close" });
+			if (modals.length) {
+				modalCtl.close();
 			}
 		} else if (e.key === "k" && e.ctrlKey) {
 			e.preventDefault();
-			if (ctx.data.modals.length) {
-				props.dispatch({ do: "modal.close" });
+			if (modals.length) {
+				modalCtl.close();
 			} else {
-				props.dispatch({ do: "modal.open", modal: { type: "palette" } });
+				modalCtl.open({ type: "palette" });
 			}
 		} else if (e.key === "f" && e.ctrlKey) {
 			e.preventDefault();
@@ -687,9 +677,11 @@ function Overlay() {
 		return { user, room_member, thread_member };
 	});
 
+	const [modals] = useModals();
+
 	return (
 		<>
-			<For each={ctx.data.modals}>{(modal) => getModal(modal)}</For>
+			<For each={modals}>{(modal) => getModal(modal)}</For>
 			<Show when={ctx.menu()}>
 				<div class="contextmenu">
 					<div

@@ -37,7 +37,6 @@ export type Attachment =
 	);
 
 export type Data = {
-	modals: Array<Modal>;
 	cursor: Cursor;
 };
 

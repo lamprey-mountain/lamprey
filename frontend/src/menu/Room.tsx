@@ -4,6 +4,7 @@ import { timeAgo } from "../Time.tsx";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
+import { useModals } from "../contexts/modal";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for rooms
@@ -30,20 +31,17 @@ export function RoomMenu(props: { room_id: string }) {
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(room())));
 
 	const leave = () => {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "are you sure you want to leave?",
-			cont(confirm) {
-				if (!confirm) return;
-				ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
-					params: {
-						path: {
-							room_id: props.room_id,
-							user_id: api.users.cache.get("@self")!.id,
-						},
+		const [, controller] = useModals();
+		controller.confirm("are you sure you want to leave?", (confirm) => {
+			if (!confirm) return;
+			ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
+				params: {
+					path: {
+						room_id: props.room_id,
+						user_id: api.users.cache.get("@self")!.id,
 					},
-				});
-			},
+				},
+			});
 		});
 	};
 
@@ -63,23 +61,21 @@ export function RoomMenu(props: { room_id: string }) {
 			<Show when={hasPermission("ChannelManage")}>
 				<Item
 					onClick={() => {
-						ctx.dispatch({
-							do: "modal.open",
-							modal: {
-								type: "channel_create",
-								room_id: props.room_id,
-								cont: (data) => {
-									if (!data) return;
-									ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
-										params: {
-											path: { room_id: props.room_id },
-										},
-										body: {
-											name: data.name,
-											type: data.type,
-										},
-									});
-								},
+						const [, controller] = useModals();
+						controller.open({
+							type: "channel_create",
+							room_id: props.room_id,
+							cont: (data) => {
+								if (!data) return;
+								ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
+									params: {
+										path: { room_id: props.room_id },
+									},
+									body: {
+										name: data.name,
+										type: data.type,
+									},
+								});
 							},
 						});
 					}}

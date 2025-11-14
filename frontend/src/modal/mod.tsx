@@ -6,12 +6,13 @@ import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
 import { ModalMedia } from "./ModalMedia.tsx";
 import { ModalChannelCreate } from "./ModalChannelCreate";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
+import { useModals } from "../contexts/modal.tsx";
 
 export const Modal = (props: ParentProps) => {
-	const ctx = useCtx()!;
+	const [, modalCtl] = useModals();
 	return (
 		<div class="modal">
-			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
+			<div class="bg" onClick={() => modalCtl.close()}></div>
 			<div class="content">
 				<div class="base"></div>
 				<div class="inner" role="dialog" aria-modal>
@@ -89,6 +90,7 @@ const ModalConfirm = (
 	props: { text: string; cont: (bool: boolean) => void },
 ) => {
 	const ctx = useCtx()!;
+	const [, modalCtl] = useModals();
 	return (
 		<Modal>
 			<p>{props.text}</p>
@@ -96,7 +98,7 @@ const ModalConfirm = (
 				<button
 					onClick={() => {
 						props.cont(true);
-						ctx.dispatch({ do: "modal.close" });
+						modalCtl.close();
 					}}
 				>
 					okay!
@@ -104,7 +106,7 @@ const ModalConfirm = (
 				<button
 					onClick={() => {
 						props.cont(false);
-						ctx.dispatch({ do: "modal.close" });
+						modalCtl.close();
 					}}
 				>
 					nevermind...
@@ -117,7 +119,7 @@ const ModalConfirm = (
 const ModalPrompt = (
 	props: { text: string; cont: (s: string | null) => void },
 ) => {
-	const ctx = useCtx()!;
+	const [, modalCtl] = useModals();
 	return (
 		<Modal>
 			<p>{props.text}</p>
@@ -130,7 +132,7 @@ const ModalPrompt = (
 						"text",
 					) as HTMLInputElement;
 					props.cont(input.value);
-					ctx.dispatch({ do: "modal.close" });
+					modalCtl.close();
 				}}
 			>
 				<input type="text" name="text" autofocus />
@@ -139,7 +141,7 @@ const ModalPrompt = (
 					<button
 						onClick={() => {
 							props.cont(null);
-							ctx.dispatch({ do: "modal.close" });
+							modalCtl.close();
 						}}
 					>
 						nevermind...
