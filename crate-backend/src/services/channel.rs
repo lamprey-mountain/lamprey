@@ -567,7 +567,14 @@ impl ServiceThreads {
         let srv = self.state.services();
         let chan_old = srv.channels.get(thread_id, None).await?;
         if chan_old.archived_at.is_some() {
-            return Err(Error::BadStatic("thread is archived"));
+            let can_unarchive = patch.archived == Some(false);
+            let mut other_changes = patch.clone();
+            other_changes.archived = None;
+            let has_other_changes = other_changes.changes(&chan_old);
+
+            if !can_unarchive || has_other_changes {
+                return Err(Error::BadStatic("thread is archived"));
+            }
         }
         if chan_old.deleted_at.is_some() {
             return Err(Error::BadStatic("thread is removed"));
@@ -577,13 +584,35 @@ impl ServiceThreads {
             perms.ensure(Permission::ThreadLock)?;
         }
 
-        // FIXME: don't require ThreadEdit or ChannelEdit permissions to archive/lock threads
-        if chan_old.ty.is_thread() {
-            if chan_old.creator_id != user_id {
-                perms.ensure(Permission::ThreadEdit)?;
+        // if the patch contains more than just archive/lock changes, do a general permission check
+        let mut other_changes = patch.clone();
+        other_changes.archived = None;
+        other_changes.locked = None;
+        if other_changes.changes(&chan_old) {
+            if chan_old.ty.is_thread() {
+                if chan_old.creator_id != user_id {
+                    perms.ensure(Permission::ThreadEdit)?;
+                }
+            } else {
+                perms.ensure(Permission::ChannelEdit)?;
             }
-        } else {
-            perms.ensure(Permission::ChannelEdit)?;
+        }
+
+        if patch
+            .auto_archive_duration
+            .changes(&chan_old.auto_archive_duration)
+            || patch
+                .default_auto_archive_duration
+                .changes(&chan_old.default_auto_archive_duration)
+            || patch.slowmode_thread.changes(&chan_old.slowmode_thread)
+            || patch.slowmode_message.changes(&chan_old.slowmode_message)
+            || patch
+                .default_slowmode_message
+                .changes(&chan_old.default_slowmode_message)
+        {
+            if !perms.has(Permission::ThreadManage) && !perms.has(Permission::ChannelManage) {
+                return Err(Error::MissingPermissions);
+            }
         }
 
         // shortcut if it wont modify the thread
@@ -634,9 +663,7 @@ impl ServiceThreads {
             if !chan_old.ty.is_thread() {
                 return Err(Error::BadStatic("not a thread"));
             }
-            if chan_old.creator_id != user_id {
-                perms.ensure(Permission::ThreadManage)?;
-            }
+            data.thread_member_get(thread_id, user_id).await?;
         }
 
         if patch.locked.is_some_and(|a| a != chan_old.locked) {
