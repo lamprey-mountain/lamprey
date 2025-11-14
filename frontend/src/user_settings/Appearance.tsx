@@ -26,7 +26,6 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 	// TODO(#429): high contrast mode
 	// TODO: preview message styling
 	// TODO: show send message button
-	// TODO: compact/cozy message style
 	// TODO: message group spacing
 	// TODO: chat font scale
 	// TODO: application scale
@@ -70,18 +69,6 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 				/>
 			</div>
 			<div class="options">
-				{/* TODO: merge this into "compact/cozy" mode */}
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["message_pfps"] === "yes"}
-						onInput={toggle("message_pfps")}
-					/>
-					<Checkbox
-						checked={ctx.userConfig().frontend["message_pfps"] === "yes"}
-					/>
-					<span>Show pfps in messages (experimental)</span>
-				</label>
 				<label class="option">
 					<input
 						type="checkbox"

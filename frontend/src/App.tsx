@@ -149,6 +149,7 @@ const DEFAULT_USER_CONFIG: UserConfig = {
 		desktop_notifs: "yes",
 		push_notifs: "yes",
 		tts_notifs: "no",
+		message_style: "cozy",
 	},
 	notifs: {
 		messages: "Watching",
