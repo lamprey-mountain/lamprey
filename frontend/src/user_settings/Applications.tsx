@@ -16,6 +16,11 @@ import { useFloating } from "solid-floating-ui";
 import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";
+import { Checkbox } from "../icons";
+
+// TODO: in create session and rotate oauth token, make the secret Copyable
+// TODO: show bot avatar
+// TODO: allow changing avatar
 
 const SessionList = (props: { appId: string }) => {
 	const api = useApi();
@@ -62,13 +67,18 @@ const SessionList = (props: { appId: string }) => {
 					<For each={sessions()}>
 						{(session) => (
 							<li>
-								<span>{session.name || session.id}</span>
-								<button onClick={() => renameSession(session.id)}>
-									Rename
-								</button>
-								<button onClick={() => revokeSession(session.id)}>
-									Revoke
-								</button>
+								<div style="display:flex">
+									<div style="flex:1">{session.name || session.id}</div>
+									<button onClick={() => renameSession(session.id)}>
+										Rename
+									</button>
+									<button
+										class="danger"
+										onClick={() => revokeSession(session.id)}
+									>
+										Revoke
+									</button>
+								</div>
 							</li>
 						)}
 					</For>
@@ -81,7 +91,6 @@ const SessionList = (props: { appId: string }) => {
 	);
 };
 
-// TODO: in create session and rotate oauth token, make the secret Copyable
 export function Applications(_props: VoidProps<{ user: User }>) {
 	const api = useApi();
 	const [, modalctl] = useModals();
@@ -158,7 +167,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 		}
 	};
 
-	const ctx = useCtx();
+	const [, modalCtl] = useModals();
 	const rotateSecret = async (app_id: string) => {
 		const { data } = await api.client.http.POST(
 			"/api/v1/app/{app_id}/rotate-secret",
@@ -166,7 +175,6 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				params: { path: { app_id } },
 			},
 		);
-		const [, modalCtl] = useModals();
 		modalCtl.alert(
 			`your secret is ${data?.oauth_secret} (this can only be seen once)`,
 		);
@@ -187,7 +195,6 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				body: { name: "session" },
 			},
 		);
-		const [, modalCtl] = useModals();
 		modalCtl.alert(
 			`your secret is ${data?.token} (this can only be seen once)`,
 		);
@@ -201,7 +208,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 	};
 
 	return (
-		<div class="applications-settings">
+		<div class="user-settings-applications">
 			<h2>applications</h2>
 			<header class="applications-header">
 				<input
@@ -219,89 +226,140 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 					{(app, index) => {
 						return (
 							<li>
-								<h3 class="dim">name</h3>
-								<input
-									type="text"
-									value={app.name}
-									onInput={(e) =>
-										updateApp(index(), "name", e.currentTarget.value)}
-								/>
-								<div style="height: 8px" />
-								<h3 class="dim">description</h3>
-								<textarea
-									onInput={(e) =>
-										updateApp(index(), "description", e.currentTarget.value)}
-								>
-									{app.description ?? ""}
-								</textarea>
-								<div style="height: 8px" />
-								<h3 class="dim">id (click to copy)</h3>
-								<Copyable>{app.id}</Copyable>
-								<div style="height: 8px" />
-								<label>
-									<input
-										type="checkbox"
-										checked={app.bridge}
-										onInput={(e) =>
-											updateApp(index(), "bridge", e.currentTarget.checked)}
-									/>{" "}
-									bridge
-								</label>
-								<br />
-								<label>
-									<input
-										type="checkbox"
-										checked={app.public}
-										onInput={(e) =>
-											updateApp(index(), "public", e.currentTarget.checked)}
-									/>{" "}
-									public
-								</label>
-								<br />
-								<br />
-								<div class="oauth">
-									<b>oauth settings</b>
-									<br />
-									<label>
+								<details>
+									<summary>{app.name}</summary>
+									<div class="inner">
+										<h3 class="dim">name</h3>
 										<input
-											type="checkbox"
-											checked={app.oauth_confidential}
+											type="text"
+											value={app.name}
+											onInput={(e) =>
+												updateApp(index(), "name", e.currentTarget.value)}
+										/>
+										<div style="height: 8px" />
+										<h3 class="dim">description</h3>
+										<textarea
 											onInput={(e) =>
 												updateApp(
 													index(),
-													"oauth_confidential",
-													e.currentTarget.checked,
+													"description",
+													e.currentTarget.value,
 												)}
-										/>
-									</label>{" "}
-									confidential (can keep secrets)
-									<br />
-									<h3 class="dim">redirect uris</h3>
-									<ul>
-										<For each={app.oauth_redirect_uris}>
-											{(uri, uriIndex) => (
+										>
+											{app.description ?? ""}
+										</textarea>
+										<div style="height: 8px" />
+										<h3 class="dim">id (click to copy)</h3>
+										<Copyable>{app.id}</Copyable>
+										<div style="height: 8px" />
+										<label class="option">
+											<input
+												type="checkbox"
+												checked={app.bridge}
+												onInput={(e) =>
+													updateApp(index(), "bridge", e.currentTarget.checked)}
+												style="display: none;"
+											/>
+											<Checkbox checked={app.bridge} />
+											<div>
+												<div>bridge</div>
+												<div class="dim">can create puppets</div>
+											</div>
+										</label>
+										<label class="option">
+											<input
+												type="checkbox"
+												checked={app.public}
+												onInput={(e) =>
+													updateApp(index(), "public", e.currentTarget.checked)}
+												style="display: none;"
+											/>
+											<Checkbox checked={app.public} />
+											<div>
+												<div>public</div>
+												<div class="dim">anyone can add and use this bot</div>
+											</div>
+										</label>
+										<button
+											style="margin-left:4px"
+											onClick={(e) => {
+												e.stopImmediatePropagation();
+												setInviteApp({
+													app,
+													x: e.clientX,
+													y: e.clientY,
+												});
+											}}
+										>
+											add to room
+										</button>
+										<br />
+										<div class="oauth">
+											<b>oauth settings</b>
+											<br />
+											<label class="option">
+												<input
+													type="checkbox"
+													checked={app.oauth_confidential}
+													onInput={(e) =>
+														updateApp(
+															index(),
+															"oauth_confidential",
+															e.currentTarget.checked,
+														)}
+													style="display: none;"
+												/>
+												<Checkbox checked={app.oauth_confidential} />
+												<div>
+													<div>confidential</div>
+													<div class="dim">can keep secrets</div>
+												</div>
+											</label>
+											<h3 class="dim">redirect uris</h3>
+											<ul>
+												<For each={app.oauth_redirect_uris}>
+													{(uri, uriIndex) => (
+														<li>
+															<input
+																type="text"
+																value={uri}
+																onInput={(e) => {
+																	const newUris = [
+																		...app.oauth_redirect_uris ?? [],
+																	];
+																	newUris[uriIndex()] = e.currentTarget.value;
+																	updateApp(
+																		index(),
+																		"oauth_redirect_uris",
+																		newUris,
+																	);
+																}}
+															/>
+															<button
+																onClick={() => {
+																	const newUris = [
+																		...app.oauth_redirect_uris ?? [],
+																	];
+																	newUris.splice(uriIndex(), 1);
+																	updateApp(
+																		index(),
+																		"oauth_redirect_uris",
+																		newUris,
+																	);
+																}}
+															>
+																remove
+															</button>
+														</li>
+													)}
+												</For>
 												<li>
-													<input
-														type="text"
-														value={uri}
-														onInput={(e) => {
-															const newUris = [
-																...app.oauth_redirect_uris ?? [],
-															];
-															newUris[uriIndex()] = e.currentTarget.value;
-															updateApp(
-																index(),
-																"oauth_redirect_uris",
-																newUris,
-															);
-														}}
-													/>
 													<button
 														onClick={() => {
 															const newUris = [
 																...app.oauth_redirect_uris ?? [],
+																"",
 															];
-															newUris.splice(uriIndex(), 1);
 															updateApp(
 																index(),
 																"oauth_redirect_uris",
@@ -309,50 +367,23 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 															);
 														}}
 													>
-														remove
+														add uri
 													</button>
 												</li>
-											)}
-										</For>
-										<li>
-											<button
-												onClick={() => {
-													const newUris = [
-														...app.oauth_redirect_uris ?? [],
-														"",
-													];
-													updateApp(index(), "oauth_redirect_uris", newUris);
-												}}
-											>
-												add uri
+											</ul>
+											<br />
+											<button onClick={() => rotateSecret(app.id)}>
+												rotate secret
 											</button>
-										</li>
-									</ul>
-									<br />
-									<button onClick={() => rotateSecret(app.id)}>
-										rotate secret
-									</button>
-								</div>
-								<div class="sessions">
-									<button onClick={() => createSession(app.id)}>
-										create session
-									</button>
-									<SessionList appId={app.id} />
-								</div>
-								<div class="invite">
-									<button
-										onClick={(e) => {
-											e.stopImmediatePropagation();
-											setInviteApp({
-												app,
-												x: e.clientX,
-												y: e.clientY,
-											});
-										}}
-									>
-										add to room
-									</button>
-								</div>
+										</div>
+										<div class="sessions">
+											<button onClick={() => createSession(app.id)}>
+												create session
+											</button>
+											<SessionList appId={app.id} />
+										</div>
+									</div>
+								</details>
 							</li>
 						);
 					}}

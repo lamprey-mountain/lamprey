@@ -296,3 +296,80 @@
 		width: 100%;
 	}
 }
+
+.user-settings-applications {
+	padding-right: calc(100% - 60ch);
+	padding-left: 0.25rem;
+	padding-top: 0.25rem;
+
+	.applications-header {
+		display: flex;
+		gap: 8px;
+		margin: 8px 0 16px;
+
+		input {
+			flex: 1;
+			padding: 0 8px;
+		}
+	}
+
+	.applications-list {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 6rem;
+
+		& .oauth {
+			border: solid #444 1px;
+			padding: 4px;
+			margin: 4px;
+		}
+
+		& .sessions {
+			border: solid #444 1px;
+			margin: 4px;
+			padding: 4px;
+		}
+
+		& .invite {
+			border: solid #444 1px;
+			margin: 4px;
+			padding: 4px;
+		}
+	}
+
+	details {
+		background: $bg-150;
+		border: solid $sep-300 1px;
+		margin-bottom: 8px;
+	}
+
+	summary {
+		padding: 8px;
+
+		&:hover {
+			background: $bg-100;
+		}
+	}
+
+	.inner {
+		padding: 8px;
+		background: $bg-150;
+	}
+
+	details[open] > summary {
+		border-bottom: solid $sep-300 1px;
+		margin-bottom: 8px;
+	}
+
+	.option {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding: 4px;
+		cursor: pointer;
+
+		&:hover {
+			background: $bg-100;
+		}
+	}
+}
