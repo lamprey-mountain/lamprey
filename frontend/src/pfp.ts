@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
-import { cyrb53, getColor } from "./colors";
+import { getColor } from "./colors";
 import pfpsUrl from "./assets/pfps.png";
+import { cyrb53, LCG } from "./rng";
 
 const SIZE = 80;
 const layers = [6, 6, 6];
@@ -14,15 +15,6 @@ pfpsImg.onload = () => {
 };
 
 const pfpCache = new Map<string, string>();
-
-/** linear congruential generator */
-export function LCG(seed: number) {
-	let state = seed;
-	return function () {
-		state = (1103515245 * state + 12345) % 2147483648;
-		return state / 2147483648;
-	};
-}
 
 export async function generatePfp(userId: string): Promise<string> {
 	if (!pfpsLoaded()) return "";

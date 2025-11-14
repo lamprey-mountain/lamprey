@@ -44,8 +44,7 @@ import icChanVoice2 from "./assets/channel-voice-2.png";
 import icChanForum1 from "./assets/channel-forum-1.png";
 import icChanCalendar1 from "./assets/channel-calendar-1.png";
 import icChanNsfw from "./assets/channel-nsfw.png";
-import { cyrb53 } from "./colors";
-import { LCG } from "./pfp";
+import { cyrb53, LCG } from "./rng.ts";
 
 type UserProps = {
 	room_member?: RoomMember;
