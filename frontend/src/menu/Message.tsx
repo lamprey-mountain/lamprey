@@ -21,6 +21,7 @@ export function MessageMenu(props: MessageMenuProps) {
 		() => props.message_id,
 	);
 	const [ch, chUpdate] = ctx.channel_contexts.get(props.channel_id)!;
+	const [, modalCtl] = useModals();
 
 	const copyId = () => navigator.clipboard.writeText(props.message_id);
 
@@ -59,7 +60,6 @@ export function MessageMenu(props: MessageMenuProps) {
 	};
 
 	function deleteMessage() {
-		const [, modalCtl] = useModals();
 		modalCtl.confirm("really delete?", (conf) => {
 			if (!conf) return;
 			api.client.http.DELETE(
