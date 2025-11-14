@@ -528,7 +528,7 @@ export const ItemChannel = (props: { channel: Channel }) => {
 			data-channel-id={props.channel.id}
 		>
 			<ChannelIcon channel={props.channel} />
-			<div style="pointer-events:none;line-height:1">
+			<div style="pointer-events:none;line-height:1;flex:1">
 				<div
 					style={{
 						"text-overflow": "ellipsis",
@@ -546,6 +546,9 @@ export const ItemChannel = (props: { channel: Channel }) => {
 					{(t) => <div class="dim">{t()}</div>}
 				</Show>
 			</div>
+			<Show when={props.channel.mention_count}>
+				<div class="mentions">{props.channel.mention_count}</div>
+			</Show>
 		</A>
 	);
 };

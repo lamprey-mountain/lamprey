@@ -162,6 +162,18 @@
 			margin-right: 4px;
 			filter: invert(0.6);
 		}
+
+		& > .mentions {
+			background: oklch(54.03% 0.1759 13.16);
+			height: 16px;
+			min-width: 16px;
+			border-radius: 10px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: bold;
+			padding: 0 4px;
+		}
 	}
 }
 

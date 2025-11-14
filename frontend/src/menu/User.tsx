@@ -245,7 +245,7 @@ export function UserMenu(props: UserMenuProps) {
 						},
 					},
 				});
-			}
+			},
 		);
 	};
 
