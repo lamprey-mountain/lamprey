@@ -145,7 +145,11 @@ function loadSavedConfig(): Config | null {
 }
 
 const DEFAULT_USER_CONFIG: UserConfig = {
-	frontend: {},
+	frontend: {
+		desktop_notifs: "yes",
+		push_notifs: "yes",
+		tts_notifs: "no",
+	},
 	notifs: {
 		messages: "Watching",
 		mentions: "Notify",

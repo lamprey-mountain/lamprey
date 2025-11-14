@@ -151,6 +151,15 @@
 		align-items: center;
 		justify-content: space-between;
 	}
+
+	.dropdowns > .option {
+		justify-content: space-between;
+		cursor: default;
+
+		&:hover {
+			background: none;
+		}
+	}
 }
 
 .user-settings-connections {

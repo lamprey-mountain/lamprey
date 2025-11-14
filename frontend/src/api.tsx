@@ -263,7 +263,8 @@ export function createApi(
 			const me = users.cache.get("@self");
 			if (
 				me && m.author_id !== me.id && m.type === "DefaultMarkdown" &&
-				notificationPermission() === "granted"
+				notificationPermission() === "granted" &&
+				userConfig().frontend["desktop_notifs"] === "yes"
 			) {
 				const mentions = m.mentions;
 				let is_mentioned = false;
@@ -292,7 +293,8 @@ export function createApi(
 					}
 				}
 
-				if (is_mentioned) {
+				// Check notification settings for mentions
+				if (is_mentioned && userConfig().notifs.mentions === "Notify") {
 					const author = users.cache.get(m.author_id);
 					const channel = channels.cache.get(m.channel_id);
 					const title = `${author?.name ?? "Someone"} in #${
