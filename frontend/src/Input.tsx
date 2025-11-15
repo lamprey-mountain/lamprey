@@ -80,8 +80,29 @@ export function Input(props: InputProps) {
 		return user_ids;
 	});
 
+	let slowmodeRef!: HTMLDivElement;
+
+	const slowmodeShake = () => {
+		const SCALEX = 1.5;
+		const SCALEY = .4;
+		const FRAMES = 10;
+		const rnd = (sx: number, sy: number) =>
+			`${Math.random() * sx - sx / 2}px ${Math.random() * sy - sy / 2}px`;
+		const translations = new Array(FRAMES).fill(0).map((_, i) =>
+			rnd(i * SCALEX, i * SCALEY)
+		).reverse();
+		const reduceMotion = false; // TODO
+		slowmodeRef.animate({
+			translate: reduceMotion ? [] : translations,
+			color: ["red", ""],
+		}, { duration: 200, easing: "linear" });
+	};
+
 	const onSubmit = (text: string) => {
-		if (slowmodeActive()) return false;
+		if (slowmodeActive()) {
+			slowmodeShake();
+			return false;
+		}
 		handleSubmit(
 			ctx,
 			[ch, chUpdate],
@@ -303,9 +324,8 @@ export function Input(props: InputProps) {
 				<div style="flex:1"></div>
 
 				<Show when={props.channel.slowmode_message || slowmodeActive()}>
-					{/* TODO: tooltip showing slowmode ratelimit */}
 					{/* TODO: icon for slowmode indicator*/}
-					<div class="slowmode">
+					<div class="slowmode" ref={slowmodeRef}>
 						{slowmodeFormatted()}
 					</div>
 				</Show>
