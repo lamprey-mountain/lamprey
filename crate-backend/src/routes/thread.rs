@@ -600,6 +600,16 @@ async fn thread_create_from_message(
     data.thread_member_put(thread_id, auth_user.id, ThreadMemberPut::default())
         .await?;
 
+    let channel = srv.channels.get(thread_id, Some(auth_user.id)).await?;
+    s.broadcast_channel(
+        parent_channel_id,
+        auth_user.id,
+        MessageSync::ChannelCreate {
+            channel: Box::new(channel.clone()),
+        },
+    )
+    .await?;
+
     // 6. Conditionally create system message in the original thread
     let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
     if _source_message
@@ -635,8 +645,6 @@ async fn thread_create_from_message(
         .await?;
     }
 
-    let channel = srv.channels.get(thread_id, Some(auth_user.id)).await?;
-
     if let Some(room_id) = room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -660,15 +668,6 @@ async fn thread_create_from_message(
         })
         .await?;
     }
-
-    s.broadcast_channel(
-        parent_channel_id,
-        auth_user.id,
-        MessageSync::ChannelCreate {
-            channel: Box::new(channel.clone()),
-        },
-    )
-    .await?;
 
     Ok((StatusCode::CREATED, Json(channel)))
 }
