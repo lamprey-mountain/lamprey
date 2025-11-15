@@ -929,7 +929,7 @@ async fn message_pin_reorder(
     Ok(StatusCode::OK)
 }
 
-/// Message pin list
+/// Pin list
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/pin",
