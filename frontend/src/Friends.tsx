@@ -52,7 +52,7 @@ const Friend = (props: { user_id: string }) => {
 	const user = api.users.fetch(() => props.user_id);
 
 	return (
-		<div class="friend">
+		<div class="friend menu-user" data-user-id={props.user_id}>
 			<AvatarWithStatus user={user()} />
 			<div>
 				<div>{user()?.name}</div>
