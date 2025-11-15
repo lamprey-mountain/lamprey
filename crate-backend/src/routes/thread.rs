@@ -424,6 +424,27 @@ pub async fn thread_list_removed(
     Ok(Json(res))
 }
 
+/// Thread list atom/rss (TODO)
+///
+/// Get an atom or rss feed of threads for this channel
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/thread.atom",
+    params(
+        ("channel_id", description = "Channel id"),
+        PaginationQuery<ChannelId>
+    ),
+    tags = ["thread"],
+)]
+pub async fn thread_list_atom(
+    Path(_channel_id): Path<ChannelId>,
+    Query(_pagination): Query<PaginationQuery<ChannelId>>,
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
 /// Thread create
 #[utoipa::path(
     post,
@@ -663,4 +684,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_list))
         .routes(routes!(thread_list_archived))
         .routes(routes!(thread_list_removed))
+        .routes(routes!(thread_list_atom))
 }

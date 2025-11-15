@@ -15,6 +15,7 @@ use crate::ServerState;
 use super::util::Auth;
 use crate::error::{Error, Result};
 
+// TODO: merge with channel_create_dm
 /// Dm initialize
 ///
 /// Get or create a direct message thread.
@@ -50,6 +51,7 @@ async fn dm_init(
     }
 }
 
+// TODO: move to channels.rs
 /// Dm get
 ///
 /// Get a direct message room.
@@ -78,6 +80,8 @@ async fn dm_get(
     Ok(Json(thread))
 }
 
+// TODO: move to channels.rs
+// TODO: rename to /api/v1/user/@self/channel
 /// Dm list
 ///
 /// List direct message channels. Ordered by the last message version id, so

@@ -245,6 +245,7 @@ pub enum MessageType {
     Call(MessageCall),
 
     /// this thread was renamed
+    // TODO: rename to ChannelRename
     ThreadRename(MessageThreadRename),
 
     /// A thread was created from a message
@@ -265,7 +266,11 @@ pub enum MessageType {
     // // #[deprecated = "reports will be impl'd as threads"]
     // ModerationReport(MessageModerationReport),
 
+    // /// (TODO) someone nudged you!
     // Nudge,
+
+    // /// (TODO) someone changed this thread's icon
+    // ChannelIcon(MessageThreadIcon),
 }
 
 /// Information about a message being pinned

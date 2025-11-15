@@ -1030,6 +1030,44 @@ async fn message_list_removed(
     Ok(Json(res))
 }
 
+/// Message list atom/rss (TODO)
+///
+/// Get an atom or rss feed of messages for this channel
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/message.atom",
+    params(
+        ("channel_id", description = "Channel id"),
+        PaginationQuery<ChannelId>
+    ),
+    tags = ["message"],
+)]
+pub async fn message_list_atom(
+    Path(_channel_id): Path<ChannelId>,
+    Query(_pagination): Query<PaginationQuery<ChannelId>>,
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+/// Nudge (TODO)
+///
+/// Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
+#[utoipa::path(
+    post,
+    path = "/channel/{channel_id}/nudge",
+    params(("channel_id", description = "Channel id")),
+    tags = ["message"],
+)]
+pub async fn message_nudge(
+    Path(_channel_id): Path<ChannelId>,
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(message_create))
@@ -1037,6 +1075,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_list))
         .routes(routes!(message_list_deleted))
         .routes(routes!(message_list_removed))
+        .routes(routes!(message_list_atom))
         .routes(routes!(message_context))
         .routes(routes!(message_edit))
         .routes(routes!(message_delete))
@@ -1050,4 +1089,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_pin_delete))
         .routes(routes!(message_pin_reorder))
         .routes(routes!(message_pin_list))
+        .routes(routes!(message_nudge))
 }

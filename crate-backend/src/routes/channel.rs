@@ -77,6 +77,7 @@ async fn channel_create_room(
     Ok((StatusCode::CREATED, Json(channel)))
 }
 
+// TODO: rename to /api/v1/user/@self/channel
 /// Channel create dm
 ///
 /// Create a dm or group dm thread (outside of a room)
