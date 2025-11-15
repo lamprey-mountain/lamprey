@@ -3341,3 +3341,38 @@ kbd {
 	/* border: none; */
 	/* } */
 }
+
+.friends {
+	.info {
+		display: flex;
+		gap: 4px;
+		margin-top: 4px;
+		margin-bottom: 4px;
+		padding: 0 4px;
+
+		input {
+			flex: 1;
+			padding: 0 2px;
+		}
+
+		.filter {
+			border: solid $sep-500 1px;
+
+			button {
+				border: none;
+			}
+		}
+	}
+
+	.friend {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+
+		.avatar {
+			padding: 8px;
+			height: 32px;
+			width: 32px;
+		}
+	}
+}

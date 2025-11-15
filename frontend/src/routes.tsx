@@ -25,6 +25,7 @@ import { ChannelContext, useChannel } from "./channelctx.tsx";
 import { createInitialChannelState } from "./channelctx.tsx";
 import { createStore } from "solid-js/store";
 import { RoomT } from "./types.ts";
+import { Friends } from "./Friends.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -378,40 +379,13 @@ export function RouteInbox(p: RouteSectionProps) {
 }
 
 export function RouteFriends() {
-	const api = useApi();
-
-	const [friends] = createResource(async () => {
-		const { data } = await api.client.http.GET(
-			"/api/v1/user/{user_id}/friend",
-			{ params: { path: { user_id: "@self" } } },
-		);
-		return data;
-	});
-
-	const sendRequest = () => {
-		const target_id = prompt("target_id");
-		if (!target_id) return;
-		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
-			params: { path: { target_id } },
-		});
-	};
-
 	return (
 		<LayoutDefault
 			title="friends"
-			showChannelNav={false}
-			showVoiceTray={false}
+			showChannelNav={true}
+			showVoiceTray={true}
 		>
-			<div class="friends" style="padding:8px">
-				todo!
-				<ul>
-					<li>foo</li>
-					<li>bar</li>
-					<li>baz</li>
-				</ul>
-				<pre>{JSON.stringify(friends())}</pre>
-				<button onClick={sendRequest}>send request</button>
-			</div>
+			<Friends />
 		</LayoutDefault>
 	);
 }
