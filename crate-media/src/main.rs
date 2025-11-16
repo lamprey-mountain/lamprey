@@ -25,6 +25,7 @@ use crate::config::Config;
 mod config;
 mod data;
 mod error;
+mod ffmpeg;
 mod routes;
 
 #[derive(Clone)]
@@ -37,6 +38,7 @@ struct AppState {
     cache_emoji: Cache<EmojiId, MediaId>,
     cache_media: Cache<MediaId, Media>,
     pending_thumbnails: Cache<(MediaId, u32, u32), Vec<u8>>,
+    pending_gifv: Cache<MediaId, Arc<async_tempfile::TempFile>>,
 }
 
 impl AppState {
@@ -128,6 +130,7 @@ async fn main() -> anyhow::Result<()> {
         cache_media,
         cache_emoji,
         pending_thumbnails: Cache::new(0),
+        pending_gifv: Cache::new(100),
     };
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())

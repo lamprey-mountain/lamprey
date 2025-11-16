@@ -37,3 +37,6 @@ percent-encoding = "2.3.2"
 thiserror = "2.0.16"
 moka = { version = "0.12.10", features = ["future"] }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+async-tempfile = "0.7.0"
+futures-util = "0.3.31"
+tokio-util = { version = "0.7.17", features = ["io"] }

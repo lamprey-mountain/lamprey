@@ -51,6 +51,10 @@ pub enum ContentInfo<'a> {
         media: &'a Media,
         content_length: Option<u64>,
     },
+    Gifv {
+        media: &'a Media,
+        content_length: Option<u64>,
+    },
 }
 
 impl<'a> ContentInfo<'a> {
@@ -58,6 +62,7 @@ impl<'a> ContentInfo<'a> {
         match self {
             ContentInfo::Media(media) => media.source.mime.to_string().parse().unwrap(),
             ContentInfo::Thumb { .. } => "image/avif".parse().unwrap(),
+            ContentInfo::Gifv { .. } => "video/webm".parse().unwrap(),
         }
     }
 
@@ -65,6 +70,14 @@ impl<'a> ContentInfo<'a> {
         match self {
             ContentInfo::Media(media) => media.filename.clone(),
             ContentInfo::Thumb { .. } => "thumbnail.avif".to_string(),
+            ContentInfo::Gifv { media, .. } => {
+                let mut f = media.filename.clone();
+                if let Some(p) = f.rsplit_once('.') {
+                    f = p.0.to_owned();
+                }
+                f.push_str(".webm");
+                f
+            }
         }
     }
 
@@ -72,6 +85,7 @@ impl<'a> ContentInfo<'a> {
         match self {
             ContentInfo::Media(media) => Some(media.source.size),
             ContentInfo::Thumb { content_length, .. } => *content_length,
+            ContentInfo::Gifv { content_length, .. } => *content_length,
         }
     }
 
@@ -79,6 +93,7 @@ impl<'a> ContentInfo<'a> {
         match self {
             ContentInfo::Media(media) => media,
             ContentInfo::Thumb { media, .. } => media,
+            ContentInfo::Gifv { media, .. } => media,
         }
     }
 }

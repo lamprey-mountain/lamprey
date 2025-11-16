@@ -27,6 +27,15 @@ pub enum Error {
 
     #[error("invalid range")]
     BadRange,
+
+    #[error("ffmpeg error")]
+    Ffmpeg,
+
+    #[error("tempfile error: {0}")]
+    Tempfile(Arc<std::io::Error>),
+
+    #[error("async tempfile error: {0}")]
+    AsyncTempfile(Arc<async_tempfile::Error>),
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -37,6 +46,9 @@ pub enum ErrorCode {
     ImageError,
     Opendal,
     BadRange,
+    Ffmpeg,
+    Tempfile,
+    AsyncTempfile,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -56,6 +68,9 @@ impl Error {
             Error::ImageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Opendal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::BadRange => StatusCode::RANGE_NOT_SATISFIABLE,
+            Error::Ffmpeg => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Tempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::AsyncTempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -67,6 +82,9 @@ impl Error {
             Error::ImageError(_) => ErrorCode::ImageError,
             Error::Opendal(_) => ErrorCode::Opendal,
             Error::BadRange => ErrorCode::BadRange,
+            Error::Ffmpeg => ErrorCode::Ffmpeg,
+            Error::Tempfile(_) => ErrorCode::Tempfile,
+            Error::AsyncTempfile(_) => ErrorCode::AsyncTempfile,
         }
     }
 
@@ -82,6 +100,18 @@ impl IntoResponse for Error {
     fn into_response(self) -> Response {
         error!("responding with error: {self}");
         (self.status_code(), Json(self.to_json())).into_response()
+    }
+}
+
+impl From<async_tempfile::Error> for Error {
+    fn from(value: async_tempfile::Error) -> Self {
+        Error::AsyncTempfile(Arc::new(value))
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Error::Tempfile(Arc::new(value))
     }
 }
 
