@@ -29,7 +29,7 @@ use moka::future::Cache;
 use tokio::sync::{broadcast, watch, Mutex};
 use tracing::error;
 
-use crate::{error::Error, Result, ServerStateInner};
+use crate::{error::Error, services::members::util::MemberListKey, Result, ServerStateInner};
 
 use self::util::MemberGroup;
 
@@ -43,9 +43,7 @@ pub struct ServiceMembers {
 
 struct ServiceMembersInner {
     state: Arc<ServerStateInner>,
-    member_lists_channel:
-        DashMap<ChannelId, Arc<(MemberList, broadcast::Sender<Vec<MemberListOp>>)>>,
-    member_lists_room: DashMap<RoomId, Arc<(MemberList, broadcast::Sender<Vec<MemberListOp>>)>>,
+    member_lists: DashMap<MemberListKey, Arc<(MemberList, broadcast::Sender<Vec<MemberListOp>>)>>,
     cache_room_member: Cache<(UserId, RoomId), RoomMember>,
     cache_thread_member: Cache<(UserId, ChannelId), ThreadMember>,
 }
@@ -63,8 +61,7 @@ impl ServiceMembers {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         let inner = Arc::new(ServiceMembersInner {
             state: state.clone(),
-            member_lists_room: DashMap::new(),
-            member_lists_channel: DashMap::new(),
+            member_lists: DashMap::new(),
             cache_room_member: Cache::builder().max_capacity(1_000_000).build(),
             cache_thread_member: Cache::builder().max_capacity(1_000_000).build(),
         });
@@ -263,28 +260,28 @@ impl ServiceMembersInner {
     ) -> Result<Arc<(MemberList, broadcast::Sender<Vec<MemberListOp>>)>> {
         match target {
             MemberListTarget::Room(room_id) => {
-                if let Some(list) = self.member_lists_room.get(room_id) {
+                if let Some(list) = self.member_lists.get(&MemberListKey::room(*room_id)) {
                     return Ok(list.clone());
                 }
 
                 let list = self.compute_member_list(target, user_id).await?;
                 let (tx, _) = broadcast::channel(256);
                 let entry = self
-                    .member_lists_room
-                    .entry(*room_id)
+                    .member_lists
+                    .entry(MemberListKey::room(*room_id))
                     .or_insert(Arc::new((list, tx)));
                 Ok(entry.value().clone())
             }
             MemberListTarget::Channel(channel_id) => {
-                if let Some(list) = self.member_lists_channel.get(channel_id) {
+                if let Some(list) = self.member_lists.get(&MemberListKey::channel(*channel_id)) {
                     return Ok(list.clone());
                 }
 
                 let list = self.compute_member_list(target, user_id).await?;
                 let (tx, _) = broadcast::channel(256);
                 let entry = self
-                    .member_lists_channel
-                    .entry(*channel_id)
+                    .member_lists
+                    .entry(MemberListKey::channel(*channel_id))
                     .or_insert(Arc::new((list, tx)));
                 Ok(entry.value().clone())
             }
@@ -658,7 +655,7 @@ impl ServiceMembersInner {
     }
 
     fn remove_room_list(&self, room_id: RoomId) {
-        if let Some((_, arc)) = self.member_lists_room.remove(&room_id) {
+        if let Some((_, arc)) = self.member_lists.remove(&MemberListKey::room(room_id)) {
             let (old_list, tx) = &*arc;
             let count = old_list.sorted_members.len() as u64;
             if count > 0 {
@@ -669,7 +666,7 @@ impl ServiceMembersInner {
     }
 
     async fn recalculate_channel_list(&self, channel_id: ChannelId) -> Result<()> {
-        if let Some(entry) = self.member_lists_channel.get(&channel_id) {
+        if let Some(entry) = self.member_lists.get(&MemberListKey::channel(channel_id)) {
             let (old_list, tx) = entry.value().as_ref();
             let new_list = self
                 .compute_member_list(&MemberListTarget::Channel(channel_id), UserId::new())
@@ -723,15 +720,17 @@ impl ServiceMembersInner {
                 tx.send(ops).ok();
             }
 
-            self.member_lists_channel
-                .insert(channel_id, Arc::new((new_list, tx.clone())));
+            self.member_lists.insert(
+                MemberListKey::channel(channel_id),
+                Arc::new((new_list, tx.clone())),
+            );
         }
 
         Ok(())
     }
 
     async fn recalculate_room_list(&self, room_id: RoomId) -> Result<()> {
-        if let Some(entry) = self.member_lists_room.get(&room_id) {
+        if let Some(entry) = self.member_lists.get(&MemberListKey::room(room_id)) {
             let (old_list, tx) = entry.value().as_ref();
             let new_list = self
                 .compute_member_list(&MemberListTarget::Room(room_id), UserId::new())
@@ -785,16 +784,18 @@ impl ServiceMembersInner {
                 tx.send(ops).ok();
             }
 
-            self.member_lists_room
-                .insert(room_id, Arc::new((new_list, tx.clone())));
+            self.member_lists.insert(
+                MemberListKey::room(room_id),
+                Arc::new((new_list, tx.clone())),
+            );
         }
 
         // Invalidate all channel member lists in the room
         let channel_ids_to_invalidate: Vec<ChannelId> = self
-            .member_lists_channel
+            .member_lists
             .iter()
             .filter(|entry| entry.value().0.room_id == Some(room_id))
-            .map(|entry| *entry.key())
+            .filter_map(|entry| entry.key().channel_id)
             .collect();
 
         for channel_id in channel_ids_to_invalidate {

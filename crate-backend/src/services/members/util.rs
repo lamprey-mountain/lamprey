@@ -34,6 +34,15 @@ pub struct MemberListItem {
     pub display_name: Arc<str>,
 }
 
+/// for deduplicating member lists
+// TODO: use permission overwrites (for view permission) instead of creating a list per channel
+// unlike discord, this needs to handle permission overwrite inheritance
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct MemberListKey {
+    pub room_id: Option<RoomId>,
+    pub channel_id: Option<ChannelId>,
+}
+
 impl PartialOrd for MemberGroup {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -83,6 +92,22 @@ impl MemberList {
             sorted_members,
             groups,
             notifier: Arc::new(Notify::new()),
+        }
+    }
+}
+
+impl MemberListKey {
+    pub fn room(room_id: RoomId) -> Self {
+        Self {
+            room_id: Some(room_id),
+            channel_id: None,
+        }
+    }
+
+    pub fn channel(channel_id: ChannelId) -> Self {
+        Self {
+            room_id: None,
+            channel_id: Some(channel_id),
         }
     }
 }
