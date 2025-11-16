@@ -38,7 +38,6 @@ mod util;
 pub use util::{MemberList, MemberListItem, MemberListTarget};
 
 pub struct ServiceMembers {
-    state: Arc<ServerStateInner>,
     inner: Arc<ServiceMembersInner>,
 }
 
@@ -80,7 +79,7 @@ impl ServiceMembers {
             }
         });
 
-        Self { state, inner }
+        Self { inner }
     }
 
     pub fn create_syncer(&self) -> ServiceMembersSyncer {

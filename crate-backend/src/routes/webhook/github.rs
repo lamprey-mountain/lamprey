@@ -34,6 +34,8 @@ struct GitHubCommit {
 struct GitHubRepository {
     name: String,
     full_name: String,
+
+    #[allow(unused)]
     html_url: String,
 }
 
@@ -68,6 +70,8 @@ struct PullRequest {
     html_url: String,
     number: u64,
     title: String,
+
+    #[allow(unused)]
     user: GitHubUser,
 }
 
