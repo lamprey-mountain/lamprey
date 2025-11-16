@@ -532,7 +532,7 @@ export const ItemChannel = (props: { channel: Channel }) => {
 			data-channel-id={props.channel.id}
 		>
 			<ChannelIcon channel={props.channel} />
-			<div style="pointer-events:none;line-height:1;flex:1">
+			<div style="pointer-events:none;line-height:1;flex:1;overflow:hidden">
 				<div
 					style={{
 						"text-overflow": "ellipsis",
