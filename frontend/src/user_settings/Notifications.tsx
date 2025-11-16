@@ -9,6 +9,7 @@ type NotifAction = "Notify" | "Watching" | "Ignore";
 
 export function Notifications(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
+	const { t } = useCtx();
 
 	// TODO: option to disable mention sound
 
@@ -43,15 +44,15 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 
 	return (
 		<div class="user-settings-notifications">
-			<h2>notifications</h2>
+			<h2>{t("user_settings.notifications")}</h2>
 			<Show when={notificationPermission() !== "granted"}>
 				<div class="permission">
-					You haven't given lamprey permission to send notifications
+					{t("user_settings.notifications_permission_text")}
 					<button
 						class="primary"
 						onClick={() => Notification.requestPermission()}
 					>
-						Allow notifications
+						{t("user_settings.notifications_permission_button")}
 					</button>
 				</div>
 			</Show>
@@ -68,8 +69,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				/>
 				<Checkbox checked={isFrontendConfigEnabled("desktop_notifs")} />
 				<div>
-					<div>Enable desktop notifications</div>
-					<div class="dim">Show desktop notifications for messages</div>
+					<div>{t("user_settings.desktop_notifs")}</div>
+					<div class="dim">{t("user_settings.desktop_notifs_description")}</div>
 				</div>
 			</label>
 			<label class="option">
@@ -82,8 +83,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				/>
 				<Checkbox checked={isFrontendConfigEnabled("push_notifs")} />
 				<div>
-					<div>Enable push notifications</div>
-					<div class="dim">Receive push notifications when away</div>
+					<div>{t("user_settings.push_notifs")}</div>
+					<div class="dim">{t("user_settings.push_notifs_description")}</div>
 				</div>
 			</label>
 			<label class="option">
@@ -96,111 +97,113 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				/>
 				<Checkbox checked={isFrontendConfigEnabled("tts_notifs")} />
 				<div>
-					<div>Enable text to speech for notifications</div>
-					<div class="dim">Read notification messages aloud</div>
+					<div>{t("user_settings.tts_notifs")}</div>
+					<div class="dim">{t("user_settings.tts_notifs_description")}</div>
 				</div>
 			</label>
-			<h3 class="dim" style="margin-top:8px;margin-left:4px">more stuff</h3>
+			<h3 class="dim" style="margin-top:8px;margin-left:4px">
+				{t("user_settings.notifications_more_stuff")}
+			</h3>
 			<div class="options dropdowns">
 				<div class="option">
 					<div>
-						<div>Messages</div>
+						<div>{t("user_settings.messages")}</div>
 						<div class="dim">
-							Configure how you want to be notified of new messages
+							{t("user_settings.messages_description")}
 						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().notifs.messages}
 						onSelect={(value) => value && setNotifConfig("messages", value)}
 						options={[
-							{ item: "Notify", label: "Notify" },
-							{ item: "Watching", label: "Watching" },
-							{ item: "Ignore", label: "Ignore" },
+							{ item: "Notify", label: t("user_settings.notify") },
+							{ item: "Watching", label: t("user_settings.watching") },
+							{ item: "Ignore", label: t("user_settings.ignore") },
 						]}
 					/>
 				</div>
 				<div class="option">
 					<div>
-						<div>Mentions</div>
+						<div>{t("user_settings.mentions")}</div>
 						<div class="dim">
-							Configure how you want to be notified of mentions
+							{t("user_settings.mentions_description")}
 						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().notifs.mentions}
 						onSelect={(value) => value && setNotifConfig("mentions", value)}
 						options={[
-							{ item: "Notify", label: "Notify" },
-							{ item: "Watching", label: "Watching" },
-							{ item: "Ignore", label: "Ignore" },
+							{ item: "Notify", label: t("user_settings.notify") },
+							{ item: "Watching", label: t("user_settings.watching") },
+							{ item: "Ignore", label: t("user_settings.ignore") },
 						]}
 					/>
 				</div>
 				<div class="option">
 					<div>
-						<div>Threads</div>
+						<div>{t("user_settings.threads")}</div>
 						<div class="dim">
-							Configure how you want to be notified of new threads
+							{t("user_settings.threads_description")}
 						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().notifs.threads}
 						onSelect={(value) => value && setNotifConfig("threads", value)}
 						options={[
-							{ item: "Notify", label: "Notify" },
-							{ item: "Watching", label: "Watching" },
-							{ item: "Ignore", label: "Ignore" },
+							{ item: "Notify", label: t("user_settings.notify") },
+							{ item: "Watching", label: t("user_settings.watching") },
+							{ item: "Ignore", label: t("user_settings.ignore") },
 						]}
 					/>
 				</div>
 				<div class="option">
 					<div>
-						<div>Public Rooms</div>
+						<div>{t("user_settings.public_rooms")}</div>
 						<div class="dim">
-							Configure how you want to be notified of public room activity
+							{t("user_settings.public_rooms_description")}
 						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().notifs.room_public}
 						onSelect={(value) => value && setNotifConfig("room_public", value)}
 						options={[
-							{ item: "Notify", label: "Notify" },
-							{ item: "Watching", label: "Watching" },
-							{ item: "Ignore", label: "Ignore" },
+							{ item: "Notify", label: t("user_settings.notify") },
+							{ item: "Watching", label: t("user_settings.watching") },
+							{ item: "Ignore", label: t("user_settings.ignore") },
 						]}
 					/>
 				</div>
 				<div class="option">
 					<div>
-						<div>Private Rooms</div>
+						<div>{t("user_settings.private_rooms")}</div>
 						<div class="dim">
-							Configure how you want to be notified of private room activity
+							{t("user_settings.private_rooms_description")}
 						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().notifs.room_private}
 						onSelect={(value) => value && setNotifConfig("room_private", value)}
 						options={[
-							{ item: "Notify", label: "Notify" },
-							{ item: "Watching", label: "Watching" },
-							{ item: "Ignore", label: "Ignore" },
+							{ item: "Notify", label: t("user_settings.notify") },
+							{ item: "Watching", label: t("user_settings.watching") },
+							{ item: "Ignore", label: t("user_settings.ignore") },
 						]}
 					/>
 				</div>
 				<div class="option">
 					<div>
-						<div>Direct Messages</div>
+						<div>{t("user_settings.direct_messages")}</div>
 						<div class="dim">
-							Configure how you want to be notified of direct messages
+							{t("user_settings.direct_messages_description")}
 						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().notifs.room_dm}
 						onSelect={(value) => value && setNotifConfig("room_dm", value)}
 						options={[
-							{ item: "Notify", label: "Notify" },
-							{ item: "Watching", label: "Watching" },
-							{ item: "Ignore", label: "Ignore" },
+							{ item: "Notify", label: t("user_settings.notify") },
+							{ item: "Watching", label: t("user_settings.watching") },
+							{ item: "Ignore", label: t("user_settings.ignore") },
 						]}
 					/>
 				</div>

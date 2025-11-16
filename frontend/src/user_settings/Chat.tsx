@@ -6,6 +6,7 @@ import { Dropdown } from "../Dropdown.tsx";
 
 export function Chat(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
+	const { t } = useCtx();
 
 	const toggle = (setting: string) => () => {
 		const c = ctx.userConfig();
@@ -20,10 +21,10 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 
 	return (
 		<div class="user-settings-chat">
-			<h2>chat</h2>
+			<h2>{t("user_settings.chat")}</h2>
 			<br />
 			<div class="options">
-				<h3 class="dim" style="margin-top:0">media</h3>
+				<h3 class="dim" style="margin-top:0">{t("user_settings.media")}</h3>
 				<label class="option">
 					<input
 						type="checkbox"
@@ -34,7 +35,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["preview_attachments"] === "yes"}
 					/>
-					<span>Preview attachments</span>
+					<span>{t("user_settings.preview_attachments")}</span>
 				</label>
 				<label class="option">
 					<input
@@ -48,7 +49,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 						checked={ctx.userConfig()
 							.frontend["preview_attachments_descriptions"] === "yes"}
 					/>
-					<span>Show attachment descriptions (alt text)</span>
+					<span>{t("user_settings.preview_attachments_descriptions")}</span>
 				</label>
 				<label class="option">
 					<input
@@ -60,9 +61,9 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["link_previews"] === "yes"}
 					/>
-					<span>Enable link previews</span>
+					<span>{t("user_settings.link_previews")}</span>
 				</label>
-				<h3 class="dim">input</h3>
+				<h3 class="dim">{t("user_settings.input")}</h3>
 				<label class="option">
 					<input
 						type="checkbox"
@@ -73,7 +74,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
 					/>
-					<span>Show send message button</span>
+					<span>{t("user_settings.show_send_button")}</span>
 				</label>
 				<label class="option">
 					<input
@@ -85,13 +86,15 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["typing_indicators"] === "yes"}
 					/>
-					<span>Show typing indicators</span>
+					<span>{t("user_settings.typing_indicators")}</span>
 				</label>
-				<h3 class="dim">content</h3>
+				<h3 class="dim">{t("user_settings.content")}</h3>
 				<div class="option apart">
 					<div>
-						<div>Show spoilers</div>
-						<div class="dim">Show when to show spoilers</div>
+						<div>{t("user_settings.show_spoilers")}</div>
+						<div class="dim">
+							{t("user_settings.show_spoilers_description")}
+						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().frontend["spoilers"] || "click"}
@@ -108,9 +111,9 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 							}
 						}}
 						options={[
-							{ item: "click", label: "On click" },
-							{ item: "hover", label: "On hover" },
-							{ item: "always", label: "Always" },
+							{ item: "click", label: t("user_settings.spoilers_click") },
+							{ item: "hover", label: t("user_settings.spoilers_hover") },
+							{ item: "always", label: t("user_settings.spoilers_always") },
 						]}
 					/>
 				</div>

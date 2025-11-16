@@ -9,6 +9,7 @@ import { Dropdown } from "../Dropdown";
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const api = useApi();
 	const ctx = useCtx();
+	const { t } = useCtx();
 
 	const toggle = (setting: string) => () => {
 		const c = ctx.userConfig();
@@ -34,12 +35,15 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 
 	return (
 		<div class="user-settings-appearance">
-			<h2>appearance</h2>
+			<h2>{t("user_settings.appearance")}</h2>
 			<br />
 			<div class="option apart">
 				<div>
-					<div>Theme</div>
-					<div class="dim">Choose your preferred theme</div>
+					<div>{t("user_settings.theme")}</div>
+					<div class="dim">
+						{t("user_settings.theme_description") ||
+							"Choose your preferred theme"}
+					</div>
 				</div>
 				<Dropdown
 					selected={ctx.userConfig().frontend["theme"] || "auto"}
@@ -56,15 +60,27 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						}
 					}}
 					options={[
-						{ item: "auto", label: "Auto (system)" },
+						{
+							item: "auto",
+							label: t("user_settings.theme_auto") || "Auto (system)",
+						},
 						{
 							item: "auto-highcontrast",
-							label: "Auto (system) (high contrast)",
+							label: t("user_settings.theme_auto_highcontrast") ||
+								"Auto (system) (high contrast)",
 						},
-						{ item: "light", label: "Light" },
-						{ item: "dark", label: "Dark" },
-						{ item: "light-highcontrast", label: "Light (high contrast)" },
-						{ item: "dark-highcontrast", label: "Dark (high contrast)" },
+						{ item: "light", label: t("user_settings.theme_light") || "Light" },
+						{ item: "dark", label: t("user_settings.theme_dark") || "Dark" },
+						{
+							item: "light-highcontrast",
+							label: t("user_settings.theme_light_highcontrast") ||
+								"Light (high contrast)",
+						},
+						{
+							item: "dark-highcontrast",
+							label: t("user_settings.theme_dark_highcontrast") ||
+								"Dark (high contrast)",
+						},
 					]}
 				/>
 			</div>
@@ -78,7 +94,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["underline_links"] === "yes"}
 					/>
-					<span>Always underline links</span>
+					<span>{t("user_settings.underline_links")}</span>
 				</label>
 				<label class="option">
 					<input
@@ -90,12 +106,15 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
 					/>
-					<span>Show send message button</span>
+					<span>{t("user_settings.show_send_button")}</span>
 				</label>
 				<div class="option apart">
 					<div>
-						<div>Message style</div>
-						<div class="dim">Choose how messages are displayed</div>
+						<div>{t("user_settings.message_style")}</div>
+						<div class="dim">
+							{t("user_settings.message_style_description") ||
+								"Choose how messages are displayed"}
+						</div>
 					</div>
 					<Dropdown
 						selected={ctx.userConfig().frontend["message_style"] || "cozy"}
@@ -112,15 +131,24 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 							}
 						}}
 						options={[
-							{ item: "cozy", label: "Cozy" },
-							{ item: "compact", label: "Compact" },
+							{
+								item: "cozy",
+								label: t("user_settings.message_style_cozy") || "Cozy",
+							},
+							{
+								item: "compact",
+								label: t("user_settings.message_style_compact") || "Compact",
+							},
 						]}
 					/>
 				</div>
 				<div class="option apart">
 					<div>
-						<div>Message group spacing</div>
-						<div class="dim">Adjust the spacing between message groups</div>
+						<div>{t("user_settings.message_group_spacing")}</div>
+						<div class="dim">
+							{t("user_settings.message_group_spacing_description") ||
+								"Adjust the spacing between message groups"}
+						</div>
 					</div>
 					<input
 						type="range"
@@ -142,8 +170,11 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 				</div>
 				<div class="option apart">
 					<div>
-						<div>Chat font scale</div>
-						<div class="dim">Adjust the size of chat text</div>
+						<div>{t("user_settings.chat_font_scale")}</div>
+						<div class="dim">
+							{t("user_settings.chat_font_scale_description") ||
+								"Adjust the size of chat text"}
+						</div>
 					</div>
 					<input
 						type="range"
@@ -165,8 +196,11 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 				</div>
 				<div class="option apart">
 					<div>
-						<div>Application scale</div>
-						<div class="dim">Adjust the overall application size</div>
+						<div>{t("user_settings.application_scale")}</div>
+						<div class="dim">
+							{t("user_settings.application_scale_description") ||
+								"Adjust the overall application size"}
+						</div>
 					</div>
 					<input
 						type="range"
@@ -188,8 +222,11 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 				</div>
 				<div class="option apart">
 					<div>
-						<div>Saturation</div>
-						<div class="dim">Adjust the color saturation</div>
+						<div>{t("user_settings.saturation")}</div>
+						<div class="dim">
+							{t("user_settings.saturation_description") ||
+								"Adjust the color saturation"}
+						</div>
 					</div>
 					<input
 						type="range"
@@ -209,7 +246,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						class="slider"
 					/>
 				</div>
-				<h3 class="dim">reduced motion</h3>
+				<h3 class="dim">{t("user_settings.reduced_motion")}</h3>
 				<label class="option">
 					<input
 						type="checkbox"
@@ -220,7 +257,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["reduced_motion"] === "yes"}
 					/>
-					<span>Reduced motion</span>
+					<span>{t("user_settings.reduced_motion")}</span>
 				</label>
 				<label class="option">
 					<input
@@ -234,7 +271,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						checked={ctx.userConfig().frontend["reduced_motion_sync"] ===
 							"yes"}
 					/>
-					<span>Sync reduced motion with system settings</span>
+					<span>{t("user_settings.reduced_motion_sync")}</span>
 				</label>
 				<label class="option">
 					<input
@@ -246,7 +283,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["autoplay_gifs"] === "yes"}
 					/>
-					<span>Autoplay GIFs in messages</span>
+					<span>{t("user_settings.autoplay_gifs")}</span>
 				</label>
 				<label class="option">
 					<input
@@ -258,7 +295,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["autoplay_emoji"] === "yes"}
 					/>
-					<span>Autoplay animated emoji</span>
+					<span>{t("user_settings.autoplay_emoji")}</span>
 				</label>
 			</div>
 		</div>
