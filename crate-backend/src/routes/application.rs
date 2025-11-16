@@ -642,7 +642,7 @@ async fn oauth_authorize(
 #[utoipa::path(
     post,
     path = "/oauth/token",
-    tags = ["application"],
+    tags = ["oauth"],
     request_body = OauthTokenRequest,
     responses(
         (status = OK, description = "success", body = OauthTokenResponse)
