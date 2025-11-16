@@ -161,7 +161,7 @@ async fn gifv_response(
 
 /// Fetch gifv
 ///
-/// get a gifv for a piece of media
+/// transcode a gif into a video
 #[utoipa::path(get, path = "/gifv/{media_id}")]
 pub async fn get_gifv(
     State(s): State<AppState>,
@@ -173,7 +173,7 @@ pub async fn get_gifv(
 
 /// Head gifv
 ///
-/// get headers for a gifv for a piece of media
+/// get headers for a transcoded gif
 #[utoipa::path(head, path = "/gifv/{media_id}")]
 pub async fn head_gifv(
     State(s): State<AppState>,
