@@ -99,7 +99,6 @@ pub struct DbRoomMemberWithUser {
     pub u_description: Option<String>,
     pub u_avatar: Option<Uuid>,
     pub u_banner: Option<Uuid>,
-    pub u_puppet: Option<serde_json::Value>,
     pub u_system: bool,
     pub u_suspended: Option<serde_json::Value>,
     pub u_registered_at: Option<time::PrimitiveDateTime>,
@@ -110,6 +109,10 @@ pub struct DbRoomMemberWithUser {
     pub u_webhook_channel_id: Option<Uuid>,
     pub u_webhook_creator_id: Option<Uuid>,
     pub u_webhook_room_id: Option<Uuid>,
+    pub u_puppet_external_platform: Option<String>,
+    pub u_puppet_external_id: Option<String>,
+    pub u_puppet_external_url: Option<String>,
+    pub u_puppet_alias_id: Option<Uuid>,
 }
 
 impl From<DbRoomMemberWithUser> for (RoomMember, User) {
@@ -142,7 +145,6 @@ impl From<DbRoomMemberWithUser> for (RoomMember, User) {
             description: row.u_description,
             avatar: row.u_avatar,
             banner: row.u_banner,
-            puppet: row.u_puppet,
             system: row.u_system,
             suspended: row.u_suspended,
             registered_at: row.u_registered_at,
@@ -153,6 +155,10 @@ impl From<DbRoomMemberWithUser> for (RoomMember, User) {
             webhook_channel_id: row.u_webhook_channel_id,
             webhook_creator_id: row.u_webhook_creator_id,
             webhook_room_id: row.u_webhook_room_id,
+            puppet_external_platform: row.u_puppet_external_platform,
+            puppet_external_id: row.u_puppet_external_id,
+            puppet_external_url: row.u_puppet_external_url,
+            puppet_alias_id: row.u_puppet_alias_id,
         }
         .into();
 

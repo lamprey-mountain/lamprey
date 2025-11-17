@@ -14,12 +14,12 @@ impl DataMetrics for Postgres {
             r#"
             SELECT
                 (SELECT count(*) FROM usr) AS "user_count_total!",
-                (SELECT count(*) FROM usr WHERE registered_at IS NULL AND puppet IS NULL AND id NOT IN (SELECT id FROM application) AND id NOT IN (SELECT id FROM webhook)) AS "user_count_guest!",
+                (SELECT count(*) FROM usr WHERE registered_at IS NULL AND id NOT IN (SELECT id FROM puppet) AND id NOT IN (SELECT id FROM application) AND id NOT IN (SELECT id FROM webhook)) AS "user_count_guest!",
                 (SELECT count(*) FROM usr WHERE registered_at IS NOT NULL) AS "user_count_registered!",
                 (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM application)) AS "user_count_bot!",
                 (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM webhook)) AS "user_count_webhook!",
-                (SELECT count(*) FROM usr WHERE puppet IS NOT NULL) AS "user_count_puppet!",
-                (SELECT count(*) FROM usr WHERE puppet IS NOT NULL AND parent_id IN (SELECT id FROM application)) AS "user_count_puppet_bot!",
+                (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM puppet)) AS "user_count_puppet!",
+                (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM puppet) AND parent_id IN (SELECT id FROM application)) AS "user_count_puppet_bot!",
                 (SELECT count(*) FROM room) AS "room_count_total!",
                 (SELECT count(*) FROM room WHERE public = false) AS "room_count_private!",
                 (SELECT count(*) FROM room WHERE public = true) AS "room_count_public!",

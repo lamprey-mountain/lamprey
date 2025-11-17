@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    self, PaginationDirection, PaginationQuery, PaginationResponse, Suspended, User, UserId,
-    UserListFilter,
+    self, ExternalPlatform, PaginationDirection, PaginationQuery, PaginationResponse, Suspended,
+    User, UserId, UserListFilter,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -26,7 +26,6 @@ pub struct DbUser {
     pub description: Option<String>,
     pub avatar: Option<Uuid>,
     pub banner: Option<Uuid>,
-    pub puppet: Option<Value>,
     pub system: bool,
     pub suspended: Option<Value>,
     pub registered_at: Option<time::PrimitiveDateTime>,
@@ -37,6 +36,10 @@ pub struct DbUser {
     pub webhook_channel_id: Option<Uuid>,
     pub webhook_creator_id: Option<Uuid>,
     pub webhook_room_id: Option<Uuid>,
+    pub puppet_external_platform: Option<String>,
+    pub puppet_external_id: Option<String>,
+    pub puppet_external_url: Option<String>,
+    pub puppet_alias_id: Option<Uuid>,
 }
 
 impl From<DbUser> for User {
@@ -71,6 +74,26 @@ impl From<DbUser> for User {
             None
         };
 
+        let puppet = if let (Some(parent_id), Some(external_platform), Some(external_id)) = (
+            row.parent_id,
+            row.puppet_external_platform,
+            row.puppet_external_id,
+        ) {
+            Some(types::Puppet {
+                owner_id: parent_id.into(),
+                external_platform: if external_platform == "Discord" {
+                    ExternalPlatform::Discord
+                } else {
+                    ExternalPlatform::Other(external_platform)
+                },
+                external_id,
+                external_url: row.puppet_external_url.and_then(|u| u.parse().ok()),
+                alias_id: row.puppet_alias_id.map(Into::into),
+            })
+        } else {
+            None
+        };
+
         User {
             id: row.id,
             version_id: row.version_id,
@@ -80,7 +103,7 @@ impl From<DbUser> for User {
             avatar: row.avatar.map(Into::into),
             banner: row.banner.map(Into::into),
             bot,
-            puppet: row.puppet.and_then(|r| serde_json::from_value(r).ok()),
+            puppet,
             webhook,
             suspended: row
                 .suspended
@@ -116,10 +139,13 @@ impl DataUser for Postgres {
             user_config: Default::default(),
             emails: None,
         };
+
+        let mut tx = self.pool.begin().await?;
+
         query!(
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, puppet, suspended, can_fork, registered_at, system)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10)
+            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, suspended, can_fork, registered_at, system)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9)
         "#,
             *user.id,
             *user.version_id,
@@ -127,13 +153,35 @@ impl DataUser for Postgres {
             user.name,
             user.description,
             user.avatar.map(|i| *i),
-            serde_json::to_value(user.puppet)?,
             serde_json::to_value(user.suspended)?,
             user.registered_at.map(|t| time::PrimitiveDateTime::from(t)),
             user.system,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        if let Some(puppet) = &user.puppet {
+            let external_platform = match &puppet.external_platform {
+                ExternalPlatform::Discord => "Discord".to_string(),
+                ExternalPlatform::Other(s) => s.clone(),
+            };
+            query!(
+                r#"
+                INSERT INTO puppet (id, external_platform, external_id, external_url, alias_id)
+                VALUES ($1, $2, $3, $4, $5)
+                "#,
+                *user.id,
+                external_platform,
+                puppet.external_id,
+                puppet.external_url.as_ref().map(|u| u.as_str()),
+                puppet.alias_id.map(|id| *id),
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+
         self.user_get(user_id).await
     }
 
@@ -143,13 +191,15 @@ impl DataUser for Postgres {
         let user = query_as!(
             DbUser,
             r#"
-            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                    a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                   p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
             FROM usr u
             LEFT JOIN application a ON u.id = a.id
             LEFT JOIN webhook w ON u.id = w.id
             LEFT JOIN channel c ON w.channel_id = c.id
+            LEFT JOIN puppet p ON u.id = p.id
             WHERE u.id = $1
             FOR UPDATE OF u
             "#,
@@ -200,13 +250,15 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                    a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                   p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
             FROM usr u
             LEFT JOIN application a ON u.id = a.id
             LEFT JOIN webhook w ON u.id = w.id
             LEFT JOIN channel c ON w.channel_id = c.id
+            LEFT JOIN puppet p ON u.id = p.id
             WHERE u.id = $1
             "#,
             *id
@@ -230,15 +282,17 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                                a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                               p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
                         LEFT JOIN webhook w ON u.id = w.id
                         LEFT JOIN channel c ON w.channel_id = c.id
+                        LEFT JOIN puppet p ON u.id = p.id
                         WHERE u.id > $1 AND u.id < $2
-                          AND u.registered_at IS NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
+                          AND u.registered_at IS NULL AND a.id IS NULL AND p.id IS NULL AND u.system = false
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
@@ -246,7 +300,7 @@ impl DataUser for Postgres {
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id WHERE u.registered_at IS NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false"),
+                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id LEFT JOIN puppet p ON u.id = p.id WHERE u.registered_at IS NULL AND a.id IS NULL AND p.id IS NULL AND u.system = false"),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -257,15 +311,17 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                                a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                               p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
                         LEFT JOIN webhook w ON u.id = w.id
                         LEFT JOIN channel c ON w.channel_id = c.id
+                        LEFT JOIN puppet p ON u.id = p.id
                         WHERE u.id > $1 AND u.id < $2
-                          AND u.registered_at IS NOT NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
+                          AND u.registered_at IS NOT NULL AND a.id IS NULL AND p.id IS NULL AND u.system = false
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
@@ -273,7 +329,7 @@ impl DataUser for Postgres {
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id WHERE u.registered_at IS NOT NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false"),
+                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id LEFT JOIN puppet p ON u.id = p.id WHERE u.registered_at IS NOT NULL AND a.id IS NULL AND p.id IS NULL AND u.system = false"),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -284,13 +340,15 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                                a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                               p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
                         FROM usr u
                         JOIN application a ON u.id = a.id
                         LEFT JOIN webhook w ON u.id = w.id
                         LEFT JOIN channel c ON w.channel_id = c.id
+                        LEFT JOIN puppet p ON u.id = p.id
                         WHERE u.id > $1 AND u.id < $2
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
@@ -310,15 +368,16 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                                a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                               p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
                         LEFT JOIN webhook w ON u.id = w.id
                         LEFT JOIN channel c ON w.channel_id = c.id
+                        JOIN puppet p ON u.id = p.id
                         WHERE u.id > $1 AND u.id < $2
-                          AND u.puppet->'owner_id' IS NOT NULL
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
@@ -326,7 +385,7 @@ impl DataUser for Postgres {
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr WHERE puppet->'owner_id' IS NOT NULL"),
+                    query_scalar!("SELECT count(*) FROM usr u JOIN puppet p ON u.id = p.id"),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -337,15 +396,17 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                                a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                               p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
                         LEFT JOIN webhook w ON u.id = w.id
                         LEFT JOIN channel c ON w.channel_id = c.id
+                        LEFT JOIN puppet p ON u.id = p.id
                         WHERE u.id > $1 AND u.id < $2
-                          AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
+                          AND a.id IS NULL AND p.id IS NULL AND u.system = false
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
@@ -353,7 +414,7 @@ impl DataUser for Postgres {
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id WHERE a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false"),
+                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id LEFT JOIN puppet p ON u.id = p.id WHERE a.id IS NULL AND p.id IS NULL AND u.system = false"),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -367,8 +428,9 @@ impl DataUser for Postgres {
     ) -> Result<Option<UserId>> {
         let id = query_scalar!(
             r#"
-            SELECT id FROM usr
-            WHERE parent_id = $1 AND puppet->>'external_id' = $2
+            SELECT p.id FROM puppet p
+            JOIN usr u ON p.id = u.id
+            WHERE u.parent_id = $1 AND p.external_id = $2
             "#,
             *owner_id,
             external_id,
@@ -383,13 +445,15 @@ impl DataUser for Postgres {
         let rows = query_as!(
             DbUser,
             r#"
-            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,
                    a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
-                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
+                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                   p.external_platform as "puppet_external_platform?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
             FROM usr u
             LEFT JOIN application a ON u.id = a.id
             LEFT JOIN webhook w ON u.id = w.id
             LEFT JOIN channel c ON w.channel_id = c.id
+            LEFT JOIN puppet p ON u.id = p.id
             WHERE u.id = ANY($1)
             "#,
             &ids
