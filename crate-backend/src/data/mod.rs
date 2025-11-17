@@ -74,11 +74,40 @@ pub trait Data:
     + DataNotification
     + DataWebhook
     + DataTag
+    + DataMetrics
     + Send
     + Sync
 {
     // async fn commit(self) -> Result<()>;
     // async fn rollback(self) -> Result<()>;
+}
+
+#[derive(Debug, Default)]
+#[allow(dead_code)]
+pub struct InstanceMetrics {
+    pub user_count_total: i64,
+    pub user_count_guest: i64,
+    pub user_count_registered: i64,
+    pub user_count_bot: i64,
+    pub user_count_webhook: i64,
+    pub user_count_puppet: i64,
+    pub user_count_puppet_bot: i64,
+    pub room_count_total: i64,
+    pub room_count_private: i64,
+    pub room_count_public: i64,
+    pub channel_count_total: i64,
+    pub channel_count_text: i64,
+    pub channel_count_voice: i64,
+    pub channel_count_calendar: i64,
+    pub channel_count_thread_public: i64,
+    pub channel_count_thread_private: i64,
+    pub channel_count_dm: i64,
+    pub channel_count_gdm: i64,
+}
+
+#[async_trait]
+pub trait DataMetrics {
+    async fn get_metrics(&self) -> Result<InstanceMetrics>;
 }
 
 #[async_trait]

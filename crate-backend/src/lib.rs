@@ -8,6 +8,7 @@ pub mod services;
 pub mod state;
 pub mod sync;
 pub mod types;
+pub mod metrics;
 
 pub use error::{Error, Result};
 pub use state::{ServerState, ServerStateInner};

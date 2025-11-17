@@ -22,6 +22,7 @@ mod emoji;
 mod invite;
 mod media;
 mod message;
+mod metrics;
 mod notification;
 mod permission;
 mod reaction;

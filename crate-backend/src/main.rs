@@ -244,6 +244,7 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
 
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api/v1", routes::routes())
+        .route("/metrics", get(routes::metrics::get_metrics))
         .with_state(state.clone())
         .split_for_parts();
     NestedTags.modify(&mut api);

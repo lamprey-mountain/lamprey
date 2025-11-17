@@ -39,6 +39,8 @@ mod util;
 mod voice;
 mod webhook;
 
+pub mod metrics;
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .merge(admin::routes())
