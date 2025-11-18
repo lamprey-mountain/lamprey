@@ -52,6 +52,7 @@ import { Sessions } from "./api/sessions.ts";
 import { notificationPermission } from "./notification.ts";
 import { deepEqual } from "./utils/deepEqual.ts";
 import { Inbox } from "./api/inbox.ts";
+import { generateNotificationIcon } from "./drawing.ts";
 
 export type Json =
 	| number
@@ -306,11 +307,33 @@ export function createApi(
 						m.channel_id,
 					);
 					const body = processedContent.substring(0, 200);
-					const notification = new Notification(title, { body });
-					notification.onclick = () => {
-						window.focus();
-						location.href = `/channel/${m.channel_id}/message/${m.id}`;
-					};
+
+					(async () => {
+						let icon: string | undefined;
+						if (author) {
+							const room = channel?.room_id
+								? rooms.cache.get(channel.room_id)
+								: undefined;
+							const iconBlob = await generateNotificationIcon(
+								author,
+								room ?? undefined,
+							);
+							if (iconBlob) {
+								icon = URL.createObjectURL(iconBlob);
+							}
+						}
+
+						const notification = new Notification(title, { body, icon });
+						notification.onclick = () => {
+							window.focus();
+							location.href = `/channel/${m.channel_id}/message/${m.id}`;
+						};
+						if (icon) {
+							notification.onclose = () => {
+								URL.revokeObjectURL(icon!);
+							};
+						}
+					})();
 				}
 			}
 
