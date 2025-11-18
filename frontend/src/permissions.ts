@@ -1,10 +1,12 @@
-import { Permission } from "sdk";
+import { ChannelType, Permission } from "sdk";
 
+// TODO: rename to PermissionDescription
 type Perm = {
 	id: Permission;
 	name: string;
 	description: string;
 	group?: string;
+	types?: ChannelType[];
 };
 
 export const permissions: Array<Perm> = [
@@ -103,15 +105,13 @@ export const permissions: Array<Perm> = [
 		id: "MessageEmbeds",
 		name: "Use message embeds",
 		description:
-			"(unimplemented) Has link previews generated for links in their message, and can send custom embeds",
+			"Has link previews generated for links in their message, and can send custom embeds",
 		group: "messages",
 	},
-	// { id: "MessageMassMention" },
-	// { id: "MessageMove" },
 	{
 		id: "MessagePin",
 		name: "Pin messages",
-		description: "(unimplemented) Can pin and unpin messages",
+		description: "Can pin and unpin messages",
 		group: "messages",
 	},
 	{
@@ -147,8 +147,6 @@ export const permissions: Array<Perm> = [
 			"Can change this room's name, description, and icon. Can make this room public or private.",
 		group: "room",
 	},
-	// { id: "TagApply" },
-	// { id: "TagManage" },
 	{
 		id: "ThreadCreatePublic",
 		name: "Create public threads",
@@ -180,7 +178,6 @@ export const permissions: Array<Perm> = [
 		description: "can change channel names and topics",
 		group: "channels",
 	},
-	// { id: "ChannelForward" },
 	{
 		id: "ThreadLock",
 		name: "Lock threads",
@@ -200,7 +197,6 @@ export const permissions: Array<Perm> = [
 		description: "Can view channels.",
 		group: "channels",
 	},
-	// { id: "ThreadPublish" },
 	{
 		id: "ViewAuditLog",
 		name: "View audit log",
@@ -264,7 +260,7 @@ export const permissions: Array<Perm> = [
 	{
 		id: "ServerMetrics",
 		name: "View metrics",
-		description: "(unimplemented) Can access the metrics endpoint",
+		description: "Can access the metrics endpoint",
 		group: "server",
 	},
 	{
@@ -291,6 +287,223 @@ export const permissions: Array<Perm> = [
 		description:
 			"Can suspend and unsuspend server members permanently or for a period of time",
 		group: "server members",
+	},
+];
+
+export const permissionsOverwrites: Array<Perm> = [
+	{
+		id: "ViewChannel",
+		name: "View channel",
+		description: "Can view this channel.",
+		group: "general",
+	},
+	{
+		id: "ChannelEdit",
+		name: "Edit channel",
+		description: "can change this channel's name and topic",
+		group: "general",
+		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+	},
+	{
+		id: "RoleManage",
+		name: "Manage permissions",
+		description: "Can set and remove permission overwrites for this channel.",
+		group: "general",
+		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+	},
+	{
+		id: "IntegrationsManage",
+		name: "Manage webhooks",
+		description: "Can add and remove webhooks in this channel",
+		group: "general",
+		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+	},
+	{
+		id: "InviteCreate",
+		name: "Create Invites",
+		description: "Can invite new people to this channel",
+		group: "members",
+		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+	},
+	{
+		id: "InviteManage",
+		name: "Manage invites",
+		description: "Can revoke invites and view metadata",
+		group: "members",
+		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+	},
+	{
+		id: "MemberBridge",
+		name: "Bridge members",
+		description:
+			"Can add puppet users and massage timestamps; only usable for bridge bots",
+		group: "members",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "MemberKick",
+		name: "Manage thread members",
+		description: "Can remove other members from threads",
+		group: "members",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "MessageCreate",
+		name: "Send messages",
+		description: "Can send messages in threads",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "MessageAttachments",
+		name: "Use message attachments",
+		description: "Can attach files and media to their message",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "MessageDelete",
+		name: "Remove messages",
+		description: "Can remove and restore other's messages",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "MessageEmbeds",
+		name: "Use message embeds",
+		description:
+			"Has link previews generated for links in their message, and can send custom embeds",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "MessagePin",
+		name: "Pin messages",
+		description: "Can pin and unpin messages",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "EmojiUseExternal",
+		name: "Use external emoji",
+		description: "(unimplemented) Can use custom emoji from outside this room",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "ReactionAdd",
+		name: "Add reactions",
+		description:
+			"Can add and remove new reactions to messages. Everyone can always react with an existing emoji.",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "ReactionPurge",
+		name: "Purge reactions",
+		description: "Can remove all reactions from a message",
+		group: "messages",
+		types: ["Text", "Forum", "Voice", "Category"],
+	},
+	{
+		id: "ThreadCreatePublic",
+		name: "Create public threads",
+		description: "Can create new public threads",
+		group: "threads",
+		types: ["Text", "Forum", "Category"],
+		// types: ["Text", "Category"],
+	},
+	{
+		id: "ThreadCreatePrivate",
+		name: "Create private threads",
+		description: "Can create new private threads",
+		group: "threads",
+		types: ["Text", "Category"],
+	},
+	{
+		id: "ThreadManage",
+		name: "Manage threads",
+		description:
+			"remove and archive threads, and move threads between channels. can also view all threads.",
+		group: "threads",
+		types: ["Text", "Forum", "Category"],
+	},
+	{
+		id: "ThreadEdit",
+		name: "Edit threads",
+		description: "Can edit threads created by others",
+		group: "threads",
+		types: ["Text", "Forum", "Category"],
+	},
+	{
+		id: "ThreadLock",
+		name: "Lock threads",
+		description: "Can lock threads",
+		group: "threads",
+		types: ["Text", "Forum", "Category"],
+	},
+	{
+		id: "VoiceConnect",
+		name: "Connect",
+		description: "Can connect to voice threads",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "VoiceDeafen",
+		name: "Deafen members",
+		description: "Can deafen other members",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "VoiceDisconnect",
+		name: "Disconnect members",
+		description: "Can disconnect other members from voice threads",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "VoiceMove",
+		name: "Move members",
+		description: "Can move other members betwixt voice threads",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "VoiceMute",
+		name: "Mute members",
+		description: "Can mute other members",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "VoicePriority",
+		name: "Priority speaker",
+		description: "(unimplemented) Can talk louder",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "VoiceSpeak",
+		name: "Speak",
+		description: "Can talk in voice threads",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "VoiceVideo",
+		name: "Video",
+		description: "Can send video and screenshare in voice threads",
+		group: "voice",
+		types: ["Voice", "Category"],
+	},
+	{
+		id: "CalendarEventManage",
+		name: "Manage calendar events",
+		description: "Can manage calendar events",
+		group: "calendar",
+		types: ["Calendar", "Category"],
 	},
 ];
 

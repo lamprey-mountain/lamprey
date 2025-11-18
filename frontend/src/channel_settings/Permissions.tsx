@@ -1,4 +1,9 @@
-import type { Channel, Permission, PermissionOverwrite } from "sdk";
+import type {
+	Channel,
+	ChannelType,
+	Permission,
+	PermissionOverwrite,
+} from "sdk";
 import {
 	batch,
 	createEffect,
@@ -12,9 +17,21 @@ import {
 import { createStore, produce } from "solid-js/store";
 import { useApi } from "../api.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
-import { permissions } from "../permissions.ts";
+import { permissionsOverwrites } from "../permissions.ts";
 import { Resizable } from "../Resizable";
 import { Copyable } from "../util.tsx";
+
+function filterPermissionsByChannelType(
+	permissions: typeof permissionsOverwrites,
+	channelType?: ChannelType,
+): typeof permissionsOverwrites {
+	if (!channelType) return permissions;
+
+	return permissions.filter((perm) => {
+		if (!perm.types) return true;
+		return perm.types.includes(channelType);
+	});
+}
 
 type PermState = "allow" | "deny" | "inherit";
 
@@ -194,7 +211,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 
 		const isEveryone = isEveryoneRole(id, props.channel.room_id);
 		const shouldBeRemoved = isEveryone &&
-			isAllInherit(updatedOverwrite, [...permissions]);
+			isAllInherit(updatedOverwrite, [...permissionsOverwrites]);
 		const existsInStore = overwrites.some((o) => o.id === id);
 
 		if (shouldBeRemoved) {
@@ -305,6 +322,13 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 			!overwrites.some((o) => o.id === r.id)
 		);
 
+	const filteredPermissions = createMemo(() => {
+		return filterPermissionsByChannelType(
+			permissionsOverwrites,
+			props.channel.type,
+		);
+	});
+
 	return (
 		<div class="channel-settings-permissions">
 			<div class="main">
@@ -387,8 +411,8 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 							</div>
 							<PermissionSelector
 								seed={props.channel.id + overwrite.id}
-								permissions={permissions}
-								permStates={permissions.reduce((acc, p) => {
+								permissions={filteredPermissions()}
+								permStates={filteredPermissions().reduce((acc, p) => {
 									acc[p.id] = getPermState(overwrite, p.id);
 									return acc;
 								}, {} as Record<Permission, PermState>)}

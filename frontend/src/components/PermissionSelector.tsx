@@ -69,9 +69,11 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 
 		const groupOrder = props.roomType === "Default"
 			? [
+				"general", // channel overwrites
 				"room",
 				"members",
 				"messages",
+				"threads", // channel overwrites
 				"channels",
 				"voice",
 				"calendar",
