@@ -3,6 +3,7 @@ import { createSignal, For, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 import { useModals } from "../contexts/modal";
+import { Checkbox } from "../icons";
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
@@ -74,16 +75,18 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				channel id: <code class="select-all">{props.channel.id}</code>
 			</div>
 			<div>
-				<label>
+				<label class="option">
+					<input
+						type="checkbox"
+						checked={editingNsfw()}
+						onInput={(e) => setEditingNsfw(e.currentTarget.checked)}
+						style="display: none;"
+					/>
+					<Checkbox checked={editingNsfw()} />
 					<div>
-						<input
-							type="checkbox"
-							checked={editingNsfw()}
-							onInput={(e) => setEditingNsfw(e.currentTarget.checked)}
-						/>
 						<b>nsfw</b>
+						<div>mark this channel as not safe for work</div>
 					</div>
-					<div>mark this channel as not safe for work</div>
 				</label>
 			</div>
 			<Show when={props.channel.type === "Forum"}>
