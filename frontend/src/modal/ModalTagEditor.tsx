@@ -4,6 +4,7 @@ import { useCtx } from "../context";
 import { Tag, TagCreate, TagPatch } from "sdk";
 import { useApi } from "../api";
 import { useModals } from "../contexts/modal";
+import { Checkbox } from "../icons";
 
 interface ModalTagEditorProps {
 	tag?: Tag;
@@ -69,9 +70,9 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 	return (
 		<Modal>
 			<h3>{props.tag ? "Edit Tag" : "Create Tag"}</h3>
-			<form onSubmit={handleSubmit}>
-				<div class="form-group">
-					<label for="tagName">Name</label>
+			<form class="tag-edit-form" onSubmit={handleSubmit}>
+				<div class="option-block">
+					<label for="tagName" class="small">Name</label>
 					<input
 						id="tagName"
 						type="text"
@@ -82,7 +83,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 					/>
 				</div>
 
-				<div class="form-group">
+				<div class="option-block">
 					<label for="tagDescription">Description</label>
 					<textarea
 						id="tagDescription"
@@ -93,7 +94,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 					/>
 				</div>
 
-				<div class="form-group">
+				<div class="option-block">
 					<label for="tagColor">Color</label>
 					<input
 						id="tagColor"
@@ -103,18 +104,21 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 					/>
 				</div>
 
-				<div class="form-group checkbox-group">
-					<label for="tagRestricted">
+				<div class="option">
+					<label class="option">
 						<input
-							id="tagRestricted"
 							type="checkbox"
 							checked={restricted()}
 							onInput={(e) => setRestricted(e.currentTarget.checked)}
+							style="display: none;"
 						/>
-						<span>
-							Restricted (only users with ThreadEdit or ThreadManage can apply
-							this tag)
-						</span>
+						<Checkbox checked={restricted()} />
+						<div>
+							<div>Restricted</div>
+							<div class="dim">
+								Only users with ThreadEdit or ThreadManage can apply this tag
+							</div>
+						</div>
 					</label>
 				</div>
 

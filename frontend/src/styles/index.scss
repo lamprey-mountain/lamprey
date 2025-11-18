@@ -3376,3 +3376,22 @@ kbd {
 		}
 	}
 }
+
+.tag-edit-form {
+	.option-block {
+		display: flex;
+		flex-direction: column;
+		align-items: start;
+		margin-top: 8px;
+
+		& > label {
+			color: $fg-500;
+			font-size: 0.8rem;
+		}
+	}
+}
+
+input[type="color"] {
+	height: 1em;
+	width: 2em;
+}
