@@ -11,7 +11,7 @@ use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, Session,
 };
 use tokio::time::Instant;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 use crate::error::{Error, Result};
 use crate::services::members::{MemberListTarget, ServiceMembersSyncer};
@@ -225,7 +225,8 @@ impl Connection {
                     ConnectionState::Unauthed => return Err(Error::MissingAuth),
                     ConnectionState::Authenticated { session } => session,
                     ConnectionState::Disconnected { .. } => {
-                        panic!("somehow recv msg while disconnected?")
+                        warn!("somehow recv msg while disconnected?");
+                        return Ok(());
                     }
                 };
                 let srv = self.s.services();
