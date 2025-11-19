@@ -11,6 +11,7 @@ type FolderMenuProps = {
 export function FolderMenu(props: FolderMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const [, modalctl] = useModals();
 
 	const getFolder = () => {
 		const config = ctx.userConfig().frontend.roomNav as RoomNavItem[];
@@ -33,8 +34,7 @@ export function FolderMenu(props: FolderMenuProps) {
 	};
 
 	const renameFolder = () => {
-		const [, modalCtl] = useModals();
-		modalCtl.prompt("new folder name", (name) => {
+		modalctl.prompt("new folder name", (name) => {
 			if (!name) return;
 
 			const currentConfig = ctx.userConfig().frontend
