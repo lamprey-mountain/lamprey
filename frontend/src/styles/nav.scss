@@ -242,7 +242,21 @@
 
 		& a {
 			padding: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 100%;
 		}
+	}
+
+	.home-item .icon, .folder-header .icon {
+		height: 32px;
+		width: 32px;
+		filter: invert(0.8);
+	}
+
+	.home-item {
+		background: $bg-200;
 	}
 
 	.folder-header {
@@ -251,6 +265,10 @@
 		border-radius: 4px;
 		background: #2a2a2a;
 		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
 
 		&:hover {
 			background: $bg-150;

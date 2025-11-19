@@ -13,6 +13,8 @@ import { flags } from "./flags";
 import { getThumbFromId } from "./media/util";
 import { useCtx } from "./context";
 import type { Room } from "sdk";
+import icHome from "./assets/home.png";
+import icFolder1 from "./assets/folder-1.png";
 
 export type RoomNavItem =
 	| {
@@ -442,7 +444,7 @@ export const RoomNav = () => {
 				<ul>
 					<li class="home-item">
 						<A href="/" end>
-							home
+							<img src={icHome} class="icon" />
 						</A>
 					</li>
 					<For each={previewedItems()}>
@@ -484,7 +486,7 @@ export const RoomNav = () => {
 													});
 												}}
 											>
-												{folder.name}
+												<img src={icFolder1} class="icon" />
 											</div>
 											<Show when={!collapsedFolders().has(folder.id)}>
 												<ul>

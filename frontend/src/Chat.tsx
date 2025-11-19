@@ -275,7 +275,7 @@ export const ChatMain = (props: ChatProps) => {
 
 					const version_id =
 						api.messages.cacheRanges.get(channel_id)?.live.end ??
-						props.channel.last_version_id;
+							props.channel.last_version_id;
 
 					if (version_id) {
 						ctx.dispatch({
