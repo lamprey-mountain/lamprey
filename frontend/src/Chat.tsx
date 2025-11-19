@@ -29,6 +29,7 @@ import { SearchInput } from "./SearchInput.tsx";
 import { md } from "./markdown.tsx";
 import icPin from "./assets/pin.png";
 import icMembers from "./assets/members.png";
+import icCall from "./assets/call.png";
 import { useChannel } from "./channelctx.tsx";
 
 type ChatProps = {
@@ -274,7 +275,7 @@ export const ChatMain = (props: ChatProps) => {
 
 					const version_id =
 						api.messages.cacheRanges.get(channel_id)?.live.end ??
-							props.channel.last_version_id;
+						props.channel.last_version_id;
 
 					if (version_id) {
 						ctx.dispatch({
@@ -439,6 +440,18 @@ export const ChatHeader = (
 					</Switch>
 					<div style="flex:1"></div>
 					<SearchInput channel={props.channel} />
+					<Show
+						when={props.channel.type === "Dm" || props.channel.type === "Gdm"}
+					>
+						<button
+							onClick={() => {
+								// TODO: calling
+							}}
+							title="Start call"
+						>
+							<img class="icon" src={icCall} />
+						</button>
+					</Show>
 					<button
 						onClick={togglePinned}
 						classList={{ active: isShowingPinned() }}
