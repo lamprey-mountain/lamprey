@@ -673,10 +673,10 @@ input[type="url"] {
 		overflow-y: auto;
 
 		& a,
-		button {
+		button.action {
 			display: block;
 			padding: 4px 8px;
-			background-color: none;
+			background: none;
 
 			&:hover,
 			&:focus {
@@ -690,6 +690,12 @@ input[type="url"] {
 			&.active {
 				background-color: #fff2;
 			}
+		}
+
+		.action {
+			border: none;
+			border-radius: 4px;
+			width: 100%;
 		}
 	}
 

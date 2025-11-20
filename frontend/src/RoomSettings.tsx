@@ -16,6 +16,9 @@ import {
 import * as Admin from "./admin_settings/mod.tsx";
 import { SERVER_ROOM_ID } from "sdk";
 import { A } from "@solidjs/router";
+import { useCtx } from "./context.ts";
+import { useApi } from "./api.tsx";
+import { useModals } from "./contexts/modal.tsx";
 
 const tabs = [
 	{ category: "overview" },
@@ -32,6 +35,7 @@ const tabs = [
 	{ category: "moderation" },
 	{ name: "bans", path: "bans", component: Bans },
 	{ name: "audit log", path: "logs", component: AuditLog },
+	{ name: "delete room", action: "delete", style: "danger" },
 ];
 
 const adminTabs = [
@@ -48,9 +52,36 @@ const adminTabs = [
 ];
 
 export const RoomSettings = (props: { room: RoomT; page: string }) => {
+	const ctx = useCtx();
+	const api = useApi();
+	const [, modalCtl] = useModals();
 	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
 		currentTabs().find((i) => i.path === (props.page ?? ""))!;
+
+	const handleAction = (action: string) => {
+		switch (action) {
+			case "delete":
+				modalCtl.confirm(
+					`Are you sure you want to delete "${props.room.name}"?`,
+					(confirmed) => {
+						if (confirmed) {
+							ctx.client.http.DELETE("/api/v1/room/{room_id}", {
+								params: { path: { room_id: props.room.id } },
+							}).then(() => {
+								window.location.href = "/";
+							}).catch((error) => {
+								console.error("Failed to delete room:", error);
+								modalCtl.alert("Failed to delete room: " + error.message);
+							});
+						}
+					},
+				);
+				break;
+			default:
+				console.warn(`Unknown action: ${action}`);
+		}
+	};
 
 	return (
 		<div class="settings">
@@ -74,7 +105,22 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 										{tab.category}
 									</div>
 								</Match>
-								<Match when={tab.name}>
+								<Match when={tab.action}>
+									<li>
+										<button
+											class="action"
+											onClick={() => handleAction(tab.action)}
+											style={{
+												color: tab.style === "danger"
+													? "oklch(var(--color-red))"
+													: "inherit",
+											}}
+										>
+											{tab.name}
+										</button>
+									</li>
+								</Match>
+								<Match when={true}>
 									<li>
 										<A href={`/room/${props.room.id}/settings/${tab.path}`}>
 											{tab.name}
