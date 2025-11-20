@@ -117,8 +117,11 @@ pub struct ParseMentions {
 pub struct Mentions {
     pub users: Vec<UserId>,
     pub roles: Vec<RoleId>,
+
+    // TODO: remove
     pub threads: Vec<ChannelId>,
 
+    // TODO: remove
     #[serde(default)]
     pub emojis: Vec<EmojiId>,
 

@@ -856,6 +856,7 @@ pub mod mentions {
             .into_iter()
             .collect();
 
+        // TODO(#833): enforce EmojiUseExternal permission
         let emojis = EMOJI_MENTION_RE
             .captures_iter(content)
             .filter_map(|cap| Uuid::parse_str(&cap[1]).ok().map(Into::into))
