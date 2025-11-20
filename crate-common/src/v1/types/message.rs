@@ -584,3 +584,26 @@ impl MessageType {
         matches!(self, MessageType::DefaultMarkdown(_))
     }
 }
+
+impl MessageCreate {
+    pub fn is_empty(&self) -> bool {
+        self.content.as_ref().is_none_or(|s| s.is_empty())
+            && self.attachments.is_empty()
+            && self.embeds.is_empty()
+    }
+}
+
+impl MessageDefaultMarkdown {
+    pub fn is_empty(&self) -> bool {
+        self.content.as_ref().is_none_or(|s| s.is_empty())
+            && self.attachments.is_empty()
+            && self.embeds.is_empty()
+    }
+
+    /// remove all content from this message
+    pub fn strip(&mut self) {
+        self.content = None;
+        self.attachments = vec![];
+        self.embeds = vec![];
+    }
+}
