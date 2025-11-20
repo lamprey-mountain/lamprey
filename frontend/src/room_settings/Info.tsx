@@ -162,30 +162,6 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				<span>Make this room public (anyone can join and view)</span>
 			</label>
 			<br />
-			<div class="danger">
-				<h3>danger zone</h3>
-				<label>
-					<button onClick={archiveAllThreads}>archive all threads</button>
-					<span style="margin-left:8px">
-						archive all threads in this room
-					</span>
-				</label>
-				<br />
-				<label>
-					<button onClick={() => alert("todo")}>transfer ownership</button>
-					<span style="margin-left:8px">
-						makes this room someone else's problem
-					</span>
-				</label>
-				<br />
-				<label>
-					<button onClick={() => alert("todo")}>obliterate</button>
-					<span style="margin-left:8px">
-						delete this room
-					</span>
-				</label>
-				<br />
-			</div>
 		</>
 	);
 }

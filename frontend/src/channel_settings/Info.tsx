@@ -129,42 +129,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</div>
 			</Show>
 			{/* TODO: add/remove tags from thread channels */}
-			<br />
-			{/* TODO: add padding to all settings */}
-			<div class="danger" style="margin:0 2px">
-				<h3>danger zone</h3>
-				<label>
-					{/* should this really be in the "danger zone"? archiving doesnt do much */}
-					<button onClick={toggleArchived}>
-						{props.channel.archived_at ? "unarchive" : "archive"}
-					</button>
-					<span style="margin-left:8px">
-						{props.channel.archived_at
-							? "shows this channel in the nav bar"
-							: "hides this channel in the nav bar"}
-					</span>
-				</label>
-				<br />
-				<label>
-					<button onClick={toggleLocked}>
-						{props.channel.locked ? "unlock" : "lock"}
-					</button>
-					<span style="margin-left:8px">
-						{props.channel.locked
-							? "anyone will be able to chat in this channel"
-							: "only moderators can chat in this channel"}
-					</span>
-				</label>
-				<br />
-				<label>
-					<button onClick={() => alert("todo")}>remove</button>
-					<span style="margin-left:8px">
-						archives and locks this channel and hides it from all listings
-						(direct links still work)
-					</span>
-				</label>
-				<br />
-			</div>
+			{/* TODO: archive all threads in this channel (text, forum) */}
 			{isDirty() && (
 				<div class="savebar">
 					<div class="inner">
