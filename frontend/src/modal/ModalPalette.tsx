@@ -7,6 +7,10 @@ import { getThumbFromId } from "../media/util";
 import { ChannelIcon } from "../User";
 import { Modal } from "./mod";
 import { useModals } from "../contexts/modal";
+import icHome from "../assets/home.png";
+import icInbox from "../assets/inbox.png";
+import icSettings from "../assets/settings.png";
+import icMembers from "../assets/members.png";
 
 export const ModalPalette = () => {
 	const api = useApi();
@@ -178,6 +182,22 @@ export const ModalPalette = () => {
 												class="avatar"
 											/>
 										</Show>
+									</div>
+								</Show>
+								<Show when={item.type === "link"} keyed>
+									<div class="item-icon">
+										<img
+											src={item.id === "home"
+												? icHome
+												: item.id === "inbox"
+												? icInbox
+												: item.id === "settings"
+												? icSettings
+												: item.id === "friends"
+												? icMembers
+												: ""}
+											class="icon"
+										/>
 									</div>
 								</Show>
 								<span>{item.name}</span>
