@@ -204,6 +204,11 @@
 			display: none;
 		}
 	}
+
+	& a.muted {
+		color: $fg-500;
+		opacity: 0.6;
+	}
 }
 
 #room-nav {

@@ -522,12 +522,22 @@ export const ItemChannel = (props: { channel: Channel }) => {
 		return props.channel.name;
 	};
 
+	const channelConfig = () => props.channel.user_config;
+
+	const isMuted = () => {
+		const c = channelConfig();
+		if (!c?.notifs.mute) return false;
+		if (c.notifs.mute.expires_at === null) return true;
+		return Date.parse(c.notifs.mute.expires_at) > Date.now();
+	};
+
 	return (
 		<A
 			href={`/channel/${props.channel.id}`}
 			class="menu-channel nav-channel"
 			classList={{
 				unread: props.channel.type !== "Voice" && !!props.channel.is_unread,
+				muted: isMuted(),
 			}}
 			data-channel-id={props.channel.id}
 		>
