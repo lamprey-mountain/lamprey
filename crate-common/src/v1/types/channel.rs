@@ -172,6 +172,9 @@ pub enum ChannelType {
     /// a call
     Voice,
 
+    /// broadcast voice channel for many listeners
+    Broadcast,
+
     /// category for grouping channels together
     Category,
 
@@ -392,6 +395,7 @@ impl ChannelType {
                 | ChannelType::Dm
                 | ChannelType::Gdm
                 | ChannelType::Voice
+                | ChannelType::Broadcast
         )
     }
 
@@ -413,7 +417,7 @@ impl ChannelType {
     }
 
     pub fn has_voice(&self) -> bool {
-        matches!(self, ChannelType::Voice)
+        matches!(self, ChannelType::Voice | ChannelType::Broadcast)
     }
 
     /// for a thread to be taggable, it must be in a channel with has_tags

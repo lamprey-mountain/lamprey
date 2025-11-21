@@ -26,6 +26,7 @@ impl DataMetrics for Postgres {
                 (SELECT count(*) FROM channel) AS "channel_count_total!",
                 (SELECT count(*) FROM channel WHERE type = 'Text') AS "channel_count_text!",
                 (SELECT count(*) FROM channel WHERE type = 'Voice') AS "channel_count_voice!",
+                (SELECT count(*) FROM channel WHERE type = 'Broadcast') AS "channel_count_broadcast!",
                 (SELECT count(*) FROM channel WHERE type = 'Calendar') AS "channel_count_calendar!",
                 (SELECT count(*) FROM channel WHERE type = 'ThreadPublic') AS "channel_count_thread_public!",
                 (SELECT count(*) FROM channel WHERE type = 'ThreadPrivate') AS "channel_count_thread_private!",

@@ -98,6 +98,7 @@ pub struct InstanceMetrics {
     pub channel_count_total: i64,
     pub channel_count_text: i64,
     pub channel_count_voice: i64,
+    pub channel_count_broadcast: i64,
     pub channel_count_calendar: i64,
     pub channel_count_thread_public: i64,
     pub channel_count_thread_private: i64,

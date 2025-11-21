@@ -273,6 +273,7 @@ impl ServiceThreads {
             ChannelType::Text
             | ChannelType::Forum
             | ChannelType::Voice
+            | ChannelType::Broadcast
             | ChannelType::Category
             | ChannelType::Calendar => {
                 perms.ensure(Permission::ChannelManage)?;
@@ -364,10 +365,10 @@ impl ServiceThreads {
         if json.bitrate.is_some_and(|b| b > 393216) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
-        if json.ty != ChannelType::Voice && json.bitrate.is_some() {
+        if !json.ty.has_voice() && json.bitrate.is_some() {
             return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
         }
-        if json.ty != ChannelType::Voice && json.user_limit.is_some() {
+        if !json.ty.has_voice() && json.user_limit.is_some() {
             return Err(Error::BadStatic(
                 "cannot set user_limit for non voice thread",
             ));
@@ -437,6 +438,7 @@ impl ServiceThreads {
                     ChannelType::Text => DbChannelType::Text,
                     ChannelType::Forum => DbChannelType::Forum,
                     ChannelType::Voice => DbChannelType::Voice,
+                    ChannelType::Broadcast => DbChannelType::Broadcast,
                     ChannelType::Category => DbChannelType::Category,
                     ChannelType::ThreadPublic => DbChannelType::ThreadPublic,
                     ChannelType::ThreadPrivate => DbChannelType::ThreadPrivate,

@@ -25,6 +25,7 @@ register_gauge!(ROOM_COUNT_PUBLIC, "Number of public rooms");
 register_gauge!(CHANNEL_COUNT_TOTAL, "Total number of channels");
 register_gauge!(CHANNEL_COUNT_TEXT, "Number of text channels");
 register_gauge!(CHANNEL_COUNT_VOICE, "Number of voice channels");
+register_gauge!(CHANNEL_COUNT_BROADCAST, "Number of broadcast channels");
 register_gauge!(CHANNEL_COUNT_CALENDAR, "Number of calendar channels");
 register_gauge!(
     CHANNEL_COUNT_THREAD_PUBLIC,
