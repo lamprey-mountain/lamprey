@@ -19,7 +19,10 @@ import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
 import { useModals } from "./contexts/modal.tsx";
+import { usePermissions } from "./hooks/usePermissions.ts";
 
+// TODO: hide empty categories
+// TODO: more permission checks
 const tabs = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Info },
@@ -27,34 +30,87 @@ const tabs = [
 	{ name: "metrics", path: "metrics", component: Metrics },
 	{ category: "integrations" },
 	{ name: "bots", path: "bots", component: Bots },
-	{ name: "webhooks", path: "webhooks", component: Webhooks },
+	{
+		name: "webhooks",
+		path: "webhooks",
+		component: Webhooks,
+		permissionCheck: (p) => p.has("IntegrationsManage"),
+	},
 	{ category: "access" },
-	{ name: "invites", path: "invites", component: Invites },
-	{ name: "roles", path: "roles", component: Roles, noPad: true },
+	{
+		name: "invites",
+		path: "invites",
+		component: Invites,
+		permissionCheck: (p) => p.has("InviteManage"),
+	},
+	{
+		name: "roles",
+		path: "roles",
+		component: Roles,
+		noPad: true,
+		permissionCheck: (p) => p.has("RoleManage"),
+	},
 	{ name: "members", path: "members", component: Members },
 	{ category: "moderation" },
-	{ name: "bans", path: "bans", component: Bans },
-	{ name: "audit log", path: "logs", component: AuditLog },
-	{ name: "delete room", action: "delete", style: "danger" },
+	{
+		name: "bans",
+		path: "bans",
+		component: Bans,
+		permissionCheck: (p) => p.has("MemberBan"),
+	},
+	{
+		name: "audit log",
+		path: "logs",
+		component: AuditLog,
+		permissionCheck: (p) => p.has("ViewAuditLog"),
+	},
+	{
+		name: "delete room",
+		action: "delete",
+		style: "danger",
+		// TODO: check owner id for room delete
+	},
 ];
 
 const adminTabs = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Admin.ServerInfo },
 	{ category: "access" },
-	{ name: "invites", path: "invites", component: Admin.Invites },
-	{ name: "roles", path: "roles", component: Roles, noPad: true },
+	{
+		name: "invites",
+		path: "invites",
+		component: Admin.Invites,
+		permissionCheck: (p) => p.has("InviteManage"),
+	},
+	{
+		name: "roles",
+		path: "roles",
+		component: Roles,
+		noPad: true,
+		permissionCheck: (p) => p.has("RoleManage"),
+	},
 	{ category: "content" },
 	{ name: "users", path: "users", component: Admin.Users },
 	{ name: "rooms", path: "rooms", component: Admin.Rooms },
 	{ category: "moderation" },
-	{ name: "audit log", path: "logs", component: Admin.AuditLog },
+	{
+		name: "audit log",
+		path: "logs",
+		component: Admin.AuditLog,
+		permissionCheck: (p) => p.has("ViewAuditLog"),
+	},
 ];
 
 export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const [, modalCtl] = useModals();
+	const user_id = () => api.users.cache.get("@self")?.id;
+	const perms = usePermissions(
+		user_id,
+		() => props.room.id,
+		() => undefined,
+	);
 	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
 		currentTabs().find((i) => i.path === (props.page ?? ""))!;
@@ -93,41 +149,45 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 				<ul>
 					<For each={currentTabs()}>
 						{(tab, idx) => (
-							<Switch>
-								<Match when={tab.category}>
-									<div
-										class="dim"
-										style={{
-											"margin-top": idx() === 0 ? "" : "12px",
-											"margin": "2px 8px",
-										}}
-									>
-										{tab.category}
-									</div>
-								</Match>
-								<Match when={tab.action}>
-									<li>
-										<button
-											class="action"
-											onClick={() => handleAction(tab.action)}
+							<Show
+								when={!tab.permissionCheck || tab.permissionCheck(perms)}
+							>
+								<Switch>
+									<Match when={tab.category}>
+										<div
+											class="dim"
 											style={{
-												color: tab.style === "danger"
-													? "oklch(var(--color-red))"
-													: "inherit",
+												"margin-top": idx() === 0 ? "" : "12px",
+												"margin": "2px 8px",
 											}}
 										>
-											{tab.name}
-										</button>
-									</li>
-								</Match>
-								<Match when={true}>
-									<li>
-										<A href={`/room/${props.room.id}/settings/${tab.path}`}>
-											{tab.name}
-										</A>
-									</li>
-								</Match>
-							</Switch>
+											{tab.category}
+										</div>
+									</Match>
+									<Match when={tab.action}>
+										<li>
+											<button
+												class="action"
+												onClick={() => handleAction(tab.action)}
+												style={{
+													color: tab.style === "danger"
+														? "oklch(var(--color-red))"
+														: "inherit",
+												}}
+											>
+												{tab.name}
+											</button>
+										</li>
+									</Match>
+									<Match when={true}>
+										<li>
+											<A href={`/room/${props.room.id}/settings/${tab.path}`}>
+												{tab.name}
+											</A>
+										</li>
+									</Match>
+								</Switch>
+							</Show>
 						)}
 					</For>
 				</ul>

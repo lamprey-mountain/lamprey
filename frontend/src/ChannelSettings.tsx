@@ -10,23 +10,50 @@ import {
 } from "./channel_settings/mod.tsx";
 import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal.tsx";
+import { usePermissions } from "./hooks/usePermissions.ts";
+import { useApi } from "./api.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
-	{ name: "invites", path: "invites", component: Invites },
+	{
+		name: "invites",
+		path: "invites",
+		component: Invites,
+		permissionCheck: (p) => p.has("InviteManage"),
+	},
 	{
 		name: "permissions",
 		path: "permissions",
 		component: Permissions,
 		noPad: true,
+		permissionCheck: (p) => p.has("RoleManage"),
 	},
-	{ name: "webhooks", path: "webhooks", component: Webhooks },
-	{ name: "remove channel", action: "remove", style: "danger" },
+	{
+		name: "webhooks",
+		path: "webhooks",
+		component: Webhooks,
+		permissionCheck: (p) => p.has("IntegrationsManage"),
+	},
+	{
+		name: "remove channel",
+		action: "remove",
+		style: "danger",
+		// TODO: check ThreadManage in threads, ChannelManage in channels
+		permissionCheck: (p) => p.has("ThreadManage") || p.has("ChannelManage"),
+	},
 ];
 
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const ctx = useCtx();
+	const api = useApi();
 	const [, modalCtl] = useModals();
+	const user_id = () => api.users.cache.get("@self")?.id;
+	const perms = usePermissions(
+		user_id,
+		() => props.channel.room_id,
+		() => props.channel.id,
+	);
+
 	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""))!;
 
 	const handleAction = (action: string) => {
@@ -65,32 +92,36 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 				<ul>
 					<For each={tabs}>
 						{(tab) => (
-							<Switch>
-								<Match when={tab.action}>
-									<li>
-										<button
-											class="action"
-											onClick={() => handleAction(tab.action)}
-											style={{
-												color: tab.style === "danger"
-													? "oklch(var(--color-red))"
-													: "inherit",
-											}}
-										>
-											{tab.name}
-										</button>
-									</li>
-								</Match>
-								<Match when={true}>
-									<li>
-										<A
-											href={`/channel/${props.channel.id}/settings/${tab.path}`}
-										>
-											{tab.name}
-										</A>
-									</li>
-								</Match>
-							</Switch>
+							<Show
+								when={!tab.permissionCheck || tab.permissionCheck(perms)}
+							>
+								<Switch>
+									<Match when={tab.action}>
+										<li>
+											<button
+												class="action"
+												onClick={() => handleAction(tab.action)}
+												style={{
+													color: tab.style === "danger"
+														? "oklch(var(--color-red))"
+														: "inherit",
+												}}
+											>
+												{tab.name}
+											</button>
+										</li>
+									</Match>
+									<Match when={true}>
+										<li>
+											<A
+												href={`/channel/${props.channel.id}/settings/${tab.path}`}
+											>
+												{tab.name}
+											</A>
+										</li>
+									</Match>
+								</Switch>
+							</Show>
 						)}
 					</For>
 				</ul>
