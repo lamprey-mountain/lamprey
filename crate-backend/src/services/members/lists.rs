@@ -273,7 +273,7 @@ impl MemberList2 {
             }
 
             ops.push(MemberListOp::Sync {
-                position: *start as u64,
+                position: start as u64,
                 room_members: if room_members.is_empty() {
                     None
                 } else {
@@ -463,7 +463,40 @@ impl MemberList2 {
 
     /// create a new group if it doesnt exist. returns the group index.
     fn insert_group(&mut self, group_id: MemberListGroupId) -> usize {
-        todo!()
+        let new_group_info = match group_id {
+            MemberListGroupId::Online => MemberGroupInfo::Online,
+            MemberListGroupId::Offline => MemberGroupInfo::Offline,
+            MemberListGroupId::Role(role_id) => {
+                let role = self
+                    .roles
+                    .iter()
+                    .find(|r| r.id == role_id)
+                    .expect("role doesnt exist");
+                MemberGroupInfo::Hoisted {
+                    role_id,
+                    role_position: role.position,
+                }
+            }
+        };
+
+        if let Some(pos) = self.groups.iter().position(|g| g.info == new_group_info) {
+            return pos;
+        }
+
+        let insert_idx = self
+            .groups
+            .binary_search_by(|group| group.info.cmp(&new_group_info))
+            .unwrap_or_else(|e| e);
+
+        self.groups.insert(
+            insert_idx,
+            MemberList2Group {
+                info: new_group_info,
+                users: vec![],
+            },
+        );
+
+        insert_idx
     }
 
     /// remove a group and re-insert its members
