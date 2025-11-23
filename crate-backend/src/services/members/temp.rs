@@ -37,6 +37,7 @@ impl MemberList2 {
         match event {
             MessageSync::ChannelUpdate { channel: _ } => {
                 // handle view overwrite update
+                // handle inheritance (eg. Category -> Text -> ThreadPublic)
                 todo!()
             }
             MessageSync::RoomMemberUpsert { member } => {
@@ -140,6 +141,7 @@ impl MemberList2 {
                 let old_user_name = self.users.get(&user.id).map(|u| u.name.clone());
                 self.users.insert(user.id, user.clone());
 
+                // user's name changed
                 if old_user_name.as_deref() != Some(user.name.as_str()) {
                     let is_in_list = if self.key.room_id.is_some() {
                         self.room_members.contains_key(&user.id)
@@ -153,6 +155,7 @@ impl MemberList2 {
                         return self.recalculate_user(user.id);
                     }
                 }
+
                 vec![]
             }
             MessageSync::PresenceUpdate { user_id, presence } => {
@@ -166,6 +169,7 @@ impl MemberList2 {
                     false
                 };
 
+                // user may have gone online or offline
                 if is_in_list {
                     self.recalculate_user(*user_id)
                 } else {
@@ -231,6 +235,11 @@ impl MemberList2 {
         } else {
             vec![]
         }
+    }
+
+    /// get the group index and index of the user inside that group
+    fn get_user_position(&self, user_id: UserId) -> Option<(usize, usize)> {
+        todo!()
     }
 
     /// get the group id for a given member
