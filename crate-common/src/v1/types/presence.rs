@@ -70,6 +70,13 @@ impl Presence {
             activities: vec![],
         }
     }
+
+    pub fn is_online(&self) -> bool {
+        matches!(
+            self.status,
+            Status::Online | Status::Away | Status::Busy | Status::Available
+        )
+    }
 }
 
 #[cfg(feature = "validator")]

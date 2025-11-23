@@ -29,12 +29,19 @@ use moka::future::Cache;
 use tokio::sync::{broadcast, watch, Mutex};
 use tracing::error;
 
-use crate::{error::Error, services::members::util::MemberListKey, Result, ServerStateInner};
+use crate::{
+    error::Error, services::members::util::MemberListKey, Result, ServerState, ServerStateInner,
+};
 
 use self::util::MemberGroup;
 
 mod util;
+
+/// member list implementation
 mod temp;
+
+/// code to make member list work with server state/syncers
+mod temp2;
 
 pub use util::{MemberList, MemberListItem, MemberListTarget};
 
@@ -45,6 +52,8 @@ pub struct ServiceMembers {
 struct ServiceMembersInner {
     state: Arc<ServerStateInner>,
     member_lists: DashMap<MemberListKey, Arc<(MemberList, broadcast::Sender<Vec<MemberListOp>>)>>,
+
+    // TODO: remove
     cache_room_member: Cache<(UserId, RoomId), RoomMember>,
     cache_thread_member: Cache<(UserId, ChannelId), ThreadMember>,
 }

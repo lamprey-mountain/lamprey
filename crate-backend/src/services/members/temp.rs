@@ -1,36 +1,41 @@
+use std::collections::HashMap;
+
 use common::v1::types::{
-    MemberListGroup, MemberListGroupId, MemberListOp, MessageSync, Role, RoleId, RoomMembership,
-    ThreadMembership, UserId,
+    presence::Presence, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync, Role,
+    RoleId, RoomMember, RoomMembership, ThreadMember, ThreadMembership, User, UserId,
 };
 use tracing::warn;
 
-use crate::services::members::util::MemberListKey;
+use crate::{services::members::util::MemberListKey, Result, ServerState};
 
 pub struct MemberList2 {
     pub key: MemberListKey,
     pub roles: Vec<Role>,
     pub groups: Vec<MemberList2Group>,
+
+    // TODO: use Arc for everything?
+    pub presences: HashMap<UserId, Presence>,
+    pub room_members: HashMap<UserId, RoomMember>,
+    pub thread_members: HashMap<UserId, ThreadMember>,
+    pub users: HashMap<UserId, User>,
 }
 
 pub struct MemberList2Group {
+    // TODO: use MemberGroup instead for correct ordering
     pub id: MemberListGroupId,
-    pub items: Vec<MemberList2Item>,
-}
-
-/// a single member in a member list
-#[derive(Clone, PartialEq, Eq)]
-pub struct MemberList2Item {
-    pub user_id: UserId,
-    pub name: String,
-    pub nick: Option<String>,
-    pub roles: Vec<RoleId>,
+    pub users: Vec<UserId>,
 }
 
 impl MemberList2 {
+    /// create a new member list. fetches data from server state.
+    pub async fn new_from_server(key: MemberListKey, s: &ServerState) -> Result<Self> {
+        todo!()
+    }
+
     /// handle a sync event and calculate what operations need to be applied
     pub fn process(&mut self, event: &MessageSync) -> Vec<MemberListOp> {
         match event {
-            MessageSync::ChannelUpdate { channel } => {
+            MessageSync::ChannelUpdate { channel: _ } => {
                 // handle view overwrite update
                 todo!()
             }
@@ -44,13 +49,16 @@ impl MemberList2 {
                     self.remove_user(member.user_id)
                 } else {
                     // member joined, changed roles, or changed override_name
-                    self.upsert_user(MemberList2Item {
-                        user_id: member.user_id,
-                        // FIXME: get actual user name (maybe return User object in RoomMemberUpsert?)
-                        name: "user name".to_string(),
-                        nick: member.override_name.clone(),
-                        roles: member.roles.clone(),
-                    })
+                    self.room_members.insert(member.user_id, member.clone());
+                    if self.users.contains_key(&member.user_id) {
+                        self.recalculate_user(member.user_id)
+                    } else {
+                        warn!(
+                            "RoomMemberUpsert for user {} without User object, can't update list",
+                            member.user_id
+                        );
+                        vec![]
+                    }
                 }
             }
             MessageSync::ThreadMemberUpsert { member } => {
@@ -63,14 +71,16 @@ impl MemberList2 {
                     self.remove_user(member.user_id)
                 } else {
                     // member joined thread
-                    self.upsert_user(MemberList2Item {
-                        user_id: member.user_id,
-                        // FIXME: get actual user name (maybe return User object in RoomMemberUpsert?)
-                        name: "user name".to_string(),
-                        // FIXME: store room member nickname/roles
-                        nick: None,
-                        roles: vec![],
-                    })
+                    self.thread_members.insert(member.user_id, member.clone());
+                    if self.users.contains_key(&member.user_id) {
+                        self.recalculate_user(member.user_id)
+                    } else {
+                        warn!(
+                            "ThreadMemberUpsert for user {} without User object, can't update list",
+                            member.user_id
+                        );
+                        vec![]
+                    }
                 }
             }
             MessageSync::RoleUpdate { role } => {
@@ -78,24 +88,36 @@ impl MemberList2 {
                     return vec![];
                 }
 
-                let Some(existing) = self.roles.iter().find(|r| r.id == role.id) else {
+                let Some(existing) = self.roles.iter_mut().find(|r| r.id == role.id) else {
                     warn!("got RoleUpdate for role we dont have");
                     return vec![];
                 };
 
-                if existing.hoist == role.hoist {
-                    // no change
+                let old_hoist = existing.hoist;
+                *existing = role.clone();
+
+                if old_hoist == role.hoist {
+                    // no change that affects member list groups
                     return vec![];
                 }
 
                 if role.hoist {
-                    // role is hoisted
-                    // 1. get members with this role as their top hoisted role
-                    // 2. issue deletes for all of those members
-                    // 3. create new group for members with those roles
-                    todo!()
+                    // role is now hoisted, some members might move to this new hoisted group
+                    // we need to find all members that have this role and recalculate their group
+                    let members_with_role: Vec<_> = self
+                        .room_members
+                        .values()
+                        .filter(|rm| rm.roles.contains(&role.id))
+                        .map(|rm| rm.user_id)
+                        .collect();
+
+                    let mut ops = vec![];
+                    for user_id in members_with_role {
+                        ops.extend(self.recalculate_user(user_id));
+                    }
+                    ops
                 } else {
-                    // role is now not hoisted
+                    // role is no longer hoisted
                     self.remove_group(MemberListGroupId::Role(role.id))
                 }
             }
@@ -104,22 +126,51 @@ impl MemberList2 {
                     return vec![];
                 }
 
-                // role has been deleted
-                // TODO: remove role from self.roles
+                self.roles.retain(|r| r.id != *role_id);
                 self.remove_group(MemberListGroupId::Role(*role_id))
             }
-            MessageSync::RoleReorder { room_id, roles } => {
+            MessageSync::RoleReorder {
+                room_id: _,
+                roles: _,
+            } => {
                 // handle role reorder
                 todo!()
             }
             MessageSync::UserUpdate { user } => {
-                // handle name change
-                todo!()
+                let old_user_name = self.users.get(&user.id).map(|u| u.name.clone());
+                self.users.insert(user.id, user.clone());
+
+                if old_user_name.as_deref() != Some(user.name.as_str()) {
+                    let is_in_list = if self.key.room_id.is_some() {
+                        self.room_members.contains_key(&user.id)
+                    } else if self.key.channel_id.is_some() {
+                        self.thread_members.contains_key(&user.id)
+                    } else {
+                        false
+                    };
+
+                    if is_in_list {
+                        return self.recalculate_user(user.id);
+                    }
+                }
+                vec![]
             }
             MessageSync::PresenceUpdate { user_id, presence } => {
-                // handle offline -> online
-                // handle online -> offline
-                todo!()
+                self.presences.insert(*user_id, presence.clone());
+
+                let is_in_list = if self.key.room_id.is_some() {
+                    self.room_members.contains_key(user_id)
+                } else if self.key.channel_id.is_some() {
+                    self.thread_members.contains_key(user_id)
+                } else {
+                    false
+                };
+
+                if is_in_list {
+                    self.recalculate_user(*user_id)
+                } else {
+                    vec![]
+                }
             }
             _ => vec![],
         }
@@ -136,33 +187,184 @@ impl MemberList2 {
             .iter()
             .map(|g| MemberListGroup {
                 id: g.id,
-                count: g.items.len() as u64,
+                count: g.users.len() as u64,
             })
+            .filter(|g| g.count != 0)
             .collect()
     }
 
     /// remove a user from this list
     // NOTE: will generally only emit one member list op (Delete)
     fn remove_user(&mut self, user_id: UserId) -> Vec<MemberListOp> {
+        self.presences.remove(&user_id);
+        self.room_members.remove(&user_id);
+        self.thread_members.remove(&user_id);
+        self.users.remove(&user_id);
+
+        let mut position = 0;
+        let mut found_group_idx = None;
+        let mut found_item_idx = None;
+
+        for (g_idx, group) in self.groups.iter().enumerate() {
+            if let Some(i_idx) = group.users.iter().position(|&id| id == user_id) {
+                position += i_idx;
+                found_group_idx = Some(g_idx);
+                found_item_idx = Some(i_idx);
+                break;
+            } else {
+                position += group.users.len();
+            }
+        }
+
+        if let (Some(group_idx), Some(item_idx)) = (found_group_idx, found_item_idx) {
+            let group = &mut self.groups[group_idx];
+            group.users.remove(item_idx);
+
+            if group.users.is_empty() {
+                self.groups.remove(group_idx);
+            }
+
+            vec![MemberListOp::Delete {
+                position: position as u64,
+                count: 1,
+            }]
+        } else {
+            vec![]
+        }
+    }
+
+    /// get the group id for a given member
+    // TODO: check self.presences, remove is_online
+    fn get_member_group_id(&self, user_id: UserId, is_online: bool) -> MemberListGroupId {
+        if is_online {
+            let roles_map: std::collections::HashMap<_, _> =
+                self.roles.iter().map(|r| (r.id, r)).collect();
+
+            let member_roles = self
+                .room_members
+                .get(&user_id)
+                .map(|rm| rm.roles.as_slice())
+                .unwrap_or(&[]);
+
+            if let Some(role) = member_roles
+                .iter()
+                .filter_map(|role_id| roles_map.get(role_id))
+                .filter(|r| r.hoist)
+                .min_by_key(|r| r.position)
+            {
+                MemberListGroupId::Role(role.id)
+            } else {
+                MemberListGroupId::Online
+            }
+        } else {
+            MemberListGroupId::Offline
+        }
+    }
+
+    /// recalculate a user's position in list
+    ///
+    /// - if this user already exists, this may return nothing or a delete/insert op pair to move this user
+    /// - if the user doesnt already exist, this will return a single op
+    fn recalculate_user(&mut self, user_id: UserId) -> Vec<MemberListOp> {
+        let mut ops = vec![];
+
+        let user = if let Some(user) = self.users.get(&user_id) {
+            user.to_owned()
+        } else {
+            warn!(
+                "upsert_user called for user {} but user object not found",
+                user_id
+            );
+            return vec![];
+        };
+
+        // remove existing item, if it exists
+        let mut old_pos: Option<usize> = None;
+        let mut current_pos = 0;
+        for group in self.groups.iter_mut() {
+            if let Some(item_idx) = group.users.iter().position(|&id| id == user_id) {
+                old_pos = Some(current_pos + item_idx);
+                group.users.remove(item_idx);
+                break;
+            }
+            current_pos += group.users.len();
+        }
+
+        if let Some(pos) = old_pos {
+            ops.push(MemberListOp::Delete {
+                position: pos as u64,
+                count: 1,
+            });
+        }
+
+        let is_online = self
+            .presences
+            .get(&user_id)
+            .map(|p| p.is_online())
+            .unwrap_or(false);
+        let group_id = self.get_member_group_id(user_id, is_online);
+
+        let group_idx = self.insert_group(group_id);
+
+        // find position to insert within group, maintaining sort order
+        let group = &mut self.groups[group_idx];
+
+        let get_display_name =
+            |uid: &UserId,
+             users: &HashMap<UserId, User>,
+             room_members: &HashMap<UserId, RoomMember>| {
+                let nick = room_members
+                    .get(uid)
+                    .and_then(|rm| rm.override_name.as_deref());
+                let name = users.get(uid).map(|u| u.name.as_str());
+                nick.or(name).unwrap_or_default().to_owned()
+            };
+
+        let display_name = get_display_name(&user_id, &self.users, &self.room_members);
+
+        let item_idx = group
+            .users
+            .binary_search_by(|uid| {
+                get_display_name(uid, &self.users, &self.room_members).cmp(&display_name)
+            })
+            .unwrap_or_else(|e| e);
+
+        group.users.insert(item_idx, user_id);
+
+        // calculate absolute position of new item
+        let new_pos = self.groups[..group_idx]
+            .iter()
+            .map(|g| g.users.len())
+            .sum::<usize>()
+            + item_idx;
+
+        ops.push(MemberListOp::Insert {
+            position: new_pos as u64,
+            room_member: self.room_members.get(&user_id).cloned(),
+            thread_member: self.thread_members.get(&user_id).cloned(),
+            user: Box::new(user.clone()),
+        });
+
+        ops
+    }
+
+    /// create a new group if it doesnt exist. returns the group index.
+    fn insert_group(&mut self, group_id: MemberListGroupId) -> usize {
         todo!()
     }
 
-    /// insert a user into this list. if this user already exists, this may return nothing or a delete/insert op pair to move this user
-    fn upsert_user(&mut self, item: MemberList2Item) -> Vec<MemberListOp> {
-        todo!()
-    }
-
-    /// get a user
-    fn get_user(&self, user_id: UserId) -> Option<MemberList2Item> {
-        todo!()
-    }
-
-    /// remove a group
-    fn remove_group(&mut self, group: MemberListGroupId) -> Vec<MemberListOp> {
-        // 0. check if group exists
-        // 1. issue delete for group
-        // 2. remove group from self.groups
-        // 3. issue inserts for every member in that group
-        todo!()
+    /// remove a group and re-insert its members
+    fn remove_group(&mut self, group_id: MemberListGroupId) -> Vec<MemberListOp> {
+        let mut ops = vec![];
+        if let Some(group_idx) = self.groups.iter().position(|g| g.id == group_id) {
+            let group = self.groups.remove(group_idx);
+            // TODO: issue a delete op for all members in the group
+            // ops.push(MemberListOp::Delete { position: (), count: () });
+            for user_id in group.users {
+                // reinsert the user in the correct group
+                ops.extend(self.recalculate_user(user_id));
+            }
+        }
+        ops
     }
 }
