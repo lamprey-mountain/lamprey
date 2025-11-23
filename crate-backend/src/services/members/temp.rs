@@ -25,9 +25,7 @@ pub struct MemberList2 {
 }
 
 pub struct MemberList2Group {
-    // TODO: use MemberGroup instead for correct ordering
-    pub id: MemberListGroupId,
-    // pub info: MemberGroupInfo,
+    pub info: MemberGroupInfo,
     pub users: Vec<UserId>,
 }
 
@@ -82,7 +80,7 @@ impl MemberList2 {
             me.users.insert(u.id, u);
         }
 
-        // TODO: build groups
+        // TODO: build initial groups
 
         Ok(me)
     }
@@ -245,7 +243,7 @@ impl MemberList2 {
         self.groups
             .iter()
             .map(|g| MemberListGroup {
-                id: g.id,
+                id: g.info.into(),
                 count: g.users.len() as u64,
             })
             .filter(|g| g.count != 0)
@@ -420,7 +418,11 @@ impl MemberList2 {
     /// remove a group and re-insert its members
     fn remove_group(&mut self, group_id: MemberListGroupId) -> Vec<MemberListOp> {
         let mut ops = vec![];
-        if let Some(group_idx) = self.groups.iter().position(|g| g.id == group_id) {
+        if let Some(group_idx) = self
+            .groups
+            .iter()
+            .position(|g| MemberListGroupId::from(g.info) == group_id)
+        {
             let group = self.groups.remove(group_idx);
             // TODO: issue a delete op for all members in the group
             // ops.push(MemberListOp::Delete { position: (), count: () });

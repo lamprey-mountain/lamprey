@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::v1::types::{ChannelId, MemberListGroup, RoleId, RoomId, UserId};
+use common::v1::types::{ChannelId, MemberListGroup, MemberListGroupId, RoleId, RoomId, UserId};
 use tokio::sync::Notify;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,7 +9,7 @@ pub enum MemberListTarget {
     Channel(ChannelId),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MemberGroupInfo {
     Hoisted { role_id: RoleId, role_position: u64 },
     Online,
@@ -108,6 +108,19 @@ impl MemberListKey {
         Self {
             room_id: None,
             channel_id: Some(channel_id),
+        }
+    }
+}
+
+impl From<MemberGroupInfo> for MemberListGroupId {
+    fn from(value: MemberGroupInfo) -> Self {
+        match value {
+            MemberGroupInfo::Hoisted {
+                role_id,
+                role_position: _,
+            } => MemberListGroupId::Role(role_id),
+            MemberGroupInfo::Online => MemberListGroupId::Online,
+            MemberGroupInfo::Offline => MemberListGroupId::Offline,
         }
     }
 }
