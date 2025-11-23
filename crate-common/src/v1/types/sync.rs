@@ -470,7 +470,7 @@ pub struct MemberListGroup {
     pub count: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MemberListGroupId {
     /// online members without a hoisted role
@@ -480,7 +480,6 @@ pub enum MemberListGroupId {
     Offline,
 
     /// hoisted roles
-    // TODO: implement role hoisting
     #[serde(untagged)]
     Role(RoleId),
 }

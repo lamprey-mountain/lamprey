@@ -34,6 +34,7 @@ use crate::{error::Error, services::members::util::MemberListKey, Result, Server
 use self::util::MemberGroup;
 
 mod util;
+mod temp;
 
 pub use util::{MemberList, MemberListItem, MemberListTarget};
 
