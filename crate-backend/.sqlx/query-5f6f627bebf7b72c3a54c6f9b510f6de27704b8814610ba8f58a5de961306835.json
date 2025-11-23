@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,\n                               a.owner_id as \"app_owner_id?\", a.bridge as \"app_bridge?\", a.public as \"app_public?\",\n                               w.channel_id as \"webhook_channel_id?\", w.creator_id as \"webhook_creator_id?\", c.room_id as \"webhook_room_id?\"\n                        FROM usr u\n                        JOIN application a ON u.id = a.id\n                        LEFT JOIN webhook w ON u.id = w.id\n                        LEFT JOIN channel c ON w.channel_id = c.id\n                        WHERE u.id > $1 AND u.id < $2\n                        ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4\n                        ",
+  "query": "\n            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.registered_at, u.deleted_at, u.suspended,\n                   a.owner_id as \"app_owner_id?\", a.bridge as \"app_bridge?\", a.public as \"app_public?\",\n                   w.channel_id as \"webhook_channel_id?\", w.creator_id as \"webhook_creator_id?\", c.room_id as \"webhook_room_id?\",\n                   p.external_platform as \"puppet_external_platform?\", p.external_id as \"puppet_external_id?\", p.external_url as \"puppet_external_url?\", p.alias_id as \"puppet_alias_id?\"\n            FROM usr u\n            LEFT JOIN application a ON u.id = a.id\n            LEFT JOIN webhook w ON u.id = w.id\n            LEFT JOIN channel c ON w.channel_id = c.id\n            LEFT JOIN puppet p ON u.id = p.id\n            WHERE u.id = ANY($1)\n            ",
   "describe": {
     "columns": [
       {
@@ -40,66 +40,78 @@
       },
       {
         "ordinal": 7,
-        "name": "puppet",
-        "type_info": "Jsonb"
-      },
-      {
-        "ordinal": 8,
         "name": "system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "registered_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "deleted_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "suspended",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 12,
+        "ordinal": 11,
         "name": "app_owner_id?",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 13,
+        "ordinal": 12,
         "name": "app_bridge?",
         "type_info": "Bool"
       },
       {
-        "ordinal": 14,
+        "ordinal": 13,
         "name": "app_public?",
         "type_info": "Bool"
       },
       {
-        "ordinal": 15,
+        "ordinal": 14,
         "name": "webhook_channel_id?",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 16,
+        "ordinal": 15,
         "name": "webhook_creator_id?",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 17,
+        "ordinal": 16,
         "name": "webhook_room_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 17,
+        "name": "puppet_external_platform?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 18,
+        "name": "puppet_external_id?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 19,
+        "name": "puppet_external_url?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
+        "name": "puppet_alias_id?",
         "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "UuidArray"
       ]
     },
     "nullable": [
@@ -110,18 +122,21 @@
       true,
       true,
       true,
-      true,
       false,
       true,
       true,
       true,
-      false,
-      false,
-      false,
-      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
       true,
       true
     ]
   },
-  "hash": "a9216aa0d3d1d92700a6780308978a237ee1b1991e952858f8ae149f0b954688"
+  "hash": "5f6f627bebf7b72c3a54c6f9b510f6de27704b8814610ba8f58a5de961306835"
 }

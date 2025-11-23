@@ -31,7 +31,8 @@
                 "Category",
                 "ThreadPublic",
                 "ThreadPrivate",
-                "Calendar"
+                "Calendar",
+                "Broadcast"
               ]
             }
           }

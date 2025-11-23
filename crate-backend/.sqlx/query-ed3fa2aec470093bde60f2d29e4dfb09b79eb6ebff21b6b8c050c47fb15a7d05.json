@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id WHERE a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false",
+  "query": "SELECT count(*) FROM usr u JOIN puppet p ON u.id = p.id",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       null
     ]
   },
-  "hash": "a212e5a3b566e82b3c77e2fe7e92f4e1714e639945bf16947baa5bbf84673c84"
+  "hash": "ed3fa2aec470093bde60f2d29e4dfb09b79eb6ebff21b6b8c050c47fb15a7d05"
 }

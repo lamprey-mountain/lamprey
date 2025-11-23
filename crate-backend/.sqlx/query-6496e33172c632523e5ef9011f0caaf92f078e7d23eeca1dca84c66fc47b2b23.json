@@ -1,0 +1,128 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                (SELECT count(*) FROM usr) AS \"user_count_total!\",\n                (SELECT count(*) FROM usr WHERE registered_at IS NULL AND id NOT IN (SELECT id FROM puppet) AND id NOT IN (SELECT id FROM application) AND id NOT IN (SELECT id FROM webhook)) AS \"user_count_guest!\",\n                (SELECT count(*) FROM usr WHERE registered_at IS NOT NULL) AS \"user_count_registered!\",\n                (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM application)) AS \"user_count_bot!\",\n                (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM webhook)) AS \"user_count_webhook!\",\n                (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM puppet)) AS \"user_count_puppet!\",\n                (SELECT count(*) FROM usr WHERE id IN (SELECT id FROM puppet) AND parent_id IN (SELECT id FROM application)) AS \"user_count_puppet_bot!\",\n                (SELECT count(*) FROM room) AS \"room_count_total!\",\n                (SELECT count(*) FROM room WHERE public = false) AS \"room_count_private!\",\n                (SELECT count(*) FROM room WHERE public = true) AS \"room_count_public!\",\n                (SELECT count(*) FROM channel) AS \"channel_count_total!\",\n                (SELECT count(*) FROM channel WHERE type = 'Text') AS \"channel_count_text!\",\n                (SELECT count(*) FROM channel WHERE type = 'Voice') AS \"channel_count_voice!\",\n                (SELECT count(*) FROM channel WHERE type = 'Broadcast') AS \"channel_count_broadcast!\",\n                (SELECT count(*) FROM channel WHERE type = 'Calendar') AS \"channel_count_calendar!\",\n                (SELECT count(*) FROM channel WHERE type = 'ThreadPublic') AS \"channel_count_thread_public!\",\n                (SELECT count(*) FROM channel WHERE type = 'ThreadPrivate') AS \"channel_count_thread_private!\",\n                (SELECT count(*) FROM channel WHERE type = 'Dm') AS \"channel_count_dm!\",\n                (SELECT count(*) FROM channel WHERE type = 'Gdm') AS \"channel_count_gdm!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_count_total!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_count_guest!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_count_registered!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_count_bot!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_count_webhook!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_count_puppet!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_count_puppet_bot!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "room_count_total!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "room_count_private!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "room_count_public!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "channel_count_total!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "channel_count_text!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "channel_count_voice!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "channel_count_broadcast!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 14,
+        "name": "channel_count_calendar!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "channel_count_thread_public!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "channel_count_thread_private!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 17,
+        "name": "channel_count_dm!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 18,
+        "name": "channel_count_gdm!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "6496e33172c632523e5ef9011f0caaf92f078e7d23eeca1dca84c66fc47b2b23"
+}
