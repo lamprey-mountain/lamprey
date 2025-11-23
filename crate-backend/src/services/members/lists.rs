@@ -295,6 +295,13 @@ impl MemberList2 {
         todo!()
     }
 
+    /// get the index of a group
+    fn find_group(&self, group_id: MemberListGroupId) -> Option<usize> {
+        self.groups
+            .iter()
+            .position(|g| MemberListGroupId::from(g.info) == group_id)
+    }
+
     /// get the group id for a given member
     // TODO: check self.presences, remove is_online
     fn get_member_group_id(&self, user_id: UserId, is_online: bool) -> MemberListGroupId {
@@ -418,20 +425,14 @@ impl MemberList2 {
     /// remove a group and re-insert its members
     fn remove_group(&mut self, group_id: MemberListGroupId) -> Vec<MemberListOp> {
         let mut ops = vec![];
-        if let Some(group_idx) = self
-            .groups
-            .iter()
-            .position(|g| MemberListGroupId::from(g.info) == group_id)
-        {
+        if let Some(group_idx) = self.find_group(group_id) {
             let group = self.groups.remove(group_idx);
-
-            // Calculate the absolute position of the group being removed
             let position = self.groups[..group_idx]
                 .iter()
                 .map(|g| g.users.len())
                 .sum::<usize>() as u64;
 
-            // Issue a delete operation for all members in the group
+            // delete all members in the group
             if !group.users.is_empty() {
                 ops.push(MemberListOp::Delete {
                     position,
@@ -439,8 +440,8 @@ impl MemberList2 {
                 });
             }
 
+            // reinsert the users in the correct group
             for user_id in group.users {
-                // reinsert the user in the correct group
                 ops.extend(self.recalculate_user(user_id));
             }
         }
