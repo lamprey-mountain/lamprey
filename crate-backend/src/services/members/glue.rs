@@ -3,6 +3,7 @@ use std::sync::Arc;
 use common::v1::types::{MemberListGroup, MemberListOp, MessageSync};
 use dashmap::DashMap;
 use tokio::sync::broadcast;
+use tracing::warn;
 
 use crate::{
     services::members::{
@@ -25,10 +26,11 @@ pub struct MemberListSyncer {
 pub struct MemberListHandler {
     s: Arc<ServerState>,
     list: MemberList2,
-    tx: broadcast::Sender<MemberListSync>,
+    tx: broadcast::Receiver<MemberListSync>,
 }
 
-#[derive(Clone)]
+/// minimal member list sync payload for broadcasting
+#[derive(Debug, Clone)]
 pub struct MemberListSync {
     key: MemberListKey,
     ops: Vec<MemberListOp>,
@@ -42,37 +44,37 @@ impl ServiceMembers2 {
     }
 
     /// spawn a handler for a key if it doesnt exist
-    pub fn ensure_handler(&self, key: MemberListKey) -> MemberListHandler {
-        let (tx, _) = broadcast::channel(100);
-        MemberListHandler {
-            s: self.s.clone(),
-            list: todo!(),
-            tx,
-        }
-    }
-}
+    // TODO: reuse receivers if they already exist for a key
+    // TODO: shutdown unused receivers after a period of time
+    pub fn ensure_handler(&self, key: MemberListKey) -> broadcast::Receiver<MemberListSync> {
+        let (tx, rx) = broadcast::channel(100);
+        let mut events = self.s.sushi.subscribe();
+        let s = self.s.clone();
 
-impl MemberListHandler {
-    pub fn spawn(mut self) {
         tokio::spawn(async move {
-            let mut events = self.s.sushi.subscribe();
+            let mut list = match MemberList2::new_from_server(key.clone(), &s).await {
+                Ok(l) => l,
+                Err(e) => {
+                    warn!("failed to init member list: {e:?}");
+                    return;
+                }
+            };
+
             loop {
                 let msg = events.recv().await.expect("error while receiving event");
-                let ops = self.list.process(&msg);
+                let ops = list.process(&msg);
                 if !ops.is_empty() {
-                    self.tx.send(MemberListSync {
-                        key: self.list.key,
+                    // TODO: handle error
+                    tx.send(MemberListSync {
+                        key: key.clone(),
                         ops,
-                        groups: self.list.groups(),
-                    });
+                        groups: list.groups(),
+                    }).unwrap();
                 }
             }
         });
-    }
 
-    /// poll for the next member list sync message
-    pub async fn poll(&self) -> Result<MessageSync> {
-        todo!()
+        rx
     }
 }
 
