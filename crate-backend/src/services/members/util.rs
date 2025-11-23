@@ -10,7 +10,7 @@ pub enum MemberListTarget {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MemberGroup {
+pub enum MemberGroupInfo {
     Hoisted { role_id: RoleId, role_position: u64 },
     Online,
     Offline,
@@ -43,40 +43,40 @@ pub struct MemberListKey {
     pub channel_id: Option<ChannelId>,
 }
 
-impl PartialOrd for MemberGroup {
+impl PartialOrd for MemberGroupInfo {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for MemberGroup {
+impl Ord for MemberGroupInfo {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering;
 
         match (self, other) {
             // hoisted roles are ordered by position (lower position = higher precedence = Less)
             (
-                MemberGroup::Hoisted {
+                MemberGroupInfo::Hoisted {
                     role_position: a, ..
                 },
-                MemberGroup::Hoisted {
+                MemberGroupInfo::Hoisted {
                     role_position: b, ..
                 },
             ) => a.cmp(b),
 
             // hoisted roles come before online and offline
-            (MemberGroup::Hoisted { .. }, MemberGroup::Online) => Ordering::Less,
-            (MemberGroup::Hoisted { .. }, MemberGroup::Offline) => Ordering::Less,
+            (MemberGroupInfo::Hoisted { .. }, MemberGroupInfo::Online) => Ordering::Less,
+            (MemberGroupInfo::Hoisted { .. }, MemberGroupInfo::Offline) => Ordering::Less,
 
             // Online comes before offline
-            (MemberGroup::Online, MemberGroup::Hoisted { .. }) => Ordering::Greater,
-            (MemberGroup::Online, MemberGroup::Online) => Ordering::Equal,
-            (MemberGroup::Online, MemberGroup::Offline) => Ordering::Less,
+            (MemberGroupInfo::Online, MemberGroupInfo::Hoisted { .. }) => Ordering::Greater,
+            (MemberGroupInfo::Online, MemberGroupInfo::Online) => Ordering::Equal,
+            (MemberGroupInfo::Online, MemberGroupInfo::Offline) => Ordering::Less,
 
             // Offline comes after everything else
-            (MemberGroup::Offline, MemberGroup::Hoisted { .. }) => Ordering::Greater,
-            (MemberGroup::Offline, MemberGroup::Online) => Ordering::Greater,
-            (MemberGroup::Offline, MemberGroup::Offline) => Ordering::Equal,
+            (MemberGroupInfo::Offline, MemberGroupInfo::Hoisted { .. }) => Ordering::Greater,
+            (MemberGroupInfo::Offline, MemberGroupInfo::Online) => Ordering::Greater,
+            (MemberGroupInfo::Offline, MemberGroupInfo::Offline) => Ordering::Equal,
         }
     }
 }

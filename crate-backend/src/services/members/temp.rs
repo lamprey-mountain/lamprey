@@ -1,12 +1,16 @@
 use std::collections::HashMap;
 
 use common::v1::types::{
-    presence::Presence, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync, Role,
-    RoleId, RoomMember, RoomMembership, ThreadMember, ThreadMembership, User, UserId,
+    presence::Presence, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync,
+    PaginationQuery, Role, RoleId, RoomMember, RoomMembership, ThreadMember, ThreadMembership,
+    User, UserId,
 };
 use tracing::warn;
 
-use crate::{services::members::util::MemberListKey, Result, ServerState};
+use crate::{
+    services::members::util::{MemberGroupInfo, MemberListKey},
+    Result, ServerState,
+};
 
 pub struct MemberList2 {
     pub key: MemberListKey,
@@ -23,13 +27,64 @@ pub struct MemberList2 {
 pub struct MemberList2Group {
     // TODO: use MemberGroup instead for correct ordering
     pub id: MemberListGroupId,
+    // pub info: MemberGroupInfo,
     pub users: Vec<UserId>,
 }
 
 impl MemberList2 {
     /// create a new member list. fetches data from server state.
     pub async fn new_from_server(key: MemberListKey, s: &ServerState) -> Result<Self> {
-        todo!()
+        let mut me = Self {
+            key: key.clone(),
+            roles: vec![],
+            groups: vec![],
+            presences: HashMap::new(),
+            room_members: HashMap::new(),
+            thread_members: HashMap::new(),
+            users: HashMap::new(),
+        };
+        let data = s.data();
+        let srv = s.services();
+
+        if let Some(room_id) = key.room_id {
+            let roles = data
+                .role_list(
+                    room_id,
+                    PaginationQuery {
+                        limit: Some(1024),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+            me.roles = roles.items;
+            for m in data.room_member_list_all(room_id).await? {
+                me.room_members.insert(m.user_id, m);
+            }
+        }
+
+        if let Some(channel_id) = key.channel_id {
+            let channel = srv.channels.get(channel_id, None).await?;
+            if channel.ty.is_thread() {
+                for m in data.thread_member_list_all(channel_id).await? {
+                    me.thread_members.insert(m.user_id, m);
+                }
+            }
+        }
+
+        let user_ids: Vec<_> = me
+            .room_members
+            .keys()
+            .chain(me.thread_members.keys())
+            .copied()
+            .collect();
+        for u in srv.users.get_many(&user_ids).await? {
+            me.presences.insert(u.id, u.presence.clone());
+            me.users.insert(u.id, u);
+        }
+
+        // TODO: build groups
+
+        Ok(me)
     }
 
     /// handle a sync event and calculate what operations need to be applied

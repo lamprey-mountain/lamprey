@@ -33,7 +33,7 @@ use crate::{
     error::Error, services::members::util::MemberListKey, Result, ServerState, ServerStateInner,
 };
 
-use self::util::MemberGroup;
+use self::util::MemberGroupInfo;
 
 mod util;
 
@@ -451,15 +451,15 @@ impl ServiceMembersInner {
         let get_group = |rm: &Option<RoomMember>, user: &User| {
             if srv.presence.is_online(user.id) {
                 if let Some(role) = get_highest_hoisted_role(rm) {
-                    MemberGroup::Hoisted {
+                    MemberGroupInfo::Hoisted {
                         role_id: role.id,
                         role_position: role.position,
                     }
                 } else {
-                    MemberGroup::Online
+                    MemberGroupInfo::Online
                 }
             } else {
-                MemberGroup::Offline
+                MemberGroupInfo::Offline
             }
         };
 
