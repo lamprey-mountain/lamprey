@@ -35,13 +35,14 @@ use crate::{
 
 use self::util::MemberGroupInfo;
 
+/// helpful utilities for member lists
 mod util;
 
 /// member list implementation
-mod temp;
+mod lists;
 
 /// code to make member list work with server state/syncers
-mod temp2;
+mod glue;
 
 pub use util::{MemberList, MemberListItem, MemberListTarget};
 

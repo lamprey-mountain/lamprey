@@ -291,7 +291,7 @@ impl MemberList2 {
     }
 
     /// get the group index and index of the user inside that group
-    fn get_user_position(&self, user_id: UserId) -> Option<(usize, usize)> {
+    fn find_user(&self, user_id: UserId) -> Option<(usize, usize)> {
         todo!()
     }
 
@@ -424,8 +424,21 @@ impl MemberList2 {
             .position(|g| MemberListGroupId::from(g.info) == group_id)
         {
             let group = self.groups.remove(group_idx);
-            // TODO: issue a delete op for all members in the group
-            // ops.push(MemberListOp::Delete { position: (), count: () });
+
+            // Calculate the absolute position of the group being removed
+            let position = self.groups[..group_idx]
+                .iter()
+                .map(|g| g.users.len())
+                .sum::<usize>() as u64;
+
+            // Issue a delete operation for all members in the group
+            if !group.users.is_empty() {
+                ops.push(MemberListOp::Delete {
+                    position,
+                    count: group.users.len() as u64,
+                });
+            }
+
             for user_id in group.users {
                 // reinsert the user in the correct group
                 ops.extend(self.recalculate_user(user_id));
