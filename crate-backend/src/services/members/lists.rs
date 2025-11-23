@@ -235,7 +235,60 @@ impl MemberList2 {
 
     /// get a list of Sync ops for these ranges. used when initially syncing a member list
     pub fn get_initial_ranges(&self, ranges: &[(u64, u64)]) -> Vec<MemberListOp> {
-        todo!()
+        let sorted_members: Vec<UserId> = self
+            .groups
+            .iter()
+            .flat_map(|g| g.users.iter().copied())
+            .collect();
+
+        let mut ops = vec![];
+
+        for (start, end) in ranges {
+            let start = *start as usize;
+            let end = (*end as usize).min(sorted_members.len());
+
+            if start >= end {
+                continue;
+            }
+
+            let slice = &sorted_members[start..end];
+
+            let mut room_members = vec![];
+            let mut thread_members = vec![];
+            let mut users = vec![];
+
+            // TODO: verify that all three vecs are the same length
+            for user_id in slice {
+                if let Some(rm) = self.room_members.get(user_id) {
+                    room_members.push(rm.clone());
+                }
+                if let Some(tm) = self.thread_members.get(user_id) {
+                    thread_members.push(tm.clone());
+                }
+                if let Some(u) = self.users.get(user_id) {
+                    users.push(u.clone());
+                } else {
+                    warn!("user {} not found in users map", user_id);
+                }
+            }
+
+            ops.push(MemberListOp::Sync {
+                position: *start as u64,
+                room_members: if room_members.is_empty() {
+                    None
+                } else {
+                    Some(room_members)
+                },
+                thread_members: if thread_members.is_empty() {
+                    None
+                } else {
+                    Some(thread_members)
+                },
+                users,
+            });
+        }
+
+        ops
     }
 
     /// get a list of groups for this member list

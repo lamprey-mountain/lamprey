@@ -69,7 +69,8 @@ impl ServiceMembers2 {
                         key: key.clone(),
                         ops,
                         groups: list.groups(),
-                    }).unwrap();
+                    })
+                    .unwrap();
                 }
             }
         });
