@@ -258,26 +258,16 @@ impl MemberList2 {
         self.thread_members.remove(&user_id);
         self.users.remove(&user_id);
 
-        let mut position = 0;
-        let mut found_group_idx = None;
-        let mut found_item_idx = None;
+        if let Some((group_idx, item_idx)) = self.find_user(user_id) {
+            let position: usize = self.groups[..group_idx]
+                .iter()
+                .map(|g| g.users.len())
+                .sum::<usize>()
+                + item_idx;
 
-        for (g_idx, group) in self.groups.iter().enumerate() {
-            if let Some(i_idx) = group.users.iter().position(|&id| id == user_id) {
-                position += i_idx;
-                found_group_idx = Some(g_idx);
-                found_item_idx = Some(i_idx);
-                break;
-            } else {
-                position += group.users.len();
-            }
-        }
+            self.groups[group_idx].users.remove(item_idx);
 
-        if let (Some(group_idx), Some(item_idx)) = (found_group_idx, found_item_idx) {
-            let group = &mut self.groups[group_idx];
-            group.users.remove(item_idx);
-
-            if group.users.is_empty() {
+            if self.groups[group_idx].users.is_empty() {
                 self.groups.remove(group_idx);
             }
 
@@ -292,7 +282,12 @@ impl MemberList2 {
 
     /// get the group index and index of the user inside that group
     fn find_user(&self, user_id: UserId) -> Option<(usize, usize)> {
-        todo!()
+        for (group_idx, group) in self.groups.iter().enumerate() {
+            if let Some(user_idx) = group.users.iter().position(|&id| id == user_id) {
+                return Some((group_idx, user_idx));
+            }
+        }
+        None
     }
 
     /// get the index of a group
@@ -348,20 +343,16 @@ impl MemberList2 {
         };
 
         // remove existing item, if it exists
-        let mut old_pos: Option<usize> = None;
-        let mut current_pos = 0;
-        for group in self.groups.iter_mut() {
-            if let Some(item_idx) = group.users.iter().position(|&id| id == user_id) {
-                old_pos = Some(current_pos + item_idx);
-                group.users.remove(item_idx);
-                break;
-            }
-            current_pos += group.users.len();
-        }
+        if let Some((group_idx, item_idx)) = self.find_user(user_id) {
+            let old_pos: usize = self.groups[..group_idx]
+                .iter()
+                .map(|g| g.users.len())
+                .sum::<usize>()
+                + item_idx;
+            self.groups[group_idx].users.remove(item_idx);
 
-        if let Some(pos) = old_pos {
             ops.push(MemberListOp::Delete {
-                position: pos as u64,
+                position: old_pos as u64,
                 count: 1,
             });
         }
