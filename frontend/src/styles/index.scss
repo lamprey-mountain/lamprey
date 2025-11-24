@@ -3114,6 +3114,9 @@ button.link {
 
 	& > .item {
 		padding: 2px 4px;
+		display: flex;
+		align-items: center;
+		gap: 8px;
 
 		&:hover,
 		&.hovered {
@@ -3124,6 +3127,17 @@ button.link {
 	.emoji-img {
 		height: 1em;
 		width: 1em;
+	}
+
+	.mention-user {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+
+		.avatar {
+			width: 20px;
+			height: 20px;
+		}
 	}
 }
 

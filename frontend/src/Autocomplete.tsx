@@ -15,6 +15,7 @@ import { useApi } from "./api";
 import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "./media/util";
+import { Avatar } from "./User";
 import twemoji from "twemoji";
 import { type Command } from "./slash-commands";
 import { useSlashCommands } from "./slash-commands";
@@ -281,6 +282,15 @@ export const Autocomplete = () => {
 										<div class="description dim">
 											{(result.obj as Command).description}
 										</div>
+									</div>
+								</Match>
+								<Match
+									when={ctx.autocomplete()?.type === "mention" &&
+										"avatar" in result.obj}
+								>
+									<div class="mention-user">
+										<Avatar user={result.obj as User} pad={0} />
+										<span>{(result.obj as User).name}</span>
 									</div>
 								</Match>
 								<Match when={true}>
