@@ -8,7 +8,7 @@ use common::v1::types::{
 use tracing::warn;
 
 use crate::{
-    services::members::util::{MemberGroupInfo, MemberListKey},
+    services::members::util::{MemberGroupInfo, MemberListKey, MemberListVisibility},
     Result, ServerState,
 };
 
@@ -231,6 +231,11 @@ impl MemberList2 {
             }
             _ => vec![],
         }
+    }
+
+    /// update the list of permission overwrites for this member list
+    pub fn set_visibility(&mut self, v: MemberListVisibility) -> Vec<MemberListOp> {
+        todo!()
     }
 
     /// get a list of Sync ops for these ranges. used when initially syncing a member list

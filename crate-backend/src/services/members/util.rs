@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use common::v1::types::{ChannelId, MemberListGroup, MemberListGroupId, RoleId, RoomId, UserId};
+use common::v1::types::{
+    ChannelId, MemberListGroup, MemberListGroupId, PermissionOverwrites, RoleId, RoomId,
+    RoomMember, UserId,
+};
 use tokio::sync::Notify;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,5 +125,16 @@ impl From<MemberGroupInfo> for MemberListGroupId {
             MemberGroupInfo::Online => MemberListGroupId::Online,
             MemberGroupInfo::Offline => MemberListGroupId::Offline,
         }
+    }
+}
+
+pub struct MemberListVisibility {
+    /// list of permission overwrites in order from topmost parent to the channel itself
+    pub overwrites: Vec<PermissionOverwrites>,
+}
+
+impl MemberListVisibility {
+    pub fn visible_to(&self, member: &RoomMember) -> bool {
+        todo!()
     }
 }
