@@ -5,6 +5,7 @@ import { Tag, TagCreate, TagPatch } from "sdk";
 import { useApi } from "../api";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
+import { Colorpicker } from "../Colorpicker";
 
 interface ModalTagEditorProps {
 	tag?: Tag;
@@ -96,11 +97,9 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 
 				<div class="option-block">
 					<label for="tagColor">Color</label>
-					<input
-						id="tagColor"
-						type="color"
-						value={color()}
-						onInput={(e) => setColor(e.currentTarget.value)}
+					<Colorpicker
+						value={color() ?? "#000000"}
+						onInput={(newColor) => setColor(newColor)}
 					/>
 				</div>
 
