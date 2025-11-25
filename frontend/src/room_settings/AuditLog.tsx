@@ -1,4 +1,10 @@
-import { For, Show, type VoidProps } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type Room } from "sdk";
 import { formatChanges } from "../audit-log-util.tsx";
@@ -9,7 +15,24 @@ import { Dropdown } from "../Dropdown.tsx";
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api = useApi();
 	const log = api.audit_logs.fetch(() => props.room.id);
+	const [members, setMembers] = createSignal<any[]>([]);
 	const collapsed = new ReactiveSet();
+
+	createEffect(() => {
+		const roomMembers = api.room_members.list(() => props.room.id);
+		if (roomMembers()) {
+			const memberList = roomMembers()!.items;
+			const userList = memberList.map((member: any) => {
+				const user = api.users.fetch(() => member.user_id)();
+				return {
+					item: member.user_id,
+					label: member.override_name || user?.name || member.user_id,
+				};
+			});
+			userList.unshift({ item: "", label: "all users" });
+			setMembers(userList);
+		}
+	});
 
 	return (
 		<>
@@ -24,11 +47,8 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 				<div>
 					<h3 class="dim">user</h3>
 					<Dropdown
-						options={[
-							{ item: "foo", label: "foo" },
-							{ item: "bar", label: "bar" },
-							{ item: "baz", label: "baz" },
-						]}
+						selected=""
+						options={members()}
 					/>
 				</div>
 				<div>
