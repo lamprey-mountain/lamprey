@@ -395,6 +395,7 @@ async fn room_ack(
     tags = ["room"],
     responses((status = OK, description = "success", body = RoomMetrics))
 )]
+#[deprecated = "use room analytics endpoints instead"]
 async fn room_metrics(
     Path(room_id): Path<RoomId>,
     Auth(user): Auth,

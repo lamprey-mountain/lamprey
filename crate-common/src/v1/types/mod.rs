@@ -25,6 +25,7 @@ pub mod presence;
 pub mod reaction;
 pub mod role;
 pub mod room;
+pub mod room_analytics;
 pub mod room_member;
 pub mod room_template;
 pub mod search;

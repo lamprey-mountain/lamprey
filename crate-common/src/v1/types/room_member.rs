@@ -153,9 +153,13 @@ pub struct RoomBanCreate {
     pub expires_at: Option<Time>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(
+    feature = "utoipa",
+    derive(Serialize, Deserialize),
+    serde(tag = "type")
+)]
 pub enum RoomMemberOrigin {
     /// joined via invite
     Invite {

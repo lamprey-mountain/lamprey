@@ -104,7 +104,7 @@ impl Modify for NestedTags {
             {
                 "name": "room",
                 "description": "working with rooms",
-                "tags": ["room", "room_member", "room_template", "role", "emoji", "tag", "automod"],
+                "tags": ["room", "room_member", "room_template", "room_analytics", "role", "emoji", "tag", "automod"],
             },
             {
                 "name": "channel",
