@@ -19,24 +19,31 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 				<button>expand all</button>
 				<button>collapse all</button>
 			</Show>
-			<Show when={false}>
-				{/* TODO: filter audit log by event type, actor, time range */}
-				<Dropdown
-					options={[
-						{ item: "MessageDelete", label: "message delete" },
-						{ item: "MessageVersionDelete", label: "message version delete" },
-						{ item: "MessageDeleteBulk", label: "message delete bulk" },
-						{ item: "ReactionPurge", label: "reaction purge" },
-					]}
-				/>
-				<Dropdown
-					options={[
-						{ item: "foo", label: "foo" },
-						{ item: "bar", label: "bar" },
-						{ item: "baz", label: "baz" },
-					]}
-				/>
-			</Show>
+			{/* TODO: filter audit log by event type, actor, time range */}
+			<div style="display:flex;gap:4px">
+				<div>
+					<h3 class="dim">user</h3>
+					<Dropdown
+						options={[
+							{ item: "foo", label: "foo" },
+							{ item: "bar", label: "bar" },
+							{ item: "baz", label: "baz" },
+						]}
+					/>
+				</div>
+				<div>
+					<h3 class="dim">action</h3>
+					<Dropdown
+						options={[
+							{ item: "", label: "all actions" },
+							{ item: "MessageDelete", label: "message delete" },
+							{ item: "MessageVersionDelete", label: "message version delete" },
+							{ item: "MessageDeleteBulk", label: "message delete bulk" },
+							{ item: "ReactionPurge", label: "reaction purge" },
+						]}
+					/>
+				</div>
+			</div>
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
 					<For each={log()!.items}>
