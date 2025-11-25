@@ -9,6 +9,11 @@ use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
+use common::v1::types::room_analytics::{
+    RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
+    RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
+    RoomAnalyticsOverview, RoomAnalyticsParams,
+};
 use common::v1::types::search::{SearchChannelsRequest, SearchMessageRequest};
 use common::v1::types::tag::{Tag, TagCreate, TagPatch};
 use common::v1::types::user_config::{
@@ -75,6 +80,7 @@ pub trait Data:
     + DataWebhook
     + DataTag
     + DataMetrics
+    + DataRoomAnalytics
     + Send
     + Sync
 {
@@ -1095,4 +1101,44 @@ pub trait DataWebhook {
     ) -> Result<Webhook>;
     async fn webhook_delete(&self, webhook_id: WebhookId) -> Result<()>;
     async fn webhook_delete_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataRoomAnalytics {
+    async fn room_analytics_members_count(
+        &self,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
+    ) -> Result<Vec<RoomAnalyticsMembersCount>>;
+
+    async fn room_analytics_members_join(
+        &self,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
+    ) -> Result<Vec<RoomAnalyticsMembersJoin>>;
+
+    async fn room_analytics_members_leave(
+        &self,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
+    ) -> Result<Vec<RoomAnalyticsMembersLeave>>;
+
+    async fn room_analytics_channels(
+        &self,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
+        q2: RoomAnalyticsChannelParams,
+    ) -> Result<Vec<RoomAnalyticsChannel>>;
+
+    async fn room_analytics_overview(
+        &self,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
+    ) -> Result<Vec<RoomAnalyticsOverview>>;
+
+    async fn room_analytics_invites(
+        &self,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
+    ) -> Result<Vec<RoomAnalyticsInvites>>;
 }

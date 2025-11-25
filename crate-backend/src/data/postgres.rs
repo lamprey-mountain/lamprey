@@ -29,6 +29,7 @@ mod reaction;
 mod role;
 mod role_member;
 mod room;
+mod room_analytics;
 mod room_member;
 mod search;
 mod session;
