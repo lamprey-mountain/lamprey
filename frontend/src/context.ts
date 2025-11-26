@@ -110,6 +110,9 @@ export type Modal =
 		tag?: import("sdk").Tag;
 		onSave?: (tag: import("sdk").Tag) => void;
 		onClose?: () => void;
+	}
+	| {
+		type: "export_data";
 	};
 
 export type AttachmentCreateT = {

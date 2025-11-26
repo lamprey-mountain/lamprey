@@ -6,6 +6,7 @@ import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
 import { ModalMedia } from "./ModalMedia.tsx";
 import { ModalChannelCreate } from "./ModalChannelCreate";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
+import { ModalExportData } from "./ModalExportData.tsx";
 import { useModals } from "../contexts/modal.tsx";
 
 export const Modal = (props: ParentProps) => {
@@ -68,6 +69,9 @@ export function getModal(modal: ContextModal) {
 					onClose={modal.onClose}
 				/>
 			);
+		}
+		case "export_data": {
+			return <ModalExportData />;
 		}
 	}
 }

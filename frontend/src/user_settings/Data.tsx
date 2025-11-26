@@ -1,5 +1,12 @@
+import { useModals } from "../contexts/modal";
+
 export function Data() {
-	// TODO: export data
+	const [, modalCtl] = useModals();
+
+	const handleExportClick = () => {
+		modalCtl.open({ type: "export_data" });
+	};
+
 	return (
 		<div>
 			<h2>data</h2>
@@ -7,7 +14,7 @@ export function Data() {
 			<br />
 			<h3>export</h3>
 			<p>export all of your data in one big data dump</p>
-			<button>export</button>
+			<button onClick={handleExportClick}>export</button>
 		</div>
 	);
 }
