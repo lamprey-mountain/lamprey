@@ -1,6 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::emoji::Emoji;
-use common::v1::types::reaction::{ReactionKey, ReactionListItem};
+use common::v1::types::reaction::{ReactionKeyParam, ReactionListItem};
 use common::v1::types::{
     ChannelId, MessageId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
@@ -21,23 +20,14 @@ impl DataReaction for Postgres {
     async fn reaction_put(
         &self,
         user_id: UserId,
-        _thread_id: ChannelId,
+        channel_id: ChannelId,
         message_id: MessageId,
-        key: ReactionKey,
+        key: ReactionKeyParam,
     ) -> Result<()> {
         debug!("reaction put user_id={user_id} message_id={message_id} key={key:?}");
         let mut tx = self.pool.begin().await?;
+        let key_str = key.to_string();
 
-        let emoji_id = match &key.0 {
-            Emoji::Custom(e) => Some(*e.id),
-            Emoji::Unicode(_) => None,
-        };
-        let key_str = match &key.0 {
-            Emoji::Custom(e) => e.id.to_string(),
-            Emoji::Unicode(e) => e.0.to_owned(),
-        };
-
-        // Check if the key already exists for this message by any user
         let key_exists: bool = query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND key = $2)",
             *message_id,
@@ -48,7 +38,7 @@ impl DataReaction for Postgres {
         .unwrap_or(false);
 
         if !key_exists {
-            // It's a new unique reaction, check the limit
+            // new reaction, check limit
             let unique_reaction_count: i64 = query_scalar!(
                 "SELECT count(DISTINCT key) FROM reaction WHERE message_id = $1",
                 *message_id
@@ -69,18 +59,18 @@ impl DataReaction for Postgres {
             r#"
             WITH pos AS (
                 SELECT coalesce(
-                    (SELECT position FROM reaction WHERE message_id = $1 AND key = $3),
+                    (SELECT position FROM reaction WHERE message_id = $1 AND key = $4),
                     (SELECT coalesce(max(position) + 1, 0) FROM reaction WHERE message_id = $1)
                 ) AS pos
             )
-            INSERT INTO reaction (message_id, user_id, key, emoji_id, position)
+            INSERT INTO reaction (message_id, user_id, channel_id, key, position)
             SELECT $1, $2, $3, $4, pos FROM pos
             ON CONFLICT DO NOTHING
             "#,
             *message_id,
             *user_id,
-            &key_str,
-            emoji_id,
+            *channel_id,
+            key_str,
         )
         .execute(&mut *tx)
         .await?;
@@ -92,15 +82,12 @@ impl DataReaction for Postgres {
     async fn reaction_delete(
         &self,
         user_id: UserId,
-        _thread_id: ChannelId,
+        _channel_id: ChannelId,
         message_id: MessageId,
-        key: ReactionKey,
+        key: ReactionKeyParam,
     ) -> Result<()> {
         debug!("reaction delete user_id={user_id} message_id={message_id} key={key:?}");
-        let key = match &key.0 {
-            Emoji::Custom(e) => e.id.to_string(),
-            Emoji::Unicode(e) => e.0.to_owned(),
-        };
+        let key = key.to_string();
         query!(
             r#"
             DELETE FROM reaction
@@ -117,16 +104,13 @@ impl DataReaction for Postgres {
 
     async fn reaction_list(
         &self,
-        _thread_id: ChannelId,
+        _channel_id: ChannelId,
         message_id: MessageId,
-        key: ReactionKey,
+        key: ReactionKeyParam,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ReactionListItem>> {
         let p: Pagination<_> = pagination.try_into()?;
-        let key = match &key.0 {
-            Emoji::Custom(e) => e.id.to_string(),
-            Emoji::Unicode(e) => e.0.to_owned(),
-        };
+        let key = key.to_string();
 
         gen_paginate!(
             p,
@@ -154,23 +138,13 @@ impl DataReaction for Postgres {
         )
     }
 
-    async fn reaction_purge(&self, _thread_id: ChannelId, message_id: MessageId) -> Result<()> {
-        query!(r#"DELETE FROM reaction WHERE message_id = $1"#, *message_id,)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
-    }
-
-    async fn reaction_purge_key(
+    async fn reaction_delete_key(
         &self,
-        _thread_id: ChannelId,
+        _channel_id: ChannelId,
         message_id: MessageId,
-        key: ReactionKey,
+        key: ReactionKeyParam,
     ) -> Result<()> {
-        let key = match &key.0 {
-            Emoji::Custom(e) => e.id.to_string(),
-            Emoji::Unicode(e) => e.0.to_owned(),
-        };
+        let key = key.to_string();
         query!(
             r#"DELETE FROM reaction WHERE message_id = $1 AND key = $2"#,
             *message_id,
@@ -178,6 +152,17 @@ impl DataReaction for Postgres {
         )
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    async fn reaction_delete_all(
+        &self,
+        _channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<()> {
+        query!(r#"DELETE FROM reaction WHERE message_id = $1"#, *message_id,)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }

@@ -3,9 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::emoji::{
-    EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiLookup, EmojiOwner,
-};
+use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync,
     PaginationQuery, PaginationResponse, Permission, RoomId,
@@ -155,7 +153,7 @@ async fn emoji_delete(
     })
     .await?;
 
-    if let EmojiOwner::Room { room_id } = emoji.owner {
+    if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
         s.broadcast_room(
             room_id,
             auth_user.id,
@@ -209,14 +207,16 @@ async fn emoji_update(
     })
     .await?;
 
-    s.broadcast_room(
-        room_id,
-        auth_user.id,
-        MessageSync::EmojiUpdate {
-            emoji: emoji.clone(),
-        },
-    )
-    .await?;
+    if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::EmojiUpdate {
+                emoji: emoji.clone(),
+            },
+        )
+        .await?;
+    }
 
     Ok(Json(emoji))
 }
@@ -259,7 +259,7 @@ async fn emoji_list(
     params(("emoji_id", description = "Emoji id")),
     tags = ["emoji"],
     responses(
-        (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
+        (status = OK, body = EmojiCustom, description = "success"),
     )
 )]
 async fn emoji_lookup(
@@ -268,39 +268,31 @@ async fn emoji_lookup(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let emoji = data.emoji_get(emoji_id).await?;
-    match emoji.owner {
-        EmojiOwner::Room { room_id } => {
+    let mut emoji = data.emoji_get(emoji_id).await?;
+
+    let original_owner = emoji.owner.clone();
+    let original_creator_id = emoji.creator_id;
+
+    emoji.creator_id = None;
+    emoji.owner = None;
+
+    match original_owner {
+        Some(EmojiOwner::Room { room_id }) => {
             if data.room_member_get(room_id, user.id).await.is_ok() {
-                Ok(Json(EmojiLookup {
-                    id: emoji.id,
-                    name: emoji.name,
-                    creator_id: Some(emoji.creator_id),
-                    room_id: Some(room_id),
-                    animated: emoji.animated,
-                }))
-            } else {
-                Ok(Json(EmojiLookup {
-                    id: emoji.id,
-                    name: emoji.name,
-                    creator_id: None,
-                    room_id: None,
-                    animated: emoji.animated,
-                }))
+                emoji.owner = original_owner;
+                emoji.creator_id = original_creator_id;
             }
         }
-        EmojiOwner::User => Ok(Json(EmojiLookup {
-            id: emoji.id,
-            name: emoji.name,
-            creator_id: if user.id == emoji.creator_id {
-                Some(user.id)
-            } else {
-                None
-            },
-            room_id: None,
-            animated: emoji.animated,
-        })),
+        Some(EmojiOwner::User) => {
+            if original_creator_id == Some(user.id) {
+                emoji.owner = original_owner;
+                emoji.creator_id = original_creator_id;
+            }
+        }
+        None => {}
     }
+
+    Ok(Json(emoji))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

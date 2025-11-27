@@ -28,11 +28,11 @@ impl From<DbEmojiCustom> for EmojiCustom {
         EmojiCustom {
             id: value.id.into(),
             name: value.name,
-            creator_id: value.creator_id.into(),
-            owner: match value.room_id {
+            creator_id: Some(value.creator_id.into()),
+            owner: Some(match value.room_id {
                 Some(id) => EmojiOwner::Room { room_id: id.into() },
                 None => EmojiOwner::User,
-            },
+            }),
             animated: value.animated,
             media_id: value.media_id.into(),
         }

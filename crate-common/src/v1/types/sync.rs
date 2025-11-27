@@ -238,6 +238,19 @@ pub enum MessageSync {
         key: ReactionKey,
     },
 
+    // TODO: implement
+    // ReactionDeleteEmoji {
+    //     channel_id: ChannelId,
+    //     message_id: MessageId,
+    //     key: ReactionKey,
+    // },
+
+    // ReactionDeleteAll {
+    //     channel_id: ChannelId,
+    //     message_id: MessageId,
+    // },
+
+    // TODO: deprecate and remove (rename to ReactionDeleteAll)
     /// remove all reactions
     ReactionPurge {
         channel_id: ChannelId,

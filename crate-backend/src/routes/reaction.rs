@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::reaction::{ReactionKey, ReactionListItem};
+use common::v1::types::reaction::{ReactionKey, ReactionKeyParam, ReactionListItem};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageId, MessageSync,
     PaginationQuery, PaginationResponse, Permission, UserId,
@@ -15,16 +15,50 @@ use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 use crate::{Error, ServerState};
 
+/// Reaction list
+///
+/// List message reactions for a specific emoji.
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}",
+    params(
+        PaginationQuery<UserId>,
+        ("channel_id", description = "channel id"),
+        ("message_id", description = "Message id"),
+        ("reaction_key", description = "Reaction key"),
+    ),
+    tags = ["reaction"],
+    responses(
+        (status = OK, body = PaginationResponse<ReactionListItem>, description = "success"),
+    )
+)]
+async fn reaction_list(
+    Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
+    Auth(auth_user): Auth,
+    Query(q): Query<PaginationQuery<UserId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let list = data
+        .reaction_list(channel_id, message_id, reaction_key, q)
+        .await?;
+    Ok(Json(list))
+}
+
 /// Reaction add
 ///
 /// Add a reaction to a message.
 #[utoipa::path(
     put,
-    path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
+    path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
     params(
         ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
-        ("key", description = "Reaction key"),
+        ("reaction_key", description = "Reaction key"),
+        ("user_id", description = "User id"),
     ),
     tags = ["reaction", "badge.perm.ReactionAdd"],
     responses(
@@ -33,18 +67,28 @@ use crate::{Error, ServerState};
     )
 )]
 async fn reaction_add(
-    Path((channel_id, message_id, key)): Path<(ChannelId, MessageId, ReactionKey)>,
+    Path((channel_id, message_id, reaction_key, user_id)): Path<(
+        ChannelId,
+        MessageId,
+        ReactionKeyParam,
+        UserId,
+    )>,
     Auth(auth_user): Auth,
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
-    let data = s.data();
+
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionAdd)?;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+
+    let thread = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -52,42 +96,144 @@ async fn reaction_add(
         return Err(Error::BadStatic("thread is removed"));
     }
     if thread.locked {
+        let perms = s
+            .services()
+            .perms
+            .for_channel(auth_user.id, channel_id)
+            .await?;
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_put(auth_user.id, channel_id, message_id, key.clone())
+
+    let data = s.data();
+    data.reaction_put(user_id, channel_id, message_id, reaction_key.clone())
         .await?;
+
+    let reaction_key = match reaction_key {
+        ReactionKeyParam::Text(t) => ReactionKey::Text(t),
+        ReactionKeyParam::Custom(emoji_id) => {
+            let emoji = data.emoji_get(emoji_id).await?;
+            ReactionKey::Custom(emoji)
+        }
+    };
+
     s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::ReactionCreate {
             channel_id,
-            user_id: auth_user.id,
+            user_id,
             message_id,
-            key,
+            key: reaction_key,
         },
     )
     .await?;
+
     Ok(StatusCode::OK)
 }
 
 /// Reaction remove
 ///
-/// Remove a reaction from a message.
+/// Remove a user's reaction from a message.
 #[utoipa::path(
     delete,
-    path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
+    path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
     params(
         ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
-        ("key", description = "Reaction key"),
+        ("reaction_key", description = "Reaction key"),
+        ("user_id", description = "User id"),
     ),
-    tags = ["reaction", "badge.perm.ReactionAdd"],
+    tags = ["reaction", "badge.perm.ReactionPurge"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
 )]
 async fn reaction_remove(
-    Path((channel_id, message_id, key)): Path<(ChannelId, MessageId, ReactionKey)>,
+    Path((channel_id, message_id, reaction_key, user_id)): Path<(
+        ChannelId,
+        MessageId,
+        ReactionKeyParam,
+        UserId,
+    )>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    if auth_user.id == user_id {
+        perms.ensure(Permission::ReactionAdd)?;
+    } else {
+        perms.ensure(Permission::ReactionPurge)?;
+    }
+
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if chan.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+    if chan.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if chan.locked {
+        let perms = s
+            .services()
+            .perms
+            .for_channel(auth_user.id, channel_id)
+            .await?;
+        perms.ensure(Permission::ThreadLock)?;
+    }
+
+    let data = s.data();
+    data.reaction_delete(user_id, channel_id, message_id, reaction_key.clone())
+        .await?;
+
+    let reaction_key = match reaction_key {
+        ReactionKeyParam::Text(t) => ReactionKey::Text(t),
+        ReactionKeyParam::Custom(emoji_id) => {
+            let emoji = data.emoji_get(emoji_id).await?;
+            ReactionKey::Custom(emoji)
+        }
+    };
+
+    // TODO: audit log if auth_user.id != user_id and in room
+
+    s.broadcast_channel(
+        channel_id,
+        auth_user.id,
+        MessageSync::ReactionDelete {
+            channel_id,
+            user_id,
+            message_id,
+            key: reaction_key,
+        },
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Reaction remove key
+///
+/// Remove all reactions for a specific key/emoji from a message.
+#[utoipa::path(
+    delete,
+    path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}",
+    params(
+        ("channel_id", description = "channel id"),
+        ("message_id", description = "Message id"),
+        ("reaction_key", description = "Reaction key"),
+    ),
+    tags = ["reaction", "badge.perm.ReactionPurge"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn reaction_remove_key(
+    Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -96,34 +242,38 @@ async fn reaction_remove(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::ReactionAdd)?;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if thread.archived_at.is_some() {
+    perms.ensure(Permission::ReactionPurge)?;
+
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if chan.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
-    if thread.deleted_at.is_some() {
+    if chan.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked {
+    if chan.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_delete(auth_user.id, channel_id, message_id, key.clone())
+
+    data.reaction_delete_key(channel_id, message_id, reaction_key.clone())
         .await?;
+
+    // TODO: audit log if auth_user.id != user_id and in room
+
     s.broadcast_channel(
         channel_id,
         auth_user.id,
-        MessageSync::ReactionDelete {
+        MessageSync::ReactionPurge {
             channel_id,
-            user_id: auth_user.id,
             message_id,
-            key,
         },
     )
     .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Reaction purge
+/// Reaction remove all
 ///
 /// Remove all reactions from a message.
 #[utoipa::path(
@@ -133,12 +283,12 @@ async fn reaction_remove(
         ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
     ),
-    tags = ["reaction", "badge.perm.ReactionClear"],
+    tags = ["reaction", "badge.perm.ReactionPurge"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-async fn reaction_purge(
+async fn reaction_remove_all(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
@@ -150,6 +300,7 @@ async fn reaction_purge(
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionPurge)?;
+
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
@@ -160,9 +311,9 @@ async fn reaction_purge(
     if thread.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_purge(channel_id, message_id).await?;
 
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    data.reaction_delete_all(channel_id, message_id).await?;
+
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -187,44 +338,15 @@ async fn reaction_purge(
         },
     )
     .await?;
-    Ok(StatusCode::NO_CONTENT)
-}
 
-/// Reaction list
-///
-/// List message reactions for a specific emoji.
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
-    params(
-        PaginationQuery<UserId>,
-        ("channel_id", description = "channel id"),
-        ("message_id", description = "Message id"),
-        ("key", description = "Reaction key"),
-    ),
-    tags = ["reaction"],
-    responses(
-        (status = OK, body = PaginationResponse<ReactionListItem>, description = "success"),
-    )
-)]
-async fn reaction_list(
-    Path((channel_id, message_id, key)): Path<(ChannelId, MessageId, ReactionKey)>,
-    Auth(auth_user): Auth,
-    Query(q): Query<PaginationQuery<UserId>>,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
-    let list = data.reaction_list(channel_id, message_id, key, q).await?;
-    Ok(Json(list))
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
+        .routes(routes!(reaction_list))
         .routes(routes!(reaction_add))
         .routes(routes!(reaction_remove))
-        .routes(routes!(reaction_purge))
-        .routes(routes!(reaction_list))
+        .routes(routes!(reaction_remove_key))
+        .routes(routes!(reaction_remove_all))
 }

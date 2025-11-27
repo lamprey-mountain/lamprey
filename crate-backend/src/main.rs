@@ -56,7 +56,6 @@ mod util;
         types::UserListFilter,
         MessageSync,
         PaginationQuery<MessageId>,
-        types::emoji::Emoji,
         types::emoji::EmojiCustom,
         types::emoji::EmojiOwner,
         types::reaction::ReactionKey,

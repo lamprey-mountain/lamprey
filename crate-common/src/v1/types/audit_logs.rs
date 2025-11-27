@@ -128,11 +128,33 @@ pub enum AuditLogEntryType {
     },
 
     /// remove all reactions
+    // TODO: deprecate then remove
     ReactionPurge {
         channel_id: ChannelId,
         message_id: MessageId,
     },
 
+    // TODO: implement then remove
+    // /// remove all reactions from a message
+    // ReactionDelete {
+    //     channel_id: ChannelId,
+    //     message_id: MessageId,
+    // },
+
+    // /// remove all reactions of an emoji from a message
+    // ReactionDeleteEmoji {
+    //     channel_id: ChannelId,
+    //     message_id: MessageId,
+    //     key: ReactionKey,
+    // },
+
+    // /// remove all reactions of an emoji for a user from a message
+    // ReactionDeleteUser {
+    //     channel_id: ChannelId,
+    //     message_id: MessageId,
+    //     key: ReactionKey,
+    //     user_id: UserId,
+    // },
     EmojiCreate {
         changes: Vec<AuditLogChange>,
     },

@@ -8,7 +8,7 @@ use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch}
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
-use common::v1::types::reaction::{ReactionKey, ReactionListItem};
+use common::v1::types::reaction::{ReactionKeyParam, ReactionListItem};
 use common::v1::types::room_analytics::{
     RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
     RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
@@ -860,29 +860,30 @@ pub trait DataReaction {
         user_id: UserId,
         channel_id: ChannelId,
         message_id: MessageId,
-        key: ReactionKey,
-    ) -> Result<()>;
-    async fn reaction_delete(
-        &self,
-        user_id: UserId,
-        channel_id: ChannelId,
-        message_id: MessageId,
-        key: ReactionKey,
+        key: ReactionKeyParam,
     ) -> Result<()>;
     async fn reaction_list(
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        key: ReactionKey,
+        key: ReactionKeyParam,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ReactionListItem>>;
-    async fn reaction_purge(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
-    async fn reaction_purge_key(
+    async fn reaction_delete(
+        &self,
+        user_id: UserId,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        key: ReactionKeyParam,
+    ) -> Result<()>;
+    async fn reaction_delete_key(
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        key: ReactionKey,
+        key: ReactionKeyParam,
     ) -> Result<()>;
+    async fn reaction_delete_all(&self, channel_id: ChannelId, message_id: MessageId)
+        -> Result<()>;
 }
 
 #[async_trait]

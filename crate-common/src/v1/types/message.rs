@@ -7,12 +7,13 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::emoji::Emoji;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
+#[cfg(feature = "feat_interaction_reaction")]
+use crate::v1::types::reaction::ReactionKey;
 use crate::v1::types::util::{some_option, Diff, Time};
+use crate::v1::types::RoomId;
 use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
-use crate::v1::types::{EmojiId, RoomId};
 
 use super::channel::Channel;
 use super::EmbedCreate;
@@ -120,10 +121,6 @@ pub struct Mentions {
 
     // TODO: remove
     pub threads: Vec<ChannelId>,
-
-    // TODO: remove
-    #[serde(default)]
-    pub emojis: Vec<EmojiId>,
 
     #[serde(default)]
     pub everyone: bool,
@@ -422,7 +419,9 @@ pub struct MessageCall {
 pub struct Interactions {
     #[cfg(feature = "feat_interaction_reaction")]
     /// show placeholder reactions (they appear with zero total reactions) for these emoji
-    pub reactions_default: Option<Vec<Emoji>>,
+    pub reactions_default: Option<Vec<ReactionKey>>,
+    // for message create
+    // pub reactions_default: Option<Vec<ReactionKeyParam>>,
 
     // yet another rabbit hole. not worth it for now.
     #[cfg(feature = "feat_interaction_status")]

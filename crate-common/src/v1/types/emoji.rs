@@ -1,39 +1,36 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
-
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-// WARN: this is an *extreme* work in progress
-// at this point in time, custom emoji is still very tentative. i'm still not
-// sure if i'll implement custom emoji or not.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
-pub enum Emoji {
-    Custom(EmojiCustom),
-    Unicode(EmojiUnicode),
-}
+use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
 
-/// a single unicode emoji
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct EmojiUnicode(pub String);
+// WARN: this is an *extreme* work in progress
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EmojiCustom {
     pub id: EmojiId,
     pub name: String,
-    pub creator_id: UserId,
-    pub owner: EmojiOwner,
+
+    /// the user who created this emoji
+    ///
+    /// not returned unless
+    /// - the owner is a room and you're in the room this emoji is in
+    /// - the owner is a user and you're the creator
+    pub creator_id: Option<UserId>,
+
+    /// the place where this emoji exists
+    ///
+    /// not returned unless
+    /// - the owner is a room and you're in the room this emoji is in
+    /// - the owner is a user and you're the creator
+    pub owner: Option<EmojiOwner>,
+
     pub animated: bool,
+
     pub media_id: MediaId,
-    // pub aliases: Vec<String>, // for searching
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,11 +38,7 @@ pub struct EmojiCustom {
 #[serde(tag = "owner")]
 pub enum EmojiOwner {
     /// an emoji owned by a room
-    Room {
-        room_id: RoomId,
-        // /// who can use this emoji
-        // restrict: Option<Vec<RoleId | UserId>>,
-    },
+    Room { room_id: RoomId },
 
     /// an emoji owned by the user that creator_id points to
     User,
@@ -54,6 +47,7 @@ pub enum EmojiOwner {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EmojiCustomCreate {
+    // TODO(#862): enforce emoji naming conventions (ie. no spaces)
     pub name: String,
     pub animated: bool,
     pub media_id: MediaId,
@@ -64,19 +58,4 @@ pub struct EmojiCustomCreate {
 pub struct EmojiCustomPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub name: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct EmojiLookup {
-    pub id: EmojiId,
-    pub name: String,
-
-    /// not returned unless you're in the room this emoji is in
-    pub creator_id: Option<UserId>,
-
-    /// not returned unless you're in the room this emoji is in and owner is a room
-    pub room_id: Option<RoomId>,
-
-    pub animated: bool,
 }

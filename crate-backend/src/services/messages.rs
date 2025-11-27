@@ -762,7 +762,7 @@ async fn embed_from_create(
 }
 
 pub mod mentions {
-    use common::v1::types::{EmojiId, Mentions, ParseMentions, RoleId, UserId};
+    use common::v1::types::{Mentions, ParseMentions, RoleId, UserId};
     use once_cell::sync::Lazy;
     use regex::Regex;
     use std::collections::HashSet;
@@ -857,12 +857,12 @@ pub mod mentions {
             .collect();
 
         // TODO(#833): enforce EmojiUseExternal permission
-        let emojis = EMOJI_MENTION_RE
-            .captures_iter(content)
-            .filter_map(|cap| Uuid::parse_str(&cap[1]).ok().map(Into::into))
-            .collect::<HashSet<EmojiId>>()
-            .into_iter()
-            .collect();
+        // let emojis = EMOJI_MENTION_RE
+        //     .captures_iter(content)
+        //     .filter_map(|cap| Uuid::parse_str(&cap[1]).ok().map(Into::into))
+        //     .collect::<HashSet<EmojiId>>()
+        //     .into_iter()
+        //     .collect();
 
         let everyone = options.everyone && EVERYONE_MENTION_RE.is_match(content);
 
@@ -870,7 +870,6 @@ pub mod mentions {
             users,
             roles,
             threads: channels,
-            emojis,
             everyone,
         }
     }

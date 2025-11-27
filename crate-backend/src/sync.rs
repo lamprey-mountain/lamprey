@@ -494,13 +494,29 @@ impl Connection {
                 (Some(s), None) => AuthCheck::Channel(s.channel_id),
                 (Some(s), Some(o)) => AuthCheck::EitherChannel(s.channel_id, o.channel_id),
             },
-            MessageSync::EmojiCreate { emoji } => match emoji.owner {
-                EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
-                EmojiOwner::User => AuthCheck::User(emoji.creator_id),
+            MessageSync::EmojiCreate { emoji } => match emoji
+                .owner
+                .as_ref()
+                .expect("emoji sync events from server always has owner")
+            {
+                EmojiOwner::Room { room_id } => AuthCheck::Room(*room_id),
+                EmojiOwner::User => AuthCheck::User(
+                    emoji
+                        .creator_id
+                        .expect("emoji sync events from server always has creator_id"),
+                ),
             },
-            MessageSync::EmojiUpdate { emoji } => match emoji.owner {
-                EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
-                EmojiOwner::User => AuthCheck::User(emoji.creator_id),
+            MessageSync::EmojiUpdate { emoji } => match emoji
+                .owner
+                .as_ref()
+                .expect("emoji sync events from server always has owner")
+            {
+                EmojiOwner::Room { room_id } => AuthCheck::Room(*room_id),
+                EmojiOwner::User => AuthCheck::User(
+                    emoji
+                        .creator_id
+                        .expect("emoji sync events from server always has creator_id"),
+                ),
             },
             MessageSync::EmojiDelete {
                 room_id,
