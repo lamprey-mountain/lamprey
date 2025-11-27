@@ -6,6 +6,7 @@ import {
 	createSignal,
 	For,
 	Match,
+	onCleanup,
 	onMount,
 	Show,
 	Switch,
@@ -367,6 +368,22 @@ export function MessageView(props: MessageProps) {
 	const ctx = useCtx();
 	const thread = api.channels.fetch(() => props.message.channel_id);
 	const [ch, chUpdate] = useChannel()!;
+	let messageArticleRef: HTMLElement | undefined;
+
+	const isMenuOpen = () => {
+		const menu = ctx.menu();
+		if (!menu) return false;
+		return menu.type === "message" && menu.message_id === props.message.id;
+	};
+
+	const isReactionPickerOpen = () => {
+		const popout = ctx.popout();
+		if (popout.id !== "emoji" || !popout.ref || !messageArticleRef) {
+			return false;
+		}
+		return messageArticleRef.contains(popout.ref as Node);
+	};
+	const toolbarVisible = () => isMenuOpen() || isReactionPickerOpen();
 
 	const inSelectMode = () => ch.selectMode;
 
@@ -420,11 +437,13 @@ export function MessageView(props: MessageProps) {
 		if (props.message.type === "MemberAdd") {
 			return (
 				<article
+					ref={messageArticleRef!}
 					class="message menu-message oneline"
 					data-message-id={props.message.id}
 					classList={{
 						separate: props.separate,
 						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
 					onMouseDown={onMouseDown}
@@ -463,11 +482,13 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.type === "MemberRemove") {
 			return (
 				<article
+					ref={messageArticleRef!}
 					class="message menu-message oneline"
 					data-message-id={props.message.id}
 					classList={{
 						separate: props.separate,
 						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
 				>
@@ -505,11 +526,13 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.type === "MemberJoin") {
 			return (
 				<article
+					ref={messageArticleRef!}
 					class="message menu-message oneline"
 					data-message-id={props.message.id}
 					classList={{
 						separate: props.separate,
 						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
 				>
@@ -535,11 +558,13 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.type === "MessagePinned") {
 			return (
 				<article
+					ref={messageArticleRef!}
 					class="message menu-message oneline"
 					data-message-id={props.message.id}
 					classList={{
 						separate: props.separate,
 						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
 				>
@@ -565,11 +590,13 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.type === "ThreadRename") {
 			return (
 				<article
+					ref={messageArticleRef!}
 					class="message menu-message oneline"
 					data-message-id={props.message.id}
 					classList={{
 						separate: props.separate,
 						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
 				>
@@ -614,12 +641,14 @@ export function MessageView(props: MessageProps) {
 			// TODO: this code is getting messy and needs a refactor soon...
 			return (
 				<article
+					ref={messageArticleRef!}
 					class="message menu-message"
 					data-message-id={props.message.id}
 					classList={{
 						withavatar: withAvatar,
 						separate: props.separate,
 						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
 					onMouseDown={onMouseDown}
@@ -735,8 +764,10 @@ export function MessageView(props: MessageProps) {
 		} else {
 			return (
 				<article
+					ref={messageArticleRef!}
 					class="message menu-message"
 					data-message-id={props.message.id}
+					classList={{ "toolbar-visible": toolbarVisible() }}
 					onClick={handleClick}
 				>
 					unknown message: {props.message.type}
@@ -1077,6 +1108,60 @@ function Actor(props: { user_id: string; thread: Channel }) {
 const MessageToolbar = (props: { message: Message }) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
+	let reactionButtonRef: HTMLButtonElement | undefined;
+
+	createEffect(() => {
+		if (showReactionPicker()) {
+			ctx.setPopout({
+				id: "emoji",
+				ref: reactionButtonRef,
+				placement: "left-start",
+				props: {
+					selected: (emoji: string | null, keepOpen: boolean) => {
+						if (emoji) {
+							const existing = props.message.reactions?.find((r) =>
+								r.key === emoji
+							);
+							if (!existing || !existing.self) {
+								api.reactions.add(
+									props.message.channel_id,
+									props.message.id,
+									emoji,
+								);
+							}
+						}
+						if (!keepOpen) setShowReactionPicker(false);
+					},
+				},
+			});
+		} else {
+			if (
+				ctx.popout().id === "emoji" && ctx.popout().ref === reactionButtonRef
+			) {
+				ctx.setPopout({});
+			}
+		}
+	});
+
+	const closePicker = (e: MouseEvent) => {
+		const popoutEl = document.querySelector(".popout");
+		if (
+			reactionButtonRef && !reactionButtonRef.contains(e.target as Node) &&
+			(!popoutEl || !popoutEl.contains(e.target as Node))
+		) {
+			setShowReactionPicker(false);
+		}
+	};
+
+	createEffect(() => {
+		if (showReactionPicker()) {
+			document.addEventListener("click", closePicker);
+		} else {
+			document.removeEventListener("click", closePicker);
+		}
+		onCleanup(() => document.removeEventListener("click", closePicker));
+	});
 
 	const isOwnMessage = () => {
 		const currentUser = api.users.cache.get("@self");
@@ -1089,8 +1174,9 @@ const MessageToolbar = (props: { message: Message }) => {
 			isOwnMessage();
 	};
 
-	const handleAddReaction = () => {
-		// TODO
+	const handleAddReaction = (e: MouseEvent) => {
+		e.stopPropagation();
+		setShowReactionPicker(!showReactionPicker());
 	};
 
 	const [ch, chUpdate] = useChannel()!;
@@ -1129,6 +1215,7 @@ const MessageToolbar = (props: { message: Message }) => {
 	return (
 		<div class="message-toolbar">
 			<button
+				ref={reactionButtonRef}
 				onClick={handleAddReaction}
 				title="Add reaction"
 				aria-label="Add reaction"

@@ -64,7 +64,11 @@ export const Reactions = (props: ReactionsProps) => {
 	});
 
 	const closePicker = (e: MouseEvent) => {
-		if (addEl && !addEl.contains(e.target as Node)) {
+		const popoutEl = document.querySelector(".popout");
+		if (
+			addEl && !addEl.contains(e.target as Node) &&
+			(!popoutEl || !popoutEl.contains(e.target as Node))
+		) {
 			setShowPicker(false);
 		}
 	};

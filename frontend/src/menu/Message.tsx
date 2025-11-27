@@ -90,14 +90,41 @@ export function MessageMenu(props: MessageMenuProps) {
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
 
+	const addReaction = () => {
+		// HACK: open reaction picker next to toolbar button by clicking it
+		const messageEl = document.querySelector(
+			`[data-message-id="${props.message_id}"]`,
+		);
+		if (!messageEl) return;
+		const button = messageEl.querySelector(
+			'.message-toolbar button[title="Add reaction"]',
+		) as HTMLElement;
+		if (!button) return;
+		button.click();
+	};
+
+	const viewReactions = () => {
+		// TODO: open reactions modal
+	};
+
 	return (
 		<Menu>
 			<Item onClick={markUnread}>mark unread</Item>
 			<Item onClick={copyLink}>copy link</Item>
+			<Separator />
+			{/* TODO: only show if you have ReactionAdd permission */}
+			<Item onClick={addReaction}>add reaction</Item>
+			{/* TODO: only show if message has reactions */}
+			<Item onClick={viewReactions}>view reactions</Item>
+			{/* TODO: only show if you have MessageCreate permission */}
 			<Item onClick={setReply}>reply</Item>
+			{/* TODO: only show if you have MessageCreate permission AND sent the message */}
 			<Item onClick={edit}>edit</Item>
+			{/* TODO: only show if you have MessagePin permission */}
 			<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
+			{/* TODO: only show if you have MessageDelete OR MessageRemove permission */}
 			<Item onClick={selectMessage}>select</Item>
+			{/* TODO: only show if you have MessageDelete permission OR sent the message */}
 			<Item onClick={deleteMessage} color="danger">delete</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>

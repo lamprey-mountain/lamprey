@@ -3162,7 +3162,8 @@ button.link {
 	}
 }
 
-article.message:hover > .message-toolbar {
+article.message:hover > .message-toolbar,
+article.message.toolbar-visible > .message-toolbar {
 	visibility: visible;
 }
 

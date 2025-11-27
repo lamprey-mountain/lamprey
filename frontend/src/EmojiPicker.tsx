@@ -30,7 +30,8 @@ const getGroupName = (id: number) => {
 		case 1:
 			return "People";
 		case 2:
-			return "???";
+			// this category is skin tones and hair modifiers, so we ignore it
+			return;
 		case 3:
 			return "Animals & nature";
 		case 4:
