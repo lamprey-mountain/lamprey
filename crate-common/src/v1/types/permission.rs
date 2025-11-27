@@ -50,6 +50,12 @@ pub enum Permission {
     /// edit members' nicknames
     MemberNicknameManage,
 
+    /// use a custom nickname
+    MemberNickname,
+
+    /// timeout members
+    MemberTimeout,
+
     /// send attachments
     /// requires MessageCreate
     MessageAttachments,
@@ -77,17 +83,12 @@ pub enum Permission {
     /// pin and unpin messages
     MessagePin,
 
-    /// use a custom nickname
-    MemberNickname,
-
-    /// timeout members
-    MemberTimeout,
-
     /// add new reactions
     // TODO: can still react with existing reactions
     ReactionAdd,
 
     /// remove all reactions
+    // TODO: rename to ReactionManage
     ReactionPurge,
 
     /// add and remove roles from members
@@ -100,6 +101,7 @@ pub enum Permission {
     RoomManage,
 
     /// (server, unimplemented) can access metrics (prometheus)
+    // TODO: enforce this permission
     ServerMetrics,
 
     /// (server) can view the server room and all members on the server
@@ -145,10 +147,11 @@ pub enum Permission {
     /// view audit log
     ViewAuditLog,
 
-    // TODO
+    // TODO: add permission
     // /// view room analytics
     // ViewAnalytics,
     /// connect and listen to voice threads
+    // TODO: remove
     VoiceConnect,
 
     /// stop someone from listening
@@ -175,6 +178,9 @@ pub enum Permission {
     /// requires VoiceConnect
     VoiceVideo,
 
+    // TODO: add permission
+    // /// can create calendar events and delete their own calendar events
+    // CalendarEventCreate,
     /// can manage calendar events
     CalendarEventManage,
 }

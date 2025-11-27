@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use common::v1::types::{
     room_analytics::{
         RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
-        RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin,
-        RoomAnalyticsMembersLeave, RoomAnalyticsOverview, RoomAnalyticsParams,
+        RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
+        RoomAnalyticsOverview, RoomAnalyticsParams,
     },
     RoomId,
 };
