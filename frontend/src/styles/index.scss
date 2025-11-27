@@ -2973,7 +2973,8 @@ button.link {
 	display: flex;
 	align-items: center;
 
-	& > .icon, & > .avatar {
+	& > .icon,
+	& > .avatar {
 		margin-right: 4px;
 	}
 
@@ -3293,7 +3294,8 @@ kbd {
 	display: flex;
 	height: 100%;
 
-	& .main, .edit {
+	& .main,
+	.edit {
 		padding: 0.5rem;
 		overflow-y: auto;
 	}
@@ -3415,4 +3417,52 @@ kbd {
 input[type="color"] {
 	height: 1em;
 	width: 2em;
+}
+
+.reactions-modal {
+	display: flex;
+	margin: -16px;
+	border: solid $sep-500 1px;
+	height: 300px;
+	width: 400px;
+
+	.reactions {
+		background: $bg-100;
+		padding: 8px;
+		display: flex;
+		flex-direction: column;
+
+		button {
+			display: flex;
+			gap: 8px;
+			width: 48px;
+
+			border: none;
+			background: none;
+
+			&:hover,
+			&[data-selected] {
+				background: #fff2;
+			}
+		}
+	}
+
+	.users {
+		display: flex;
+		flex-direction: column;
+		background: $bg-200;
+		gap: 8px;
+		padding: 8px;
+	}
+
+	.user {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+
+		.avatar {
+			height: 24px;
+			width: 24px;
+		}
+	}
 }

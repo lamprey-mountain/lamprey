@@ -113,8 +113,12 @@ export type Modal =
 	}
 	| {
 		type: "export_data";
+	}
+	| {
+		type: "view_reactions";
+		channel_id: string;
+		message_id: string;
 	};
-
 export type AttachmentCreateT = {
 	id: string;
 };

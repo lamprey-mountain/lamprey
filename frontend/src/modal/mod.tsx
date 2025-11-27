@@ -8,6 +8,7 @@ import { ModalChannelCreate } from "./ModalChannelCreate";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
 import { ModalExportData } from "./ModalExportData.tsx";
 import { useModals } from "../contexts/modal.tsx";
+import { ModalReactions } from "./ModalReactions.tsx";
 
 export const Modal = (props: ParentProps) => {
 	const [, modalCtl] = useModals();
@@ -72,6 +73,14 @@ export function getModal(modal: ContextModal) {
 		}
 		case "export_data": {
 			return <ModalExportData />;
+		}
+		case "view_reactions": {
+			return (
+				<ModalReactions
+					channel_id={modal.channel_id}
+					message_id={modal.message_id}
+				/>
+			);
 		}
 	}
 }

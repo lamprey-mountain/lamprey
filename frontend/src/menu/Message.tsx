@@ -104,7 +104,11 @@ export function MessageMenu(props: MessageMenuProps) {
 	};
 
 	const viewReactions = () => {
-		// TODO: open reactions modal
+		modalCtl.open({
+			type: "view_reactions",
+			channel_id: props.channel_id,
+			message_id: props.message_id,
+		});
 	};
 
 	return (
