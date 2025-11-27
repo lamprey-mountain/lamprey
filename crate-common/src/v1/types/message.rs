@@ -586,6 +586,25 @@ impl MessageType {
     pub fn is_movable(&self) -> bool {
         matches!(self, MessageType::DefaultMarkdown(_))
     }
+
+    /// if this will be returned in the thread activity route
+    pub fn is_activity(&self) -> bool {
+        match self {
+            MessageType::DefaultMarkdown(_) => false,
+            #[cfg(feature = "feat_message_forwarding")]
+            MessageType::Forward(_) => false,
+            MessageType::MessagePinned(_) => true,
+            MessageType::MemberAdd(_) => true,
+            MessageType::MemberRemove(_) => true,
+            MessageType::MemberJoin => false,
+            MessageType::ThreadRename(_) => true,
+            MessageType::ThreadPingback(_) => true,
+            #[cfg(feature = "feat_message_move")]
+            MessageType::MessagesMoved(_) => false,
+            MessageType::Call(_) => false,
+            MessageType::ThreadCreated(_) => false,
+        }
+    }
 }
 
 impl MessageCreate {

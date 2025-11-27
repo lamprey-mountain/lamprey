@@ -672,6 +672,39 @@ async fn thread_create_from_message(
     Ok((StatusCode::CREATED, Json(channel)))
 }
 
+/// Thread activity (TODO)
+///
+/// List activity in this thread
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/activity",
+    params(
+        ("channel_id", description = "Parent channel id"),
+        PaginationQuery<MessageId>
+    ),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = PaginationResponse<MessageId>, description = "List activity success"),
+    )
+)]
+async fn thread_activity(
+    Path((parent_channel_id,)): Path<(ChannelId,)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+
+    let perms = srv
+        .perms
+        .for_channel(auth_user.id, parent_channel_id)
+        .await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create))
@@ -684,4 +717,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_list_archived))
         .routes(routes!(thread_list_removed))
         .routes(routes!(thread_list_atom))
+        .routes(routes!(thread_activity))
 }
