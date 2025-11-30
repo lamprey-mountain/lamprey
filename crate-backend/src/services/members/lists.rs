@@ -80,9 +80,19 @@ impl MemberList2 {
             me.users.insert(u.id, u);
         }
 
-        // TODO: build initial groups
+        // TODO: fetch and save MemberListVisibility
+
+        me.rebuild_groups();
 
         Ok(me)
+    }
+
+    /// recalculate groups from scratch
+    fn rebuild_groups(&mut self) -> Vec<MemberListOp> {
+        self.groups.clear();
+        // go through thread_members/room_members, partition them into groups
+        // emit a MemberListOp::Sync event with the full group
+        todo!()
     }
 
     /// handle a sync event and calculate what operations need to be applied
@@ -235,6 +245,8 @@ impl MemberList2 {
 
     /// update the list of permission overwrites for this member list
     pub fn set_visibility(&mut self, v: MemberListVisibility) -> Vec<MemberListOp> {
+        // save v in self?
+        // self.rebuild_groups();
         todo!()
     }
 
