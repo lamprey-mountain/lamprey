@@ -688,7 +688,7 @@ export function createApi(
 		} else if (msg.type === "BotAdd") {
 			// TODO: maybe do something here?
 		} else if (msg.type === "ReactionCreate") {
-			const { message_id, channel_id: thread_id, user_id, key } = msg;
+			const { message_id, channel_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);
 			if (message) {
 				const reactions = message.reactions ?? [];
@@ -708,7 +708,7 @@ export function createApi(
 				messages.cache.set(message_id, { ...message, reactions });
 			}
 		} else if (msg.type === "ReactionDelete") {
-			const { message_id, channel_id: thread_id, user_id, key } = msg;
+			const { message_id, channel_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);
 			if (message) {
 				const reactions = message.reactions ?? [];
@@ -727,8 +727,23 @@ export function createApi(
 				}
 				messages.cache.set(message_id, { ...message, reactions });
 			}
-		} else if (msg.type === "ReactionPurge") {
-			// TODO
+		} else if (msg.type === "ReactionDeleteKey") {
+			const { message_id, key } = msg;
+			const message = messages.cache.get(message_id);
+			if (message) {
+				const reactions = message.reactions ?? [];
+				const idx = reactions.findIndex((r) => r.key === key);
+				if (idx !== -1) {
+					reactions.splice(idx, 1);
+				}
+				messages.cache.set(message_id, { ...message, reactions });
+			}
+		} else if (msg.type === "ReactionDeleteAll") {
+			const { message_id } = msg;
+			const message = messages.cache.get(message_id);
+			if (message) {
+				messages.cache.set(message_id, { ...message, reactions: [] });
+			}
 		} else if (msg.type === "EmojiCreate") {
 			// TODO
 		} else if (msg.type === "EmojiDelete") {
