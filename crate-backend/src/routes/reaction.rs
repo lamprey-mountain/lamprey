@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::misc::UserIdReq;
 use common::v1::types::reaction::{ReactionKey, ReactionKeyParam, ReactionListItem};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageId, MessageSync,
@@ -71,12 +72,17 @@ async fn reaction_add(
         ChannelId,
         MessageId,
         ReactionKeyParam,
-        UserId,
+        UserIdReq,
     )>,
     Auth(auth_user): Auth,
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let user_id = match user_id {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
     auth_user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -157,12 +163,17 @@ async fn reaction_remove(
         ChannelId,
         MessageId,
         ReactionKeyParam,
-        UserId,
+        UserIdReq,
     )>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let user_id = match user_id {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -215,7 +226,7 @@ async fn reaction_remove(
                 channel_id,
                 message_id,
                 key: reaction_key,
-                user_id
+                user_id,
             },
         })
         .await?;
