@@ -8,10 +8,10 @@ use uuid::Uuid;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Scope, email::EmailAddr, role::RoleReorderItem, util::Time, ApplicationId,
-    AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem, ChannelType, EmojiId,
-    InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId,
-    UserId, WebhookId,
+    application::Scope, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
+    util::Time, ApplicationId, AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem,
+    ChannelType, EmojiId, InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId,
+    RoomId, SessionId, UserId, WebhookId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
@@ -128,33 +128,33 @@ pub enum AuditLogEntryType {
     },
 
     /// remove all reactions
-    // TODO: deprecate then remove
+    #[deprecated = "renamed to ReactionDeleteAll"]
     ReactionPurge {
         channel_id: ChannelId,
         message_id: MessageId,
     },
 
-    // TODO: implement then remove
-    // /// remove all reactions from a message
-    // ReactionDelete {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    // },
+    /// remove all reactions from a message
+    ReactionDeleteAll {
+        channel_id: ChannelId,
+        message_id: MessageId,
+    },
 
-    // /// remove all reactions of an emoji from a message
-    // ReactionDeleteEmoji {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     key: ReactionKey,
-    // },
+    /// remove all reactions of an emoji from a message
+    ReactionDeleteKey {
+        channel_id: ChannelId,
+        message_id: MessageId,
+        key: ReactionKeyParam,
+    },
 
-    // /// remove all reactions of an emoji for a user from a message
-    // ReactionDeleteUser {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     key: ReactionKey,
-    //     user_id: UserId,
-    // },
+    /// remove a reactions from a specific user on a message
+    ReactionDeleteUser {
+        channel_id: ChannelId,
+        message_id: MessageId,
+        key: ReactionKeyParam,
+        user_id: UserId,
+    },
+
     EmojiCreate {
         changes: Vec<AuditLogChange>,
     },

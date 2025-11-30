@@ -231,6 +231,7 @@ pub enum MessageSync {
         key: ReactionKey,
     },
 
+    /// remove one specific emoji on a message
     ReactionDelete {
         user_id: UserId,
         channel_id: ChannelId,
@@ -238,21 +239,15 @@ pub enum MessageSync {
         key: ReactionKey,
     },
 
-    // TODO: implement
-    // ReactionDeleteEmoji {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     key: ReactionKey,
-    // },
+    /// remove all reactions for a reaction key on a message
+    ReactionDeleteKey {
+        channel_id: ChannelId,
+        message_id: MessageId,
+        key: ReactionKey,
+    },
 
-    // ReactionDeleteAll {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    // },
-
-    // TODO: deprecate and remove (rename to ReactionDeleteAll)
-    /// remove all reactions
-    ReactionPurge {
+    /// remove all reactions on a message
+    ReactionDeleteAll {
         channel_id: ChannelId,
         message_id: MessageId,
     },

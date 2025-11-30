@@ -84,6 +84,10 @@ async fn reaction_add(
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionAdd)?;
 
+    if auth_user.id != user_id {
+        return Err(Error::BadStatic("cannot act on behalf of other users"));
+    }
+
     let thread = s
         .services()
         .channels
@@ -118,7 +122,7 @@ async fn reaction_add(
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        user_id,
         MessageSync::ReactionCreate {
             channel_id,
             user_id,
@@ -156,6 +160,7 @@ async fn reaction_remove(
         UserId,
     )>,
     Auth(auth_user): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -191,7 +196,7 @@ async fn reaction_remove(
     data.reaction_delete(user_id, channel_id, message_id, reaction_key.clone())
         .await?;
 
-    let reaction_key = match reaction_key {
+    let reaction_key_for_sync = match reaction_key.clone() {
         ReactionKeyParam::Text(t) => ReactionKey::Text(t),
         ReactionKeyParam::Custom(emoji_id) => {
             let emoji = data.emoji_get(emoji_id).await?;
@@ -199,7 +204,22 @@ async fn reaction_remove(
         }
     };
 
-    // TODO: audit log if auth_user.id != user_id and in room
+    if let Some(room_id) = chan.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ReactionDeleteUser {
+                channel_id,
+                message_id,
+                key: reaction_key,
+                user_id
+            },
+        })
+        .await?;
+    }
 
     s.broadcast_channel(
         channel_id,
@@ -208,7 +228,7 @@ async fn reaction_remove(
             channel_id,
             user_id,
             message_id,
-            key: reaction_key,
+            key: reaction_key_for_sync,
         },
     )
     .await?;
@@ -235,6 +255,7 @@ async fn reaction_remove(
 async fn reaction_remove_key(
     Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
     Auth(auth_user): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
@@ -258,14 +279,37 @@ async fn reaction_remove_key(
     data.reaction_delete_key(channel_id, message_id, reaction_key.clone())
         .await?;
 
-    // TODO: audit log if auth_user.id != user_id and in room
+    let reaction_key_for_sync = match reaction_key.clone() {
+        ReactionKeyParam::Text(t) => ReactionKey::Text(t),
+        ReactionKeyParam::Custom(emoji_id) => {
+            let emoji = data.emoji_get(emoji_id).await?;
+            ReactionKey::Custom(emoji)
+        }
+    };
+
+    if let Some(room_id) = chan.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ReactionDeleteKey {
+                channel_id,
+                message_id,
+                key: reaction_key,
+            },
+        })
+        .await?;
+    }
 
     s.broadcast_channel(
         channel_id,
         auth_user.id,
-        MessageSync::ReactionPurge {
+        MessageSync::ReactionDeleteKey {
             channel_id,
             message_id,
+            key: reaction_key_for_sync,
         },
     )
     .await?;
@@ -321,7 +365,7 @@ async fn reaction_remove_all(
             user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
-            ty: AuditLogEntryType::ReactionPurge {
+            ty: AuditLogEntryType::ReactionDeleteAll {
                 channel_id,
                 message_id,
             },
@@ -332,7 +376,7 @@ async fn reaction_remove_all(
     s.broadcast_channel(
         channel_id,
         auth_user.id,
-        MessageSync::ReactionPurge {
+        MessageSync::ReactionDeleteAll {
             channel_id,
             message_id,
         },

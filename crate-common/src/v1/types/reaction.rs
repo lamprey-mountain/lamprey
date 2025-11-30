@@ -36,7 +36,7 @@ pub struct ReactionListItem {
 /// reaction key returned in reaction counts for messages
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema), serde(tag = "type"))]
 pub enum ReactionKey {
     Text(String),
     Custom(EmojiCustom),
