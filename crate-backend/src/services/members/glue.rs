@@ -61,9 +61,13 @@ impl ServiceMembers2 {
     }
 
     /// spawn a handler for a key if it doesnt exist
-    // TODO: reuse receivers if they already exist for a key
     // TODO: shutdown unused receivers after a period of time
-    pub fn ensure_handler(&self, key: MemberListKey) -> broadcast::Receiver<MemberListSync> {
+    // TODO: better error handling (maybe return Result?)
+    pub async fn ensure_handler(&self, key: MemberListKey) -> broadcast::Receiver<MemberListSync> {
+        if let Some(list) = self.lists.get(&key) {
+            return list.tx.resubscribe();
+        }
+
         let (tx, rx) = broadcast::channel(100);
         let mut events = self.s.sushi.subscribe();
         let s = self.s.clone();
@@ -77,7 +81,6 @@ impl ServiceMembers2 {
                 }
             };
 
-            // TODO: better error handling
             loop {
                 let msg = events.recv().await.expect("error while receiving event");
                 let ops = match msg {
@@ -110,7 +113,9 @@ impl ServiceMembers2 {
 
 impl MemberListSyncer {
     /// set the new query
-    pub fn set_query(&self, target: MemberListTarget, ranges: &[(u64, u64)]) {
+    pub async fn set_query(&self, target: MemberListTarget, ranges: &[(u64, u64)]) {
+        // let key = MemberListKey;
+        // *self.ops_rx.lock().await = self.s.services().members.ensure_handler(key).await?;
         self.query_tx
             .send(MemberListQuery {
                 target,
@@ -138,8 +143,18 @@ impl MemberListSyncer {
             }
         } else {
             qrx.changed().await.unwrap();
-            // return list.get_initial_ranges
+            // self.list.as_ref().unwrap().get_initial_ranges(&self.query_rx.borrow().ranges);
             todo!()
         }
+    }
+}
+
+impl MemberListHandler {
+    pub fn get_initial_ranges(&self, ranges: &[(u64, u64)]) -> Vec<MemberListOp> {
+        self.list.get_initial_ranges(ranges)
+    }
+
+    pub fn list(&self) -> &MemberList2 {
+        &self.list
     }
 }
