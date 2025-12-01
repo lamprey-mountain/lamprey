@@ -237,6 +237,7 @@ pub trait DataTag {
 #[async_trait]
 pub trait DataRole {
     async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role>;
+    // TODO: make this return all roles, paginate in server logic
     async fn role_list(
         &self,
         room_id: RoomId,

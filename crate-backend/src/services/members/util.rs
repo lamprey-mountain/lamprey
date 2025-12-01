@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use common::v1::types::{
-    ChannelId, MemberListGroup, MemberListGroupId, PermissionOverwrites, RoleId, RoomId,
-    RoomMember, UserId,
+    ChannelId, MemberListGroup, MemberListGroupId, Permission, PermissionOverwrite,
+    PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
 };
 use tokio::sync::Notify;
 
@@ -128,13 +128,80 @@ impl From<MemberGroupInfo> for MemberListGroupId {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct MemberListVisibility {
     /// list of permission overwrites in order from topmost parent to the channel itself
-    pub overwrites: Vec<PermissionOverwrites>,
+    pub overwrites: Vec<Vec<PermissionOverwrite>>,
 }
 
 impl MemberListVisibility {
-    pub fn visible_to(&self, member: &RoomMember) -> bool {
-        todo!()
+    /// check if this member can view a channel with this set of overwrites. has_base is if the member can view all channels by default.
+    pub fn visible_to(&self, member: &RoomMember, has_base: bool) -> bool {
+        let mut has_view = has_base;
+
+        // apply each overwrite in order
+        for ow_set in &self.overwrites {
+            // apply role allow overwrites
+            for ow in ow_set {
+                if ow.ty != PermissionOverwriteType::Role {
+                    continue;
+                }
+
+                if !member.roles.contains(&ow.id.into()) {
+                    continue;
+                }
+
+                if ow.allow.contains(&Permission::ViewChannel) {
+                    has_view = true;
+                }
+            }
+
+            // apply role deny overwrites
+            for ow in ow_set {
+                if ow.ty != PermissionOverwriteType::Role {
+                    continue;
+                }
+
+                if !member.roles.contains(&ow.id.into()) {
+                    continue;
+                }
+
+                if ow.deny.contains(&Permission::ViewChannel) {
+                    has_view = false;
+                }
+            }
+
+            // apply user allow overwrites
+            for ow in ow_set {
+                if ow.ty != PermissionOverwriteType::User {
+                    continue;
+                }
+
+                if ow.id != *member.user_id {
+                    continue;
+                }
+
+                if ow.allow.contains(&Permission::ViewChannel) {
+                    has_view = true;
+                }
+            }
+
+            // apply user deny overwrites
+            for ow in ow_set {
+                if ow.ty != PermissionOverwriteType::User {
+                    continue;
+                }
+
+                if ow.id != *member.user_id {
+                    continue;
+                }
+
+                if ow.deny.contains(&Permission::ViewChannel) {
+                    has_view = false;
+                }
+            }
+        }
+
+        has_view
     }
 }

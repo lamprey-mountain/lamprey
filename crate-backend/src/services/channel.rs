@@ -7,7 +7,7 @@ use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
     ChannelPatch, ChannelType, MessageSync, MessageThreadRename, MessageType, PaginationQuery,
-    Permission, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
+    Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -960,5 +960,23 @@ impl ServiceThreads {
                 }
             }
         }
+    }
+
+    /// fetch the full list of permission overwrites from topmost parent channel to this current channel
+    pub async fn fetch_overwrite_ancestors(
+        &self,
+        channel_id: ChannelId,
+    ) -> Result<Vec<Vec<PermissionOverwrite>>> {
+        // TODO: optimize
+        let srv = self.state.services();
+        let mut top = self.get(channel_id, None).await?;
+        let mut overwrites = vec![top.permission_overwrites.clone()];
+        while let Some(parent_id) = top.parent_id {
+            let chan = srv.channels.get(parent_id, None).await?;
+            overwrites.push(chan.permission_overwrites.clone());
+            top = chan;
+        }
+        overwrites.reverse();
+        Ok(overwrites)
     }
 }

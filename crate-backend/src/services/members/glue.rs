@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use common::v1::types::{MemberListGroup, MemberListOp, MessageSync};
+use common::v1::types::{MemberListGroup, MemberListOp, MessageSync, PermissionOverwrites};
 use dashmap::DashMap;
 use tokio::sync::broadcast;
 use tracing::warn;
 
 use crate::{
     services::members::{
-        lists::MemberList2, util::MemberListKey, MemberList, MemberListTarget, ServiceMembers,
+        lists::MemberList2,
+        util::{MemberListKey, MemberListVisibility},
+        MemberList, MemberListTarget, ServiceMembers,
     },
     Result, ServerState,
 };
@@ -62,7 +64,28 @@ impl ServiceMembers2 {
 
             loop {
                 let msg = events.recv().await.expect("error while receiving event");
-                let ops = list.process(&msg);
+                let ops = match msg {
+                    MessageSync::ChannelUpdate { channel } => {
+                        // TODO: optimize
+                        let srv = s.services();
+                        let mut overwrites = vec![channel.permission_overwrites.clone()];
+                        let mut top = channel;
+                        while let Some(parent_id) = top.parent_id {
+                            // TODO: handle error
+                            let chan = srv
+                                .channels
+                                .get(parent_id, None)
+                                .await
+                                .expect("failed to fetch channel");
+                            overwrites.push(chan.permission_overwrites.clone());
+                            top = Box::new(chan);
+                        }
+                        overwrites.reverse();
+                        let v = MemberListVisibility { overwrites };
+                        list.set_visibility(v)
+                    }
+                    msg => list.process(&msg),
+                };
                 if !ops.is_empty() {
                     // TODO: handle error
                     tx.send(MemberListSync {

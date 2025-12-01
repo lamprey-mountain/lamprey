@@ -440,4 +440,9 @@ impl ChannelType {
             _ => false,
         }
     }
+
+    /// if the member list subscription logic should restrict the list to thread members (instead of filtering all room members)
+    pub fn member_list_uses_thread_members(&self) -> bool {
+        matches!(self, ChannelType::Dm | ChannelType::Gdm) || self.is_thread()
+    }
 }

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common::v1::types::{
-    presence::Presence, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync,
-    PaginationQuery, Role, RoleId, RoomMember, RoomMembership, ThreadMember, ThreadMembership,
+    presence::Presence, ChannelType, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync,
+    PaginationQuery, Permission, Role, RoomMember, RoomMembership, ThreadMember, ThreadMembership,
     User, UserId,
 };
 use tracing::warn;
@@ -16,8 +16,12 @@ pub struct MemberList2 {
     pub key: MemberListKey,
     pub roles: Vec<Role>,
     pub groups: Vec<MemberList2Group>,
+    pub visibility: MemberListVisibility,
+    pub use_thread_members: bool,
 
-    // TODO: use Arc for everything?
+    // TODO: deduplicate room_members between member lists in the same room
+    // TODO: deduplicate presences, users between all member lists
+    // maybe i can wrap everything in Arc for deduplication?
     pub presences: HashMap<UserId, Presence>,
     pub room_members: HashMap<UserId, RoomMember>,
     pub thread_members: HashMap<UserId, ThreadMember>,
@@ -29,20 +33,35 @@ pub struct MemberList2Group {
     pub users: Vec<UserId>,
 }
 
+impl MemberList2Group {
+    /// get the number of users in this group
+    pub fn len(&self) -> usize {
+        self.users.len()
+    }
+}
+
 impl MemberList2 {
     /// create a new member list. fetches data from server state.
     pub async fn new_from_server(key: MemberListKey, s: &ServerState) -> Result<Self> {
+        let data = s.data();
+        let srv = s.services();
+
         let mut me = Self {
             key: key.clone(),
             roles: vec![],
             groups: vec![],
+            visibility: match key.channel_id {
+                Some(channel_id) => MemberListVisibility {
+                    overwrites: srv.channels.fetch_overwrite_ancestors(channel_id).await?,
+                },
+                None => MemberListVisibility::default(),
+            },
+            use_thread_members: false,
             presences: HashMap::new(),
             room_members: HashMap::new(),
             thread_members: HashMap::new(),
             users: HashMap::new(),
         };
-        let data = s.data();
-        let srv = s.services();
 
         if let Some(room_id) = key.room_id {
             let roles = data
@@ -67,6 +86,8 @@ impl MemberList2 {
                     me.thread_members.insert(m.user_id, m);
                 }
             }
+
+            me.use_thread_members = channel.ty.member_list_uses_thread_members();
         }
 
         let user_ids: Vec<_> = me
@@ -80,8 +101,6 @@ impl MemberList2 {
             me.users.insert(u.id, u);
         }
 
-        // TODO: fetch and save MemberListVisibility
-
         me.rebuild_groups();
 
         Ok(me)
@@ -90,19 +109,54 @@ impl MemberList2 {
     /// recalculate groups from scratch
     fn rebuild_groups(&mut self) -> Vec<MemberListOp> {
         self.groups.clear();
-        // go through thread_members/room_members, partition them into groups
-        // emit a MemberListOp::Sync event with the full group
-        todo!()
+
+        let user_ids: Vec<_> = if self.use_thread_members {
+            self.thread_members.keys().copied().collect()
+        } else {
+            self.room_members.keys().copied().collect()
+        };
+
+        for user_id in user_ids {
+            self.recalculate_user(user_id);
+        }
+
+        let mut room_members = vec![];
+        let mut thread_members = vec![];
+        let mut users = vec![];
+
+        for g in &self.groups {
+            for user_id in &g.users {
+                if let Some(m) = self.room_members.get(&user_id).cloned() {
+                    room_members.push(m);
+                }
+
+                if let Some(m) = self.thread_members.get(&user_id).cloned() {
+                    thread_members.push(m);
+                }
+
+                users.push(self.users.get(&user_id).unwrap().to_owned());
+            }
+        }
+
+        vec![MemberListOp::Sync {
+            position: 0,
+            room_members: if self.key.room_id.is_some() {
+                Some(room_members)
+            } else {
+                None
+            },
+            thread_members: if self.use_thread_members {
+                Some(thread_members)
+            } else {
+                None
+            },
+            users,
+        }]
     }
 
-    /// handle a sync event and calculate what operations need to be applied
+    /// handle a sync event and calculate what operations need to be applied. ChannelUpdate is not handled here, use set_visibility instead.
     pub fn process(&mut self, event: &MessageSync) -> Vec<MemberListOp> {
         match event {
-            MessageSync::ChannelUpdate { channel: _ } => {
-                // handle view overwrite update
-                // handle inheritance (eg. Category -> Text -> ThreadPublic)
-                todo!()
-            }
             MessageSync::RoomMemberUpsert { member } => {
                 if self.key.room_id != Some(member.room_id) {
                     return vec![];
@@ -197,8 +251,9 @@ impl MemberList2 {
                 room_id: _,
                 roles: _,
             } => {
-                // handle role reorder
-                todo!()
+                // i don't know if theres a more efficient way to handle reorder roles, so for now rebuild everything from scratch
+                // role reorderings should be relatively rare anyways, so this *shouldn't* cause too many issues
+                self.rebuild_groups()
             }
             MessageSync::UserUpdate { user } => {
                 let old_user_name = self.users.get(&user.id).map(|u| u.name.clone());
@@ -222,17 +277,25 @@ impl MemberList2 {
                 vec![]
             }
             MessageSync::PresenceUpdate { user_id, presence } => {
-                self.presences.insert(*user_id, presence.clone());
-
-                let is_in_list = if self.key.room_id.is_some() {
-                    self.room_members.contains_key(user_id)
-                } else if self.key.channel_id.is_some() {
-                    self.thread_members.contains_key(user_id)
-                } else {
-                    false
+                let Some(user) = self.users.get_mut(user_id) else {
+                    return vec![];
                 };
 
-                // user may have gone online or offline
+                self.presences.insert(*user_id, presence.to_owned());
+                user.presence = presence.to_owned();
+
+                // the only thing presence changes affect in lists are online/offline groups
+                if user.presence.is_online() == presence.is_online() {
+                    return vec![];
+                }
+
+                // extra check if this user is in the list
+                let is_in_list = if self.use_thread_members {
+                    self.thread_members.contains_key(user_id)
+                } else {
+                    self.room_members.contains_key(user_id)
+                };
+
                 if is_in_list {
                     self.recalculate_user(*user_id)
                 } else {
@@ -245,9 +308,8 @@ impl MemberList2 {
 
     /// update the list of permission overwrites for this member list
     pub fn set_visibility(&mut self, v: MemberListVisibility) -> Vec<MemberListOp> {
-        // save v in self?
-        // self.rebuild_groups();
-        todo!()
+        self.visibility = v;
+        self.rebuild_groups()
     }
 
     /// get a list of Sync ops for these ranges. used when initially syncing a member list
@@ -314,7 +376,7 @@ impl MemberList2 {
             .iter()
             .map(|g| MemberListGroup {
                 id: g.info.into(),
-                count: g.users.len() as u64,
+                count: g.len() as u64,
             })
             .filter(|g| g.count != 0)
             .collect()
@@ -331,7 +393,7 @@ impl MemberList2 {
         if let Some((group_idx, item_idx)) = self.find_user(user_id) {
             let position: usize = self.groups[..group_idx]
                 .iter()
-                .map(|g| g.users.len())
+                .map(|g| g.len())
                 .sum::<usize>()
                 + item_idx;
 
@@ -416,7 +478,7 @@ impl MemberList2 {
         if let Some((group_idx, item_idx)) = self.find_user(user_id) {
             let old_pos: usize = self.groups[..group_idx]
                 .iter()
-                .map(|g| g.users.len())
+                .map(|g| g.len())
                 .sum::<usize>()
                 + item_idx;
             self.groups[group_idx].users.remove(item_idx);
@@ -433,7 +495,6 @@ impl MemberList2 {
             .map(|p| p.is_online())
             .unwrap_or(false);
         let group_id = self.get_member_group_id(user_id, is_online);
-
         let group_idx = self.insert_group(group_id);
 
         // find position to insert within group, maintaining sort order
@@ -464,10 +525,11 @@ impl MemberList2 {
         // calculate absolute position of new item
         let new_pos = self.groups[..group_idx]
             .iter()
-            .map(|g| g.users.len())
+            .map(|g| g.len())
             .sum::<usize>()
             + item_idx;
 
+        // return op for syncing
         ops.push(MemberListOp::Insert {
             position: new_pos as u64,
             room_member: self.room_members.get(&user_id).cloned(),
@@ -523,14 +585,14 @@ impl MemberList2 {
             let group = self.groups.remove(group_idx);
             let position = self.groups[..group_idx]
                 .iter()
-                .map(|g| g.users.len())
+                .map(|g| g.len())
                 .sum::<usize>() as u64;
 
             // delete all members in the group
             if !group.users.is_empty() {
                 ops.push(MemberListOp::Delete {
                     position,
-                    count: group.users.len() as u64,
+                    count: group.len() as u64,
                 });
             }
 
@@ -540,5 +602,50 @@ impl MemberList2 {
             }
         }
         ops
+    }
+
+    /// get if the room member can view this list
+    fn can_view(&self, m: &RoomMember) -> bool {
+        let (has_admin, has_view) = self.calc_view_base(m);
+        if has_admin {
+            return true;
+        }
+
+        self.visibility.visible_to(&m, has_view)
+    }
+
+    /// get if the room member is an admin and can view channels by default
+    fn calc_view_base(&self, m: &RoomMember) -> (bool, bool) {
+        let roles: Vec<_> = self
+            .roles
+            .iter()
+            .filter(|r| m.roles.contains(&r.id))
+            .collect();
+        let mut has_admin = false;
+        let mut has_view_allow = false;
+        let mut has_view_deny = false;
+
+        for r in roles {
+            if r.allow.contains(&Permission::Admin) {
+                has_admin = true;
+                break;
+            }
+
+            if r.allow.contains(&Permission::ViewChannel) {
+                has_view_allow = true;
+            }
+
+            if r.deny.contains(&Permission::ViewChannel) {
+                has_view_deny = true;
+            }
+        }
+
+        let has_view = if has_admin {
+            true
+        } else {
+            has_view_allow && (!has_view_deny)
+        };
+
+        (has_admin, has_view)
     }
 }
