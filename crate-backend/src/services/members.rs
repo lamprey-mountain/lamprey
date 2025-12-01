@@ -29,9 +29,7 @@ use moka::future::Cache;
 use tokio::sync::{broadcast, watch, Mutex};
 use tracing::error;
 
-use crate::{
-    error::Error, services::members::util::MemberListKey, Result, ServerState, ServerStateInner,
-};
+use crate::{error::Error, services::members::util::MemberListKey, Result, ServerStateInner};
 
 use self::util::MemberGroupInfo;
 
@@ -45,6 +43,8 @@ mod lists;
 mod glue;
 
 pub use util::{MemberList, MemberListItem, MemberListTarget};
+
+// EVERYTHING BELOW IS DEPRECATED AND WILL BE REPLACED
 
 pub struct ServiceMembers {
     inner: Arc<ServiceMembersInner>,

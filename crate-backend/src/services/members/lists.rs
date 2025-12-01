@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use common::v1::types::{
-    presence::Presence, ChannelType, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync,
+    presence::Presence, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync,
     PaginationQuery, Permission, Role, RoomMember, RoomMembership, ThreadMember, ThreadMembership,
     User, UserId,
 };

@@ -46,6 +46,29 @@ pub struct MemberListKey {
     pub channel_id: Option<ChannelId>,
 }
 
+// maybe redo member list key into an enum
+// enum MemberListKey {
+//     Room(RoomId),
+//     RoomChannel(RoomId, ChannelId),
+//     RoomThread(RoomId, ChannelId),
+//     Dm(ChannelId),
+// }
+//
+// i also still want to dedup lists by permission overwrites, so two channels with the same set of permissions get deduped
+// pub enum MemberListKey {
+//     /// a room member list
+//     Room {
+//         room_id: RoomId,
+
+//         // empty for the main list
+//         overwrites: Vec<Vec<PermissionOverwrite>>,
+//     },
+
+//     /// (group) direct messages
+//     // maybe since recipients exists i dont need to have this at all?
+//     Dm { channel_id: ChannelId },
+// }
+
 impl PartialOrd for MemberGroupInfo {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))

@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use common::v1::types::{MemberListGroup, MemberListOp, MessageSync, PermissionOverwrites};
+use common::v1::types::{MemberListGroup, MemberListOp, MessageSync};
 use dashmap::DashMap;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 use tracing::warn;
 
 use crate::{
     services::members::{
         lists::MemberList2,
         util::{MemberListKey, MemberListVisibility},
-        MemberList, MemberListTarget, ServiceMembers,
+        MemberListTarget,
     },
     Result, ServerState,
 };
@@ -22,6 +22,15 @@ pub struct ServiceMembers2 {
 /// one syncer exists for each connected session
 pub struct MemberListSyncer {
     s: Arc<ServerState>,
+    query_tx: tokio::sync::watch::Sender<MemberListQuery>,
+    query_rx: tokio::sync::watch::Receiver<MemberListQuery>,
+    ops_rx: Mutex<Option<broadcast::Receiver<MemberListSync>>>,
+}
+
+#[derive(Debug)]
+pub struct MemberListQuery {
+    target: MemberListTarget,
+    ranges: Vec<(u64, u64)>,
 }
 
 /// one handler exists for each member list
@@ -41,8 +50,14 @@ pub struct MemberListSync {
 
 impl ServiceMembers2 {
     /// create a new MemberListSyncer for a session
-    pub fn create_syncer(&self) -> MemberListSyncer {
-        todo!()
+    pub fn create_syncer(&self, q: MemberListQuery) -> MemberListSyncer {
+        let (query_tx, query_rx) = tokio::sync::watch::channel(q);
+        MemberListSyncer {
+            s: self.s.clone(),
+            query_tx,
+            query_rx,
+            ops_rx: Mutex::new(None),
+        }
     }
 
     /// spawn a handler for a key if it doesnt exist
@@ -62,32 +77,23 @@ impl ServiceMembers2 {
                 }
             };
 
+            // TODO: better error handling
             loop {
                 let msg = events.recv().await.expect("error while receiving event");
                 let ops = match msg {
                     MessageSync::ChannelUpdate { channel } => {
-                        // TODO: optimize
                         let srv = s.services();
-                        let mut overwrites = vec![channel.permission_overwrites.clone()];
-                        let mut top = channel;
-                        while let Some(parent_id) = top.parent_id {
-                            // TODO: handle error
-                            let chan = srv
-                                .channels
-                                .get(parent_id, None)
-                                .await
-                                .expect("failed to fetch channel");
-                            overwrites.push(chan.permission_overwrites.clone());
-                            top = Box::new(chan);
-                        }
-                        overwrites.reverse();
+                        let overwrites = srv
+                            .channels
+                            .fetch_overwrite_ancestors(channel.id)
+                            .await
+                            .unwrap();
                         let v = MemberListVisibility { overwrites };
                         list.set_visibility(v)
                     }
                     msg => list.process(&msg),
                 };
                 if !ops.is_empty() {
-                    // TODO: handle error
                     tx.send(MemberListSync {
                         key: key.clone(),
                         ops,
@@ -104,12 +110,36 @@ impl ServiceMembers2 {
 
 impl MemberListSyncer {
     /// set the new query
-    pub fn set_query(&mut self, target: MemberListTarget, ranges: &[(u64, u64)]) {
-        todo!()
+    pub fn set_query(&self, target: MemberListTarget, ranges: &[(u64, u64)]) {
+        self.query_tx
+            .send(MemberListQuery {
+                target,
+                ranges: ranges.to_vec(),
+            })
+            .unwrap();
     }
 
     /// poll for the next member list sync message
+    // TODO: better error handling
     pub async fn poll(&self) -> Result<MessageSync> {
-        todo!()
+        let mut qrx = self.query_rx.clone();
+        if let Some(ops_rx) = &mut *self.ops_rx.lock().await {
+            tokio::select! {
+                op = ops_rx.recv() => {
+                    // let op = op.unwrap()
+                    // Ok(MessageSync::Foo { ... })
+                    todo!()
+                }
+                changed = qrx.changed() => {
+                    changed.unwrap();
+                    // return list.get_initial_ranges
+                    todo!()
+                }
+            }
+        } else {
+            qrx.changed().await.unwrap();
+            // return list.get_initial_ranges
+            todo!()
+        }
     }
 }
