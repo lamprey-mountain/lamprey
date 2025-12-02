@@ -16,7 +16,7 @@ use crate::{
 pub struct MemberList {
     pub key: MemberListKey,
     pub roles: Vec<Role>,
-    pub groups: Vec<MemberList2Group>,
+    pub groups: Vec<MemberListGroupData>,
     pub visibility: MemberListVisibility,
 
     /// whether this list should be restricted to thread members instead of using room member permission logic
@@ -32,12 +32,12 @@ pub struct MemberList {
     pub presences: HashMap<UserId, Presence>,
 }
 
-pub struct MemberList2Group {
+pub struct MemberListGroupData {
     pub info: MemberGroupInfo,
     pub users: Vec<UserId>,
 }
 
-impl MemberList2Group {
+impl MemberListGroupData {
     /// get the number of users in this group
     pub fn len(&self) -> usize {
         self.users.len()
@@ -590,7 +590,7 @@ impl MemberList {
 
         self.groups.insert(
             insert_idx,
-            MemberList2Group {
+            MemberListGroupData {
                 info: new_group_info,
                 users: vec![],
             },
