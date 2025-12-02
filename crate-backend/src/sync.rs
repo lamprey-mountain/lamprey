@@ -259,17 +259,20 @@ impl Connection {
 
                 let target = if let Some(room_id) = room_id {
                     let _perms = srv.perms.for_room(user_id, room_id).await?;
-                    MemberListTarget::Room(room_id)
+                    Some(MemberListTarget::Room(room_id))
                 } else if let Some(thread_id) = thread_id {
                     let perms = srv.perms.for_channel(user_id, thread_id).await?;
                     perms.ensure(Permission::ViewChannel)?;
-                    MemberListTarget::Channel(thread_id)
+                    Some(MemberListTarget::Channel(thread_id))
                 } else {
-                    // TODO: unsubscribe
-                    return Err(Error::BadStatic("room_id or thread_id must be provided"));
+                    None
                 };
 
-                self.member_list.set_query(target, &ranges).await?;
+                if let Some(target) = target {
+                    self.member_list.set_query(target, &ranges).await?;
+                } else {
+                    self.member_list.clear_query().await;
+                }
             }
             MessageClient::VoiceDispatch {
                 user_id: _,
