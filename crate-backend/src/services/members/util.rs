@@ -1,6 +1,6 @@
 use common::v1::types::{
-    ChannelId, MemberListGroupId, Permission, PermissionOverwrite, PermissionOverwriteType, RoleId,
-    RoomId, RoomMember,
+    ChannelId, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync, Permission,
+    PermissionOverwrite, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -191,5 +191,25 @@ impl MemberListVisibility {
         }
 
         has_view
+    }
+}
+
+/// minimal member list sync payload for broadcasting
+#[derive(Debug, Clone)]
+pub struct MemberListSync {
+    pub key: MemberListKey,
+    pub ops: Vec<MemberListOp>,
+    pub groups: Vec<MemberListGroup>,
+}
+
+impl MemberListSync {
+    pub fn into_sync_message(self, user_id: UserId) -> MessageSync {
+        MessageSync::MemberListSync {
+            user_id,
+            room_id: self.key.room_id,
+            channel_id: self.key.channel_id,
+            ops: self.ops,
+            groups: self.groups,
+        }
     }
 }

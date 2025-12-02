@@ -19,30 +19,36 @@
 
 use std::sync::Arc;
 
-use common::v1::types::{MemberListGroup, MemberListOp, MessageSync, UserId};
+use common::v1::types::{MessageSync, UserId};
 use dashmap::DashMap;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
 use tracing::{debug, warn};
 
 use crate::{
     services::members::{
         lists::MemberList,
-        util::{MemberListKey, MemberListVisibility},
+        util::{MemberListKey, MemberListSync, MemberListVisibility},
     },
-    Error, Result, ServerState, ServerStateInner,
+    Error, Result, ServerStateInner,
 };
 
 /// helpful utilities for member lists
 mod util;
 
-/// member list implementation
+/// member list logic
 mod lists;
 
 pub use util::MemberListTarget;
 
 pub struct ServiceMembers {
     s: Arc<ServerStateInner>,
-    lists: DashMap<MemberListKey, Arc<MemberListHandler>>,
+    lists: DashMap<
+        MemberListKey,
+        (
+            mpsc::Sender<ActorMessage>,
+            broadcast::Receiver<MemberListSync>,
+        ),
+    >,
 }
 
 /// one syncer exists for each connected session
@@ -54,38 +60,19 @@ pub struct MemberListSyncer {
     ops_rx: Mutex<Option<broadcast::Receiver<MemberListSync>>>,
 }
 
+enum ActorMessage {
+    GetInitialRanges {
+        user_id: UserId,
+        ranges: Vec<(u64, u64)>,
+        callback: oneshot::Sender<MessageSync>,
+    },
+}
+
 /// a member list query/subscription
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MemberListQuery {
     key: MemberListKey,
     ranges: Vec<(u64, u64)>,
-}
-
-/// one handler exists for each member list
-pub struct MemberListHandler {
-    s: Arc<ServerState>,
-    list: MemberList,
-    tx: broadcast::Receiver<MemberListSync>,
-}
-
-/// minimal member list sync payload for broadcasting
-#[derive(Debug, Clone)]
-pub struct MemberListSync {
-    pub key: MemberListKey,
-    pub ops: Vec<MemberListOp>,
-    pub groups: Vec<MemberListGroup>,
-}
-
-impl MemberListSync {
-    pub fn into_sync_message(self, user_id: UserId) -> MessageSync {
-        MessageSync::MemberListSync {
-            user_id,
-            room_id: self.key.room_id,
-            channel_id: self.key.channel_id,
-            ops: self.ops,
-            groups: self.groups,
-        }
-    }
 }
 
 impl ServiceMembers {
@@ -113,10 +100,14 @@ impl ServiceMembers {
     // TODO: better error handling (maybe return Result?)
     pub async fn ensure_handler(&self, key: MemberListKey) -> broadcast::Receiver<MemberListSync> {
         if let Some(list) = self.lists.get(&key) {
-            return list.tx.resubscribe();
+            return list.1.resubscribe();
         }
 
-        let (tx, rx) = broadcast::channel(100);
+        let (actor_tx, mut actor_rx) = mpsc::channel(100);
+        let (sync_tx, sync_rx) = broadcast::channel(100);
+        self.lists
+            .insert(key.clone(), (actor_tx, sync_rx.resubscribe()));
+
         let mut events = self.s.sushi.subscribe();
         let s = self.s.clone();
 
@@ -130,7 +121,28 @@ impl ServiceMembers {
             };
 
             loop {
-                let msg = events.recv().await.expect("error while receiving event");
+                let msg = tokio::select! {
+                    msg = events.recv() => {
+                        msg.expect("error while receiving event")
+                    }
+                    msg = actor_rx.recv() => {
+                        let msg = msg.expect("error while receiving event");
+                        match msg {
+                            ActorMessage::GetInitialRanges { user_id, ranges, callback } => {
+                                let ops = list.get_initial_ranges(&ranges);
+                                let msg = MessageSync::MemberListSync {
+                                    user_id,
+                                    room_id: key.room_id,
+                                    channel_id: key.channel_id,
+                                    ops,
+                                    groups: list.groups(),
+                                };
+                                callback.send(msg).unwrap()
+                            }
+                        }
+                        continue;
+                    }
+                };
                 let ops = match msg {
                     MessageSync::ChannelUpdate { channel } => {
                         let srv = s.services();
@@ -145,19 +157,41 @@ impl ServiceMembers {
                     msg => list.process(&msg),
                 };
                 if !ops.is_empty() {
-                    tx.send(MemberListSync {
-                        key: key.clone(),
-                        ops,
-                        groups: list.groups(),
-                    })
-                    .unwrap();
+                    sync_tx
+                        .send(MemberListSync {
+                            key: key.clone(),
+                            ops,
+                            groups: list.groups(),
+                        })
+                        .unwrap();
                 }
             }
         });
 
-        // FIXME: create handler, insert into self.lists
+        sync_rx
+    }
 
-        rx
+    // TODO: better error handling
+    async fn get_initial_ranges(
+        &self,
+        user_id: UserId,
+        key: MemberListKey,
+        ranges: Vec<(u64, u64)>,
+    ) -> MessageSync {
+        let Some(list) = self.lists.get(&key) else {
+            todo!("handle error here")
+        };
+
+        let (range_tx, range_rx) = oneshot::channel();
+        list.0
+            .send(ActorMessage::GetInitialRanges {
+                user_id,
+                ranges,
+                callback: range_tx,
+            })
+            .await
+            .unwrap();
+        range_rx.await.unwrap()
     }
 }
 
@@ -227,31 +261,14 @@ impl MemberListSyncer {
     async fn get_initial_ranges(&self) -> MessageSync {
         let user_id = self.user_id().await;
         debug!("get initial ranges for {user_id:?}");
-        let q = self.query_rx.borrow();
-        let q = q.as_ref().unwrap();
+        let q = self.query_rx.borrow().clone().unwrap();
         let srv = self.s.services();
-        let handler = srv.members.lists.get(&q.key).unwrap();
-        let ops = handler.get_initial_ranges(&q.ranges);
-        MessageSync::MemberListSync {
-            user_id,
-            room_id: q.key.room_id,
-            channel_id: q.key.channel_id,
-            ops,
-            groups: handler.list().groups(),
-        }
+        srv.members
+            .get_initial_ranges(user_id, q.key, q.ranges)
+            .await
     }
 
     async fn user_id(&self) -> UserId {
         self.user_id.lock().await.unwrap()
-    }
-}
-
-impl MemberListHandler {
-    pub fn get_initial_ranges(&self, ranges: &[(u64, u64)]) -> Vec<MemberListOp> {
-        self.list.get_initial_ranges(ranges)
-    }
-
-    pub fn list(&self) -> &MemberList {
-        &self.list
     }
 }
