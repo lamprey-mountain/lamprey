@@ -14,7 +14,7 @@ use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
 
 use crate::error::{Error, Result};
-use crate::services::members::{MemberListTarget, ServiceMembersSyncer};
+use crate::services::members::{MemberListSyncer, MemberListTarget};
 use crate::sync::permissions::AuthCheck;
 use crate::ServerState;
 
@@ -38,7 +38,7 @@ pub struct Connection {
     seq_server: u64,
     seq_client: u64,
     id: String,
-    pub member_list: Box<ServiceMembersSyncer>,
+    pub member_list: Box<MemberListSyncer>,
 }
 
 #[derive(Debug, Clone)]
@@ -265,10 +265,11 @@ impl Connection {
                     perms.ensure(Permission::ViewChannel)?;
                     MemberListTarget::Channel(thread_id)
                 } else {
+                    // TODO: unsubscribe
                     return Err(Error::BadStatic("room_id or thread_id must be provided"));
                 };
 
-                self.member_list.set_query(target, &ranges);
+                self.member_list.set_query(target, &ranges).await?;
             }
             MessageClient::VoiceDispatch {
                 user_id: _,

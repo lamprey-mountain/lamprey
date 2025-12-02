@@ -9,10 +9,11 @@ use tracing::warn;
 
 use crate::{
     services::members::util::{MemberGroupInfo, MemberListKey, MemberListVisibility},
-    Result, ServerState,
+    Result, ServerState, ServerStateInner,
 };
 
-pub struct MemberList2 {
+/// represents just the logic for a member list
+pub struct MemberList {
     pub key: MemberListKey,
     pub roles: Vec<Role>,
     pub groups: Vec<MemberList2Group>,
@@ -43,9 +44,9 @@ impl MemberList2Group {
     }
 }
 
-impl MemberList2 {
-    /// create a new member list. fetches data from server state.
-    pub async fn new_from_server(key: MemberListKey, s: &ServerState) -> Result<Self> {
+impl MemberList {
+    /// create a new member list, fetching required data from ServerStateInner.
+    pub async fn new_from_server_inner(key: MemberListKey, s: &ServerStateInner) -> Result<Self> {
         let data = s.data();
         let srv = s.services();
 
