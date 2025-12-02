@@ -16,7 +16,7 @@ use time::OffsetDateTime;
 use tracing::warn;
 
 use crate::error::{Error, Result};
-use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
+use crate::types::{DbChannelCreate, DbChannelPrivate, DbMessageCreate};
 use crate::ServerStateInner;
 
 // TODO: split caches more
@@ -435,14 +435,6 @@ impl ServiceThreads {
                 name: json.name.clone(),
                 description: json.description.clone(),
                 ty: match json.ty {
-                    ChannelType::Text => DbChannelType::Text,
-                    ChannelType::Forum => DbChannelType::Forum,
-                    ChannelType::Voice => DbChannelType::Voice,
-                    ChannelType::Broadcast => DbChannelType::Broadcast,
-                    ChannelType::Category => DbChannelType::Category,
-                    ChannelType::ThreadPublic => DbChannelType::ThreadPublic,
-                    ChannelType::ThreadPrivate => DbChannelType::ThreadPrivate,
-                    ChannelType::Calendar => return Err(Error::BadStatic("not yet implemented")),
                     ChannelType::Dm | ChannelType::Gdm => {
                         // this should be unreachable due to the check above
                         warn!("unreachable: dm/gdm thread creation in room");
@@ -450,6 +442,7 @@ impl ServiceThreads {
                             "can't create a direct message thread in a room",
                         ));
                     }
+                    ty => ty.into(),
                 },
                 nsfw: json.nsfw,
                 bitrate: json.bitrate.map(|b| b as i32),
