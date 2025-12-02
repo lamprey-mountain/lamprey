@@ -236,8 +236,8 @@ impl MemberListSyncer {
 
     /// poll for the next member list sync message
     // TODO: better error handling for changed
-    pub async fn poll(&self) -> Result<MessageSync> {
-        let mut qrx = self.query_rx.clone();
+    pub async fn poll(&mut self) -> Result<MessageSync> {
+        let qrx = &mut self.query_rx;
         if let Some(ops_rx) = &mut *self.ops_rx.lock().await {
             tokio::select! {
                 op = ops_rx.recv() => {
