@@ -290,10 +290,7 @@ impl ServiceThreads {
                 }
                 perms.ensure(Permission::ThreadCreatePublic)?;
 
-                if !perms.has(Permission::ChannelManage)
-                    && !perms.has(Permission::ThreadManage)
-                    && !perms.has(Permission::MemberTimeout)
-                {
+                if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
                             .channel_get_thread_slowmode_expire_at(parent_id, user_id)
@@ -329,10 +326,7 @@ impl ServiceThreads {
                 }
                 perms.ensure(Permission::ThreadCreatePrivate)?;
 
-                if !perms.has(Permission::ChannelManage)
-                    && !perms.has(Permission::ThreadManage)
-                    && !perms.has(Permission::MemberTimeout)
-                {
+                if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
                             .channel_get_thread_slowmode_expire_at(parent_id, user_id)

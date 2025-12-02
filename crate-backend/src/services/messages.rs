@@ -143,10 +143,7 @@ impl ServiceMessages {
             perms.ensure(Permission::ViewChannel)?;
             perms.ensure(Permission::MessageCreate)?;
 
-            if !perms.has(Permission::ChannelManage)
-                && !perms.has(Permission::ThreadManage)
-                && !perms.has(Permission::MemberTimeout)
-            {
+            if !perms.can_bypass_slowmode() {
                 if let Some(message_slowmode_expire_at) = data
                     .channel_get_message_slowmode_expire_at(thread_id, user_id)
                     .await?

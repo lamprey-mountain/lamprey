@@ -64,6 +64,12 @@ impl Permissions {
         }
         self.p = new;
     }
+
+    pub fn can_bypass_slowmode(&self) -> bool {
+        self.has(Permission::ChannelManage)
+            || self.has(Permission::ThreadManage)
+            || self.has(Permission::MemberTimeout)
+    }
 }
 
 impl FromIterator<Permission> for Permissions {
