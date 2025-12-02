@@ -9,7 +9,7 @@ use tracing::warn;
 
 use crate::{
     services::members::util::{MemberGroupInfo, MemberListKey, MemberListVisibility},
-    Result, ServerState, ServerStateInner,
+    Result, ServerStateInner,
 };
 
 /// represents just the logic for a member list

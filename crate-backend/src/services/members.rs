@@ -96,27 +96,6 @@ impl ServiceMembers {
         }
     }
 
-    // pub fn new(state: Arc<ServerStateInner>) -> Self {
-    //     let inner = Arc::new(ServiceMembersInner {
-    //         state: state.clone(),
-    //         member_lists: DashMap::new(),
-    //         cache_room_member: Cache::builder().max_capacity(1_000_000).build(),
-    //         cache_thread_member: Cache::builder().max_capacity(1_000_000).build(),
-    //     });
-
-    //     let inner2 = inner.clone();
-    //     let mut sub = state.sushi.subscribe();
-    //     tokio::spawn(async move {
-    //         while let Ok(msg) = sub.recv().await {
-    //             if let Err(err) = inner2.handle_event(&msg).await {
-    //                 error!("service members error: {err}");
-    //             }
-    //         }
-    //     });
-
-    //     Self { inner }
-    // }
-
     /// create a new MemberListSyncer for a session
     pub fn create_syncer(&self) -> MemberListSyncer {
         let (query_tx, query_rx) = tokio::sync::watch::channel(None);
@@ -216,10 +195,10 @@ impl MemberListSyncer {
         Ok(())
     }
 
-    // pub async fn clear_query(&self) {
-    //     *self.ops_rx.lock().await = None;
-    //     self.query_tx.send(None).unwrap();
-    // }
+    pub async fn clear_query(&self) {
+        *self.ops_rx.lock().await = None;
+        self.query_tx.send(None).unwrap();
+    }
 
     /// poll for the next member list sync message
     // TODO: better error handling for changed

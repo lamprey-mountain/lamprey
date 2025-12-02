@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
 use common::v1::types::{
-    ChannelId, MemberListGroup, MemberListGroupId, Permission, PermissionOverwrite,
-    PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
+    ChannelId, MemberListGroupId, Permission, PermissionOverwrite, PermissionOverwriteType, RoleId,
+    RoomId, RoomMember,
 };
-use tokio::sync::Notify;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemberListTarget {
@@ -18,24 +15,6 @@ pub enum MemberGroupInfo {
     Online,
     Offline,
 }
-
-// /// a list of members
-// #[derive(Clone)]
-// pub struct MemberList {
-//     pub room_id: Option<RoomId>,
-//     pub sorted_members: Vec<MemberListItem>,
-//     pub groups: Vec<MemberListGroup>,
-//     pub notifier: Arc<Notify>,
-// }
-
-// /// a single member in a member list
-// #[derive(Clone, PartialEq, Eq)]
-// pub struct MemberListItem {
-//     pub user_id: UserId,
-
-//     /// the room member override_name, or the user name if it doesnt exist
-//     pub display_name: Arc<str>,
-// }
 
 /// for deduplicating member lists
 // TODO: use permission overwrites (for view permission) instead of creating a list per channel
@@ -106,21 +85,6 @@ impl Ord for MemberGroupInfo {
         }
     }
 }
-
-// impl MemberList {
-//     pub fn new(
-//         room_id: Option<RoomId>,
-//         sorted_members: Vec<MemberListItem>,
-//         groups: Vec<MemberListGroup>,
-//     ) -> Self {
-//         Self {
-//             room_id,
-//             sorted_members,
-//             groups,
-//             notifier: Arc::new(Notify::new()),
-//         }
-//     }
-// }
 
 impl MemberListKey {
     pub fn room(room_id: RoomId) -> Self {

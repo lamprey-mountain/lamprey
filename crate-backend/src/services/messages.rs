@@ -786,6 +786,7 @@ pub mod mentions {
         )
         .unwrap()
     });
+    #[allow(unused)] // TEMP
     static EMOJI_MENTION_RE: Lazy<Regex> = Lazy::new(|| {
         Regex::new(
             r"<a?:\w+:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})>",
