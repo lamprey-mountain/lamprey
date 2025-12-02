@@ -17,15 +17,18 @@ pub struct MemberList2 {
     pub roles: Vec<Role>,
     pub groups: Vec<MemberList2Group>,
     pub visibility: MemberListVisibility,
+
+    /// whether this list should be restricted to thread members instead of using room member permission logic
     pub use_thread_members: bool,
 
     // TODO: deduplicate room_members between member lists in the same room
     // TODO: deduplicate presences, users between all member lists
     // maybe i can wrap everything in Arc for deduplication?
-    pub presences: HashMap<UserId, Presence>,
     pub room_members: HashMap<UserId, RoomMember>,
     pub thread_members: HashMap<UserId, ThreadMember>,
     pub users: HashMap<UserId, User>,
+    // NOTE: i probably don't need this, since user.presence exists
+    pub presences: HashMap<UserId, Presence>,
 }
 
 pub struct MemberList2Group {
@@ -107,6 +110,8 @@ impl MemberList2 {
     }
 
     /// recalculate groups from scratch
+    // TODO: create and order groups instead of calling recalculate_user in a loop
+    // TODO: reduce allocations here; all room_members/thread_members/users are cloned
     fn rebuild_groups(&mut self) -> Vec<MemberListOp> {
         self.groups.clear();
 
@@ -462,6 +467,21 @@ impl MemberList2 {
     /// - if this user already exists, this may return nothing or a delete/insert op pair to move this user
     /// - if the user doesnt already exist, this will return a single op
     fn recalculate_user(&mut self, user_id: UserId) -> Vec<MemberListOp> {
+        if self.key.room_id.is_some() {
+            // enforce view permissions for room lists, removing users that dont exist/cant view
+            if let Some(room_member) = self.room_members.get(&user_id) {
+                if !self.can_view(room_member) {
+                    return self.remove_user(user_id);
+                }
+            } else {
+                return self.remove_user(user_id);
+            }
+        } else if self.use_thread_members {
+            if self.thread_members.get(&user_id).is_none() {
+                return self.remove_user(user_id);
+            }
+        }
+
         let mut ops = vec![];
 
         let user = if let Some(user) = self.users.get(&user_id) {
@@ -615,6 +635,7 @@ impl MemberList2 {
     }
 
     /// get if the room member is an admin and can view channels by default
+    // TODO: find a way to deduplicate logic with canonical service
     fn calc_view_base(&self, m: &RoomMember) -> (bool, bool) {
         let roles: Vec<_> = self
             .roles

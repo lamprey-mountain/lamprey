@@ -159,6 +159,7 @@ pub struct MemberListVisibility {
 
 impl MemberListVisibility {
     /// check if this member can view a channel with this set of overwrites. has_base is if the member can view all channels by default.
+    // TODO: dedup this code with canonical permission logic in services/permission.rs
     pub fn visible_to(&self, member: &RoomMember, has_base: bool) -> bool {
         let mut has_view = has_base;
 
