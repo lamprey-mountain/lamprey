@@ -1,5 +1,7 @@
 # media
 
+kinda tus compatible, but not really since PATCH can return data currently
+
 1. `POST /api/v1/media` – create a new media/upload item. get
 2. `PATCH /api/v1/media/{media_id}` – upload. use the headers specified below
    when uploading
@@ -18,3 +20,4 @@ cdn routes:
 - `GET /media/{media_id}/{original_filename}`
 - `GET /thumb/{media_id}?size=[64|320|640]`
 - `GET /emoji/{emoji_id}?size=[64|320|640]`
+- `GET /gifv/{media_id}` (media must be a gif, will transcode to webm)
