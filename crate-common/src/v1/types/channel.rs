@@ -16,6 +16,7 @@ use crate::v1::types::{MediaId, MessageVerId, TagId, ThreadMember, User};
 use super::{ChannelId, RoomId, UserId};
 
 /// A channel
+// TODO(#878): minimal data for channels
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -35,6 +36,8 @@ pub struct Channel {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
 
+    // TODO: maybe rename this to topic? since most other platforms call it topic.
+    // i guess i could also have topic and description be separate (short vs long)
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 2048)
@@ -241,6 +244,117 @@ pub struct ChannelCreate {
     pub slowmode_message: Option<u64>,
 
     pub default_slowmode_message: Option<u64>,
+}
+
+// TODO(#874) split out channel create structs
+#[cfg(any())]
+mod split_channel_types {
+    use super::{ChannelId, UserId};
+    use crate::v1::types::PermissionOverwrite;
+    use crate::v1::types::{ChannelType, MediaId, MessageCreate, TagId};
+
+    // channel create room (do i allow creating threads with this endpoint?)
+    pub struct ChannelCreateRoom {
+        pub name: String,
+        pub description: Option<String>,
+        // // room channels can't have icons (yet?)
+        // pub icon: Option<MediaId>,
+        pub ty: ChannelType,
+        pub nsfw: bool,
+        pub bitrate: Option<u64>,
+        pub user_limit: Option<u64>,
+        pub parent_id: Option<ChannelId>,
+        pub permission_overwrites: Vec<PermissionOverwrite>,
+        pub auto_archive_duration: Option<u64>,
+        pub default_auto_archive_duration: Option<u64>,
+        pub slowmode_thread: Option<u64>,
+        pub slowmode_message: Option<u64>,
+        pub default_slowmode_message: Option<u64>,
+    }
+
+    // channel create dm
+    pub struct ChannelCreateDm {
+        pub name: String,
+        pub description: Option<String>,
+        pub icon: Option<MediaId>,
+        /// must be Dm or Gdm
+        pub ty: ChannelType,
+        pub recipients: Option<Vec<UserId>>,
+    }
+
+    // thread create
+    // maybe have a separate ThreadCreateForum type too?
+    pub struct ThreadCreate {
+        pub name: String,
+        pub description: Option<String>,
+        /// must be ThreadPublic or ThreadPrivate. must be ThreadPublic in forums (remove?)
+        pub ty: ChannelType,
+        /// tags to apply, only usable in forums
+        pub tags: Option<Vec<TagId>>,
+        /// the initial message for this thread, required in forums
+        pub starter_message: Option<MessageCreate>,
+        pub invitable: bool,
+        pub auto_archive_duration: Option<u64>,
+        pub slowmode_message: Option<u64>,
+    }
+
+    // thread create from message
+    pub struct ThreadCreateFromMessage {
+        pub name: String,
+        pub description: Option<String>,
+        /// must be ThreadPublic (remove in this case)
+        pub ty: ChannelType,
+        pub auto_archive_duration: Option<u64>,
+        pub slowmode_message: Option<u64>,
+    }
+
+    struct ThreadCreateMaybeUnused {
+        // // inherits from parent
+        // pub nsfw: bool,
+        // // maybe include this as users to include by default?
+        // pub recipients: Option<Vec<UserId>>,
+        // // exists as route param
+        // pub parent_id: Option<ChannelId>,
+    }
+}
+
+// unlikely to be used
+#[cfg(any())]
+mod granular_channel_data {
+    use crate::v1::types::PermissionOverwrite;
+
+    pub struct Channel {
+        voice: Option<ChannelVoice>,
+        thread: Option<ChannelThread>,
+        threadable: Option<ChannelThreadable>,
+        text: Option<ChannelText>,
+        room: Option<ChannelRoom>,
+    }
+
+    pub struct ChannelVoice {
+        pub bitrate: Option<u64>,
+        pub user_limit: Option<u64>,
+    }
+
+    pub struct ChannelThread {
+        pub auto_archive_duration: Option<u64>,
+    }
+
+    pub struct ChannelThreadable {
+        pub default_auto_archive_duration: Option<u64>,
+        pub slowmode_thread: Option<u64>,
+        pub default_slowmode_message: Option<u64>,
+    }
+
+    pub struct ChannelText {
+        pub slowmode_message: Option<u64>,
+    }
+
+    // for top level room channels
+    pub struct ChannelRoom {
+        pub nsfw: bool,
+        pub permission_overwrites: Vec<PermissionOverwrite>,
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
