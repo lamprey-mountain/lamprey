@@ -1,0 +1,8 @@
+@use "./util.scss" as *;
+
+.calendar {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	grid-template-rows: min-content repeat(4, 200px);
+	height: 100%;
+}
