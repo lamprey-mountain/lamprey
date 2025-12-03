@@ -167,6 +167,7 @@ impl MemberList {
     }
 
     /// handle a sync event and calculate what operations need to be applied. ChannelUpdate is not handled here, use set_visibility instead.
+    #[tracing::instrument(skip(self), level = "debug", fields(key = ?self.key))]
     pub fn process(&mut self, event: &MessageSync) -> Vec<MemberListOp> {
         match event {
             MessageSync::RoomMemberUpsert { member } => {
@@ -638,7 +639,7 @@ impl MemberList {
 
     /// get if the room member can view this list
     fn can_view(&self, m: &RoomMember) -> bool {
-        let (has_admin, has_view) = dbg!(self.calc_view_base(m));
+        let (has_admin, has_view) = self.calc_view_base(m);
         if has_admin {
             return true;
         }
@@ -654,7 +655,6 @@ impl MemberList {
             .iter()
             .filter(|r| m.roles.contains(&r.id) || r.is_default())
             .collect();
-        dbg!(&roles);
         let mut has_admin = false;
         let mut has_view_allow = false;
         let mut has_view_deny = false;
