@@ -181,6 +181,7 @@ export type AutocompleteState =
 
 import type { ChannelContextT } from "./channelctx";
 
+// TODO: split apart this massive context into more granular contexts
 export type ChatCtx = {
 	client: Client;
 	data: Data;
@@ -197,7 +198,7 @@ export type ChatCtx = {
 	setAutocomplete: Setter<AutocompleteState>;
 	userView: Accessor<UserViewData | null>;
 	setUserView: Setter<UserViewData | null>;
-	uploads: ReactiveMap<string, Upload>;
+	uploads: ReactiveMap<string, Upload>; // TODO: verify this is unused then remove
 	recentChannels: Accessor<Array<string>>;
 	setRecentChannels: Setter<Array<string>>;
 	currentMedia: Accessor<MediaCtx | null>;
