@@ -5,7 +5,7 @@ use common::v1::types::{
     PaginationQuery, Permission, Role, RoomMember, RoomMembership, ThreadMember, ThreadMembership,
     User, UserId,
 };
-use tracing::warn;
+use tracing::{trace, warn};
 
 use crate::{
     services::members::util::{MemberGroupInfo, MemberListKey, MemberListVisibility},
@@ -13,6 +13,7 @@ use crate::{
 };
 
 /// represents just the logic for a member list
+#[derive(Debug)]
 pub struct MemberList {
     pub key: MemberListKey,
     pub roles: Vec<Role>,
@@ -32,6 +33,7 @@ pub struct MemberList {
     pub presences: HashMap<UserId, Presence>,
 }
 
+#[derive(Debug)]
 pub struct MemberListGroupData {
     pub info: MemberGroupInfo,
     pub users: Vec<UserId>,
@@ -107,6 +109,8 @@ impl MemberList {
 
         me.rebuild_groups();
 
+        trace!("built initial groups: {me:?}");
+
         Ok(me)
     }
 
@@ -117,8 +121,10 @@ impl MemberList {
         self.groups.clear();
 
         let user_ids: Vec<_> = if self.use_thread_members {
+            trace!("using {} thread members", self.thread_members.len());
             self.thread_members.keys().copied().collect()
         } else {
+            trace!("using {} room members", self.room_members.len());
             self.room_members.keys().copied().collect()
         };
 
@@ -472,13 +478,16 @@ impl MemberList {
             // enforce view permissions for room lists, removing users that dont exist/cant view
             if let Some(room_member) = self.room_members.get(&user_id) {
                 if !self.can_view(room_member) {
+                    trace!("recalculate_user: {user_id} cannot view list");
                     return self.remove_user(user_id);
                 }
             } else {
+                trace!("recalculate_user: {user_id} does not have room member");
                 return self.remove_user(user_id);
             }
         } else if self.use_thread_members {
             if self.thread_members.get(&user_id).is_none() {
+                trace!("recalculate_user: {user_id} does not have thread member");
                 return self.remove_user(user_id);
             }
         }
@@ -497,6 +506,7 @@ impl MemberList {
 
         // remove existing item, if it exists
         if let Some((group_idx, item_idx)) = self.find_user(user_id) {
+            trace!("remove existing user");
             let old_pos: usize = self.groups[..group_idx]
                 .iter()
                 .map(|g| g.len())
@@ -516,6 +526,7 @@ impl MemberList {
             .map(|p| p.is_online())
             .unwrap_or(false);
         let group_id = self.get_member_group_id(user_id, is_online);
+        trace!("user is in group {group_id:?}");
         let group_idx = self.insert_group(group_id);
 
         // find position to insert within group, maintaining sort order
@@ -627,7 +638,7 @@ impl MemberList {
 
     /// get if the room member can view this list
     fn can_view(&self, m: &RoomMember) -> bool {
-        let (has_admin, has_view) = self.calc_view_base(m);
+        let (has_admin, has_view) = dbg!(self.calc_view_base(m));
         if has_admin {
             return true;
         }
@@ -641,8 +652,9 @@ impl MemberList {
         let roles: Vec<_> = self
             .roles
             .iter()
-            .filter(|r| m.roles.contains(&r.id))
+            .filter(|r| m.roles.contains(&r.id) || r.is_default())
             .collect();
+        dbg!(&roles);
         let mut has_admin = false;
         let mut has_view_allow = false;
         let mut has_view_deny = false;

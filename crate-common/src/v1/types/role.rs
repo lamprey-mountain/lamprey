@@ -170,3 +170,10 @@ impl Diff<Role> for RolePatch {
             || self.hoist.changes(&other.hoist)
     }
 }
+
+impl Role {
+    /// returns if this is the default/everyone role that everyone in a room implicitly has
+    pub fn is_default(&self) -> bool {
+        *self.id == *self.room_id
+    }
+}
