@@ -169,6 +169,7 @@ impl MemberList {
     /// handle a sync event and calculate what operations need to be applied. ChannelUpdate is not handled here, use set_visibility instead.
     #[tracing::instrument(skip(self), level = "debug", fields(key = ?self.key))]
     pub fn process(&mut self, event: &MessageSync) -> Vec<MemberListOp> {
+        trace!("processing event");
         match event {
             MessageSync::RoomMemberUpsert { member } => {
                 if self.key.room_id != Some(member.room_id) {
@@ -295,10 +296,11 @@ impl MemberList {
                 };
 
                 self.presences.insert(*user_id, presence.to_owned());
-                user.presence = presence.to_owned();
+                let mut presence_old = presence.to_owned();
+                std::mem::swap(&mut user.presence, &mut presence_old);
 
                 // the only thing presence changes affect in lists are online/offline groups
-                if user.presence.is_online() == presence.is_online() {
+                if presence_old.is_online() == presence.is_online() {
                     return vec![];
                 }
 
@@ -475,6 +477,8 @@ impl MemberList {
     /// - if this user already exists, this may return nothing or a delete/insert op pair to move this user
     /// - if the user doesnt already exist, this will return a single op
     fn recalculate_user(&mut self, user_id: UserId) -> Vec<MemberListOp> {
+        trace!("recalculate user {user_id}");
+
         if self.key.room_id.is_some() {
             // enforce view permissions for room lists, removing users that dont exist/cant view
             if let Some(room_member) = self.room_members.get(&user_id) {

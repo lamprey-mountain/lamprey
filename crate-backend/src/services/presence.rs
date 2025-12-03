@@ -11,6 +11,7 @@ use crate::{Result, ServerStateInner};
 
 /// when to expire presences from disconnected users
 // currently relies on sync heartbeat time
+// TODO: expire presence faster on sync websocket disconnect
 const PRESENCE_EXPIRE: Duration = Duration::from_secs(40);
 
 pub struct ServicePresence {

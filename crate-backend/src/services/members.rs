@@ -123,7 +123,7 @@ impl ServiceMembers {
             loop {
                 let msg = tokio::select! {
                     msg = events.recv() => {
-                        msg.expect("error while receiving event")
+                        dbg!(msg).expect("error while receiving event")
                     }
                     msg = actor_rx.recv() => {
                         let msg = msg.expect("error while receiving event");

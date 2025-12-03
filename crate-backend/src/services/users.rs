@@ -65,7 +65,10 @@ impl ServiceUsers {
         if user_ids.is_empty() {
             return Ok(vec![]);
         }
-        let users = self.state.data().user_get_many(user_ids).await?;
+        let mut users = self.state.data().user_get_many(user_ids).await?;
+        for user in &mut users {
+            user.presence = self.state.services().presence.get(user.id);
+        }
         Ok(users)
     }
 
