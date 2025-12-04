@@ -9,6 +9,8 @@ use common::v1::types::{
     PaginationQuery, PaginationResponse, Permission, RoomId,
 };
 use http::StatusCode;
+use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
@@ -295,6 +297,32 @@ async fn emoji_lookup(
     Ok(Json(emoji))
 }
 
+#[allow(unused)] // TEMP
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+pub struct EmojiSearchQuery {
+    pub query: String,
+}
+
+/// Emoji search (TODO)
+///
+/// Search all emoji the user can see.
+#[utoipa::path(
+    get,
+    path = "/emoji/search",
+    tags = ["emoji"],
+    responses(
+        (status = OK, body = Vec<EmojiCustom>, description = "success"),
+    )
+)]
+async fn emoji_search(
+    Path(_emoji_id): Path<EmojiId>,
+    Auth(_user): Auth,
+    Query(_q): Query<EmojiSearchQuery>,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(emoji_create))
@@ -303,4 +331,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(emoji_update))
         .routes(routes!(emoji_list))
         .routes(routes!(emoji_lookup))
+        .routes(routes!(emoji_search))
 }
