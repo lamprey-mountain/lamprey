@@ -1143,4 +1143,6 @@ pub trait DataRoomAnalytics {
         room_id: RoomId,
         q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsInvites>>;
+
+    async fn room_analytics_snapshot_all(&self) -> Result<()>;
 }

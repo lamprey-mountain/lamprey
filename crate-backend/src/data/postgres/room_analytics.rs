@@ -63,4 +63,8 @@ impl DataRoomAnalytics for Postgres {
     ) -> Result<Vec<RoomAnalyticsInvites>> {
         todo!()
     }
+
+    async fn room_analytics_snapshot_all(&self) -> Result<()> {
+        todo!()
+    }
 }
