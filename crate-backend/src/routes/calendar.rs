@@ -57,12 +57,14 @@ async fn calendar_event_list(
 ) -> Result<impl IntoResponse> {
     query.validate()?;
 
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
+
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
 
     let events = s.data().calendar_event_list(channel_id, query).await?;
 
@@ -92,6 +94,15 @@ async fn calendar_event_create(
         .for_channel(auth_user.id, channel_id)
         .await?;
     perms.ensure(Permission::CalendarEventManage)?;
+
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
 
     let event = s
         .data()
@@ -150,6 +161,15 @@ async fn calendar_event_get(
         .await?;
     perms.ensure(Permission::ViewChannel)?;
 
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+
     let event = s.data().calendar_event_get(calendar_event_id).await?;
 
     if event.channel_id != channel_id {
@@ -185,6 +205,15 @@ async fn calendar_event_update(
         .for_channel(auth_user.id, channel_id)
         .await?;
     perms.ensure(Permission::CalendarEventManage)?;
+
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
 
     let old_event = s.data().calendar_event_get(calendar_event_id).await?;
     if old_event.channel_id != channel_id {
@@ -253,6 +282,15 @@ async fn calendar_event_delete(
         .await?;
     perms.ensure(Permission::CalendarEventManage)?;
 
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+
     let event = s.data().calendar_event_get(calendar_event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
@@ -307,6 +345,15 @@ async fn calendar_rsvp_list(
         .await?;
     perms.ensure(Permission::ViewChannel)?;
 
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+
     let event = s.data().calendar_event_get(calendar_event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
@@ -339,6 +386,15 @@ async fn calendar_rsvp_get(
         .for_channel(auth_user.id, channel_id)
         .await?;
     perms.ensure(Permission::ViewChannel)?;
+
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
 
     let event = s.data().calendar_event_get(calendar_event_id).await?;
     if event.channel_id != channel_id {
@@ -376,6 +432,15 @@ async fn calendar_rsvp_update(
         .for_channel(auth_user.id, channel_id)
         .await?;
 
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+
     let event = s.data().calendar_event_get(calendar_event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
@@ -412,6 +477,15 @@ async fn calendar_rsvp_delete(
             .for_channel(auth_user.id, channel_id)
             .await?;
         perms.ensure(Permission::CalendarEventManage)?;
+    }
+
+    let chan = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
     }
 
     let event = s.data().calendar_event_get(calendar_event_id).await?;

@@ -547,6 +547,15 @@ impl ChannelType {
         matches!(self, ChannelType::Gdm)
     }
 
+    /// if voice connections in this channel act like calls
+    pub fn has_call(&self) -> bool {
+        matches!(self, ChannelType::Dm | ChannelType::Gdm)
+    }
+
+    pub fn has_calendar(&self) -> bool {
+        matches!(self, ChannelType::Calendar)
+    }
+
     pub fn can_change_to(self, other: ChannelType) -> bool {
         match (self, other) {
             (ChannelType::ThreadPublic, ChannelType::ThreadPrivate) => true,
