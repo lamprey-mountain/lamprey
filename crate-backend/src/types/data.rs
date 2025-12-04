@@ -428,6 +428,7 @@ impl_perms!(
     ThreadManage,
     ViewChannel,
     ViewAuditLog,
+    ViewAnalytics,
     VoiceConnect,
     VoiceDeafen,
     VoiceDisconnect,

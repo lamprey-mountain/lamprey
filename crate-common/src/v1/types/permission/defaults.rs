@@ -41,6 +41,7 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::ThreadManage,
     Permission::ViewChannel,
     Permission::ViewAuditLog,
+    Permission::ViewAnalytics,
     Permission::VoiceConnect,
     Permission::VoiceDeafen,
     Permission::VoiceDisconnect,

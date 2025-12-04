@@ -147,9 +147,9 @@ pub enum Permission {
     /// view audit log
     ViewAuditLog,
 
-    // TODO: add permission
-    // /// view room analytics
-    // ViewAnalytics,
+    /// view room analytics
+    ViewAnalytics,
+
     /// connect and listen to voice threads
     // TODO: remove
     VoiceConnect,
