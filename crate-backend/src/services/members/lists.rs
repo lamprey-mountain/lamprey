@@ -510,6 +510,7 @@ impl MemberList {
         };
 
         // remove existing item, if it exists
+        // TODO: if the user ends up not moving, dont emit Delete + Insert ops
         if let Some((group_idx, item_idx)) = self.find_user(user_id) {
             trace!("remove existing user");
             let old_pos: usize = self.groups[..group_idx]
