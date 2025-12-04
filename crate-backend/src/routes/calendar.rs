@@ -90,6 +90,7 @@ async fn calendar_event_create(
     json.validate()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::CalendarEventManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
@@ -186,6 +187,7 @@ async fn calendar_event_update(
     json.validate()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::CalendarEventManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
@@ -254,6 +256,7 @@ async fn calendar_event_delete(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::CalendarEventManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
@@ -382,7 +385,8 @@ async fn calendar_rsvp_update(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let _perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -420,8 +424,9 @@ async fn calendar_rsvp_delete(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
 
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     if auth_user.id != user_id {
-        let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
         perms.ensure(Permission::CalendarEventManage)?;
     }
 
