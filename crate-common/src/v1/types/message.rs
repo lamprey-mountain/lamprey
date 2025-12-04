@@ -582,6 +582,11 @@ impl MessageType {
         matches!(self, MessageType::DefaultMarkdown(_))
     }
 
+    /// if threads can be created from this message
+    pub fn is_threadable(&self) -> bool {
+        matches!(self, MessageType::DefaultMarkdown(_))
+    }
+
     pub fn is_movable(&self) -> bool {
         matches!(self, MessageType::DefaultMarkdown(_))
     }

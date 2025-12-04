@@ -553,10 +553,16 @@ async fn thread_create_from_message(
     }
 
     // 3. Check if message exists and doesn't have a thread already
-    let _source_message = srv
+    let source_message = srv
         .messages
         .get(parent_channel_id, source_message_id, auth_user.id)
         .await?;
+    if !source_message.message_type.is_threadable() {
+        return Err(Error::BadStatic(
+            "Cannot create a thread from this message type",
+        ));
+    }
+
     let thread_id: ChannelId = (*source_message_id).into();
     if data.channel_get(thread_id).await.is_ok() {
         return Err(Error::Conflict);
@@ -612,7 +618,7 @@ async fn thread_create_from_message(
 
     // 6. Conditionally create system message in the original thread
     let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
-    if _source_message
+    if source_message
         .created_at
         .map_or(false, |t| t.into_inner() < four_hours_ago)
     {
