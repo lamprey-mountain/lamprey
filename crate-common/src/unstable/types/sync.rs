@@ -3,13 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use std::collections::HashMap;
-
-use crate::v1::types::{
-    util::Time, Channel, ChannelId, Invite, InviteCode, Message, MessageId, MessageVerId,
-    Relationship, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, ThreadMember, User,
-    UserId,
-};
+use crate::v1::types::{ChannelId, RoomId, SessionToken};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -73,53 +67,15 @@ pub enum SyncTransport {
     Webhook {
         url: String,
     },
+
     Websocket,
+
     /// long polling
     Poll,
 }
 
 // maybe use patches instead of upserts to save bandwidth?
 // maybe not - patches only work if you already have a resource to patch
-// None is a shorthand for state = Deleted
-// maybe replace *Delete with *Upsert with state = deleted (but don't send actual full item content (hard to do while retaining compat?))
-
-// FIXME: i don't know why utoipa is breaking here
-
-/// an upsert to global state
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageSynchronizeGlobal {
-    pub room: HashMap<RoomId, Option<Room>>,
-    pub user: HashMap<UserId, Option<User>>,
-    pub dm: HashMap<UserId, Option<Room>>,
-    pub relationship: HashMap<UserId, Option<Relationship>>,
-    pub session: HashMap<SessionId, Option<Session>>,
-    pub invite: HashMap<InviteCode, Option<Invite>>,
-}
-
-/// an upsert to a room's state
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageSynchronizeRoom {
-    pub room_id: RoomId,
-    pub role: HashMap<RoleId, Option<Role>>,
-    pub room_member: HashMap<(RoomId, UserId), Option<RoomMember>>,
-    pub thread: HashMap<ChannelId, Option<Channel>>,
-    // pub application: HashMap<UserId, Option<Application>>,
-}
-
-/// an upsert to a thread's state
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageSynchronizeThread {
-    pub thread_id: ChannelId,
-    pub thread_member: HashMap<(ChannelId, UserId), Option<ThreadMember>>,
-    // only one of message or message_version gets set per server event
-    pub message: HashMap<MessageId, Option<Message>>,
-    pub message_version: HashMap<MessageVerId, Option<Message>>,
-    // pub voice: HashMap<UserId, Option<VoiceState>>,
-    // pub reactions: HashMap<MessageId, Option<Reactions>>,
-}
 
 // // how do i add in extra stuff?
 // struct AuditExtra {
@@ -131,48 +87,106 @@ pub struct MessageSynchronizeThread {
 //     nonce: Option<String>,
 // }
 
-/// a raw event from the server
+// TODO(#871): reuse sync wrapper/transport
+// use this for both client syncing and voice server syncing
+
+/// an event from the server for the client
 #[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
-pub enum Event {
+pub enum Event<R, T> {
+    /// heartbeat
     Ping,
+
+    /// some kind of error
     Error { error: String },
-    Ready {},
+
+    /// successfully connected
+    Ready {
+        /// ready data
+        #[serde(flatten)]
+        data: R,
+
+        /// connection id
+        conn: String,
+
+        /// sequence id for reconnecting
+        seq: u64,
+    },
+
+    /// send all missed messages, now tailing live event stream
     Resumed,
-    Reconnect { can_resume: bool },
-    Dispatch(Payload),
+
+    /// client needs to disconnect and reconnect
+    Reconnect {
+        /// whether the client can resume
+        can_resume: bool,
+    },
+
+    /// data to keep local copy of state in sync with server
+    Dispatch { data: T, seq: u64 },
 }
 
-/// a payload for an experimental state-based sync method
-// problems with state-based sync:
-// - its less efficient; i can't patch
-// - some events (like typing) don't really map to state naturally
-// i'm likely not going to impl this, may remove later
+/// a command from the client to the server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
-pub enum Payload {
-    /// synchronize state with server
-    SyncGlobal(MessageSynchronizeGlobal),
+pub enum Command<R, T> {
+    /// initial message
+    Hello {
+        /// authorization token
+        token: SessionToken,
 
-    /// synchronize room-specific state with server
-    SyncRoom(MessageSynchronizeRoom),
-
-    /// synchronize thread-specific state with server
-    SyncThread(MessageSynchronizeThread),
-
-    /// typing notification
-    Typing {
-        thread_id: ChannelId,
-        user_id: UserId,
-        until: Time,
+        /// extra data for hello
+        #[serde(flatten)]
+        data: R,
     },
 
-    /// arbitrary user defined event, for bots? with a matching MessageClient
-    /// entry? builtin pub/sub for bots?
+    /// reconnect a dropped connection
+    Resume {
+        /// authorization token
+        token: SessionToken,
+
+        /// connection id
+        conn: String,
+
+        /// last seen sequence number
+        seq: u64,
+    },
+
+    /// heartbeat
+    Pong,
+
+    /// send some data to the server
     Dispatch {
-        action: String,
-        payload: Option<serde_json::Value>,
+        #[serde(flatten)]
+        data: T,
     },
+}
+
+/// errors you may receive
+pub enum SyncError<T> {
+    /// you were sent a Ping but didn't respond with a Pong in time
+    Timeout,
+
+    /// you tried to do something that you can't do
+    Unauthorized,
+
+    /// you tried to send a Hello or Resume but were already authenticated
+    Unauthenticated,
+
+    /// the token sent in Hello or Resume is invalid
+    AuthFailure,
+
+    /// you sent data that i couldn't decode
+    InvalidData,
+
+    /// you sent a sequence number that was invalid
+    InvalidSequence,
+
+    /// you're sending requests too quickly
+    Ratelimit,
+
+    /// sync specific error
+    Custom(T),
 }

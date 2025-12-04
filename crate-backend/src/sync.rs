@@ -406,6 +406,15 @@ impl Connection {
             MessageSync::UserConfigRoom { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigChannel { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigUser { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::RoomMemberCreate { member } => {
+                AuthCheck::RoomOrUser(member.room_id, member.user_id)
+            }
+            MessageSync::RoomMemberUpdate { member } => {
+                AuthCheck::RoomOrUser(member.room_id, member.user_id)
+            }
+            MessageSync::RoomMemberDelete { room_id, user_id } => {
+                AuthCheck::RoomOrUser(*room_id, *user_id)
+            }
             MessageSync::RoomMemberUpsert { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }

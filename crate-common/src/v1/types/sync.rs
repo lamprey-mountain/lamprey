@@ -104,11 +104,14 @@ pub enum MessagePayload {
         seq: u64,
     },
 
-    /// successfully reconnected
+    /// send all missed messages, now tailing live event stream
     Resumed,
 
     /// client needs to disconnect and reconnect
-    Reconnect { can_resume: bool },
+    Reconnect {
+        /// whether the client can resume
+        can_resume: bool,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,12 +188,30 @@ pub enum MessageSync {
         message_ids: Vec<MessageId>,
     },
 
+    RoomMemberCreate {
+        member: RoomMember,
+    },
+
+    RoomMemberUpdate {
+        member: RoomMember,
+    },
+
+    RoomMemberDelete {
+        room_id: RoomId,
+        user_id: UserId,
+    },
+
+    // TODO: deprecate and remove
     RoomMemberUpsert {
         member: RoomMember,
     },
 
+    // TODO: allow batch upserting/removing
     ThreadMemberUpsert {
         member: ThreadMember,
+        // thread_id: ChannelId,
+        // added: Vec<ThreadMember>,
+        // removed: Vec<UserId>,
     },
 
     RoleCreate {

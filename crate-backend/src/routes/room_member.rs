@@ -239,6 +239,14 @@ async fn room_member_add(
                 s.broadcast_room(
                     room_id,
                     auth_user.id,
+                    MessageSync::RoomMemberCreate {
+                        member: res.clone(),
+                    },
+                )
+                .await?;
+                s.broadcast_room(
+                    room_id,
+                    auth_user.id,
                     MessageSync::RoomMemberUpsert {
                         member: res.clone(),
                     },
@@ -367,7 +375,7 @@ async fn room_member_add(
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
 
-    let changes = if let Ok(existing) = existing {
+    let changes = if let Ok(existing) = &existing {
         Changes::new()
             .change("override_name", &existing.override_name, &res.override_name)
             .change(
@@ -402,6 +410,26 @@ async fn room_member_add(
             },
         })
         .await?;
+
+        if existing.is_err() {
+            s.broadcast_room(
+                room_id,
+                auth_user.id,
+                MessageSync::RoomMemberCreate {
+                    member: res.clone(),
+                },
+            )
+            .await?;
+        } else {
+            s.broadcast_room(
+                room_id,
+                auth_user.id,
+                MessageSync::RoomMemberUpdate {
+                    member: res.clone(),
+                },
+            )
+            .await?;
+        }
 
         s.broadcast_room(
             room_id,
@@ -563,6 +591,14 @@ async fn room_member_update(
     s.broadcast_room(
         room_id,
         auth_user.id,
+        MessageSync::RoomMemberUpdate {
+            member: res.clone(),
+        },
+    )
+    .await?;
+    s.broadcast_room(
+        room_id,
+        auth_user.id,
         MessageSync::RoomMemberUpsert {
             member: res.clone(),
         },
@@ -653,6 +689,16 @@ async fn room_member_delete(
             user_id: target_user_id,
         },
     })
+    .await?;
+
+    s.broadcast_room(
+        room_id,
+        auth_user.id,
+        MessageSync::RoomMemberDelete {
+            room_id,
+            user_id: target_user_id,
+        },
+    )
     .await?;
 
     s.broadcast_room(
@@ -836,6 +882,15 @@ async fn room_ban_create(
     s.broadcast_room(
         room_id,
         auth_user.id,
+        MessageSync::RoomMemberDelete {
+            room_id,
+            user_id: target_user_id,
+        },
+    )
+    .await?;
+    s.broadcast_room(
+        room_id,
+        auth_user.id,
         MessageSync::RoomMemberUpsert { member },
     )
     .await?;
@@ -920,6 +975,16 @@ async fn room_ban_create_bulk(
         s.broadcast_room(
             room_id,
             auth_user.id,
+            MessageSync::RoomMemberDelete {
+                room_id,
+                user_id: target_user_id,
+            },
+        )
+        .await?;
+
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
             MessageSync::RoomMemberUpsert { member },
         )
         .await?;
@@ -953,16 +1018,13 @@ async fn room_ban_remove(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
 
     d.room_ban_delete(room_id, target_user_id).await?;
-    s.services()
-        .perms
-        .invalidate_room(target_user_id, room_id)
-        .await;
-    s.services().perms.invalidate_is_mutual(target_user_id);
-    let res = d.room_member_get(room_id, target_user_id).await?;
+    srv.perms.invalidate_room(target_user_id, room_id).await;
+    srv.perms.invalidate_is_mutual(target_user_id);
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -980,18 +1042,13 @@ async fn room_ban_remove(
     s.broadcast_room(
         room_id,
         auth_user.id,
-        MessageSync::RoomMemberUpsert { member: res },
-    )
-    .await?;
-    s.broadcast_room(
-        room_id,
-        auth_user.id,
         MessageSync::BanDelete {
             room_id,
             user_id: target_user_id,
         },
     )
     .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
