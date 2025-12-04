@@ -46,11 +46,8 @@ export const RoomMembers = (props: { room: RoomT }) => {
 	});
 
 	const getGroupName = (group: any) => {
-		if (typeof group.id === "object" && group.id.Role) {
-			const role = api.roles.cache.get(group.id.Role);
-			return role?.name ?? "Role";
-		}
-		return group.id;
+		const role = api.roles.cache.get(group.id);
+		return role?.name ?? group.id;
 	};
 
 	return (
