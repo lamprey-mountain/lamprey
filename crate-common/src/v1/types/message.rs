@@ -124,7 +124,29 @@ pub struct Mentions {
 
     #[serde(default)]
     pub everyone: bool,
+    // TODO: redo mentions?
+    // pub users: Vec<MentionsUser>,
+    // pub channels: Vec<MentionsChannel>,
 }
+
+// struct MentionsUser {
+//     id: UserId,
+//     /// the resolved name (member nick or user name)
+//     name: String,
+// }
+
+// struct MentionsChannel {
+//     id: ChannelId,
+//     room_id: Option<RoomId>,
+//     #[serde(rename = "type")]
+//     ty: ChannelType,
+//     name: String,
+// }
+
+// struct MentionEmoji {
+//     id: EmojiId,
+//     name: String,
+// }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
