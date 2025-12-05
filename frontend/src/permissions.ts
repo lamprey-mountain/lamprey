@@ -6,7 +6,7 @@ type Perm = {
 	name: string;
 	description: string;
 	group?: string;
-	types?: ChannelType[];
+	types?: (ChannelType | "Room" | "Server")[];
 };
 
 export const permissions: Array<Perm> = [
@@ -210,9 +210,15 @@ export const permissions: Array<Perm> = [
 		group: "voice",
 	},
 	{
+		id: "CalendarEventCreate",
+		name: "Create calendar events",
+		description: "Can create events. Can edit and delete their own events.",
+		group: "calendar",
+	},
+	{
 		id: "CalendarEventManage",
 		name: "Manage calendar events",
-		description: "Can manage calendar events",
+		description: "Can edit and delete all events. Implies \"Create calendar events\".",
 		group: "calendar",
 	},
 	{
@@ -296,41 +302,42 @@ export const permissionsOverwrites: Array<Perm> = [
 		name: "View channel",
 		description: "Can view this channel.",
 		group: "general",
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category", "Calendar"],
 	},
 	{
 		id: "ChannelEdit",
 		name: "Edit channel",
 		description: "can change this channel's name and topic",
 		group: "general",
-		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category", "Calendar"],
 	},
 	{
 		id: "RoleManage",
 		name: "Manage permissions",
 		description: "Can set and remove permission overwrites for this channel.",
 		group: "general",
-		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category", "Calendar"],
 	},
 	{
 		id: "IntegrationsManage",
 		name: "Manage webhooks",
 		description: "Can add and remove webhooks in this channel",
 		group: "general",
-		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category", "Calendar"],
 	},
 	{
 		id: "InviteCreate",
 		name: "Create Invites",
 		description: "Can invite new people to this channel",
 		group: "members",
-		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category", "Calendar"],
 	},
 	{
 		id: "InviteManage",
 		name: "Manage invites",
 		description: "Can revoke invites and view metadata",
 		group: "members",
-		types: ["Text", "Forum", "Voice", "Category", "Calendar"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category", "Calendar"],
 	},
 	{
 		id: "MemberBridge",
@@ -338,35 +345,35 @@ export const permissionsOverwrites: Array<Perm> = [
 		description:
 			"Can add puppet users and massage timestamps; only usable for bridge bots",
 		group: "members",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "MemberKick",
 		name: "Manage thread members",
 		description: "Can remove other members from threads",
 		group: "members",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "MessageCreate",
 		name: "Send messages",
 		description: "Can send messages in threads",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "MessageAttachments",
 		name: "Use message attachments",
 		description: "Can attach files and media to their message",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "MessageDelete",
 		name: "Remove messages",
 		description: "Can remove and restore other's messages",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "MessageEmbeds",
@@ -374,21 +381,21 @@ export const permissionsOverwrites: Array<Perm> = [
 		description:
 			"Has link previews generated for links in their message, and can send custom embeds",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "MessagePin",
 		name: "Pin messages",
 		description: "Can pin and unpin messages",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "EmojiUseExternal",
 		name: "Use external emoji",
 		description: "(unimplemented) Can use custom emoji from outside this room",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "ReactionAdd",
@@ -396,14 +403,14 @@ export const permissionsOverwrites: Array<Perm> = [
 		description:
 			"Can add and remove new reactions to messages. Everyone can always react with an existing emoji.",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "ReactionPurge",
 		name: "Purge reactions",
 		description: "Can remove all reactions from a message",
 		group: "messages",
-		types: ["Text", "Forum", "Voice", "Category"],
+		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "ThreadCreatePublic",
@@ -447,61 +454,67 @@ export const permissionsOverwrites: Array<Perm> = [
 		name: "Connect",
 		description: "Can connect to voice threads",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "VoiceDeafen",
 		name: "Deafen members",
 		description: "Can deafen other members",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "VoiceDisconnect",
 		name: "Disconnect members",
 		description: "Can disconnect other members from voice threads",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "VoiceMove",
 		name: "Move members",
 		description: "Can move other members betwixt voice threads",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "VoiceMute",
 		name: "Mute members",
 		description: "Can mute other members",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "VoicePriority",
 		name: "Priority speaker",
 		description: "(unimplemented) Can talk louder",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "VoiceSpeak",
 		name: "Speak",
 		description: "Can talk in voice threads",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
 	},
 	{
 		id: "VoiceVideo",
 		name: "Video",
 		description: "Can send video and screenshare in voice threads",
 		group: "voice",
-		types: ["Voice", "Category"],
+		types: ["Voice", "Broadcast", "Category"],
+	},
+	{
+		id: "CalendarEventCreate",
+		name: "Create calendar events",
+		description: "Can create events. Can edit and delete their own events.",
+		types: ["Calendar", "Category"],
 	},
 	{
 		id: "CalendarEventManage",
 		name: "Manage calendar events",
-		description: "Can manage calendar events",
+		description: "Can edit and delete all events. Implies \"Create calendar events\".",
 		group: "calendar",
 		types: ["Calendar", "Category"],
 	},

@@ -91,7 +91,7 @@ async fn calendar_event_create(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::CalendarEventManage)?;
+    perms.ensure(Permission::CalendarEventCreate)?;
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -188,7 +188,6 @@ async fn calendar_event_update(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::CalendarEventManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -198,6 +197,12 @@ async fn calendar_event_update(
     let old_event = s.data().calendar_event_get(calendar_event_id).await?;
     if old_event.channel_id != channel_id {
         return Err(Error::NotFound);
+    }
+
+    if old_event.creator_id == Some(auth_user.id) {
+        perms.ensure(Permission::CalendarEventCreate)?;
+    } else {
+        perms.ensure(Permission::CalendarEventManage)?;
     }
 
     let updated_event = s
@@ -257,7 +262,6 @@ async fn calendar_event_delete(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::CalendarEventManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -267,6 +271,11 @@ async fn calendar_event_delete(
     let event = s.data().calendar_event_get(calendar_event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
+    }
+    if event.creator_id == Some(auth_user.id) {
+        perms.ensure(Permission::CalendarEventCreate)?;
+    } else {
+        perms.ensure(Permission::CalendarEventManage)?;
     }
 
     s.data().calendar_event_delete(calendar_event_id).await?;
@@ -387,6 +396,10 @@ async fn calendar_rsvp_update(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
+
+    if auth_user.id != user_id {
+        perms.ensure(Permission::CalendarEventManage)?;
+    }
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if !chan.ty.has_calendar() {

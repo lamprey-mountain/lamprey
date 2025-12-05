@@ -178,9 +178,9 @@ pub enum Permission {
     /// requires VoiceConnect
     VoiceVideo,
 
-    // TODO: add permission
-    // /// can create calendar events and delete their own calendar events
-    // CalendarEventCreate,
+    /// can create calendar events and delete their own calendar events
+    CalendarEventCreate,
+
     /// can manage calendar events
     CalendarEventManage,
 }

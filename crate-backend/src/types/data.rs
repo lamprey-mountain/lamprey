@@ -439,6 +439,7 @@ impl_perms!(
     VoiceVideo,
     ChannelManage,
     ChannelEdit,
+    CalendarEventCreate,
     CalendarEventManage,
 );
 

@@ -28,6 +28,9 @@ impl Permissions {
         if perm == Permission::Admin {
             self.p.extend(ADMIN_ROOM);
         }
+        if perm == Permission::CalendarEventManage {
+            self.p.insert(Permission::CalendarEventCreate);
+        }
         self.p.insert(perm);
     }
 
