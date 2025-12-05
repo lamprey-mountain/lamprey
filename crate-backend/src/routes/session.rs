@@ -216,6 +216,44 @@ pub async fn session_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Session delete all
+///
+/// Delete all sessions, *including the current one*
+#[utoipa::path(
+    delete,
+    path = "/session/@all",
+    tags = ["session"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+pub async fn session_delete_all(
+    AuthRelaxed(auth_session): AuthRelaxed,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    let Some(user_id) = auth_session.user_id() else {
+        return Err(Error::UnauthSession);
+    };
+
+    let data = s.data();
+    let srv = s.services();
+
+    // TODO: should i restrict deleting other sessions to sudo mode?
+    data.session_delete_all(user_id).await?;
+    srv.sessions.invalidate_all(user_id).await;
+    s.broadcast(MessageSync::SessionDeleteAll { user_id })?;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: user_id.into_inner().into(),
+        user_id: user_id,
+        session_id: Some(auth_session.id),
+        reason,
+        ty: AuditLogEntryType::SessionDeleteAll,
+    })
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Session get
 #[utoipa::path(
     get,
@@ -252,4 +290,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(session_update))
         .routes(routes!(session_get))
         .routes(routes!(session_delete))
+        .routes(routes!(session_delete_all))
 }

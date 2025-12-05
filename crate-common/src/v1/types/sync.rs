@@ -356,6 +356,10 @@ pub enum MessageSync {
         user_id: Option<UserId>,
     },
 
+    SessionDeleteAll {
+        user_id: UserId,
+    },
+
     RelationshipUpsert {
         user_id: UserId,
         target_user_id: UserId,

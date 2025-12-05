@@ -476,6 +476,7 @@ impl Connection {
                     AuthCheck::Custom(false)
                 }
             }
+            MessageSync::SessionDeleteAll { user_id } => AuthCheck::User(*user_id),
             MessageSync::RoleDelete { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::RoleReorder { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::InviteDelete { target, .. } => match target {

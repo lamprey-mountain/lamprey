@@ -304,6 +304,8 @@ pub enum AuditLogEntryType {
         session_id: SessionId,
     },
 
+    SessionDeleteAll,
+
     /// auth state changed
     AuthUpdate {
         changes: Vec<AuditLogChange>,

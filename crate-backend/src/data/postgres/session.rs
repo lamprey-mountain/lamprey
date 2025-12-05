@@ -113,6 +113,13 @@ impl DataSession for Postgres {
         Ok(())
     }
 
+    async fn session_delete_all(&self, user_id: UserId) -> Result<()> {
+        query!("DELETE FROM session WHERE user_id = $1", *user_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;

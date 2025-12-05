@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::v1::types::{Session, SessionId, SessionToken};
+use common::v1::types::{Session, SessionId, SessionToken, UserId};
 use moka::future::Cache;
 
 use crate::{Result, ServerStateInner};
@@ -49,5 +49,14 @@ impl ServiceSessions {
         let _ = self
             .cache_tokens
             .invalidate_entries_if(move |_, s| s.id == session_id);
+    }
+
+    pub async fn invalidate_all(&self, user_id: UserId) {
+        let _ = self
+            .cache_sessions
+            .invalidate_entries_if(move |_, s| s.user_id() == Some(user_id));
+        let _ = self
+            .cache_tokens
+            .invalidate_entries_if(move |_, s| s.user_id() == Some(user_id));
     }
 }
