@@ -179,7 +179,7 @@ struct TestPermissionsResponse {
     tags = ["debug"],
     responses((status = OK, body = ServerInfo, description = "success")),
 )]
-pub async fn debug_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+async fn debug_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     Ok(Json(ServerInfo {
         version: ServerVersion {
             debug: env!("VERGEN_CARGO_DEBUG") == "true",
@@ -227,7 +227,7 @@ pub async fn debug_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRe
         (status = OK, body = ServerVersion, description = "success"),
     )
 )]
-pub async fn debug_version() -> Result<impl IntoResponse> {
+async fn debug_version() -> Result<impl IntoResponse> {
     Ok(Json(ServerVersion {
         debug: env!("VERGEN_CARGO_DEBUG") == "true",
         target: env!("VERGEN_CARGO_TARGET_TRIPLE"),
@@ -248,7 +248,7 @@ pub async fn debug_version() -> Result<impl IntoResponse> {
         (status = ACCEPTED, description = "success"),
     )
 )]
-pub async fn debug_embed_url(
+async fn debug_embed_url(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
@@ -274,7 +274,7 @@ pub async fn debug_embed_url(
     tags = ["debug"],
     responses((status = INTERNAL_SERVER_ERROR, description = "success")),
 )]
-pub async fn debug_panic() {
+async fn debug_panic() {
     panic!("whoops!")
 }
 
@@ -287,7 +287,7 @@ pub async fn debug_panic() {
     tags = ["debug"],
     responses((status = OK, body = TestPermissionsResponse, description = "success")),
 )]
-pub async fn debug_test_permissions(
+async fn debug_test_permissions(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TestPermissionsRequest>,
