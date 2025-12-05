@@ -128,6 +128,7 @@ pub struct Integration {
     pub member: RoomMember,
 }
 
+// TODO: move to oauth
 /// an oauth scope
 ///
 /// WORK IN PROGRESS!!! SUBJECT TO CHANGE!!!
@@ -140,6 +141,9 @@ pub enum Scope {
     /// affects user_get and oauth_userinfo
     #[serde(alias = "openid")]
     Identify,
+
+    /// return email address in user profile
+    Email,
 
     /// full read/write access to the user's account (except auth)
     ///
@@ -165,6 +169,7 @@ impl fmt::Display for Scope {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Scope::Identify => "identify",
+            Scope::Email => "email",
             Scope::Full => "full",
             Scope::Auth => "auth",
         };
@@ -178,6 +183,7 @@ impl FromStr for Scope {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "identify" | "openid" => Ok(Scope::Identify),
+            "email" => Ok(Scope::Email),
             "full" => Ok(Scope::Full),
             "auth" => Ok(Scope::Auth),
             _ => Err(()),
