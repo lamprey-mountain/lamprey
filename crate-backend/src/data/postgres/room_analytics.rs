@@ -101,7 +101,7 @@ impl DataRoomAnalytics for Postgres {
             )
             INSERT INTO metric_channel (ts, channel_id, room_id, message_count, media_count, media_size)
             SELECT
-                date_trunc('day', now()),
+                now(),
                 c.id as channel_id,
                 c.room_id,
                 coalesce(cms.message_count, 0) as message_count,
@@ -157,7 +157,7 @@ impl DataRoomAnalytics for Postgres {
             )
             INSERT INTO metric_room (ts, room_id, members, members_join, members_leave)
             SELECT
-                date_trunc('day', now()),
+                now(),
                 r.id as room_id,
                 coalesce(rmc.member_count, 0) as members,
                 coalesce(rj.join_count, 0) as members_join,
