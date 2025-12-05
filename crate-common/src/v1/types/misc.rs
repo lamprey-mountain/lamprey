@@ -69,8 +69,10 @@ where
 
 impl UserIdReq {
     /// retrieve the user id, falling back to self_id if this is UserSelf
+    // TODO: use this instead of manually matching
+    // TODO: impl this for other FooIdReq types
     pub fn unwrap_or(self, self_id: UserId) -> UserId {
-        match user_id {
+        match self {
             UserIdReq::UserSelf => self_id,
             UserIdReq::UserId(user_id) => user_id,
         }
