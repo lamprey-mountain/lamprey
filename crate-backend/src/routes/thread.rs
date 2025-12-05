@@ -5,10 +5,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Changes;
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
-    ChannelType, MessageId, MessageMember, MessageSync, MessageThreadCreated, MessageType,
-    PaginationQuery, PaginationResponse, Permission, ThreadMember, ThreadMemberPut,
-    ThreadMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelType, Message, MessageId, MessageMember, MessageSync, MessageThreadCreated, MessageType, PaginationQuery, PaginationResponse, Permission, ThreadMember, ThreadMemberPut, ThreadMembership, UserId
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -678,23 +675,24 @@ async fn thread_create_from_message(
     Ok((StatusCode::CREATED, Json(channel)))
 }
 
-/// Thread activity (TODO)
+/// Thread activity
 ///
 /// List activity in this thread
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/activity",
     params(
-        ("channel_id", description = "Parent channel id"),
+        ("channel_id", description = "Channel id"),
         PaginationQuery<MessageId>
     ),
     tags = ["thread"],
     responses(
-        (status = OK, body = PaginationResponse<MessageId>, description = "List activity success"),
+        (status = OK, body = PaginationResponse<Message>, description = "List activity success"),
     )
 )]
 async fn thread_activity(
-    Path((parent_channel_id,)): Path<(ChannelId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
+    Query(q): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -702,13 +700,19 @@ async fn thread_activity(
 
     let srv = s.services();
 
-    let perms = srv
-        .perms
-        .for_channel(auth_user.id, parent_channel_id)
-        .await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    Ok(Error::Unimplemented)
+    let data = s.data();
+    let mut res = data
+        .message_list_activity(channel_id, auth_user.id, q)
+        .await?;
+
+    for message in &mut res.items {
+        s.presign_message(message).await?;
+    }
+
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
