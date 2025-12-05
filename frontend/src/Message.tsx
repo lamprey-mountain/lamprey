@@ -809,46 +809,35 @@ function ReplyView(props: ReplyProps) {
 
 		let contentStr = r.content;
 
-		// Replace mentions with HTML spans that won't be affected by markdown processing
-		// We'll use HTML that will be recognized by the markdown parser but styled appropriately
-		contentStr = contentStr.replace(
-			/<@([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
-			(match, userId) => {
-				const user = api.users.fetch(() => userId)();
-				return `<span class="mention-user" data-user-id="${userId}">@${
-					user?.name || "..."
-				}</span>`;
-			},
-		);
-
-		contentStr = contentStr.replace(
-			/<#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
-			(match, channelId) => {
-				const channel = api.channels.fetch(() => channelId)();
-				return `<span class="mention-channel" data-channel-id="${channelId}">#${
-					channel?.name || "..."
-				}</span>`;
-			},
-		);
-
-		contentStr = contentStr.replace(
-			/<@&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
-			(match, roleId) => {
-				const role = thread()?.room_id
-					? api.roles.fetch(() => thread()!.room_id, () => roleId)()
-					: null;
-				return `<span class="mention-role" data-role-id="${roleId}">@${
-					role?.name || "..."
-				}</span>`;
-			},
-		);
-
-		contentStr = contentStr.replace(
-			/<a?:([^:]+):([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g,
-			(match, emojiName) => {
-				return `<span class="mention-emoji">:${emojiName}:</span>`;
-			},
-		);
+		for (const user of r.mentions.users) {
+			contentStr = contentStr.replace(
+				new RegExp(`<@${user.id}>`, "g"),
+				`<span class="mention-user" data-user-id="${user.id}">@${user.resolved_name}</span>`,
+			);
+		}
+		for (const channel of r.mentions.channels) {
+			contentStr = contentStr.replace(
+				new RegExp(`<#${channel.id}>`, "g"),
+				`<span class="mention-channel" data-channel-id="${channel.id}">#${channel.name}</span>`,
+			);
+		}
+		for (const role of r.mentions.roles) {
+			const roleData = thread()?.room_id
+				? api.roles.fetch(() => thread()!.room_id, () => role.id)()
+				: null;
+			contentStr = contentStr.replace(
+				new RegExp(`<@&${role.id}>`, "g"),
+				`<span class="mention-role" data-role-id="${role.id}">@${
+					roleData?.name || "..."
+				}</span>`,
+			);
+		}
+		for (const emoji of r.mentions.emoji) {
+			contentStr = contentStr.replace(
+				new RegExp(`<a?:${emoji.name}:${emoji.id}>`, "g"),
+				`<span class="mention-emoji">:${emoji.name}:</span>`,
+			);
+		}
 
 		// Process the content with markdown, now that mentions are replaced with proper HTML
 		const processedHTML = md(contentStr);

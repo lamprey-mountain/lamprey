@@ -218,7 +218,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "CalendarEventManage",
 		name: "Manage calendar events",
-		description: "Can edit and delete all events. Implies \"Create calendar events\".",
+		description:
+			'Can edit and delete all events. Implies "Create calendar events".',
 		group: "calendar",
 	},
 	{
@@ -514,7 +515,8 @@ export const permissionsOverwrites: Array<Perm> = [
 	{
 		id: "CalendarEventManage",
 		name: "Manage calendar events",
-		description: "Can edit and delete all events. Implies \"Create calendar events\".",
+		description:
+			'Can edit and delete all events. Implies "Create calendar events".',
 		group: "calendar",
 		types: ["Calendar", "Category"],
 	},

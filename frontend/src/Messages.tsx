@@ -43,7 +43,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 				if (!me) return false;
 				if (!item.message.mentions) return false;
 
-				if (item.message.mentions.users.includes(me.id)) {
+				if (item.message.mentions.users.some((u) => u.id === me.id)) {
 					return true;
 				}
 				if (
@@ -53,8 +53,8 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 				}
 				const rm = room_member();
 				if (rm) {
-					for (const role_id of item.message.mentions.roles) {
-						if (rm.roles.some((r) => r.id === role_id)) {
+					for (const role of item.message.mentions.roles) {
+						if (rm.roles.some((r) => r.id === role.id)) {
 							return true;
 						}
 					}

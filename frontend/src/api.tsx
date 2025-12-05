@@ -270,7 +270,7 @@ export function createApi(
 				const mentions = m.mentions;
 				let is_mentioned = false;
 				if (mentions) {
-					if (mentions.users.includes(me.id)) {
+					if (mentions.users.some((u) => u.id === me.id)) {
 						is_mentioned = true;
 					}
 					if (!is_mentioned && mentions.everyone) {
@@ -283,8 +283,8 @@ export function createApi(
 								me.id,
 							);
 							if (room_member) {
-								for (const role_id of mentions.roles) {
-									if (room_member.roles.some((r) => r.id === role_id)) {
+								for (const role of mentions.roles) {
+									if (room_member.roles.some((r) => r.id === role.id)) {
 										is_mentioned = true;
 										break;
 									}
