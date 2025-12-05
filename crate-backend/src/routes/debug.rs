@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::EmbedRequest;
-use serde::Serialize;
+use common::v1::types::{ChannelId, EmbedRequest, Permission, RoomId, UserId};
+use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -158,6 +158,18 @@ struct ServerVersion {
     rustc_channel: &'static str,
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+struct TestPermissionsRequest {
+    room_id: RoomId,
+    channel_id: Option<ChannelId>,
+    user_id: UserId,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct TestPermissionsResponse {
+    permissions: Vec<Permission>,
+}
+
 /// Get server info
 ///
 /// in the future, this will become a stable route
@@ -266,10 +278,49 @@ pub async fn debug_panic() {
     panic!("whoops!")
 }
 
+/// Test permissions
+///
+/// Get the resolved set of permissions for a user
+#[utoipa::path(
+    post,
+    path = "/debug/test-permissions",
+    tags = ["debug"],
+    responses((status = OK, body = TestPermissionsResponse, description = "success")),
+)]
+pub async fn debug_test_permissions(
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<TestPermissionsRequest>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let permissions = if let Some(channel_id) = json.channel_id {
+        s.services()
+            .perms
+            .for_channel(json.user_id, channel_id)
+            .await?
+    } else {
+        s.services()
+            .perms
+            .for_room(json.user_id, json.room_id)
+            .await?
+    };
+
+    let mut permissions_vec: Vec<Permission> = permissions.into_iter().collect();
+    permissions_vec.sort();
+
+    let response = TestPermissionsResponse {
+        permissions: permissions_vec,
+    };
+
+    Ok(Json(response))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(debug_info))
         .routes(routes!(debug_version))
         .routes(routes!(debug_embed_url))
         .routes(routes!(debug_panic))
+        .routes(routes!(debug_test_permissions))
 }
