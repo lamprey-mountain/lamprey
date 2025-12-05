@@ -7,7 +7,7 @@ use common::v1::types::{
     },
     RoomId,
 };
-use sqlx::query;
+use sqlx::{query, query_scalar};
 use time::{OffsetDateTime, PrimitiveDateTime};
 
 use crate::data::DataRoomAnalytics;
@@ -121,7 +121,7 @@ impl DataRoomAnalytics for Postgres {
         .await?;
 
         // snapshot room metrics
-        let last_ts = sqlx::query_scalar!("SELECT max(ts) FROM metric_room")
+        let last_ts = query_scalar!("SELECT max(ts) FROM metric_room")
             .fetch_one(&mut *tx)
             .await?
             .unwrap_or_else(|| {
@@ -181,5 +181,12 @@ impl DataRoomAnalytics for Postgres {
         tx.commit().await?;
 
         Ok(())
+    }
+
+    async fn room_analytics_get_last_snapshot_ts(&self) -> Result<Option<time::PrimitiveDateTime>> {
+        let ts = query_scalar!("SELECT max(ts) FROM metric_room")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(ts)
     }
 }

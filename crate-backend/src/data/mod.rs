@@ -1145,4 +1145,5 @@ pub trait DataRoomAnalytics {
     ) -> Result<Vec<RoomAnalyticsInvites>>;
 
     async fn room_analytics_snapshot_all(&self) -> Result<()>;
+    async fn room_analytics_get_last_snapshot_ts(&self) -> Result<Option<time::PrimitiveDateTime>>;
 }
