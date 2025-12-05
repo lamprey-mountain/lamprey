@@ -599,7 +599,7 @@ impl Into<MentionsIds> for Mentions {
                 .into_iter()
                 .map(|mention| mention.id)
                 .collect(),
-            emojis: self.emoji.into_iter().map(|mention| mention.id).collect(),
+            emojis: self.emojis.into_iter().map(|mention| mention.id).collect(),
             everyone: self.everyone,
         }
     }

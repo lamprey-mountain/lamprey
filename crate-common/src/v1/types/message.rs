@@ -120,7 +120,7 @@ pub struct Mentions {
     pub users: Vec<MentionsUser>,
     pub roles: Vec<MentionsRole>,
     pub channels: Vec<MentionsChannel>,
-    pub emoji: Vec<MentionsEmoji>,
+    pub emojis: Vec<MentionsEmoji>,
 
     /// if this message mentions everyone
     #[serde(default)]

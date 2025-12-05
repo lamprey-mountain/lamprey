@@ -832,7 +832,7 @@ function ReplyView(props: ReplyProps) {
 				}</span>`,
 			);
 		}
-		for (const emoji of r.mentions.emoji) {
+		for (const emoji of r.mentions.emojis) {
 			contentStr = contentStr.replace(
 				new RegExp(`<a?:${emoji.name}:${emoji.id}>`, "g"),
 				`<span class="mention-emoji">:${emoji.name}:</span>`,

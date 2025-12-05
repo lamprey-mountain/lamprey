@@ -734,7 +734,7 @@ impl ServiceMessages {
             users: vec![],
             roles: vec![],
             channels: vec![],
-            emoji: vec![],
+            emojis: vec![],
             everyone: mentions_ids.everyone,
         };
 
@@ -779,7 +779,7 @@ impl ServiceMessages {
 
         for emoji_id in mentions_ids.emojis {
             let emoji = data.emoji_get(emoji_id).await?;
-            mentions.emoji.push(MentionsEmoji {
+            mentions.emojis.push(MentionsEmoji {
                 id: emoji_id,
                 name: emoji.name,
                 animated: emoji.animated,
@@ -800,7 +800,7 @@ impl ServiceMessages {
         let data = self.state.data();
         let mut allowed_emoji = vec![];
 
-        for i in &m.emoji {
+        for i in &m.emojis {
             let emoji = data.emoji_get(i.id).await?;
             let is_room_emoji = emoji.owner == Some(EmojiOwner::Room { room_id });
             if is_room_emoji || allow {

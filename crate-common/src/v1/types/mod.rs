@@ -41,6 +41,9 @@ pub mod visibility;
 pub mod voice;
 pub mod webhook;
 
+#[cfg(feature = "feat_interaction")]
+pub mod interactions;
+
 pub use media::{
     Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaTrack, MediaTrackInfo,
     Mime, Mixed, Text, TimedText, TrackSource, Video,
