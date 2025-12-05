@@ -5,6 +5,6 @@ export * from "./Info.tsx";
 export * from "./Bots.tsx";
 export * from "./Invites.tsx";
 export * from "./Members.tsx";
-export * from "./Metrics.tsx";
+export * from "./Analytics.tsx";
 export * from "./Roles.tsx";
 export * from "./Webhooks.tsx";

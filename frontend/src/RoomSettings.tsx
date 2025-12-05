@@ -9,7 +9,7 @@ import {
 	Info,
 	Invites,
 	Members,
-	Metrics,
+	Metrics as Analytics,
 	Roles,
 	Webhooks,
 } from "./room_settings/mod.tsx";
@@ -26,8 +26,8 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 const tabs = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Info },
+	{ name: "analytics", path: "analytics", component: Analytics },
 	{ name: "emoji", path: "emoji", component: Emoji },
-	{ name: "metrics", path: "metrics", component: Metrics },
 	{ category: "integrations" },
 	{ name: "bots", path: "bots", component: Bots },
 	{
