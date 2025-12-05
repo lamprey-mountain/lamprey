@@ -9,7 +9,7 @@ use crate::consts::MAX_PINNED_MESSAGES;
 use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
-    ChannelId, DbChannelType, DbMessageCreate, Message, MessageId, MessageVerId,
+    ChannelId, DbChannelType, DbMessageCreate, MentionsIds, Message, MessageId, MessageVerId,
     PaginationDirection, PaginationQuery, PaginationResponse,
 };
 
@@ -168,7 +168,8 @@ impl DataMessage for Postgres {
         }
 
         let embeds = serde_json::to_value(create.embeds.clone())?;
-        let mentions = serde_json::to_value(create.mentions.clone())?;
+        let mentions: MentionsIds = create.mentions.clone().into();
+        let mentions = serde_json::to_value(mentions)?;
         query!(r#"
     	    INSERT INTO message (id, channel_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, mentions)
     	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE channel_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()), $12)

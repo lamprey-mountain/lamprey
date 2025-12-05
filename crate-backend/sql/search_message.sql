@@ -41,7 +41,7 @@ select
     msg.deleted_at,
     msg.removed_at,
     msg.pinned,
-    msg.mentions,
+    hm.mentions,
     coalesce(att_json.attachments, '[]'::json) as "attachments!",
     msg.embeds as "embeds",
     r.json as "reactions"
@@ -49,6 +49,7 @@ from message as msg
 join channel_viewer on msg.channel_id = channel_viewer.id
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
+left join hydrated_mentions hm on hm.message_id = msg.id
 where is_latest and msg.deleted_at is null
   and msg.id > $2 AND msg.id < $3
   and ($6::text is null or $6 = '' or content @@ websearch_to_tsquery('english', $6))

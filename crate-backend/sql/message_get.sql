@@ -2,6 +2,7 @@ with
 reaction_counts as (
     select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $3) as self_reacted
     from reaction
+    where message_id = $2
     group by message_id, key
 ),
 message_reaction as (
@@ -30,11 +31,12 @@ SELECT
     msg.deleted_at,
     msg.removed_at,
     msg.pinned,
-    msg.mentions,
+    hm.mentions,
     coalesce(att_json.attachments, '{}') as "attachments!",
     msg.embeds as "embeds",
     r.json as "reactions"
 from message as msg
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
+left join hydrated_mentions hm on hm.message_id = msg.id
 where is_latest and channel_id = $1 and msg.id = $2 and msg.deleted_at is null

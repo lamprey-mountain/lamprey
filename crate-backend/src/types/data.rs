@@ -1,3 +1,5 @@
+// TODO: move into data mod
+
 use common::v1::types::Mentions;
 use common::v1::types::{
     util::Time, Channel, ChannelId, ChannelType, ChannelVerId, Embed, MediaId, MessageId,
@@ -567,6 +569,38 @@ impl Into<RoomType> for DbRoomType {
         match self {
             DbRoomType::Default => RoomType::Default,
             DbRoomType::Server => RoomType::Server,
+        }
+    }
+}
+
+/// this is whats actually stored in the db
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct MentionsIds {
+    pub users: Vec<UserId>,
+    pub roles: Vec<RoleId>,
+
+    #[serde(default)]
+    pub channels: Vec<ChannelId>,
+
+    #[serde(default)]
+    pub emojis: Vec<EmojiId>,
+
+    #[serde(default)]
+    pub everyone: bool,
+}
+
+impl Into<MentionsIds> for Mentions {
+    fn into(self) -> MentionsIds {
+        MentionsIds {
+            users: self.users.into_iter().map(|mention| mention.id).collect(),
+            roles: self.roles.into_iter().map(|mention| mention.id).collect(),
+            channels: self
+                .channels
+                .into_iter()
+                .map(|mention| mention.id)
+                .collect(),
+            emojis: self.emoji.into_iter().map(|mention| mention.id).collect(),
+            everyone: self.everyone,
         }
     }
 }

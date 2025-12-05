@@ -12,8 +12,8 @@ use crate::v1::types::reaction::ReactionCounts;
 #[cfg(feature = "feat_interaction_reaction")]
 use crate::v1::types::reaction::ReactionKey;
 use crate::v1::types::util::{some_option, Diff, Time};
-use crate::v1::types::RoomId;
 use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
+use crate::v1::types::{ChannelType, EmojiId, RoomId};
 
 use super::channel::Channel;
 use super::EmbedCreate;
@@ -22,7 +22,8 @@ use super::{
     ChannelId, MessageId, MessageVerId,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Message {
@@ -116,37 +117,70 @@ pub struct ParseMentions {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
-    pub users: Vec<UserId>,
-    pub roles: Vec<RoleId>,
+    pub users: Vec<MentionsUser>,
+    pub roles: Vec<MentionsRole>,
+    pub channels: Vec<MentionsChannel>,
+    pub emoji: Vec<MentionsEmoji>,
 
-    // TODO: remove
-    pub threads: Vec<ChannelId>,
-
+    /// if this message mentions everyone
     #[serde(default)]
     pub everyone: bool,
-    // TODO: redo mentions?
-    // pub users: Vec<MentionsUser>,
-    // pub channels: Vec<MentionsChannel>,
 }
 
-// struct MentionsUser {
-//     id: UserId,
-//     /// the resolved name (member nick or user name)
-//     name: String,
-// }
+/// a mentioned user
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MentionsUser {
+    /// the id of this user
+    pub id: UserId,
 
-// struct MentionsChannel {
-//     id: ChannelId,
-//     room_id: Option<RoomId>,
-//     #[serde(rename = "type")]
-//     ty: ChannelType,
-//     name: String,
-// }
+    /// the resolved name (either the room member nickname or the user's name)
+    pub resolved_name: String,
+}
 
-// struct MentionEmoji {
-//     id: EmojiId,
-//     name: String,
-// }
+/// a mentioned role
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MentionsRole {
+    /// the id of this role
+    pub id: RoleId,
+}
+
+/// a mentioned channel
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MentionsChannel {
+    /// the id of this channel
+    pub id: ChannelId,
+
+    /// the room this is in
+    pub room_id: Option<RoomId>,
+
+    /// the type of this channel
+    #[serde(rename = "type")]
+    pub ty: ChannelType,
+
+    /// the name of this channel
+    pub name: String,
+}
+
+/// a custom emoji used in the message
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MentionsEmoji {
+    /// the id of this emoji
+    pub id: EmojiId,
+
+    /// the name of this emoji
+    pub name: String,
+
+    /// if this emoji is animated
+    pub animated: bool,
+}
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

@@ -30,13 +30,14 @@ select
     msg.deleted_at,
     msg.removed_at,
     msg.pinned,
-    msg.mentions,
+    hm.mentions,
     coalesce(att_json.attachments, '{}') as "attachments!",
     msg.embeds as "embeds",
     r.json as "reactions"
 from message as msg
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
+left join hydrated_mentions hm on hm.message_id = msg.id
 where channel_id = $1 and msg.id = $2 and msg.deleted_at is null
   and msg.id > $4 and msg.id < $5
 order by (case when $6 = 'f' then msg.version_id end), msg.version_id desc limit $7

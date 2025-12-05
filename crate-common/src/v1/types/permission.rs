@@ -236,3 +236,17 @@ pub enum PermissionOverwriteType {
     /// permission overrides for a user
     User,
 }
+
+impl Permission {
+    /// if this permission is applicable to webhooks
+    // TODO(#898): permissions for webhooks
+    pub fn is_webhook_usable(&self) -> bool {
+        matches!(
+            self,
+            Permission::MessageMassMention
+                | Permission::EmojiUseExternal
+                | Permission::MessageAttachments
+                | Permission::MessageEmbeds
+        )
+    }
+}
