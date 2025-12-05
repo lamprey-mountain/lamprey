@@ -8,6 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     calendar::{CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch},
+    misc::UserIdReq,
     permission::Permission,
     CalendarEventId, ChannelId, UserId,
 };
@@ -345,15 +346,24 @@ async fn calendar_rsvp_list(
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
-        ("user_id" = UserId, description = "User id")
+        ("user_id" = UserIdReq, description = "@self or user id"),
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_rsvp_get(
-    Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
+    Path((channel_id, calendar_event_id, user_id_req)): Path<(
+        ChannelId,
+        CalendarEventId,
+        UserIdReq,
+    )>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let user_id = match user_id_req {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -384,21 +394,30 @@ async fn calendar_rsvp_get(
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
-        ("user_id" = UserId, description = "User id")
+        ("user_id" = UserIdReq, description = "@self or user id"),
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_rsvp_update(
-    Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
+    Path((channel_id, calendar_event_id, user_id_req)): Path<(
+        ChannelId,
+        CalendarEventId,
+        UserIdReq,
+    )>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let user_id = match user_id_req {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
     if auth_user.id != user_id {
-        perms.ensure(Permission::CalendarEventManage)?;
+        return Err(Error::BadStatic("cannot rsvp other people"));
     }
 
     let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
@@ -426,15 +445,24 @@ async fn calendar_rsvp_update(
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
-        ("user_id" = UserId, description = "User id")
+        ("user_id" = inline(UserIdReq), description = "@self or user id"),
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_rsvp_delete(
-    Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
+    Path((channel_id, calendar_event_id, user_id_req)): Path<(
+        ChannelId,
+        CalendarEventId,
+        UserIdReq,
+    )>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let user_id = match user_id_req {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
     let srv = s.services();
 
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;

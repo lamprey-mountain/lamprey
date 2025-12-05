@@ -38,8 +38,6 @@ pub enum ApplicationIdReq {
 pub enum SessionIdReq {
     #[serde(deserialize_with = "const_self")]
     SessionSelf,
-    // #[serde(deserialize_with = "const_all")]
-    // SessionAll,
     SessionId(SessionId),
 }
 
@@ -68,6 +66,16 @@ where
 
 //     Helper::deserialize(deserializer).map(|_| ())
 // }
+
+impl UserIdReq {
+    /// retrieve the user id, falling back to self_id if this is UserSelf
+    pub fn unwrap_or(self, self_id: UserId) -> UserId {
+        match user_id {
+            UserIdReq::UserSelf => self_id,
+            UserIdReq::UserId(user_id) => user_id,
+        }
+    }
+}
 
 impl Display for UserIdReq {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
