@@ -211,6 +211,9 @@ genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
 genid!(Webhook, "00000000-0000-0000-0000-00000webhook");
 genid!(CalendarEvent, "00000000-0000-0000-0000-calendarevent");
 
+#[cfg(feature = "feat_interaction")]
+genid!(Interaction, "00000000-0000-0000-0000-00interaction");
+
 pub const SERVER_USER_ID: UserId = Id {
     inner: uuid!("00000000-0000-7000-0000-0000726f6f74"),
     phantom: std::marker::PhantomData,

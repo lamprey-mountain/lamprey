@@ -41,6 +41,7 @@ default = [
   "validator",
   "feat_custom_emoji",
   "feat_thread_type_forums",
+  "feat_interaction",
   "feat_interaction_reaction",
   "str0m",
 ]

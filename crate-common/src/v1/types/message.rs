@@ -297,7 +297,7 @@ pub enum MessageType {
     /// a room member joined the room
     MemberJoin,
 
-    /// (TODO) call ended in a dm/gdm
+    /// (TODO) a call was started in a dm or gdm
     Call(MessageCall),
 
     /// this thread was renamed
@@ -394,6 +394,7 @@ pub struct MessageRoomFollowed {
     pub reason: Option<String>,
 }
 
+// TODO: remove
 /// audit log entries as a message (builtin moderation logging?)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -468,6 +469,7 @@ pub struct MessageCall {
     pub participants: Vec<UserId>,
 }
 
+// TODO: remove
 /// ways to interact with a message
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
