@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use common::v1::types::RoomMetrics;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;

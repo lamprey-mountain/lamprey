@@ -81,6 +81,7 @@ pub trait Data:
     + DataNotification
     + DataWebhook
     + DataTag
+    + DataMetrics
     + DataRoomAnalytics
     + Send
     + Sync
