@@ -261,68 +261,6 @@ impl DataRoom for Postgres {
         )
     }
 
-    async fn room_metrics(&self, room_id: RoomId) -> Result<RoomMetrics> {
-        let channel_count =
-            query_scalar!("select count(*) from channel where room_id = $1", *room_id)
-                .fetch_one(&self.pool)
-                .await?
-                .unwrap_or_default();
-        let active_channel_count = query_scalar!(
-            "select count(*) from channel where room_id = $1 and archived_at is null",
-            *room_id
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .unwrap_or_default();
-        let member_count = query_scalar!(
-            "select count(*) from room_member where room_id = $1",
-            *room_id
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .unwrap_or_default();
-        let message_media_counts = query!(
-            r#"
-            select
-                count(distinct s.id) as total_messages,
-                count(distinct l.media_id) as total_media
-            from channel t
-            join message s on s.channel_id = t.id
-            left join media_link l
-                   on l.target_id = s.id
-                  and l.link_type = 'Message'
-            where t.room_id = $1
-            "#,
-            *room_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        let media_size = query_scalar!(
-            r#"
-            select sum((m.data->'source'->'size')::int) as total_size
-            from room r
-            join channel t on t.room_id = r.id
-            join message s on s.channel_id = t.id
-            join media_link l on l.target_id = s.id and l.link_type = 'Message'
-            join media m on m.id = l.media_id
-            where r.id = $1
-            "#,
-            *room_id
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .unwrap_or_default();
-
-        Ok(RoomMetrics {
-            channel_count: channel_count as u64,
-            active_channel_count: active_channel_count as u64,
-            message_count: message_media_counts.total_messages.unwrap_or_default() as u64,
-            member_count: member_count as u64,
-            media_count: message_media_counts.total_media.unwrap_or_default() as u64,
-            media_size: media_size as u64,
-        })
-    }
-
     async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId> {
         let version_id = RoomVerId::new();
         query!(

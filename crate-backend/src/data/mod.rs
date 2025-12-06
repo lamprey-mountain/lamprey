@@ -31,8 +31,8 @@ use common::v1::types::{
     Permission, PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin,
     RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced, RoomMemberSearchResponse,
-    RoomMembership, RoomMetrics, SessionPatch, SessionStatus, SessionToken, Suspended, TagId,
-    ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
+    RoomMembership, SessionPatch, SessionStatus, SessionToken, Suspended, TagId, ThreadMember,
+    ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
 };
 
 use uuid::Uuid;
@@ -81,7 +81,6 @@ pub trait Data:
     + DataNotification
     + DataWebhook
     + DataTag
-    + DataMetrics
     + DataRoomAnalytics
     + Send
     + Sync
@@ -140,7 +139,6 @@ pub trait DataRoom {
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
     async fn room_update(&self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
-    async fn room_metrics(&self, room_id: RoomId) -> Result<RoomMetrics>;
     async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId>;
     async fn room_delete(&self, room_id: RoomId) -> Result<()>;
     async fn room_undelete(&self, room_id: RoomId) -> Result<()>;

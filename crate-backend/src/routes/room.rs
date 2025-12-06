@@ -9,7 +9,7 @@ use axum::{
 use axum_extra::TypedHeader;
 use common::v1::types::{
     application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    AuditLogFilter, RoomMetrics, RoomType, TransferOwnership, SERVER_ROOM_ID,
+    AuditLogFilter, RoomType, TransferOwnership, SERVER_ROOM_ID,
 };
 use headers::ETag;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -385,29 +385,6 @@ async fn room_ack(
     Ok(Json(()))
 }
 
-/// Room metrics
-///
-/// Get metrics for a room
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/metrics",
-    params(("room_id", description = "Room id")),
-    tags = ["room"],
-    responses((status = OK, description = "success", body = RoomMetrics))
-)]
-#[deprecated = "use room analytics endpoints instead"]
-async fn room_metrics(
-    Path(room_id): Path<RoomId>,
-    Auth(user): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s.services().perms.for_room(user.id, room_id).await?;
-    perms.ensure(Permission::ViewAuditLog)?;
-    let metrics = data.room_metrics(room_id).await?;
-    Ok(Json(metrics))
-}
-
 /// Room transfer ownership
 #[utoipa::path(
     post,
@@ -601,7 +578,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_undelete))
         .routes(routes!(room_audit_logs))
         .routes(routes!(room_ack))
-        .routes(routes!(room_metrics))
         .routes(routes!(room_transfer_ownership))
         .routes(routes!(room_integration_list))
         .routes(routes!(room_quarantine))
