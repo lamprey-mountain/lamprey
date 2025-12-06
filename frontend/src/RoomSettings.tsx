@@ -3,6 +3,7 @@ import type { RoomT } from "./types.ts";
 import { Dynamic } from "solid-js/web";
 import {
 	AuditLog,
+	Automod,
 	Bans,
 	Bots,
 	Emoji,
@@ -20,6 +21,7 @@ import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
+import { flags } from "./flags.ts";
 
 // TODO: hide empty categories
 // TODO: more permission checks
@@ -52,6 +54,12 @@ const tabs = [
 	},
 	{ name: "members", path: "members", component: Members },
 	{ category: "moderation" },
+	{
+		name: "automod",
+		path: "automod",
+		component: Automod,
+		permissionCheck: (p) => p.has("RoomManage") && flags.has("automod"),
+	},
 	{
 		name: "bans",
 		path: "bans",

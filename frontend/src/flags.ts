@@ -42,6 +42,7 @@ export const allFlags = [
 	{ id: "thread_quick_create" },
 	{ id: "channel_forum" },
 	{ id: "channel_calendar" },
+	{ id: "automod" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -60,6 +61,7 @@ const flagsDev: Flag[] = [
 	"thread_quick_create",
 	"channel_forum",
 	"channel_calendar",
+	"automod",
 ];
 
 const flagsProd: Flag[] = [
