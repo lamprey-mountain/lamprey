@@ -151,9 +151,18 @@ impl DataEmoji for Postgres {
         )
     }
 
-    async fn emoji_update(&self, _emoji_id: EmojiId, _patch: EmojiCustomPatch) -> Result<()> {
-        // TODO: version id on emoji?
-        todo!()
+    async fn emoji_update(&self, emoji_id: EmojiId, patch: EmojiCustomPatch) -> Result<()> {
+        if let Some(name) = patch.name {
+            query!(
+                "UPDATE custom_emoji SET name = $1 WHERE id = $2",
+                name,
+                *emoji_id
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+
+        Ok(())
     }
 
     async fn emoji_delete(&self, emoji_id: EmojiId) -> Result<()> {

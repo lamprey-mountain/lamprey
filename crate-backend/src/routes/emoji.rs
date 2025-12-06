@@ -197,15 +197,21 @@ async fn emoji_update(
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     let data = s.data();
     perms.ensure(Permission::EmojiManage)?;
+    let emoji_before = data.emoji_get(emoji_id).await?;
     data.emoji_update(emoji_id, json).await?;
     let emoji = data.emoji_get(emoji_id).await?;
+
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
-        ty: AuditLogEntryType::EmojiDelete { emoji_id },
+        ty: AuditLogEntryType::EmojiUpdate {
+            changes: Changes::new()
+                .change("name", &emoji_before.name, &emoji.name)
+                .build(),
+        },
     })
     .await?;
 
