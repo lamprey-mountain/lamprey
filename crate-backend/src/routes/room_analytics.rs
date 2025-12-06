@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
+    Json,
 };
 use common::v1::types::{
     room_analytics::{
@@ -10,7 +11,7 @@ use common::v1::types::{
         RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
         RoomAnalyticsOverview, RoomAnalyticsParams,
     },
-    RoomId,
+    Permission, RoomId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -21,7 +22,7 @@ use crate::{
 
 use super::util::Auth;
 
-/// Room analytics members count (TODO)
+/// Room analytics members count
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/members-count",
@@ -30,16 +31,23 @@ use super::util::Auth;
 )]
 async fn room_analytics_members_count(
     Auth(auth_user): Auth,
-    Path(_room_id): Path<RoomId>,
-    Query(_q): Query<RoomAnalyticsParams>,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Query(q): Query<RoomAnalyticsParams>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
-    Ok(Error::Unimplemented)
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::ViewAnalytics)?;
+
+    let datapoints = data.room_analytics_members_count(room_id, q).await?;
+    Ok(Json(datapoints))
 }
 
-/// Room analytics members joined (TODO)
+/// Room analytics members joined
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/members-join",
@@ -48,16 +56,18 @@ async fn room_analytics_members_count(
 )]
 async fn room_analytics_members_join(
     Auth(auth_user): Auth,
-    Path(_room_id): Path<RoomId>,
-    Query(_q): Query<RoomAnalyticsParams>,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Query(q): Query<RoomAnalyticsParams>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
-
-    Ok(Error::Unimplemented)
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::ViewAnalytics)?;
+    let res = s.data().room_analytics_members_join(room_id, q).await?;
+    Ok(Json(res))
 }
 
-/// Room analytics members left (TODO)
+/// Room analytics members left
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/members-leave",
@@ -66,16 +76,18 @@ async fn room_analytics_members_join(
 )]
 async fn room_analytics_members_leave(
     Auth(auth_user): Auth,
-    Path(_room_id): Path<RoomId>,
-    Query(_q): Query<RoomAnalyticsParams>,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Query(q): Query<RoomAnalyticsParams>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
-
-    Ok(Error::Unimplemented)
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::ViewAnalytics)?;
+    let res = s.data().room_analytics_members_leave(room_id, q).await?;
+    Ok(Json(res))
 }
 
-/// Room analytics channels (TODO)
+/// Room analytics channels
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/channels",
@@ -84,17 +96,19 @@ async fn room_analytics_members_leave(
 )]
 async fn room_analytics_channels(
     Auth(auth_user): Auth,
-    Path(_room_id): Path<RoomId>,
-    Query(_q): Query<RoomAnalyticsParams>,
-    Query(_q2): Query<RoomAnalyticsChannelParams>,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Query(q): Query<RoomAnalyticsParams>,
+    Query(q2): Query<RoomAnalyticsChannelParams>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
-
-    Ok(Error::Unimplemented)
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::ViewAnalytics)?;
+    let res = s.data().room_analytics_channels(room_id, q, q2).await?;
+    Ok(Json(res))
 }
 
-/// Room analytics overview (TODO)
+/// Room analytics overview
 ///
 /// aggregate all stats from all channels
 #[utoipa::path(
@@ -105,13 +119,15 @@ async fn room_analytics_channels(
 )]
 async fn room_analytics_overview(
     Auth(auth_user): Auth,
-    Path(_room_id): Path<RoomId>,
-    Query(_q): Query<RoomAnalyticsParams>,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Query(q): Query<RoomAnalyticsParams>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
-
-    Ok(Error::Unimplemented)
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::ViewAnalytics)?;
+    let res = s.data().room_analytics_overview(room_id, q).await?;
+    Ok(Json(res))
 }
 
 /// Room analytics invites (TODO)

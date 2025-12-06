@@ -1,61 +1,208 @@
 use async_trait::async_trait;
 use common::v1::types::{
     room_analytics::{
-        RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
+        Aggregation, RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
         RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
         RoomAnalyticsOverview, RoomAnalyticsParams,
     },
     RoomId,
 };
 use sqlx::{query, query_scalar};
-use time::{OffsetDateTime, PrimitiveDateTime};
+use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 
 use crate::data::DataRoomAnalytics;
 use crate::error::Result;
 
 use super::Postgres;
 
+fn aggregate_points<T: Clone + Send>(
+    points: Vec<T>,
+    q: &RoomAnalyticsParams,
+    get_bucket: impl Fn(&T) -> OffsetDateTime,
+) -> Vec<T> {
+    if points.is_empty() {
+        return vec![];
+    }
+
+    let limit = q.limit.unwrap_or(100).max(1).min(1024) as usize;
+
+    let aggregation_duration = match q.aggregate {
+        Aggregation::Hourly => Duration::hours(1),
+        Aggregation::Daily => Duration::days(1),
+        Aggregation::Weekly => Duration::weeks(1),
+        Aggregation::Monthly => Duration::days(30), // approximation
+    };
+
+    let mut aggregated_points = Vec::new();
+    let mut last_bucket_time: Option<OffsetDateTime> = None;
+
+    // iterate from newest to oldest
+    for point in points.into_iter().rev() {
+        let current_bucket_time = get_bucket(&point);
+
+        if let Some(last_time) = last_bucket_time {
+            if last_time - current_bucket_time < aggregation_duration {
+                continue;
+            }
+        }
+
+        aggregated_points.push(point.clone());
+        last_bucket_time = Some(current_bucket_time);
+
+        if aggregated_points.len() >= limit {
+            break;
+        }
+    }
+
+    // return in ascending order of time
+    aggregated_points.reverse();
+    aggregated_points
+}
+
 #[async_trait]
 impl DataRoomAnalytics for Postgres {
     async fn room_analytics_members_count(
         &self,
-        _room_id: RoomId,
-        _q: RoomAnalyticsParams,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsMembersCount>> {
-        todo!()
+        let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
+        let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
+
+        let points = query!(
+            "select ts, members from metric_room where room_id = $1 AND ($2::timestamp IS NULL OR ts >= $2) AND ($3::timestamp IS NULL OR ts <= $3) ORDER BY ts ASC",
+            *room_id,
+            start_time,
+            end_time
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|p| RoomAnalyticsMembersCount {
+            bucket: p.ts.into(),
+            count: p.members as u64,
+        })
+        .collect();
+
+        Ok(aggregate_points(points, &q, |p| p.bucket.into_inner()))
     }
 
     async fn room_analytics_members_join(
         &self,
-        _room_id: RoomId,
-        _q: RoomAnalyticsParams,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsMembersJoin>> {
-        todo!()
+        let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
+        let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
+
+        let points = query!(
+            "SELECT ts, members_join from metric_room where room_id = $1 AND ($2::timestamp IS NULL OR ts >= $2) AND ($3::timestamp IS NULL OR ts <= $3) ORDER BY ts ASC",
+            *room_id,
+            start_time,
+            end_time
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|p| RoomAnalyticsMembersJoin {
+            bucket: p.ts.into(),
+            count: p.members_join as u64,
+        })
+        .collect();
+
+        Ok(aggregate_points(points, &q, |p| p.bucket.into_inner()))
     }
 
     async fn room_analytics_members_leave(
         &self,
-        _room_id: RoomId,
-        _q: RoomAnalyticsParams,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsMembersLeave>> {
-        todo!()
+        let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
+        let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
+
+        let points = query!(
+            "SELECT ts, members_leave from metric_room where room_id = $1 AND ($2::timestamp IS NULL OR ts >= $2) AND ($3::timestamp IS NULL OR ts <= $3) ORDER BY ts ASC",
+            *room_id,
+            start_time,
+            end_time
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|p| RoomAnalyticsMembersLeave {
+            bucket: p.ts.into(),
+            count: p.members_leave as u64,
+        })
+        .collect();
+
+        Ok(aggregate_points(points, &q, |p| p.bucket.into_inner()))
     }
 
     async fn room_analytics_channels(
         &self,
-        _room_id: RoomId,
-        _q: RoomAnalyticsParams,
-        _q2: RoomAnalyticsChannelParams,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
+        q2: RoomAnalyticsChannelParams,
     ) -> Result<Vec<RoomAnalyticsChannel>> {
-        todo!()
+        let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
+        let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
+
+        let points = query!(
+            "SELECT ts, channel_id, message_count, media_count, media_size
+        FROM metric_channel
+        WHERE room_id = $1 AND ($2::uuid IS NULL OR channel_id = $2) AND ($3::timestamp IS NULL OR ts >= $3) AND ($4::timestamp IS NULL OR ts <= $4)
+        ORDER BY ts ASC",
+            *room_id,
+            q2.channel_id.map(|c| *c),
+            start_time,
+            end_time
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|p| RoomAnalyticsChannel {
+            bucket: p.ts.into(),
+            channel_id: p.channel_id.into(),
+            message_count: p.message_count as u64,
+            media_count: p.media_count as u64,
+            media_size: p.media_size as u64,
+        })
+        .collect();
+
+        Ok(aggregate_points(points, &q, |p| p.bucket.into_inner()))
     }
 
     async fn room_analytics_overview(
         &self,
-        _room_id: RoomId,
-        _q: RoomAnalyticsParams,
+        room_id: RoomId,
+        q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsOverview>> {
-        todo!()
+        let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
+        let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
+
+        let points = query!(
+            "SELECT ts, sum(message_count)::int as message_count, sum(media_count)::int as media_count, sum(media_size)::int as media_size
+        FROM metric_channel
+        WHERE room_id = $1 AND ($2::timestamp IS NULL OR ts >= $2) AND ($3::timestamp IS NULL OR ts <= $3)
+        GROUP BY ts
+        ORDER BY ts ASC",
+            *room_id,
+            start_time,
+            end_time
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|p| RoomAnalyticsOverview {
+            bucket: p.ts.into(),
+            message_count: p.message_count.unwrap_or(0) as u64,
+            media_count: p.media_count.unwrap_or(0) as u64,
+            media_size: p.media_size.unwrap_or(0) as u64,
+        })
+        .collect();
+
+        Ok(aggregate_points(points, &q, |p| p.bucket.into_inner()))
     }
 
     async fn room_analytics_invites(

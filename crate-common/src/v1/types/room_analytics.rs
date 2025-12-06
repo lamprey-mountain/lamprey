@@ -23,6 +23,9 @@ pub struct RoomAnalyticsParams {
     pub start: Option<Time>,
     pub end: Option<Time>,
     pub aggregate: Aggregation,
+
+    /// limit between 1..1024, default to 10
+    pub limit: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
