@@ -72,9 +72,12 @@ where
         }
     }
 
-    let media: JsonValue = query_scalar!("SELECT data FROM media WHERE id = $1", *media_id)
-        .fetch_one(exec)
-        .await?;
+    let media: JsonValue = query_scalar!(
+        "SELECT data FROM media WHERE id = $1 AND deleted_at IS NULL",
+        *media_id
+    )
+    .fetch_one(exec)
+    .await?;
     let media: DbMediaData = serde_json::from_value(media).unwrap();
     Ok(match media {
         DbMediaData::V1(media) => media,
