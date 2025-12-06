@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
+use crate::v1::types::{util::Diff, EmojiId, MediaId, RoomId, UserId};
 
 // WARN: this is an *extreme* work in progress
 
@@ -58,4 +58,10 @@ pub struct EmojiCustomCreate {
 pub struct EmojiCustomPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub name: Option<String>,
+}
+
+impl Diff<EmojiCustom> for EmojiCustomPatch {
+    fn changes(&self, other: &EmojiCustom) -> bool {
+        self.name.changes(&other.name)
+    }
 }

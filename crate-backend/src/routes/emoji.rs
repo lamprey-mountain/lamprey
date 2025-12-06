@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
+use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync,
     PaginationQuery, PaginationResponse, Permission, RoomId,
@@ -190,15 +191,20 @@ async fn emoji_update(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<EmojiCustomPatch>,
+    Json(patch): Json<EmojiCustomPatch>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     let data = s.data();
     perms.ensure(Permission::EmojiManage)?;
+
     let emoji_before = data.emoji_get(emoji_id).await?;
-    data.emoji_update(emoji_id, json).await?;
+    if patch.changes(&emoji_before) {
+        return Ok(Json(emoji_before));
+    }
+
+    data.emoji_update(emoji_id, patch).await?;
     let emoji = data.emoji_get(emoji_id).await?;
 
     s.audit_log_append(AuditLogEntry {
