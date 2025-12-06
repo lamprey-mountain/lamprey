@@ -87,7 +87,9 @@
                       "VoicePriority",
                       "VoiceSpeak",
                       "VoiceVideo",
-                      "CalendarEventManage"
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate"
                     ]
                   }
                 }
@@ -155,7 +157,9 @@
                       "VoicePriority",
                       "VoiceSpeak",
                       "VoiceVideo",
-                      "CalendarEventManage"
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate"
                     ]
                   }
                 }
@@ -252,7 +256,9 @@
                       "VoicePriority",
                       "VoiceSpeak",
                       "VoiceVideo",
-                      "CalendarEventManage"
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate"
                     ]
                   }
                 }
@@ -316,7 +322,9 @@
                       "VoicePriority",
                       "VoiceSpeak",
                       "VoiceVideo",
-                      "CalendarEventManage"
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate"
                     ]
                   }
                 }

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ts, members_leave from metric_room where room_id = $1 AND ($2::timestamp IS NULL OR ts >= $2) AND ($3::timestamp IS NULL OR ts <= $3) ORDER BY ts ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 1,
+        "name": "members_leave",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamp",
+        "Timestamp"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e99865bac1ab2976499ad60e4902781c068f590b7de5eab481e27f65e6536bd8"
+}
