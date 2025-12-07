@@ -28,7 +28,7 @@ struct TagDeleteQuery {
     force: bool,
 }
 
-/// Create a tag
+/// Tag create
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/tag",
@@ -96,7 +96,7 @@ async fn tag_create(
     Ok((StatusCode::CREATED, Json(tag)))
 }
 
-/// Update a tag
+/// Tag update
 #[utoipa::path(
     patch,
     path = "/channel/{channel_id}/tag/{tag_id}",
@@ -167,7 +167,7 @@ async fn tag_update(
     Ok((StatusCode::OK, Json(tag)))
 }
 
-/// Delete a tag
+/// Tag delete
 #[utoipa::path(
     delete,
     path = "/channel/{channel_id}/tag/{tag_id}",
