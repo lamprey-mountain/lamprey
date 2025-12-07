@@ -121,13 +121,16 @@ async fn media_patch(
             return Ok((StatusCode::NO_CONTENT, headers));
         }
     }
-    let (media, uploader_id) = s.data().media_select(media_id).await?;
-    if uploader_id != auth_user.id {
+    let media = s.data().media_select(media_id).await?;
+    if media.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    if media.user_id != auth_user.id {
         return Err(Error::MissingPermissions);
     }
     s.data().media_update(media_id, json).await?;
     let mut headers = HeaderMap::new();
-    let size = media.source.size;
+    let size = media.inner.source.size;
     headers.insert("upload-offset", size.into());
     headers.insert("upload-length", size.into());
     Ok((StatusCode::NO_CONTENT, headers))
@@ -331,7 +334,11 @@ async fn media_get(
     Auth(_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let (mut media, _) = s.data().media_select(media_id).await?;
+    let media = s.data().media_select(media_id).await?;
+    if media.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    let mut media = media.inner;
     s.presign(&mut media).await?;
     Ok(Json(media))
 }
@@ -368,9 +375,9 @@ async fn media_check(
             return Ok((StatusCode::NO_CONTENT, headers));
         }
     }
-    let (media, _) = s.data().media_select(media_id).await?;
+    let media = s.data().media_select(media_id).await?;
     let mut headers = HeaderMap::new();
-    let size = media.source.size;
+    let size = media.inner.source.size;
     headers.insert("upload-offset", size.into());
     headers.insert("upload-length", size.into());
     Ok((StatusCode::NO_CONTENT, headers))

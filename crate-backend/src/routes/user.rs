@@ -60,16 +60,16 @@ async fn user_update(
         return Ok(Json(start));
     }
     if let Some(Some(avatar_media_id)) = patch.avatar {
-        let (media, _) = data.media_select(avatar_media_id).await?;
-        if !matches!(media.source.info, MediaTrackInfo::Image(_)) {
+        let media = data.media_select(avatar_media_id).await?;
+        if !matches!(media.inner.source.info, MediaTrackInfo::Image(_)) {
             return Err(Error::BadStatic(
                 "couldn't link media as avatar: not an image",
             ));
         }
     }
     if let Some(Some(banner_media_id)) = patch.banner {
-        let (media, _) = data.media_select(banner_media_id).await?;
-        if !matches!(media.source.info, MediaTrackInfo::Image(_)) {
+        let media = data.media_select(banner_media_id).await?;
+        if !matches!(media.inner.source.info, MediaTrackInfo::Image(_)) {
             return Err(Error::BadStatic(
                 "couldn't link media as banner: not an image",
             ));

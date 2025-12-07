@@ -382,9 +382,9 @@ impl ServiceThreads {
         }
 
         if let Some(icon) = json.icon {
-            let (media, _) = data.media_select(icon).await?;
+            let media = data.media_select(icon).await?;
             if !matches!(
-                media.source.info,
+                media.inner.source.info,
                 common::v1::types::MediaTrackInfo::Image(_)
             ) {
                 return Err(Error::BadStatic("media not an image"));
@@ -667,9 +667,9 @@ impl ServiceThreads {
             if chan_old.ty.has_icon() {
                 return Err(Error::BadStatic("this channel doesnt have an icon"));
             }
-            let (media, _) = data.media_select(icon).await?;
+            let media = data.media_select(icon).await?;
             if !matches!(
-                media.source.info,
+                media.inner.source.info,
                 common::v1::types::MediaTrackInfo::Image(_)
             ) {
                 return Err(Error::BadStatic("media not an image"));

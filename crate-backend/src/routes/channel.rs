@@ -148,9 +148,9 @@ async fn channel_create_dm(
         if json.ty != ChannelType::Gdm {
             return Err(Error::BadStatic("only gdm threads can have icons"));
         }
-        let (media, _) = data.media_select(icon).await?;
+        let media = data.media_select(icon).await?;
         if !matches!(
-            media.source.info,
+            media.inner.source.info,
             common::v1::types::MediaTrackInfo::Image(_)
         ) {
             return Err(Error::BadStatic("media not an image"));

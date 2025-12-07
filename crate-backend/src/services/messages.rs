@@ -13,9 +13,10 @@ use common::v1::types::notifications::{Notification, NotificationReason};
 use common::v1::types::util::{Diff, Time};
 
 use common::v1::types::{
-    ChannelId, ChannelPatch, Embed, EmbedCreate, Mentions, MentionsChannel, MentionsEmoji,
-    MentionsRole, MentionsUser, Message, MessageCreate, MessageDefaultMarkdown, MessageId,
-    MessagePatch, MessageSync, MessageType, NotificationId, Permission, RoomId, ThreadMembership,
+    ChannelId, ChannelPatch, Embed, EmbedCreate, EmbedId, EmbedType, Mentions, MentionsChannel,
+    MentionsEmoji, MentionsRole, MentionsUser, Message, MessageCreate, MessageDefaultMarkdown,
+    MessageId, MessagePatch, MessageSync, MessageType, NotificationId, Permission, RoomId,
+    ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -838,8 +839,8 @@ async fn embed_from_create(
     user_id: UserId,
 ) -> Result<Embed> {
     let media = if let Some(media_ref) = value.media {
-        let (media, owner_id) = s.data().media_select(media_ref.id).await?;
-        if owner_id != user_id {
+        let media = s.data().media_select(media_ref.id).await?;
+        if media.user_id != user_id {
             return Err(Error::MissingPermissions);
         }
         Some(media)
@@ -847,8 +848,8 @@ async fn embed_from_create(
         None
     };
     let thumbnail = if let Some(media_ref) = value.thumbnail {
-        let (media, owner_id) = s.data().media_select(media_ref.id).await?;
-        if owner_id != user_id {
+        let media = s.data().media_select(media_ref.id).await?;
+        if media.user_id != user_id {
             return Err(Error::MissingPermissions);
         }
         Some(media)
@@ -856,8 +857,8 @@ async fn embed_from_create(
         None
     };
     let author_avatar = if let Some(media_ref) = value.author_avatar {
-        let (media, owner_id) = s.data().media_select(media_ref.id).await?;
-        if owner_id != user_id {
+        let media = s.data().media_select(media_ref.id).await?;
+        if media.user_id != user_id {
             return Err(Error::MissingPermissions);
         }
         Some(media)
@@ -866,8 +867,8 @@ async fn embed_from_create(
     };
 
     Ok(Embed {
-        id: common::v1::types::EmbedId::new(),
-        ty: common::v1::types::EmbedType::Custom,
+        id: EmbedId::new(),
+        ty: EmbedType::Custom,
         url: value.url,
         canonical_url: None,
         title: value.title,
@@ -880,11 +881,11 @@ async fn embed_from_create(
             .ok()
             .flatten()
             .map(|c| Color::from_hex_string(c.to_css_hex())),
-        media,
-        thumbnail,
+        media: media.map(|m| m.into()),
+        thumbnail: thumbnail.map(|m| m.into()),
         author_name: value.author_name,
         author_url: value.author_url,
-        author_avatar,
+        author_avatar: author_avatar.map(|m| m.into()),
         site_name: None,
         site_avatar: None,
     })

@@ -1,8 +1,10 @@
 use async_trait::async_trait;
+use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::{MediaPatch, MediaTrack};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
-use tracing::info;
+use time::PrimitiveDateTime;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -16,6 +18,7 @@ use super::Postgres;
 pub struct DbMedia {
     pub user_id: Uuid,
     pub data: serde_json::Value,
+    pub deleted_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -94,20 +97,24 @@ impl DataMedia for Postgres {
         Ok(())
     }
 
-    async fn media_select(&self, media_id: MediaId) -> Result<(Media, UserId)> {
+    async fn media_select(&self, media_id: MediaId) -> Result<MediaWithAdmin> {
         let media = query_as!(
             DbMedia,
             r#"
-    	    SELECT user_id, data
+    	    SELECT user_id, deleted_at, data
     	    FROM media
     	    WHERE id = $1
         "#,
-            media_id.into_inner(),
+            *media_id,
         )
         .fetch_one(&self.pool)
         .await?;
         let parsed: DbMediaData = serde_json::from_value(media.data).unwrap();
-        Ok((parsed.into(), media.user_id.into()))
+        Ok(MediaWithAdmin {
+            inner: parsed.into(),
+            user_id: media.user_id.into(),
+            deleted_at: media.deleted_at.map(|t| t.into()),
+        })
     }
 
     async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()> {
@@ -115,7 +122,7 @@ impl DataMedia for Postgres {
         let mut media = query_as!(
             DbMedia,
             r#"
-    	    SELECT user_id, data
+    	    SELECT user_id, deleted_at, data
     	    FROM media
     	    WHERE id = $1
     	    FOR UPDATE
@@ -124,6 +131,13 @@ impl DataMedia for Postgres {
         )
         .fetch_one(&mut *tx)
         .await?;
+
+        if media.deleted_at.is_some() {
+            warn!("tried to update media, but media is deleted. ignoring update.");
+            tx.rollback().await?;
+            return Ok(());
+        }
+
         let media_data: DbMediaData =
             serde_json::from_value(media.data).expect("invalid data in db");
         let mut media_data: Media = media_data.into();

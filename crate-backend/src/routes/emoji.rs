@@ -48,9 +48,9 @@ async fn emoji_create(
     perms.ensure(Permission::EmojiManage)?;
 
     let data = s.data();
-    let (media, _) = data.media_select(json.media_id).await?;
+    let media = data.media_select(json.media_id).await?;
     if !matches!(
-        media.source.info,
+        media.inner.source.info,
         common::v1::types::MediaTrackInfo::Image(_)
     ) {
         return Err(Error::BadStatic("media not an image"));

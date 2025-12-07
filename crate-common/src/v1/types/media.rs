@@ -10,7 +10,7 @@ use validator::Validate;
 
 use crate::v1::types::{
     util::{Diff, Time},
-    MediaId,
+    MediaId, UserId,
 };
 
 mod mime;
@@ -55,6 +55,22 @@ pub struct Media {
     // /// extra metadata relevant to the media itself and not a track
     // // NOTE: maybe derived could be its own MediaTrackInfo type. not sure how it would be to use though?
     // pub derived: Option<MediaDerived>,
+}
+
+/// media with extra metadata for admins
+// maybe make this a part of media? and make each field optional
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaWithAdmin {
+    #[serde(flatten)]
+    pub inner: Media,
+
+    /// the user who uploaded this media
+    pub user_id: UserId,
+
+    /// if this media was deleted, and when it was deleted
+    pub deleted_at: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -205,5 +221,11 @@ impl MediaCreateSource {
             MediaCreateSource::Upload { filename, .. } => Some(filename.as_str()),
             MediaCreateSource::Download { filename, .. } => filename.as_deref(),
         }
+    }
+}
+
+impl Into<Media> for MediaWithAdmin {
+    fn into(self) -> Media {
+        self.inner
     }
 }

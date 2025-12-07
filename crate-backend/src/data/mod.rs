@@ -7,6 +7,7 @@ use common::v1::types::calendar::{
 };
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
+use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
@@ -380,7 +381,7 @@ pub trait DataInvite {
 #[async_trait]
 pub trait DataMedia {
     async fn media_insert(&self, user_id: UserId, media: Media) -> Result<()>;
-    async fn media_select(&self, media_id: MediaId) -> Result<(Media, UserId)>;
+    async fn media_select(&self, media_id: MediaId) -> Result<MediaWithAdmin>;
     async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
     async fn media_delete(&self, media_id: MediaId) -> Result<()>;
     async fn media_link_insert(

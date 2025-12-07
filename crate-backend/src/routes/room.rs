@@ -45,9 +45,9 @@ async fn room_create(
     let icon = json.icon;
     if let Some(media_id) = icon {
         let data = s.data();
-        let (media, _) = data.media_select(media_id).await?;
+        let media = data.media_select(media_id).await?;
         if !matches!(
-            media.source.info,
+            media.inner.source.info,
             common::v1::types::MediaTrackInfo::Image(_)
         ) {
             return Err(Error::BadStatic("media not an image"));
@@ -171,9 +171,9 @@ async fn room_edit(
 
     if let Some(Some(media_id)) = json.icon {
         let data = s.data();
-        let (media, _) = data.media_select(media_id).await?;
+        let media = data.media_select(media_id).await?;
         if !matches!(
-            media.source.info,
+            media.inner.source.info,
             common::v1::types::MediaTrackInfo::Image(_)
         ) {
             return Err(Error::BadStatic("media not an image"));
