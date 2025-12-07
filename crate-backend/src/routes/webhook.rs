@@ -46,12 +46,19 @@ async fn webhook_create(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookCreate>,
 ) -> Result<impl IntoResponse> {
-    let channel = s.data().channel_get(channel_id).await?;
-    let room_id = channel
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let chan = srv.channels.get(channel_id, None).await?;
+    let room_id = chan
         .room_id
-        .ok_or(Error::BadRequest("Channel not in a room".to_string()))?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
     perms.ensure(Permission::IntegrationsManage)?;
+
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
 
     let webhook = s
         .data()
@@ -101,12 +108,19 @@ async fn webhook_list_channel(
     State(s): State<Arc<ServerState>>,
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
-    let channel = s.data().channel_get(channel_id).await?;
-    let room_id = channel
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let chan = srv.channels.get(channel_id, None).await?;
+    let _room_id = chan
         .room_id
-        .ok_or(Error::BadRequest("Channel not in a room".to_string()))?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
     perms.ensure(Permission::IntegrationsManage)?;
+
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
 
     let webhooks = s
         .data()
@@ -159,11 +173,21 @@ async fn webhook_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get(webhook_id).await?;
-    let room_id = webhook
+
+    let srv = s.services();
+    let perms = srv
+        .perms
+        .for_channel(auth_user.id, webhook.channel_id)
+        .await?;
+    let chan = srv.channels.get(webhook.channel_id, None).await?;
+    let _room_id = chan
         .room_id
-        .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
     perms.ensure(Permission::IntegrationsManage)?;
+
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
 
     Ok(Json(webhook))
 }
@@ -205,12 +229,21 @@ async fn webhook_delete(
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let chan = srv.channels.get(channel_id, None).await?;
     let webhook = s.data().webhook_get(webhook_id).await?;
-    let room_id = webhook
+    let _room_id = webhook
         .room_id
-        .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
+        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
+
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
 
     s.data().webhook_delete(webhook_id).await?;
 
