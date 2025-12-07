@@ -12,6 +12,7 @@ use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, Permission, TagId,
 };
 use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -242,9 +243,37 @@ async fn tag_delete(
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
+#[allow(unused)] // TEMP
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+pub struct TagSearchQuery {
+    pub query: String,
+}
+
+/// Tag search (TODO)
+///
+/// Search all emoji the user can see.
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/tag/search",
+    params(("channel_id", description = "The ID of the forum channel to search for tags in.")),
+    tags = ["tag"],
+    responses(
+        (status = OK, body = Vec<Tag>, description = "success"),
+    )
+)]
+async fn tag_search(
+    Path(_channel_id): Path<ChannelId>,
+    Auth(_user): Auth,
+    Query(_q): Query<TagSearchQuery>,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(tag_create))
         .routes(routes!(tag_update))
         .routes(routes!(tag_delete))
+        .routes(routes!(tag_search))
 }
