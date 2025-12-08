@@ -232,13 +232,13 @@ async fn webhook_delete(
     auth_user.ensure_unsuspended()?;
 
     let srv = s.services();
+    let webhook = s.data().webhook_get(webhook_id).await?;
+    let channel_id = webhook.channel_id;
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     let chan = srv.channels.get(channel_id, None).await?;
-    let webhook = s.data().webhook_get(webhook_id).await?;
-    let _room_id = webhook
+    let room_id = chan
         .room_id
         .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     if !chan.ty.has_text() {
