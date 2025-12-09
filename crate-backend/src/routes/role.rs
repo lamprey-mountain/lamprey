@@ -41,6 +41,16 @@ async fn role_create(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
+
+    let allow_set: HashSet<_> = json.allow.iter().collect();
+    let deny_set: HashSet<_> = json.deny.iter().collect();
+
+    if !allow_set.is_disjoint(&deny_set) {
+        return Err(Error::BadRequest(
+            "a permission cannot be both allowed and denied".to_string(),
+        ));
+    }
+
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
@@ -129,6 +139,19 @@ async fn role_update(
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::RoleManage)?;
     let start_role = d.role_select(room_id, role_id).await?;
+
+    let new_allow = json.allow.as_ref().unwrap_or(&start_role.allow);
+    let new_deny = json.deny.as_ref().unwrap_or(&start_role.deny);
+
+    let allow_set: HashSet<_> = new_allow.iter().collect();
+    let deny_set: HashSet<_> = new_deny.iter().collect();
+
+    if !allow_set.is_disjoint(&deny_set) {
+        return Err(Error::BadRequest(
+            "a permission cannot be both allowed and denied".to_string(),
+        ));
+    }
+
     if !json.changes(&start_role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }

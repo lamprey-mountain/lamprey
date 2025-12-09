@@ -37,6 +37,16 @@ async fn permission_overwrite(
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
+
+    let allow_set: HashSet<_> = json.allow.iter().collect();
+    let deny_set: HashSet<_> = json.deny.iter().collect();
+
+    if !allow_set.is_disjoint(&deny_set) {
+        return Err(Error::BadRequest(
+            "a permission cannot be both allowed and denied".to_string(),
+        ));
+    }
+
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
