@@ -44,7 +44,7 @@ impl DataSearch for Postgres {
             }
         }
 
-        let thread_ids: Vec<Uuid> = query.thread_id.iter().map(|id| **id).collect();
+        let channel_ids: Vec<Uuid> = query.channel_id.iter().map(|id| **id).collect();
         let user_ids: Vec<Uuid> = query.user_id.iter().map(|id| **id).collect();
         let mentions_users: Vec<Uuid> = query.mentions_users.iter().map(|id| **id).collect();
         let mentions_roles: Vec<Uuid> = query.mentions_roles.iter().map(|id| **id).collect();
@@ -61,7 +61,7 @@ impl DataSearch for Postgres {
                 (p.limit + 1) as i32,
                 query.query,
                 &room_ids,
-                &thread_ids,
+                &channel_ids,
                 &user_ids,
                 query.has_attachment,
                 query.has_image,
@@ -82,7 +82,7 @@ impl DataSearch for Postgres {
                 *user_id,
                 query.query,
                 &room_ids,
-                &thread_ids,
+                &channel_ids,
                 &user_ids,
                 query.has_attachment,
                 query.has_image,

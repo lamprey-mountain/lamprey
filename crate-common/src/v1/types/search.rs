@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{ChannelId, RoleId, RoomId, UserId};
+use crate::v1::types::{ChannelId, ChannelType, RoleId, RoomId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -23,16 +23,17 @@ pub struct SearchMessageRequest {
     #[serde(default)]
     pub query: Option<String>,
 
+    /// Only return messages in these rooms. Defaults to all rooms.
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub room_id: Vec<RoomId>,
 
-    /// Only return messages in these threads. Defaults to all threads.
+    /// Only return messages in these channels. Defaults to all channels.
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
-    pub thread_id: Vec<ChannelId>,
+    pub channel_id: Vec<ChannelId>,
 
-    /// Only return messages from these users. Defaults to all threads.
+    /// Only return messages from these users. Defaults to all users.
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub user_id: Vec<UserId>,
@@ -106,6 +107,11 @@ pub struct SearchChannelsRequest {
 
     /// Only return removed (or not removed) threads
     pub removed: Option<bool>,
+
+    /// only return channels of these types
+    #[serde(default, rename = "type")]
+    #[cfg_attr(feature = "validator", validate(length(max = 32)))]
+    pub ty: Vec<ChannelType>,
 }
 
 // TODO(#77): room searching
