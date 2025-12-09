@@ -14,9 +14,10 @@ use common::v1::types::notifications::{Notification, NotificationReason};
 use common::v1::types::util::{Diff, Time};
 
 use common::v1::types::{
-    ChannelId, ChannelPatch, Embed, EmbedCreate, EmbedId, EmbedType, Mentions, MentionsChannel,
-    MentionsEmoji, MentionsRole, MentionsUser, Message, MessageCreate, MessageDefaultMarkdown,
-    MessageId, MessagePatch, MessageSync, MessageType, NotificationId, Permission, RoomId,
+    ChannelId, ChannelPatch, ContextQuery, ContextResponse, Embed, EmbedCreate, EmbedId, EmbedType,
+    Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, Message, MessageCreate,
+    MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync, MessageType, NotificationId,
+    PaginationDirection, PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId,
     ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
@@ -25,7 +26,7 @@ use linkify::LinkFinder;
 use url::Url;
 use validator::Validate;
 
-use crate::types::{DbMessageCreate, MediaLinkType, MentionsIds};
+use crate::types::{DbMessageCreate, MediaLinkType, MentionsIds, MessageVerId};
 use crate::{Error, Result, ServerStateInner};
 
 pub mod mentions;
@@ -852,23 +853,237 @@ impl ServiceMessages {
     }
 
     // TODO: move data stuff to this service
-    // pub async fn list(
-    //     &self,
-    //     channel_id: ChannelId,
-    //     user_id: UserId,
-    //     pagination: PaginationQuery<MessageId>,
-    // ) -> Result<PaginationResponse<Message>> {
-    //     todo!()
-    // }
+    pub async fn list(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data.message_list(channel_id, user_id, pagination).await?;
 
-    // pub fn list_deleted(&self) {}
-    // pub fn list_removed(&self) {}
-    // pub fn list_context(&self) {}
-    // pub fn list_versions(&self) {}
-    // pub fn get_version(&self) {}
-    // pub fn list_replies(&self) {}
-    // pub fn list_pins(&self) {}
-    // pub fn list_activity(&self) {}
+        self.populate_reactions(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+
+        Ok(res)
+    }
+
+    pub async fn list_deleted(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data
+            .message_list_deleted(channel_id, user_id, pagination)
+            .await?;
+
+        self.populate_reactions(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+
+        Ok(res)
+    }
+
+    pub async fn list_removed(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data
+            .message_list_removed(channel_id, user_id, pagination)
+            .await?;
+
+        self.populate_reactions(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+
+        Ok(res)
+    }
+
+    pub async fn list_context(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        user_id: UserId,
+        query: ContextQuery,
+    ) -> Result<ContextResponse> {
+        let s = &self.state;
+        let data = s.data();
+
+        let limit = query.limit.unwrap_or(10);
+        if limit > 1024 {
+            return Err(Error::BadStatic("limit too big"));
+        }
+
+        let before_q = PaginationQuery {
+            from: Some(message_id),
+            to: query.to_start,
+            dir: Some(PaginationDirection::B),
+            limit: Some(limit),
+        };
+
+        let after_q = PaginationQuery {
+            from: Some(message_id),
+            to: query.to_end,
+            dir: Some(PaginationDirection::F),
+            limit: Some(limit),
+        };
+
+        let (before_res, after_res, message_res) = tokio::join!(
+            data.message_list(channel_id, user_id, before_q),
+            data.message_list(channel_id, user_id, after_q),
+            data.message_get(channel_id, message_id, user_id)
+        );
+
+        let before = before_res?;
+        let after = after_res?;
+        let message = message_res.ok();
+
+        let mut items: Vec<Message> = before
+            .items
+            .into_iter()
+            .chain(message)
+            .chain(after.items)
+            .collect();
+
+        self.populate_reactions(channel_id, user_id, &mut items)
+            .await?;
+
+        for item in &mut items {
+            s.presign_message(item).await?;
+        }
+
+        Ok(ContextResponse {
+            items,
+            total: after.total,
+            has_after: after.has_more,
+            has_before: before.has_more,
+        })
+    }
+
+    pub async fn list_versions(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageVerId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data
+            .message_version_list(channel_id, message_id, user_id, pagination)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+
+        Ok(res)
+    }
+
+    pub async fn get_version(
+        &self,
+        channel_id: ChannelId,
+        version_id: MessageVerId,
+        user_id: UserId,
+    ) -> Result<Message> {
+        let s = &self.state;
+        let data = s.data();
+        let mut message = data
+            .message_version_get(channel_id, version_id, user_id)
+            .await?;
+        s.presign_message(&mut message).await?;
+        Ok(message)
+    }
+
+    pub async fn list_replies(
+        &self,
+        channel_id: ChannelId,
+        root_message_id: Option<MessageId>,
+        user_id: UserId,
+        query: RepliesQuery,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data
+            .message_replies(
+                channel_id,
+                root_message_id,
+                user_id,
+                query.depth,
+                query.breadth,
+                pagination,
+            )
+            .await?;
+
+        self.populate_reactions(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+        Ok(res)
+    }
+
+    pub async fn list_pins(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data
+            .message_pin_list(channel_id, user_id, pagination)
+            .await?;
+
+        self.populate_reactions(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+        Ok(res)
+    }
+
+    pub async fn list_activity(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data
+            .message_list_activity(channel_id, user_id, pagination)
+            .await?;
+
+        self.populate_reactions(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+        Ok(res)
+    }
 }
 
 // this should probably be moved somewhere else

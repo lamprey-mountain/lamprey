@@ -8,8 +8,8 @@ use axum::{
 };
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ContextQuery, ContextResponse,
-    MessageMigrate, MessageModerate, MessagePin, MessageType, PaginationDirection, PinsReorder,
-    RepliesQuery, ThreadMemberPut, ThreadMembership,
+    MessageMigrate, MessageModerate, MessagePin, MessageType, PinsReorder, RepliesQuery,
+    ThreadMemberPut, ThreadMembership,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -86,51 +86,15 @@ async fn message_context(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let limit = q.limit.unwrap_or(10);
-    if limit > 1024 {
-        return Err(Error::BadStatic("limit too big"));
-    }
-    let before_q = PaginationQuery {
-        from: Some(message_id),
-        to: q.to_start,
-        dir: Some(PaginationDirection::B),
-        limit: Some(limit),
-    };
-    let before = data
-        .message_list(channel_id, auth_user.id, before_q)
+
+    let res = srv
+        .messages
+        .list_context(channel_id, message_id, auth_user.id, q)
         .await?;
-    let after_q = PaginationQuery {
-        from: Some(message_id),
-        to: q.to_end,
-        dir: Some(PaginationDirection::F),
-        limit: Some(limit),
-    };
-    let after = data.message_list(channel_id, auth_user.id, after_q).await?;
-    let message = data
-        .message_get(channel_id, message_id, auth_user.id)
-        .await
-        .ok();
-    let mut res = ContextResponse {
-        items: before
-            .items
-            .into_iter()
-            .chain(message)
-            .chain(after.items)
-            .collect(),
-        total: after.total,
-        has_after: after.has_more,
-        has_before: before.has_more,
-    };
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
+
     Ok(Json(res))
 }
 
@@ -152,17 +116,10 @@ async fn message_list(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let mut res = data.message_list(channel_id, auth_user.id, q).await?;
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
+    let res = srv.messages.list(channel_id, auth_user.id, q).await?;
     Ok(Json(res))
 }
 
@@ -184,17 +141,13 @@ async fn message_get(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let mut message = data
-        .message_get(channel_id, message_id, auth_user.id)
+    let message = srv
+        .messages
+        .get(channel_id, message_id, auth_user.id)
         .await?;
-    s.presign_message(&mut message).await?;
     Ok(Json(message))
 }
 
@@ -343,19 +296,13 @@ async fn message_version_list(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let mut res = data
-        .message_version_list(channel_id, message_id, auth_user.id, q)
+    let res = srv
+        .messages
+        .list_versions(channel_id, message_id, auth_user.id, q)
         .await?;
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
     Ok(Json(res))
 }
 
@@ -378,17 +325,13 @@ async fn message_version_get(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let mut message = data
-        .message_version_get(channel_id, version_id, auth_user.id)
+    let message = srv
+        .messages
+        .get_version(channel_id, version_id, auth_user.id)
         .await?;
-    s.presign_message(&mut message).await?;
     Ok(Json(message))
 }
 
@@ -613,26 +556,13 @@ async fn message_reply_query(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let mut res = data
-        .message_replies(
-            channel_id,
-            Some(message_id),
-            auth_user.id,
-            q.depth,
-            q.breadth,
-            pagination,
-        )
+    let res = srv
+        .messages
+        .list_replies(channel_id, Some(message_id), auth_user.id, q, pagination)
         .await?;
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
     Ok(Json(res))
 }
 
@@ -659,26 +589,13 @@ async fn message_reply_roots(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let mut res = data
-        .message_replies(
-            channel_id,
-            None,
-            auth_user.id,
-            q.depth,
-            q.breadth,
-            pagination,
-        )
+    let res = srv
+        .messages
+        .list_replies(channel_id, None, auth_user.id, q, pagination)
         .await?;
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
     Ok(Json(res))
 }
 
@@ -948,17 +865,10 @@ async fn message_pin_list(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let mut res = data.message_pin_list(channel_id, auth_user.id, q).await?;
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
+    let res = srv.messages.list_pins(channel_id, auth_user.id, q).await?;
     Ok(Json(res))
 }
 
@@ -980,19 +890,13 @@ async fn message_list_deleted(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::MessageDelete)?;
-    let mut res = data
-        .message_list_deleted(channel_id, auth_user.id, q)
+    let res = srv
+        .messages
+        .list_deleted(channel_id, auth_user.id, q)
         .await?;
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
     Ok(Json(res))
 }
 
@@ -1014,19 +918,13 @@ async fn message_list_removed(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::MessageRemove)?;
-    let mut res = data
-        .message_list_removed(channel_id, auth_user.id, q)
+    let res = srv
+        .messages
+        .list_removed(channel_id, auth_user.id, q)
         .await?;
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
     Ok(Json(res))
 }
 

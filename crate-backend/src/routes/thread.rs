@@ -706,14 +706,10 @@ async fn thread_activity(
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let data = s.data();
-    let mut res = data
-        .message_list_activity(channel_id, auth_user.id, q)
+    let res = srv
+        .messages
+        .list_activity(channel_id, auth_user.id, q)
         .await?;
-
-    for message in &mut res.items {
-        s.presign_message(message).await?;
-    }
 
     Ok(Json(res))
 }
