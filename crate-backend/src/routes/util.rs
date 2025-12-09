@@ -32,9 +32,13 @@ impl Auth2 {
     pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
         let mut missing = vec![];
 
-        for s in scopes {
-            if !self.scopes.contains(s) {
-                missing.push(s.to_owned());
+        for required_scope in scopes {
+            if !self
+                .scopes
+                .iter()
+                .any(|session_scope| session_scope.implies(required_scope))
+            {
+                missing.push(required_scope.to_owned());
             }
         }
 

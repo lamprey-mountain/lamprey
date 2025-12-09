@@ -143,15 +143,37 @@ pub enum Scope {
     Identify,
 
     /// return email address in user profile
+    ///
+    /// implies `identify`
     Email,
 
     /// full read/write access to the user's account (except auth)
     ///
     /// in the future, this will be split into separate scopes
+    ///
+    /// implies `email` and `identify`
     Full,
 
     /// full read/write access to /auth. implies `full`. very dangerous, will be reworked later!
+    ///
+    /// implies `full`
     Auth,
+}
+
+impl Scope {
+    /// check if this scope implies another scope
+    pub fn implies(&self, other: &Scope) -> bool {
+        if self == other {
+            return true;
+        }
+
+        match self {
+            Scope::Auth => true,
+            Scope::Full => matches!(other, Scope::Email | Scope::Identify),
+            Scope::Email => *other == Scope::Identify,
+            Scope::Identify => false,
+        }
+    }
 }
 
 impl Diff<Application> for ApplicationPatch {
