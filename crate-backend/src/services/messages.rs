@@ -837,7 +837,9 @@ impl ServiceMessages {
             for r in rs {
                 a.push(ReactionCount {
                     key: match &r.0 {
-                        ReactionKeyParam::Text(t) => ReactionKey::Text(t.to_owned()),
+                        ReactionKeyParam::Text(t) => ReactionKey::Text {
+                            content: t.to_owned(),
+                        },
                         ReactionKeyParam::Custom(c) => {
                             let emoji = data.emoji_get(*c).await?;
                             ReactionKey::Custom(emoji)

@@ -38,7 +38,7 @@ pub struct ReactionListItem {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), serde(tag = "type"))]
 pub enum ReactionKey {
-    Text(String),
+    Text { content: String },
     Custom(EmojiCustom),
 }
 
@@ -136,7 +136,7 @@ impl ReactionKey {
     /// get this key as a ReactionKeyParam
     pub fn to_param(&self) -> ReactionKeyParam {
         match self {
-            ReactionKey::Text(t) => ReactionKeyParam::Text(t.to_owned()),
+            ReactionKey::Text { content: t } => ReactionKeyParam::Text(t.to_owned()),
             ReactionKey::Custom(e) => ReactionKeyParam::Custom(e.id),
         }
     }

@@ -119,7 +119,7 @@ async fn reaction_add(
         .await?;
 
     let reaction_key = match reaction_key {
-        ReactionKeyParam::Text(t) => ReactionKey::Text(t),
+        ReactionKeyParam::Text(t) => ReactionKey::Text { content: t },
         ReactionKeyParam::Custom(emoji_id) => {
             let emoji = data.emoji_get(emoji_id).await?;
             ReactionKey::Custom(emoji)
@@ -208,7 +208,7 @@ async fn reaction_remove(
         .await?;
 
     let reaction_key_for_sync = match reaction_key.clone() {
-        ReactionKeyParam::Text(t) => ReactionKey::Text(t),
+        ReactionKeyParam::Text(t) => ReactionKey::Text { content: t },
         ReactionKeyParam::Custom(emoji_id) => {
             let emoji = data.emoji_get(emoji_id).await?;
             ReactionKey::Custom(emoji)
@@ -291,7 +291,7 @@ async fn reaction_remove_key(
         .await?;
 
     let reaction_key_for_sync = match reaction_key.clone() {
-        ReactionKeyParam::Text(t) => ReactionKey::Text(t),
+        ReactionKeyParam::Text(t) => ReactionKey::Text { content: t },
         ReactionKeyParam::Custom(emoji_id) => {
             let emoji = data.emoji_get(emoji_id).await?;
             ReactionKey::Custom(emoji)
