@@ -26,21 +26,6 @@ ranked_messages as (
         row_number() over (partition by reply_id order by id) as rn
     from
         message_tree
-),
-reaction_counts as (
-    select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $9) as self_reacted
-    from reaction
-    group by message_id, key
-),
-message_reaction as (
-    select message_id,
-        json_agg(jsonb_build_object(
-            'key', key,
-            'count', count,
-            'self', self_reacted
-        ) order by pos) as json
-    from reaction_counts
-    group by message_id
 )
 select
     msg.type as "message_type: DbMessageType",
@@ -60,12 +45,10 @@ select
     msg.pinned,
     hm.mentions,
     coalesce(att_json.attachments, '{}') as "attachments!",
-    msg.embeds as "embeds",
-    r.json as "reactions"
+    msg.embeds as "embeds"
 from message as msg
 join ranked_messages rm on msg.id = rm.id
 left join att_json on att_json.version_id = msg.version_id
-left join message_reaction r on r.message_id = msg.id
 left join hydrated_mentions hm on hm.message_id = msg.id
 where is_latest and channel_id = $1 and msg.deleted_at is null and (rm.rn <= $4 or $4 is null)
   and msg.id > $5 AND msg.id < $6

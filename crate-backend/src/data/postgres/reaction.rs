@@ -3,8 +3,10 @@ use common::v1::types::reaction::{ReactionKeyParam, ReactionListItem};
 use common::v1::types::{
     ChannelId, MessageId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
+use serde::Deserialize;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::debug;
+use uuid::Uuid;
 
 use crate::data::postgres::Pagination;
 use crate::error::Result;
@@ -164,5 +166,58 @@ impl DataReaction for Postgres {
             .execute(&self.pool)
             .await?;
         Ok(())
+    }
+
+    // TODO: refactor to make this code less horrible
+    async fn reaction_fetch_all(
+        &self,
+        _channel_id: ChannelId,
+        user_id: UserId,
+        messages: &[MessageId],
+    ) -> Result<Vec<(MessageId, Vec<(ReactionKeyParam, u64, bool)>)>> {
+        let message_ids: Vec<Uuid> = messages.iter().map(|id| id.into_inner()).collect();
+        let reactions = query!(r#"
+            with reaction_counts as (
+                select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $1) as self_reacted
+                from reaction
+                group by message_id, key
+            )
+            select message_id,
+                json_agg(jsonb_build_object(
+                    'key', key,
+                    'count', count,
+                    'self_reacted', self_reacted
+                ) order by pos) as json
+            from reaction_counts
+            where message_id = any($2)
+            group by message_id
+            "#,
+            *user_id,
+            &message_ids,
+        )
+            .fetch_all(&self.pool)
+            .await?;
+
+        #[derive(Deserialize)]
+        struct ReactionData {
+            key: ReactionKeyParam,
+            count: u64,
+            self_reacted: bool,
+        }
+
+        let formatted = reactions
+            .into_iter()
+            .map(|r| {
+                let data: Vec<ReactionData> = serde_json::from_value(r.json.unwrap()).unwrap();
+                (
+                    r.message_id.into(),
+                    data.into_iter()
+                        .map(|d| (d.key, d.count, d.self_reacted))
+                        .collect(),
+                )
+            })
+            .collect();
+
+        Ok(formatted)
     }
 }

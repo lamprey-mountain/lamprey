@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelType, Embed, MessageDefaultMarkdown, MessageType, UserId};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
@@ -32,7 +33,6 @@ pub struct DbMessage {
     pub override_name: Option<String>, // temp?
     pub author_id: UserId,
     pub embeds: Option<serde_json::Value>,
-    pub reactions: Option<serde_json::Value>,
     pub created_at: Option<time::PrimitiveDateTime>,
     pub edited_at: Option<time::PrimitiveDateTime>,
     pub deleted_at: Option<time::PrimitiveDateTime>,
@@ -130,10 +130,7 @@ impl From<DbMessage> for Message {
             created_at: row.created_at.map(Time::from),
             removed_at: row.removed_at.map(Time::from),
             pinned: row.pinned.and_then(|p| serde_json::from_value(p).ok()),
-            reactions: row
-                .reactions
-                .map(|a| serde_json::from_value(a).unwrap())
-                .unwrap_or_default(),
+            reactions: ReactionCounts(vec![]),
             mentions: row
                 .mentions
                 .map(|a| serde_json::from_value(a).unwrap())
@@ -306,9 +303,9 @@ impl DataMessage for Postgres {
         &self,
         channel_id: ChannelId,
         id: MessageId,
-        user_id: UserId,
+        _user_id: UserId,
     ) -> Result<Message> {
-        let row = query_file_as!(DbMessage, "sql/message_get.sql", *channel_id, *id, *user_id)
+        let row = query_file_as!(DbMessage, "sql/message_get.sql", *channel_id, *id)
             .fetch_one(&self.pool)
             .await?;
         Ok(row.into())
@@ -317,7 +314,7 @@ impl DataMessage for Postgres {
     async fn message_list(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -328,7 +325,6 @@ impl DataMessage for Postgres {
                 DbMessage,
                 r"sql/message_paginate.sql",
                 *channel_id,
-                *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
@@ -342,7 +338,7 @@ impl DataMessage for Postgres {
     async fn message_list_deleted(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -353,7 +349,6 @@ impl DataMessage for Postgres {
                 DbMessage,
                 r"sql/message_paginate_deleted.sql",
                 *channel_id,
-                *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
@@ -367,7 +362,7 @@ impl DataMessage for Postgres {
     async fn message_list_removed(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -378,7 +373,6 @@ impl DataMessage for Postgres {
                 DbMessage,
                 r"sql/message_paginate_removed.sql",
                 *channel_id,
-                *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
@@ -392,7 +386,7 @@ impl DataMessage for Postgres {
     async fn message_list_activity(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -403,7 +397,6 @@ impl DataMessage for Postgres {
                 DbMessage,
                 r"sql/message_activity_paginate.sql",
                 *channel_id,
-                *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
@@ -482,13 +475,12 @@ impl DataMessage for Postgres {
         &self,
         channel_id: ChannelId,
         version_id: MessageVerId,
-        user_id: UserId,
+        _user_id: UserId,
     ) -> Result<Message> {
         let row = query_file_as!(
             DbMessage,
             "sql/message_version_get.sql",
             *channel_id,
-            *user_id,
             *version_id,
         )
         .fetch_one(&self.pool)
@@ -517,7 +509,7 @@ impl DataMessage for Postgres {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        user_id: UserId,
+        _user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -529,7 +521,6 @@ impl DataMessage for Postgres {
                 "sql/message_version_paginate.sql",
                 *channel_id,
                 *message_id,
-                *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
@@ -548,7 +539,7 @@ impl DataMessage for Postgres {
         &self,
         channel_id: ChannelId,
         root_message_id: Option<MessageId>,
-        user_id: UserId,
+        _user_id: UserId,
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
@@ -569,7 +560,6 @@ impl DataMessage for Postgres {
                 *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
-                *user_id,
             ),
             query_file_scalar!(
                 "sql/message_replies_count.sql",
@@ -687,7 +677,7 @@ impl DataMessage for Postgres {
     async fn message_pin_list(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -698,7 +688,6 @@ impl DataMessage for Postgres {
                 DbMessage,
                 r"sql/message_pin_list.sql",
                 *channel_id,
-                *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),

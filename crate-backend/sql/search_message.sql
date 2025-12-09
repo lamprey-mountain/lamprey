@@ -9,21 +9,6 @@ with
         select channel.id, channel.room_id from channel
         join thread_member on channel.id = thread_member.channel_id
         where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
-    ),
-    reaction_counts as (
-        select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $1) as self_reacted
-        from reaction
-        group by message_id, key
-    ),
-    message_reaction as (
-        select message_id,
-            json_agg(jsonb_build_object(
-                'key', key,
-                'count', count,
-                'self', self_reacted
-            ) order by pos) as json
-        from reaction_counts
-        group by message_id
     )
 select
     msg.type as "message_type: DbMessageType",
@@ -43,12 +28,10 @@ select
     msg.pinned,
     hm.mentions,
     coalesce(att_json.attachments, '[]'::json) as "attachments!",
-    msg.embeds as "embeds",
-    r.json as "reactions"
+    msg.embeds as "embeds"
 from message as msg
 join channel_viewer on msg.channel_id = channel_viewer.id
 left join att_json on att_json.version_id = msg.version_id
-left join message_reaction r on r.message_id = msg.id
 left join hydrated_mentions hm on hm.message_id = msg.id
 where is_latest and msg.deleted_at is null
   and msg.id > $2 AND msg.id < $3

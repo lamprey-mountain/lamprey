@@ -1,6 +1,7 @@
 use common::v1::types::emoji::EmojiOwner;
+use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
 use moka::future::Cache;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
@@ -810,6 +811,44 @@ impl ServiceMessages {
         }
 
         Ok(mentions::strip_emoji(content, &allowed_emoji))
+    }
+
+    pub async fn populate_reactions(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        messages: &mut [Message],
+    ) -> Result<()> {
+        let data = self.state.data();
+        let message_ids: Vec<MessageId> = messages.iter().map(|m| m.id).collect();
+        let reactions = data
+            .reaction_fetch_all(channel_id, user_id, &message_ids)
+            .await?;
+        let reactions: HashMap<MessageId, Vec<(ReactionKeyParam, u64, bool)>> =
+            reactions.into_iter().collect();
+        for m in messages {
+            let Some(rs) = reactions.get(&m.id) else {
+                continue;
+            };
+
+            let mut a = vec![];
+            for r in rs {
+                a.push(ReactionCount {
+                    key: match &r.0 {
+                        ReactionKeyParam::Text(t) => ReactionKey::Text(t.to_owned()),
+                        ReactionKeyParam::Custom(c) => {
+                            let emoji = data.emoji_get(*c).await?;
+                            ReactionKey::Custom(emoji)
+                        }
+                    },
+                    count: r.1,
+                    self_reacted: r.2,
+                });
+            }
+            m.reactions = ReactionCounts(a);
+        }
+
+        Ok(())
     }
 
     // TODO: move data stuff to this service

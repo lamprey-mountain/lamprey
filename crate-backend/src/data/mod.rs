@@ -894,6 +894,13 @@ pub trait DataReaction {
     ) -> Result<()>;
     async fn reaction_delete_all(&self, channel_id: ChannelId, message_id: MessageId)
         -> Result<()>;
+    // TODO: make this return type less terrible
+    async fn reaction_fetch_all(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        messages: &[MessageId],
+    ) -> Result<Vec<(MessageId, Vec<(ReactionKeyParam, u64, bool)>)>>;
 }
 
 #[async_trait]
