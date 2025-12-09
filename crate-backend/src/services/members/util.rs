@@ -202,6 +202,37 @@ pub struct MemberListSync {
     pub groups: Vec<MemberListGroup>,
 }
 
+pub struct Ranges {
+    pub inner: Vec<(u64, u64)>,
+}
+
+impl Ranges {
+    pub fn new(inner: Vec<(u64, u64)>) -> Self {
+        Self { inner }
+    }
+
+    /// return if a given index is inside the ranges
+    pub fn contains(&self, idx: u64) -> bool {
+        for &(start, end) in &self.inner {
+            if idx >= start && idx < end {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// return if a given range intersects with any of the ranges
+    pub fn intersects(&self, other_start: u64, other_end: u64) -> bool {
+        for &(start, end) in &self.inner {
+            if start.max(other_start) < end.min(other_end) {
+                return true;
+            }
+        }
+        false
+    }
+}
+
 impl MemberListSync {
     pub fn into_sync_message(self, user_id: UserId) -> MessageSync {
         MessageSync::MemberListSync {
@@ -209,6 +240,84 @@ impl MemberListSync {
             room_id: self.key.room_id,
             channel_id: self.key.channel_id,
             ops: self.ops,
+            groups: self.groups,
+        }
+    }
+
+    /// filter/split ops to only include those in these ranges
+    pub fn mask(self, ranges: &[(u64, u64)]) -> MemberListSync {
+        let mut ops = vec![];
+        let ranges = Ranges::new(ranges.to_vec());
+
+        for op in self.ops {
+            match op {
+                MemberListOp::Sync {
+                    position,
+                    room_members,
+                    thread_members,
+                    users,
+                } => {
+                    let op_end = position + users.len() as u64;
+
+                    for &(start, end) in &ranges.inner {
+                        let intersect_start = position.max(start);
+                        let intersect_end = op_end.min(end);
+
+                        if intersect_start < intersect_end {
+                            let slice_start = (intersect_start - position) as usize;
+                            let slice_end = (intersect_end - position) as usize;
+
+                            let new_users = users[slice_start..slice_end].to_vec();
+
+                            let new_room_members = room_members.as_ref().map(|v| {
+                                v.iter()
+                                    .filter(|m| new_users.iter().any(|u| u.id == m.user_id))
+                                    .cloned()
+                                    .collect()
+                            });
+
+                            let new_thread_members = thread_members.as_ref().map(|v| {
+                                v.iter()
+                                    .filter(|m| new_users.iter().any(|u| u.id == m.user_id))
+                                    .cloned()
+                                    .collect()
+                            });
+
+                            ops.push(MemberListOp::Sync {
+                                position: intersect_start,
+                                room_members: new_room_members,
+                                thread_members: new_thread_members,
+                                users: new_users,
+                            });
+                        }
+                    }
+                }
+                MemberListOp::Delete { position, count } => {
+                    if ranges.intersects(position, position + count) {
+                        ops.push(MemberListOp::Delete { position, count });
+                    }
+                }
+                MemberListOp::Insert {
+                    position,
+                    room_member,
+                    thread_member,
+                    user,
+                } => {
+                    if ranges.contains(position) {
+                        ops.push(MemberListOp::Insert {
+                            position,
+                            room_member,
+                            thread_member,
+                            user,
+                        });
+                    }
+                }
+            }
+        }
+
+        MemberListSync {
+            key: self.key,
+            ops,
             groups: self.groups,
         }
     }

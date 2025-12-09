@@ -462,6 +462,7 @@ pub enum MessageSync {
     },
 }
 
+// TODO: skip sending room_members/thread_members/users if the client already has them
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
@@ -478,6 +479,8 @@ pub enum MemberListOp {
         thread_members: Option<Vec<ThreadMember>>,
 
         users: Vec<User>,
+        // /// the users in this range
+        // items: Vec<UserId>,
     },
 
     /// insert a member
