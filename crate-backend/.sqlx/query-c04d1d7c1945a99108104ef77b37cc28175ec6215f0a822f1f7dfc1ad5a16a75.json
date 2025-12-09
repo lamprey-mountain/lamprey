@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\nreaction_counts as (\n    select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $2) as self_reacted\n    from reaction\n    group by message_id, key\n),\nmessage_reaction as (\n    select message_id,\n        json_agg(jsonb_build_object(\n            'key', key,\n            'count', count,\n            'self', self_reacted\n        ) order by pos) as json\n    from reaction_counts\n    group by message_id\n)\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.channel_id,\n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.created_at,\n    msg.edited_at,\n    msg.deleted_at,\n    msg.removed_at,\n    msg.pinned,\n    hm.mentions,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nleft join hydrated_mentions hm on hm.message_id = msg.id\nwhere is_latest and channel_id = $1 and msg.deleted_at is null\n  and msg.id > $3 AND msg.id < $4\norder by (CASE WHEN $5 = 'f' THEN msg.id END), msg.id DESC LIMIT $6\n",
+  "query": "select\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.channel_id,\n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.created_at,\n    msg.edited_at,\n    msg.deleted_at,\n    msg.removed_at,\n    msg.pinned,\n    hm.mentions,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join hydrated_mentions hm on hm.message_id = msg.id\nwhere is_latest and channel_id = $1 and msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
   "describe": {
     "columns": [
       {
@@ -108,16 +108,10 @@
         "ordinal": 17,
         "name": "embeds",
         "type_info": "Jsonb"
-      },
-      {
-        "ordinal": 18,
-        "name": "reactions",
-        "type_info": "Json"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
         "Uuid",
         "Uuid",
         "Uuid",
@@ -143,9 +137,8 @@
       true,
       true,
       null,
-      true,
-      null
+      true
     ]
   },
-  "hash": "9a13875030438caf9e82d984086c9afa653ee6c61f3bcfdf01303cc13270009f"
+  "hash": "c04d1d7c1945a99108104ef77b37cc28175ec6215f0a822f1f7dfc1ad5a16a75"
 }

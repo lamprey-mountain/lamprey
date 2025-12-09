@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            with reaction_counts as (\n                select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $1) as self_reacted\n                from reaction\n                group by message_id, key\n            )\n            select message_id,\n                json_agg(jsonb_build_object(\n                    'key', key,\n                    'count', count,\n                    'self_reacted', self_reacted\n                ) order by pos) as json\n            from reaction_counts\n            where message_id = any($2)\n            group by message_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "json",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "31595038120eb1b5c4a963cc229f52a1655058d1594ec3ad129c54f9ebb4cc5f"
+}

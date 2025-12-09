@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    \t    SELECT user_id, data\n    \t    FROM media\n    \t    WHERE id = $1\n        ",
+  "query": "\n    \t    SELECT user_id, deleted_at, data\n    \t    FROM media\n    \t    WHERE id = $1\n    \t    FOR UPDATE\n        ",
   "describe": {
     "columns": [
       {
@@ -10,6 +10,11 @@
       },
       {
         "ordinal": 1,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 2,
         "name": "data",
         "type_info": "Jsonb"
       }
@@ -21,8 +26,9 @@
     },
     "nullable": [
       false,
+      true,
       false
     ]
   },
-  "hash": "816d1a33edd43c2e0b632e48d3c16ef729cc55cc68ac7395c3728ac614c39f7c"
+  "hash": "0d611fc1a708cdada841826635a92878e66bc87f3dfd27776b6bdc047021bc41"
 }
