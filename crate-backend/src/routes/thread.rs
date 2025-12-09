@@ -7,9 +7,9 @@ use axum::{extract::State, Json};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
-    ChannelType, Message, MessageId, MessageMember, MessageSync, MessageThreadCreated, MessageType,
-    PaginationQuery, PaginationResponse, Permission, RoomId, ThreadMember, ThreadMemberPut,
-    ThreadMembership, UserId,
+    ChannelType, Mentions, MentionsUser, Message, MessageId, MessageMember, MessageSync,
+    MessageThreadCreated, MessageType, PaginationQuery, PaginationResponse, Permission, RoomId,
+    ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use serde::Serialize;
@@ -159,7 +159,14 @@ async fn thread_member_add(
                 message_type: MessageType::MemberAdd(MessageMember { target_user_id }),
                 edited_at: None,
                 created_at: None,
-                mentions: Default::default(),
+                mentions: Mentions {
+                    users: vec![MentionsUser {
+                        id: target_user_id,
+                        // data serialization code ignores resolved_name
+                        resolved_name: "(this should be ignored)".to_owned(),
+                    }],
+                    ..Default::default()
+                },
             })
             .await?;
         let message = srv
