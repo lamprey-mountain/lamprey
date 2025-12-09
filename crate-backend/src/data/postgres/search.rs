@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
     search::{SearchChannelsRequest, SearchMessageRequest},
-    Channel, ChannelId, Message, MessageId, PaginationDirection, PaginationQuery,
+    Channel, ChannelId, ChannelType, Message, MessageId, PaginationDirection, PaginationQuery,
     PaginationResponse, UserId,
 };
 use sqlx::{query_file_as, query_file_scalar, Acquire};
@@ -113,6 +113,26 @@ impl DataSearch for Postgres {
         let room_ids: Vec<Uuid> = query.room_id.iter().map(|id| **id).collect();
         let parent_ids: Vec<Uuid> = query.parent_id.iter().map(|id| **id).collect();
 
+        let channel_types: Vec<String> = query
+            .ty
+            .iter()
+            .map(|t| {
+                let s = match *t {
+                    ChannelType::Text => "Text",
+                    ChannelType::Forum => "Forum",
+                    ChannelType::Voice => "Voice",
+                    ChannelType::Broadcast => "Broadcast",
+                    ChannelType::Category => "Category",
+                    ChannelType::Calendar => "Calendar",
+                    ChannelType::ThreadPublic => "ThreadPublic",
+                    ChannelType::ThreadPrivate => "ThreadPrivate",
+                    ChannelType::Dm => "Dm",
+                    ChannelType::Gdm => "Gdm",
+                };
+                s.to_string()
+            })
+            .collect();
+
         let mut visible_channel_ids = vec![];
         let mut manageable_channel_ids = vec![];
 
@@ -141,6 +161,7 @@ impl DataSearch for Postgres {
                 query.removed,
                 &visible_channel_ids,
                 &manageable_channel_ids,
+                &channel_types,
             ),
             query_file_scalar!(
                 "sql/search_channel_count.sql",
@@ -152,6 +173,7 @@ impl DataSearch for Postgres {
                 query.removed,
                 &visible_channel_ids,
                 &manageable_channel_ids,
+                &channel_types,
             ),
             |i: &Channel| i.id.to_string()
         )
