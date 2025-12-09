@@ -12,14 +12,16 @@ use utoipa::ToSchema;
 #[serde(untagged)]
 pub enum Color {
     // Named(ColorNamed),
+    // Semantic(ColorSemantic),
+    // Srgb(ColorSrgb),
     /// sRGB (not linear) compatible with css
     // FIXME: this should be a hex code, not arbitrary string
     Srgb(String),
-    // with alpha as separate ver? Srgba(String),
 }
 
 /// a color that changes depending on theme
-/// color names currently unstable and may change
+///
+/// COLOR NAMES CURRENTLY UNSTABLE AND MAY CHANGE
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ColorThemed {
@@ -31,6 +33,9 @@ pub enum ColorThemed {
 
     /// default background color (for this item)
     BgMain,
+
+    /// default accent color
+    Accent,
 
     Red,
     Green,
@@ -58,7 +63,7 @@ pub enum ColorSemantic {
     /// very important to read, generic
     Important,
 
-    /// very important to read, bad things happen if you don't
+    /// very important to read, bad things may happen if you don't
     Warning,
 
     /// very important to read, dangerous things happen if you don't
@@ -70,6 +75,13 @@ pub enum ColorSemantic {
     /// something went right
     Success,
 }
+
+/// a sRGB (not linear) color, compatible with css
+// TODO: impl FromStr, Display. enforce hex format #rrggbb, allow #rgb in deserialize
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ColorSrgb(pub String);
 
 impl Color {
     pub fn from_hex_string(s: String) -> Color {
