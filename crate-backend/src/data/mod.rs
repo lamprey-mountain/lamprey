@@ -743,6 +743,13 @@ pub trait DataThreadMember {
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>>;
     async fn thread_member_list_all(&self, thread_id: ChannelId) -> Result<Vec<ThreadMember>>;
+
+    /// fetch thread member object for all of these threads
+    async fn thread_member_bulk_fetch(
+        &self,
+        user_id: UserId,
+        thread_ids: &[ChannelId],
+    ) -> Result<Vec<(ChannelId, ThreadMember)>>;
 }
 
 #[async_trait]
@@ -770,8 +777,11 @@ pub trait DataThread {
         include_all: bool,
     ) -> Result<PaginationResponse<Channel>>;
 
-    /// Archive threads that have been inactive beyond their auto-archive duration
+    /// archive threads that have been inactive beyond their auto-archive duration
     async fn thread_auto_archive(&self) -> Result<Vec<ChannelId>>;
+
+    /// list all active threads in a room
+    async fn thread_all_active_room(&self, room_id: RoomId) -> Result<Vec<Channel>>;
 }
 
 #[async_trait]

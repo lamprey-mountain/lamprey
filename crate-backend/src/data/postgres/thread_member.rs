@@ -178,4 +178,41 @@ impl DataThreadMember for Postgres {
         .await?;
         Ok(items.into_iter().map(Into::into).collect())
     }
+
+    async fn thread_member_bulk_fetch(
+        &self,
+        user_id: UserId,
+        thread_ids: &[ChannelId],
+    ) -> Result<Vec<(ChannelId, ThreadMember)>> {
+        let thread_uuids: Vec<Uuid> = thread_ids.iter().map(|id| id.into_inner()).collect();
+        if thread_uuids.is_empty() {
+            return Ok(vec![]);
+        }
+        let items = query_as!(
+            DbThreadMember,
+            r#"
+            SELECT
+                channel_id,
+                user_id,
+                membership as "membership: _",
+                joined_at
+            FROM thread_member
+            WHERE user_id = $1 AND channel_id = ANY($2)
+            "#,
+            user_id.into_inner(),
+            &thread_uuids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let result = items
+            .into_iter()
+            .map(|db_member| {
+                let thread_member: ThreadMember = db_member.into();
+                (thread_member.thread_id, thread_member)
+            })
+            .collect();
+
+        Ok(result)
+    }
 }

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
@@ -7,10 +8,12 @@ use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
     ChannelType, Message, MessageId, MessageMember, MessageSync, MessageThreadCreated, MessageType,
-    PaginationQuery, PaginationResponse, Permission, ThreadMember, ThreadMemberPut,
+    PaginationQuery, PaginationResponse, Permission, RoomId, ThreadMember, ThreadMemberPut,
     ThreadMembership, UserId,
 };
 use http::StatusCode;
+use serde::Serialize;
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -678,6 +681,68 @@ async fn thread_create_from_message(
     Ok((StatusCode::CREATED, Json(channel)))
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct ThreadListRoom {
+    /// threads in this room
+    pub threads: Vec<Channel>,
+
+    /// only your own thread member objects
+    pub thread_members: Vec<ThreadMember>,
+}
+
+/// Thread list room
+///
+/// List all active threads in a room
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/thread",
+    params(("room_id", description = "Room id")),
+    tags = ["thread"],
+    responses((status = OK, body = ThreadListRoom, description = "List room threads success")),
+)]
+pub async fn thread_list_room(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let user_id = auth_user.id;
+
+    // just check if the user is a room member
+    let _perms = srv.perms.for_room(user_id, room_id).await?;
+
+    let all_threads = data.thread_all_active_room(room_id).await?;
+
+    let thread_ids: Vec<_> = all_threads.iter().map(|t| t.id).collect();
+    let thread_members = data.thread_member_bulk_fetch(user_id, &thread_ids).await?;
+    let thread_members: HashMap<_, _> = thread_members.into_iter().collect();
+
+    let mut filtered_thread_ids = vec![];
+    for t in all_threads {
+        // this *should* be cached and not too horrible performance wise?
+        let perms = srv.perms.for_channel(auth_user.id, t.id).await?;
+        let can_view = if t.ty == ChannelType::ThreadPublic {
+            perms.has(Permission::ViewChannel)
+        } else {
+            perms.has(Permission::ThreadManage) || thread_members.get(&t.id).is_some()
+        };
+        if can_view {
+            filtered_thread_ids.push(t.id);
+        }
+    }
+
+    let threads = srv
+        .channels
+        .get_many(&filtered_thread_ids, Some(user_id))
+        .await?;
+
+    Ok(Json(ThreadListRoom {
+        threads,
+        thread_members: thread_members.into_values().collect(),
+    }))
+}
+
 /// Thread activity
 ///
 /// List activity in this thread
@@ -726,5 +791,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_list_archived))
         .routes(routes!(thread_list_removed))
         .routes(routes!(thread_list_atom))
+        .routes(routes!(thread_list_room))
         .routes(routes!(thread_activity))
 }
