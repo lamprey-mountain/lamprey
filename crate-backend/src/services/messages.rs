@@ -1,5 +1,6 @@
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
+use futures::{stream::FuturesUnordered, StreamExt};
 use moka::future::Cache;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -14,11 +15,11 @@ use common::v1::types::notifications::{Notification, NotificationReason};
 use common::v1::types::util::{Diff, Time};
 
 use common::v1::types::{
-    ChannelId, ChannelPatch, ContextQuery, ContextResponse, Embed, EmbedCreate, EmbedId, EmbedType,
-    Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, Message, MessageCreate,
-    MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync, MessageType, NotificationId,
-    PaginationDirection, PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId,
-    ThreadMembership,
+    Channel, ChannelId, ChannelPatch, ContextQuery, ContextResponse, Embed, EmbedCreate, EmbedId,
+    EmbedType, Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, Message,
+    MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync, MessageType,
+    NotificationId, PaginationDirection, PaginationQuery, PaginationResponse, Permission,
+    RepliesQuery, RoomId, ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -852,7 +853,39 @@ impl ServiceMessages {
         Ok(())
     }
 
-    // TODO: move data stuff to this service
+    pub async fn populate_threads(&self, user_id: UserId, messages: &mut [Message]) -> Result<()> {
+        if messages.is_empty() {
+            return Ok(());
+        }
+
+        let mut thread_futs = FuturesUnordered::new();
+        for message in messages.iter() {
+            let thread_channel_id: ChannelId = (*message.id).into();
+            let srv = self.state.services();
+            thread_futs.push(async move {
+                // we dont care about the result, if it errors it means no thread
+                let thread = srv.channels.get(thread_channel_id, Some(user_id)).await;
+                (thread_channel_id, thread)
+            });
+        }
+
+        let mut threads_map: HashMap<ChannelId, Channel> = HashMap::new();
+        while let Some((id, thread_result)) = thread_futs.next().await {
+            if let Ok(thread) = thread_result {
+                threads_map.insert(id, thread);
+            }
+        }
+
+        for message in messages {
+            let thread_channel_id: ChannelId = (*message.id).into();
+            if let Some(thread) = threads_map.remove(&thread_channel_id) {
+                message.thread = Some(Box::new(thread));
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn list(
         &self,
         channel_id: ChannelId,
@@ -865,6 +898,8 @@ impl ServiceMessages {
 
         self.populate_reactions(channel_id, user_id, &mut res.items)
             .await?;
+
+        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
@@ -888,6 +923,8 @@ impl ServiceMessages {
         self.populate_reactions(channel_id, user_id, &mut res.items)
             .await?;
 
+        self.populate_threads(user_id, &mut res.items).await?;
+
         for message in &mut res.items {
             s.presign_message(message).await?;
         }
@@ -909,6 +946,8 @@ impl ServiceMessages {
 
         self.populate_reactions(channel_id, user_id, &mut res.items)
             .await?;
+
+        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
@@ -965,6 +1004,8 @@ impl ServiceMessages {
 
         self.populate_reactions(channel_id, user_id, &mut items)
             .await?;
+
+        self.populate_threads(user_id, &mut items).await?;
 
         for item in &mut items {
             s.presign_message(item).await?;
@@ -1037,6 +1078,8 @@ impl ServiceMessages {
         self.populate_reactions(channel_id, user_id, &mut res.items)
             .await?;
 
+        self.populate_threads(user_id, &mut res.items).await?;
+
         for message in &mut res.items {
             s.presign_message(message).await?;
         }
@@ -1058,6 +1101,8 @@ impl ServiceMessages {
         self.populate_reactions(channel_id, user_id, &mut res.items)
             .await?;
 
+        self.populate_threads(user_id, &mut res.items).await?;
+
         for message in &mut res.items {
             s.presign_message(message).await?;
         }
@@ -1078,6 +1123,8 @@ impl ServiceMessages {
 
         self.populate_reactions(channel_id, user_id, &mut res.items)
             .await?;
+
+        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
