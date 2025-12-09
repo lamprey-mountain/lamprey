@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::Query;
@@ -35,6 +36,31 @@ pub async fn search_messages(
     let srv = s.services();
     let vis = srv.channels.list_user_room_channels(auth_user.id).await?;
     let mut res = data.search_message(auth_user.id, json, q, &vis).await?;
+
+    // group messages by channel id
+    let mut channel_message_indices: HashMap<ChannelId, Vec<usize>> = HashMap::new();
+    for (i, message) in res.items.iter().enumerate() {
+        channel_message_indices
+            .entry(message.channel_id)
+            .or_default()
+            .push(i);
+    }
+
+    // TODO: avoid cloning
+    // populate reactions
+    for (channel_id, indices) in channel_message_indices {
+        let mut temp_messages: Vec<Message> =
+            indices.iter().map(|&i| res.items[i].clone()).collect();
+
+        srv.messages
+            .populate_reactions(channel_id, auth_user.id, &mut temp_messages)
+            .await?;
+
+        for (i, original_index) in indices.iter().enumerate() {
+            res.items[*original_index].reactions = temp_messages[i].reactions.clone();
+        }
+    }
+
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
