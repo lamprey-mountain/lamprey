@@ -81,4 +81,5 @@ where ($9::boolean is null or (channel.archived_at is not null) = $9)
   and (cardinality($7::uuid[]) = 0 or channel.room_id = any($7))
   and (cardinality($8::uuid[]) = 0 or channel.parent_id = any($8))
   and (cardinality($13::text[]) = 0 or channel.type::text = any($13))
+  and (cardinality($14::uuid[]) = 0 OR EXISTS (SELECT 1 FROM channel_tag tt WHERE tt.channel_id = channel.id AND tt.tag_id = ANY($14)))
 order by (CASE WHEN $4 = 'f' THEN channel.id END), channel.id DESC LIMIT $5

@@ -112,6 +112,17 @@ impl DataSearch for Postgres {
         let p: Pagination<ChannelId> = paginate.try_into()?;
         let room_ids: Vec<Uuid> = query.room_id.iter().map(|id| **id).collect();
         let parent_ids: Vec<Uuid> = query.parent_id.iter().map(|id| **id).collect();
+        let tag_ids: Vec<Uuid> = query.tag_id.iter().map(|id| **id).collect();
+
+        let mut visible_channel_ids = vec![];
+        let mut manageable_channel_ids = vec![];
+
+        for (id, can_manage) in channel_visibility {
+            visible_channel_ids.push(**id);
+            if *can_manage {
+                manageable_channel_ids.push(**id);
+            }
+        }
 
         let channel_types: Vec<String> = query
             .ty
@@ -133,16 +144,6 @@ impl DataSearch for Postgres {
             })
             .collect();
 
-        let mut visible_channel_ids = vec![];
-        let mut manageable_channel_ids = vec![];
-
-        for (id, can_manage) in channel_visibility {
-            visible_channel_ids.push(**id);
-            if *can_manage {
-                manageable_channel_ids.push(**id);
-            }
-        }
-
         gen_paginate!(
             p,
             self.pool,
@@ -162,6 +163,7 @@ impl DataSearch for Postgres {
                 &visible_channel_ids,
                 &manageable_channel_ids,
                 &channel_types,
+                &tag_ids,
             ),
             query_file_scalar!(
                 "sql/search_channel_count.sql",
@@ -174,6 +176,7 @@ impl DataSearch for Postgres {
                 &visible_channel_ids,
                 &manageable_channel_ids,
                 &channel_types,
+                &tag_ids,
             ),
             |i: &Channel| i.id.to_string()
         )

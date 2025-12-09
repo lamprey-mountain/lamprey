@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{ChannelId, ChannelType, RoleId, RoomId, UserId};
+use crate::v1::types::{ChannelId, ChannelType, RoleId, RoomId, TagId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -101,6 +101,11 @@ pub struct SearchChannelsRequest {
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub parent_id: Vec<ChannelId>,
+
+    /// Only return threads with these tags.
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    pub tag_id: Vec<TagId>,
 
     /// Only return archived (or unarchived) threads
     pub archived: Option<bool>,
