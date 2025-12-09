@@ -2,6 +2,7 @@ use std::num::{ParseFloatError, ParseIntError};
 
 use axum::extract::multipart::MultipartError;
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::error::Error as ApiError;
 use common::v1::types::{MessageEnvelope, MessagePayload};
 use opentelemetry_otlp::ExporterBuildError;
@@ -116,6 +117,9 @@ pub enum Error {
 
     #[error("{0}")]
     MultipartError(#[from] MultipartError),
+
+    #[error("missing scopes {0:?}")]
+    MissingScopes(Vec<Scope>),
 }
 
 impl From<sqlx::Error> for Error {
@@ -157,6 +161,7 @@ impl Error {
                 ApiError::UserSuspended => StatusCode::FORBIDDEN,
             },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
+            Error::MissingScopes(_) => StatusCode::FORBIDDEN,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -187,6 +192,7 @@ impl Error {
             Error::UnknownImageFormat => Error::UnknownImageFormat,
             Error::UrlEmbedOther(s) => Error::UrlEmbedOther(s.to_string()),
             Error::Validation(validation_errors) => Error::Validation(validation_errors.clone()),
+            Error::MissingScopes(s) => Error::MissingScopes(s.clone()),
             _ => Error::GenericError(self.to_string()),
         }
     }

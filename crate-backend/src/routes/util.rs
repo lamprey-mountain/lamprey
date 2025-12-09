@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
-use common::v1::types::{util::Time, SessionToken, User, UserId};
+use common::v1::types::{application::Scope, util::Time, SessionToken, User, UserId};
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 
 use crate::{
@@ -9,6 +9,42 @@ use crate::{
     types::{Session, SessionStatus},
     ServerState,
 };
+
+#[allow(dead_code)] // TEMP
+/// extract authentication info for a request
+// TODO: use this instead of the existing Auth stuff
+pub struct Auth2 {
+    /// the effective user making this request
+    pub user: User,
+
+    /// the real user making this request
+    pub real_user: Option<User>,
+
+    /// the session for this request
+    pub session: Session,
+
+    /// the oauth scopes this session has
+    pub scopes: Vec<Scope>,
+}
+
+#[allow(dead_code)] // TEMP
+impl Auth2 {
+    pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
+        let mut missing = vec![];
+
+        for s in scopes {
+            if !self.scopes.contains(s) {
+                missing.push(s.to_owned());
+            }
+        }
+
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::MissingScopes(missing))
+        }
+    }
+}
 
 /// extract the client's Session
 pub struct AuthRelaxed(pub Session);
@@ -229,6 +265,84 @@ impl FromRequestParts<Arc<ServerState>> for AuthSudoWithSession {
             SessionStatus::Sudo { user_id, .. } => {
                 let user = s.services().users.get(user_id, None).await?;
                 Ok(Self(session, user))
+            }
+        }
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for Auth2 {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        // TODO: populate scopes
+        let AuthRelaxed(session) = AuthRelaxed::from_request_parts(parts, s).await?;
+        match session.status {
+            SessionStatus::Unauthorized => Err(Error::UnauthSession),
+            SessionStatus::Authorized { user_id } | SessionStatus::Sudo { user_id, .. } => {
+                let HeaderPuppetId(puppet_id) =
+                    HeaderPuppetId::from_request_parts(parts, s).await?;
+                let mut user = s.services().users.get(user_id, None).await?;
+                if let Some(puppet_id) = puppet_id {
+                    let puppet = s.services().users.get(puppet_id, None).await?;
+
+                    if let Some(bot) = &puppet.bot {
+                        if bot.owner_id == user.id {
+                            return Ok(Auth2 {
+                                user: puppet,
+                                real_user: Some(user),
+                                session,
+                                scopes: vec![],
+                            });
+                        }
+                    }
+
+                    let Some(bot) = &user.bot else {
+                        return Err(Error::BadStatic("user is not a bot"));
+                    };
+
+                    if !bot.is_bridge {
+                        return Err(Error::BadStatic("bot is not a bridge"));
+                    }
+
+                    let Some(p) = &puppet.puppet else {
+                        return Err(Error::BadStatic("can only puppet users of type Puppet"));
+                    };
+
+                    if p.owner_id != user.id {
+                        return Err(Error::BadStatic("can only puppet your own puppets"));
+                    }
+
+                    Ok(Auth2 {
+                        user: puppet,
+                        real_user: Some(user),
+                        session,
+                        scopes: vec![],
+                    })
+                } else {
+                    if let Some(puppet) = &user.puppet {
+                        let bot = s.services().users.get(puppet.owner_id, None).await?;
+
+                        if let Some(bot) = &bot.bot {
+                            let owner = s.services().users.get(bot.owner_id, None).await?;
+                            user.suspended = owner.suspended;
+                        }
+
+                        user.suspended = bot.suspended;
+                    } else if let Some(bot) = &user.bot {
+                        let owner = s.services().users.get(bot.owner_id, None).await?;
+                        user.suspended = owner.suspended;
+                    }
+
+                    Ok(Auth2 {
+                        user,
+                        real_user: None,
+                        session,
+                        scopes: vec![],
+                    })
+                }
             }
         }
     }
