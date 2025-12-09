@@ -36,7 +36,7 @@ use crate::error::{Error, Result};
         (status = OK, body = PaginationResponse<ThreadMember>, description = "success"),
     )
 )]
-pub async fn thread_member_list(
+async fn thread_member_list(
     Path(thread_id): Path<ChannelId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
     Auth(auth_user): Auth,
@@ -66,7 +66,7 @@ pub async fn thread_member_list(
         (status = OK, body = ThreadMember, description = "success"),
     )
 )]
-pub async fn thread_member_get(
+async fn thread_member_get(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -105,7 +105,7 @@ pub async fn thread_member_get(
         (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
-pub async fn thread_member_add(
+async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -216,7 +216,7 @@ pub async fn thread_member_add(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn thread_member_delete(
+async fn thread_member_delete(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
@@ -330,7 +330,7 @@ pub async fn thread_member_delete(
         (status = OK, body = PaginationResponse<Channel>, description = "List channel threads success"),
     )
 )]
-pub async fn thread_list(
+async fn thread_list(
     Path(channel_id): Path<ChannelId>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
@@ -346,11 +346,11 @@ pub async fn thread_list(
         .thread_list_active(auth_user.id, pagination, channel_id, include_all)
         .await?;
 
-    let mut channels = vec![];
-    for c in &res.items {
-        channels.push(srv.channels.get(c.id, Some(auth_user.id)).await?);
-    }
-    res.items = channels;
+    let channel_ids: Vec<ChannelId> = res.items.iter().map(|c| c.id).collect();
+    res.items = srv
+        .channels
+        .get_many(&channel_ids, Some(auth_user.id))
+        .await?;
     Ok(Json(res))
 }
 
@@ -367,7 +367,7 @@ pub async fn thread_list(
         (status = OK, body = PaginationResponse<Channel>, description = "List channel archived threads success"),
     )
 )]
-pub async fn thread_list_archived(
+async fn thread_list_archived(
     Path(channel_id): Path<ChannelId>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
@@ -383,11 +383,11 @@ pub async fn thread_list_archived(
         .thread_list_archived(auth_user.id, pagination, channel_id, include_all)
         .await?;
 
-    let mut channels = vec![];
-    for c in &res.items {
-        channels.push(srv.channels.get(c.id, Some(auth_user.id)).await?);
-    }
-    res.items = channels;
+    let channel_ids: Vec<ChannelId> = res.items.iter().map(|c| c.id).collect();
+    res.items = srv
+        .channels
+        .get_many(&channel_ids, Some(auth_user.id))
+        .await?;
     Ok(Json(res))
 }
 
@@ -404,7 +404,7 @@ pub async fn thread_list_archived(
         (status = OK, body = PaginationResponse<Channel>, description = "List channel removed threads success"),
     )
 )]
-pub async fn thread_list_removed(
+async fn thread_list_removed(
     Path(channel_id): Path<ChannelId>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
@@ -419,11 +419,11 @@ pub async fn thread_list_removed(
         .thread_list_removed(auth_user.id, pagination, channel_id, true)
         .await?;
 
-    let mut channels = vec![];
-    for c in &res.items {
-        channels.push(srv.channels.get(c.id, Some(auth_user.id)).await?);
-    }
-    res.items = channels;
+    let channel_ids: Vec<ChannelId> = res.items.iter().map(|c| c.id).collect();
+    res.items = srv
+        .channels
+        .get_many(&channel_ids, Some(auth_user.id))
+        .await?;
     Ok(Json(res))
 }
 
@@ -439,7 +439,7 @@ pub async fn thread_list_removed(
     ),
     tags = ["thread"],
 )]
-pub async fn thread_list_atom(
+async fn thread_list_atom(
     Path(_channel_id): Path<ChannelId>,
     Query(_pagination): Query<PaginationQuery<ChannelId>>,
     Auth(_auth_user): Auth,
@@ -462,7 +462,7 @@ pub async fn thread_list_atom(
         (status = CREATED, body = Channel, description = "Create thread success"),
     )
 )]
-pub async fn thread_create(
+async fn thread_create(
     Path(parent_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -700,7 +700,7 @@ pub struct ThreadListRoom {
     tags = ["thread"],
     responses((status = OK, body = ThreadListRoom, description = "List room threads success")),
 )]
-pub async fn thread_list_room(
+async fn thread_list_room(
     Path(room_id): Path<RoomId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
