@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import twemoji from "twemoji";
 import { useCtx } from "./context.ts";
 import { createTooltip } from "./Tooltip.tsx";
@@ -16,12 +16,17 @@ export const Reactions = (props: ReactionsProps) => {
 	let addEl: HTMLDivElement | undefined;
 
 	const getTwemoji = (unicode: string) => {
-		return twemoji.parse(unicode, {
-			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-			attributes: () => ({ loading: "lazy" }),
-			folder: "svg",
-			ext: ".svg",
-		});
+		if (unicode.type === "Text") {
+			return twemoji.parse(unicode.content, {
+				base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+				attributes: () => ({ loading: "lazy" }),
+				folder: "svg",
+				ext: ".svg",
+			});
+		} else if (unicode.type === "Custom") {
+			// FIXME: custom emoji reactions
+			return "(unknown emoji)";
+		}
 	};
 
 	const handleClick = (key: string, self: boolean) => {
@@ -32,7 +37,7 @@ export const Reactions = (props: ReactionsProps) => {
 		}
 	};
 
-	createEffect(() => {
+	createEffect(on(showPicker, () => {
 		if (showPicker()) {
 			ctx.setPopout({
 				id: "emoji",
@@ -61,7 +66,7 @@ export const Reactions = (props: ReactionsProps) => {
 				ctx.setPopout({});
 			}
 		}
-	});
+	}));
 
 	const closePicker = (e: MouseEvent) => {
 		const popoutEl = document.querySelector(".popout");
