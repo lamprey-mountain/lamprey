@@ -438,6 +438,11 @@ async fn webhook_execute(
     let channel_id = webhook.channel_id;
 
     let srv = s.services();
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
+
     let message = srv
         .messages
         .create(channel_id, author_id, None, None, json)
@@ -467,6 +472,12 @@ async fn webhook_message_get(
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
     let channel_id = webhook.channel_id;
     let webhook_user_id: UserId = (*webhook.id).into();
+
+    let srv = s.services();
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
 
     let mut message = s
         .data()
@@ -505,6 +516,12 @@ async fn webhook_message_edit(
     let channel_id = webhook.channel_id;
     let webhook_user_id: UserId = (*webhook.id).into();
 
+    let srv = s.services();
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
+
     let (status, message) = s
         .services()
         .messages
@@ -535,6 +552,12 @@ async fn webhook_message_delete(
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
     let channel_id = webhook.channel_id;
     let webhook_user_id: UserId = (*webhook.id).into();
+
+    let srv = s.services();
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
 
     let message = s
         .data()

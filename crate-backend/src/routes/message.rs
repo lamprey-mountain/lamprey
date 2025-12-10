@@ -55,6 +55,10 @@ async fn message_create(
     auth_user.ensure_unsuspended()?;
 
     let srv = s.services();
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !chan.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
 
     let message = srv
         .messages
@@ -175,6 +179,9 @@ async fn message_edit(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -235,6 +242,9 @@ async fn message_delete(
     }
     perms.ensure(Permission::MessageDelete)?;
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -385,6 +395,9 @@ async fn message_moderate(
     perms.ensure(Permission::ViewChannel)?;
 
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -631,6 +644,9 @@ async fn message_pin_create(
     perms.ensure(Permission::MessagePin)?;
 
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -738,6 +754,9 @@ async fn message_pin_delete(
     perms.ensure(Permission::MessagePin)?;
 
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -806,6 +825,9 @@ async fn message_pin_reorder(
     perms.ensure(Permission::MessagePin)?;
 
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
