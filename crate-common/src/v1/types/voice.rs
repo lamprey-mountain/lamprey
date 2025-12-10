@@ -22,9 +22,16 @@ pub struct SessionDescription(pub String);
 pub struct IceCandidate(pub String);
 
 /// a unique identifier for a media track (corresponds to a transceiver in webrtc, or a Mid in str0m)
+///
+/// media track ids are unique per peer connection
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackId(pub String);
+
+/// a unique identifier for a track layer (corresponds to a rid in webrtc)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct LayerId(pub String);
 
 impl Deref for SessionDescription {
     type Target = str;
@@ -87,6 +94,8 @@ pub struct VoiceState {
     // these can come later, if needed at all
     // pub suppress: bool,
     // pub requested_to_speak_at: Option<Time>,
+    // /// the thumbnail for the user's stream. should be updated periodically.
+    // pub thumbnail: Option<MediaId>,
 }
 
 /// represents an update that a user would like to make to their voice state
@@ -98,6 +107,8 @@ pub struct VoiceStateUpdate {
     pub self_mute: bool,
     pub self_video: bool,
     pub self_screen: bool,
+    // /// the thumbnail for the user's stream. should be updated periodically.
+    // pub thumbnail: Option<MediaId>,
 }
 
 /// metadata about a track
@@ -114,6 +125,39 @@ pub struct TrackMetadata {
     ///
     /// currently there are two streams `user` and `screen` used by frontend
     pub key: String,
+    // /// simulcasting layers, only applicable for video
+    // #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    // pub layers: Vec<TrackLayer>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct TrackLayer {
+    pub rid: LayerId,
+    pub encoding: TrackEncoding,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum TrackEncoding {
+    /// source resolution
+    Source,
+
+    /// reduced thumbnail resolution
+    Reduced,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Subscription {
+    pub mid: TrackId,
+
+    /// the layers of the track to subscribe to
+    ///
+    /// - clients should only subscribe to one layer at a time
+    /// - the server may subscribe to multiple depending on if multiple resolutions are requested
+    /// - leave empty for audio tracks
+    pub rid: Vec<LayerId>,
 }
 
 /// messages that either the sfu or client can send to each other
@@ -155,14 +199,26 @@ pub enum SignallingMessage {
     // TODO: server sent `Want`s
     // TODO: client sent `Want`s
     Want { tracks: Vec<TrackId> },
-
+    // Want { subscriptions: Vec<Subscription> },
     /// sent by client to update their voice state (including disconnecting)
+    // TODO: move this to sync.rs
     VoiceState { state: Option<VoiceStateUpdate> },
 
     /// trigger a full reset; client should dispose current RTCPeerConnection and create a new one
     /// also useful to switch connection to another session
     Reconnect,
+    // /// an error emitted by the sfu
+    // Error {
+    //     message: String,
+    //     // code: VoiceErrorCode,
+    // },
 }
+
+// #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub enum VoiceErrorCode {
+//     Other,
+// }
 
 /// the kind of media this track is for
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -196,6 +252,7 @@ impl SpeakingFlags {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Speaking {
     pub user_id: UserId,
+    // pub track_id: TrackId,
     pub flags: SpeakingFlags,
 }
 
@@ -203,6 +260,7 @@ pub struct Speaking {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SpeakingWithoutUserId {
     pub flags: SpeakingFlags,
+    // pub track_id: TrackId,
 }
 
 impl VoiceState {
