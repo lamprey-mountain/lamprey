@@ -32,6 +32,12 @@ pub enum Command {
     /// garbage collect expired sessions
     GcSession {},
 
+    /// garbage collect old audit log entries
+    GcAuditLog {},
+
+    /// garbage collect old room analytics entries
+    GcRoomAnalytics {},
+
     /// run all garbage collection routines
     GcAll {},
 

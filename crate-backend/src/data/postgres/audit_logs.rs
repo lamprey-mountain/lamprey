@@ -4,6 +4,7 @@ use common::v1::types::{
     PaginationResponse, RoomId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
+use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -93,5 +94,20 @@ impl DataAuditLogs for Postgres {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+
+    async fn gc_audit_logs(&self) -> Result<u64> {
+        let interval = Duration::days(crate::consts::RETENTION_AUDIT_LOG as i64);
+        let cutoff = OffsetDateTime::now_utc() - interval;
+        let cutoff_primitive = PrimitiveDateTime::new(cutoff.date(), cutoff.time());
+        // TODO: extract and index on created_at
+        let result = query!(
+            "DELETE FROM audit_log WHERE extract_timestamp_from_uuid_v7(id) < $1",
+            cutoff_primitive
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected())
     }
 }

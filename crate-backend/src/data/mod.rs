@@ -714,6 +714,7 @@ pub trait DataAuditLogs {
         filter: AuditLogFilter,
     ) -> Result<PaginationResponse<AuditLogEntry>>;
     async fn audit_logs_room_append(&self, entry: AuditLogEntry) -> Result<()>;
+    async fn gc_audit_logs(&self) -> Result<u64>;
 }
 
 #[async_trait]
@@ -1172,4 +1173,5 @@ pub trait DataRoomAnalytics {
 
     async fn room_analytics_snapshot_all(&self) -> Result<()>;
     async fn room_analytics_get_last_snapshot_ts(&self) -> Result<Option<time::PrimitiveDateTime>>;
+    async fn gc_room_analytics(&self) -> Result<u64>;
 }

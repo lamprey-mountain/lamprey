@@ -336,4 +336,20 @@ impl DataRoomAnalytics for Postgres {
             .await?;
         Ok(ts)
     }
+
+    async fn gc_room_analytics(&self) -> Result<u64> {
+        let interval = Duration::days(crate::consts::RETENTION_ROOM_ANALYTICS as i64);
+        let cutoff = OffsetDateTime::now_utc() - interval;
+        let cutoff_primitive = PrimitiveDateTime::new(cutoff.date(), cutoff.time());
+
+        let r1 = query!("DELETE FROM metric_room WHERE ts < $1", cutoff_primitive)
+            .execute(&self.pool)
+            .await?;
+
+        let r2 = query!("DELETE FROM metric_channel WHERE ts < $1", cutoff_primitive)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(r1.rows_affected() + r2.rows_affected())
+    }
 }

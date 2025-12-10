@@ -167,6 +167,8 @@ async fn main() -> Result<()> {
         cli::Command::GcMedia {} => gc_media(state).await?,
         cli::Command::GcMessages {} => gc_messages(state).await?,
         cli::Command::GcSession {} => gc_sessions(state).await?,
+        cli::Command::GcAuditLog {} => gc_audit_log(state).await?,
+        cli::Command::GcRoomAnalytics {} => gc_room_analytics(state).await?,
         cli::Command::GcAll {} => gc_all(state).await?,
         cli::Command::Register { user_id, reason } => {
             data.user_set_registered(*user_id, Some(Time::now_utc()), None)
@@ -357,11 +359,27 @@ async fn gc_sessions(state: Arc<ServerState>) -> Result<()> {
     Ok(())
 }
 
+async fn gc_audit_log(state: Arc<ServerState>) -> Result<()> {
+    info!("starting audit log garbage collection job");
+    let rows_affected = state.data().gc_audit_logs().await?;
+    info!("done; {} rows affected", rows_affected);
+    Ok(())
+}
+
+async fn gc_room_analytics(state: Arc<ServerState>) -> Result<()> {
+    info!("starting room analytics garbage collection job");
+    let rows_affected = state.data().gc_room_analytics().await?;
+    info!("done; {} rows affected", rows_affected);
+    Ok(())
+}
+
 async fn gc_all(state: Arc<ServerState>) -> Result<()> {
     info!("garbage collecting everything");
     gc_media(state.clone()).await?;
     gc_messages(state.clone()).await?;
     gc_sessions(state.clone()).await?;
+    gc_audit_log(state.clone()).await?;
+    gc_room_analytics(state).await?;
     Ok(())
 }
 
