@@ -26,6 +26,46 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/admin/collect-garbage": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin collect garbage
+		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 */
+		post: operations["admin_collect_garbage"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/purge-cache": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin purge cache
+		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 */
+		post: operations["admin_purge_cache"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/admin/register-user": {
 		parameters: {
 			query?: never;
@@ -663,7 +703,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Thread activity (TODO)
+		 * Thread activity
 		 * @description
 		 *
 		 *     List activity in this thread
@@ -821,6 +861,30 @@ export interface paths {
 		 *     Create an invite that goes to a channel
 		 */
 		post: operations["invite_channel_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/member/search": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Channel member search
+		 * @description
+		 *
+		 *     If this is a thread, search thread members. Otherwise, search all room members who can view this thread.
+		 *
+		 *     For mention autocomplete
+		 */
+		get: operations["channel_member_search"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1353,10 +1417,32 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Create a tag
+		 * Tag create
 		 * @description <div class="markdown-alert-permission-required">TagManage</div>
 		 */
 		post: operations["tag_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/tag/search": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Tag search (TODO)
+		 * @description
+		 *
+		 *     Search all emoji the user can see.
+		 */
+		get: operations["tag_search"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1374,14 +1460,14 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/**
-		 * Delete a tag
+		 * Tag delete
 		 * @description <div class="markdown-alert-permission-required">TagManage</div>
 		 */
 		delete: operations["tag_delete"];
 		options?: never;
 		head?: never;
 		/**
-		 * Update a tag
+		 * Tag update
 		 * @description <div class="markdown-alert-permission-required">TagManage</div>
 		 */
 		patch: operations["tag_update"];
@@ -2401,7 +2487,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room analytics channels (TODO)
+		 * Room analytics channels
 		 * @description
 		 */
 		get: operations["room_analytics_channels"];
@@ -2441,7 +2527,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room analytics members count (TODO)
+		 * Room analytics members count
 		 * @description
 		 */
 		get: operations["room_analytics_members_count"];
@@ -2461,7 +2547,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room analytics members joined (TODO)
+		 * Room analytics members joined
 		 * @description
 		 */
 		get: operations["room_analytics_members_join"];
@@ -2481,7 +2567,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room analytics members left (TODO)
+		 * Room analytics members left
 		 * @description
 		 */
 		get: operations["room_analytics_members_leave"];
@@ -2501,7 +2587,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room analytics overview (TODO)
+		 * Room analytics overview
 		 * @description
 		 *
 		 *     aggregate all stats from all channels
@@ -2914,29 +3000,6 @@ export interface paths {
 		patch: operations["room_member_update"];
 		trace?: never;
 	};
-	"/api/v1/room/{room_id}/metrics": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Room metrics
-		 * @deprecated
-		 * @description
-		 *
-		 *     Get metrics for a room
-		 */
-		get: operations["room_metrics"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/room/{room_id}/prune": {
 		parameters: {
 			query?: never;
@@ -3105,6 +3168,28 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
 		 */
 		delete: operations["role_member_remove"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/thread": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Thread list room
+		 * @description
+		 *
+		 *     List all active threads in a room
+		 */
+		get: operations["thread_list_room"];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -4196,6 +4281,61 @@ export interface components {
 		AdminBroadcast: {
 			message: components["schemas"]["MessageCreate"];
 		};
+		AdminCollectGarbage: {
+			/** @description whether to return 202 accepted or calculate stats */
+			async: boolean;
+			mode: components["schemas"]["AdminCollectGarbageMode"];
+			targets: components["schemas"]["AdminCollectGarbageTarget"][];
+		};
+		/** @enum {string} */
+		AdminCollectGarbageMode: "Dry" | "Mark" | "Sweep";
+		AdminCollectGarbageResponse: {
+			stats: components["schemas"]["AdminCollectGarbageStat"][];
+		};
+		AdminCollectGarbageStat: {
+			/**
+			 * Format: int64
+			 * @description Number of bytes deleted (or would be deleted); only returned for the `Media` target.
+			 */
+			bytes_deleted?: number | null;
+			/**
+			 * Format: int64
+			 * @description The number of milliseconds taken to run this garbage collection task.
+			 */
+			ms_elapsed: number;
+			/**
+			 * Format: int64
+			 * @description The number of rows that were deleted (or would be deleted)
+			 */
+			rows_deleted: number;
+			target: components["schemas"]["AdminCollectGarbageTarget"];
+		};
+		/** @enum {string} */
+		AdminCollectGarbageTarget:
+			| "Media"
+			| "Messages"
+			| "Session"
+			| "AuditLog"
+			| "RoomAnalytics";
+		AdminPurgeCache: {
+			targets: components["schemas"]["AdminPurgeCacheTarget"][];
+		};
+		AdminPurgeCacheResponse: {
+			stats: components["schemas"]["AdminPurgeCacheStat"][];
+		};
+		AdminPurgeCacheStat: {
+			/** Format: int64 */
+			bytes_reclaimed: number;
+			target: components["schemas"]["AdminPurgeCacheTarget"];
+		};
+		/** @enum {string} */
+		AdminPurgeCacheTarget:
+			| "Channels"
+			| "Embeds"
+			| "Permissions"
+			| "Rooms"
+			| "Sessions"
+			| "Users";
 		AdminRegisterUser: {
 			user_id: components["schemas"]["Id"];
 		};
@@ -5091,6 +5231,16 @@ export interface components {
 			/** Format: int64 */
 			user_limit?: number | null;
 		};
+		ChannelMemberSearchResponse: {
+			/** @description a room member for each returned user */
+			room_members: components["schemas"]["RoomMember"][];
+			/** @description a thread member for each returned user
+			 *
+			 *     will only be populated if this is a thread */
+			thread_members: components["schemas"]["ThreadMember"][];
+			/** @description the resulting users */
+			users: components["schemas"]["User"][];
+		};
 		ChannelPatch: {
 			archived?: boolean | null;
 			/** Format: int64 */
@@ -5134,6 +5284,7 @@ export interface components {
 		/** @enum {string} */
 		ChannelType:
 			| "Text"
+			| "Announcement"
 			| "ThreadPublic"
 			| "ThreadPrivate"
 			| "Dm"
@@ -5142,7 +5293,9 @@ export interface components {
 			| "Voice"
 			| "Broadcast"
 			| "Category"
-			| "Calendar";
+			| "Calendar"
+			| "Forum2"
+			| "Info";
 		/** @description a color */
 		Color: string;
 		/** @description an application that is authorized to a user */
@@ -5517,10 +5670,43 @@ export interface components {
 		};
 		/** @description who/what this message notified on send */
 		Mentions: {
+			channels: components["schemas"]["MentionsChannel"][];
+			emojis: components["schemas"]["MentionsEmoji"][];
+			/** @description if this message mentions everyone */
 			everyone?: boolean;
-			roles: components["schemas"]["Id"][];
-			threads: components["schemas"]["Id"][];
-			users: components["schemas"]["Id"][];
+			roles: components["schemas"]["MentionsRole"][];
+			users: components["schemas"]["MentionsUser"][];
+		};
+		/** @description a mentioned channel */
+		MentionsChannel: {
+			/** @description the id of this channel */
+			id: components["schemas"]["Id"];
+			/** @description the name of this channel */
+			name: string;
+			room_id?: null | components["schemas"]["Id"];
+			/** @description the type of this channel */
+			type: components["schemas"]["ChannelType"];
+		};
+		/** @description a custom emoji used in the message */
+		MentionsEmoji: {
+			/** @description if this emoji is animated */
+			animated: boolean;
+			/** @description the id of this emoji */
+			id: components["schemas"]["Id"];
+			/** @description the name of this emoji */
+			name: string;
+		};
+		/** @description a mentioned role */
+		MentionsRole: {
+			/** @description the id of this role */
+			id: components["schemas"]["Id"];
+		};
+		/** @description a mentioned user */
+		MentionsUser: {
+			/** @description the id of this user */
+			id: components["schemas"]["Id"];
+			/** @description the resolved name (either the room member nickname or the user's name) */
+			resolved_name: string;
 		};
 		Message: components["schemas"]["MessageType"] & {
 			/** @description the id of who sent this message */
@@ -6438,13 +6624,6 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
-		PaginationResponse_Id: {
-			cursor?: string | null;
-			has_more: boolean;
-			items: string[];
-			/** Format: int64 */
-			total: number;
-		};
 		PaginationResponse_Integration: {
 			cursor?: string | null;
 			has_more: boolean;
@@ -6929,6 +7108,7 @@ export interface components {
 		/** @description reaction key returned in reaction counts for messages */
 		ReactionKey:
 			| {
+				content: string;
 				/** @enum {string} */
 				type: "Text";
 			}
@@ -7331,38 +7511,6 @@ export interface components {
 		};
 		/** @enum {string} */
 		RoomMembership: "Join" | "Leave";
-		RoomMetrics: {
-			/**
-			 * Format: int64
-			 * @description Number of active channels in this room (excluding archived or removed ones).
-			 */
-			active_channel_count: number;
-			/**
-			 * Format: int64
-			 * @description Total number of channels in this room (including archived or removed ones).
-			 */
-			channel_count: number;
-			/**
-			 * Format: int64
-			 * @description Total number of attachments from messages in this room.
-			 */
-			media_count: number;
-			/**
-			 * Format: int64
-			 * @description Combined size (in bytes) of all attachments in this room.
-			 */
-			media_size: number;
-			/**
-			 * Format: int64
-			 * @description Total number of members in this room.
-			 */
-			member_count: number;
-			/**
-			 * Format: int64
-			 * @description Total number of messages across all active threads in this room (excluding removed messages).
-			 */
-			message_count: number;
-		};
 		/** @description An update to a room */
 		RoomPatch: {
 			description?: string | null;
@@ -7427,7 +7575,7 @@ export interface components {
 		 *     WORK IN PROGRESS!!! SUBJECT TO CHANGE!!!
 		 * @enum {string}
 		 */
-		Scope: "identify" | "full" | "auth";
+		Scope: "identify" | "email" | "full" | "auth";
 		SearchChannelsRequest: {
 			/** @description Only return archived (or unarchived) threads */
 			archived?: boolean | null;
@@ -7439,8 +7587,14 @@ export interface components {
 			removed?: boolean | null;
 			/** @description Only return threads in these rooms. Defaults to all rooms. */
 			room_id?: components["schemas"]["Id"][];
+			/** @description Only return threads with these tags. */
+			tag_id?: components["schemas"]["Id"][];
+			/** @description only return channels of these types */
+			type?: components["schemas"]["ChannelType"][];
 		};
 		SearchMessageRequest: {
+			/** @description Only return messages in these channels. Defaults to all channels. */
+			channel_id?: components["schemas"]["Id"][];
 			/** @description Only return messages that have an attachment of any type */
 			has_attachment?: boolean | null;
 			/** @description Only return messages that have an attachment of type audio/* */
@@ -7465,10 +7619,9 @@ export interface components {
 			pinned?: boolean | null;
 			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
 			query?: string | null;
+			/** @description Only return messages in these rooms. Defaults to all rooms. */
 			room_id?: components["schemas"]["Id"][];
-			/** @description Only return messages in these threads. Defaults to all threads. */
-			thread_id?: components["schemas"]["Id"][];
-			/** @description Only return messages from these users. Defaults to all threads. */
+			/** @description Only return messages from these users. Defaults to all users. */
 			user_id?: components["schemas"]["Id"][];
 		};
 		SearchRoomsRequest: {
@@ -7635,6 +7788,12 @@ export interface components {
 		Text: {
 			language?: null | components["schemas"]["Language"];
 		};
+		ThreadListRoom: {
+			/** @description only your own thread member objects */
+			thread_members: components["schemas"]["ThreadMember"][];
+			/** @description threads in this room */
+			threads: components["schemas"]["Channel"][];
+		};
 		ThreadMember: {
 			/** @description When this member joined the thread */
 			joined_at: components["schemas"]["Time"];
@@ -7677,7 +7836,9 @@ export interface components {
 		TotpVerificationRequest: {
 			code: string;
 		};
-		/** @description a unique identifier for a media track (corresponds to a transceiver in webrtc, or a Mid in str0m) */
+		/** @description a unique identifier for a media track (corresponds to a transceiver in webrtc, or a Mid in str0m)
+		 *
+		 *     media track ids are unique per peer connection */
 		TrackId: string;
 		/** @description metadata about a track */
 		TrackMetadata: {
@@ -7940,6 +8101,62 @@ export interface operations {
 			};
 		};
 	};
+	admin_collect_garbage: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AdminCollectGarbage"];
+			};
+		};
+		responses: {
+			/** @description garbage collecting task finished */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["AdminCollectGarbageResponse"];
+				};
+			};
+			/** @description garbage collecting task started */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	admin_purge_cache: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AdminPurgeCache"];
+			};
+		};
+		responses: {
+			/** @description cache purging task finished */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["AdminPurgeCacheResponse"];
+				};
+			};
+		};
+	};
 	admin_register_user: {
 		parameters: {
 			query?: never;
@@ -7954,13 +8171,11 @@ export interface operations {
 		};
 		responses: {
 			/** @description User registered */
-			200: {
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content: {
-					"application/json": components["schemas"]["SessionWithToken"];
-				};
+				content?: never;
 			};
 		};
 	};
@@ -8818,15 +9033,16 @@ export interface operations {
 	};
 	thread_activity: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
-				/** @description Parent channel id */
+				/** @description Channel id */
 				channel_id: components["schemas"]["Id"];
-				from: string;
-				to: string;
-				dir: "b" | "f";
-				limit: number;
 			};
 			cookie?: never;
 		};
@@ -8838,7 +9054,8 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["PaginationResponse_Id"];
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
 				};
 			};
 		};
@@ -9149,6 +9366,33 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Invite"];
+				};
+			};
+		};
+	};
+	channel_member_search: {
+		parameters: {
+			query: {
+				query: string;
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["ChannelMemberSearchResponse"];
 				};
 			};
 		};
@@ -9993,6 +10237,29 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Tag"];
+				};
+			};
+		};
+	};
+	tag_search: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the forum channel to search for tags in. */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Tag"][];
 				};
 			};
 		};
@@ -12510,29 +12777,6 @@ export interface operations {
 			};
 		};
 	};
-	room_metrics: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["RoomMetrics"];
-				};
-			};
-		};
-	};
 	room_member_prune: {
 		parameters: {
 			query?: never;
@@ -12902,6 +13146,29 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["RoomMember"];
+				};
+			};
+		};
+	};
+	thread_list_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List room threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ThreadListRoom"];
 				};
 			};
 		};
