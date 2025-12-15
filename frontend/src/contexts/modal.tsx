@@ -45,6 +45,9 @@ export const ModalsProvider = (p: ParentProps) => {
 		},
 	};
 
+	// TEMP: for debugging
+	globalThis.modalctl = controller;
+
 	return (
 		<ModalsContext.Provider value={[modals, controller]}>
 			{p.children}

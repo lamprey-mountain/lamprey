@@ -11,6 +11,7 @@ import { useModals } from "../contexts/modal.tsx";
 import { ModalReactions } from "./ModalReactions.tsx";
 import { ModalNotifications } from "./ModalNotifications.tsx";
 import { ModalPrivacy } from "./ModalPrivacy.tsx";
+import { ModalAttachment } from "./ModalAttachment.tsx";
 
 export const Modal = (props: ParentProps) => {
 	const [, modalCtl] = useModals();
@@ -89,6 +90,9 @@ export function getModal(modal: ContextModal) {
 		}
 		case "notifications": {
 			return <ModalNotifications channel_id={modal.room_id} />;
+		}
+		case "attachment": {
+			return <ModalAttachment />;
 		}
 	}
 }
