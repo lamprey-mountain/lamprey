@@ -14,6 +14,7 @@ import { Voice, VoiceTray } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
 import { Forum } from "./Forum.tsx";
+import { Forum2 } from "./Forum2.tsx";
 import { Category } from "./Category.tsx";
 import { type Channel, SERVER_ROOM_ID } from "sdk";
 import { PinnedMessages } from "./PinnedMessages.tsx";
@@ -283,6 +284,7 @@ export const RouteChannel = (p: RouteSectionProps) => {
 							when={channel()!.type === "Text" ||
 								channel()!.type === "Dm" ||
 								channel()!.type === "Gdm" ||
+								channel()!.type === "Announcement" ||
 								channel()!.type === "ThreadPublic" ||
 								channel()!.type === "ThreadPrivate"}
 						>
@@ -293,6 +295,9 @@ export const RouteChannel = (p: RouteSectionProps) => {
 						</Show>
 						<Show when={channel()!.type === "Forum"}>
 							<Forum channel={channel()!} />
+						</Show>
+						<Show when={channel()!.type === "Forum2"}>
+							<Forum2 channel={channel()!} />
 						</Show>
 						<Show when={channel()!.type === "Category"}>
 							<Category channel={channel()!} />
