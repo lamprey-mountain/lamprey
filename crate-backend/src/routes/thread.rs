@@ -7,9 +7,10 @@ use axum::{extract::State, Json};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
-    ChannelType, Mentions, MentionsUser, Message, MessageId, MessageMember, MessageSync,
-    MessageThreadCreated, MessageType, PaginationQuery, PaginationResponse, Permission, RoomId,
-    ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
+    ChannelMemberSearch, ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message,
+    MessageId, MessageMember, MessageSync, MessageThreadCreated, MessageType, PaginationQuery,
+    PaginationResponse, Permission, RoomId, ThreadMember, ThreadMemberPut, ThreadMembership,
+    UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use serde::Serialize;
@@ -786,6 +787,56 @@ async fn thread_activity(
     Ok(Json(res))
 }
 
+/// Channel member search
+///
+/// If this is a thread, search thread members. Otherwise, search all room members who can view this thread.
+///
+/// For mention autocomplete
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/member/search",
+    params(
+        ChannelMemberSearch,
+        ("channel_id" = ChannelId, description = "Channel id"),
+    ),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = ChannelMemberSearchResponse, description = "success"),
+    )
+)]
+async fn channel_member_search(
+    Path(channel_id): Path<ChannelId>,
+    Query(search): Query<ChannelMemberSearch>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let _d = s.data();
+    let srv = s.services();
+
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let chan = srv.channels.get(channel_id, None).await?;
+
+    // extra permission check to prevent returning the entire list of registered users
+    if chan.room_id == Some(SERVER_ROOM_ID) {
+        perms.ensure(Permission::ServerOversee)?;
+    }
+
+    let _limit = search.limit.unwrap_or(10).min(100);
+    // let room_members = d.room_member_search(room_id, search.query, limit).await?;
+    // let user_ids: Vec<UserId> = room_members.iter().map(|m| m.user_id).collect();
+    // let users = srv.users.get_many(&user_ids).await?;
+
+    // Ok(Json(ChannelMemberSearchResponse {
+    //     room_members,
+    //     thread_members,
+    //     users,
+    // }))
+
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create))
@@ -800,4 +851,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_list_atom))
         .routes(routes!(thread_list_room))
         .routes(routes!(thread_activity))
+        .routes(routes!(channel_member_search))
 }

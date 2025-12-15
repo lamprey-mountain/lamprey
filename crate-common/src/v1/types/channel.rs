@@ -52,7 +52,6 @@ pub struct Channel {
     // )]
     // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     // pub url: Option<Url>,
-
     /// type specific data for this channel
     #[serde(rename = "type")]
     pub ty: ChannelType,
