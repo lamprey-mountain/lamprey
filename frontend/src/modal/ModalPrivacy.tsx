@@ -28,7 +28,8 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 					<label for="opt-dms">
 						<div>Allow direct messages</div>
 						<div class="dim">
-							Let others send direct messages to you. Bots, moderators, and friends can always start dms.
+							Let others send direct messages to you. Bots, moderators, and
+							friends can always start dms.
 						</div>
 					</label>
 				</div>
@@ -44,11 +45,15 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 					<label for="opt-rpc">
 						<div>Share rich presence</div>
 						<div class="dim">
-							Share rich presence with everyone else in this room. Friends can always view your rich presence.
+							Share rich presence with everyone else in this room. Friends can
+							always view your rich presence.
 						</div>
 					</label>
 				</div>
-				<div class="option" style="z-index:999;flex-direction:column;align-items:start">
+				<div
+					class="option"
+					style="z-index:999;flex-direction:column;align-items:start"
+				>
 					<h3 class="dim">EXIF Metadata</h3>
 					<Dropdown
 						options={[
