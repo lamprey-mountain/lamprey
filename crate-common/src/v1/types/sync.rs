@@ -460,6 +460,11 @@ pub enum MessageSync {
         slowmode_thread_expire_at: Option<Time>,
         slowmode_message_expire_at: Option<Time>,
     },
+    // TODO(#915): media v2
+    // /// A piece of media has processed and is now in the `Uploaded` state.
+    // MediaProcessed {
+    //     media: crate::v2::types::media::Media,
+    // },
 }
 
 // TODO: skip sending room_members/thread_members/users if the client already has them

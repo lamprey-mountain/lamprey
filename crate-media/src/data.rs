@@ -25,6 +25,7 @@ where
     #[serde(tag = "v")]
     pub enum DbMediaData {
         V1(Media),
+        // V2(common::v2::types::media::Media),
 
         #[serde(untagged)]
         Raw(DbMediaRaw),
@@ -42,6 +43,7 @@ where
         fn from(value: DbMediaData) -> Self {
             match value {
                 DbMediaData::V1(media) => media,
+                // DbMediaData::V2(media) => media,
                 DbMediaData::Raw(db_media_raw) => db_media_raw.into(),
             }
         }

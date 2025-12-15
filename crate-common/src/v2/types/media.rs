@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -12,26 +12,6 @@ use crate::v1::types::{
     util::{Diff, Time},
     MediaId, Mime, UserId,
 };
-
-/*
-media api:
-
-POST /media
-GET /media/{media_id}
-PATCH /media/{media_id}
-DELETE /media/{media_id}
-PUT /media/{media_id}/done
-PUT /media/{media_id}/done?async=true -- return 202 accepted, see MessageSync event
-
--- tus uploading
-PATCH /arbitrary/upload/url
-HEAD /arbitrary/upload/url
-
--- cdn urls
-GET /media/{media_url}
-GET /thumb/{media_url}?size={n}
-GET /gifv/{media_url} (convert gif or other animated file to webm)
-*/
 
 /// A reference to a piece of media to be used.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,6 +26,17 @@ pub enum MediaReference {
 
     /// Shortcut to create media from form data. Only usable if the request body is multipart/form-data.
     Attachment { field_name: String },
+}
+
+/// request body for `media_done`
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct MediaDoneParams {
+    /// Whether to process this media asynchronously.
+    ///
+    /// If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing.
+    #[serde(default, rename = "async")]
+    pub process_async: bool,
 }
 
 /// The status for this media
@@ -311,13 +302,127 @@ impl Diff<Media> for MediaPatch {
     }
 }
 
-// when this is implemented, i'll copy these to their respective files
-#[cfg(any())]
-mod extra {
-    use super::Media;
+use crate::v1::types::media::{Media as V1Media, MediaWithAdmin as V1MediaWithAdmin};
 
-    enum MessageSync {
-        /// A piece of media has processed and is now in the `Uploaded` state.
-        MediaProcessed { media: Media },
+impl Into<V1Media> for Media {
+    fn into(self) -> V1Media {
+        V1Media {
+            id: self.id,
+            filename: self.filename,
+            alt: self.alt,
+            source: crate::v1::types::MediaTrack {
+                info: match self.metadata {
+                    MediaMetadata::Image { width, height } => {
+                        crate::v1::types::MediaTrackInfo::Image(crate::v1::types::Image {
+                            height,
+                            width,
+                            language: None,
+                        })
+                    }
+                    MediaMetadata::Video {
+                        width,
+                        height,
+                        duration,
+                    } => crate::v1::types::MediaTrackInfo::Mixed(crate::v1::types::Mixed {
+                        width: Some(width),
+                        height: Some(height),
+                        duration: Some(duration),
+                        language: None,
+                    }),
+                    MediaMetadata::Audio { duration } => {
+                        crate::v1::types::MediaTrackInfo::Mixed(crate::v1::types::Mixed {
+                            height: None,
+                            width: None,
+                            duration: Some(duration),
+                            language: None,
+                        })
+                    }
+                    MediaMetadata::Text => {
+                        crate::v1::types::MediaTrackInfo::Text(crate::v1::types::Text {
+                            language: None,
+                        })
+                    }
+                    MediaMetadata::File => crate::v1::types::MediaTrackInfo::Other,
+                },
+                size: self.size,
+                mime: self.mime,
+                source: if let Some(source_url) = self.source_url {
+                    crate::v1::types::TrackSource::Downloaded { source_url }
+                } else {
+                    crate::v1::types::TrackSource::Uploaded
+                },
+            },
+        }
+    }
+}
+
+impl Into<Media> for V1Media {
+    fn into(self) -> Media {
+        let s = self.source;
+        Media {
+            id: self.id,
+            // WARNING: the database is going to need to correctly populate `status`
+            status: MediaStatus::Consumed,
+            filename: self.filename,
+            alt: self.alt,
+            size: s.size,
+            mime: s.mime.clone(),
+            source_url: match s.source {
+                crate::v1::types::TrackSource::Uploaded => None,
+                crate::v1::types::TrackSource::Downloaded { source_url } => Some(source_url),
+                crate::v1::types::TrackSource::Extracted => None,
+                crate::v1::types::TrackSource::Generated => None,
+            },
+            metadata: match s.info {
+                crate::v1::types::MediaTrackInfo::Video(video) => MediaMetadata::Video {
+                    width: video.width,
+                    height: video.height,
+                    duration: video.duration,
+                },
+                crate::v1::types::MediaTrackInfo::Audio(audio) => MediaMetadata::Audio {
+                    duration: audio.duration,
+                },
+                crate::v1::types::MediaTrackInfo::Image(image) => MediaMetadata::Image {
+                    width: image.width,
+                    height: image.height,
+                },
+                crate::v1::types::MediaTrackInfo::Thumbnail(image) => MediaMetadata::Image {
+                    width: image.width,
+                    height: image.height,
+                },
+                crate::v1::types::MediaTrackInfo::TimedText(_) => MediaMetadata::File,
+                crate::v1::types::MediaTrackInfo::Text(_) => MediaMetadata::Text,
+                crate::v1::types::MediaTrackInfo::Mixed(mixed) => match s.mime.parse() {
+                    Ok(s) => match s.ty().as_str() {
+                        "video" => MediaMetadata::Video {
+                            width: mixed.width.unwrap_or_default(),
+                            height: mixed.height.unwrap_or_default(),
+                            duration: mixed.width.unwrap_or_default(),
+                        },
+                        "audio" => todo!(),
+                        _ => MediaMetadata::File,
+                    },
+                    Err(_) => MediaMetadata::File,
+                },
+                crate::v1::types::MediaTrackInfo::Other => MediaMetadata::File,
+            },
+            user_id: None,
+            deleted_at: None,
+            scans: vec![],
+            has_thumbnail: false,
+            has_gifv: false,
+        }
+    }
+}
+
+impl Into<Media> for V1MediaWithAdmin {
+    fn into(self) -> Media {
+        let user_id = self.user_id;
+        let deleted_at = self.deleted_at;
+        Media {
+            user_id: Some(user_id),
+            deleted_at,
+            ..self.inner.into()
+        }
     }
 }

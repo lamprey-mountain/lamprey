@@ -112,7 +112,7 @@ pub struct EmbedCreate {
     /// the theme color of the site, as a hex string (`#rrggbb`)
     pub color: Option<String>,
 
-    // TODO: allow using a url directly
+    // TODO(#915): use MediaReference
     pub media: Option<MediaRef>,
     pub thumbnail: Option<MediaRef>,
 

@@ -7,7 +7,7 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
-use common::v1::types::{MediaCreateSource, MediaPatch};
+use common::{v1::types::{MediaCreateSource, MediaPatch}, v2::types::media::MediaDoneParams};
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, trace};
@@ -139,15 +139,18 @@ async fn media_patch(
 /// Media done
 ///
 /// finishes a media upload. at this point, the media becomes immutable
+// TODO(#915): media v2
+// TODO(#26): async media
 #[utoipa::path(
     put,
     path = "/media/{media_id}/done",
     tags = ["media"],
     params(("media_id", description = "Media id")),
+    request_body = MediaDoneParams,
     responses(
-        // (status = NOT_MODIFIED, description = "Not modified"),
         (status = OK, body = Media, description = "Success"),
-    )
+        (status = ACCEPTED, description = "Processing in background"),
+    ),
 )]
 async fn media_done(
     Path(media_id): Path<MediaId>,
