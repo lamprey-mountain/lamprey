@@ -144,7 +144,6 @@ async fn emoji_delete(
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::EmojiManage)?;
     data.emoji_delete(emoji_id).await?;
-    data.media_link_delete_all(*emoji.id).await?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
