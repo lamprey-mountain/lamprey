@@ -9,6 +9,7 @@ pub struct Postgres {
 
 impl Data for Postgres {}
 
+mod admin;
 mod application;
 mod audit_logs;
 mod auth;

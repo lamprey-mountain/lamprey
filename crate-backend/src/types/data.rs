@@ -9,6 +9,7 @@ use common::v1::types::{
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use time::PrimitiveDateTime;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 pub use common::v1::types::ids::*;

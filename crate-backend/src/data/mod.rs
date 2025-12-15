@@ -39,6 +39,7 @@ use common::v1::types::{
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::services::admin::AdminCollectGarbageMode;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
     DbSessionCreate, DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink,
@@ -84,6 +85,7 @@ pub trait Data:
     + DataTag
     + DataMetrics
     + DataRoomAnalytics
+    + DataAdmin
     + Send
     + Sync
 {
@@ -1174,4 +1176,34 @@ pub trait DataRoomAnalytics {
     async fn room_analytics_snapshot_all(&self) -> Result<()>;
     async fn room_analytics_get_last_snapshot_ts(&self) -> Result<Option<time::PrimitiveDateTime>>;
     async fn gc_room_analytics(&self) -> Result<u64>;
+}
+
+#[async_trait]
+pub trait DataAdmin {
+    // TODO: move admin queries here (from main.rs, etc)
+
+    /// garbage collect room analytics data
+    ///
+    /// returns rows affected
+    async fn gc_room_analytics(&self, mode: AdminCollectGarbageMode) -> Result<u64>;
+
+    /// garbage collect messages data
+    ///
+    /// returns rows affected
+    async fn gc_messages(&self, mode: AdminCollectGarbageMode) -> Result<u64>;
+
+    /// garbage collect media data
+    ///
+    /// returns (rows affected, bytes affected)
+    async fn gc_media(&self, mode: AdminCollectGarbageMode) -> Result<(u64)>;
+
+    /// garbage collect sessions
+    ///
+    /// returns rows affected
+    async fn gc_sessions(&self, mode: AdminCollectGarbageMode) -> Result<u64>;
+
+    /// garbage collect audit logs
+    ///
+    /// returns rows affected
+    async fn gc_audit_logs(&self, mode: AdminCollectGarbageMode) -> Result<u64>;
 }

@@ -20,6 +20,7 @@ use crate::{
     ServerStateInner,
 };
 
+pub mod admin;
 pub mod channel;
 pub mod email;
 pub mod embed;

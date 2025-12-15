@@ -8,14 +8,21 @@ use common::v1::types::{
 };
 use common::v1::types::{ChannelPatch, PaginationQuery};
 use http::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
 
-use crate::ServerState;
-use crate::{error::Result, Error};
+use crate::{
+    error::Result,
+    services::admin::{
+        AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
+    },
+    Error, ServerState,
+};
+
+// NOTE: do i want to standardize admin apis?
 
 #[derive(Deserialize, ToSchema)]
 struct AdminWhisper {
@@ -31,35 +38,6 @@ struct AdminBroadcast {
 #[derive(Deserialize, ToSchema)]
 struct AdminRegisterUser {
     user_id: UserId,
-}
-
-#[derive(Deserialize, ToSchema)]
-struct AdminPurgeCache {
-    targets: Vec<AdminPurgeCacheTarget>,
-}
-
-#[derive(Deserialize, ToSchema)]
-enum AdminPurgeCacheTarget {
-    Channels,
-    Embeds,
-    Permissions,
-    Rooms,
-    Sessions,
-    Users,
-}
-
-#[derive(Deserialize, ToSchema)]
-struct AdminCollectGarbage {
-    targets: Vec<AdminCollectGarbageTarget>,
-}
-
-#[derive(Deserialize, ToSchema)]
-enum AdminCollectGarbageTarget {
-    Media,
-    Messages,
-    Session,
-    AuditLog,
-    RoomAnalytics,
 }
 
 /// Admin whisper
@@ -278,7 +256,9 @@ async fn admin_register_user(
     path = "/admin/purge-cache",
     tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
     request_body = AdminPurgeCache,
-    responses((status = NO_CONTENT))
+    responses(
+        (status = OK, body = AdminPurgeCacheResponse, description = "cache purging task finished"),
+    ),
 )]
 async fn admin_purge_cache(
     Auth(auth_user): Auth,
@@ -302,7 +282,10 @@ async fn admin_purge_cache(
     path = "/admin/collect-garbage",
     tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
     request_body = AdminCollectGarbage,
-    responses((status = NO_CONTENT))
+    responses(
+        (status = ACCEPTED, description = "garbage collecting task started"),
+        (status = OK, body = AdminCollectGarbageResponse, description = "garbage collecting task finished"),
+    )
 )]
 async fn admin_collect_garbage(
     Auth(auth_user): Auth,
