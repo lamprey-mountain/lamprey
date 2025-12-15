@@ -141,6 +141,7 @@ impl DataSearch for Postgres {
                     ChannelType::ThreadPrivate => "ThreadPrivate",
                     ChannelType::Dm => "Dm",
                     ChannelType::Gdm => "Gdm",
+                    ChannelType::Info => "Info",
                 };
                 s.to_string()
             })

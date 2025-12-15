@@ -156,6 +156,7 @@ pub enum DbChannelType {
     ThreadPublic,
     ThreadPrivate,
     Calendar,
+    Info,
 }
 
 impl From<DbChannelType> for ChannelType {
@@ -173,6 +174,7 @@ impl From<DbChannelType> for ChannelType {
             DbChannelType::ThreadPublic => ChannelType::ThreadPublic,
             DbChannelType::ThreadPrivate => ChannelType::ThreadPrivate,
             DbChannelType::Calendar => ChannelType::Calendar,
+            DbChannelType::Info => ChannelType::Info,
         }
     }
 }
@@ -192,6 +194,7 @@ impl From<ChannelType> for DbChannelType {
             ChannelType::ThreadPublic => DbChannelType::ThreadPublic,
             ChannelType::ThreadPrivate => DbChannelType::ThreadPrivate,
             ChannelType::Calendar => DbChannelType::Calendar,
+            ChannelType::Info => DbChannelType::Info,
         }
     }
 }

@@ -45,6 +45,14 @@ pub struct Channel {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 
+    // /// url that this info channel should link to
+    // #[cfg_attr(
+    //     feature = "utoipa",
+    //     schema(required = false, min_length = 1, max_length = 2048)
+    // )]
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
+    // pub url: Option<Url>,
+
     /// type specific data for this channel
     #[serde(rename = "type")]
     pub ty: ChannelType,
@@ -189,6 +197,9 @@ pub enum ChannelType {
 
     /// long form chat history (clone of Forum)
     Forum2,
+
+    /// info channel without text/voice/threads
+    Info,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

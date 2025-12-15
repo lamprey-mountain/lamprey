@@ -277,7 +277,8 @@ impl ServiceThreads {
             | ChannelType::Voice
             | ChannelType::Broadcast
             | ChannelType::Category
-            | ChannelType::Calendar => {
+            | ChannelType::Calendar
+            | ChannelType::Info => {
                 perms.ensure(Permission::ChannelManage)?;
             }
             ChannelType::ThreadPublic => {
