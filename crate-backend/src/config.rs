@@ -34,6 +34,8 @@ pub struct Config {
     pub require_server_invite: bool,
     #[serde(default = "default_listen")]
     pub listen: Vec<ListenConfig>,
+    #[serde(default)]
+    pub media_scanners: Vec<ConfigMediaScanner>,
 }
 
 fn default_require_server_invite() -> bool {
@@ -156,3 +158,46 @@ fn default_address() -> IpAddr {
 fn default_port() -> u16 {
     4000
 }
+
+/// A method to scan media
+#[derive(Debug, Deserialize)]
+pub struct ConfigMediaScanner {
+    /// The url to post media to
+    pub scan_url: Url,
+
+    /// The unique name of the media scanner (eg. `nsfw`, `malware`)
+    pub key: String,
+
+    /// The current version of this scanner.
+    pub version: u16,
+}
+
+/*
+media scanning notes
+
+```
+POST /media/{media_id}/rescan
+```
+
+```
+POST scan_url
+Content-Length: blob_length
+
+<blob bytes>
+```
+
+```
+200 OK
+Content-Type: application/json
+
+{"score":0.5}
+```
+*/
+
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct MediaScanResponse {
+//     pub score: f32,
+
+//     /// note for the sysadmin
+//     pub note: Option<String>,
+// }

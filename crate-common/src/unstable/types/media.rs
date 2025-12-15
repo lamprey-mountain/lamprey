@@ -1,6 +1,6 @@
-//! media schema v3
-
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -8,200 +8,316 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use super::{EmbedId, EmojiId, MediaId, MessageId, MessageVerId, Mime, UserId};
+use crate::v1::types::{
+    util::{Diff, Time},
+    MediaId, Mime, UserId,
+};
 
-pub mod animated;
-pub mod embed;
-pub mod file;
-pub mod stream;
-pub mod thumb;
+/*
+media api:
 
-pub use animated::Animated;
-pub use embed::Embed;
-pub use file::*;
-pub use stream::Streamable;
-pub use thumb::{Thumb, Thumbs};
+POST /media
+GET /media/{media_id}
+PATCH /media/{media_id}
+DELETE /media/{media_id}
+PUT /media/{media_id}/done
+PUT /media/{media_id}/done?async=true -- return 202 accepted, see MessageSync event
 
-/// a piece of media. becomes immutable after being linked to something.
+-- tus uploading
+PATCH /arbitrary/upload/url
+HEAD /arbitrary/upload/url
+
+-- cdn urls
+GET /media/{media_url}
+GET /thumb/{media_url}?size={n}
+GET /gifv/{media_url} (convert gif or other animated file to webm)
+*/
+
+/// A reference to a piece of media to be used.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(untagged)]
+pub enum MediaReference {
+    /// Use this piece of uploaded media. Prefer using this whenever possible.
+    Media { media_id: MediaId },
+
+    /// Shortcut to download media from a url. Saves a few requests for uploading.
+    Url { source_url: Url },
+
+    /// Shortcut to create media from form data. Only usable if the request body is multipart/form-data.
+    Attachment { field_name: String },
+}
+
+/// The status for this media
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MediaStatus {
+    /// Newly created and is waiting for either
+    ///
+    /// - the client to begin uploading via `media_upload` route
+    /// - the downlod from `source_url` to complete
+    Transferring,
+
+    /// This media is done being uploaded and is being scanned by the server.
+    Processing,
+
+    /// This media is done being uploaded and processed.
+    Uploaded,
+
+    /// This media is `Uploaded` and linked to some resource. `strip_exif` can no longer be edited. The underlying blob is now immutable and can be fetched via cdn routes.
+    Consumed,
+}
+
+/// A piece of media.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct Media<T: MediaType> {
-    /// an unique identifier
+pub struct Media {
     pub id: MediaId,
+    pub status: MediaStatus,
 
-    /// if the associated object has been deleted, flag for garbage collection
-    pub is_deleted: bool,
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    pub filename: String,
 
-    /// if the nsfw scanner detected something
-    pub is_likely_nsfw: bool,
-
-    /// cannot be accessed by regular users
-    pub is_quarantined: bool,
-
-    /// what this media is linked to. each piece of media may only be linked to one thing. if None, this media hasn't been consumed yet.
-    pub link: Option<MediaLink>,
-
-    /// who created this piece of media
-    // (should i really expose this publicly, or make it an Option?)
-    pub user_id: UserId,
-
-    /// info/metadata about this media
-    pub info: T,
-
-    /// Descriptive alt text, not entirely unlike a caption.
-    /// Used by screenreaders and as a fallback if this media fails to load
+    /// Descriptive alt text.
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 8192)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub alt: Option<String>,
+
+    /// The underlying blob's length in bytes.
+    pub size: u64,
+
+    /// The mime type of this piece of media.
+    pub mime: Mime,
+
+    /// Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+    pub source_url: Option<Url>,
+
+    /// Additional filetype-specific metadata for the file
+    pub metadata: MediaMetadata,
+
+    /// The user who uploaded this media. Only exists for admins or if you uploaded this media
+    pub user_id: Option<UserId>,
+
+    /// If this media was deleted, when it was deleted. Only exists for admins.
+    pub deleted_at: Option<Time>,
+
+    /// The results of automated scans.
+    pub scans: Vec<MediaScan>,
+
+    /// Whether this media can be fetched through the `/thumb/{media_id}` cdn route.
+    pub has_thumbnail: bool,
+
+    /// Whether this media can be fetched through the `/gifv/{media_id}` cdn route.
+    pub has_gifv: bool,
 }
 
-/// what object a piece of media is linked to
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// An automated scan result
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaScan {
+    /// The name of the media scanner (eg. `nsfw`, `malware`)
+    pub key: String,
+
+    /// The confidence score of the scan, from 0.0 to 1.0
+    pub result: f32,
+
+    /// The version of the scanner that was used for this attachment.
+    pub version: u16,
+}
+
+/// Filetype-specific metadata
+// TODO: consider using NonZeroU64 if i am sure its valid, eg. double check no image format allows image height/width zero.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
-pub enum MediaLink {
-    /// linked to a message
-    Message {
-        /// the id of the message this is linked to
-        message_id: MessageId,
+pub enum MediaMetadata {
+    /// An image file
+    Image {
+        /// the width of the image in pixels
+        width: u64,
 
-        /// the earliest version_id this media is linked to
-        version_id: MessageVerId,
+        /// the height of the image in pixels
+        height: u64,
     },
 
-    /// linked to a user's avatar
-    AvatarUser {
-        /// the id of the user this is linked to
-        user_id: UserId,
+    /// A video file
+    Video {
+        /// the width of the video in pixels
+        width: u64,
+
+        /// the height of the video in pixels
+        height: u64,
+
+        /// the duration of the video in seconds
+        duration: u64,
     },
 
-    // /// linked to a room's avatar
-    // AvatarRoom {
-    //     /// the id of the room this is linked to
-    //     room_id: RoomId,
-    // },
-    /// linked to a url or custom embed
-    Embed {
-        /// the id of the embed this is linked to
-        embed_id: EmbedId,
+    /// An audio file
+    Audio {
+        /// the duration of the video in seconds
+        duration: u64,
     },
 
-    /// linked to a custom emoji
-    Emoji {
-        /// the id of the embed this is linked to
-        emoji_id: EmojiId,
+    /// A generic file that can be previewed in a pre/code block
+    Text,
+
+    /// A generic file
+    File,
+}
+
+/// An update to a piece of media
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaPatch {
+    /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    pub alt: Option<Option<String>>,
+
+    /// The filename for this piece of media
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 256)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    pub filename: Option<String>,
+
+    /// Whether to strip sensitive exif info, like location or camera make and model.
+    ///
+    /// This can only be changed if the media status is not `Consumed`.
+    #[serde(default)]
+    pub strip_exif: Option<bool>,
+}
+
+/// a request body for `media_create`
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaCreate {
+    /// Whether to strip sensitive exif info, like location or camera make and model.
+    #[serde(default)]
+    pub strip_exif: bool,
+
+    /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    pub alt: Option<String>,
+
+    #[serde(flatten)]
+    #[cfg_attr(feature = "validator", validate(nested))]
+    pub source: MediaCreateSource,
+}
+
+/// What to create this media from
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(untagged)]
+pub enum MediaCreateSource {
+    /// create this file by downloading it
+    Download {
+        /// The filename of the downloaded file; automatically detect if None
+        #[cfg_attr(
+            feature = "utoipa",
+            schema(required = false, min_length = 1, max_length = 256)
+        )]
+        filename: Option<String>,
+
+        /// The size (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
+        size: Option<u64>,
+
+        /// A url to download this media from
+        source_url: Url,
+    },
+
+    /// create this file by uploading it
+    Upload {
+        /// The filename of this file to use
+        #[cfg_attr(
+            feature = "utoipa",
+            schema(required = false, min_length = 1, max_length = 256)
+        )]
+        filename: String,
+
+        /// The size of this file (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
+        size: Option<u64>,
     },
 }
 
-pub trait MediaType {
-    fn tag(&self) -> &'static str;
+/// response body for `media_create`
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MediaCreated {
+    /// The id of the media that has been created
+    pub media_id: MediaId,
+
+    /// A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
+    pub upload_url: Option<Url>,
 }
 
-impl<T: MediaType> MediaType for File<T> {
-    fn tag(&self) -> &'static str {
-        self.meta.tag()
+impl MediaCreateSource {
+    pub fn size(&self) -> Option<u64> {
+        match self {
+            MediaCreateSource::Upload { size, .. } => *size,
+            MediaCreateSource::Download { size, .. } => *size,
+        }
+    }
+
+    pub fn filename(&self) -> Option<&str> {
+        match self {
+            MediaCreateSource::Upload { filename, .. } => Some(filename.as_str()),
+            MediaCreateSource::Download { filename, .. } => filename.as_deref(),
+        }
     }
 }
 
-macro_rules! impl_media_type {
-    ($name:ident) => {
-        pastey::paste! {
-            pub type [<Media $name>] = Media<$name>;
-        }
+#[cfg(feature = "validator")]
+mod val {
+    use super::MediaCreateSource;
+    use serde_json::json;
+    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
 
-        impl MediaType for $name {
-            fn tag(&self) -> &'static str {
-                stringify!($name)
+    impl Validate for MediaCreateSource {
+        fn validate(&self) -> Result<(), ValidationErrors> {
+            let mut v = ValidationErrors::new();
+            if self
+                .filename()
+                .is_none_or(|n| n.validate_length(Some(1), Some(256), None))
+            {
+                Ok(())
+            } else {
+                let mut err = ValidationError::new("length");
+                err.add_param("max".into(), &json!(256));
+                err.add_param("min".into(), &json!(1));
+                v.add("filename", err);
+                Err(v)
             }
         }
-    };
+    }
 }
 
-impl_media_type!(Image);
-impl_media_type!(Video);
-impl_media_type!(Audio);
-impl_media_type!(Streamable);
-impl_media_type!(Text);
-impl_media_type!(Generic);
-impl_media_type!(Embed);
-impl_media_type!(Animated);
-
-/// Any file
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
-pub enum MediaFile {
-    Image(Media<FileImage>),
-    Video(Media<FileVideo>),
-    Audio(Media<FileAudio>),
-    Text(Media<FileText>),
-    File(Media<FileGeneric>),
-    // do i want to include this?
-    // Streamable(Media<Streamable>),
+impl Diff<Media> for MediaPatch {
+    fn changes(&self, other: &Media) -> bool {
+        self.alt.changes(&other.alt) || self.filename.changes(&other.filename)
+    }
 }
 
-/// Any piece of media whatsoever
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
-pub enum MediaAny {
-    Image(Media<FileImage>),
-    Video(Media<FileVideo>),
-    Audio(Media<FileAudio>),
-    Text(Media<FileText>),
-    File(Media<FileGeneric>),
-    Streamable(Media<Streamable>),
-    Embed(Media<Embed>),
-}
+// when this is implemented, i'll copy these to their respective files
+#[cfg(any())]
+mod extra {
+    use super::Media;
 
-/// a message attachment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
-pub struct Attachment {
-    pub media: MediaAny,
-
-    /// if this piece of media is a spoiler in context
-    pub is_spoiler: bool,
-
-    /// override alt text with possibly more contextual text
-    // somewhat unnecessary with UrlEmbed? could/should i enforce this with
-    // types, somehow?
-    pub alt_override: Option<String>,
-}
-
-// i need more tests
-#[cfg(test)]
-mod tests {
-    use super::MediaAny;
-
-    #[test]
-    fn test_roundtrip() {
-        let val = serde_json::json!({
-            "type": "Image",
-            "id": "6f8bc7a5-a628-4a01-9bea-48b57c3b1036",
-            "user_id": "555509b9-edba-4a8a-a51b-f367501a4f5f",
-            "alt": "a test image",
-            "is_deleted": false,
-            "is_likely_nsfw": false,
-            "is_quarantined": false,
-            "link": null,
-            "info": {
-                "filename": "test.png",
-                "size": 1234,
-                "mime": "image/png",
-                "url": "https://example.com/",
-                "source_url": null,
-                "thumbs": [],
-                "height": 123,
-                "width": 456,
-            }
-        });
-        let parsed: MediaAny = serde_json::from_value(val.clone()).unwrap();
-        assert_eq!(serde_json::to_value(&parsed).unwrap(), val);
+    enum MessageSync {
+        /// A piece of media has processed and is now in the `Uploaded` state.
+        MediaProcessed { media: Media },
     }
 }
