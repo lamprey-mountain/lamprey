@@ -65,6 +65,10 @@ impl ServiceRooms {
         self.cache_room.invalidate(&room_id).await;
     }
 
+    pub fn purge_cache(&self) {
+        self.cache_room.invalidate_all();
+    }
+
     pub async fn update(
         &self,
         room_id: RoomId,

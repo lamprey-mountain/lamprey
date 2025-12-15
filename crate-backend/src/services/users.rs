@@ -76,6 +76,10 @@ impl ServiceUsers {
         self.cache_users.invalidate(&user_id).await
     }
 
+    pub fn purge_cache(&self) {
+        self.cache_users.invalidate_all();
+    }
+
     pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Channel, bool)> {
         let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
         let data = self.state.data();

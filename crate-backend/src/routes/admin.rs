@@ -8,7 +8,7 @@ use common::v1::types::{
 };
 use common::v1::types::{ChannelPatch, PaginationQuery};
 use http::StatusCode;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -19,7 +19,7 @@ use crate::{
     services::admin::{
         AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
     },
-    Error, ServerState,
+    ServerState,
 };
 
 // NOTE: do i want to standardize admin apis?
@@ -263,17 +263,17 @@ async fn admin_register_user(
 async fn admin_purge_cache(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<AdminPurgeCache>,
+    Json(json): Json<AdminPurgeCache>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let _d = s.data();
 
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
-    Ok(Error::Unimplemented)
+    let res = srv.admin.purge_caches(json).await?;
+    Ok(Json(res))
 }
 
 /// Admin collect garbage
@@ -290,17 +290,17 @@ async fn admin_purge_cache(
 async fn admin_collect_garbage(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<AdminCollectGarbage>,
+    Json(json): Json<AdminCollectGarbage>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let _d = s.data();
 
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
-    Ok(Error::Unimplemented)
+    let res = srv.admin.collect_garbage(json).await?;
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

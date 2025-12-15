@@ -716,7 +716,6 @@ pub trait DataAuditLogs {
         filter: AuditLogFilter,
     ) -> Result<PaginationResponse<AuditLogEntry>>;
     async fn audit_logs_room_append(&self, entry: AuditLogEntry) -> Result<()>;
-    async fn gc_audit_logs(&self) -> Result<u64>;
 }
 
 #[async_trait]
@@ -1175,13 +1174,10 @@ pub trait DataRoomAnalytics {
 
     async fn room_analytics_snapshot_all(&self) -> Result<()>;
     async fn room_analytics_get_last_snapshot_ts(&self) -> Result<Option<time::PrimitiveDateTime>>;
-    async fn gc_room_analytics(&self) -> Result<u64>;
 }
 
 #[async_trait]
 pub trait DataAdmin {
-    // TODO: move admin queries here (from main.rs, etc)
-
     /// garbage collect room analytics data
     ///
     /// returns rows affected
@@ -1192,10 +1188,17 @@ pub trait DataAdmin {
     /// returns rows affected
     async fn gc_messages(&self, mode: AdminCollectGarbageMode) -> Result<u64>;
 
-    /// garbage collect media data
-    ///
-    /// returns (rows affected, bytes affected)
-    async fn gc_media(&self, mode: AdminCollectGarbageMode) -> Result<(u64)>;
+    /// marks media for garbage collection
+    async fn gc_media_mark(&self) -> Result<u64>;
+
+    /// gets candidates for media garbage collection sweep
+    async fn gc_media_get_sweep_candidates(&self, limit: u32) -> Result<Vec<MediaId>>;
+
+    /// deletes media that has been swept
+    async fn gc_media_delete_swept(&self, ids: &[MediaId]) -> Result<u64>;
+
+    /// counts media marked for deletion
+    async fn gc_media_count_deleted(&self) -> Result<u64>;
 
     /// garbage collect sessions
     ///

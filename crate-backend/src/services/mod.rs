@@ -14,8 +14,8 @@ use users::ServiceUsers;
 
 use crate::{
     services::{
-        members::ServiceMembers, presence::ServicePresence, search::ServiceSearch,
-        voice::ServiceVoice,
+        admin::ServiceAdmin, members::ServiceMembers, presence::ServicePresence,
+        search::ServiceSearch, voice::ServiceVoice,
     },
     ServerStateInner,
 };
@@ -39,6 +39,7 @@ pub mod voice;
 
 pub struct Services {
     pub(super) state: Arc<ServerStateInner>,
+    pub admin: ServiceAdmin,
     pub channels: ServiceThreads,
     pub email: ServiceEmail,
     pub embed: ServiceEmbed,
@@ -59,6 +60,7 @@ pub struct Services {
 impl Services {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
+            admin: ServiceAdmin::new(state.clone()),
             channels: ServiceThreads::new(state.clone()),
             email: ServiceEmail::new(state.clone()),
             embed: ServiceEmbed::new(state.clone()),

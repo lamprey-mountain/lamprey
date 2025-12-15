@@ -189,6 +189,10 @@ impl ServiceEmbed {
         }
     }
 
+    pub fn purge_cache(&self) {
+        self.cache.invalidate_all();
+    }
+
     async fn worker(state: Arc<ServerStateInner>) -> Result<()> {
         let data = state.data();
         let Some(job) = data.url_embed_queue_claim().await? else {

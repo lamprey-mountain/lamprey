@@ -23,6 +23,7 @@ use crate::config::{ListenComponent, ListenTransport};
 use lamprey_backend::{
     cli, config, error,
     routes::{self},
+    services::admin::AdminCollectGarbageMode,
     types::{
         self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
         RoomCreate, RoomMemberPut, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
@@ -361,14 +362,28 @@ async fn gc_sessions(state: Arc<ServerState>) -> Result<()> {
 
 async fn gc_audit_log(state: Arc<ServerState>) -> Result<()> {
     info!("starting audit log garbage collection job");
-    let rows_affected = state.data().gc_audit_logs().await?;
+    state
+        .data()
+        .gc_audit_logs(AdminCollectGarbageMode::Mark)
+        .await?;
+    let rows_affected = state
+        .data()
+        .gc_audit_logs(AdminCollectGarbageMode::Sweep)
+        .await?;
     info!("done; {} rows affected", rows_affected);
     Ok(())
 }
 
 async fn gc_room_analytics(state: Arc<ServerState>) -> Result<()> {
     info!("starting room analytics garbage collection job");
-    let rows_affected = state.data().gc_room_analytics().await?;
+    state
+        .data()
+        .gc_room_analytics(AdminCollectGarbageMode::Mark)
+        .await?;
+    let rows_affected = state
+        .data()
+        .gc_room_analytics(AdminCollectGarbageMode::Sweep)
+        .await?;
     info!("done; {} rows affected", rows_affected);
     Ok(())
 }

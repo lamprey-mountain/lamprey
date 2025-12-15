@@ -247,6 +247,12 @@ impl ServiceThreads {
             .await
     }
 
+    pub fn purge_cache(&self) {
+        self.cache_thread.invalidate_all();
+        self.cache_thread_private.invalidate_all();
+        self.cache_thread_recipients.invalidate_all();
+    }
+
     pub async fn create_channel(
         &self,
         user_id: UserId,

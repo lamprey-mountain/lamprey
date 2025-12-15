@@ -59,4 +59,9 @@ impl ServiceSessions {
             .cache_tokens
             .invalidate_entries_if(move |_, s| s.user_id() == Some(user_id));
     }
+
+    pub fn purge_cache(&self) {
+        self.cache_sessions.invalidate_all();
+        self.cache_tokens.invalidate_all();
+    }
 }

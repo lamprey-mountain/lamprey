@@ -47,6 +47,13 @@ impl ServicePermissions {
         }
     }
 
+    pub fn purge_cache(&self) {
+        self.cache_perm_room.invalidate_all();
+        self.cache_perm_channel.invalidate_all();
+        self.cache_is_mutual.invalidate_all();
+        self.cache_user_rank.invalidate_all();
+    }
+
     pub async fn update_timeout_task(
         &self,
         user_id: UserId,
