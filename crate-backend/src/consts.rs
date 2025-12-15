@@ -22,6 +22,9 @@ pub const MAX_ROLE_MENTION_MEMBERS_ADD: u32 = 50;
 /// the maximum number of members to allow in group dm.
 pub const MAX_GDM_MEMBERS: u32 = 16;
 
+/// the maximum number of webhooks per channel
+pub const MAX_CHANNEL_WEBHOOKS: u32 = 16;
+
 /// how many days to retain audit log entries
 pub const RETENTION_AUDIT_LOG: u32 = 90;
 

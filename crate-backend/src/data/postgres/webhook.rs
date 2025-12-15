@@ -34,6 +34,21 @@ impl DataWebhook for Postgres {
     ) -> Result<Webhook> {
         let mut tx = self.pool.begin().await?;
 
+        let count: i64 = sqlx::query_scalar!(
+            "SELECT count(*) FROM webhook WHERE channel_id = $1",
+            *channel_id
+        )
+        .fetch_one(&mut *tx)
+        .await?
+        .unwrap_or(0);
+
+        if count as u32 >= crate::consts::MAX_CHANNEL_WEBHOOKS {
+            return Err(Error::BadRequest(format!(
+                "too many webhooks in channel (max {})",
+                crate::consts::MAX_CHANNEL_WEBHOOKS
+            )));
+        }
+
         let webhook_id = WebhookId::new();
         let version_id = webhook_id.into_inner();
 
