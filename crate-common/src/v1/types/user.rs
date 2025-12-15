@@ -38,6 +38,7 @@ pub struct User {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
 
+    // TODO: rename to bio?
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 8192)
@@ -58,7 +59,25 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emails: Option<Vec<EmailInfo>>,
     pub user_config: Option<UserConfigUser>,
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 16)))]
+    // pub fields: Vec<UserField>,
 }
+
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub struct UserField {
+//     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+//     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+//     pub key: String,
+
+//     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 2048))]
+//     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
+//     pub value: String,
+
+//     // TODO: skip_serializing_if false
+//     /// if this url is verified?
+//     pub verified: bool,
+// }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
