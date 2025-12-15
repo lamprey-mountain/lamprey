@@ -6,7 +6,7 @@ use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageCreate, MessageSync, Permission,
     UserId, SERVER_ROOM_ID, SERVER_USER_ID,
 };
-use common::v1::types::{ChannelPatch, PaginationQuery, SessionWithToken};
+use common::v1::types::{ChannelPatch, PaginationQuery};
 use http::StatusCode;
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -14,8 +14,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
 
-use crate::error::Result;
 use crate::ServerState;
+use crate::{error::Result, Error};
 
 #[derive(Deserialize, ToSchema)]
 struct AdminWhisper {
@@ -31,6 +31,35 @@ struct AdminBroadcast {
 #[derive(Deserialize, ToSchema)]
 struct AdminRegisterUser {
     user_id: UserId,
+}
+
+#[derive(Deserialize, ToSchema)]
+struct AdminPurgeCache {
+    targets: Vec<AdminPurgeCacheTarget>,
+}
+
+#[derive(Deserialize, ToSchema)]
+enum AdminPurgeCacheTarget {
+    Channels,
+    Embeds,
+    Permissions,
+    Rooms,
+    Sessions,
+    Users,
+}
+
+#[derive(Deserialize, ToSchema)]
+struct AdminCollectGarbage {
+    targets: Vec<AdminCollectGarbageTarget>,
+}
+
+#[derive(Deserialize, ToSchema)]
+enum AdminCollectGarbageTarget {
+    Media,
+    Messages,
+    Session,
+    AuditLog,
+    RoomAnalytics,
 }
 
 /// Admin whisper
@@ -243,9 +272,59 @@ async fn admin_register_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Admin purge cache
+#[utoipa::path(
+    post,
+    path = "/admin/purge-cache",
+    tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
+    request_body = AdminPurgeCache,
+    responses((status = NO_CONTENT))
+)]
+async fn admin_purge_cache(
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(_json): Json<AdminPurgeCache>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let _d = s.data();
+
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Error::Unimplemented)
+}
+
+/// Admin collect garbage
+#[utoipa::path(
+    post,
+    path = "/admin/collect-garbage",
+    tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
+    request_body = AdminCollectGarbage,
+    responses((status = NO_CONTENT))
+)]
+async fn admin_collect_garbage(
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(_json): Json<AdminCollectGarbage>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let _d = s.data();
+
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(admin_whisper))
         .routes(routes!(admin_broadcast))
         .routes(routes!(admin_register_user))
+        .routes(routes!(admin_purge_cache))
+        .routes(routes!(admin_collect_garbage))
 }
