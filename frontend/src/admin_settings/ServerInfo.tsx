@@ -5,19 +5,27 @@ export function ServerInfo() {
 	const api = useApi();
 
 	const purgeCache = (target: string) => {
-		// TODO
+		api.client.http.POST("/api/v1/admin/purge-cache", {
+			body: { targets: [target as any] },
+		});
 	};
 
 	const gcDry = (target: string) => {
-		// TODO
+		api.client.http.POST("/api/v1/admin/collect-garbage", {
+			body: { targets: [target as any], async: false, mode: "Dry" },
+		});
 	};
 
 	const gcMark = (target: string) => {
-		// TODO
+		api.client.http.POST("/api/v1/admin/collect-garbage", {
+			body: { targets: [target as any], async: false, mode: "Mark" },
+		});
 	};
 
 	const gcSweep = (target: string) => {
-		// TODO
+		api.client.http.POST("/api/v1/admin/collect-garbage", {
+			body: { targets: [target as any], async: false, mode: "Sweep" },
+		});
 	};
 
 	return (
