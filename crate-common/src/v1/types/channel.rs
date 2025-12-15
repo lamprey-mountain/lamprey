@@ -155,6 +155,9 @@ pub enum ChannelType {
     #[default]
     Text,
 
+    /// announcement channel (like Text but with announcement-specific features)
+    Announcement,
+
     /// a thread visible to anyone who can see the channel
     ThreadPublic,
 
@@ -183,6 +186,9 @@ pub enum ChannelType {
 
     /// a calendar
     Calendar,
+
+    /// long form chat history (clone of Forum)
+    Forum2,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -506,6 +512,7 @@ impl ChannelType {
             ChannelType::ThreadPublic
                 | ChannelType::ThreadPrivate
                 | ChannelType::Text
+                | ChannelType::Announcement
                 | ChannelType::Dm
                 | ChannelType::Gdm
                 | ChannelType::Voice
@@ -517,7 +524,12 @@ impl ChannelType {
     pub fn has_public_threads(&self) -> bool {
         matches!(
             self,
-            ChannelType::Text | ChannelType::Dm | ChannelType::Gdm | ChannelType::Forum
+            ChannelType::Text
+                | ChannelType::Announcement
+                | ChannelType::Dm
+                | ChannelType::Gdm
+                | ChannelType::Forum
+                | ChannelType::Forum2
         )
     }
 
@@ -540,7 +552,7 @@ impl ChannelType {
     }
 
     pub fn has_tags(&self) -> bool {
-        matches!(self, ChannelType::Forum)
+        matches!(self, ChannelType::Forum | ChannelType::Forum2)
     }
 
     pub fn has_icon(&self) -> bool {
@@ -560,6 +572,8 @@ impl ChannelType {
         match (self, other) {
             (ChannelType::ThreadPublic, ChannelType::ThreadPrivate) => true,
             (ChannelType::ThreadPrivate, ChannelType::ThreadPublic) => true,
+            (ChannelType::Text, ChannelType::Announcement) => true,
+            (ChannelType::Announcement, ChannelType::Text) => true,
             _ => false,
         }
     }

@@ -130,7 +130,9 @@ impl DataSearch for Postgres {
             .map(|t| {
                 let s = match *t {
                     ChannelType::Text => "Text",
+                    ChannelType::Announcement => "Announcement",
                     ChannelType::Forum => "Forum",
+                    ChannelType::Forum2 => "Forum2",
                     ChannelType::Voice => "Voice",
                     ChannelType::Broadcast => "Broadcast",
                     ChannelType::Category => "Category",

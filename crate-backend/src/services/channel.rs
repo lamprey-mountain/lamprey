@@ -271,7 +271,9 @@ impl ServiceThreads {
 
         match json.ty {
             ChannelType::Text
+            | ChannelType::Announcement
             | ChannelType::Forum
+            | ChannelType::Forum2
             | ChannelType::Voice
             | ChannelType::Broadcast
             | ChannelType::Category

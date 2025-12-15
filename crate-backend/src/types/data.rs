@@ -145,7 +145,9 @@ pub struct DbChannelCreate {
 #[sqlx(type_name = "channel_type")]
 pub enum DbChannelType {
     Text,
+    Announcement,
     Forum,
+    Forum2,
     Voice,
     Broadcast,
     Dm,
@@ -160,7 +162,9 @@ impl From<DbChannelType> for ChannelType {
     fn from(value: DbChannelType) -> Self {
         match value {
             DbChannelType::Text => ChannelType::Text,
+            DbChannelType::Announcement => ChannelType::Announcement,
             DbChannelType::Forum => ChannelType::Forum,
+            DbChannelType::Forum2 => ChannelType::Forum2,
             DbChannelType::Voice => ChannelType::Voice,
             DbChannelType::Broadcast => ChannelType::Broadcast,
             DbChannelType::Dm => ChannelType::Dm,
@@ -177,7 +181,9 @@ impl From<ChannelType> for DbChannelType {
     fn from(value: ChannelType) -> Self {
         match value {
             ChannelType::Text => DbChannelType::Text,
+            ChannelType::Announcement => DbChannelType::Announcement,
             ChannelType::Forum => DbChannelType::Forum,
+            ChannelType::Forum2 => DbChannelType::Forum2,
             ChannelType::Voice => DbChannelType::Voice,
             ChannelType::Broadcast => DbChannelType::Broadcast,
             ChannelType::Dm => DbChannelType::Dm,
