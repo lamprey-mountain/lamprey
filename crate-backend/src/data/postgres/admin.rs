@@ -12,23 +12,83 @@ use super::Postgres;
 #[async_trait]
 impl DataAdmin for Postgres {
     async fn gc_room_analytics(&self, mode: AdminCollectGarbageMode) -> Result<u64> {
+        let interval = Duration::days(crate::consts::RETENTION_ROOM_ANALYTICS as i64);
+        let cutoff = OffsetDateTime::now_utc() - interval;
+        let cutoff_primitive = PrimitiveDateTime::new(cutoff.date(), cutoff.time());
+
         match mode {
-            AdminCollectGarbageMode::Sweep => {
-                let interval = Duration::days(crate::consts::RETENTION_ROOM_ANALYTICS as i64);
-                let cutoff = OffsetDateTime::now_utc() - interval;
-                let cutoff_primitive = PrimitiveDateTime::new(cutoff.date(), cutoff.time());
+            AdminCollectGarbageMode::Dry => {
+                let r1 = query_scalar!(
+                    "SELECT COUNT(*) FROM metric_room WHERE ts < $1 AND deleted_at IS NULL",
+                    cutoff_primitive
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .unwrap_or(0);
 
-                let r1 = query!("DELETE FROM metric_room WHERE ts < $1", cutoff_primitive)
-                    .execute(&self.pool)
-                    .await?;
+                let r2 = query_scalar!(
+                    "SELECT COUNT(*) FROM metric_channel WHERE ts < $1 AND deleted_at IS NULL",
+                    cutoff_primitive
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .unwrap_or(0);
 
-                let r2 = query!("DELETE FROM metric_channel WHERE ts < $1", cutoff_primitive)
-                    .execute(&self.pool)
-                    .await?;
+                let r3 = query_scalar!(
+                    "SELECT COUNT(*) FROM metric_invite WHERE ts < $1 AND deleted_at IS NULL",
+                    cutoff_primitive
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .unwrap_or(0);
 
-                Ok(r1.rows_affected() + r2.rows_affected())
+                Ok((r1 + r2 + r3) as u64)
             }
-            _ => Err(Error::Unimplemented),
+            AdminCollectGarbageMode::Mark => {
+                let now = OffsetDateTime::now_utc();
+                let now_primitive = PrimitiveDateTime::new(now.date(), now.time());
+
+                let r1 = query!(
+                    "UPDATE metric_room SET deleted_at = $1 WHERE ts < $2 AND deleted_at IS NULL",
+                    now_primitive,
+                    cutoff_primitive
+                )
+                .execute(&self.pool)
+                .await?;
+
+                let r2 = query!(
+                    "UPDATE metric_channel SET deleted_at = $1 WHERE ts < $2 AND deleted_at IS NULL",
+                    now_primitive,
+                    cutoff_primitive
+                )
+                .execute(&self.pool)
+                .await?;
+
+                let r3 = query!(
+                    "UPDATE metric_invite SET deleted_at = $1 WHERE ts < $2 AND deleted_at IS NULL",
+                    now_primitive,
+                    cutoff_primitive
+                )
+                .execute(&self.pool)
+                .await?;
+
+                Ok(r1.rows_affected() + r2.rows_affected() + r3.rows_affected())
+            }
+            AdminCollectGarbageMode::Sweep => {
+                let r1 = query!("DELETE FROM metric_room WHERE deleted_at IS NOT NULL")
+                    .execute(&self.pool)
+                    .await?;
+
+                let r2 = query!("DELETE FROM metric_channel WHERE deleted_at IS NOT NULL")
+                    .execute(&self.pool)
+                    .await?;
+
+                let r3 = query!("DELETE FROM metric_invite WHERE deleted_at IS NOT NULL")
+                    .execute(&self.pool)
+                    .await?;
+
+                Ok(r1.rows_affected() + r2.rows_affected() + r3.rows_affected())
+            }
         }
     }
 
@@ -92,22 +152,39 @@ impl DataAdmin for Postgres {
     }
 
     async fn gc_audit_logs(&self, mode: AdminCollectGarbageMode) -> Result<u64> {
+        let interval = Duration::days(crate::consts::RETENTION_AUDIT_LOG as i64);
+        let cutoff = OffsetDateTime::now_utc() - interval;
+        let cutoff_primitive = PrimitiveDateTime::new(cutoff.date(), cutoff.time());
         match mode {
-            AdminCollectGarbageMode::Sweep => {
-                let interval = Duration::days(crate::consts::RETENTION_AUDIT_LOG as i64);
-                let cutoff = OffsetDateTime::now_utc() - interval;
-                let cutoff_primitive = PrimitiveDateTime::new(cutoff.date(), cutoff.time());
-                // TODO: extract and index on created_at
+            AdminCollectGarbageMode::Dry => {
+                let count = query_scalar!(
+                    "SELECT COUNT(*) FROM audit_log WHERE extract_timestamp_from_uuid_v7(id) < $1 AND deleted_at IS NULL",
+                    cutoff_primitive
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .unwrap_or(0);
+                Ok(count as u64)
+            }
+            AdminCollectGarbageMode::Mark => {
+                let now = OffsetDateTime::now_utc();
+                let now_primitive = PrimitiveDateTime::new(now.date(), now.time());
                 let result = query!(
-                    "DELETE FROM audit_log WHERE extract_timestamp_from_uuid_v7(id) < $1",
+                    "UPDATE audit_log SET deleted_at = $1 WHERE extract_timestamp_from_uuid_v7(id) < $2 AND deleted_at IS NULL",
+                    now_primitive,
                     cutoff_primitive
                 )
                 .execute(&self.pool)
                 .await?;
+                Ok(result.rows_affected())
+            }
+            AdminCollectGarbageMode::Sweep => {
+                let result = query!("DELETE FROM audit_log WHERE deleted_at IS NOT NULL")
+                    .execute(&self.pool)
+                    .await?;
 
                 Ok(result.rows_affected())
             }
-            _ => Err(Error::Unimplemented),
         }
     }
 }
