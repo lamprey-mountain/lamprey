@@ -1,7 +1,6 @@
 import { createSignal } from "solid-js";
 import { Modal } from "./mod";
 import { Checkbox } from "../icons";
-import { Dropdown } from "../Dropdown";
 
 interface ModalPrivacyProps {
 	room_id: string;
@@ -10,7 +9,7 @@ interface ModalPrivacyProps {
 export const ModalPrivacy = (props: ModalPrivacyProps) => {
 	const [dms, setDms] = createSignal(false);
 	const [rpc, setRpc] = createSignal(false);
-	const [exif, setExif] = createSignal<"none" | "location" | "all">("location");
+	const [exif, setExif] = createSignal(false);
 
 	return (
 		<Modal>
@@ -50,21 +49,22 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 						</div>
 					</label>
 				</div>
-				<div
-					class="option"
-					style="z-index:999;flex-direction:column;align-items:start"
-				>
-					<h3 class="dim">EXIF Metadata</h3>
-					<Dropdown
-						options={[
-							{ item: "all", label: "Strip all data" },
-							{ item: "location", label: "Strip location data" },
-							{ item: "none", label: "Don't strip anything" },
-						]}
-						onSelect={(it) => setExif(it)}
-						required
-						selected={exif()}
+				<div class="option">
+					<input
+						id="opt-exif"
+						type="checkbox"
+						checked={exif()}
+						onInput={(e) => setExif(e.currentTarget.checked)}
+						style="display: none;"
 					/>
+					<Checkbox checked={exif()} />
+					<label for="opt-exif">
+						<div>Strip exif metadata</div>
+						<div class="dim">
+							Strip potentially sensitive exif metadata (ie. camera model or
+							location) from images you upload.
+						</div>
+					</label>
 				</div>
 			</div>
 		</Modal>
