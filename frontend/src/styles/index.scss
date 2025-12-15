@@ -3466,3 +3466,18 @@ input[type="color"] {
 		}
 	}
 }
+
+.admin-tasks {
+	border: solid $sep-300 1px;
+	background: $bg-150;
+
+	& > li {
+		display: flex;
+		align-items: center;
+		padding: 4px;
+
+		& > .name {
+			flex: 1;
+		}
+	}
+}

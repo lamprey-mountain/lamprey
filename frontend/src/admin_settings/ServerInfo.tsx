@@ -1,11 +1,72 @@
+import { For } from "solid-js";
+import { useApi } from "../api";
+
 export function ServerInfo() {
+	const api = useApi();
+
+	const purgeCache = (target: string) => {
+		// TODO
+	};
+
+	const gcDry = (target: string) => {
+		// TODO
+	};
+
+	const gcMark = (target: string) => {
+		// TODO
+	};
+
+	const gcSweep = (target: string) => {
+		// TODO
+	};
+
 	return (
 		<>
 			<h2>Info</h2>
+			<h3 class="dim" style="margin-top:8px">Garbage collect</h3>
+			<ul class="admin-tasks">
+				<For
+					each={[
+						"Media",
+						"Messages",
+						"Session",
+						"AuditLog",
+						"RoomAnalytics",
+					]}
+				>
+					{(i) => (
+						<li>
+							<div class="name">{i}</div>
+							<button onClick={[gcDry, i]}>dry</button>
+							<button onClick={[gcMark, i]}>mark</button>
+							<button onClick={[gcSweep, i]}>sweep</button>
+						</li>
+					)}
+				</For>
+			</ul>
+			<h3 class="dim" style="margin-top:8px">Purge caches</h3>
+			<ul class="admin-tasks">
+				<For
+					each={[
+						"Channels",
+						"Embeds",
+						"Permissions",
+						"Rooms",
+						"Sessions",
+						"Users",
+					]}
+				>
+					{(i) => (
+						<li>
+							<div class="name">{i}</div>
+							<button onClick={[purgeCache, i]}>purge</button>
+						</li>
+					)}
+				</For>
+			</ul>
+			<br />
+			<br />
 			<ul>
-				<li>garbage collect media</li>
-				<li>garbage collect cache</li>
-				<li>garbage collect everything else</li>
 				<li>stats (uptime, memory, etc)</li>
 				<li>metrics</li>
 				<li>
