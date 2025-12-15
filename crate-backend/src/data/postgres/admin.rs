@@ -4,7 +4,7 @@ use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::{
-    data::DataAdmin, error::Result, services::admin::AdminCollectGarbageMode, types::MediaId,
+    data::DataAdmin, error::Result, services::admin::AdminCollectGarbageMode, types::MediaId, Error,
 };
 
 use super::Postgres;
@@ -28,7 +28,7 @@ impl DataAdmin for Postgres {
 
                 Ok(r1.rows_affected() + r2.rows_affected())
             }
-            _ => todo!(),
+            _ => Err(Error::Unimplemented),
         }
     }
 
@@ -40,7 +40,7 @@ impl DataAdmin for Postgres {
                     .await?;
                 Ok(result.rows_affected())
             }
-            _ => todo!(),
+            _ => Err(Error::Unimplemented),
         }
     }
 
@@ -87,7 +87,7 @@ impl DataAdmin for Postgres {
                     .await?;
                 Ok(result.rows_affected())
             }
-            _ => todo!(),
+            _ => Err(Error::Unimplemented),
         }
     }
 
@@ -107,7 +107,7 @@ impl DataAdmin for Postgres {
 
                 Ok(result.rows_affected())
             }
-            _ => todo!(),
+            _ => Err(Error::Unimplemented),
         }
     }
 }
