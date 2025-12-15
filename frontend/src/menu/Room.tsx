@@ -54,6 +54,15 @@ export function RoomMenu(props: { room_id: string }) {
 				mark as read
 			</Item>
 			<Item onClick={copyLink}>copy link</Item>
+			<Item
+				onClick={() =>
+					modalctl.open({
+						type: "privacy",
+						room_id: props.room_id,
+					})}
+			>
+				privacy
+			</Item>
 			<Show when={room()}>
 				{(r) => <RoomNotificationMenu room={r()} />}
 			</Show>
@@ -149,9 +158,15 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	const one_day = 24 * 60 * 60 * 1000;
 	const one_week = 7 * one_day;
 
+	const [, modalctl] = useModals();
+
 	return (
 		<>
-			<Submenu content={"notifications"}>
+			<Submenu
+				content={"notifications"}
+				onClick={() =>
+					modalctl.open({ type: "notifications", room_id: props.room.id })}
+			>
 				<Item
 					onClick={() =>
 						setNotifs({

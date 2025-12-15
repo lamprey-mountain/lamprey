@@ -118,7 +118,16 @@ export type Modal =
 		type: "view_reactions";
 		channel_id: string;
 		message_id: string;
+	}
+	| {
+		type: "privacy";
+		room_id: string;
+	}
+	| {
+		type: "notifications";
+		room_id: string;
 	};
+
 export type AttachmentCreateT = {
 	id: string;
 };

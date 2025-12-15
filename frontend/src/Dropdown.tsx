@@ -401,6 +401,7 @@ export function Dropdown<T>(
 						id={listboxId}
 						class="dropdown-items floating"
 						style={{
+							"z-index": 99999,
 							position: position.strategy,
 							translate: `${position.x}px ${position.y}px`,
 							width: `${inputEl()?.offsetWidth || 0}px`,

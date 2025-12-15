@@ -9,6 +9,8 @@ import { ModalTagEditor } from "./ModalTagEditor.tsx";
 import { ModalExportData } from "./ModalExportData.tsx";
 import { useModals } from "../contexts/modal.tsx";
 import { ModalReactions } from "./ModalReactions.tsx";
+import { ModalNotifications } from "./ModalNotifications.tsx";
+import { ModalPrivacy } from "./ModalPrivacy.tsx";
 
 export const Modal = (props: ParentProps) => {
 	const [, modalCtl] = useModals();
@@ -81,6 +83,12 @@ export function getModal(modal: ContextModal) {
 					message_id={modal.message_id}
 				/>
 			);
+		}
+		case "privacy": {
+			return <ModalPrivacy channel_id={modal.room_id} />;
+		}
+		case "notifications": {
+			return <ModalNotifications channel_id={modal.room_id} />;
 		}
 	}
 }
