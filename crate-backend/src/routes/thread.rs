@@ -142,6 +142,21 @@ async fn thread_member_add(
         perms.ensure(Permission::ThreadLock)?;
     }
 
+    if thread.ty == ChannelType::Gdm {
+        let is_joining = d
+            .thread_member_get(thread_id, target_user_id)
+            .await
+            .map(|m| m.membership != ThreadMembership::Join)
+            .unwrap_or(true);
+
+        if is_joining {
+            let count = d.thread_member_list_all(thread_id).await?.len() as u32;
+            if count >= crate::consts::MAX_GDM_MEMBERS {
+                return Err(Error::BadStatic("group dm is full"));
+            }
+        }
+    }
+
     let start = d.thread_member_get(thread_id, target_user_id).await.ok();
     d.thread_member_put(thread_id, target_user_id, ThreadMemberPut {})
         .await?;

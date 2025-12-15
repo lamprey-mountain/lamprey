@@ -19,6 +19,9 @@ pub const MAX_PINNED_MESSAGES: u32 = 1024;
 /// the maximum number of role members to add to a thread when a role is mentioned.
 pub const MAX_ROLE_MENTION_MEMBERS_ADD: u32 = 50;
 
+/// the maximum number of members to allow in group dm.
+pub const MAX_GDM_MEMBERS: u32 = 16;
+
 /// how many days to retain audit log entries
 pub const RETENTION_AUDIT_LOG: u32 = 90;
 

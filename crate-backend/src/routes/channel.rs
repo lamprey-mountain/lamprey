@@ -124,6 +124,10 @@ async fn channel_create_dm(
                 return Err(Error::BadStatic("gdm thread is missing recipients"));
             };
             recipients.push(auth_user.id);
+
+            if recipients.len() as u32 > crate::consts::MAX_GDM_MEMBERS {
+                return Err(Error::BadStatic("group dm has too many members"));
+            }
         }
         _ => {
             return Err(Error::BadStatic(
