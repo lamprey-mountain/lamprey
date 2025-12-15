@@ -66,7 +66,10 @@
                 "ThreadPublic",
                 "ThreadPrivate",
                 "Calendar",
-                "Broadcast"
+                "Broadcast",
+                "Announcement",
+                "Forum2",
+                "Info"
               ]
             }
           }

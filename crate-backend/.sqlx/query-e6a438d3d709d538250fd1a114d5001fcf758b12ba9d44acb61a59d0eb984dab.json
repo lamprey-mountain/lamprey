@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE metric_channel SET deleted_at = $1 WHERE ts < $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e6a438d3d709d538250fd1a114d5001fcf758b12ba9d44acb61a59d0eb984dab"
+}
