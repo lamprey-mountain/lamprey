@@ -205,7 +205,7 @@ async fn admin_broadcast(
     path = "/admin/register-user",
     tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
     request_body = AdminRegisterUser,
-    responses((status = OK, description = "User registered", body = SessionWithToken))
+    responses((status = NO_CONTENT, description = "User registered"))
 )]
 async fn admin_register_user(
     Auth(auth_user): Auth,
