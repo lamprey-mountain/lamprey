@@ -14,7 +14,7 @@ use users::ServiceUsers;
 
 use crate::{
     services::{
-        admin::ServiceAdmin, members::ServiceMembers, presence::ServicePresence,
+        admin::ServiceAdmin, http::ServiceHttp, members::ServiceMembers, presence::ServicePresence,
         search::ServiceSearch, voice::ServiceVoice,
     },
     ServerStateInner,
@@ -24,6 +24,7 @@ pub mod admin;
 pub mod channel;
 pub mod email;
 pub mod embed;
+pub mod http;
 pub mod media;
 pub mod members;
 pub mod messages;
@@ -43,6 +44,7 @@ pub struct Services {
     pub channels: ServiceThreads,
     pub email: ServiceEmail,
     pub embed: ServiceEmbed,
+    pub http: ServiceHttp,
     pub media: ServiceMedia,
     pub members: ServiceMembers,
     pub messages: ServiceMessages,
@@ -64,6 +66,7 @@ impl Services {
             channels: ServiceThreads::new(state.clone()),
             email: ServiceEmail::new(state.clone()),
             embed: ServiceEmbed::new(state.clone()),
+            http: ServiceHttp::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
             members: ServiceMembers::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),

@@ -2,7 +2,6 @@ use std::{
     cmp::Ordering,
     io::{Cursor, SeekFrom},
     sync::Arc,
-    time::Duration,
 };
 
 use async_tempfile::TempFile;
@@ -302,17 +301,7 @@ impl ServiceMedia {
         let media_id = MediaId::new();
         self.create_upload(media_id, user_id, json.clone()).await?;
 
-        let res = reqwest::Client::builder()
-            .timeout(Duration::from_secs(15))
-            .connect_timeout(Duration::from_secs(5))
-            .redirect(reqwest::redirect::Policy::limited(10))
-            .user_agent(&self.state.config.url_preview.user_agent)
-            .https_only(true)
-            .build()?
-            .get(source_url.clone())
-            .send()
-            .await?
-            .error_for_status()?;
+        let res = self.state.services().http.get(source_url.clone()).await?;
 
         match (size, res.content_length()) {
             (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),

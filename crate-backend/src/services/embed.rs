@@ -273,27 +273,8 @@ impl ServiceEmbed {
         user_id: UserId,
         url: Url,
     ) -> Result<Embed> {
-        let http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(15))
-            .connect_timeout(Duration::from_secs(5))
-            .redirect(reqwest::redirect::Policy::limited(10))
-            .user_agent(&state.config.url_preview.user_agent)
-            .https_only(true)
-            .build()?;
-        let fetched = http
-            .get(url.clone())
-            .timeout(Duration::from_secs(15))
-            .send()
-            .await?;
-        let addr = fetched
-            .remote_addr()
-            .ok_or(Error::BadStatic("request has no remote ip address"))?;
-        for denied in &state.config.url_preview.deny {
-            if denied.contains(&addr.ip()) {
-                return Err(Error::BadStatic("url blacklisted"));
-            }
-        }
-        let mut fetched = fetched.error_for_status()?;
+        let mut fetched = state.services().http.get(url.clone()).await?;
+
         let content_length = fetched.content_length();
         let content_type = fetched
             .headers()
