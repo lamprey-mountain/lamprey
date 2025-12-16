@@ -312,27 +312,30 @@ async fn gc_media(state: Arc<ServerState>) -> Result<()> {
         let rows = sqlx::query!("select id from media where deleted_at is not null limit 50")
             .fetch_all(&state.pool)
             .await?;
-        let mut tx = state.pool.begin().await?;
+
         if rows.is_empty() {
             break;
         }
-        for row in rows {
-            let items = state
-                .blobs
-                .list_with(&format!("media/{}/", row.id))
-                .recursive(true)
-                .await?;
-            for item in items {
-                if item.metadata().is_file() {
-                    state.blobs.delete(item.path()).await?;
+
+        for row in &rows {
+            let path = format!("media/{}/", row.id);
+            // Using remove_all is more efficient than listing and then deleting files one by one.
+            // Opendal's s3 backend will list all objects with this prefix and delete them.
+            if let Err(e) = state.blobs.remove_all(&path).await {
+                // An error is expected if the media "directory" does not exist (e.g. already deleted).
+                // We can safely ignore NotFound errors and continue.
+                if e.kind() != opendal::ErrorKind::NotFound {
+                    return Err(e.into());
                 }
             }
-            sqlx::query!("delete from media where id = $1", row.id)
-                .execute(&mut *tx)
-                .await?;
-            info!("delete {}", row.id);
         }
-        tx.commit().await?;
+
+        let ids: Vec<_> = rows.iter().map(|r| r.id).collect();
+        // Deleting the media records from the database in a batch.
+        sqlx::query!("delete from media where id = ANY($1)", &ids as &[uuid::Uuid])
+            .execute(&state.pool)
+            .await?;
+        info!("deleted {} media records", ids.len());
     }
 
     Ok(())

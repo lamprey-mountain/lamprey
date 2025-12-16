@@ -1,3 +1,12 @@
-update media set deleted_at = now()
-where id not in (select media_id from media_link)
-and extract_timestamp_from_uuid_v7(id) < now() - interval '7 day';
+UPDATE media
+SET deleted_at = now()
+WHERE
+    NOT EXISTS (
+        SELECT
+            1
+        FROM
+            media_link
+        WHERE
+            media_link.media_id = media.id
+    )
+    AND extract_timestamp_from_uuid_v7(id) < now() - interval '7 day';
