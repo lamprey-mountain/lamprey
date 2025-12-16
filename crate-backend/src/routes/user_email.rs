@@ -142,6 +142,12 @@ async fn email_delete(
         return Err(Error::NotFound);
     }
 
+    let emails = s.data().user_email_list(target_user_id).await?;
+    let email_info = emails
+        .iter()
+        .find(|e| e.email == email)
+        .ok_or(Error::NotFound)?;
+
     s.data()
         .user_email_delete(target_user_id, email.clone())
         .await?;
@@ -152,7 +158,12 @@ async fn email_delete(
         user_id: auth_user.id,
         session_id: Some(session.id),
         reason,
-        ty: AuditLogEntryType::EmailDelete { email },
+        ty: AuditLogEntryType::EmailDelete {
+            email,
+            changes: Changes::new()
+                .remove("is_verified", &email_info.is_verified)
+                .build(),
+        },
     })
     .await?;
 

@@ -253,6 +253,12 @@ async fn app_delete(
             reason,
             ty: AuditLogEntryType::ApplicationDelete {
                 application_id: app_id,
+                changes: Changes::new()
+                    .remove("name", &app.name)
+                    .remove("description", &app.description)
+                    .remove("bridge", &app.bridge)
+                    .remove("public", &app.public)
+                    .build(),
             },
         })
         .await?;

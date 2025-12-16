@@ -156,13 +156,14 @@ async fn user_delete(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
+    let data = s.data();
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
     let is_admin = perms.has(Permission::Admin);
 
     if auth_user.id != target_user_id && !is_admin {
         return Err(Error::MissingPermissions);
     }
-    let data = s.data();
+    let user_to_delete = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     data.user_delete(target_user_id).await?;
     data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
         .await?;
@@ -177,6 +178,12 @@ async fn user_delete(
         reason,
         ty: AuditLogEntryType::UserDelete {
             user_id: target_user_id,
+            changes: Changes::new()
+                .remove("name", &user_to_delete.name)
+                .remove("description", &user_to_delete.description)
+                .remove("avatar", &user_to_delete.avatar)
+                .remove("banner", &user_to_delete.banner)
+                .build(),
         },
     })
     .await?;

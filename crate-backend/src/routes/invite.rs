@@ -91,7 +91,12 @@ async fn invite_delete(
                 user_id: auth_user.id,
                 session_id: None,
                 reason: reason.clone(),
-                ty: AuditLogEntryType::InviteDelete { code: code.clone() },
+                ty: AuditLogEntryType::InviteDelete {
+                    code: code.clone(),
+                    changes: Changes::new()
+                        .remove("description", &invite.invite.description)
+                        .build(),
+                },
             })
             .await?;
         }

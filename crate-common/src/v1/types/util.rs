@@ -111,6 +111,18 @@ impl Changes {
         self
     }
 
+    pub fn remove<T: Serialize + PartialEq>(mut self, key: impl Into<String>, old: &T) -> Self {
+        let val = serde_json::to_value(old).unwrap_or(Value::Null);
+        if val != Value::Null {
+            self.changes.push(AuditLogChange {
+                key: key.into(),
+                old: val,
+                new: Value::Null,
+            });
+        }
+        self
+    }
+
     pub fn build(self) -> Vec<AuditLogChange> {
         self.changes
     }

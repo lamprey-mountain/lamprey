@@ -8,8 +8,7 @@ use axum::{
 };
 use axum_extra::TypedHeader;
 use common::v1::types::{
-    application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    AuditLogFilter, RoomType, TransferOwnership, SERVER_ROOM_ID,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, AuditLogFilter, RoomType, SERVER_ROOM_ID, TransferOwnership, application::Integration, util::Changes
 };
 use headers::ETag;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -241,13 +240,23 @@ async fn room_delete(
     srv.rooms.invalidate(room_id).await;
     srv.perms.invalidate_room_all(room_id);
 
+    let changes = Changes::new()
+        .remove("name", &room.name)
+        .remove("description", &room.description)
+        .remove("icon", &room.icon)
+        .remove("public", &room.public)
+        .build();
+
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
-        ty: AuditLogEntryType::RoomDelete { room_id },
+        ty: AuditLogEntryType::RoomDelete {
+            room_id,
+            changes: changes.clone(),
+        },
     })
     .await?;
 
@@ -257,7 +266,7 @@ async fn room_delete(
         user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
-        ty: AuditLogEntryType::RoomDelete { room_id },
+        ty: AuditLogEntryType::RoomDelete { room_id, changes },
     })
     .await?;
 

@@ -151,7 +151,14 @@ async fn emoji_delete(
         user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
-        ty: AuditLogEntryType::EmojiDelete { emoji_id },
+        ty: AuditLogEntryType::EmojiDelete {
+            emoji_id,
+            changes: Changes::new()
+                .remove("name", &emoji.name)
+                .remove("animated", &emoji.animated)
+                .remove("media_id", &emoji.media_id)
+                .build(),
+        },
     })
     .await?;
 

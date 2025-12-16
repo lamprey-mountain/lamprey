@@ -199,6 +199,7 @@ async fn role_update(
             &start_role.is_mentionable,
             &end_role.is_mentionable,
         )
+        .change("hoist", &start_role.hoist, &end_role.hoist)
         .build();
 
     s.audit_log_append(AuditLogEntry {
@@ -264,7 +265,19 @@ async fn role_delete(
             user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
-            ty: AuditLogEntryType::RoleDelete { role_id },
+            ty: AuditLogEntryType::RoleDelete {
+                role_id,
+                changes: Changes::new()
+                    .remove("name", &role.name)
+                    .remove("description", &role.description)
+                    .remove("allow", &role.allow)
+                    .remove("deny", &role.deny)
+                    .remove("is_self_applicable", &role.is_self_applicable)
+                    .remove("is_mentionable", &role.is_mentionable)
+                    .remove("hoist", &role.hoist)
+                    .remove("member_count", &role.member_count)
+                    .build(),
+            },
         })
         .await?;
 

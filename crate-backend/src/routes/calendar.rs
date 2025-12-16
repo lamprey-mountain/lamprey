@@ -295,8 +295,14 @@ async fn calendar_event_delete(
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::CalendarEventDelete {
-            title: event.title,
             event_id: event.id,
+            changes: Changes::new()
+                .remove("title", &event.title)
+                .remove("description", &event.description)
+                .remove("location", &event.location)
+                .remove("start", &event.start)
+                .remove("end", &event.end)
+                .build(),
         },
     })
     .await?;

@@ -209,6 +209,9 @@ pub async fn session_delete(
             reason,
             ty: AuditLogEntryType::SessionDelete {
                 session_id: target_session_id,
+                changes: Changes::new()
+                    .remove("name", &target_session.name)
+                    .build(),
             },
         })
         .await?;

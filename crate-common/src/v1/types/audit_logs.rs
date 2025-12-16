@@ -109,6 +109,9 @@ pub enum AuditLogEntryType {
 
     RoleDelete {
         role_id: RoleId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     RoleReorder {
@@ -125,6 +128,9 @@ pub enum AuditLogEntryType {
 
     InviteDelete {
         code: InviteCode,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     /// remove all reactions
@@ -165,6 +171,9 @@ pub enum AuditLogEntryType {
 
     EmojiDelete {
         emoji_id: EmojiId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     PermissionOverwriteSet {
@@ -302,6 +311,9 @@ pub enum AuditLogEntryType {
 
     SessionDelete {
         session_id: SessionId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     SessionDeleteAll,
@@ -328,6 +340,9 @@ pub enum AuditLogEntryType {
 
     ApplicationDelete {
         application_id: ApplicationId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     EmailCreate {
@@ -342,6 +357,9 @@ pub enum AuditLogEntryType {
 
     EmailDelete {
         email: EmailAddr,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     ConnectionCreate {
@@ -359,6 +377,9 @@ pub enum AuditLogEntryType {
 
     UserDelete {
         user_id: UserId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     UserUndelete {
@@ -376,6 +397,9 @@ pub enum AuditLogEntryType {
 
     RoomDelete {
         room_id: RoomId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     RoomUndelete {
@@ -417,8 +441,10 @@ pub enum AuditLogEntryType {
     },
 
     CalendarEventDelete {
-        title: String,
         event_id: CalendarEventId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     WebhookCreate {
@@ -433,6 +459,9 @@ pub enum AuditLogEntryType {
 
     WebhookDelete {
         webhook_id: WebhookId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
 
     RatelimitUpdate {

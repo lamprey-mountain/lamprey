@@ -253,7 +253,14 @@ async fn webhook_delete(
         user_id: auth_user.id,
         session_id: None,
         reason,
-        ty: AuditLogEntryType::WebhookDelete { webhook_id },
+        ty: AuditLogEntryType::WebhookDelete {
+            webhook_id,
+            changes: Changes::new()
+                .remove("name", &webhook.name)
+                .remove("avatar", &webhook.avatar)
+                .remove("channel_id", &webhook.channel_id)
+                .build(),
+        },
     };
     s.audit_log_append(audit_entry).await?;
 
