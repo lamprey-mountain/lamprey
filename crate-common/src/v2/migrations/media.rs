@@ -96,7 +96,9 @@ impl Into<Media> for V1Media {
                             height: mixed.height.unwrap_or_default(),
                             duration: mixed.width.unwrap_or_default(),
                         },
-                        "audio" => todo!(),
+                        "audio" => MediaMetadata::Audio {
+                            duration: mixed.width.unwrap_or_default(),
+                        },
                         _ => MediaMetadata::File,
                     },
                     Err(_) => MediaMetadata::File,
