@@ -26,7 +26,6 @@ where
     pub enum DbMediaData {
         V1(Media),
         // V2(common::v2::types::media::Media),
-
         #[serde(untagged)]
         Raw(DbMediaRaw),
     }

@@ -7,7 +7,10 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
-use common::{v1::types::{MediaCreateSource, MediaPatch}, v2::types::media::MediaDoneParams};
+use common::{
+    v1::types::{MediaCreateSource, MediaPatch},
+    v2::types::media::MediaDoneParams,
+};
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, trace};
