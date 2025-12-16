@@ -457,6 +457,7 @@ async fn channel_update(
     Ok(Json(chan))
 }
 
+// TODO: move to types/channel.rs?
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 struct AckReq {
     /// The last read message id. Will be resolved from version_id if empty. (maybe remove later?)
@@ -499,11 +500,8 @@ async fn channel_ack(
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {
     let data = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let version_id = json.version_id;
     let message_id = if let Some(message_id) = json.message_id {
@@ -521,10 +519,13 @@ async fn channel_ack(
         json.mention_count,
     )
     .await?;
-    s.services()
-        .channels
-        .invalidate_user(channel_id, auth_user.id)
-        .await;
+    srv.channels.invalidate_user(channel_id, auth_user.id).await;
+    s.broadcast(MessageSync::ChannelAck {
+        user_id: auth_user.id,
+        channel_id,
+        message_id,
+        version_id,
+    })?;
     Ok(Json(AckRes {
         message_id,
         version_id,
