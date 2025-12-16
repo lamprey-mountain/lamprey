@@ -34,6 +34,7 @@ pub struct Message {
     pub version_id: MessageVerId,
 
     /// unique string sent by the client via idempotency-key to identify this message
+    // TODO: move this to sync event
     pub nonce: Option<String>,
 
     /// the id of who sent this message

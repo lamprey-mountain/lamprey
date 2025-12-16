@@ -44,7 +44,6 @@ pub struct Room {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
 
-    // TODO: rename to `topic`
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 8192)
@@ -79,6 +78,32 @@ pub struct Room {
     /// whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user.
     pub quarantined: bool,
     pub user_config: Option<UserConfigRoom>,
+}
+
+// NOTE: may be removed later, i dont see that much of a reason for this
+/// a minimal preview of a room
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomPreview {
+    pub id: RoomId,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    pub name: String,
+
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    pub description: Option<String>,
+
+    pub icon: Option<MediaId>,
+
+    /// number of people in this room
+    pub member_count: u64,
+
+    /// number of people who are online in this room
+    pub online_count: u64,
 }
 
 /// User-specific room data

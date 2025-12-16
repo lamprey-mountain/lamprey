@@ -84,7 +84,16 @@ pub enum MessagePayload {
     Ping,
 
     /// data to keep local copy of state in sync with server
-    Sync { data: Box<MessageSync>, seq: u64 },
+    Sync {
+        /// the data for this sync event
+        data: Box<MessageSync>,
+
+        /// the sequence number of this event, for resuming
+        seq: u64,
+        // /// the nonce, if this is in response to a request with the `Idempotency-Key` header set
+        // #[serde(skip_serializing_if = "Option::is_none")]
+        // nonce: Option<String>,
+    },
 
     /// some kind of error
     Error { error: String },
@@ -154,10 +163,26 @@ pub enum MessageSync {
 
     MessageCreate {
         message: Message,
+        // /// the room member of the author, if this was sent in a room
+        // room_member: Option<RoomMember>,
+
+        // /// the thread member of the author, if this was sent in a thread
+        // thread_member: Option<ThreadMember>,
+
+        // /// the user who sent this message
+        // user: User,
     },
 
     MessageUpdate {
         message: Message,
+        // /// the room member of the author, if this was sent in a room
+        // room_member: Option<RoomMember>,
+
+        // /// the thread member of the author, if this was sent in a thread
+        // thread_member: Option<ThreadMember>,
+
+        // /// the user who sent this message
+        // user: User,
     },
 
     MessageDelete {
@@ -184,16 +209,21 @@ pub enum MessageSync {
 
     MessageRestore {
         channel_id: ChannelId,
-        // NOTE: if messages are not returned for listing endpoints, i should return a vec of Messages insetad
+
+        // TODO: remove `message_ids`
         message_ids: Vec<MessageId>,
+        // TODO: add `messages`
+        // messages: Vec<Message>,
     },
 
     RoomMemberCreate {
         member: RoomMember,
+        // user: User,
     },
 
     RoomMemberUpdate {
         member: RoomMember,
+        // user: User,
     },
 
     RoomMemberDelete {
