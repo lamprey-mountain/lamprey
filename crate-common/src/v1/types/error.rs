@@ -16,15 +16,43 @@ pub enum Error {
     UserSuspended,
 }
 
-/// an error that may be returned from the sync error
+/// an error that may be returned from the sync websocket
 #[derive(Debug, Error, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ErrorSync {
-    #[error("connection is too old")]
-    TooOld,
+pub enum SyncError {
+    /// invalid sequence number (connection may be too old)
+    #[error("invalid sequence number (connection may be too old)")]
+    InvalidSeq,
+
+    /// you were sent a `Ping` but didn't respond with a `Pong` in time
+    #[error("you were sent a `Ping` but didn't respond with a `Pong` in time")]
+    Timeout,
+
+    /// you tried to do something that you can't do
+    #[error("you tried to do something that you can't do")]
+    Unauthorized,
+
+    /// you tried to do something before sending a `Hello` or `Resume`
+    #[error("you tried to do something before sending a `Hello` or `Resume`")]
+    Unauthenticated,
+
+    /// you tried to send a `Hello` or `Resume` but were already authenticated
+    #[error("you tried to send a `Hello` or `Resume` but were already authenticated")]
+    AlreadyAuthenticated,
+
+    /// the token sent in `Hello` or `Resume` is invalid
+    #[error("the token sent in `Hello` or `Resume` is invalid")]
+    AuthFailure,
+
+    /// you sent data that i couldn't decode. make sure you're encoding payloads as utf-8 json as text.
+    #[error(
+        "you sent data that i couldn't decode. make sure you're encoding payloads as utf-8 json as text."
+    )]
+    InvalidData,
 
     /// an api error
+    // NOTE: may be removed later
     #[error("{0}")]
     Api(#[from] Error),
 }

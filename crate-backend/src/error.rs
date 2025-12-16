@@ -3,7 +3,7 @@ use std::num::{ParseFloatError, ParseIntError};
 use axum::extract::multipart::MultipartError;
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scope;
-use common::v1::types::error::Error as ApiError;
+use common::v1::types::error::{Error as ApiError, SyncError};
 use common::v1::types::{MessageEnvelope, MessagePayload};
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
@@ -116,6 +116,9 @@ pub enum Error {
     ApiError(ApiError),
 
     #[error("{0}")]
+    SyncError(SyncError),
+
+    #[error("{0}")]
     MultipartError(#[from] MultipartError),
 
     #[error("missing scopes {0:?}")]
@@ -160,6 +163,17 @@ impl Error {
             Error::ApiError(err) => match err {
                 ApiError::UserSuspended => StatusCode::FORBIDDEN,
             },
+            Error::SyncError(err) => match err {
+                SyncError::InvalidSeq => StatusCode::BAD_REQUEST,
+                SyncError::Timeout => StatusCode::BAD_REQUEST,
+                SyncError::Unauthorized => StatusCode::FORBIDDEN,
+                SyncError::Unauthenticated => StatusCode::UNAUTHORIZED,
+                SyncError::AlreadyAuthenticated => StatusCode::BAD_REQUEST,
+                SyncError::AuthFailure => StatusCode::UNAUTHORIZED,
+                SyncError::InvalidData => StatusCode::BAD_REQUEST,
+                // HACK: too lazy to duplicate code. cloning err is kinda h
+                SyncError::Api(err) => Error::ApiError(err.clone()).get_status(),
+            },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             Error::MissingScopes(_) => StatusCode::FORBIDDEN,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
@@ -176,6 +190,7 @@ impl Error {
             Error::NotFound => Error::NotFound,
             Error::MissingPermissions => Error::MissingPermissions,
             Error::ApiError(err) => Error::ApiError(err.clone()),
+            Error::SyncError(err) => Error::SyncError(err.clone()),
             Error::BadStatic(s) => Error::BadStatic(s),
             Error::BadRequest(s) => Error::BadRequest(s.clone()),
             Error::TooBig => Error::TooBig,
@@ -232,6 +247,12 @@ impl From<Error> for Message {
 impl From<ApiError> for Error {
     fn from(err: ApiError) -> Self {
         Self::ApiError(err)
+    }
+}
+
+impl From<SyncError> for Error {
+    fn from(value: SyncError) -> Self {
+        Self::SyncError(value)
     }
 }
 

@@ -3,6 +3,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
 use common::v1::types::emoji::EmojiOwner;
+use common::v1::types::error::SyncError;
 use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
@@ -80,7 +81,7 @@ impl Connection {
             self.seq_client = seq;
             Ok(())
         } else {
-            Err(Error::BadStatic("too old"))
+            Err(SyncError::InvalidSeq.into())
         }
     }
 
@@ -120,7 +121,7 @@ impl Connection {
                     .get_by_token(token)
                     .await
                     .map_err(|err| match err {
-                        Error::NotFound => Error::MissingAuth,
+                        Error::NotFound => SyncError::AuthFailure.into(),
                         other => other,
                     })?;
 
@@ -146,6 +147,10 @@ impl Connection {
                         }
                     }
                     return Err(Error::BadStatic("bad or expired reconnection info"));
+                }
+
+                if let ConnectionState::Authenticated { .. } = self.state {
+                    return Err(SyncError::AlreadyAuthenticated.into());
                 }
 
                 let user = if let Some(user_id) = session.user_id() {
@@ -222,7 +227,7 @@ impl Connection {
             }
             MessageClient::Presence { presence } => {
                 let session = match &self.state {
-                    ConnectionState::Unauthed => return Err(Error::MissingAuth),
+                    ConnectionState::Unauthed => return Err(SyncError::Unauthenticated.into()),
                     ConnectionState::Authenticated { session } => session,
                     ConnectionState::Disconnected { .. } => {
                         warn!("somehow recv msg while disconnected?");
@@ -237,7 +242,7 @@ impl Connection {
             }
             MessageClient::Pong => {
                 let session = match &self.state {
-                    ConnectionState::Unauthed => return Err(Error::MissingAuth),
+                    ConnectionState::Unauthed => return Err(SyncError::Unauthenticated.into()),
                     ConnectionState::Authenticated { session } => session,
                     ConnectionState::Disconnected { .. } => {
                         panic!("somehow recv msg while disconnected?")
@@ -253,7 +258,10 @@ impl Connection {
                 thread_id,
                 ranges,
             } => {
-                let session = self.state.session().ok_or(Error::MissingAuth)?;
+                let session = self
+                    .state
+                    .session()
+                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 let srv = self.s.services();
 

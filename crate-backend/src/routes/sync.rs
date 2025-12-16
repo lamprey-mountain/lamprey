@@ -5,6 +5,7 @@ use axum::extract::WebSocketUpgrade;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::routing::any;
+use common::v1::types::error::SyncError;
 use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
 use futures_util::SinkExt;
 use tracing::debug;
@@ -84,7 +85,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
             }
             _ = tokio::time::sleep_until(timeout.get_instant()) => {
                 if !handle_timeout(&mut timeout, &mut ws).await {
-                    let _ = ws.send(Error::BadStatic("connection timed out").into()).await;
+                    let _ = ws.send(Error::from(SyncError::Timeout).into()).await;
                     let _ = ws
                         .send(Message::text(serde_json::to_string(&MessageEnvelope {
                             payload: MessagePayload::Reconnect { can_resume: true },
