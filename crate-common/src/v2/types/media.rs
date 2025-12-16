@@ -83,7 +83,7 @@ pub struct Media {
     pub size: u64,
 
     /// The mime type of this piece of media.
-    pub mime: Mime,
+    pub content_type: Mime,
 
     /// Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
     pub source_url: Option<Url>,

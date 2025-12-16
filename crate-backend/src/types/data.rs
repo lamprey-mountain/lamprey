@@ -484,12 +484,18 @@ pub struct DbInvite {
     pub description: Option<String>,
 }
 
+// TODO: move to common
 #[derive(Deserialize)]
 pub struct RoleDeleteQuery {
     #[serde(default)]
     pub force: bool,
 }
 
+/// what object this media is linked to
+///
+/// normally one piece of media is linked to exactly one object, but a slightly
+/// awkward thing to note is that media linked to `Message`s also have links to each
+/// `MessageVersion` they're referenced in.
 #[derive(sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "media_link_type")]
 pub enum MediaLinkType {

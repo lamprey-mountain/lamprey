@@ -42,7 +42,7 @@ impl Into<V1Media> for Media {
                     MediaMetadata::File => crate::v1::types::MediaTrackInfo::Other,
                 },
                 size: self.size,
-                mime: self.mime,
+                mime: self.content_type,
                 source: if let Some(source_url) = self.source_url {
                     crate::v1::types::TrackSource::Downloaded { source_url }
                 } else {
@@ -63,7 +63,7 @@ impl Into<Media> for V1Media {
             filename: self.filename,
             alt: self.alt,
             size: s.size,
-            mime: s.mime.clone(),
+            content_type: s.mime.clone(),
             source_url: match s.source {
                 crate::v1::types::TrackSource::Uploaded => None,
                 crate::v1::types::TrackSource::Downloaded { source_url } => Some(source_url),
