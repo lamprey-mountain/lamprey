@@ -49,8 +49,8 @@ impl DataChannel for Postgres {
 
         query!(
             "
-			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         ",
             channel_id.into_inner(),
             channel_id.into_inner(),
@@ -71,6 +71,7 @@ impl DataChannel for Postgres {
             create.slowmode_thread.map(|s| s as i32),
             create.slowmode_message.map(|s| s as i32),
             create.default_slowmode_message.map(|s| s as i32),
+            create.url,
         )
         .execute(&mut *tx)
         .await?;
@@ -314,7 +315,8 @@ impl DataChannel for Postgres {
                 slowmode_thread = $17,
                 slowmode_message = $18,
                 default_slowmode_message = $19,
-                last_activity_at = $20
+                last_activity_at = $20,
+                url = $21
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -358,6 +360,7 @@ impl DataChannel for Postgres {
                 .unwrap_or(thread.default_slowmode_message)
                 .map(|i| i as i32),
             last_activity_at as _,
+            patch.url.unwrap_or(thread.url),
         )
         .execute(&mut *tx)
         .await?;

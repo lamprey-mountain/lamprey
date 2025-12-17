@@ -197,6 +197,7 @@ impl ServiceRooms {
                     creator_id,
                     name: "general".to_string(),
                     description: None,
+                    url: None,
                     ty: DbChannelType::Text,
                     nsfw: false,
                     bitrate: None,

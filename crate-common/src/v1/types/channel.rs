@@ -45,13 +45,14 @@ pub struct Channel {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 
-    // /// url that this info channel should link to
-    // #[cfg_attr(
-    //     feature = "utoipa",
-    //     schema(required = false, min_length = 1, max_length = 2048)
-    // )]
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    // pub url: Option<Url>,
+    /// url that this info channel should link to
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 2048)
+    )]
+    #[cfg_attr(feature = "validator", validate(url, length(min = 1, max = 2048)))]
+    pub url: Option<String>,
+
     /// type specific data for this channel
     #[serde(rename = "type")]
     pub ty: ChannelType,
@@ -194,7 +195,7 @@ pub enum ChannelType {
     /// a calendar
     Calendar,
 
-    /// long form chat history (clone of Forum)
+    /// experimental tree style long form chat history (like reddit or hackernews)
     Forum2,
 
     /// info channel without text/voice/threads
@@ -215,6 +216,13 @@ pub struct ChannelCreate {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
+
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, format = Uri, max_length = 1, min_length = 2048)
+    )]
+    #[cfg_attr(feature = "validator", validate(url, length(min = 1, max = 2048)))]
+    pub url: Option<String>,
 
     pub icon: Option<MediaId>,
 
@@ -389,6 +397,14 @@ pub struct ChannelPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, format = Uri, max_length = 1, min_length = 2048)
+    )]
+    #[cfg_attr(feature = "validator", validate(url, length(min = 1, max = 2048)))]
+    #[serde(default, deserialize_with = "some_option")]
+    pub url: Option<Option<String>>,
+
     #[serde(default, deserialize_with = "some_option")]
     pub icon: Option<Option<MediaId>>,
 
@@ -464,6 +480,7 @@ impl Diff<Channel> for ChannelPatch {
     fn changes(&self, other: &Channel) -> bool {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
+            || self.url.changes(&other.url)
             || self.icon.changes(&other.icon)
             || self.tags.changes(&other.tags)
             || self.nsfw.changes(&other.nsfw)
@@ -554,6 +571,10 @@ impl ChannelType {
 
     pub fn has_voice(&self) -> bool {
         matches!(self, ChannelType::Voice | ChannelType::Broadcast)
+    }
+
+    pub fn has_url(&self) -> bool {
+        matches!(self, ChannelType::Info)
     }
 
     /// for a thread to be taggable, it must be in a channel with has_tags

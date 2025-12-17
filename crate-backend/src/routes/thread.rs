@@ -610,6 +610,7 @@ async fn thread_create_from_message(
         creator_id: auth_user.id,
         name: json.name.clone(),
         description: json.description.clone(),
+        url: json.url.clone(),
         ty: DbChannelType::ThreadPublic,
         nsfw: json.nsfw,
         bitrate: json.bitrate.map(|b| b as i32),

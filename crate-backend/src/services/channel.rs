@@ -369,15 +369,18 @@ impl ServiceThreads {
             return Err(Error::BadStatic("bitrate is too high"));
         }
         if !json.ty.has_voice() && json.bitrate.is_some() {
-            return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
+            return Err(Error::BadStatic("cannot set bitrate for non voice channel"));
         }
         if !json.ty.has_voice() && json.user_limit.is_some() {
             return Err(Error::BadStatic(
-                "cannot set user_limit for non voice thread",
+                "cannot set user_limit for non voice channel",
             ));
         }
         if !json.ty.has_icon() && json.icon.is_some() {
             return Err(Error::BadStatic("this channel type cannot have an icon"));
+        }
+        if !json.ty.has_url() && json.url.is_some() {
+            return Err(Error::BadStatic("cannot set url for non info channel"));
         }
 
         if json.default_auto_archive_duration.is_some() && !json.ty.has_threads() {
@@ -460,6 +463,7 @@ impl ServiceThreads {
                 slowmode_message: json.slowmode_message.map(|d| d as i64),
                 default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
                 tags: json.tags,
+                url: json.url,
             })
             .await?;
 
@@ -507,6 +511,7 @@ impl ServiceThreads {
                             .add("bitrate", &channel.bitrate)
                             .add("type", &channel.ty)
                             .add("parent_id", &channel.parent_id)
+                            .add("url", &channel.url)
                             .build(),
                     },
                 })
@@ -653,6 +658,9 @@ impl ServiceThreads {
                 "cannot set user_limit for non voice thread",
             ));
         }
+        if !chan_old.ty.has_url() && patch.url.is_some() {
+            return Err(Error::BadStatic("cannot set url for non info channel"));
+        }
 
         if patch
             .archived
@@ -763,6 +771,7 @@ impl ServiceThreads {
                             .change("name", &chan_old.name, &chan_new.name)
                             .change("description", &chan_old.description, &chan_new.description)
                             .change("icon", &chan_old.icon, &chan_new.icon)
+                            .change("url", &chan_old.url, &chan_new.url)
                             .change("nsfw", &chan_old.nsfw, &chan_new.nsfw)
                             .change("bitrate", &chan_old.bitrate, &chan_new.bitrate)
                             .change("user_limit", &chan_old.user_limit, &chan_new.user_limit)

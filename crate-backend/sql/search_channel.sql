@@ -41,6 +41,7 @@ select
     channel.name,
     channel.version_id,
     channel.description,
+    channel.url,
     channel.nsfw,
     channel.locked,
     channel.archived_at,

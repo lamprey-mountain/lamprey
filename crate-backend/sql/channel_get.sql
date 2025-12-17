@@ -7,6 +7,7 @@ SELECT
     t.name,
     t.description,
     t.icon,
+    t.url,
     t.type as "ty: _",
     t.nsfw,
     t.locked,

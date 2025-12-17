@@ -86,6 +86,7 @@ pub struct DbChannel {
     pub version_id: ChannelVerId,
     pub name: String,
     pub description: Option<String>,
+    pub url: Option<String>,
     pub icon: Option<Uuid>,
     pub ty: DbChannelType,
     pub last_version_id: Option<Uuid>,
@@ -126,6 +127,7 @@ pub struct DbChannelCreate {
     pub owner_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
+    pub url: Option<String>,
     pub icon: Option<Uuid>,
     pub ty: DbChannelType,
     pub nsfw: bool,
@@ -239,6 +241,7 @@ impl From<DbChannel> for Channel {
             slowmode_thread: row.slowmode_thread.map(|v| v as u64),
             slowmode_message: row.slowmode_message.map(|v| v as u64),
             default_slowmode_message: row.default_slowmode_message.map(|v| v as u64),
+            url: row.url,
 
             // these fields get filled in later
             is_unread: None,
