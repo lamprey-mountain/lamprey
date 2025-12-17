@@ -3,6 +3,7 @@ import { createMemo, For, Show } from "solid-js";
 import { useApi } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
+import { Author } from "./Message";
 
 interface CommentNode {
 	message: Message;
@@ -92,9 +93,9 @@ const Comment = (
 				<Show when={collapsed()}>
 					<span class="childCount dim">[{countAllChildren(props.node)}]</span>
 				</Show>
-				<div class="author">
-					author
-				</div>
+				<Show when={props.channel}>
+					<Author message={props.node.message} thread={props.channel} />
+				</Show>
 				<Time date={getTimestampFromUUID(message().id)} />
 				<Show when={collapsed()}>
 					<div class="summary">

@@ -1015,7 +1015,7 @@ export function AttachmentView(props: MediaProps) {
 	}
 }
 
-function Author(props: { message: Message; thread?: Channel }) {
+export function Author(props: { message: Message; thread?: Channel }) {
 	const api = useApi();
 	const ctx = useCtx();
 	const room_member = props.thread?.room_id
