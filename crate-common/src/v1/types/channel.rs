@@ -172,6 +172,9 @@ pub enum ChannelType {
     /// a thread that is only visible to thread members
     ThreadPrivate,
 
+    /// a thread used in forums, behaving identically to ThreadPublic
+    ThreadForum2,
+
     /// instant messaging direct message
     Dm,
 
@@ -523,7 +526,7 @@ impl Channel {
 
 impl ChannelType {
     pub fn is_thread(&self) -> bool {
-        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate)
+        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2)
     }
 
     pub fn has_members(&self) -> bool {
@@ -538,6 +541,7 @@ impl ChannelType {
             self,
             ChannelType::ThreadPublic
                 | ChannelType::ThreadPrivate
+                | ChannelType::ThreadForum2
                 | ChannelType::Text
                 | ChannelType::Announcement
                 | ChannelType::Dm
@@ -579,7 +583,7 @@ impl ChannelType {
 
     /// for a thread to be taggable, it must be in a channel with has_tags
     pub fn is_taggable(&self) -> bool {
-        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate)
+        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2)
     }
 
     pub fn has_tags(&self) -> bool {

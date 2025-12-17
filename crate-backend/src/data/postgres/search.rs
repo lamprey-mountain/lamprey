@@ -139,6 +139,7 @@ impl DataSearch for Postgres {
                     ChannelType::Calendar => "Calendar",
                     ChannelType::ThreadPublic => "ThreadPublic",
                     ChannelType::ThreadPrivate => "ThreadPrivate",
+                    ChannelType::ThreadForum2 => "ThreadForum2",
                     ChannelType::Dm => "Dm",
                     ChannelType::Gdm => "Gdm",
                     ChannelType::Info => "Info",

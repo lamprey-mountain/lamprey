@@ -287,7 +287,7 @@ impl ServiceThreads {
             | ChannelType::Info => {
                 perms.ensure(Permission::ChannelManage)?;
             }
-            ChannelType::ThreadPublic => {
+            ChannelType::ThreadPublic | ChannelType::ThreadForum2 => {
                 let parent_id = json
                     .parent_id
                     .ok_or(Error::BadStatic("threads must have a parent channel"))?;
