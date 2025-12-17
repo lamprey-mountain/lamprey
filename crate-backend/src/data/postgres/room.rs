@@ -352,4 +352,18 @@ impl DataRoom for Postgres {
         .await?;
         Ok(version_id)
     }
+
+    async fn user_room_count(&self, user_id: UserId) -> Result<u64> {
+        let count = query_scalar!(
+            r#"
+            SELECT count(*) FROM room_member
+            WHERE user_id = $1 AND membership = 'Join'
+            "#,
+            *user_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(count.unwrap_or(0) as u64)
+    }
 }

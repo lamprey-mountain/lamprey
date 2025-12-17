@@ -10,12 +10,13 @@ use time::PrimitiveDateTime;
 use tracing::info;
 use uuid::Uuid;
 
+use crate::consts;
 use crate::data::postgres::user::DbUser;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{DbMembership, RoomId, UserId};
 
-use crate::data::DataRoomMember;
+use crate::data::{DataRoom, DataRoomMember};
 
 use super::{Pagination, Postgres};
 
@@ -175,6 +176,22 @@ impl DataRoomMember for Postgres {
         origin: Option<RoomMemberOrigin>,
         put: RoomMemberPut,
     ) -> Result<()> {
+        let is_member: bool = query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM room_member WHERE room_id = $1 AND user_id = $2 AND membership = 'Join')",
+            *room_id,
+            *user_id
+        )
+        .fetch_one(&self.pool).await?.unwrap_or(false);
+
+        if !is_member {
+            let room_count = self.user_room_count(user_id).await?;
+            if room_count >= consts::MAX_ROOM_JOINS as u64 {
+                return Err(Error::BadRequest(
+                    "User has reached the maximum number of rooms".to_string(),
+                ));
+            }
+        }
+
         query!(
             r#"
             INSERT INTO room_member (user_id, room_id, membership, override_name, override_description, joined_at, origin, mute, deaf, timeout_until)
