@@ -76,6 +76,7 @@ pub struct MessageEnvelope {
     pub payload: MessagePayload,
 }
 
+// NOTE: consider making Ready and ReadySupplemental part of Sync
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
@@ -96,13 +97,18 @@ pub enum MessagePayload {
     },
 
     /// some kind of error
-    Error { error: String },
+    Error {
+        error: String,
+        // TODO(#918): code: SyncError,
+    },
 
     /// successfully connected
     Ready {
         /// current user, null if session is unauthed
         user: Box<Option<User>>,
 
+        // /// the application this bot user belongs, if the user is a bot
+        // application: Box<Option<Application>>,
         /// current session
         session: Session,
 
@@ -113,6 +119,25 @@ pub enum MessagePayload {
         seq: u64,
     },
 
+    // /// extra data for the client to function
+    // ReadySupplemental {
+    //     rooms: Vec<Room>,
+    //     channels: Vec<Channel>, // includes threads/dms?
+    //     /// only contains the auth user's members (one for each room)
+    //     room_members: Vec<RoomMember>,
+
+    //     /// only contains the auth user's members (one for each thread)
+    //     // remove? thread_member is included in thread channels already
+    //     thread_members: Vec<ThreadMember>,
+
+    //     config: UserConfigGlobal,
+    //     friends: Vec<User>,
+    //     emojis: Vec<CustomEmoji>,
+    //     roles: Vec<Role>,
+
+    //     /// sequence id for reconnecting
+    //     seq: u64,
+    // },
     /// send all missed messages, now tailing live event stream
     Resumed,
 
