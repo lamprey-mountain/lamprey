@@ -1,4 +1,4 @@
-import type { VoidProps } from "solid-js";
+import { createSignal, onCleanup, type VoidProps } from "solid-js";
 import { tooltip } from "./Tooltip";
 
 export function timeAgo(date: Date): string {
@@ -46,6 +46,10 @@ type TimeProps = {
 export function Time(props: VoidProps<TimeProps>) {
 	const date = () => "date" in props ? props.date : new Date(props.ts);
 
+	const [tick, setTick] = createSignal(Date.now());
+	const id = setInterval(() => setTick(Date.now()), 1000 * 60);
+	onCleanup(() => clearInterval(id));
+
 	return (
 		<>
 			{tooltip(
@@ -54,7 +58,7 @@ export function Time(props: VoidProps<TimeProps>) {
 					placement: "left-start",
 				},
 				date().toDateString(),
-				<time datetime={date().toISOString()}>{timeAgo(date())}
+				<time datetime={date().toISOString()}>{(tick(), timeAgo(date()))}
 				</time> as HTMLElement,
 			)}
 		</>
