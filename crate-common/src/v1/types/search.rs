@@ -76,6 +76,23 @@ pub struct SearchMessageRequest {
 
     /// Only return messages that mentions everyone
     pub mentions_everyone: Option<bool>,
+
+    #[cfg(feature = "feat_search_ordering")]
+    /// The key to start paginating from. Not inclusive. Optional.
+    pub from: Option<MessageId>,
+
+    /// The key to stop paginating at. Not inclusive. Optional.
+    #[cfg(feature = "feat_search_ordering")]
+    pub to: Option<MessageId>,
+
+    /// The order to return messages in
+    #[cfg(feature = "feat_search_ordering")]
+    pub order: SearchMessageOrder,
+
+    /// The maximum number of items to return.
+    #[cfg(feature = "feat_search_ordering")]
+    // TODO: min 0, max 1024, default 100
+    pub limit: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,7 +114,7 @@ pub struct SearchChannelsRequest {
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub room_id: Vec<RoomId>,
 
-    /// Only return threads with these parents. Defaults to all threads.
+    /// Only return threads in these channels. Defaults to all channels.
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub parent_id: Vec<ChannelId>,
@@ -117,6 +134,23 @@ pub struct SearchChannelsRequest {
     #[serde(default, rename = "type")]
     #[cfg_attr(feature = "validator", validate(length(max = 32)))]
     pub ty: Vec<ChannelType>,
+
+    #[cfg(feature = "feat_search_ordering")]
+    /// The key to start paginating from. Not inclusive. Optional.
+    pub from: Option<MessageId>,
+
+    /// The key to stop paginating at. Not inclusive. Optional.
+    #[cfg(feature = "feat_search_ordering")]
+    pub to: Option<MessageId>,
+
+    /// The order to return channels in
+    #[cfg(feature = "feat_search_ordering")]
+    pub order: SearchChannelsOrder,
+
+    /// The maximum number of items to return.
+    #[cfg(feature = "feat_search_ordering")]
+    // TODO: min 0, max 1024, default 100
+    pub limit: Option<u16>,
 }
 
 // TODO(#77): room searching
@@ -132,4 +166,28 @@ pub struct SearchRoomsRequest {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub query: String,
+}
+
+#[cfg(feature = "feat_search_ordering")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SearchMessageOrder {
+    Relevancy,
+    Newest,
+    Oldest,
+}
+
+#[cfg(feature = "feat_search_ordering")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SearchChannelsOrder {
+    Relevancy,
+    CreatedNewest,
+    CreatedOldest,
+    ActivityNewest,
+    ActivityOldest,
+    ArchiveNewest,
+    ArchiveOldest,
 }

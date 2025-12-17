@@ -35,6 +35,7 @@ feat_automod = []
 feat_interaction = []
 feat_interaction_reaction = ["feat_interaction"]
 feat_interaction_status = ["feat_interaction"]
+feat_search_ordering = []
 
 default = [
   "utoipa",
