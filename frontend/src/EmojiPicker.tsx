@@ -2,6 +2,15 @@ import { createResource, createSignal, For, Show } from "solid-js";
 import twemoji from "twemoji";
 import fuzzysort from "fuzzysort";
 import { Search } from "./atoms/Search";
+import icEmojiActivities from "./assets/emoji-activities.png";
+import icEmojiFaces from "./assets/emoji-faces.png";
+import icEmojiFlags from "./assets/emoji-flags.png";
+import icEmojiFood from "./assets/emoji-food.png";
+import icEmojiNature from "./assets/emoji-nature.png";
+import icEmojiObjects from "./assets/emoji-objects.png";
+import icEmojiPeople from "./assets/emoji-people.png";
+import icEmojiPlaces from "./assets/emoji-places.png";
+import icEmojiSymbols from "./assets/emoji-symbols.png";
 
 type Emoji = {
 	group?: number;
@@ -133,30 +142,25 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 				</div>
 			</header>
 			<div class="categories">
-				{
-					/* TODO: icons for categories
-				<div>history</div>
-				<div>emoji_emotions</div>
-				<div>emoji_people</div>
-				<div>park</div>
-				<div>emoji_food_beverage</div>
-				<div>snowmobile</div>
-				<div>emoji_events</div>
-				<div>emoji_objects</div>
-				<div>emoji_symbols</div>
-				<div>flag</div>
-					*/
-				}
-				<div>0</div>
-				<div>1</div>
-				<div>2</div>
-				<div>3</div>
-				<div>4</div>
-				<div>5</div>
-				<div>6</div>
-				<div>7</div>
-				<div>8</div>
-				<div>9</div>
+				<For
+					each={[
+						{ id: 0, icon: icEmojiFaces },
+						{ id: 1, icon: icEmojiPeople },
+						{ id: 3, icon: icEmojiNature },
+						{ id: 4, icon: icEmojiFood },
+						{ id: 5, icon: icEmojiPlaces },
+						{ id: 6, icon: icEmojiActivities },
+						{ id: 7, icon: icEmojiObjects },
+						{ id: 8, icon: icEmojiSymbols },
+						{ id: 9, icon: icEmojiFlags },
+					]}
+				>
+					{(cat) => (
+						<button onClick={() => alert("todo")}>
+							<img class="icon" src={cat.icon} />
+						</button>
+					)}
+				</For>
 			</div>
 			<div class="emojis">
 				<Show
