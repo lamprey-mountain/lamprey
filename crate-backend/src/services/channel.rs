@@ -292,7 +292,7 @@ impl ServiceThreads {
                     .parent_id
                     .ok_or(Error::BadStatic("threads must have a parent channel"))?;
                 let parent = srv.channels.get(parent_id, Some(user_id)).await?;
-                if !matches!(parent.ty, ChannelType::Text | ChannelType::Forum) {
+                if !parent.ty.has_public_threads() {
                     return Err(Error::BadStatic(
                         "threads can only be created in text or forum channels",
                     ));
@@ -328,7 +328,7 @@ impl ServiceThreads {
                     .parent_id
                     .ok_or(Error::BadStatic("threads must have a parent channel"))?;
                 let parent = srv.channels.get(parent_id, Some(user_id)).await?;
-                if !matches!(parent.ty, ChannelType::Text | ChannelType::Forum) {
+                if !parent.ty.has_private_threads() {
                     return Err(Error::BadStatic(
                         "threads can only be created in text or forum channels",
                     ));
