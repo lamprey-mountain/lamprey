@@ -1,5 +1,6 @@
-import { createSignal, onCleanup, type VoidProps } from "solid-js";
+import { type VoidProps } from "solid-js";
 import { tooltip } from "./Tooltip";
+import { tick } from "./hooks/tick";
 
 export function timeAgo(date: Date): string {
 	const diff = Date.now() - (+date);
@@ -45,10 +46,6 @@ type TimeProps = {
 
 export function Time(props: VoidProps<TimeProps>) {
 	const date = () => "date" in props ? props.date : new Date(props.ts);
-
-	const [tick, setTick] = createSignal(Date.now());
-	const id = setInterval(() => setTick(Date.now()), 1000 * 60);
-	onCleanup(() => clearInterval(id));
 
 	return (
 		<>
