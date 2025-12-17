@@ -1,3 +1,253 @@
-export const Forum2 = () => {
-	return "todo";
+import { Channel, getTimestampFromUUID, Message } from "sdk";
+import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { useCtx } from "./context";
+import { useApi } from "./api";
+import { ReactiveSet } from "@solid-primitives/set";
+import { Time } from "./Time";
+import { A, useNavigate } from "@solidjs/router";
+import { useModals } from "./contexts/modal";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { usePermissions } from "./hooks/usePermissions";
+import { md } from "./markdown";
+import { flags } from "./flags";
+import { Forum2Comments } from "./Forum2Comments";
+import { Dropdown } from "./Dropdown";
+
+export const Forum2 = (props: { channel: Channel }) => {
+	const ctx = useCtx();
+	const api = useApi();
+	const nav = useNavigate();
+	const [, modalctl] = useModals();
+	const room_id = () => props.channel.room_id!;
+	const forum_id = () => props.channel.id;
+
+	const [threadFilter, setThreadFilter] = createSignal("active");
+
+	const fetchMore = () => {
+		const filter = threadFilter();
+		if (filter === "active") {
+			return api.threads.listForChannel(forum_id);
+		} else if (filter === "archived") {
+			return api.threads.listArchivedForChannel(forum_id);
+		} else if (filter === "removed") {
+			return api.threads.listRemovedForChannel(forum_id);
+		}
+	};
+
+	const threadsResource = createMemo(fetchMore);
+
+	const [bottom, setBottom] = createSignal<Element | undefined>();
+
+	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
+		for (const entry of entries) {
+			if (entry.isIntersecting) fetchMore();
+		}
+	});
+
+	const getThreads = () => {
+		const items = threadsResource()?.()?.items;
+		if (!items) return [];
+		// sort descending by id
+		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
+			a,
+			b,
+		) => (a.id < b.id ? 1 : -1));
+	};
+
+	function createThread(room_id: string) {
+		modalctl.prompt("name?", (name) => {
+			if (!name) return;
+			api.channels.create(room_id, {
+				name,
+				parent_id: props.channel.id,
+				type: "ThreadPublic",
+			});
+		});
+	}
+
+	const user_id = () => api.users.cache.get("@self")?.id;
+	const perms = usePermissions(user_id, room_id, () => undefined);
+
+	const [threadId, setThreadId] = createSignal<null | string>(null);
+
+	return (
+		<div class="room-home">
+			<div style="display:flex;flex-direction:column;border:solid red 1px">
+				<div style="display:flex">
+					<div style="flex:1">
+						<h2>{props.channel.name}</h2>
+						<p
+							class="markdown"
+							innerHTML={md(props.channel.description ?? "") as string}
+						>
+						</p>
+					</div>
+					<div style="display:flex;flex-direction:column;gap:4px">
+						<A
+							style="padding: 0 4px"
+							href={`/channel/${props.channel.id}/settings`}
+						>
+							settings
+						</A>
+					</div>
+				</div>
+				<Show when={flags.has("thread_quick_create")}>
+					<br />
+					{/* TODO: <QuickCreate channel={props.channel} /> */}
+					<br />
+				</Show>
+				<div style="display:flex; align-items:center">
+					<h3 style="font-size:1rem; margin-top:8px;flex:1">
+						{getThreads().length} {threadFilter()} threads
+					</h3>
+					<div class="thread-filter">
+						<button
+							classList={{ selected: threadFilter() === "active" }}
+							onClick={[setThreadFilter, "active"]}
+						>
+							active
+						</button>
+						<button
+							classList={{ selected: threadFilter() === "archived" }}
+							onClick={[setThreadFilter, "archived"]}
+						>
+							archived
+						</button>
+						<Show when={perms.has("ThreadRemove")}>
+							<button
+								classList={{ selected: threadFilter() === "removed" }}
+								onClick={[setThreadFilter, "removed"]}
+							>
+								removed
+							</button>
+						</Show>
+					</div>
+					<button
+						class="primary"
+						style="margin-left: 8px;border-radius:4px"
+						onClick={() => createThread(room_id())}
+					>
+						create thread
+					</button>
+				</div>
+				<ul>
+					<For each={getThreads()}>
+						{(thread) => (
+							<li>
+								<article class="thread menu-thread" data-thread-id={thread.id}>
+									<header onClick={() => setThreadId(thread.id)}>
+										<div class="top">
+											<div class="icon"></div>
+											<div class="spacer">{thread.name}</div>
+											<div class="time">
+												Created <Time date={getTimestampFromUUID(thread.id)} />
+											</div>
+										</div>
+										<div
+											class="bottom"
+											onClick={() => setThreadId(thread.id)}
+										>
+											<div class="dim">
+												{thread.message_count} message(s) &bull; last msg{" "}
+												<Time
+													date={getTimestampFromUUID(
+														thread.last_version_id ?? thread.id,
+													)}
+												/>
+											</div>
+											<Show when={thread.description}>
+												<div
+													class="description markdown"
+													innerHTML={md(thread.description ?? "") as string}
+												>
+												</div>
+											</Show>
+										</div>
+									</header>
+								</article>
+							</li>
+						)}
+					</For>
+				</ul>
+				<div ref={setBottom}></div>
+			</div>
+			<div style="border:solid blue 1px">
+				<Show when={threadId()}>
+					{(tid) => <Forum2View channel={api.channels.cache.get(tid())!} />}
+				</Show>
+			</div>
+		</div>
+	);
+};
+
+export const Forum2View = (props: { channel: Channel }) => {
+	// comment order by
+	return (
+		<div style="display:flex;">
+			<div style="flex:1">
+				<div>
+					<h2>{props.channel.name}</h2>
+				</div>
+				<div style="display:flex">
+					<div style="flex:1">
+						n comments
+						<button>collapse replies</button>
+						<button>expand all</button>
+					</div>
+					<div>
+						<div>
+							order by{" "}
+							<Dropdown
+								options={[
+									{ item: "new", label: "newest comments first" },
+									{ item: "old", label: "oldest comments first" },
+									{
+										item: "activity",
+										label: "recently active comment threads",
+									},
+									{ item: "reactions:+1", label: "most +1 reactions" },
+									{ item: "random", label: "random ordering" },
+									{ item: "hot", label: "mystery algorithm 1" },
+									{ item: "hot2", label: "mystery algorithm 2" },
+									// NOTE: hacker news algorithm
+									//   score = points / ((time + 2) ** gravity)
+									//   time = how old the post is in hours(?)
+									//   gravity = 1.8
+								]}
+							/>
+						</div>
+					</div>
+				</div>
+				<Forum2Comments channel={props.channel} />
+				<div style="display:flex;flex-direction:column;gap:2px">
+					{/* TODO: support markdown */}
+					<textarea style="padding: 2px 4px" placeholder="add a comment...">
+					</textarea>
+					<menu style="align-self:end">
+						<button class="big primary">send</button>
+					</menu>
+				</div>
+			</div>
+			<div style="width:144px">
+				<h3 class="dim">topic info</h3>
+				<ul>
+					<li>tags: [foo] [bar] [baz]</li>
+					<li>comments: [n] comments ([m] threads/top level comments)</li>
+					<li>
+						last comment: <a href="#">some time ago</a>
+					</li>
+				</ul>
+				<br />
+				<h3 class="dim">topic log</h3>
+				<ul>
+					<li>[user] renamed to [name]</li>
+					<li>[user] added tag to [name]</li>
+					<li>[user] pinned [a message]</li>
+					<li>[user] added [member] to the thread</li>
+					<li>[user] removed [member] from the thread</li>
+					<li>mentioned in [thread]</li>
+				</ul>
+			</div>
+		</div>
+	);
 };
