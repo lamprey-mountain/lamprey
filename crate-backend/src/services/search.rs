@@ -52,6 +52,10 @@ impl ServiceSearch {
             }
         }
 
+        srv.messages
+            .populate_threads(user_id, &mut res.items)
+            .await?;
+
         for message in &mut res.items {
             self.state.presign_message(message).await?;
         }
