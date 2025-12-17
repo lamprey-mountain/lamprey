@@ -25,6 +25,9 @@ pub const MAX_GDM_MEMBERS: u32 = 16;
 /// the maximum number of webhooks per channel
 pub const MAX_CHANNEL_WEBHOOKS: u32 = 16;
 
+/// the maximum number of rooms a user can be in.
+pub const MAX_ROOM_JOINS: u32 = 128;
+
 /// how many days to retain audit log entries
 pub const RETENTION_AUDIT_LOG: u32 = 90;
 

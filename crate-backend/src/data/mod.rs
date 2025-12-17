@@ -148,6 +148,7 @@ pub trait DataRoom {
     async fn room_undelete(&self, room_id: RoomId) -> Result<()>;
     async fn room_quarantine(&self, room_id: RoomId) -> Result<RoomVerId>;
     async fn room_unquarantine(&self, room_id: RoomId) -> Result<RoomVerId>;
+    async fn user_room_count(&self, user_id: UserId) -> Result<u64>;
 }
 
 #[async_trait]

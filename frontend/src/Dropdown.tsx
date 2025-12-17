@@ -256,6 +256,7 @@ export function Dropdown<T>(
 		required?: boolean;
 		onSelect?: (item: T | null) => void;
 		options: Array<DropdownItem<T>>;
+		style?: string;
 	}>,
 ) {
 	const [shown, setShown] = createSignal(false);
@@ -393,6 +394,7 @@ export function Dropdown<T>(
 				aria-keyshortcuts={shown()
 					? "ArrowUp ArrowDown Tab Shift+Tab Escape Enter"
 					: "Enter"}
+				style={props.style}
 			/>
 			<Portal>
 				<Show when={shown()}>

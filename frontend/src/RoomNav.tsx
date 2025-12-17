@@ -33,6 +33,44 @@ export type RoomNavItem =
 		// Omitting view-specific properties for now
 	};
 
+/*
+TODO: room nav views
+
+type RoomNavToplevelItem = RoomNavItem & {
+  type: "folder",
+  name: string,
+  items: RoomNavItem[],
+}
+
+type RoomNavItem = {
+  type: "room",
+  room_id: string,
+} | {
+  type: "view",
+  name: "string",
+  uncategorized_channels: Array<ViewChannel>;
+  categories: Array<ViewCategory>;
+}
+
+// either a local category for this view or a category from a room
+type ViewCategory =
+  | {
+    name: string;
+    channels: Array<Channel>;
+  }
+  | {
+    id: string;
+    room_id: string;
+    nickname?: string;
+  };
+
+type ViewChannel = {
+  id: string;
+  room_id?: string;
+  nickname?: string;
+};
+*/
+
 type RoomNavConfig = Array<RoomNavItem>;
 
 export const RoomNav = () => {

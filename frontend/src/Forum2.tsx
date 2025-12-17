@@ -100,6 +100,43 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<h3 style="font-size:1rem; margin-top:8px;flex:1">
 						{getThreads().length} {threadFilter()} threads
 					</h3>
+					{
+						/*
+					TODO: thread ordering
+					<div>
+						<h3 class="dim">order by</h3>
+						<Dropdown
+							style="max-width:150px"
+							options={[
+								{ item: "new", label: "newest threads first" },
+								{
+									item: "activity",
+									label: "recently active threads",
+								},
+								{ item: "reactions:+1", label: "most +1 reactions" },
+								{ item: "random", label: "random ordering" },
+								{ item: "hot", label: "mystery algorithm 1" },
+								{ item: "hot2", label: "mystery algorithm 2" },
+							]}
+						/>
+					</div>
+					*/
+					}
+					{
+						/*
+					TODO: gallery view
+					<div>
+						<h3 class="dim">view as</h3>
+						<Dropdown
+							style="max-width:150px"
+							options={[
+								{ item: "list", label: "list" },
+								{ item: "gallery", label: "gallery" },
+							]}
+						/>
+					</div>
+				*/
+					}
 					<div class="thread-filter">
 						<button
 							classList={{ selected: threadFilter() === "active" }}
@@ -181,7 +218,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 };
 
 export const Forum2View = (props: { channel: Channel }) => {
-	// comment order by
 	return (
 		<div style="display:flex;">
 			<div style="flex:1">
