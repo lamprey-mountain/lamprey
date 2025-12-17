@@ -1,29 +1,56 @@
 import { Channel, getTimestampFromUUID, Message } from "sdk";
-import { createResource, For, Show } from "solid-js";
-import { useCtx } from "./context";
+import { createMemo, For, Show } from "solid-js";
 import { useApi } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
+
+interface CommentNode {
+	message: Message;
+	children: CommentNode[];
+}
 
 export const Forum2Comments = (props: { channel: Channel }) => {
 	const api = useApi();
 	const comments = api.messages.listReplies(
 		() => props.channel.id,
 		() => undefined,
+		() => ({ depth: 8, breadth: 9999 }),
 	);
+
+	const commentTree = createMemo(() => {
+		const items = comments()?.items;
+		if (!items) return [];
+
+		const commentMap = new Map<string, CommentNode>();
+		for (const message of items) {
+			commentMap.set(message.id, { message, children: [] });
+		}
+
+		const rootComments: CommentNode[] = [];
+		for (const node of commentMap.values()) {
+			if (node.message.reply_id && commentMap.has(node.message.reply_id)) {
+				commentMap.get(node.message.reply_id)!.children.push(node);
+			} else {
+				rootComments.push(node);
+			}
+		}
+
+		return rootComments;
+	});
+
 	const collapsed = new ReactiveSet<string>();
 
 	return (
 		<div class="forum">
 			<div>forum</div>
 			<ul>
-				<For each={comments()?.items}>
-					{(c) => (
+				<For each={commentTree()}>
+					{(node) => (
 						<li class="toplevel">
 							<Comment
 								collapsed={collapsed}
 								channel={props.channel}
-								message={c}
+								node={node}
 							/>
 						</li>
 					)}
@@ -34,19 +61,21 @@ export const Forum2Comments = (props: { channel: Channel }) => {
 };
 
 const Comment = (
-	props: { collapsed: ReactiveSet<string>; channel: Channel; message: Message },
+	props: {
+		collapsed: ReactiveSet<string>;
+		channel: Channel;
+		node: CommentNode;
+	},
 ) => {
-	const api = useApi();
+	const message = () => props.node.message;
+	const children = () => props.node.children;
 
-	const collapsed = () => props.collapsed.has(props.message.id);
+	const collapsed = () => props.collapsed.has(message().id);
 
-	const children = api.messages.listReplies(
-		() => props.channel.id,
-		() => props.message.id,
-		() => ({ depth: 2 }),
-	);
-
-	const countChildren = () => children()?.total ?? 0;
+	const countAllChildren = (node: CommentNode): number => {
+		return node.children.length +
+			node.children.reduce((sum, child) => sum + countAllChildren(child), 0);
+	};
 
 	return (
 		<div class="comment" classList={{ collapsed: collapsed() }}>
@@ -55,42 +84,42 @@ const Comment = (
 					class="collapse"
 					onClick={() =>
 						collapsed()
-							? props.collapsed.delete(props.message.id)
-							: props.collapsed.add(props.message.id)}
+							? props.collapsed.delete(message().id)
+							: props.collapsed.add(message().id)}
 				>
 					{collapsed() ? "+" : "-"}
 				</button>
 				<Show when={collapsed()}>
-					<span class="childCount dim">[{countChildren()}]</span>
+					<span class="childCount dim">[{countAllChildren(props.node)}]</span>
 				</Show>
 				<div class="author">
 					author
 				</div>
-				<Time date={getTimestampFromUUID(props.message.id)} />
+				<Time date={getTimestampFromUUID(message().id)} />
 				<Show when={collapsed()}>
 					<div class="summary">
-						{props.message.content ?? "(no content)"}
+						{message().content ?? "(no content)"}
 					</div>
 				</Show>
 			</header>
 			<Show when={!collapsed()}>
 				<div class="content">
-					{props.message.content ?? "(no content)"}
+					{message().content ?? "(no content)"}
 				</div>
 				<menu>
 					<button onClick={() => alert("todo")}>
 						reply
 					</button>
 				</menu>
-				<Show when={children()}>
+				<Show when={children().length > 0}>
 					<ul class="children">
-						<For each={children()?.items.slice(1) ?? []}>
+						<For each={children()}>
 							{(child) => (
 								<li>
 									<Comment
 										collapsed={props.collapsed}
 										channel={props.channel}
-										message={child}
+										node={child}
 									/>
 								</li>
 							)}
@@ -101,9 +130,8 @@ const Comment = (
 		</div>
 	);
 };
-// {#if !collapsed}
-// {/if}
 
+// TODO: name colors
 // <div class="author">
 //   {#await author}
 //     <i>loading...</i>
