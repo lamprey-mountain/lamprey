@@ -643,6 +643,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 	};
 
 	const onSubmit = (text: string) => {
+		if (locked()) return false;
 		if (slowmodeActive()) {
 			slowmodeShake();
 			return false;
@@ -680,6 +681,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 	};
 
 	const send = () => {
+		if (locked()) return;
 		const state = ch.editor_state;
 		if (!state) return;
 		const content = state.doc.textContent.trim();
@@ -720,6 +722,11 @@ export const Forum2View = (props: { channel: Channel }) => {
 		perms.has("ChannelManage") ||
 		perms.has("ThreadManage") ||
 		perms.has("MemberTimeout");
+
+	const locked = () => {
+		return !perms.has("MessageCreate") ||
+			(props.channel.locked && !perms.has("ThreadLock"));
+	};
 
 	const [remainingTime, setRemainingTime] = createSignal(0);
 	const slowmodeRemaining = () => remainingTime();
@@ -806,14 +813,18 @@ export const Forum2View = (props: { channel: Channel }) => {
 				/>
 				<div
 					class="comment-input"
+					classList={{ locked: locked() }}
 					style="display:flex;flex-direction:column;gap:2px"
 				>
 					<editor.View
 						onSubmit={onSubmit}
 						onChange={onChange}
-						placeholder="add a comment..."
+						placeholder={locked()
+							? "This thread is locked"
+							: "add a comment..."}
 						channelId={props.channel.id}
 						submitOnEnter={false}
+						disabled={locked()}
 					/>
 					<footer style="display: flex; align-items: center;">
 						<Show when={props.channel.slowmode_message || slowmodeActive()}>
@@ -823,7 +834,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 						</Show>
 						<div style="flex:1"></div>
 						<menu>
-							<button class="big primary" onClick={send}>
+							<button class="big primary" onClick={send} disabled={locked()}>
 								send
 							</button>
 						</menu>
