@@ -39,6 +39,8 @@ import {
 	useChannel,
 } from "./channelctx";
 import { createStore } from "solid-js/store";
+import { createEditor } from "./Editor";
+import type { EditorState } from "prosemirror-state";
 import icReply from "./assets/reply.png";
 import icReactionAdd from "./assets/reaction-add.png";
 import icEdit from "./assets/edit.png";
@@ -548,8 +550,21 @@ export const Forum2 = (props: { channel: Channel }) => {
 	);
 };
 
+function EditorUserMention(props: { id: string }) {
+	const api = useApi();
+	const user = api.users.fetch(() => props.id);
+	return <span class="mention-user">@{user()?.name ?? props.id}</span>;
+}
+
+function EditorChannelMention(props: { id: string }) {
+	const api = useApi();
+	const channel = createMemo(() => api.channels.cache.get(props.id));
+	return <span class="mention-channel">#{channel()?.name ?? props.id}</span>;
+}
+
 export const Forum2View = (props: { channel: Channel }) => {
 	const api = useApi();
+	const [ch, chUpdate] = useChannel()!;
 	const comments = api.messages.listReplies(
 		() => props.channel.id,
 		() => undefined,
@@ -596,6 +611,47 @@ export const Forum2View = (props: { channel: Channel }) => {
 		}
 	};
 
+	const onSubmit = (text: string) => {
+		if (!text.trim()) {
+			return false;
+		}
+		api.messages.send(props.channel.id, {
+			content: text,
+			attachments: [],
+		});
+		return true;
+	};
+
+	const editor = createEditor({
+		mentionRenderer: (node, userId) => {
+			render(() => <EditorUserMention id={userId} />, node);
+		},
+		mentionChannelRenderer: (node, channelId) => {
+			render(() => <EditorChannelMention id={channelId} />, node);
+		},
+	});
+
+	const onChange = (state: EditorState) => {
+		chUpdate("editor_state", state);
+	};
+
+	const send = () => {
+		const state = ch.editor_state;
+		if (!state) return;
+		const content = state.doc.textContent.trim();
+		if (!content) return;
+		if (onSubmit(content)) {
+			const tr = state.tr.deleteRange(0, state.doc.nodeSize - 2);
+			chUpdate("editor_state", state.apply(tr));
+		}
+	};
+
+	createEffect(() => {
+		const state = ch.editor_state;
+		editor.setState(state);
+		editor.focus();
+	});
+
 	return (
 		<div class="forum2-thread">
 			<div class="main">
@@ -637,12 +693,19 @@ export const Forum2View = (props: { channel: Channel }) => {
 					commentTree={commentTree()}
 					collapsed={collapsed}
 				/>
-				<div style="display:flex;flex-direction:column;gap:2px">
-					{/* TODO: support markdown */}
-					<textarea style="padding: 2px 4px" placeholder="add a comment...">
-					</textarea>
+				<div
+					class="comment-input"
+					style="display:flex;flex-direction:column;gap:2px"
+				>
+					<editor.View
+						onSubmit={onSubmit}
+						onChange={onChange}
+						placeholder="add a comment..."
+						channelId={props.channel.id}
+						submitOnEnter={false}
+					/>
 					<menu style="align-self:end">
-						<button class="big primary">send</button>
+						<button class="big primary" onClick={send}>send</button>
 					</menu>
 				</div>
 			</div>

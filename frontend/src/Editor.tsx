@@ -148,6 +148,7 @@ type EditorViewProps = {
 	onSubmit: (text: string) => boolean;
 	onChange?: (state: EditorState) => void;
 	channelId?: string; // Needed for autocomplete
+	submitOnEnter?: boolean;
 };
 
 export const createEditor = (opts: EditorProps) => {
@@ -156,6 +157,15 @@ export const createEditor = (opts: EditorProps) => {
 	let editorRef!: HTMLDivElement;
 	let view: EditorView | undefined;
 	let onSubmit!: (content: string) => boolean | undefined;
+	let submitOnEnter = true;
+
+	const submitCommand: Command = (state, dispatch) => {
+		const shouldClear = onSubmit?.(state.doc.textContent.trim());
+		if (shouldClear) {
+			dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
+		}
+		return true;
+	};
 
 	const createState = () => {
 		let doc;
@@ -194,11 +204,12 @@ export const createEditor = (opts: EditorProps) => {
 						dispatch?.(state.tr.insertText("\n"));
 						return true;
 					},
+					"Ctrl-Enter": submitCommand,
 					"Enter": (state, dispatch) => {
-						const shouldClear = onSubmit?.(state.doc.textContent.trim());
-						if (shouldClear) {
-							dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
+						if (submitOnEnter) {
+							return submitCommand(state, dispatch);
 						}
+						dispatch?.(state.tr.insertText("\n"));
 						return true;
 					},
 					"Backspace": (state, dispatch) => {
@@ -229,6 +240,7 @@ export const createEditor = (opts: EditorProps) => {
 		View(props: EditorViewProps) {
 			createEffect(() => {
 				onSubmit = props.onSubmit;
+				submitOnEnter = props.submitOnEnter ?? true;
 			});
 
 			onMount(() => {
