@@ -3522,3 +3522,11 @@ input[type="color"] {
 		visibility: visible;
 	}
 }
+
+.add-reaction {
+	border: none;
+	background: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}

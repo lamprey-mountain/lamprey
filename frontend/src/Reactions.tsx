@@ -4,6 +4,7 @@ import { useCtx } from "./context.ts";
 import { createTooltip } from "./Tooltip.tsx";
 import type { Message } from "sdk";
 import { useApi } from "./api.tsx";
+import icReactionAdd from "./assets/reaction-add.png";
 
 type ReactionsProps = {
 	message: Message;
@@ -105,18 +106,17 @@ export const Reactions = (props: ReactionsProps) => {
 					);
 				}}
 			</For>
-			<div class="add" ref={addEl}>
-				<div
+			<button class="add-reaction" ref={addEl}>
+				<img
 					class="icon"
 					classList={{ show: showPicker() }}
 					onClick={(e) => {
 						e.stopPropagation();
 						setShowPicker(!showPicker());
 					}}
-				>
-					add_reaction
-				</div>
-			</div>
+					src={icReactionAdd}
+				/>
+			</button>
 		</div>
 	);
 };

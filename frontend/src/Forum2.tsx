@@ -812,16 +812,19 @@ const Comment = (
 			<Show when={!collapsed()}>
 				<div class="content markdown" ref={contentEl!} innerHTML={getHtml()}>
 				</div>
-				<Show when={message().attachments?.length}>
-					<ul class="attachments">
-						<For each={message().attachments}>
-							{(att) => <AttachmentView media={att} />}
-						</For>
-					</ul>
-				</Show>
-				<Show when={message().reactions?.length}>
-					<Reactions message={message()} />
-				</Show>
+				{/* FIXME: keep some form of margin-bottom when comment is collapsed */}
+				<div style="padding: 0 8px;margin-bottom:8px">
+					<Show when={message().attachments?.length}>
+						<ul class="attachments">
+							<For each={message().attachments}>
+								{(att) => <AttachmentView media={att} />}
+							</For>
+						</ul>
+					</Show>
+					<Show when={message().reactions?.length}>
+						<Reactions message={message()} />
+					</Show>
+				</div>
 				<Show when={children().length > 0}>
 					<ul class="children">
 						<For each={children()}>
