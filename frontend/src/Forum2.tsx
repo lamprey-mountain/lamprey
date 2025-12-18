@@ -1,5 +1,12 @@
 import { Channel, getTimestampFromUUID, Message } from "sdk";
-import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import { useCtx } from "./context";
 import { useApi } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
@@ -12,6 +19,105 @@ import { md } from "./markdown";
 import { flags } from "./flags";
 import { Dropdown } from "./Dropdown";
 import { Author } from "./Message";
+import { render } from "solid-js/web";
+import twemoji from "twemoji";
+import { getEmojiUrl } from "./media/util";
+
+function UserMention(props: { id: string; channel: Channel }) {
+	const api = useApi();
+	const ctx = useCtx();
+	const user = api.users.fetch(() => props.id);
+	return (
+		<span
+			class="mention-user"
+			onClick={(e) => {
+				e.stopPropagation();
+				const currentTarget = e.currentTarget as HTMLElement;
+				if (ctx.userView()?.ref === currentTarget) {
+					ctx.setUserView(null);
+				} else {
+					ctx.setUserView({
+						user_id: props.id,
+						room_id: props.channel.room_id,
+						thread_id: props.channel.id,
+						ref: currentTarget,
+						source: "message",
+					});
+				}
+			}}
+		>
+			@{user()?.name ?? "..."}
+		</span>
+	);
+}
+
+function RoleMention(props: { id: string; thread: Channel }) {
+	const api = useApi();
+	const [role] = createResource(() => props.thread.room_id, async (room_id) => {
+		if (!room_id) return null;
+		const roles = api.roles.list(() => room_id)();
+		return roles?.items.find((r) => r.id === props.id) ?? null;
+	});
+	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
+}
+
+function ChannelMention(props: { id: string }) {
+	const api = useApi();
+	const navigate = useNavigate();
+	const channel = api.channels.fetch(() => props.id);
+	return (
+		<span
+			class="mention-channel"
+			onClick={(e) => {
+				e.stopPropagation();
+				navigate(`/channel/${props.id}`);
+			}}
+		>
+			#{channel()?.name ?? "..."}
+		</span>
+	);
+}
+
+function Emoji(props: { id: string; name: string; animated: boolean }) {
+	const url = () => {
+		return getEmojiUrl(props.id);
+	};
+	return (
+		<img
+			class="emoji"
+			src={url()}
+			alt={`:${props.name}:`}
+			title={`:${props.name}:`}
+		/>
+	);
+}
+
+function hydrateMentions(el: HTMLElement, thread: Channel) {
+	el.querySelectorAll<HTMLSpanElement>("span.mention[data-mention-type]")
+		.forEach((mentionEl) => {
+			const type = mentionEl.dataset.mentionType;
+			if (type === "user") {
+				const userId = mentionEl.dataset.userId!;
+				render(() => <UserMention channel={thread} id={userId} />, mentionEl);
+			} else if (type === "role") {
+				const roleId = mentionEl.dataset.roleId!;
+				render(() => <RoleMention id={roleId} thread={thread} />, mentionEl);
+			} else if (type === "channel") {
+				const channelId = mentionEl.dataset.channelId!;
+				render(() => <ChannelMention id={channelId} />, mentionEl);
+			} else if (type === "emoji") {
+				const emojiId = mentionEl.dataset.emojiId!;
+				const emojiName = mentionEl.dataset.emojiName!;
+				const emojiAnimated = mentionEl.dataset.emojiAnimated === "true";
+				render(
+					() => (
+						<Emoji id={emojiId} name={emojiName} animated={emojiAnimated} />
+					),
+					mentionEl,
+				);
+			}
+		});
+}
 
 export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -319,7 +425,10 @@ export const Forum2View = (props: { channel: Channel }) => {
 				<h3 class="dim">topic info</h3>
 				<ul>
 					<li>tags: [foo] [bar] [baz]</li>
-					<li>comments: [{comments()?.items.length ?? 0}] comments ([{commentTree().length}] threads/top level comments)</li>
+					<li>
+						comments: [{comments()?.items.length ?? 0}] comments
+						([{commentTree().length}] threads/top level comments)
+					</li>
 					<li>
 						last comment: <a href="#">some time ago</a>
 					</li>
@@ -371,6 +480,8 @@ export const Forum2Comments = (
 	);
 };
 
+const contentToHtml = new WeakMap();
+
 const Comment = (
 	props: {
 		collapsed: ReactiveSet<string>;
@@ -380,6 +491,7 @@ const Comment = (
 ) => {
 	const message = () => props.node.message;
 	const children = () => props.node.children;
+	const api = useApi();
 
 	const collapsed = () => props.collapsed.has(message().id);
 
@@ -387,6 +499,56 @@ const Comment = (
 		return node.children.length +
 			node.children.reduce((sum, child) => sum + countAllChildren(child), 0);
 	};
+
+	function getHtml(): string {
+		const cached = contentToHtml.get(message());
+		if (cached) return cached;
+
+		const content = message().content ?? "";
+
+		function escape(html: string) {
+			return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
+				/>/g,
+				"&gt;",
+			).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+		}
+
+		const tokens = md.lexer(content);
+		md.walkTokens(tokens, (token) => {
+			if (token.type === "html") {
+				(token as any).text = escape((token as any).text);
+			}
+		});
+
+		const html = (md.parser(tokens) as string).trim();
+
+		const twemojified = twemoji.parse(html, {
+			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+			folder: "svg",
+			ext: ".svg",
+		});
+		contentToHtml.set(message(), twemojified);
+		return twemojified;
+	}
+
+	let contentEl!: HTMLDivElement;
+
+	createEffect(() => {
+		if (contentEl) {
+			hydrateMentions(contentEl, props.channel);
+		}
+	});
+
+	createEffect(() => {
+		getHtml();
+		import("highlight.js").then(({ default: hljs }) => {
+			if (!contentEl) return;
+			for (const el of [...contentEl.querySelectorAll("pre")]) {
+				el.dataset.highlighted = "";
+				hljs.highlightElement(el);
+			}
+		});
+	});
 
 	return (
 		<div class="comment" classList={{ collapsed: collapsed() }}>
@@ -409,13 +571,17 @@ const Comment = (
 				<Time date={getTimestampFromUUID(message().id)} />
 				<Show when={collapsed()}>
 					<div class="summary">
-						{message().content ?? "(no content)"}
+						{message().content
+							? api.stripMarkdownAndResolveMentions(
+								message().content!,
+								message().channel_id,
+							)
+							: "(no content)"}
 					</div>
 				</Show>
 			</header>
 			<Show when={!collapsed()}>
-				<div class="content">
-					{message().content ?? "(no content)"}
+				<div class="content markdown" ref={contentEl!} innerHTML={getHtml()}>
 				</div>
 				<menu>
 					<button onClick={() => alert("todo")}>

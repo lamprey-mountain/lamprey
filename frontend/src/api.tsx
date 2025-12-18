@@ -1021,7 +1021,6 @@ export function createApi(
 		thread_id: string,
 	) => {
 		let processedContent = content;
-		console.log("content", content);
 
 		// Replace user mentions <@user-id> with user names
 		const userMentionRegex =
@@ -1029,7 +1028,6 @@ export function createApi(
 		processedContent = processedContent.replace(
 			userMentionRegex,
 			(match, userId) => {
-				console.log("found", match, userId);
 				const user = users.cache.get(userId);
 				return user ? `@${user.name}` : match; // Keep original if user not found
 			},
