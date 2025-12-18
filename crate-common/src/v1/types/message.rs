@@ -147,6 +147,10 @@ pub struct MentionsUser {
 pub struct MentionsRole {
     /// the id of this role
     pub id: RoleId,
+
+    // // TODO: add this
+    // /// the name of this role
+    // pub name: String,
 }
 
 /// a mentioned channel
