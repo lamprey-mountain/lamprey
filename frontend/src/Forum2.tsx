@@ -7,6 +7,7 @@ import {
 	createResource,
 	createSignal,
 	For,
+	onCleanup,
 	Show,
 } from "solid-js";
 import { useCtx } from "./context";
@@ -32,8 +33,16 @@ import {
 	TextView,
 	VideoView,
 } from "./media/mod";
-import { ChannelContext, createInitialChannelState } from "./channelctx";
+import {
+	ChannelContext,
+	createInitialChannelState,
+	useChannel,
+} from "./channelctx";
 import { createStore } from "solid-js/store";
+import icReply from "./assets/reply.png";
+import icReactionAdd from "./assets/reaction-add.png";
+import icEdit from "./assets/edit.png";
+import icMore from "./assets/more.png";
 
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
@@ -65,11 +74,14 @@ function UserMention(props: { id: string; channel: Channel }) {
 
 function RoleMention(props: { id: string; thread: Channel }) {
 	const api = useApi();
-	const [role] = createResource(() => props.thread.room_id, async (room_id) => {
-		if (!room_id) return null;
-		const roles = api.roles.list(() => room_id)();
-		return roles?.items.find((r) => r.id === props.id) ?? null;
-	});
+	const [role] = createResource(
+		() => props.thread.room_id,
+		async (room_id) => {
+			if (!room_id) return null;
+			const roles = api.roles.list(() => room_id)();
+			return roles?.items.find((r) => r.id === props.id) ?? null;
+		},
+	);
 	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
 }
 
@@ -130,7 +142,8 @@ function AttachmentView(props: MediaProps) {
 			</li>
 		);
 	} else if (
-		b() === "text" || /^application\/json\b/.test(props.media.source.mime)
+		b() === "text" ||
+		/^application\/json\b/.test(props.media.source.mime)
 	) {
 		return (
 			<li class="raw">
@@ -148,30 +161,169 @@ function AttachmentView(props: MediaProps) {
 
 function hydrateMentions(el: HTMLElement, thread: Channel) {
 	el.querySelectorAll<HTMLSpanElement>("span.mention[data-mention-type]")
-		.forEach((mentionEl) => {
-			const type = mentionEl.dataset.mentionType;
-			if (type === "user") {
-				const userId = mentionEl.dataset.userId!;
-				render(() => <UserMention channel={thread} id={userId} />, mentionEl);
-			} else if (type === "role") {
-				const roleId = mentionEl.dataset.roleId!;
-				render(() => <RoleMention id={roleId} thread={thread} />, mentionEl);
-			} else if (type === "channel") {
-				const channelId = mentionEl.dataset.channelId!;
-				render(() => <ChannelMention id={channelId} />, mentionEl);
-			} else if (type === "emoji") {
-				const emojiId = mentionEl.dataset.emojiId!;
-				const emojiName = mentionEl.dataset.emojiName!;
-				const emojiAnimated = mentionEl.dataset.emojiAnimated === "true";
-				render(
-					() => (
-						<Emoji id={emojiId} name={emojiName} animated={emojiAnimated} />
-					),
-					mentionEl,
-				);
-			}
-		});
+		.forEach(
+			(mentionEl) => {
+				const type = mentionEl.dataset.mentionType;
+				if (type === "user") {
+					const userId = mentionEl.dataset.userId!;
+					render(() => <UserMention channel={thread} id={userId} />, mentionEl);
+				} else if (type === "role") {
+					const roleId = mentionEl.dataset.roleId!;
+					render(() => <RoleMention id={roleId} thread={thread} />, mentionEl);
+				} else if (type === "channel") {
+					const channelId = mentionEl.dataset.channelId!;
+					render(() => <ChannelMention id={channelId} />, mentionEl);
+				} else if (type === "emoji") {
+					const emojiId = mentionEl.dataset.emojiId!;
+					const emojiName = mentionEl.dataset.emojiName!;
+					const emojiAnimated = mentionEl.dataset.emojiAnimated === "true";
+					render(
+						() => (
+							<Emoji id={emojiId} name={emojiName} animated={emojiAnimated} />
+						),
+						mentionEl,
+					);
+				}
+			},
+		);
 }
+
+const MessageToolbar = (props: { message: Message }) => {
+	const ctx = useCtx();
+	const api = useApi();
+	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
+	let reactionButtonRef: HTMLButtonElement | undefined;
+
+	createEffect(() => {
+		if (showReactionPicker()) {
+			ctx.setPopout({
+				id: "emoji",
+				ref: reactionButtonRef,
+				placement: "left-start",
+				props: {
+					selected: (emoji: string | null, keepOpen: boolean) => {
+						if (emoji) {
+							const existing = props.message.reactions?.find((r) =>
+								r.key === emoji
+							);
+							if (!existing || !existing.self) {
+								api.reactions.add(
+									props.message.channel_id,
+									props.message.id,
+									emoji,
+								);
+							}
+						}
+						if (!keepOpen) setShowReactionPicker(false);
+					},
+				},
+			});
+		} else {
+			if (
+				ctx.popout().id === "emoji" && ctx.popout().ref === reactionButtonRef
+			) {
+				ctx.setPopout({});
+			}
+		}
+	});
+
+	const closePicker = (e: MouseEvent) => {
+		const popoutEl = document.querySelector(".popout");
+		if (
+			reactionButtonRef &&
+			!reactionButtonRef.contains(e.target as Node) &&
+			(!popoutEl || !popoutEl.contains(e.target as Node))
+		) {
+			setShowReactionPicker(false);
+		}
+	};
+
+	createEffect(() => {
+		if (showReactionPicker()) {
+			document.addEventListener("click", closePicker);
+		} else {
+			document.removeEventListener("click", closePicker);
+		}
+		onCleanup(() => document.removeEventListener("click", closePicker));
+	});
+
+	const isOwnMessage = () => {
+		const currentUser = api.users.cache.get("@self");
+		return currentUser && currentUser.id === props.message.author_id;
+	};
+
+	const canEditMessage = () => {
+		return props.message.type === "DefaultMarkdown" &&
+			!props.message.is_local &&
+			isOwnMessage();
+	};
+
+	const handleAddReaction = (e: MouseEvent) => {
+		e.stopPropagation();
+		setShowReactionPicker(!showReactionPicker());
+	};
+
+	const [ch, chUpdate] = useChannel()!;
+
+	const handleReply = () => {
+		chUpdate("reply_id", props.message.id);
+	};
+
+	const handleEdit = () => {
+		if (canEditMessage()) {
+			chUpdate("editingMessage", {
+				message_id: props.message.id,
+				selection: "end",
+			});
+		}
+	};
+
+	const handleContextMenu = (e: MouseEvent) => {
+		e.preventDefault();
+
+		const button = e.currentTarget as HTMLButtonElement;
+		const rect = button.getBoundingClientRect();
+
+		queueMicrotask(() => {
+			ctx.setMenu({
+				x: rect.left,
+				y: rect.bottom,
+				type: "message",
+				channel_id: props.message.channel_id,
+				message_id: props.message.id,
+				version_id: props.message.version_id,
+			});
+		});
+	};
+
+	return (
+		<div class="message-toolbar">
+			<button
+				ref={reactionButtonRef}
+				onClick={handleAddReaction}
+				title="Add reaction"
+				aria-label="Add reaction"
+			>
+				<img class="icon" src={icReactionAdd} />
+			</button>
+			<button onClick={handleReply} title="Reply" aria-label="Reply">
+				<img class="icon" src={icReply} />
+			</button>
+			<Show when={canEditMessage()}>
+				<button onClick={handleEdit} title="Edit" aria-label="Edit">
+					<img class="icon" src={icEdit} />
+				</button>
+			</Show>
+			<button
+				onClick={handleContextMenu}
+				title="More options"
+				aria-label="More options"
+			>
+				<img class="icon" src={icMore} />
+			</button>
+		</div>
+	);
+};
 
 export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -198,11 +350,14 @@ export const Forum2 = (props: { channel: Channel }) => {
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
-		}
-	});
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) fetchMore();
+			}
+		},
+	);
 
 	const getThreads = () => {
 		const items = threadsResource()?.()?.items;
@@ -688,6 +843,7 @@ const Comment = (
 					</ul>
 				</Show>
 			</Show>
+			<MessageToolbar message={message()} />
 		</div>
 	);
 };

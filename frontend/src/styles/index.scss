@@ -3512,4 +3512,13 @@ input[type="color"] {
 		flex: 1;
 		overflow-y: auto;
 	}
+
+	.comment {
+		position: relative;
+	}
+
+	.comment:hover > .message-toolbar,
+	.comment.toolbar-visible > .message-toolbar {
+		visibility: visible;
+	}
 }
