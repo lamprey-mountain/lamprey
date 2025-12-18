@@ -45,6 +45,7 @@ import icReply from "./assets/reply.png";
 import icReactionAdd from "./assets/reaction-add.png";
 import icEdit from "./assets/edit.png";
 import icMore from "./assets/more.png";
+import { leading, throttle } from "@solid-primitives/scheduled";
 
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
@@ -566,6 +567,13 @@ export const Forum2View = (props: { channel: Channel }) => {
 	const api = useApi();
 	const [ch, chUpdate] = useChannel()!;
 	const storageKey = () => `editor_draft_${props.channel.id}`;
+	const sendTyping = leading(
+		throttle,
+		() => {
+			api.channels.typing(props.channel.id);
+		},
+		8000,
+	);
 	const comments = api.messages.listReplies(
 		() => props.channel.id,
 		() => undefined,
@@ -636,7 +644,13 @@ export const Forum2View = (props: { channel: Channel }) => {
 
 	const onChange = (state: EditorState) => {
 		chUpdate("editor_state", state);
-		localStorage.setItem(storageKey(), state.doc.textContent);
+		const content = state.doc.textContent;
+		localStorage.setItem(storageKey(), content);
+		if (content.trim().length > 0) {
+			sendTyping();
+		} else {
+			sendTyping.clear();
+		}
 	};
 
 	const send = () => {
