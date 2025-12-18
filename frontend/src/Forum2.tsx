@@ -628,7 +628,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const comments = api.messages.listReplies(
 		() => props.channel.id,
 		() => undefined,
-		() => ({ depth: 8, breadth: 9999 }),
+		() => ({ depth: 8, breadth: 9999, limit: 1024 }),
 	);
 
 	const commentTree = createMemo<CommentNode[]>(() => {
