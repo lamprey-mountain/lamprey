@@ -775,6 +775,8 @@ export const Forum2View = (props: { channel: Channel }) => {
 		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
+	const isEmpty = () => !ch.editor_state?.doc.textContent.trim();
+
 	return (
 		<div class="forum2-thread">
 			<div class="main">
@@ -839,7 +841,11 @@ export const Forum2View = (props: { channel: Channel }) => {
 						</Show>
 						<div style="flex:1"></div>
 						<menu>
-							<button class="big primary" onClick={send} disabled={locked()}>
+							<button
+								class="big primary"
+								onClick={send}
+								disabled={locked() || isEmpty()}
+							>
 								send
 							</button>
 						</menu>
