@@ -1,0 +1,143 @@
+@use "./util.scss" as *;
+
+.forum2 {
+	grid-area: main;
+	display: flex;
+	padding: 0;
+	align-items: stretch;
+	justify-content: stretch;
+	overflow: hidden;
+
+	& > .list {
+		padding: 1rem;
+		background: $bg-150;
+		display: flex;
+		flex-direction: column;
+		overflow-y: auto;
+	}
+
+	& > .thread {
+		display: flex;
+		flex: 1;
+
+		& > .aside {
+			width: 256px;
+			background: $bg-150;
+			padding: 8px;
+			overflow-y: auto;
+		}
+
+		& > .main {
+			padding: 1rem;
+			flex: 1;
+			overflow-y: auto;
+		}
+	}
+
+	.comments {
+		padding: 8px;
+
+		.comment {
+			position: relative;
+			border-left: solid $sep-500 1px;
+			margin-left: calc(var(--depth) * 24px);
+			margin-bottom: -1px;
+
+			& > .inner:hover > .message-toolbar,
+			&.toolbar-visible > .message-toolbar {
+				visibility: visible;
+			}
+		}
+
+		.toplevel {
+			margin-top: 16px;
+		}
+
+		.comment > .inner {
+			/* // &.fromop { */
+			/* //   // TODO: find a good color */
+			/* //   // making the border thicker doesn't look right */
+			/* //   border-left: solid var(--borders) 1px; */
+			/* // } */
+
+			/* &.replied { */
+			/* border-left: solid var(--color-accent) 1px; */
+			/* } */
+
+			& > header {
+				display: flex;
+				gap: 8px;
+				background: $bg-150;
+				white-space: nowrap;
+				align-items: center;
+
+				& > .collapse {
+					min-width: 24px;
+					border: solid $sep-500 1px;
+					border-left: none;
+					display: flex;
+					justify-content: center;
+					background: $bg-200;
+					font-family: var(--font-mono);
+
+					&:hover {
+						background: $bg-300;
+						text-decoration: none;
+					}
+				}
+
+				& > .childCount {
+					font-size: 1rem;
+				}
+
+				/* & > .author > .green { */
+				/* color: #77c57d; */
+				/* } */
+
+				& > time {
+					color: var(--fg-dimmed);
+				}
+
+				& > .summary {
+					color: $fg-400;
+					font-style: italic;
+					overflow: hidden;
+					text-overflow: ellipsis;
+
+					&::before {
+						content: "-";
+						margin-right: 8px;
+					}
+				}
+			}
+
+			&.collapsed > header {
+				background: none;
+			}
+
+			& > .content {
+				padding: 8px;
+			}
+
+			& > menu {
+				display: flex;
+				gap: 8px;
+				padding: 0 8px;
+				padding-bottom: 12px;
+
+				& > button {
+					background: none;
+					border: none;
+					padding: 0;
+					font-size: 0.9rem;
+					color: $fg-400;
+				}
+			}
+
+			& > .children {
+				list-style: none;
+				margin-top: 8px;
+			}
+		}
+	}
+}

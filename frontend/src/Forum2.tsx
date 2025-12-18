@@ -443,9 +443,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 		return ctx.channel_contexts.get(channelId)!;
 	};
 
-	// TODO: split out room-home thread styling
 	return (
-		<div class="room-home forum2-main">
+		<div class="forum2">
 			<div class="list">
 				<div style="display:flex">
 					<div style="flex:1">
@@ -545,7 +544,10 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<For each={getThreads()}>
 						{(thread) => (
 							<li>
-								<article class="thread menu-thread" data-thread-id={thread.id}>
+								<article
+									class="thread menu-thread thread-card"
+									data-thread-id={thread.id}
+								>
 									<header onClick={() => setThreadId(thread.id)}>
 										<div class="top">
 											<div class="icon"></div>
@@ -589,7 +591,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 					const threadCtx = getOrCreateChannelContext(tid());
 					return (
 						<ChannelContext.Provider value={threadCtx}>
-							<Forum2View channel={threadChannel} />
+							<Forum2Thread channel={threadChannel} />
 						</ChannelContext.Provider>
 					);
 				}}
@@ -610,7 +612,8 @@ function EditorChannelMention(props: { id: string }) {
 	return <span class="mention-channel">#{channel()?.name ?? props.id}</span>;
 }
 
-export const Forum2View = (props: { channel: Channel }) => {
+export const Forum2Thread = (props: { channel: Channel }) => {
+	const api = useApi();
 	const [ch, chUpdate] = useChannel()!;
 	const reply_id = () => ch.reply_id;
 	const reply = () => api.messages.cache.get(reply_id()!);
@@ -824,7 +827,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 	const isEmpty = () => !ch.editor_state?.doc.textContent.trim();
 
 	return (
-		<div class="forum2-thread">
+		<div class="thread">
 			<div class="main">
 				<div>
 					<h2>{props.channel.name}</h2>
@@ -940,8 +943,8 @@ export const Forum2Comments = (
 	},
 ) => {
 	return (
-		<div class="forum">
-			<div>forum</div>
+		<div class="comments">
+			<div>comments</div>
 			<ul>
 				<For each={props.commentTree}>
 					{(node) => (
@@ -950,6 +953,7 @@ export const Forum2Comments = (
 								collapsed={props.collapsed}
 								channel={props.channel}
 								node={node}
+								depth={0}
 							/>
 						</li>
 					)}
@@ -966,6 +970,7 @@ const Comment = (
 		collapsed: ReactiveSet<string>;
 		channel: Channel;
 		node: CommentNode;
+		depth: number;
 	},
 ) => {
 	const message = () => props.node.message;
@@ -1034,68 +1039,71 @@ const Comment = (
 			class="comment menu-message"
 			data-message-id={message().id}
 			classList={{ collapsed: collapsed() }}
+			style={{ "--depth": props.depth }}
 		>
-			<header>
-				<button
-					class="collapse"
-					onClick={() =>
-						collapsed()
-							? props.collapsed.delete(message().id)
-							: props.collapsed.add(message().id)}
-				>
-					{collapsed() ? "+" : "-"}
-				</button>
-				<Show when={collapsed()}>
-					<span class="childCount dim">[{countAllChildren(props.node)}]</span>
-				</Show>
-				<Show when={props.channel}>
-					<Author message={props.node.message} thread={props.channel} />
-				</Show>
-				<Time date={getTimestampFromUUID(message().id)} />
-				<Show when={collapsed()}>
-					<div class="summary">
-						{message().content
-							? api.stripMarkdownAndResolveMentions(
-								message().content!,
-								message().channel_id,
-							)
-							: "(no content)"}
+			<div class="inner">
+				<header>
+					<button
+						class="collapse"
+						onClick={() =>
+							collapsed()
+								? props.collapsed.delete(message().id)
+								: props.collapsed.add(message().id)}
+					>
+						{collapsed() ? "+" : "-"}
+					</button>
+					<Show when={collapsed()}>
+						<span class="childCount dim">[{countAllChildren(props.node)}]</span>
+					</Show>
+					<Show when={props.channel}>
+						<Author message={props.node.message} thread={props.channel} />
+					</Show>
+					<Time date={getTimestampFromUUID(message().id)} />
+					<Show when={collapsed()}>
+						<div class="summary">
+							{message().content
+								? api.stripMarkdownAndResolveMentions(
+									message().content!,
+									message().channel_id,
+								)
+								: "(no content)"}
+						</div>
+					</Show>
+				</header>
+				<Show when={!collapsed()}>
+					<div class="content markdown" ref={contentEl!} innerHTML={getHtml()}>
 					</div>
+					<div style="padding: 0 8px">
+						<Show when={message().attachments?.length}>
+							<ul class="attachments">
+								<For each={message().attachments}>
+									{(att) => <AttachmentView media={att} />}
+								</For>
+							</ul>
+						</Show>
+						<Show when={message().reactions?.length}>
+							<Reactions message={message()} />
+						</Show>
+					</div>
+					<MessageToolbar message={message()} />
 				</Show>
-			</header>
-			<Show when={!collapsed()}>
-				<div class="content markdown" ref={contentEl!} innerHTML={getHtml()}>
-				</div>
-				{/* FIXME: keep some form of margin-bottom when comment is collapsed */}
-				<div style="padding: 0 8px;margin-bottom:8px">
-					<Show when={message().attachments?.length}>
-						<ul class="attachments">
-							<For each={message().attachments}>
-								{(att) => <AttachmentView media={att} />}
-							</For>
-						</ul>
-					</Show>
-					<Show when={message().reactions?.length}>
-						<Reactions message={message()} />
-					</Show>
-				</div>
-				<Show when={children().length > 0}>
-					<ul class="children">
-						<For each={children()}>
-							{(child) => (
-								<li>
-									<Comment
-										collapsed={props.collapsed}
-										channel={props.channel}
-										node={child}
-									/>
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
+			</div>
+			<Show when={!collapsed() && children().length > 0}>
+				<ul class="children">
+					<For each={children()}>
+						{(child) => (
+							<li>
+								<Comment
+									collapsed={props.collapsed}
+									channel={props.channel}
+									node={child}
+									depth={props.depth + 1}
+								/>
+							</li>
+						)}
+					</For>
+				</ul>
 			</Show>
-			<MessageToolbar message={message()} />
 		</div>
 	);
 };
