@@ -32,6 +32,8 @@ import {
 	TextView,
 	VideoView,
 } from "./media/mod";
+import { ChannelContext, createInitialChannelState } from "./channelctx";
+import { createStore } from "solid-js/store";
 
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
@@ -228,6 +230,14 @@ export const Forum2 = (props: { channel: Channel }) => {
 
 	const [threadId, setThreadId] = createSignal<null | string>(null);
 
+	const getOrCreateChannelContext = (channelId: string) => {
+		if (!ctx.channel_contexts.has(channelId)) {
+			const store = createStore(createInitialChannelState());
+			ctx.channel_contexts.set(channelId, store);
+		}
+		return ctx.channel_contexts.get(channelId)!;
+	};
+
 	// TODO: split out room-home thread styling
 	return (
 		<div class="room-home forum2-main">
@@ -368,7 +378,16 @@ export const Forum2 = (props: { channel: Channel }) => {
 				<div ref={setBottom}></div>
 			</div>
 			<Show when={threadId()}>
-				{(tid) => <Forum2View channel={api.channels.cache.get(tid())!} />}
+				{(tid) => {
+					const threadChannel = api.channels.cache.get(tid());
+					if (!threadChannel) return;
+					const threadCtx = getOrCreateChannelContext(tid());
+					return (
+						<ChannelContext.Provider value={threadCtx}>
+							<Forum2View channel={threadChannel} />
+						</ChannelContext.Provider>
+					);
+				}}
 			</Show>
 		</div>
 	);
