@@ -228,9 +228,10 @@ export const Forum2 = (props: { channel: Channel }) => {
 
 	const [threadId, setThreadId] = createSignal<null | string>(null);
 
+	// TODO: split out room-home thread styling
 	return (
-		<div class="room-home" style="display:flex">
-			<div style="display:flex;flex-direction:column;border:solid red 1px">
+		<div class="room-home forum2-main">
+			<div class="list">
 				<div style="display:flex">
 					<div style="flex:1">
 						<h2>{props.channel.name}</h2>
@@ -366,11 +367,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 				</ul>
 				<div ref={setBottom}></div>
 			</div>
-			<div style="border:solid blue 1px">
-				<Show when={threadId()}>
-					{(tid) => <Forum2View channel={api.channels.cache.get(tid())!} />}
-				</Show>
-			</div>
+			<Show when={threadId()}>
+				{(tid) => <Forum2View channel={api.channels.cache.get(tid())!} />}
+			</Show>
 		</div>
 	);
 };
@@ -424,8 +423,8 @@ export const Forum2View = (props: { channel: Channel }) => {
 	};
 
 	return (
-		<div style="display:flex;">
-			<div style="flex:1">
+		<div class="forum2-thread">
+			<div class="main">
 				<div>
 					<h2>{props.channel.name}</h2>
 				</div>
@@ -473,8 +472,8 @@ export const Forum2View = (props: { channel: Channel }) => {
 					</menu>
 				</div>
 			</div>
-			<div style="width:144px">
-				<h3 class="dim">topic info</h3>
+			<div class="aside">
+				<h3 class="dim">thread info</h3>
 				<ul>
 					<li>tags: [foo] [bar] [baz]</li>
 					<li>
@@ -486,7 +485,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 					</li>
 				</ul>
 				<br />
-				<h3 class="dim">topic log</h3>
+				<h3 class="dim">thread log</h3>
 				<ul>
 					<li>[user] renamed to [name]</li>
 					<li>[user] added tag to [name]</li>
