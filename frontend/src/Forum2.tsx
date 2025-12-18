@@ -1,3 +1,5 @@
+// TODO: refactor out duplicated code from here and Message.tsx
+
 import { Channel, getTimestampFromUUID, Message } from "sdk";
 import {
 	createEffect,
@@ -21,7 +23,15 @@ import { Dropdown } from "./Dropdown";
 import { Author } from "./Message";
 import { render } from "solid-js/web";
 import twemoji from "twemoji";
-import { getEmojiUrl } from "./media/util";
+import { getEmojiUrl, type MediaProps } from "./media/util";
+import { Reactions } from "./Reactions";
+import {
+	AudioView,
+	FileView,
+	ImageView,
+	TextView,
+	VideoView,
+} from "./media/mod";
 
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
@@ -90,6 +100,48 @@ function Emoji(props: { id: string; name: string; animated: boolean }) {
 			title={`:${props.name}:`}
 		/>
 	);
+}
+
+function AttachmentView(props: MediaProps) {
+	const b = () => props.media.source.mime.split("/")[0];
+	const ty = () => props.media.source.mime.split(";")[0];
+	if (b() === "image") {
+		return (
+			<li class="raw">
+				<ImageView
+					media={props.media}
+					thumb_height={props.size}
+					thumb_width={props.size}
+				/>
+			</li>
+		);
+	} else if (b() === "video") {
+		return (
+			<li class="raw">
+				<VideoView media={props.media} />
+			</li>
+		);
+	} else if (b() === "audio") {
+		return (
+			<li class="raw">
+				<AudioView media={props.media} />
+			</li>
+		);
+	} else if (
+		b() === "text" || /^application\/json\b/.test(props.media.source.mime)
+	) {
+		return (
+			<li class="raw">
+				<TextView media={props.media} />
+			</li>
+		);
+	} else {
+		return (
+			<li>
+				<FileView media={props.media} />
+			</li>
+		);
+	}
 }
 
 function hydrateMentions(el: HTMLElement, thread: Channel) {
@@ -551,7 +603,11 @@ const Comment = (
 	});
 
 	return (
-		<div class="comment" classList={{ collapsed: collapsed() }}>
+		<div
+			class="comment menu-message"
+			data-message-id={message().id}
+			classList={{ collapsed: collapsed() }}
+		>
 			<header>
 				<button
 					class="collapse"
@@ -583,6 +639,16 @@ const Comment = (
 			<Show when={!collapsed()}>
 				<div class="content markdown" ref={contentEl!} innerHTML={getHtml()}>
 				</div>
+				<Show when={message().attachments?.length}>
+					<ul class="attachments">
+						<For each={message().attachments}>
+							{(att) => <AttachmentView media={att} />}
+						</For>
+					</ul>
+				</Show>
+				<Show when={message().reactions?.length}>
+					<Reactions message={message()} />
+				</Show>
 				<menu>
 					<button onClick={() => alert("todo")}>
 						reply
