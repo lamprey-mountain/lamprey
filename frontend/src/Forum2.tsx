@@ -39,6 +39,7 @@ import {
 	useChannel,
 } from "./channelctx";
 import { createStore } from "solid-js/store";
+import { handleSubmit } from "./dispatch/submit";
 import { createEditor } from "./Editor";
 import type { EditorState } from "prosemirror-state";
 import icReply from "./assets/reply.png";
@@ -565,6 +566,7 @@ function EditorChannelMention(props: { id: string }) {
 
 export const Forum2View = (props: { channel: Channel }) => {
 	const api = useApi();
+	const ctx = useCtx();
 	const [ch, chUpdate] = useChannel()!;
 	const storageKey = () => `editor_draft_${props.channel.id}`;
 	const sendTyping = leading(
@@ -648,13 +650,16 @@ export const Forum2View = (props: { channel: Channel }) => {
 			slowmodeShake();
 			return false;
 		}
-		if (!text.trim()) {
-			return false;
-		}
-		api.messages.send(props.channel.id, {
-			content: text,
-			attachments: [],
-		});
+		handleSubmit(
+			ctx,
+			[ch, chUpdate],
+			props.channel.id,
+			text,
+			null as any,
+			api,
+			undefined,
+			bypassSlowmode(),
+		);
 		localStorage.removeItem(storageKey());
 		return true;
 	};
