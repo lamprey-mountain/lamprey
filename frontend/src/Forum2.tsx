@@ -273,7 +273,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 				</div>
 				<div style="display:flex">
 					<div style="flex:1">
-						n comments
+						{comments()?.items.length ?? 0} comments
 						<button onClick={collapseAll}>collapse replies</button>
 						<button onClick={expandAll}>expand all</button>
 					</div>
@@ -319,7 +319,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 				<h3 class="dim">topic info</h3>
 				<ul>
 					<li>tags: [foo] [bar] [baz]</li>
-					<li>comments: [n] comments ([m] threads/top level comments)</li>
+					<li>comments: [{comments()?.items.length ?? 0}] comments ([{commentTree().length}] threads/top level comments)</li>
 					<li>
 						last comment: <a href="#">some time ago</a>
 					</li>
