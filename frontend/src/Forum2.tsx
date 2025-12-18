@@ -822,11 +822,6 @@ const Comment = (
 				<Show when={message().reactions?.length}>
 					<Reactions message={message()} />
 				</Show>
-				<menu>
-					<button onClick={() => alert("todo")}>
-						reply
-					</button>
-				</menu>
 				<Show when={children().length > 0}>
 					<ul class="children">
 						<For each={children()}>
