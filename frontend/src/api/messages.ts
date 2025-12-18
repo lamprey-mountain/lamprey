@@ -572,25 +572,29 @@ export class Messages {
 				query: query?.(),
 			}),
 			async ({ channel_id, message_id, query }) => {
-				if (message_id) {
-					const { data, error } = await this.api.client.http.GET(
+				const { data, error } = await (message_id
+					? this.api.client.http.GET(
 						"/api/v1/channel/{channel_id}/reply/{message_id}",
 						{
 							params: { path: { channel_id, message_id }, query },
 						},
-					);
-					if (error) throw error;
-					return data;
-				} else {
-					const { data, error } = await this.api.client.http.GET(
+					)
+					: this.api.client.http.GET(
 						"/api/v1/channel/{channel_id}/reply",
 						{
 							params: { path: { channel_id }, query },
 						},
-					);
-					if (error) throw error;
-					return data;
-				}
+					));
+
+				if (error) throw error;
+
+				batch(() => {
+					for (const item of data.items) {
+						this.cache.set(item.id, item);
+					}
+				});
+
+				return data;
 			},
 		);
 		return resource;
