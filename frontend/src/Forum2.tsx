@@ -620,7 +620,33 @@ export const Forum2View = (props: { channel: Channel }) => {
 		}
 	};
 
+	let slowmodeRef!: HTMLDivElement;
+
+	const slowmodeShake = () => {
+		const SCALEX = 1.5;
+		const SCALEY = 0.4;
+		const FRAMES = 10;
+		const rnd = (sx: number, sy: number) =>
+			`${Math.random() * sx - sx / 2}px ${Math.random() * sy - sy / 2}px`;
+		const translations = new Array(FRAMES)
+			.fill(0)
+			.map((_, i) => rnd(i * SCALEX, i * SCALEY))
+			.reverse();
+		const reduceMotion = false; // TODO
+		slowmodeRef.animate(
+			{
+				translate: reduceMotion ? [] : translations,
+				color: ["red", ""],
+			},
+			{ duration: 200, easing: "linear" },
+		);
+	};
+
 	const onSubmit = (text: string) => {
+		if (slowmodeActive()) {
+			slowmodeShake();
+			return false;
+		}
 		if (!text.trim()) {
 			return false;
 		}
@@ -669,6 +695,73 @@ export const Forum2View = (props: { channel: Channel }) => {
 		editor.setState(state);
 		editor.focus();
 	});
+
+	createEffect(() => {
+		const expireAt = props.channel.slowmode_message_expire_at;
+		if (expireAt) {
+			const currentExpireAt = ch.slowmode_expire_at;
+			const newExpireAt = new Date(expireAt);
+			if (
+				!currentExpireAt ||
+				currentExpireAt.getTime() !== newExpireAt.getTime()
+			) {
+				chUpdate("slowmode_expire_at", newExpireAt);
+			}
+		}
+	});
+
+	const perms = usePermissions(
+		() => api.users.cache.get("@self")?.id ?? "",
+		() => props.channel.room_id ?? undefined,
+		() => props.channel.id,
+	);
+
+	const bypassSlowmode = () =>
+		perms.has("ChannelManage") ||
+		perms.has("ThreadManage") ||
+		perms.has("MemberTimeout");
+
+	const [remainingTime, setRemainingTime] = createSignal(0);
+	const slowmodeRemaining = () => remainingTime();
+	const slowmodeActive = () => slowmodeRemaining() > 0;
+
+	createEffect(() => {
+		const expireAt = ch.slowmode_expire_at;
+		if (expireAt) {
+			const updateTimer = () => {
+				const now = new Date().getTime();
+				const remaining = expireAt.getTime() - now;
+				setRemainingTime(Math.max(0, remaining));
+			};
+
+			updateTimer();
+			const interval = setInterval(updateTimer, 1000);
+			onCleanup(() => clearInterval(interval));
+		} else {
+			setRemainingTime(0);
+		}
+	});
+
+	const slowmodeFormatted = () => {
+		const remainingMs = slowmodeRemaining();
+		if (remainingMs <= 0 || bypassSlowmode()) {
+			const channelSlowmode = props.channel.slowmode_message;
+			if (channelSlowmode) {
+				const mins = Math.floor(channelSlowmode / 60);
+				const secs = channelSlowmode % 60;
+				const time = mins === 0
+					? `slowmode set to ${secs}s`
+					: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
+				return `slowmode set to ${time}${
+					bypassSlowmode() ? " (bypassed)" : ""
+				}`;
+			} else return "no slowmode";
+		}
+		const seconds = Math.ceil(remainingMs / 1000);
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return `${mins}:${secs.toString().padStart(2, "0")}`;
+	};
 
 	return (
 		<div class="forum2-thread">
@@ -722,9 +815,19 @@ export const Forum2View = (props: { channel: Channel }) => {
 						channelId={props.channel.id}
 						submitOnEnter={false}
 					/>
-					<menu style="align-self:end">
-						<button class="big primary" onClick={send}>send</button>
-					</menu>
+					<footer style="display: flex; align-items: center;">
+						<Show when={props.channel.slowmode_message || slowmodeActive()}>
+							<div class="slowmode" ref={slowmodeRef}>
+								{slowmodeFormatted()}
+							</div>
+						</Show>
+						<div style="flex:1"></div>
+						<menu>
+							<button class="big primary" onClick={send}>
+								send
+							</button>
+						</menu>
+					</footer>
 				</div>
 			</div>
 			<div class="aside">
