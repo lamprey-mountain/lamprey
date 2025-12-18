@@ -46,6 +46,9 @@ import icReply from "./assets/reply.png";
 import icReactionAdd from "./assets/reaction-add.png";
 import icEdit from "./assets/edit.png";
 import icMore from "./assets/more.png";
+import { getMessageOverrideName } from "./util";
+import cancelIc from "./assets/x.png";
+import { createTooltip } from "./Tooltip";
 import { leading, throttle } from "@solid-primitives/scheduled";
 
 function UserMention(props: { id: string; channel: Channel }) {
@@ -329,6 +332,49 @@ const MessageToolbar = (props: { message: Message }) => {
 	);
 };
 
+const InputReply = (props: { thread: Channel; reply: Message }) => {
+	const api = useApi();
+	const tip = createTooltip({ tip: () => "remove reply" });
+	const [_ch, chUpdate] = useChannel()!;
+	const getName = (user_id: string) => {
+		const user = api.users.fetch(() => user_id);
+		const room_id = props.thread.room_id;
+		if (!room_id) {
+			return user()?.name;
+		}
+		const member = api.room_members.fetch(
+			() => room_id,
+			() => user_id,
+		);
+
+		const m = member();
+		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
+	};
+
+	const getNameNullable = (user_id?: string) => {
+		if (user_id) return getName(user_id);
+	};
+
+	return (
+		<div class="reply">
+			<button
+				class="cancel"
+				onClick={() => chUpdate("reply_id", undefined)}
+				ref={tip.content}
+			>
+				<img class="icon" src={cancelIc} />
+			</button>
+			<div class="info">
+				replying to{" "}
+				<b>
+					{getMessageOverrideName(props.reply) ??
+						getNameNullable(props.reply?.author_id)}
+				</b>
+			</div>
+		</div>
+	);
+};
+
 export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
@@ -565,9 +611,9 @@ function EditorChannelMention(props: { id: string }) {
 }
 
 export const Forum2View = (props: { channel: Channel }) => {
-	const api = useApi();
-	const ctx = useCtx();
 	const [ch, chUpdate] = useChannel()!;
+	const reply_id = () => ch.reply_id;
+	const reply = () => api.messages.cache.get(reply_id()!);
 	const storageKey = () => `editor_draft_${props.channel.id}`;
 	const sendTyping = leading(
 		throttle,
@@ -821,8 +867,10 @@ export const Forum2View = (props: { channel: Channel }) => {
 				<div
 					class="comment-input"
 					classList={{ locked: locked() }}
-					style="display:flex;flex-direction:column;gap:2px"
 				>
+					<Show when={reply()}>
+						<InputReply thread={props.channel} reply={reply()!} />
+					</Show>
 					<editor.View
 						onSubmit={onSubmit}
 						onChange={onChange}
