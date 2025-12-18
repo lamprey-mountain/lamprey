@@ -1,55 +1,30 @@
 import { Channel, getTimestampFromUUID, Message } from "sdk";
-import { createMemo, For, Show } from "solid-js";
-import { useApi } from "./api";
+import { For, Show } from "solid-js";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
 import { Author } from "./Message";
 
-interface CommentNode {
+export interface CommentNode {
 	message: Message;
 	children: CommentNode[];
 }
 
-export const Forum2Comments = (props: { channel: Channel }) => {
-	const api = useApi();
-	const comments = api.messages.listReplies(
-		() => props.channel.id,
-		() => undefined,
-		() => ({ depth: 8, breadth: 9999 }),
-	);
-
-	const commentTree = createMemo(() => {
-		const items = comments()?.items;
-		if (!items) return [];
-
-		const commentMap = new Map<string, CommentNode>();
-		for (const message of items) {
-			commentMap.set(message.id, { message, children: [] });
-		}
-
-		const rootComments: CommentNode[] = [];
-		for (const node of commentMap.values()) {
-			if (node.message.reply_id && commentMap.has(node.message.reply_id)) {
-				commentMap.get(node.message.reply_id)!.children.push(node);
-			} else {
-				rootComments.push(node);
-			}
-		}
-
-		return rootComments;
-	});
-
-	const collapsed = new ReactiveSet<string>();
-
+export const Forum2Comments = (
+	props: {
+		channel: Channel;
+		commentTree: CommentNode[];
+		collapsed: ReactiveSet<string>;
+	},
+) => {
 	return (
 		<div class="forum">
 			<div>forum</div>
 			<ul>
-				<For each={commentTree()}>
+				<For each={props.commentTree}>
 					{(node) => (
 						<li class="toplevel">
 							<Comment
-								collapsed={collapsed}
+								collapsed={props.collapsed}
 								channel={props.channel}
 								node={node}
 							/>

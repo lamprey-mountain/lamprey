@@ -10,7 +10,7 @@ import { createIntersectionObserver } from "@solid-primitives/intersection-obser
 import { usePermissions } from "./hooks/usePermissions";
 import { md } from "./markdown";
 import { flags } from "./flags";
-import { Forum2Comments } from "./Forum2Comments";
+import { type CommentNode, Forum2Comments } from "./Forum2Comments";
 import { Dropdown } from "./Dropdown";
 
 export const Forum2 = (props: { channel: Channel }) => {
@@ -71,7 +71,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const [threadId, setThreadId] = createSignal<null | string>(null);
 
 	return (
-		<div class="room-home">
+		<div class="room-home" style="display:flex">
 			<div style="display:flex;flex-direction:column;border:solid red 1px">
 				<div style="display:flex">
 					<div style="flex:1">
@@ -218,6 +218,53 @@ export const Forum2 = (props: { channel: Channel }) => {
 };
 
 export const Forum2View = (props: { channel: Channel }) => {
+	const api = useApi();
+	const comments = api.messages.listReplies(
+		() => props.channel.id,
+		() => undefined,
+		() => ({ depth: 8, breadth: 9999 }),
+	);
+
+	const commentTree = createMemo<CommentNode[]>(() => {
+		const items = comments()?.items;
+		if (!items) return [];
+
+		const commentMap = new Map<string, CommentNode>();
+		for (const message of items) {
+			commentMap.set(message.id, { message, children: [] });
+		}
+
+		const rootComments: CommentNode[] = [];
+		for (const node of commentMap.values()) {
+			if (node.message.reply_id && commentMap.has(node.message.reply_id)) {
+				commentMap.get(node.message.reply_id)!.children.push(node);
+			} else {
+				rootComments.push(node);
+			}
+		}
+
+		return rootComments;
+	});
+
+	const collapsed = new ReactiveSet<string>();
+
+	const expandAll = () => {
+		collapsed.clear();
+	};
+
+	const collapseAll = () => {
+		function collapseChildren(nodes: CommentNode[]) {
+			for (const node of nodes) {
+				collapsed.add(node.message.id);
+				collapseChildren(node.children);
+			}
+		}
+
+		for (const topLevelNode of commentTree()) {
+			collapseChildren(topLevelNode.children);
+		}
+	};
+
 	return (
 		<div style="display:flex;">
 			<div style="flex:1">
@@ -227,8 +274,8 @@ export const Forum2View = (props: { channel: Channel }) => {
 				<div style="display:flex">
 					<div style="flex:1">
 						n comments
-						<button>collapse replies</button>
-						<button>expand all</button>
+						<button onClick={collapseAll}>collapse replies</button>
+						<button onClick={expandAll}>expand all</button>
 					</div>
 					<div>
 						<div>
@@ -254,7 +301,11 @@ export const Forum2View = (props: { channel: Channel }) => {
 						</div>
 					</div>
 				</div>
-				<Forum2Comments channel={props.channel} />
+				<Forum2Comments
+					channel={props.channel}
+					commentTree={commentTree()}
+					collapsed={collapsed}
+				/>
 				<div style="display:flex;flex-direction:column;gap:2px">
 					{/* TODO: support markdown */}
 					<textarea style="padding: 2px 4px" placeholder="add a comment...">
