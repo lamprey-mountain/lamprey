@@ -565,6 +565,7 @@ function EditorChannelMention(props: { id: string }) {
 export const Forum2View = (props: { channel: Channel }) => {
 	const api = useApi();
 	const [ch, chUpdate] = useChannel()!;
+	const storageKey = () => `editor_draft_${props.channel.id}`;
 	const comments = api.messages.listReplies(
 		() => props.channel.id,
 		() => undefined,
@@ -619,10 +620,12 @@ export const Forum2View = (props: { channel: Channel }) => {
 			content: text,
 			attachments: [],
 		});
+		localStorage.removeItem(storageKey());
 		return true;
 	};
 
 	const editor = createEditor({
+		initialContent: localStorage.getItem(storageKey()) ?? "",
 		mentionRenderer: (node, userId) => {
 			render(() => <EditorUserMention id={userId} />, node);
 		},
@@ -633,6 +636,7 @@ export const Forum2View = (props: { channel: Channel }) => {
 
 	const onChange = (state: EditorState) => {
 		chUpdate("editor_state", state);
+		localStorage.setItem(storageKey(), state.doc.textContent);
 	};
 
 	const send = () => {
