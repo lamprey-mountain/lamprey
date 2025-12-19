@@ -526,7 +526,10 @@ impl Channel {
 
 impl ChannelType {
     pub fn is_thread(&self) -> bool {
-        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2)
+        matches!(
+            self,
+            ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2
+        )
     }
 
     pub fn has_members(&self) -> bool {
@@ -583,7 +586,10 @@ impl ChannelType {
 
     /// for a thread to be taggable, it must be in a channel with has_tags
     pub fn is_taggable(&self) -> bool {
-        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2)
+        matches!(
+            self,
+            ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2
+        )
     }
 
     pub fn has_tags(&self) -> bool {
