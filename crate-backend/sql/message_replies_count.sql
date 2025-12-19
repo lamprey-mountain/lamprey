@@ -18,5 +18,18 @@ with recursive message_tree as (
         join message_tree mt on m.reply_id = mt.id
     where
         mt.depth < $3
+),
+ranked_messages as (
+    select
+        id,
+        depth,
+        row_number() over (partition by reply_id order by id) as rn
+    from
+        message_tree
+),
+filtered_messages as (
+    select id
+    from ranked_messages
+    where (depth = 1 or rn <= $4 or $4 is null)
 )
-select count(*) from message_tree where id in (select id from message where channel_id = $1 and deleted_at is null and is_latest)
+select count(*) from filtered_messages where id in (select id from message where channel_id = $1 and deleted_at is null and is_latest)

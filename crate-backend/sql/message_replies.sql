@@ -22,10 +22,15 @@ with recursive message_tree as (
 ranked_messages as (
     select
         id,
-        reply_id,
+        depth,
         row_number() over (partition by reply_id order by id) as rn
     from
         message_tree
+),
+filtered_messages as (
+    select id
+    from ranked_messages
+    where (depth = 1 or rn <= $4 or $4 is null)
 )
 select
     msg.type as "message_type: DbMessageType",
@@ -47,9 +52,9 @@ select
     coalesce(att_json.attachments, '{}') as "attachments!",
     msg.embeds as "embeds"
 from message as msg
-join ranked_messages rm on msg.id = rm.id
+join filtered_messages fm on msg.id = fm.id
 left join att_json on att_json.version_id = msg.version_id
 left join hydrated_mentions hm on hm.message_id = msg.id
-where is_latest and channel_id = $1 and msg.deleted_at is null and (rm.rn <= $4 or $4 is null)
+where is_latest and channel_id = $1 and msg.deleted_at is null
   and msg.id > $5 AND msg.id < $6
 order by (CASE WHEN $7 = 'f' THEN msg.id END), msg.id DESC LIMIT $8

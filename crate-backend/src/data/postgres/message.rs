@@ -565,7 +565,8 @@ impl DataMessage for Postgres {
                 "sql/message_replies_count.sql",
                 *channel_id,
                 rmid,
-                depth as i32
+                depth as i32,
+                breadth.map(|b| b as i64)
             ),
             |i: &Message| i.id.to_string()
         )
