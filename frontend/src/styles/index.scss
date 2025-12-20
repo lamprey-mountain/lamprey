@@ -3404,5 +3404,9 @@ input[type="color"] {
 
 	& > button {
 		border: none;
+
+		&.active {
+			background: #fff2;
+		}
 	}
 }
