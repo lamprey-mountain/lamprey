@@ -107,6 +107,7 @@ const CalendarMonth = (props: {
 	events: any;
 	date: Date;
 }) => {
+	const dayStartsAt = () => 0;
 	const year = () => props.date.getFullYear();
 	const month = () => props.date.getMonth(); // 0-indexed
 
@@ -115,8 +116,7 @@ const CalendarMonth = (props: {
 		const firstDay = new Date(year(), month(), 1);
 
 		const daysInMonth = new Date(year(), month() + 1, 0).getDate();
-		// day of week, 0=Mon, 6=Sun
-		const firstDayWeekday = (firstDay.getDay() + 6) % 7;
+		const firstDayWeekday = (firstDay.getDay() - dayStartsAt() + 7) % 7;
 
 		const daysInPrevMonth = new Date(year(), month(), 0).getDate();
 
@@ -156,11 +156,15 @@ const CalendarMonth = (props: {
 		);
 	};
 
+	const displayDaysOfWeek = createMemo(() => {
+		const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+		const start = dayStartsAt();
+		return [...daysOfWeek.slice(start), ...daysOfWeek.slice(0, start)];
+	});
+
 	return (
 		<div class="month-view">
-			{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((i) => (
-				<div class="dayofweek">{i}</div>
-			))}
+			{displayDaysOfWeek().map((i) => <div class="dayofweek">{i}</div>)}
 			{calendarDays().map((d) => {
 				return (
 					<div
