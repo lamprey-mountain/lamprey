@@ -1,8 +1,69 @@
 @use "./util.scss" as *;
 
 .calendar {
-	display: grid;
-	grid-template-columns: repeat(7, 1fr);
-	grid-template-rows: min-content repeat(4, 200px);
-	height: 100%;
+	header {
+		display: flex;
+		align-items: center;
+		padding: 8px;
+
+		menu {
+			display: flex;
+		}
+	}
+
+	.month-view {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		grid-template-rows: min-content repeat(4, 200px);
+		height: 100%;
+
+		.dayofweek {
+			background: $bg-100;
+			padding: 2px 8px;
+			color: $fg-500;
+			font-weight: bold;
+			font-size: 0.9rem;
+		}
+
+		.day {
+			/* background: #eee; */
+			/* height: 100px; */
+			padding: 4px;
+			border-top: solid $sep-300 1px;
+			border-left: solid $sep-300 1px;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.daynumber {
+			color: $fg-500;
+			font-size: 0.9rem;
+			padding: 2px 4px 0;
+		}
+
+		.event {
+			border: solid $link-200 1px;
+			background: oklch(var(--color-link-500) / 0.2);
+			padding: 0 2px;
+			margin-top: 2px;
+			color: $link-500;
+		}
+
+		.day:hover {
+			background: #0002;
+		}
+
+		.day.othermonth {
+			background: #0008;
+		}
+
+		.day.othermonth:hover {
+			background: #0009;
+		}
+
+		.today .daynumber {
+			font-weight: bold;
+			color: $link-500;
+		}
+	}
 }

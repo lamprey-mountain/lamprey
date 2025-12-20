@@ -12,6 +12,7 @@
 @use "./user-settings.scss";
 @use "./nav.scss";
 @use "./forum.scss";
+@use "./calendar.scss";
 
 :root {
 	font: 16px/1.3 var(--font-default);
@@ -3393,4 +3394,15 @@ input[type="color"] {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.filters {
+	display: flex;
+	border: solid $sep-500 1px;
+	border-radius: 4px;
+	overflow: hidden;
+
+	& > button {
+		border: none;
+	}
 }

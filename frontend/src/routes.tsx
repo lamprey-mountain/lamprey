@@ -27,6 +27,7 @@ import { createInitialChannelState } from "./channelctx.tsx";
 import { createStore } from "solid-js/store";
 import { RoomT } from "./types.ts";
 import { Friends } from "./Friends.tsx";
+import { Calendar } from "./Calendar.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -298,6 +299,9 @@ export const RouteChannel = (p: RouteSectionProps) => {
 						</Show>
 						<Show when={channel()!.type === "Forum2"}>
 							<Forum2 channel={channel()!} />
+						</Show>
+						<Show when={channel()!.type === "Calendar"}>
+							<Calendar channel={channel()!} />
 						</Show>
 						<Show when={channel()!.type === "Category"}>
 							<Category channel={channel()!} />
