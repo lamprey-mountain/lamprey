@@ -3031,6 +3031,7 @@ dependencies = [
  "diff",
  "dotenvy",
  "figment",
+ "flate2",
  "futures",
  "futures-util",
  "headers",

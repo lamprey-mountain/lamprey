@@ -1,3 +1,6 @@
+use common::v1::types::sync::{SyncCompression, SyncParams};
+use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
+use std::io::{Read, Write};
 use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
@@ -40,6 +43,7 @@ pub struct Connection {
     seq_client: u64,
     id: String,
     pub member_list: Box<MemberListSyncer>,
+    compression: Option<SyncCompression>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +54,7 @@ enum ConnectionState {
 }
 
 impl Connection {
-    pub fn new(s: Arc<ServerState>) -> Self {
+    pub fn new(s: Arc<ServerState>, params: SyncParams) -> Self {
         Self {
             state: ConnectionState::Unauthed,
             queue: VecDeque::new(),
@@ -58,6 +62,7 @@ impl Connection {
             seq_client: 0,
             id: format!("{}", uuid::Uuid::new_v4().hyphenated()),
             member_list: Box::new(s.services().members.create_syncer()),
+            compression: params.compression,
             s,
         }
     }
@@ -91,14 +96,30 @@ impl Connection {
         ws: &mut WebSocket,
         timeout: &mut Timeout,
     ) -> Result<()> {
-        match ws_msg {
+        let msg = match ws_msg {
             Message::Text(utf8_bytes) => {
-                let msg: MessageClient = serde_json::from_str(&utf8_bytes)?;
-                self.handle_message_client(msg, ws, timeout).await
+                if self.compression.is_some() {
+                    return Err(Error::BadStatic(
+                        "expected binary message for compressed session",
+                    ));
+                }
+                serde_json::from_str::<MessageClient>(&utf8_bytes)?
             }
-            Message::Binary(_) => Err(Error::BadStatic("doesn't support binary sorry")),
-            _ => Ok(()),
-        }
+            Message::Binary(bytes) => {
+                if let Some(SyncCompression::Deflate) = self.compression {
+                    let mut decoder = ZlibDecoder::new(&bytes[..]);
+                    let mut decompressed = Vec::new();
+                    decoder.read_to_end(&mut decompressed)?;
+                    serde_json::from_slice::<MessageClient>(&decompressed)?
+                } else {
+                    return Err(Error::BadStatic(
+                        "unexpected binary message for uncompressed session",
+                    ));
+                }
+            }
+            _ => return Ok(()),
+        };
+        self.handle_message_client(msg, ws, timeout).await
     }
 
     #[tracing::instrument(level = "debug", skip(self, ws, timeout), fields(id = self.get_id()))]
@@ -179,8 +200,7 @@ impl Connection {
                     },
                 };
 
-                ws.send(WsMessage::text(serde_json::to_string(&msg)?))
-                    .await?;
+                ws.send(self.serialize_and_compress(&msg)?).await?;
 
                 self.seq_server += 1;
 
@@ -672,8 +692,8 @@ impl Connection {
         let mut high_water_mark = last_seen;
         for (seq, msg) in self.queue.iter().rev() {
             if seq.is_none_or(|s| s > last_seen) {
-                let json = serde_json::to_string(&msg)?;
-                ws.send(WsMessage::text(json)).await?;
+                ws.send(self.serialize_and_compress(msg)?).await?;
+
                 if let Some(seq) = *seq {
                     high_water_mark = high_water_mark.max(seq);
                 }
@@ -686,6 +706,18 @@ impl Connection {
 
     pub fn get_id(&self) -> &str {
         &self.id
+    }
+
+    fn serialize_and_compress(&self, msg: &MessageEnvelope) -> Result<WsMessage> {
+        let json = serde_json::to_string(msg)?;
+        Ok(if let Some(SyncCompression::Deflate) = self.compression {
+            let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(json.as_bytes())?;
+            let compressed = encoder.finish()?;
+            WsMessage::Binary(compressed.into())
+        } else {
+            WsMessage::text(json)
+        })
     }
 }
 

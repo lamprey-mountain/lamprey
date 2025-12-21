@@ -629,9 +629,10 @@ pub enum SyncFormat {
     // Msgpack,
 }
 
-// TODO(#209): implement websocket compression
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SyncCompression {
-    // Zlib, // new DecompressionStream("deflate")
+    /// Deflate compression
+    #[serde(rename = "deflate")]
+    Deflate,
 }

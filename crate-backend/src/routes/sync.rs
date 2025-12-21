@@ -41,7 +41,7 @@ async fn sync(
 async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
     let mut timeout = Timeout::for_ping();
     let mut sushi = s.inner.sushi.subscribe();
-    let mut conn = Connection::new(s.clone());
+    let mut conn = Connection::new(s.clone(), params);
 
     loop {
         tokio::select! {
