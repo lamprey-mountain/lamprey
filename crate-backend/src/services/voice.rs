@@ -52,6 +52,7 @@ impl ServiceVoice {
                 let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {
                     user_id: s.user_id,
                     state: None,
+                    // FIXME: permissions
                     permissions: SfuPermissions {
                         speak: false,
                         video: false,

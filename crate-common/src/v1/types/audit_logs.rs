@@ -226,6 +226,10 @@ pub enum AuditLogEntryType {
         user_id: UserId,
     },
 
+    MemberDisconnectAll {
+        channel_id: ChannelId,
+    },
+
     MemberMove {
         changes: Vec<AuditLogChange>,
         user_id: UserId,

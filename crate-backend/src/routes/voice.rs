@@ -110,6 +110,51 @@ async fn voice_state_disconnect(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Voice state disconnect all
+#[utoipa::path(
+    delete,
+    path = "/voice/{thread_id}/member",
+    params(
+        ("thread_id", description = "Thread id"),
+        ("user_id", description = "User id"),
+    ),
+    tags = ["voice", "badge.perm.VoiceDisconnect"],
+    responses(
+        (status = NO_CONTENT, description = "ok"),
+    )
+)]
+async fn voice_state_disconnect_all(
+    Path((channel_id,)): Path<(ChannelId,)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::VoiceDisconnect)?;
+    srv.voice.disconnect_everyone(channel_id)?;
+    let thread = srv.channels.get(channel_id, None).await?;
+    if let Some(room_id) = thread.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::MemberDisconnectAll { channel_id },
+        })
+        .await?;
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Voice state move
 #[utoipa::path(
     post,
@@ -248,6 +293,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(voice_state_get))
         .routes(routes!(voice_state_disconnect))
+        .routes(routes!(voice_state_disconnect_all))
         .routes(routes!(voice_state_move))
         .routes(routes!(voice_state_list))
         .routes(routes!(voice_region_list))
