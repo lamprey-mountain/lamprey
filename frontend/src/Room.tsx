@@ -258,7 +258,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 				<For each={getThreads()}>
 					{(thread) => (
 						<li>
-							<article class="thread menu-thread" data-thread-id={thread.id}>
+							<article class="thread menu-thread thread-card" data-thread-id={thread.id}>
 								<header onClick={() => nav(`/thread/${thread.id}`)}>
 									<div class="top">
 										<div class="icon"></div>
