@@ -131,10 +131,6 @@ async fn voice_state_disconnect_all(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
-    let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
