@@ -127,6 +127,11 @@ export type Modal =
 		type: "notifications";
 		room_id: string;
 	}
+	| {
+		type: "invite_create";
+		room_id?: string;
+		channel_id?: string;
+	}
 	| { type: "attachment" };
 
 export type AttachmentCreateT = {

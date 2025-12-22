@@ -122,6 +122,10 @@ export const RoomMembers = (props: { room: RoomT }) => {
 	);
 };
 
+// TODO: show online/member count
+// TODO: show feed with important messages/highlights
+// TODO: show active channels
+// TODO: show invite button
 export const RoomHome = (props: { room: RoomT }) => {
 	const ctx = useCtx();
 	const api = useApi();
@@ -258,7 +262,10 @@ export const RoomHome = (props: { room: RoomT }) => {
 				<For each={getThreads()}>
 					{(thread) => (
 						<li>
-							<article class="thread menu-thread thread-card" data-thread-id={thread.id}>
+							<article
+								class="thread menu-thread thread-card"
+								data-thread-id={thread.id}
+							>
 								<header onClick={() => nav(`/thread/${thread.id}`)}>
 									<div class="top">
 										<div class="icon"></div>
