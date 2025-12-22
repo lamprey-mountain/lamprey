@@ -501,6 +501,11 @@ pub trait DataMessage {
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
+    async fn message_get_ancestors(
+        &self,
+        message_id: MessageId,
+        limit: u16,
+    ) -> Result<Vec<Message>>;
 }
 
 #[async_trait]

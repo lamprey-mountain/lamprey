@@ -888,6 +888,46 @@ impl ServiceMessages {
         Ok(())
     }
 
+    pub async fn message_reply_context(
+        &self,
+        channel_id: ChannelId,
+        root_message_id: Option<MessageId>,
+        user_id: UserId,
+        context: u16,
+    ) -> Result<Vec<Message>> {
+        let Some(start_message_id) = root_message_id else {
+            return Ok(vec![]);
+        };
+
+        if context == 0 {
+            return Ok(vec![]);
+        }
+
+        // Permission check
+        let perms = self
+            .state
+            .services()
+            .perms
+            .for_channel(user_id, channel_id)
+            .await?;
+        perms.ensure(Permission::ViewChannel)?;
+
+        let data = self.state.data();
+        let mut ancestors = data
+            .message_get_ancestors(start_message_id, context)
+            .await?;
+
+        for message in &mut ancestors {
+            self.state.presign_message(message).await?;
+        }
+
+        self.populate_reactions(channel_id, user_id, &mut ancestors)
+            .await?;
+        self.populate_threads(user_id, &mut ancestors).await?;
+
+        Ok(ancestors)
+    }
+
     pub async fn list(
         &self,
         channel_id: ChannelId,
@@ -1064,6 +1104,14 @@ impl ServiceMessages {
         query: RepliesQuery,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
+        let mut ancestors = match (query.context, root_message_id) {
+            (Some(context), Some(start_id)) if context > 0 && pagination.from.is_none() => {
+                self.message_reply_context(channel_id, Some(start_id), user_id, context)
+                    .await?
+            }
+            _ => vec![],
+        };
+
         let s = &self.state;
         let data = s.data();
         let mut res = data
@@ -1085,6 +1133,16 @@ impl ServiceMessages {
         for message in &mut res.items {
             s.presign_message(message).await?;
         }
+
+        if !ancestors.is_empty() {
+            // NOTE: maybe i don't want to include this, since the ancestors/context aren't part of replies?
+            // res.total += ancestors.len() as u64;
+            res.total += ancestors.len() as u64;
+            // make sure ancestors come first
+            ancestors.append(&mut res.items);
+            res.items = ancestors;
+        }
+
         Ok(res)
     }
 

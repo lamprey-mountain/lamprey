@@ -698,4 +698,21 @@ impl DataMessage for Postgres {
             |i: &Message| i.id.to_string()
         )
     }
+
+    async fn message_get_ancestors(
+        &self,
+        message_id: MessageId,
+        limit: u16,
+    ) -> Result<Vec<Message>> {
+        let rows = query_file_as!(
+            DbMessage,
+            "sql/message_get_ancestors.sql",
+            *message_id,
+            limit as i32
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
 }

@@ -567,6 +567,9 @@ pub struct RepliesQuery {
 
     /// how many replies to fetch per branch
     pub breadth: Option<u16>,
+
+    /// which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on.
+    pub context: Option<u16>,
 }
 
 /// always returns one
