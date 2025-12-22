@@ -339,7 +339,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 						<h3 class="dim" style="margin-top:12px;margin-bottom:4px">
 							{category?.name}
 						</h3>
-						<ul>
+						<ul class="thread-group">
 							<For each={channels}>
 								{(thread) => (
 									<li>

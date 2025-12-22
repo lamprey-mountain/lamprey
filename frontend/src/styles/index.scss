@@ -145,6 +145,10 @@ input[type="submit"] {
 		cursor: pointer;
 		text-align: center;
 	}
+
+	&:hover {
+		background-color: $bg-200;
+	}
 }
 
 .chat {
@@ -3408,5 +3412,23 @@ input[type="color"] {
 		&.active {
 			background: #fff2;
 		}
+	}
+}
+
+.thread-group {
+	border: solid 1px $sep-400;
+	border-radius: 4px;
+	margin: 8px 0;
+	overflow: hidden;
+
+	& .thread-card {
+		padding: 2px 0;
+		margin: 0;
+		border: none;
+		border-radius: 0;
+	}
+
+	& li:not(:first-child) {
+		border-top: solid 1px $sep-400;
 	}
 }
