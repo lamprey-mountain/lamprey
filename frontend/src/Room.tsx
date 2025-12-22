@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal";
-import { getTimestampFromUUID } from "sdk";
+import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { AvatarWithStatus } from "./User.tsx";
@@ -157,12 +157,89 @@ export const RoomHome = (props: { room: RoomT }) => {
 		}
 	});
 
-	const getThreads = () => {
+	const categorizedChannels = createMemo(() => {
 		const items = threadsResource()?.()?.items;
 		if (!items) return [];
-		// sort descending by id
-		return [...items].sort((a, b) => (a.id < b.id ? 1 : -1));
-	};
+
+		const allChannels: Channel[] = [...items];
+
+		const threads = allChannels.filter(
+			(c) => c.type === "ThreadPublic" || c.type === "ThreadPrivate",
+		);
+		const channels = allChannels.filter(
+			(c) => c.type !== "ThreadPublic" && c.type !== "ThreadPrivate",
+		);
+
+		channels.sort((a, b) => {
+			if (a.position === null && b.position === null) {
+				return a.id < b.id ? 1 : -1;
+			}
+			if (a.position === null) return 1;
+			if (b.position === null) return -1;
+			return a.position! - b.position!;
+		});
+
+		const channelMap = new Map<string, Channel & { threads: Channel[] }>();
+		for (const c of channels) {
+			channelMap.set(c.id, { ...c, threads: [] });
+		}
+
+		for (const thread of threads) {
+			const parent = channelMap.get(thread.parent_id!);
+			if (parent) {
+				parent.threads.push(thread);
+			}
+		}
+
+		for (const c of channelMap.values()) {
+			if (c.threads.length > 1) {
+				c.threads.sort((a, b) => a.id.localeCompare(b.id));
+			}
+		}
+
+		const categories = new Map<
+			string | null,
+			Array<Channel & { threads: Channel[] }>
+		>();
+		for (const c of channelMap.values()) {
+			if (c.type === "Category") {
+				const cat = categories.get(c.id) ?? [];
+				categories.set(c.id, cat);
+			} else {
+				const children = categories.get(c.parent_id!) ?? [];
+				children.push(c);
+				categories.set(c.parent_id!, children);
+			}
+		}
+		const list = [...categories.entries()]
+			.map(([cid, cs]) => ({
+				category: cid ? api.channels.cache.get(cid)! : null,
+				channels: cs,
+			}))
+			.sort((a, b) => {
+				// null category comes first
+				if (!a.category) return -1;
+				if (!b.category) return 1;
+
+				// categories with positions come first
+				if (a.category.position === null && b.category.position === null) {
+					// newer categories first
+					return a.category.id < b.category.id ? 1 : -1;
+				}
+				if (a.category.position === null) return 1;
+				if (b.category.position === null) return -1;
+
+				// order by position
+				const p = a.category.position! - b.category.position!;
+				if (p === 0) {
+					// newer categories first
+					return a.category.id < b.category.id ? 1 : -1;
+				}
+
+				return p;
+			});
+		return list;
+	});
 
 	function createThread(room_id: string) {
 		modalCtl.open({
@@ -220,9 +297,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			</div>
 			<div style="display:flex; align-items:center">
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
-					{threadsResource()?.()?.total ?? getThreads().length} {threadFilter()}
-					{" "}
-					channels
+					{threadsResource()?.()?.total} channels
 				</h3>
 				{
 					/*
@@ -258,48 +333,59 @@ export const RoomHome = (props: { room: RoomT }) => {
 					create channel
 				</button>
 			</div>
-			<ul>
-				<For each={getThreads()}>
-					{(thread) => (
-						<li>
-							<article
-								class="thread menu-thread thread-card"
-								data-thread-id={thread.id}
-							>
-								<header onClick={() => nav(`/thread/${thread.id}`)}>
-									<div class="top">
-										<div class="icon"></div>
-										<div class="spacer">{thread.name}</div>
-										<div class="time">
-											Created <Time date={getTimestampFromUUID(thread.id)} />
-										</div>
-									</div>
-									<div
-										class="bottom"
-										onClick={() => nav(`/thread/${thread.id}`)}
-									>
-										<div class="dim">
-											{thread.message_count} message(s) &bull; last msg{" "}
-											<Time
-												date={getTimestampFromUUID(
-													thread.last_version_id ?? thread.id,
-												)}
-											/>
-										</div>
-										<Show when={thread.description}>
-											<div
-												class="description markdown"
-												innerHTML={md(thread.description ?? "") as string}
-											>
-											</div>
-										</Show>
-									</div>
-								</header>
-							</article>
-						</li>
-					)}
-				</For>
-			</ul>
+			<For each={categorizedChannels()}>
+				{({ category, channels }) => (
+					<>
+						<h3 class="dim" style="margin-top:12px;margin-bottom:4px">
+							{category?.name}
+						</h3>
+						<ul>
+							<For each={channels}>
+								{(thread) => (
+									<li>
+										<article
+											class="thread menu-thread thread-card"
+											data-thread-id={thread.id}
+										>
+											<header onClick={() => nav(`/thread/${thread.id}`)}>
+												<div class="top">
+													<div class="icon"></div>
+													<div class="spacer">{thread.name}</div>
+													<div class="time">
+														Created{" "}
+														<Time date={getTimestampFromUUID(thread.id)} />
+													</div>
+												</div>
+												<div
+													class="bottom"
+													onClick={() => nav(`/thread/${thread.id}`)}
+												>
+													<div class="dim">
+														{thread.message_count} message(s) &bull; last msg
+														{" "}
+														<Time
+															date={getTimestampFromUUID(
+																thread.last_version_id ?? thread.id,
+															)}
+														/>
+													</div>
+													<Show when={thread.description}>
+														<div
+															class="description markdown"
+															innerHTML={md(thread.description ?? "") as string}
+														>
+														</div>
+													</Show>
+												</div>
+											</header>
+										</article>
+									</li>
+								)}
+							</For>
+						</ul>
+					</>
+				)}
+			</For>
 			<div ref={setBottom}></div>
 		</div>
 	);
