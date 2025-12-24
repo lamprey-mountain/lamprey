@@ -683,8 +683,8 @@ async fn channel_typing(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked {
-        perms.ensure(Permission::ThreadLock)?;
+    if thread.locked && !perms.can_use_locked_threads() {
+        return Err(Error::MissingPermissions);
     }
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     srv.channels

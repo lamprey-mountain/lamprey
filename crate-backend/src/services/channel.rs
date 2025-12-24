@@ -584,8 +584,8 @@ impl ServiceThreads {
             return Err(Error::BadStatic("thread is removed"));
         }
 
-        if chan_old.locked {
-            perms.ensure(Permission::ThreadLock)?;
+        if chan_old.locked && !perms.can_use_locked_threads() {
+            return Err(Error::MissingPermissions);
         }
 
         // if the patch contains more than just archive/lock changes, do a general permission check

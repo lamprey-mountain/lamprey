@@ -73,6 +73,12 @@ impl Permissions {
             || self.has(Permission::ThreadManage)
             || self.has(Permission::MemberTimeout)
     }
+
+    pub fn can_use_locked_threads(&self) -> bool {
+        self.has(Permission::ThreadManage)
+            || self.has(Permission::ChannelManage)
+            || self.has(Permission::ThreadLock)
+    }
 }
 
 impl FromIterator<Permission> for Permissions {

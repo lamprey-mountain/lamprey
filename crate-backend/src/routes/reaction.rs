@@ -105,13 +105,8 @@ async fn reaction_add(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked {
-        let perms = s
-            .services()
-            .perms
-            .for_channel(auth_user.id, channel_id)
-            .await?;
-        perms.ensure(Permission::ThreadLock)?;
+    if thread.locked && !perms.can_use_locked_threads() {
+        return Err(Error::MissingPermissions);
     }
 
     let data = s.data();
@@ -194,13 +189,8 @@ async fn reaction_remove(
     if chan.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if chan.locked {
-        let perms = s
-            .services()
-            .perms
-            .for_channel(auth_user.id, channel_id)
-            .await?;
-        perms.ensure(Permission::ThreadLock)?;
+    if chan.locked && !perms.can_use_locked_threads() {
+        return Err(Error::MissingPermissions);
     }
 
     let data = s.data();
@@ -283,8 +273,8 @@ async fn reaction_remove_key(
     if chan.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if chan.locked {
-        perms.ensure(Permission::ThreadLock)?;
+    if chan.locked && !perms.can_use_locked_threads() {
+        return Err(Error::MissingPermissions);
     }
 
     data.reaction_delete_key(channel_id, message_id, reaction_key.clone())
@@ -363,8 +353,8 @@ async fn reaction_remove_all(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked {
-        perms.ensure(Permission::ThreadLock)?;
+    if thread.locked && !perms.can_use_locked_threads() {
+        return Err(Error::MissingPermissions);
     }
 
     data.reaction_delete_all(channel_id, message_id).await?;
