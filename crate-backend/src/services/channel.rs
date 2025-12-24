@@ -284,6 +284,7 @@ impl ServiceThreads {
             | ChannelType::Broadcast
             | ChannelType::Category
             | ChannelType::Calendar
+            | ChannelType::Ticket
             | ChannelType::Info => {
                 perms.ensure(Permission::ChannelManage)?;
             }
@@ -294,7 +295,7 @@ impl ServiceThreads {
                 let parent = srv.channels.get(parent_id, Some(user_id)).await?;
                 if !parent.ty.has_public_threads() {
                     return Err(Error::BadStatic(
-                        "threads can only be created in text or forum channels",
+                        "threads can only be created in specific channel types",
                     ));
                 }
                 perms.ensure(Permission::ThreadCreatePublic)?;
@@ -330,7 +331,7 @@ impl ServiceThreads {
                 let parent = srv.channels.get(parent_id, Some(user_id)).await?;
                 if !parent.ty.has_private_threads() {
                     return Err(Error::BadStatic(
-                        "threads can only be created in text or forum channels",
+                        "threads can only be created in specific channel types",
                     ));
                 }
                 perms.ensure(Permission::ThreadCreatePrivate)?;

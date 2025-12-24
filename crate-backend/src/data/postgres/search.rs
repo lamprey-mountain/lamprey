@@ -133,6 +133,7 @@ impl DataSearch for Postgres {
                     ChannelType::Announcement => "Announcement",
                     ChannelType::Forum => "Forum",
                     ChannelType::Forum2 => "Forum2",
+                    ChannelType::Ticket => "Ticket",
                     ChannelType::Voice => "Voice",
                     ChannelType::Broadcast => "Broadcast",
                     ChannelType::Category => "Category",

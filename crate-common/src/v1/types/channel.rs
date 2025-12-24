@@ -203,6 +203,9 @@ pub enum ChannelType {
 
     /// info channel without text/voice/threads
     Info,
+
+    /// A channel for support tickets, where each thread is a private conversation.
+    Ticket,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -569,7 +572,10 @@ impl ChannelType {
 
     /// whether private threads can be created inside this channel
     pub fn has_private_threads(&self) -> bool {
-        matches!(self, ChannelType::Text | ChannelType::Dm | ChannelType::Gdm)
+        matches!(
+            self,
+            ChannelType::Text | ChannelType::Dm | ChannelType::Gdm | ChannelType::Ticket
+        )
     }
 
     pub fn has_threads(&self) -> bool {
@@ -593,7 +599,10 @@ impl ChannelType {
     }
 
     pub fn has_tags(&self) -> bool {
-        matches!(self, ChannelType::Forum | ChannelType::Forum2)
+        matches!(
+            self,
+            ChannelType::Forum | ChannelType::Forum2 | ChannelType::Ticket
+        )
     }
 
     pub fn has_icon(&self) -> bool {

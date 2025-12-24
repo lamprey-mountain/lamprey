@@ -160,6 +160,7 @@ pub enum DbChannelType {
     ThreadForum2,
     Calendar,
     Info,
+    Ticket,
 }
 
 impl From<DbChannelType> for ChannelType {
@@ -179,6 +180,7 @@ impl From<DbChannelType> for ChannelType {
             DbChannelType::ThreadForum2 => ChannelType::ThreadForum2,
             DbChannelType::Calendar => ChannelType::Calendar,
             DbChannelType::Info => ChannelType::Info,
+            DbChannelType::Ticket => ChannelType::Ticket,
         }
     }
 }
@@ -200,6 +202,7 @@ impl From<ChannelType> for DbChannelType {
             ChannelType::ThreadForum2 => DbChannelType::ThreadForum2,
             ChannelType::Calendar => DbChannelType::Calendar,
             ChannelType::Info => DbChannelType::Info,
+            ChannelType::Ticket => DbChannelType::Ticket,
         }
     }
 }
