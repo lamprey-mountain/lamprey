@@ -188,6 +188,7 @@ async fn message_edit(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     if thread.locked && !perms.can_use_locked_threads() {
         return Err(Error::MissingPermissions);
     }
