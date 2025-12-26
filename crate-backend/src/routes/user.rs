@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::types::application::Scope;
 use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
@@ -17,7 +18,7 @@ use http::StatusCode;
 use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::{AuthWithSession, HeaderReason};
+use crate::routes::util::{Auth2, AuthWithSession, HeaderReason};
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
@@ -279,18 +280,22 @@ async fn user_undelete(
 )]
 async fn user_get(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Identify])?;
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     let data = s.data();
+    let mut user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
+    if !auth.scopes.contains(&Scope::Email) {
+        user.emails = None;
+    }
     let relationship = data
-        .user_relationship_get(auth_user.id, target_user_id)
+        .user_relationship_get(auth.user.id, target_user_id)
         .await?
         .unwrap_or_default();
     Ok(Json(UserWithRelationship {

@@ -10,7 +10,6 @@ use crate::{
     ServerState,
 };
 
-#[allow(dead_code)] // TEMP
 /// extract authentication info for a request
 // TODO: use this instead of the existing Auth stuff
 pub struct Auth2 {
@@ -27,7 +26,6 @@ pub struct Auth2 {
     pub scopes: Vec<Scope>,
 }
 
-#[allow(dead_code)] // TEMP
 impl Auth2 {
     pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
         let mut missing = vec![];
@@ -54,9 +52,11 @@ impl Auth2 {
 pub struct AuthRelaxed(pub Session);
 
 /// extract the client's Session iff it is authenticated
+// TODO: remove
 pub struct AuthWithSession(pub Session, pub User);
 
 /// extract the client's Session iff it is authenticated and return the user
+// TODO: remove
 pub struct Auth(pub User);
 
 /// extract the client's Session iff it is in sudo mode and return the user
@@ -298,7 +298,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth2 {
                                 user: puppet,
                                 real_user: Some(user),
                                 session,
-                                scopes: vec![],
+                                scopes: vec![Scope::Auth],
                             });
                         }
                     }
@@ -323,7 +323,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth2 {
                         user: puppet,
                         real_user: Some(user),
                         session,
-                        scopes: vec![],
+                        scopes: vec![Scope::Auth],
                     })
                 } else {
                     if let Some(puppet) = &user.puppet {
@@ -344,7 +344,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth2 {
                         user,
                         real_user: None,
                         session,
-                        scopes: vec![],
+                        scopes: vec![Scope::Auth],
                     })
                 }
             }
