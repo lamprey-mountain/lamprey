@@ -291,7 +291,7 @@ async fn user_get(
     let srv = s.services();
     let data = s.data();
     let mut user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
-    if !auth.scopes.contains(&Scope::Email) {
+    if !auth.scopes.iter().any(|s| s.implies(&Scope::Email)) {
         user.emails = None;
     }
     let relationship = data

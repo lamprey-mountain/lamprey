@@ -1,7 +1,7 @@
 // TODO: rename foo_select to foo_get
 
 use async_trait::async_trait;
-use common::v1::types::application::{Application, Connection, Scope};
+use common::v1::types::application::{Application, Connection, Scopes};
 use common::v1::types::calendar::{
     CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
 };
@@ -676,7 +676,7 @@ pub trait DataAuth {
         application_id: ApplicationId,
         user_id: UserId,
         redirect_uri: String,
-        scopes: Vec<Scope>,
+        scopes: Scopes,
         code_challenge: Option<String>,
         code_challenge_method: Option<String>,
     ) -> Result<()>;
@@ -687,7 +687,7 @@ pub trait DataAuth {
         ApplicationId,
         UserId,
         String,
-        Vec<Scope>,
+        Scopes,
         Option<String>,
         Option<String>,
     )>;
@@ -940,7 +940,7 @@ pub trait DataConnection {
         &self,
         user_id: UserId,
         application_id: ApplicationId,
-        scopes: Vec<Scope>,
+        scopes: Scopes,
     ) -> Result<()>;
     async fn connection_get(
         &self,

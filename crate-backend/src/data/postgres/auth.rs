@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::application::Scope;
+use common::v1::types::application::Scopes;
 use common::v1::types::email::EmailAddr;
 use common::v1::types::{ApplicationId, SessionId};
 use sqlx::{query, query_scalar};
@@ -145,7 +145,7 @@ impl DataAuth for Postgres {
         application_id: ApplicationId,
         user_id: UserId,
         redirect_uri: String,
-        scopes: Vec<Scope>,
+        scopes: Scopes,
         code_challenge: Option<String>,
         code_challenge_method: Option<String>,
     ) -> Result<()> {
@@ -174,7 +174,7 @@ impl DataAuth for Postgres {
         ApplicationId,
         UserId,
         String,
-        Vec<Scope>,
+        Scopes,
         Option<String>,
         Option<String>,
     )> {
@@ -185,7 +185,7 @@ impl DataAuth for Postgres {
         .fetch_one(&self.pool)
         .await?;
 
-        let scopes: Vec<Scope> = serde_json::from_value(row.scopes).unwrap_or_default();
+        let scopes: Scopes = serde_json::from_value(row.scopes).unwrap_or_default();
 
         Ok((
             row.application_id.into(),

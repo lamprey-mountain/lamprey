@@ -7,7 +7,7 @@ use axum::{
 };
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{
-    application::{Application, ApplicationCreate, ApplicationPatch, Scope},
+    application::{Application, ApplicationCreate, ApplicationPatch, Scope, Scopes},
     misc::ApplicationIdReq,
     oauth::{
         Autoconfig, OauthAuthorizeInfo, OauthAuthorizeParams, OauthAuthorizeResponse,
@@ -605,7 +605,7 @@ async fn oauth_authorize(
     for scope in q.scope.split(' ') {
         scopes.insert(Scope::from_str(scope).map_err(|_| Error::BadStatic("invalid scope"))?);
     }
-    let scopes: Vec<_> = scopes.into_iter().collect();
+    let scopes = Scopes(scopes.into_iter().collect());
     data.connection_create(auth_user.id, app.id, scopes.clone())
         .await?;
     s.audit_log_append(AuditLogEntry {

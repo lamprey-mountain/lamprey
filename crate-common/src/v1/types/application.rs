@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::Deref;
 use std::str::FromStr;
 
 #[cfg(feature = "serde")]
@@ -11,7 +12,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Time, RoomMember, User};
+use crate::v1::types::{error::Error, util::Time, RoomMember, User};
 
 use super::{util::Diff, ApplicationId, UserId};
 
@@ -115,7 +116,7 @@ pub struct ApplicationPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Connection {
     pub application: Application,
-    pub scopes: Vec<Scope>,
+    pub scopes: Scopes,
     pub created_at: Time,
 }
 
@@ -158,6 +159,70 @@ pub enum Scope {
     ///
     /// implies `full`
     Auth,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, Default)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(transparent)]
+pub struct Scopes(pub Vec<Scope>);
+
+impl Deref for Scopes {
+    type Target = Vec<Scope>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl IntoIterator for Scopes {
+    type Item = Scope;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Scopes {
+    type Item = &'a Scope;
+    type IntoIter = std::slice::Iter<'a, Scope>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl Scopes {
+    /// check if this set of scopes contains a scope
+    pub fn has(&self, scope: &Scope) -> bool {
+        self.0.iter().any(|s| s.implies(scope))
+    }
+
+    /// check that this set of scopes contains a required scope, returning an error if it is missing
+    pub fn ensure(&self, scope: &Scope) -> Result<(), Error> {
+        if self.has(scope) {
+            Ok(())
+        } else {
+            Err(Error::MissingScopes(Scopes(vec![scope.clone()])))
+        }
+    }
+
+    /// check that this set of scopes contains all required scopes, returning an error if any are missing
+    pub fn ensure_all(&self, scopes: &[Scope]) -> Result<(), Error> {
+        let mut missing = vec![];
+
+        for required_scope in scopes {
+            if !self.has(required_scope) {
+                missing.push(required_scope.clone());
+            }
+        }
+
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::MissingScopes(Scopes(missing)))
+        }
+    }
 }
 
 impl Scope {

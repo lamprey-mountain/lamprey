@@ -6,7 +6,7 @@ use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::{Application, Scope},
+    application::{Application, Scopes},
     email::EmailAddr,
     ApplicationId, User, UserId,
 };
@@ -113,7 +113,7 @@ pub struct OauthTokenResponse {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthIntrospectResponse {
     pub active: bool,
-    pub scopes: Vec<Scope>,
+    pub scopes: Scopes,
     pub client_id: ApplicationId,
     /// this is specified to be "human readable", but in practice it would be
     /// simpler and more useful to return the unique id of the user

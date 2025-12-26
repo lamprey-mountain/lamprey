@@ -8,7 +8,7 @@ use uuid::Uuid;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Scope, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
+    application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
     util::Time, ApplicationId, AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem,
     ChannelType, EmojiId, InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId,
     RoomId, SessionId, UserId, WebhookId,
@@ -368,7 +368,7 @@ pub enum AuditLogEntryType {
 
     ConnectionCreate {
         application_id: ApplicationId,
-        scopes: Vec<Scope>,
+        scopes: Scopes,
     },
 
     ConnectionDelete {

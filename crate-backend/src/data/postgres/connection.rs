@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    application::{Application, Connection, Scope},
+    application::{Application, Connection, Scopes},
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
@@ -54,7 +54,7 @@ impl DataConnection for Postgres {
         &self,
         user_id: UserId,
         application_id: ApplicationId,
-        scopes: Vec<Scope>,
+        scopes: Scopes,
     ) -> Result<()> {
         query!(
             r#"
@@ -65,7 +65,7 @@ impl DataConnection for Postgres {
             "#,
             *user_id,
             *application_id,
-            serde_json::to_value(scopes).unwrap(),
+            serde_json::to_value(&scopes).unwrap(),
         )
         .execute(&self.pool)
         .await?;

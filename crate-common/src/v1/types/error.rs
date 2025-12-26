@@ -7,6 +7,8 @@ use thiserror::Error;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::v1::types::application::Scopes;
+
 /// an error that may be returned from the api
 #[derive(Debug, Error, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -14,6 +16,9 @@ use utoipa::ToSchema;
 pub enum Error {
     #[error("user is suspended")]
     UserSuspended,
+
+    #[error("missing scopes {0:?}")]
+    MissingScopes(Scopes),
 }
 
 /// an error that may be returned from the sync websocket
