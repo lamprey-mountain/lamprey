@@ -294,6 +294,13 @@ async fn debug_test_permissions(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
+    // check that the user has permissions for the room
+    let _ = s
+        .services()
+        .perms
+        .for_room(auth_user.id, json.room_id)
+        .await?;
+
     let permissions = if let Some(channel_id) = json.channel_id {
         s.services()
             .perms
