@@ -2,7 +2,7 @@
 // somewhat copied from discord since they do things reasonably
 
 use crate::v1::types::{
-    misc::Color, ApplicationId, Channel, ChannelId, Message, MessageCreate, MessageId,
+    misc::Color, ApplicationId, Channel, ChannelId, Embed, Message, MessageCreate, MessageId,
     MessagePatch, Permission, Room, RoomMember, User, UserId,
 };
 
@@ -21,6 +21,8 @@ use utoipa::ToSchema;
 
 struct Application {
     interactions_url: Option<Url>,
+
+    unfurl_domains: Vec<String>,
 }
 
 enum MessageSync {
@@ -87,6 +89,7 @@ pub struct Interaction {
     pub ty: InteractionType,
 }
 
+// TODO: refactor out common interaction context, Ping is only for webhooks anyways
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -119,6 +122,30 @@ pub enum InteractionType {
 
         /// application defined id associated with this button
         custom_id: String,
+    },
+
+    /// unfurl a url
+    Unfurl {
+        /// the room this interaction was created in
+        room: Option<Room>,
+
+        /// the channel this interaction was created in
+        channel: Channel,
+
+        /// the message this link is contained in
+        message: Message,
+
+        /// the user who send the message
+        user: User,
+
+        /// the room member for the user who initiated this interaction
+        room_member: Option<RoomMember>,
+
+        /// the permissions the user has in the target channel
+        user_permissions: Vec<Permission>,
+
+        /// the permissions the application has in the target channel
+        application_permissions: Vec<Permission>,
     },
 }
 
@@ -154,6 +181,15 @@ pub enum InteractionResponseType {
 
     /// acknowledge an interaction, does not show a loading indicator
     Defer,
+
+    /// unfurl a url
+    Unfurl {
+        /// also generate the default url preview
+        include_default: bool,
+
+        /// generated these embeds
+        embeds: Vec<Embed>,
+    },
 }
 
 // TODO: move these to message.rs
