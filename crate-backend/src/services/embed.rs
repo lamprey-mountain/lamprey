@@ -30,6 +30,7 @@ pub struct ServiceEmbed {
     stop: broadcast::Sender<()>,
     workers: Mutex<Vec<JoinHandle<()>>>,
 }
+
 /// an opengraph type
 ///
 /// <https://ogp.me/#types>
@@ -156,7 +157,7 @@ impl ServiceEmbed {
             warn!("embed workers already started");
             return;
         }
-        for i in 0..self.state.config.url_preview.max_parallel_jobs {
+        for i in 0..self.state.config.http.max_parallel_jobs {
             let state = self.state.clone();
             let mut stop = self.stop.subscribe();
             workers_guard.push(tokio::spawn(async move {

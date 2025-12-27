@@ -178,7 +178,7 @@ impl ServiceOauth {
             .post(&p.token_url)
             .basic_auth(&p.client_id, Some(&p.client_secret))
             .header("Accept", "application/json")
-            .header("User-Agent", &self.state.config.url_preview.user_agent)
+            .header("User-Agent", &self.state.config.http.user_agent)
             .form(&body)
             .send()
             .await?
@@ -215,7 +215,7 @@ impl ServiceOauth {
         let client = reqwest::Client::new();
         let res: DiscordAuth = client
             .get("https://discord.com/api/v10/oauth2/@me")
-            .header("User-Agent", &self.state.config.url_preview.user_agent)
+            .header("User-Agent", &self.state.config.http.user_agent)
             .bearer_auth(token)
             .send()
             .await?
@@ -231,7 +231,7 @@ impl ServiceOauth {
             .get("https://api.github.com/user")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("User-Agent", &self.state.config.url_preview.user_agent)
+            .header("User-Agent", &self.state.config.http.user_agent)
             .bearer_auth(token)
             .send()
             .await?

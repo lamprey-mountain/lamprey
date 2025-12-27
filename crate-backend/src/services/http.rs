@@ -19,8 +19,7 @@ impl ServiceHttp {
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::limited(10))
-            // TODO: rename `url_preview.user_agent` -> `http.user_agent` since this will be used for all http requests
-            .user_agent(&state.config.url_preview.user_agent)
+            .user_agent(&state.config.http.user_agent)
             .https_only(true)
             .build()
             .expect("failed to build http client");
@@ -32,8 +31,7 @@ impl ServiceHttp {
         let res = self.client.get(url).send().await?;
 
         if let Some(addr) = res.remote_addr() {
-            // TODO: rename `url_preview.deny` -> `http.deny` since this will be used for all http requests
-            for denied in &self.state.config.url_preview.deny {
+            for denied in &self.state.config.http.deny {
                 if denied.contains(&addr.ip()) {
                     return Err(Error::BadStatic("url blacklisted"));
                 }

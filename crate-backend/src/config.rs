@@ -7,33 +7,48 @@ use std::{
 };
 
 use ipnet::IpNet;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use url::Url;
+
+use crate::Result;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub rust_log: String,
     pub database_url: String,
+
+    /// public api url
     pub api_url: Url,
+
+    /// public url where media is served from
     pub cdn_url: Url,
+
+    /// public url for the web ui
     pub html_url: Url,
+
     /// for media/file uploads
     pub s3: ConfigS3,
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
     pub url_preview: ConfigUrlPreview,
+    pub http: ConfigHttp,
     pub media_max_size: u64,
     pub smtp: ConfigSmtp,
     pub otel_trace_endpoint: Option<String>,
     pub sfu_token: String,
+
     #[serde(default = "default_max_user_emails")]
     pub max_user_emails: usize,
+
     #[serde(default = "default_email_queue_workers")]
     pub email_queue_workers: usize,
+
     #[serde(default = "default_require_server_invite")]
     pub require_server_invite: bool,
+
     #[serde(default = "default_listen")]
     pub listen: Vec<ListenConfig>,
+
     #[serde(default)]
     pub media_scanners: Vec<ConfigMediaScanner>,
 }
@@ -76,6 +91,11 @@ pub struct ConfigOauthProvider {
 
 #[derive(Debug, Deserialize)]
 pub struct ConfigUrlPreview {
+    // does this need anything?
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigHttp {
     pub user_agent: String,
     pub deny: Vec<IpNet>,
     pub max_parallel_jobs: usize,
@@ -170,6 +190,42 @@ pub struct ConfigMediaScanner {
 
     /// The current version of this scanner.
     pub version: u16,
+}
+
+/// internal config that is saved in the database
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConfigInternal {
+    pub vapid_key: String,
+    pub oidc_jwk_key: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Secret {
+    /// a secret that is included directly in the config file. avoid in production.
+    Inline(String),
+
+    /// load this secret from a file. trailing newlines are removed.
+    File { file_path: PathBuf },
+
+    /// load this secret from an environment variable
+    Env { env_var: String },
+}
+
+impl Secret {
+    /// load this secret
+    pub fn load(&self) -> Result<String> {
+        match self {
+            Secret::Inline(s) => Ok(s.to_owned()),
+            Secret::File { file_path } => {
+                let s = std::fs::read_to_string(file_path)?;
+                Ok(s.trim_end().to_owned())
+            }
+            Secret::Env { env_var } => std::env::var(env_var).map_err(|_| {
+                crate::Error::BadRequest(format!("environment variable {env_var} not set"))
+            }),
+        }
+    }
 }
 
 /*
