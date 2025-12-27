@@ -18,11 +18,11 @@ use http::StatusCode;
 use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::{Auth2, AuthWithSession, HeaderReason};
+use crate::routes::util::{Auth2, HeaderReason};
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
-use super::util::{Auth, AuthRelaxed};
+use super::util::AuthRelaxed;
 use crate::error::{Error, Result};
 
 /// User update
@@ -40,23 +40,23 @@ use crate::error::{Error, Result};
 )]
 async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    if auth_user.id != target_user_id {
-        let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    if auth.user.id != target_user_id {
+        let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
         perms.ensure(Permission::Admin)?;
     }
     let data = s.data();
-    let start = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let start = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     if !patch.changes(&start) {
         return Ok(Json(start));
     }
@@ -102,7 +102,7 @@ async fn user_update(
         }
     }
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     let changes = Changes::new()
         .change("name", &start.name, &user.name)
         .change("description", &start.description, &user.description)
@@ -113,8 +113,8 @@ async fn user_update(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason: reason.clone(),
         ty: AuditLogEntryType::UserUpdate {
             changes: changes.clone(),
@@ -122,12 +122,12 @@ async fn user_update(
     })
     .await?;
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id: SERVER_ROOM_ID,
-            user_id: auth_user.id,
-            session_id: Some(session.id),
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::UserUpdate { changes },
         })
@@ -148,23 +148,23 @@ async fn user_update(
 )]
 async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     let is_admin = perms.has(Permission::Admin);
 
-    if auth_user.id != target_user_id && !is_admin {
+    if auth.user.id != target_user_id && !is_admin {
         return Err(Error::MissingPermissions);
     }
-    let user_to_delete = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let user_to_delete = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     data.user_delete(target_user_id).await?;
     data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
         .await?;
@@ -174,8 +174,8 @@ async fn user_delete(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::UserDelete {
             user_id: target_user_id,
@@ -203,25 +203,25 @@ async fn user_delete(
 )]
 async fn user_undelete(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
     data.user_undelete(target_user_id).await?;
 
-    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     let avatar_media_id = user.avatar;
     if let Some(media_id) = avatar_media_id {
         if data
@@ -246,13 +246,13 @@ async fn user_undelete(
     }
 
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     s.broadcast(MessageSync::UserCreate { user: user.clone() })?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
+        user_id: auth.user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::UserUndelete {
@@ -321,27 +321,27 @@ async fn user_get(
 )]
 async fn user_room_list(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Query(q): Query<PaginationQuery<RoomId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
     let data = s.data();
     let srv = s.services();
-    let mut rooms = if auth_user.id == target_user_id {
-        data.room_list(auth_user.id, q, false).await?
+    let mut rooms = if auth.user.id == target_user_id {
+        data.room_list(auth.user.id, q, false).await?
     } else {
-        data.room_list_mutual(auth_user.id, target_user_id, q)
+        data.room_list_mutual(auth.user.id, target_user_id, q)
             .await?
     };
 
     let mut new_rooms = vec![];
     for room in rooms.items {
-        new_rooms.push(srv.rooms.get(room.id, Some(auth_user.id)).await?);
+        new_rooms.push(srv.rooms.get(room.id, Some(auth.user.id)).await?);
     }
     rooms.items = new_rooms;
 
@@ -366,15 +366,15 @@ async fn user_audit_logs(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
     Query(filter): Query<AuditLogFilter>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -452,20 +452,20 @@ async fn guest_create(
 )]
 async fn user_suspend(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SuspendRequest>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if target_user_id != auth_user.id {
-        let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    if target_user_id != auth.user.id {
+        let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
         perms.ensure(Permission::MemberBan)?;
     }
     d.user_suspended(
@@ -480,7 +480,7 @@ async fn user_suspend(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
+        user_id: auth.user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::UserSuspend {
@@ -490,7 +490,7 @@ async fn user_suspend(
     })
     .await?;
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -505,24 +505,24 @@ async fn user_suspend(
 )]
 async fn user_unsuspend(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::MemberBan)?;
     d.user_suspended(target_user_id, None).await?;
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
+        user_id: auth.user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::UserUnsuspend {
@@ -531,7 +531,7 @@ async fn user_unsuspend(
     })
     .await?;
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -550,15 +550,15 @@ async fn user_unsuspend(
 async fn connection_list(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<ApplicationId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
@@ -579,16 +579,16 @@ async fn connection_list(
 )]
 async fn connection_revoke(
     Path((target_user_id, app_id)): Path<(UserIdReq, ApplicationId)>,
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
@@ -601,8 +601,8 @@ async fn connection_revoke(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::ConnectionDelete {
             application_id: app_id,
@@ -625,18 +625,18 @@ async fn connection_revoke(
 )]
 async fn user_presence_set(
     Path((target_user_id,)): Path<(UserIdReq,)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<Presence>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
@@ -664,12 +664,12 @@ async fn user_presence_set(
 async fn user_list(
     Query(paginate): Query<PaginationQuery<UserId>>,
     Query(q): Query<UserListParams>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::MemberBan)?;
 
     let data = s.data();
