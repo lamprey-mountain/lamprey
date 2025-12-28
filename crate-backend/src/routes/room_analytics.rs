@@ -20,7 +20,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::Auth2;
 
 /// Room analytics members count
 #[utoipa::path(
@@ -30,17 +30,17 @@ use super::util::Auth;
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersCount>)),
 )]
 async fn room_analytics_members_count(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
 
     let datapoints = data.room_analytics_members_count(room_id, q).await?;
@@ -55,13 +55,13 @@ async fn room_analytics_members_count(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersJoin>)),
 )]
 async fn room_analytics_members_join(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    auth.user.ensure_unsuspended()?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
     let res = s.data().room_analytics_members_join(room_id, q).await?;
     Ok(Json(res))
@@ -75,13 +75,13 @@ async fn room_analytics_members_join(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersLeave>)),
 )]
 async fn room_analytics_members_leave(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    auth.user.ensure_unsuspended()?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
     let res = s.data().room_analytics_members_leave(room_id, q).await?;
     Ok(Json(res))
@@ -95,14 +95,14 @@ async fn room_analytics_members_leave(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsChannel>)),
 )]
 async fn room_analytics_channels(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     Query(q2): Query<RoomAnalyticsChannelParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    auth.user.ensure_unsuspended()?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
     let res = s.data().room_analytics_channels(room_id, q, q2).await?;
     Ok(Json(res))
@@ -118,13 +118,13 @@ async fn room_analytics_channels(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsOverview>)),
 )]
 async fn room_analytics_overview(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    auth.user.ensure_unsuspended()?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
     let res = s.data().room_analytics_overview(room_id, q).await?;
     Ok(Json(res))
@@ -138,12 +138,12 @@ async fn room_analytics_overview(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsInvites>)),
 )]
 async fn room_analytics_invites(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Path(_room_id): Path<RoomId>,
     Query(_q): Query<RoomAnalyticsParams>,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)
 }
