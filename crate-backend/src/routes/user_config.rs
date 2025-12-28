@@ -10,7 +10,7 @@ use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
 use tower_http::limit::RequestBodyLimitLayer;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::error::Result;
 use crate::ServerState;
 
@@ -22,13 +22,13 @@ use crate::ServerState;
     responses((status = OK, body = UserConfigGlobal, description = "success"))
 )]
 async fn user_config_global_put(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<UserConfigGlobal>,
 ) -> Result<impl IntoResponse> {
-    s.data().user_config_set(auth_user.id, &json).await?;
+    s.data().user_config_set(auth.user.id, &json).await?;
     s.broadcast(MessageSync::UserConfigGlobal {
-        user_id: auth_user.id,
+        user_id: auth.user.id,
         config: json.clone(),
     })?;
     Ok(Json(json))
@@ -43,16 +43,16 @@ async fn user_config_global_put(
     responses((status = OK, body = UserConfigRoom, description = "success"))
 )]
 async fn user_config_room_put(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
     Json(json): Json<UserConfigRoom>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .user_config_room_set(auth_user.id, room_id, &json)
+        .user_config_room_set(auth.user.id, room_id, &json)
         .await?;
     s.broadcast(MessageSync::UserConfigRoom {
-        user_id: auth_user.id,
+        user_id: auth.user.id,
         room_id,
         config: json.clone(),
     })?;
@@ -68,16 +68,16 @@ async fn user_config_room_put(
     responses((status = OK, body = UserConfigChannel, description = "success"))
 )]
 async fn user_config_channel_put(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path(channel_id): Path<ChannelId>,
     Json(json): Json<UserConfigChannel>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .user_config_channel_set(auth_user.id, channel_id, &json)
+        .user_config_channel_set(auth.user.id, channel_id, &json)
         .await?;
     s.broadcast(MessageSync::UserConfigChannel {
-        user_id: auth_user.id,
+        user_id: auth.user.id,
         channel_id,
         config: json.clone(),
     })?;
@@ -93,16 +93,16 @@ async fn user_config_channel_put(
     responses((status = OK, body = UserConfigUser, description = "success"))
 )]
 async fn user_config_user_put(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path(user_id): Path<UserId>,
     Json(json): Json<UserConfigUser>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .user_config_user_set(auth_user.id, user_id, &json)
+        .user_config_user_set(auth.user.id, user_id, &json)
         .await?;
     s.broadcast(MessageSync::UserConfigUser {
-        user_id: auth_user.id,
+        user_id: auth.user.id,
         target_user_id: user_id,
         config: json.clone(),
     })?;
@@ -117,10 +117,10 @@ async fn user_config_user_put(
     responses((status = OK, body = UserConfigGlobal, description = "success"))
 )]
 async fn user_config_global_get(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let config = s.data().user_config_get(auth_user.id).await?;
+    let config = s.data().user_config_get(auth.user.id).await?;
     Ok(Json(config))
 }
 
@@ -133,11 +133,11 @@ async fn user_config_global_get(
     responses((status = OK, body = UserConfigRoom, description = "success"))
 )]
 async fn user_config_room_get(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
 ) -> Result<impl IntoResponse> {
-    let config = s.data().user_config_room_get(auth_user.id, room_id).await?;
+    let config = s.data().user_config_room_get(auth.user.id, room_id).await?;
     Ok(Json(config))
 }
 
@@ -150,13 +150,13 @@ async fn user_config_room_get(
     responses((status = OK, body = UserConfigChannel, description = "success"))
 )]
 async fn user_config_channel_get(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path(channel_id): Path<ChannelId>,
 ) -> Result<impl IntoResponse> {
     let config = s
         .data()
-        .user_config_channel_get(auth_user.id, channel_id)
+        .user_config_channel_get(auth.user.id, channel_id)
         .await?;
     Ok(Json(config))
 }
@@ -170,11 +170,11 @@ async fn user_config_channel_get(
     responses((status = OK, body = UserConfigUser, description = "success"))
 )]
 async fn user_config_user_get(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path(user_id): Path<UserId>,
 ) -> Result<impl IntoResponse> {
-    let config = s.data().user_config_user_get(auth_user.id, user_id).await?;
+    let config = s.data().user_config_user_get(auth.user.id, user_id).await?;
     Ok(Json(config))
 }
 
