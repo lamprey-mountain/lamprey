@@ -20,7 +20,7 @@ use crate::error::Result;
 use crate::routes::auth::fetch_auth_state;
 use crate::{Error, ServerState};
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 
 /// Invite delete
 #[utoipa::path(
@@ -36,18 +36,18 @@ use super::util::{Auth, HeaderReason};
 )]
 async fn invite_delete(
     Path(code): Path<InviteCode>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let d = s.data();
     let invite = d.invite_select(code.clone()).await?;
     let (has_perm, id_target) = match invite.invite.target {
         InviteTarget::Room { room, channel } => (
             s.services()
                 .perms
-                .for_room(auth_user.id, room.id)
+                .for_room(auth.user.id, room.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Room {
@@ -58,7 +58,7 @@ async fn invite_delete(
         InviteTarget::Gdm { channel } => (
             s.services()
                 .perms
-                .for_channel(auth_user.id, channel.id)
+                .for_channel(auth.user.id, channel.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Gdm {
@@ -68,14 +68,14 @@ async fn invite_delete(
         InviteTarget::Server => (
             s.services()
                 .perms
-                .for_room(auth_user.id, SERVER_ROOM_ID)
+                .for_room(auth.user.id, SERVER_ROOM_ID)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
         InviteTarget::User { user } => (false, InviteTargetId::User { user_id: user.id }),
     };
-    let can_delete = auth_user.id == invite.invite.creator_id || has_perm;
+    let can_delete = auth.user.id == invite.invite.creator_id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
         let room_id = match id_target {
@@ -88,8 +88,8 @@ async fn invite_delete(
             s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id,
-                user_id: auth_user.id,
-                session_id: None,
+                user_id: auth.user.id,
+                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
                 reason: reason.clone(),
                 ty: AuditLogEntryType::InviteDelete {
                     code: code.clone(),
@@ -104,7 +104,7 @@ async fn invite_delete(
             InviteTargetId::Room { room_id, .. } => {
                 s.broadcast_room(
                     room_id,
-                    auth_user.id,
+                    auth.user.id,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -115,7 +115,7 @@ async fn invite_delete(
             InviteTargetId::Gdm { channel_id } => {
                 s.broadcast_channel(
                     channel_id,
-                    auth_user.id,
+                    auth.user.id,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -126,7 +126,7 @@ async fn invite_delete(
             InviteTargetId::Server => {
                 s.broadcast_room(
                     SERVER_ROOM_ID,
-                    auth_user.id,
+                    auth.user.id,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -160,29 +160,29 @@ async fn invite_delete(
 )]
 async fn invite_resolve(
     Path(code): Path<InviteCode>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let s = s.services();
     let invite = d.invite_select(code).await?;
-    if invite.invite.creator_id == auth_user.id {
+    if invite.invite.creator_id == auth.user.id {
         return Ok(Json(invite).into_response());
     }
     let should_strip = match &invite.invite.target {
         InviteTarget::Room { room, .. } => {
-            let perms = s.perms.for_room(auth_user.id, room.id).await?;
+            let perms = s.perms.for_room(auth.user.id, room.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Gdm { channel } => {
-            let perms = s.perms.for_channel(auth_user.id, channel.id).await?;
+            let perms = s.perms.for_channel(auth.user.id, channel.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Server => {
-            let perms = s.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+            let perms = s.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
             !perms.has(Permission::InviteManage)
         }
-        InviteTarget::User { user: _ } => auth_user.id != invite.invite.creator_id,
+        InviteTarget::User { user: _ } => auth.user.id != invite.invite.creator_id,
     };
     if should_strip {
         Ok(Json(invite.strip_metadata()).into_response())
@@ -215,7 +215,7 @@ async fn invite_resolve(
 )]
 async fn invite_use(
     Path(code): Path<InviteCode>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -227,7 +227,7 @@ async fn invite_use(
     }
     match &invite.invite.target {
         InviteTarget::Room { room, .. } => {
-            if let Ok(ban) = d.room_ban_get(room.id, auth_user.id).await {
+            if let Ok(ban) = d.room_ban_get(room.id, auth.user.id).await {
                 if let Some(expires_at) = ban.expires_at {
                     if expires_at > Time::now_utc() {
                         return Err(Error::BadStatic("banned"));
@@ -241,50 +241,50 @@ async fn invite_use(
                 code: invite.invite.code,
                 inviter: invite.invite.creator_id,
             };
-            let existing = d.room_member_get(room.id, auth_user.id).await;
+            let existing = d.room_member_get(room.id, auth.user.id).await;
             if existing.is_ok_and(|e| e.membership == RoomMembership::Join) {
                 return Ok(StatusCode::NO_CONTENT);
             }
 
             d.room_member_put(
                 room.id,
-                auth_user.id,
+                auth.user.id,
                 Some(origin),
                 RoomMemberPut::default(),
             )
             .await?;
-            let member = d.room_member_get(room.id, auth_user.id).await?;
-            srv.perms.invalidate_room(auth_user.id, room.id).await;
-            srv.perms.invalidate_is_mutual(auth_user.id);
+            let member = d.room_member_get(room.id, auth.user.id).await?;
+            srv.perms.invalidate_room(auth.user.id, room.id).await;
+            srv.perms.invalidate_is_mutual(auth.user.id);
             let room_id = room.id;
             // FIXME: don't send RoomCreate to *everyone* when someone joins, just the joining user
             s.broadcast_room(
                 room_id,
-                auth_user.id,
+                auth.user.id,
                 MessageSync::RoomCreate { room: room.clone() },
             )
             .await?;
             s.broadcast_room(
                 room_id,
-                auth_user.id,
+                auth.user.id,
                 MessageSync::RoomMemberUpsert { member },
             )
             .await?;
         }
         InviteTarget::Gdm { channel } => {
-            d.thread_member_put(channel.id, auth_user.id, Default::default())
+            d.thread_member_put(channel.id, auth.user.id, Default::default())
                 .await?;
-            let member = d.thread_member_get(channel.id, auth_user.id).await?;
+            let member = d.thread_member_get(channel.id, auth.user.id).await?;
             s.broadcast_channel(
                 channel.id,
-                auth_user.id,
+                auth.user.id,
                 MessageSync::ThreadMemberUpsert { member },
             )
             .await?;
         }
         InviteTarget::Server => {
             let srv = s.services();
-            let user = srv.users.get(auth_user.id, None).await?;
+            let user = srv.users.get(auth.user.id, None).await?;
             if user.registered_at.is_some() {
                 return Err(Error::BadStatic("User is not a guest account"));
             }
@@ -303,7 +303,7 @@ async fn invite_use(
                 id: AuditLogEntryId::new(),
                 room_id: SERVER_ROOM_ID,
                 user_id: user.id,
-                session_id: None,
+                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
                 reason,
                 ty: AuditLogEntryType::UserRegistered { user_id: user.id },
             })
@@ -312,7 +312,7 @@ async fn invite_use(
         }
         InviteTarget::User { user } => {
             d.user_relationship_edit(
-                auth_user.id,
+                auth.user.id,
                 user.id,
                 RelationshipPatch {
                     ignore: None,
@@ -322,7 +322,7 @@ async fn invite_use(
             .await?;
             d.user_relationship_edit(
                 user.id,
-                auth_user.id,
+                auth.user.id,
                 RelationshipPatch {
                     ignore: None,
                     relation: Some(Some(RelationshipType::Friend)),
@@ -330,18 +330,18 @@ async fn invite_use(
             )
             .await?;
 
-            if let Some(rel) = d.user_relationship_get(auth_user.id, user.id).await? {
+            if let Some(rel) = d.user_relationship_get(auth.user.id, user.id).await? {
                 s.broadcast(MessageSync::RelationshipUpsert {
-                    user_id: auth_user.id,
+                    user_id: auth.user.id,
                     target_user_id: user.id,
                     relationship: rel,
                 })?;
             }
 
-            if let Some(rel) = d.user_relationship_get(user.id, auth_user.id).await? {
+            if let Some(rel) = d.user_relationship_get(user.id, auth.user.id).await? {
                 s.broadcast(MessageSync::RelationshipUpsert {
                     user_id: user.id,
-                    target_user_id: auth_user.id,
+                    target_user_id: auth.user.id,
                     relationship: rel,
                 })?;
             }
@@ -359,7 +359,7 @@ async fn invite_use(
         InviteTarget::User { .. } => return Ok(StatusCode::NO_CONTENT),
     };
     srv.rooms
-        .send_welcome_message(room_id, auth_user.id)
+        .send_welcome_message(room_id, auth.user.id)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -381,15 +381,15 @@ async fn invite_use(
 )]
 async fn invite_room_create(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let d = s.data();
-    let perms = s.services.perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::InviteCreate)?;
 
     if room_id == SERVER_ROOM_ID {
@@ -402,7 +402,7 @@ async fn invite_room_create(
     let code = InviteCode(nanoid!(8, &alphabet));
     d.invite_insert_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         code.clone(),
         json.expires_at,
         json.max_uses,
@@ -420,8 +420,8 @@ async fn invite_room_create(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::InviteCreate { changes },
     })
@@ -429,7 +429,7 @@ async fn invite_room_create(
 
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::InviteCreate {
             invite: Box::new(invite.clone()),
         },
@@ -463,18 +463,18 @@ enum InviteWithPotentialMetadata {
 async fn invite_room_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services.perms.for_room(user.id, room_id).await?;
+    let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
 
     let res = d.invite_list_room(room_id, paginate).await?;
     let items: Vec<_> = res
         .items
         .into_iter()
         .map(|i| {
-            if i.invite.creator_id != user.id && !perms.has(Permission::InviteManage) {
+            if i.invite.creator_id != auth.user.id && !perms.has(Permission::InviteManage) {
                 InviteWithPotentialMetadata::Invite(i.strip_metadata())
             } else {
                 InviteWithPotentialMetadata::InviteWithMetadata(i)
@@ -512,12 +512,12 @@ async fn invite_room_list(
 )]
 async fn invite_channel_create(
     Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let d = s.data();
     let channel = d.channel_get(channel_id).await?;
@@ -526,7 +526,7 @@ async fn invite_channel_create(
         // anyone can create invites for a gdm
         None
     } else if let Some(room_id) = channel.room_id {
-        let perms = s.services.perms.for_room(auth_user.id, room_id).await?;
+        let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
         perms.ensure(Permission::InviteCreate)?;
         Some(room_id)
     } else {
@@ -539,7 +539,7 @@ async fn invite_channel_create(
     let code = InviteCode(nanoid!(8, &alphabet));
     d.invite_insert_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         code.clone(),
         json.expires_at,
         json.max_uses,
@@ -558,8 +558,8 @@ async fn invite_channel_create(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason: reason.clone(),
             ty: AuditLogEntryType::InviteCreate { changes },
         })
@@ -568,7 +568,7 @@ async fn invite_channel_create(
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::InviteCreate {
             invite: Box::new(invite.clone()),
         },
@@ -595,7 +595,7 @@ async fn invite_channel_create(
 async fn invite_channel_list(
     Path(channel_id): Path<ChannelId>,
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -606,7 +606,7 @@ async fn invite_channel_list(
     } else if let Some(room_id) = channel.room_id {
         s.services
             .perms
-            .for_room(user.id, room_id)
+            .for_room(auth.user.id, room_id)
             .await?
             .has(Permission::InviteManage)
     } else {
@@ -618,7 +618,7 @@ async fn invite_channel_list(
         .items
         .into_iter()
         .map(|i| {
-            if i.invite.creator_id != user.id && !has_perm {
+            if i.invite.creator_id != auth.user.id && !has_perm {
                 InviteWithPotentialMetadata::Invite(i.strip_metadata())
             } else {
                 InviteWithPotentialMetadata::InviteWithMetadata(i)
@@ -657,7 +657,7 @@ async fn invite_channel_list(
 )]
 async fn invite_patch(
     Path(code): Path<InviteCode>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<InvitePatch>,
@@ -669,7 +669,7 @@ async fn invite_patch(
         InviteTarget::Room { room, channel } => (
             s.services()
                 .perms
-                .for_room(auth_user.id, room.id)
+                .for_room(auth.user.id, room.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Room {
@@ -680,7 +680,7 @@ async fn invite_patch(
         InviteTarget::Gdm { channel } => (
             s.services()
                 .perms
-                .for_channel(auth_user.id, channel.id)
+                .for_channel(auth.user.id, channel.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Gdm {
@@ -690,20 +690,20 @@ async fn invite_patch(
         InviteTarget::Server => (
             s.services()
                 .perms
-                .for_room(auth_user.id, SERVER_ROOM_ID)
+                .for_room(auth.user.id, SERVER_ROOM_ID)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
         InviteTarget::User { user: _ } => (
-            auth_user.id == start_invite.invite.creator_id,
+            auth.user.id == start_invite.invite.creator_id,
             InviteTargetId::User {
-                user_id: auth_user.id,
+                user_id: auth.user.id,
             },
         ),
     };
 
-    let can_patch = auth_user.id == start_invite.invite.creator_id || has_perm;
+    let can_patch = auth.user.id == start_invite.invite.creator_id || has_perm;
     if !can_patch {
         return Err(Error::MissingPermissions);
     }
@@ -734,8 +734,8 @@ async fn invite_patch(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason,
             ty: AuditLogEntryType::InviteUpdate { changes },
         })
@@ -759,16 +759,16 @@ async fn invite_patch(
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_server_create(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let d = s.data();
     let srv = s.services();
-    let user = srv.users.get(auth_user.id, None).await?;
+    let user = srv.users.get(auth.user.id, None).await?;
     if user.registered_at.is_none() {
         return Err(Error::BadStatic("Guest users cannot create server invites"));
     }
@@ -795,7 +795,7 @@ async fn invite_server_create(
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
         user_id: user.id,
-        session_id: None,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::InviteCreate { changes },
     })
@@ -829,12 +829,12 @@ async fn invite_server_create(
 )]
 async fn invite_server_list(
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let d = s.data();
-    let user = srv.users.get(user.id, None).await?;
+    let user = srv.users.get(auth.user.id, None).await?;
     if user.registered_at.is_none() {
         return Err(Error::BadStatic("Guest users cannot list server invites"));
     }
@@ -860,19 +860,19 @@ async fn invite_server_list(
 )]
 async fn invite_user_create(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -883,8 +883,8 @@ async fn invite_user_create(
         .collect();
     let code = InviteCode(nanoid!(8, &alphabet));
     d.invite_insert_user(
-        auth_user.id,
-        auth_user.id,
+        auth.user.id,
+        auth.user.id,
         code.clone(),
         json.expires_at,
         json.max_uses,
@@ -901,9 +901,9 @@ async fn invite_user_create(
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
-        room_id: auth_user.id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: None,
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::InviteCreate { changes },
     })
@@ -932,15 +932,15 @@ async fn invite_user_create(
 async fn invite_user_list(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -951,7 +951,7 @@ async fn invite_user_list(
         .items
         .into_iter()
         .map(|i| {
-            if i.invite.creator_id != auth_user.id {
+            if i.invite.creator_id != auth.user.id {
                 InviteWithPotentialMetadata::Invite(i.strip_metadata())
             } else {
                 InviteWithPotentialMetadata::InviteWithMetadata(i)
