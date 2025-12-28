@@ -1,6 +1,9 @@
 use common::v1::types::sync::{SyncCompression, SyncParams};
-use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
-use std::io::{Read, Write};
+use flate2::{
+    write::{ZlibDecoder, ZlibEncoder},
+    Compression as FlateCompression,
+};
+use std::io::Write;
 use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
@@ -43,7 +46,14 @@ pub struct Connection {
     seq_client: u64,
     id: String,
     pub member_list: Box<MemberListSyncer>,
-    compression: Option<SyncCompression>,
+    compression: Option<Compression>,
+}
+
+pub enum Compression {
+    Deflate {
+        encoder: ZlibEncoder<Vec<u8>>,
+        decoder: ZlibDecoder<Vec<u8>>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +65,14 @@ enum ConnectionState {
 
 impl Connection {
     pub fn new(s: Arc<ServerState>, params: SyncParams) -> Self {
+        let compression = match params.compression {
+            Some(SyncCompression::Deflate) => Some(Compression::Deflate {
+                encoder: ZlibEncoder::new(Vec::new(), FlateCompression::default()),
+                decoder: ZlibDecoder::new(Vec::new()),
+            }),
+            None => None,
+        };
+
         Self {
             state: ConnectionState::Unauthed,
             queue: VecDeque::new(),
@@ -62,7 +80,7 @@ impl Connection {
             seq_client: 0,
             id: format!("{}", uuid::Uuid::new_v4().hyphenated()),
             member_list: Box::new(s.services().members.create_syncer()),
-            compression: params.compression,
+            compression,
             s,
         }
     }
@@ -106,11 +124,13 @@ impl Connection {
                 serde_json::from_str::<MessageClient>(&utf8_bytes)?
             }
             Message::Binary(bytes) => {
-                if let Some(SyncCompression::Deflate) = self.compression {
-                    let mut decoder = ZlibDecoder::new(&bytes[..]);
-                    let mut decompressed = Vec::new();
-                    decoder.read_to_end(&mut decompressed)?;
-                    serde_json::from_slice::<MessageClient>(&decompressed)?
+                if let Some(Compression::Deflate { decoder, .. }) = &mut self.compression {
+                    decoder.write_all(&bytes)?;
+                    decoder.flush()?;
+                    let decompressed = decoder.get_mut();
+                    let msg = serde_json::from_slice::<MessageClient>(decompressed)?;
+                    decompressed.clear();
+                    msg
                 } else {
                     return Err(Error::BadStatic(
                         "unexpected binary message for uncompressed session",
@@ -690,9 +710,13 @@ impl Connection {
     pub async fn drain(&mut self, ws: &mut WebSocket) -> Result<()> {
         let last_seen = self.seq_client;
         let mut high_water_mark = last_seen;
-        for (seq, msg) in self.queue.iter().rev() {
+
+        let queue = &self.queue;
+        let compression = &mut self.compression;
+
+        for (seq, msg) in queue.iter().rev() {
             if seq.is_none_or(|s| s > last_seen) {
-                ws.send(self.serialize_and_compress(msg)?).await?;
+                ws.send(Self::compress_message(compression, msg)?).await?;
 
                 if let Some(seq) = *seq {
                     high_water_mark = high_water_mark.max(seq);
@@ -708,16 +732,27 @@ impl Connection {
         &self.id
     }
 
-    fn serialize_and_compress(&self, msg: &MessageEnvelope) -> Result<WsMessage> {
+    fn compress_message(
+        compression: &mut Option<Compression>,
+        msg: &MessageEnvelope,
+    ) -> Result<WsMessage> {
         let json = serde_json::to_string(msg)?;
-        Ok(if let Some(SyncCompression::Deflate) = self.compression {
-            let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-            encoder.write_all(json.as_bytes())?;
-            let compressed = encoder.finish()?;
-            WsMessage::Binary(compressed.into())
-        } else {
-            WsMessage::text(json)
-        })
+        Ok(
+            if let Some(Compression::Deflate { encoder, .. }) = compression {
+                encoder.write_all(json.as_bytes())?;
+                encoder.flush()?;
+                let compressed = encoder.get_mut();
+                let data = compressed.clone();
+                compressed.clear();
+                WsMessage::Binary(data.into())
+            } else {
+                WsMessage::text(json)
+            },
+        )
+    }
+
+    fn serialize_and_compress(&mut self, msg: &MessageEnvelope) -> Result<WsMessage> {
+        Self::compress_message(&mut self.compression, msg)
     }
 }
 
