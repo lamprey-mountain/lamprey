@@ -8,6 +8,11 @@ cdn_url = "https://example-cdn.com"
 sfu_token = "a1b2c3"
 media_max_size = 16777216 # 16 MiB
 
+[[listen]]
+type = "tcp"
+address = "0.0.0.0"
+port = 4000
+
 [s3]
 bucket = "chat-files"
 endpoint = "https://s4.celery.eu.org"
@@ -30,6 +35,8 @@ token_url = "https://github.com/login/oauth/access_token"
 revocation_url = "https://github.com/login/oauth/access_token"
 
 [url_preview]
+
+[http]
 user_agent = "Lamprey/v0.1.0 (admin@example.com)"
 deny = [
   "127.0.0.1/8",
