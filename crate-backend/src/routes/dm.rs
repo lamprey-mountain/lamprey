@@ -12,7 +12,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::types::UserIdReq;
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::error::{Error, Result};
 
 // TODO: merge with channel_create_dm
@@ -31,16 +31,16 @@ use crate::error::{Error, Result};
 )]
 async fn dm_init(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let target_user = s.data().user_get(target_user_id).await?;
     if !target_user.can_dm() {
         return Err(Error::BadStatic("cannot dm this user"));
     }
-    let (thread, is_new) = srv.users.init_dm(auth_user.id, target_user_id).await?;
+    let (thread, is_new) = srv.users.init_dm(auth.user.id, target_user_id).await?;
     s.broadcast(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
     })?;
@@ -68,15 +68,15 @@ async fn dm_init(
 )]
 async fn dm_get(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let Some(thread_id) = data.dm_get(auth_user.id, target_user_id).await? else {
+    let Some(thread_id) = data.dm_get(auth.user.id, target_user_id).await? else {
         return Err(Error::NotFound);
     };
     let srv = s.services();
-    let thread = srv.channels.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
     Ok(Json(thread))
 }
 
@@ -100,26 +100,26 @@ async fn dm_get(
 )]
 async fn dm_list(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Query(q): Query<PaginationQuery<MessageVerId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
     let data = s.data();
-    let mut res = data.dm_list(auth_user.id, q).await?;
+    let mut res = data.dm_list(auth.user.id, q).await?;
 
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
-        threads.push(srv.channels.get(t.id, Some(auth_user.id)).await?);
+        threads.push(srv.channels.get(t.id, Some(auth.user.id)).await?);
     }
     res.items = threads;
 
