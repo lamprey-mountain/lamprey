@@ -17,12 +17,10 @@ use validator::Validate;
 
 use crate::{
     error::{Error, Result},
-    routes::util::HeaderReason,
+    routes::util::{Auth2, HeaderReason},
     ServerState,
 };
 use common::v1::types::{util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType};
-
-use super::util::Auth;
 
 /// Calendar event list user (TODO)
 ///
@@ -36,7 +34,7 @@ use super::util::Auth;
 )]
 async fn calendar_event_list_user(
     Query(_query): Query<CalendarEventListQuery>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -53,16 +51,16 @@ async fn calendar_event_list_user(
 async fn calendar_event_list(
     Path(channel_id): Path<ChannelId>,
     Query(query): Query<CalendarEventListQuery>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     query.validate()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
@@ -83,30 +81,30 @@ async fn calendar_event_list(
 )]
 async fn calendar_event_create(
     Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<CalendarEventCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::CalendarEventCreate)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
     let event = s
         .data()
-        .calendar_event_create(json.clone(), channel_id, auth_user.id)
+        .calendar_event_create(json.clone(), channel_id, auth.user.id)
         .await?;
 
     let room_id = srv
         .channels
-        .get(channel_id, Some(auth_user.id))
+        .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
@@ -114,8 +112,8 @@ async fn calendar_event_create(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason: reason.clone(),
         ty: AuditLogEntryType::CalendarEventCreate {
             changes: Changes::new()
@@ -145,14 +143,14 @@ async fn calendar_event_create(
 )]
 async fn calendar_event_get(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
@@ -180,17 +178,17 @@ async fn calendar_event_get(
 )]
 async fn calendar_event_update(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<CalendarEventPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
@@ -200,7 +198,7 @@ async fn calendar_event_update(
         return Err(Error::NotFound);
     }
 
-    if old_event.creator_id == Some(auth_user.id) {
+    if old_event.creator_id == Some(auth.user.id) {
         perms.ensure(Permission::CalendarEventCreate)?;
     } else {
         perms.ensure(Permission::CalendarEventManage)?;
@@ -213,7 +211,7 @@ async fn calendar_event_update(
 
     let room_id = srv
         .channels
-        .get(channel_id, Some(auth_user.id))
+        .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
@@ -221,8 +219,8 @@ async fn calendar_event_update(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason: reason.clone(),
         ty: AuditLogEntryType::CalendarEventUpdate {
             changes: Changes::new()
@@ -256,15 +254,15 @@ async fn calendar_event_update(
 )]
 async fn calendar_event_delete(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
@@ -273,7 +271,7 @@ async fn calendar_event_delete(
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
-    if event.creator_id == Some(auth_user.id) {
+    if event.creator_id == Some(auth.user.id) {
         perms.ensure(Permission::CalendarEventCreate)?;
     } else {
         perms.ensure(Permission::CalendarEventManage)?;
@@ -283,7 +281,7 @@ async fn calendar_event_delete(
 
     let room_id = srv
         .channels
-        .get(channel_id, Some(auth_user.id))
+        .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
@@ -291,8 +289,8 @@ async fn calendar_event_delete(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason: reason.clone(),
         ty: AuditLogEntryType::CalendarEventDelete {
             event_id: event.id,
@@ -323,14 +321,14 @@ async fn calendar_event_delete(
 )]
 async fn calendar_rsvp_list(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
@@ -362,19 +360,19 @@ async fn calendar_rsvp_get(
         CalendarEventId,
         UserIdReq,
     )>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
@@ -410,23 +408,23 @@ async fn calendar_rsvp_update(
         CalendarEventId,
         UserIdReq,
     )>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    if auth_user.id != user_id {
+    if auth.user.id != user_id {
         return Err(Error::BadStatic("cannot rsvp other people"));
     }
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
@@ -461,23 +459,23 @@ async fn calendar_rsvp_delete(
         CalendarEventId,
         UserIdReq,
     )>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    if auth_user.id != user_id {
+    if auth.user.id != user_id {
         perms.ensure(Permission::CalendarEventManage)?;
     }
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
