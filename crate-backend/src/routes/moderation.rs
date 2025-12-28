@@ -5,7 +5,7 @@ use axum::{extract::State, Json};
 use common::v1::types::moderation::{Report, ReportCreate};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
@@ -19,7 +19,7 @@ use crate::ServerState;
     responses((status = OK, body = Report, description = "success"))
 )]
 async fn report_create_server(
-    Auth(_auth_user_id): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<ReportCreate>,
 ) -> Result<impl IntoResponse> {
@@ -37,7 +37,7 @@ async fn report_create_server(
     responses((status = OK, body = Report, description = "success"))
 )]
 async fn report_create_room(
-    Auth(_auth_user_id): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<ReportCreate>,
 ) -> Result<impl IntoResponse> {

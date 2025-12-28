@@ -12,7 +12,7 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 
 use crate::{
     error::Result,
@@ -50,17 +50,17 @@ struct AdminRegisterUser {
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_whisper(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminWhisper>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
 
     perms.ensure(Permission::Admin)?;
 
@@ -73,8 +73,8 @@ async fn admin_whisper(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason,
         ty: AuditLogEntryType::AdminWhisper {
             user_id: json.user_id,
@@ -83,7 +83,7 @@ async fn admin_whisper(
     })
     .await?;
 
-    let (thread, _) = srv.users.init_dm(auth_user.id, json.user_id).await?;
+    let (thread, _) = srv.users.init_dm(auth.user.id, json.user_id).await?;
     if !thread.locked {
         d.channel_update(
             thread.id,
@@ -117,17 +117,17 @@ async fn admin_whisper(
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_broadcast(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminBroadcast>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
 
     perms.ensure(Permission::Admin)?;
 
@@ -140,8 +140,8 @@ async fn admin_broadcast(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason,
         ty: AuditLogEntryType::AdminBroadcast { changes },
     })
@@ -215,17 +215,17 @@ async fn admin_broadcast(
     responses((status = NO_CONTENT, description = "User registered"))
 )]
 async fn admin_register_user(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminRegisterUser>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
     let target_user_id = json.user_id;
@@ -238,8 +238,8 @@ async fn admin_register_user(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason,
         ty: AuditLogEntryType::UserRegistered {
             user_id: target_user_id,
@@ -261,15 +261,15 @@ async fn admin_register_user(
     ),
 )]
 async fn admin_purge_cache(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AdminPurgeCache>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
     let res = srv.admin.purge_caches(json).await?;
@@ -288,15 +288,15 @@ async fn admin_purge_cache(
     )
 )]
 async fn admin_collect_garbage(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AdminCollectGarbage>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
     let res = srv.admin.collect_garbage(json).await?;

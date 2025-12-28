@@ -11,19 +11,19 @@ use crate::{
         ROOM_COUNT_TOTAL, USER_COUNT_BOT, USER_COUNT_GUEST, USER_COUNT_PUPPET,
         USER_COUNT_PUPPET_BOT, USER_COUNT_REGISTERED, USER_COUNT_TOTAL, USER_COUNT_WEBHOOK,
     },
-    routes::util::Auth,
+    routes::util::Auth2,
     types::{Permission, SERVER_ROOM_ID},
     Error, Result, ServerState,
 };
 
 pub async fn get_metrics(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s
         .services()
         .perms
-        .for_room(auth_user.id, SERVER_ROOM_ID)
+        .for_room(auth.user.id, SERVER_ROOM_ID)
         .await?;
     perms.ensure(Permission::ServerMetrics)?;
 
