@@ -14,7 +14,7 @@ use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 use crate::error::{Error, Result};
 use crate::ServerState;
 
@@ -36,15 +36,15 @@ use crate::ServerState;
     )
 )]
 async fn emoji_create(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<EmojiCustomCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::EmojiManage)?;
 
     let data = s.data();
@@ -57,7 +57,7 @@ async fn emoji_create(
     }
 
     let emoji = data
-        .emoji_create(auth_user.id, room_id, json.clone())
+        .emoji_create(auth.user.id, room_id, json.clone())
         .await?;
 
     let changes = Changes::new()
@@ -68,8 +68,8 @@ async fn emoji_create(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiCreate {
             changes: changes.build(),
@@ -79,7 +79,7 @@ async fn emoji_create(
 
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::EmojiCreate {
             emoji: emoji.clone(),
         },
@@ -105,7 +105,7 @@ async fn emoji_create(
 )]
 async fn emoji_get(
     Path((_room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    Auth(_user_id): Auth,
+    _auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -133,23 +133,23 @@ async fn emoji_get(
 )]
 async fn emoji_delete(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
     let emoji = data.emoji_get(emoji_id).await?;
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::EmojiManage)?;
     data.emoji_delete(emoji_id).await?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiDelete {
             emoji_id,
@@ -165,7 +165,7 @@ async fn emoji_delete(
     if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
         s.broadcast_room(
             room_id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::EmojiDelete {
                 emoji_id: emoji.id,
                 room_id,
@@ -194,14 +194,14 @@ async fn emoji_delete(
 )]
 async fn emoji_update(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<EmojiCustomPatch>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let data = s.data();
     perms.ensure(Permission::EmojiManage)?;
 
@@ -216,8 +216,8 @@ async fn emoji_update(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiUpdate {
             changes: Changes::new()
@@ -230,7 +230,7 @@ async fn emoji_update(
     if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
         s.broadcast_room(
             room_id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::EmojiUpdate {
                 emoji: emoji.clone(),
             },
@@ -258,13 +258,13 @@ async fn emoji_update(
 )]
 async fn emoji_list(
     Path(room_id): Path<RoomId>,
-    Auth(user): Auth,
+    auth: Auth2,
     Query(q): Query<PaginationQuery<EmojiId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let _perms = srv.perms.for_room(user.id, room_id).await?;
+    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
 
     let emoji = data.emoji_list(room_id, q).await?;
     Ok(Json(emoji))
@@ -284,7 +284,7 @@ async fn emoji_list(
 )]
 async fn emoji_lookup(
     Path(emoji_id): Path<EmojiId>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -298,13 +298,13 @@ async fn emoji_lookup(
 
     match original_owner {
         Some(EmojiOwner::Room { room_id }) => {
-            if data.room_member_get(room_id, user.id).await.is_ok() {
+            if data.room_member_get(room_id, auth.user.id).await.is_ok() {
                 emoji.owner = original_owner;
                 emoji.creator_id = original_creator_id;
             }
         }
         Some(EmojiOwner::User) => {
-            if original_creator_id == Some(user.id) {
+            if original_creator_id == Some(auth.user.id) {
                 emoji.owner = original_owner;
                 emoji.creator_id = original_creator_id;
             }
@@ -334,7 +334,7 @@ pub struct EmojiSearchQuery {
 )]
 async fn emoji_search(
     Path(_emoji_id): Path<EmojiId>,
-    Auth(_user): Auth,
+    _auth: Auth2,
     Query(_q): Query<EmojiSearchQuery>,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
