@@ -23,7 +23,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::{Auth, HeaderIdempotencyKey, HeaderReason};
+use super::util::{Auth2, HeaderIdempotencyKey, HeaderReason};
 use crate::error::Result;
 
 /// Message create
@@ -46,23 +46,23 @@ use crate::error::Result;
 )]
 async fn message_create(
     Path((channel_id,)): Path<(ChannelId,)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
 
     let message = srv
         .messages
-        .create(channel_id, auth_user.id, reason, nonce, json)
+        .create(channel_id, auth.user.id, reason, nonce, json)
         .await?;
 
     Ok((StatusCode::CREATED, Json(message)))
@@ -87,16 +87,16 @@ async fn message_create(
 async fn message_context(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<ContextQuery>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
     let res = srv
         .messages
-        .list_context(channel_id, message_id, auth_user.id, q)
+        .list_context(channel_id, message_id, auth.user.id, q)
         .await?;
 
     Ok(Json(res))
@@ -117,13 +117,13 @@ async fn message_context(
 async fn message_list(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let res = srv.messages.list(channel_id, auth_user.id, q).await?;
+    let res = srv.messages.list(channel_id, auth.user.id, q).await?;
     Ok(Json(res))
 }
 
@@ -142,15 +142,15 @@ async fn message_list(
 )]
 async fn message_get(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let message = srv
         .messages
-        .get(channel_id, message_id, auth_user.id)
+        .get(channel_id, message_id, auth.user.id)
         .await?;
     Ok(Json(message))
 }
@@ -171,14 +171,14 @@ async fn message_get(
 )]
 async fn message_edit(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
@@ -188,14 +188,14 @@ async fn message_edit(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     if thread.locked && !perms.can_use_locked_threads() {
         return Err(Error::MissingPermissions);
     }
 
     let (_status, message) = srv
         .messages
-        .edit(channel_id, message_id, auth_user.id, reason, json)
+        .edit(channel_id, message_id, auth.user.id, reason, json)
         .await?;
     Ok((StatusCode::OK, Json(message)))
 }
@@ -222,26 +222,26 @@ async fn message_edit(
 )]
 async fn message_delete(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let mut perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let message = data
-        .message_get(channel_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth.user.id)
         .await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
-    if message.author_id == auth_user.id {
+    if message.author_id == auth.user.id {
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
@@ -262,7 +262,7 @@ async fn message_delete(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
+            user_id: auth.user.id,
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::MessageDelete {
@@ -275,7 +275,7 @@ async fn message_delete(
 
     s.broadcast_channel(
         thread.id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::MessageDelete {
             channel_id,
             message_id,
@@ -303,15 +303,15 @@ async fn message_delete(
 async fn message_version_list(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let res = srv
         .messages
-        .list_versions(channel_id, message_id, auth_user.id, q)
+        .list_versions(channel_id, message_id, auth.user.id, q)
         .await?;
     Ok(Json(res))
 }
@@ -332,15 +332,15 @@ async fn message_version_list(
 )]
 async fn message_version_get(
     Path((channel_id, _message_id, version_id)): Path<(ChannelId, MessageId, MessageVerId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let message = srv
         .messages
-        .get_version(channel_id, version_id, auth_user.id)
+        .get_version(channel_id, version_id, auth.user.id)
         .await?;
     Ok(Json(message))
 }
@@ -377,12 +377,12 @@ async fn message_version_get(
 )]
 async fn message_moderate(
     Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageModerate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
 
     if json.delete.is_empty() && json.remove.is_empty() && json.restore.is_empty() {
@@ -391,10 +391,10 @@ async fn message_moderate(
 
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
@@ -412,7 +412,7 @@ async fn message_moderate(
         perms.ensure(Permission::MessageDelete)?;
         // TODO: fix n+1 query
         for id in &json.delete {
-            let message = data.message_get(channel_id, *id, auth_user.id).await?;
+            let message = data.message_get(channel_id, *id, auth.user.id).await?;
             if !message.message_type.is_deletable() {
                 return Err(Error::BadStatic("cant delete one of the messages"));
             }
@@ -427,8 +427,8 @@ async fn message_moderate(
             s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id,
-                user_id: auth_user.id,
-                session_id: None,
+                user_id: auth.user.id,
+                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
                 reason: reason.clone(),
                 ty: AuditLogEntryType::MessageDeleteBulk {
                     channel_id,
@@ -440,7 +440,7 @@ async fn message_moderate(
 
         s.broadcast_channel(
             thread.id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::MessageDeleteBulk {
                 channel_id,
                 message_ids: json.delete.clone(),
@@ -453,7 +453,7 @@ async fn message_moderate(
         perms.ensure(Permission::MessageRemove)?;
         // TODO: fix n+1 query
         for id in &json.remove {
-            let message = data.message_get(channel_id, *id, auth_user.id).await?;
+            let message = data.message_get(channel_id, *id, auth.user.id).await?;
             if !message.message_type.is_deletable() {
                 return Err(Error::BadStatic("cant remove one of the messages"));
             }
@@ -465,8 +465,8 @@ async fn message_moderate(
             s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id,
-                user_id: auth_user.id,
-                session_id: None,
+                user_id: auth.user.id,
+                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
                 reason: reason.clone(),
                 ty: AuditLogEntryType::MessageRemove {
                     channel_id,
@@ -478,7 +478,7 @@ async fn message_moderate(
 
         s.broadcast_channel(
             thread.id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::MessageRemove {
                 channel_id,
                 message_ids: json.remove.clone(),
@@ -495,8 +495,8 @@ async fn message_moderate(
             s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id,
-                user_id: auth_user.id,
-                session_id: None,
+                user_id: auth.user.id,
+                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
                 reason: reason.clone(),
                 ty: AuditLogEntryType::MessageRestore {
                     channel_id,
@@ -508,7 +508,7 @@ async fn message_moderate(
 
         s.broadcast_channel(
             thread.id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::MessageRestore {
                 channel_id,
                 message_ids: json.restore.clone(),
@@ -537,7 +537,7 @@ async fn message_moderate(
 )]
 async fn message_move(
     Path(_channel_id): Path<ChannelId>,
-    Auth(_user_id): Auth,
+    _auth: Auth2,
     HeaderReason(_reason): HeaderReason,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<MessageMigrate>,
@@ -565,16 +565,16 @@ async fn message_reply_query(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let res = srv
         .messages
-        .list_replies(channel_id, Some(message_id), auth_user.id, q, pagination)
+        .list_replies(channel_id, Some(message_id), auth.user.id, q, pagination)
         .await?;
     Ok(Json(res))
 }
@@ -598,16 +598,16 @@ async fn message_reply_roots(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let res = srv
         .messages
-        .list_replies(channel_id, None, auth_user.id, q, pagination)
+        .list_replies(channel_id, None, auth.user.id, q, pagination)
         .await?;
     Ok(Json(res))
 }
@@ -633,17 +633,17 @@ async fn message_reply_roots(
 )]
 async fn message_pin_create(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
@@ -657,12 +657,12 @@ async fn message_pin_create(
     data.message_pin_create(channel_id, message_id).await?;
 
     let message = data
-        .message_get(channel_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth.user.id)
         .await?;
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::MessageUpdate { message },
     )
     .await?;
@@ -671,7 +671,7 @@ async fn message_pin_create(
         .message_create(DbMessageCreate {
             channel_id,
             attachment_ids: vec![],
-            author_id: auth_user.id,
+            author_id: auth.user.id,
             embeds: vec![],
             message_type: MessageType::MessagePinned(MessagePin {
                 pinned_message_id: message_id,
@@ -682,10 +682,10 @@ async fn message_pin_create(
         })
         .await?;
     let mut notice_message = data
-        .message_get(channel_id, notice_message_id, auth_user.id)
+        .message_get(channel_id, notice_message_id, auth.user.id)
         .await?;
 
-    let user_id = auth_user.id;
+    let user_id = auth.user.id;
     let tm = data.thread_member_get(channel_id, user_id).await;
     if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
         data.thread_member_put(channel_id, user_id, ThreadMemberPut::default())
@@ -701,7 +701,7 @@ async fn message_pin_create(
     srv.channels.invalidate(channel_id).await; // message count
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::MessageCreate {
             message: notice_message,
         },
@@ -712,8 +712,8 @@ async fn message_pin_create(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason: reason.clone(),
             ty: AuditLogEntryType::MessagePin {
                 channel_id,
@@ -744,16 +744,16 @@ async fn message_pin_create(
 )]
 async fn message_pin_delete(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
@@ -768,12 +768,12 @@ async fn message_pin_delete(
 
     let message = s
         .data()
-        .message_get(channel_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth.user.id)
         .await?;
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::MessageUpdate { message },
     )
     .await?;
@@ -782,8 +782,8 @@ async fn message_pin_delete(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason: reason.clone(),
             ty: AuditLogEntryType::MessageUnpin {
                 channel_id,
@@ -813,18 +813,18 @@ async fn message_pin_delete(
 )]
 async fn message_pin_reorder(
     Path((channel_id,)): Path<(ChannelId,)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PinsReorder>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
@@ -843,11 +843,11 @@ async fn message_pin_reorder(
     for item in json.messages {
         let message = s
             .data()
-            .message_get(channel_id, item.id, auth_user.id)
+            .message_get(channel_id, item.id, auth.user.id)
             .await?;
         s.broadcast_channel(
             channel_id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::MessageUpdate { message },
         )
         .await?;
@@ -857,8 +857,8 @@ async fn message_pin_reorder(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason: reason.clone(),
             ty: AuditLogEntryType::MessagePinReorder { channel_id },
         })
@@ -884,13 +884,13 @@ async fn message_pin_reorder(
 async fn message_pin_list(
     Path(channel_id): Path<ChannelId>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let res = srv.messages.list_pins(channel_id, auth_user.id, q).await?;
+    let res = srv.messages.list_pins(channel_id, auth.user.id, q).await?;
     Ok(Json(res))
 }
 
@@ -909,15 +909,15 @@ async fn message_pin_list(
 async fn message_list_deleted(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessageDelete)?;
     let res = srv
         .messages
-        .list_deleted(channel_id, auth_user.id, q)
+        .list_deleted(channel_id, auth.user.id, q)
         .await?;
     Ok(Json(res))
 }
@@ -937,15 +937,15 @@ async fn message_list_deleted(
 async fn message_list_removed(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessageRemove)?;
     let res = srv
         .messages
-        .list_removed(channel_id, auth_user.id, q)
+        .list_removed(channel_id, auth.user.id, q)
         .await?;
     Ok(Json(res))
 }
@@ -965,7 +965,7 @@ async fn message_list_removed(
 pub async fn message_list_atom(
     Path(_channel_id): Path<ChannelId>,
     Query(_pagination): Query<PaginationQuery<ChannelId>>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -982,7 +982,7 @@ pub async fn message_list_atom(
 )]
 pub async fn message_nudge(
     Path(_channel_id): Path<ChannelId>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)

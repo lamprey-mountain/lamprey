@@ -25,7 +25,7 @@ use crate::{
     Error, ServerState,
 };
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 
 /// Room create
 #[utoipa::path(
@@ -34,11 +34,11 @@ use super::util::{Auth, HeaderReason};
     tags = ["room"],
 )]
 async fn room_create(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
 
     // FIXME: run this in a transaction
@@ -59,7 +59,7 @@ async fn room_create(
         ty: RoomType::Default,
         welcome_channel_id: None,
     };
-    let room = s.services().rooms.create(json, auth_user.id, extra).await?;
+    let room = s.services().rooms.create(json, auth.user.id, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
         data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::AvatarRoom)
@@ -82,13 +82,13 @@ async fn room_create(
 )]
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(user): Auth,
+    auth: Auth2,
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let _perms = srv.perms.for_room(user.id, room_id).await?;
-    let room = srv.rooms.get(room_id, Some(user.id)).await?;
+    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
 
     // TODO: use typedheader once the empty if-none-match bug is fixed
     // TODO: last-modified
@@ -118,14 +118,14 @@ async fn room_get(
 )]
 async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let is_admin = srv
         .perms
-        .for_room(user.id, SERVER_ROOM_ID)
+        .for_room(auth.user.id, SERVER_ROOM_ID)
         .await?
         .has(Permission::Admin);
 
@@ -134,7 +134,7 @@ async fn room_list(
 
         let mut new_rooms = vec![];
         for room in rooms.items {
-            new_rooms.push(srv.rooms.get(room.id, Some(user.id)).await?);
+            new_rooms.push(srv.rooms.get(room.id, Some(auth.user.id)).await?);
         }
         rooms.items = new_rooms;
 
@@ -159,14 +159,14 @@ async fn room_list(
 )]
 async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoomManage)?;
 
     if let Some(Some(media_id)) = json.icon {
@@ -183,7 +183,7 @@ async fn room_edit(
     let room = s
         .services()
         .rooms
-        .update(room_id, auth_user.id, json.clone(), reason.clone())
+        .update(room_id, auth.user.id, json.clone(), reason.clone())
         .await?;
 
     if let Some(maybe_media_id) = json.icon {
@@ -201,7 +201,7 @@ async fn room_edit(
     }
 
     let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(room_id, auth_user.id, msg).await?;
+    s.broadcast_room(room_id, auth.user.id, msg).await?;
     Ok(Json(room))
 }
 
@@ -217,24 +217,24 @@ async fn room_edit(
 )]
 async fn room_delete(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     let is_admin = perms.has(Permission::Admin);
 
     let room = srv.rooms.get(room_id, None).await?;
-    if room.owner_id != Some(auth_user.id) && !is_admin {
+    if room.owner_id != Some(auth.user.id) && !is_admin {
         return Err(Error::BadStatic("you aren't the room owner"));
     }
 
-    s.broadcast_room(room_id, auth_user.id, MessageSync::RoomDelete { room_id })
+    s.broadcast_room(room_id, auth.user.id, MessageSync::RoomDelete { room_id })
         .await?;
 
     data.room_delete(room_id).await?;
@@ -251,8 +251,8 @@ async fn room_delete(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::RoomDelete {
             room_id,
@@ -264,8 +264,8 @@ async fn room_delete(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::RoomDelete { room_id, changes },
     })
@@ -286,16 +286,16 @@ async fn room_delete(
 )]
 async fn room_undelete(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
     data.room_undelete(room_id).await?;
@@ -303,14 +303,14 @@ async fn room_undelete(
     srv.perms.invalidate_room_all(room_id);
 
     let room = srv.rooms.get(room_id, None).await?;
-    s.broadcast_room(room_id, auth_user.id, MessageSync::RoomCreate { room })
+    s.broadcast_room(room_id, auth.user.id, MessageSync::RoomCreate { room })
         .await?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::RoomUndelete { room_id },
     })
@@ -319,8 +319,8 @@ async fn room_undelete(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::RoomUndelete { room_id },
     })
@@ -347,11 +347,11 @@ async fn room_audit_logs(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
     Query(filter): Query<AuditLogFilter>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAuditLog)?;
     let logs = data
         .audit_logs_room_fetch(room_id, paginate, filter)
@@ -375,17 +375,17 @@ async fn room_audit_logs(
 )]
 async fn room_ack(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     let data = s.data();
-    let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
 
-    let updated_unreads = data.unread_put_all_in_room(auth_user.id, room_id).await?;
+    let updated_unreads = data.unread_put_all_in_room(auth.user.id, room_id).await?;
 
     for (channel_id, message_id, version_id) in updated_unreads {
         s.broadcast(MessageSync::ChannelAck {
-            user_id: auth_user.id,
+            user_id: auth.user.id,
             channel_id,
             message_id,
             version_id,
@@ -446,12 +446,12 @@ async fn room_transfer_ownership(
 )]
 async fn room_integration_list(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<ApplicationId>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let data = s.data();
     let ids = data.room_bot_list(room_id, q).await?;
     let mut integrations = vec![];
@@ -485,16 +485,16 @@ async fn room_integration_list(
 )]
 async fn room_quarantine(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::Admin)?;
 
     let room = srv.rooms.get(room_id, None).await?;
@@ -511,13 +511,13 @@ async fn room_quarantine(
     let msg = MessageSync::RoomUpdate {
         room: updated_room.clone(),
     };
-    s.broadcast_room(room_id, auth_user.id, msg).await?;
+    s.broadcast_room(room_id, auth.user.id, msg).await?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::RoomQuarantine { room_id },
     })
@@ -536,16 +536,16 @@ async fn room_quarantine(
 )]
 async fn room_unquarantine(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
 
     perms.ensure(Permission::Admin)?;
 
@@ -563,13 +563,13 @@ async fn room_unquarantine(
     let msg = MessageSync::RoomUpdate {
         room: updated_room.clone(),
     };
-    s.broadcast_room(room_id, auth_user.id, msg).await?;
+    s.broadcast_room(room_id, auth.user.id, msg).await?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::RoomUnquarantine { room_id },
     })
