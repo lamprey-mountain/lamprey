@@ -23,7 +23,7 @@ use validator::Validate;
 use crate::types::UserIdReq;
 use crate::ServerState;
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 use crate::error::{Error, Result};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
@@ -47,11 +47,11 @@ pub struct RoomBanSearchQuery {
 async fn room_member_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
 
     // extra permission check to prevent returning the entire list of registered users
     if room_id == SERVER_ROOM_ID {
@@ -77,15 +77,15 @@ async fn room_member_list(
 )]
 async fn room_member_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
     if res.membership == RoomMembership::Join {
         Ok(Json(res))
@@ -122,23 +122,23 @@ async fn room_member_get(
 )]
 async fn room_member_add(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(mut json): Json<RoomMemberPut>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
     // handle joining public rooms
-    if target_user_id == auth_user.id {
+    if target_user_id == auth.user.id {
         let room = srv.rooms.get(room_id, None).await?;
         if room.public {
-            if auth_user.registered_at.is_none() {
+            if auth.user.registered_at.is_none() {
                 return Err(Error::BadStatic("guests cannot join public rooms"));
             }
 
@@ -156,7 +156,7 @@ async fn room_member_add(
             let existing = d.room_member_get(room_id, target_user_id).await;
             let perms = if existing.is_ok() {
                 // User already exists, get their actual permissions
-                s.services().perms.for_room(auth_user.id, room_id).await?
+                s.services().perms.for_room(auth.user.id, room_id).await?
             } else {
                 // User doesn't exist yet, get default room permissions
                 s.services().perms.default_for_room(room_id).await?
@@ -238,7 +238,7 @@ async fn room_member_add(
             if is_new_join {
                 s.broadcast_room(
                     room_id,
-                    auth_user.id,
+                    auth.user.id,
                     MessageSync::RoomMemberCreate {
                         member: res.clone(),
                     },
@@ -246,7 +246,7 @@ async fn room_member_add(
                 .await?;
                 s.broadcast_room(
                     room_id,
-                    auth_user.id,
+                    auth.user.id,
                     MessageSync::RoomMemberUpsert {
                         member: res.clone(),
                     },
@@ -258,9 +258,9 @@ async fn room_member_add(
         }
     }
 
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBridge)?;
-    let auth_user = srv.users.get(auth_user.id, None).await?;
+    let auth_user = srv.users.get(auth.user.id, None).await?;
     let target_user = srv.users.get(target_user_id, None).await?;
     let Some(puppet) = target_user.puppet else {
         return Err(Error::BadStatic("can't add that user"));
@@ -272,7 +272,7 @@ async fn room_member_add(
         return Err(Error::BadStatic("bot is not a bridge"));
     }
 
-    if puppet.owner_id != auth_user.id {
+    if puppet.owner_id != auth.user.id {
         return Err(Error::BadStatic("not puppet owner"));
     }
 
@@ -297,7 +297,7 @@ async fn room_member_add(
             perms.ensure(Permission::RoleApply)?;
             let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
             let new = HashSet::<RoleId>::from_iter(r.iter().copied());
-            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+            let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
 
             // removed roles
             for role_id in old.difference(&new) {
@@ -331,7 +331,7 @@ async fn room_member_add(
         if let Some(r) = &mut json.roles {
             r.sort();
             perms.ensure(Permission::RoleApply)?;
-            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+            let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             for role_id in r {
                 let role = d.role_select(room_id, *role_id).await?;
                 if role.position >= rank {
@@ -342,7 +342,7 @@ async fn room_member_add(
     }
 
     let origin = RoomMemberOrigin::Bridged {
-        bridge_id: auth_user.id,
+        bridge_id: auth.user.id,
     };
     d.room_member_put(room_id, target_user_id, Some(origin), json.clone())
         .await?;
@@ -400,8 +400,8 @@ async fn room_member_add(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason: reason.clone(),
             ty: AuditLogEntryType::MemberUpdate {
                 room_id,
@@ -414,7 +414,7 @@ async fn room_member_add(
         if existing.is_err() {
             s.broadcast_room(
                 room_id,
-                auth_user.id,
+                auth.user.id,
                 MessageSync::RoomMemberCreate {
                     member: res.clone(),
                 },
@@ -423,7 +423,7 @@ async fn room_member_add(
         } else {
             s.broadcast_room(
                 room_id,
-                auth_user.id,
+                auth.user.id,
                 MessageSync::RoomMemberUpdate {
                     member: res.clone(),
                 },
@@ -433,7 +433,7 @@ async fn room_member_add(
 
         s.broadcast_room(
             room_id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::RoomMemberUpsert {
                 member: res.clone(),
             },
@@ -466,19 +466,19 @@ async fn room_member_add(
 )]
 async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(mut json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let srv = s.services();
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
@@ -503,10 +503,10 @@ async fn room_member_update(
 
     if json.timeout_until.changes(&start.timeout_until) {
         perms.ensure(Permission::MemberTimeout)?;
-        let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+        let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
         let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
         let room = srv.rooms.get(room_id, None).await?;
-        if room.owner_id != Some(auth_user.id) && rank <= other_rank {
+        if room.owner_id != Some(auth.user.id) && rank <= other_rank {
             return Err(Error::BadStatic("your rank is too low"));
         }
     }
@@ -517,7 +517,7 @@ async fn room_member_update(
         perms.ensure(Permission::RoleApply)?;
         let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
         let new = HashSet::<RoleId>::from_iter(r.iter().copied());
-        let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+        let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
 
         // removed roles
         for role_id in old.difference(&new) {
@@ -576,8 +576,8 @@ async fn room_member_update(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason: reason.clone(),
             ty: AuditLogEntryType::MemberUpdate {
                 room_id,
@@ -590,7 +590,7 @@ async fn room_member_update(
 
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::RoomMemberUpdate {
             member: res.clone(),
         },
@@ -598,7 +598,7 @@ async fn room_member_update(
     .await?;
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::RoomMemberUpsert {
             member: res.clone(),
         },
@@ -633,20 +633,20 @@ struct LeaveQuery {
 )]
 async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     Query(_q): Query<LeaveQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    if target_user_id != auth_user.id {
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    if target_user_id != auth.user.id {
         perms.ensure(Permission::MemberKick)?;
     }
     if room_id == SERVER_ROOM_ID {
@@ -660,9 +660,9 @@ async fn room_member_delete(
     if room.owner_id == Some(target_user_id) {
         return Err(Error::BadStatic("room owner cannot leave the room"));
     }
-    if auth_user.id != target_user_id {
-        if room.owner_id != Some(auth_user.id) {
-            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+    if auth.user.id != target_user_id {
+        if room.owner_id != Some(auth.user.id) {
+            let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
             if rank <= other_rank {
                 return Err(Error::BadStatic("your rank is too low"));
@@ -681,8 +681,8 @@ async fn room_member_delete(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::MemberKick {
             room_id,
@@ -693,7 +693,7 @@ async fn room_member_delete(
 
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::RoomMemberDelete {
             room_id,
             user_id: target_user_id,
@@ -703,7 +703,7 @@ async fn room_member_delete(
 
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::RoomMemberUpsert { member: res },
     )
     .await?;
@@ -726,11 +726,11 @@ async fn room_member_delete(
 async fn room_member_search(
     Path(room_id): Path<RoomId>,
     Query(search): Query<RoomMemberSearch>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
 
     // extra permission check to prevent returning the entire list of registered users
     if room_id == SERVER_ROOM_ID {
@@ -763,13 +763,13 @@ async fn room_member_search(
 )]
 async fn room_member_search_advanced(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(search): Json<RoomMemberSearchAdvanced>,
 ) -> Result<impl IntoResponse> {
     search.validate()?;
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
 
     // extra permission check to prevent returning the entire list of registered users
     if room_id == SERVER_ROOM_ID {
@@ -796,13 +796,13 @@ async fn room_member_search_advanced(
 )]
 async fn room_member_prune(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PruneBegin>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberKick)?;
     perms.ensure(Permission::RoomManage)?;
 
@@ -824,19 +824,19 @@ async fn room_member_prune(
 )]
 async fn room_ban_create(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let srv = s.services();
     let d = s.data();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     if room_id == SERVER_ROOM_ID {
         return Err(Error::BadStatic("cannot kick people from the server room"));
@@ -845,8 +845,8 @@ async fn room_ban_create(
     // enforce ranking if you're banning a member
     if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
         let room = srv.rooms.get(room_id, None).await?;
-        if room.owner_id != Some(auth_user.id) && member.membership == RoomMembership::Join {
-            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+        if room.owner_id != Some(auth.user.id) && member.membership == RoomMembership::Join {
+            let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
             if rank <= other_rank {
                 return Err(Error::BadStatic("your rank is too low"));
@@ -869,8 +869,8 @@ async fn room_ban_create(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::MemberBan {
             room_id,
@@ -881,7 +881,7 @@ async fn room_ban_create(
 
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::RoomMemberDelete {
             room_id,
             user_id: target_user_id,
@@ -890,13 +890,13 @@ async fn room_ban_create(
     .await?;
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::RoomMemberUpsert { member },
     )
     .await?;
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::BanCreate { room_id, ban },
     )
     .await?;
@@ -913,27 +913,27 @@ async fn room_ban_create(
 )]
 async fn room_ban_create_bulk(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanBulkCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     create.validate()?;
     let srv = s.services();
     let d = s.data();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     if room_id == SERVER_ROOM_ID {
         return Err(Error::BadStatic("cannot kick people from the server room"));
     }
 
     let room = srv.rooms.get(room_id, None).await?;
-    let auth_user_rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+    let auth_user_rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
 
     for &target_user_id in &create.target_ids {
         if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
-            if room.owner_id != Some(auth_user.id) && member.membership == RoomMembership::Join {
+            if room.owner_id != Some(auth.user.id) && member.membership == RoomMembership::Join {
                 let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
                 if auth_user_rank <= other_rank {
                     return Err(Error::BadStatic(
@@ -962,8 +962,8 @@ async fn room_ban_create_bulk(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
             reason: reason.clone(),
             ty: AuditLogEntryType::MemberBan {
                 room_id,
@@ -974,7 +974,7 @@ async fn room_ban_create_bulk(
 
         s.broadcast_room(
             room_id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::RoomMemberDelete {
                 room_id,
                 user_id: target_user_id,
@@ -984,7 +984,7 @@ async fn room_ban_create_bulk(
 
         s.broadcast_room(
             room_id,
-            auth_user.id,
+            auth.user.id,
             MessageSync::RoomMemberUpsert { member },
         )
         .await?;
@@ -1008,18 +1008,18 @@ async fn room_ban_create_bulk(
 )]
 async fn room_ban_remove(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
 
     d.room_ban_delete(room_id, target_user_id).await?;
@@ -1029,8 +1029,8 @@ async fn room_ban_remove(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
         reason: reason.clone(),
         ty: AuditLogEntryType::MemberUnban {
             room_id,
@@ -1041,7 +1041,7 @@ async fn room_ban_remove(
 
     s.broadcast_room(
         room_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::BanDelete {
             room_id,
             user_id: target_user_id,
@@ -1067,15 +1067,15 @@ async fn room_ban_remove(
 )]
 async fn room_ban_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     let res = d.room_ban_get(room_id, target_user_id).await?;
     Ok(Json(res))
@@ -1097,11 +1097,11 @@ async fn room_ban_get(
 async fn room_ban_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     let res = d.room_ban_list(room_id, paginate).await?;
     let cursor = res.items.last().map(|i| i.user_id.to_string());
@@ -1132,11 +1132,11 @@ async fn room_ban_search(
     Path(room_id): Path<RoomId>,
     Query(search): Query<RoomBanSearchQuery>,
     Query(pagination): Query<PaginationQuery<UserId>>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     let res = d.room_ban_search(room_id, search.query, pagination).await?;
     Ok(Json(res))
