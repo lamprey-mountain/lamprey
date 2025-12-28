@@ -14,7 +14,7 @@ use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
@@ -30,13 +30,13 @@ use crate::ServerState;
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_overwrite(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let allow_set: HashSet<_> = json.allow.iter().collect();
     let deny_set: HashSet<_> = json.deny.iter().collect();
@@ -48,7 +48,7 @@ async fn permission_overwrite(
     }
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
     let channel = srv.channels.get(channel_id, None).await?;
@@ -68,7 +68,7 @@ async fn permission_overwrite(
     }
 
     if let Some(room_id) = channel.room_id {
-        let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+        let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
         let other_rank = match json.ty {
             PermissionOverwriteType::Role => {
                 let role = s.data().role_select(room_id, overwrite_id.into()).await?;
@@ -81,7 +81,7 @@ async fn permission_overwrite(
             }
         };
         let room = srv.rooms.get(room_id, None).await?;
-        if rank <= other_rank && room.owner_id != Some(auth_user.id) {
+        if rank <= other_rank && room.owner_id != Some(auth.user.id) {
             return Err(Error::BadStatic("your rank is too low"));
         }
     } else {
@@ -139,14 +139,14 @@ async fn permission_overwrite(
         )
         .await?;
     srv.channels.invalidate(channel_id).await;
-    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = channel.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason: reason.clone(),
             ty: AuditLogEntryType::PermissionOverwriteSet {
                 channel_id,
@@ -170,7 +170,7 @@ async fn permission_overwrite(
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::ChannelUpdate {
             channel: Box::new(channel),
         },
@@ -191,14 +191,14 @@ async fn permission_overwrite(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_delete(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
 
@@ -219,7 +219,7 @@ async fn permission_delete(
         .find(|o| o.id == overwrite_id)
     {
         if let Some(room_id) = channel.room_id {
-            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+            let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             let other_rank = match existing.ty {
                 PermissionOverwriteType::Role => {
                     let role = s.data().role_select(room_id, overwrite_id.into()).await?;
@@ -232,7 +232,7 @@ async fn permission_delete(
                 }
             };
             let room = srv.rooms.get(room_id, None).await?;
-            if rank <= other_rank && room.owner_id != Some(auth_user.id) {
+            if rank <= other_rank && room.owner_id != Some(auth.user.id) {
                 return Err(Error::BadStatic("your rank is too low"));
             }
         } else {
@@ -255,14 +255,14 @@ async fn permission_delete(
         .permission_overwrite_delete(channel_id, overwrite_id)
         .await?;
     srv.channels.invalidate(channel_id).await;
-    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = channel.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason: reason.clone(),
             ty: AuditLogEntryType::PermissionOverwriteDelete {
                 channel_id,
@@ -274,7 +274,7 @@ async fn permission_delete(
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::ChannelUpdate {
             channel: Box::new(channel),
         },
