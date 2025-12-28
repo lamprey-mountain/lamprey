@@ -16,7 +16,7 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 
 use crate::error::Result;
 use crate::{Error, ServerState};
@@ -36,15 +36,15 @@ use crate::{Error, ServerState};
 )]
 async fn voice_state_get(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let state = srv.voice.state_get(target_user_id);
     Ok(Json(state))
@@ -65,18 +65,18 @@ async fn voice_state_get(
 )]
 async fn voice_state_disconnect(
     Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::VoiceDisconnect)?;
     let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
@@ -97,8 +97,8 @@ async fn voice_state_disconnect(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::MemberDisconnect {
                 channel_id,
@@ -125,14 +125,14 @@ async fn voice_state_disconnect(
 )]
 async fn voice_state_disconnect_all(
     Path((channel_id,)): Path<(ChannelId,)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::VoiceDisconnect)?;
     srv.voice.disconnect_everyone(channel_id)?;
@@ -141,8 +141,8 @@ async fn voice_state_disconnect_all(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::MemberDisconnectAll { channel_id },
         })
@@ -166,22 +166,22 @@ async fn voice_state_disconnect_all(
 )]
 async fn voice_state_move(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<VoiceStateMove>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms_source = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    let perms_source = srv.perms.for_channel(auth.user.id, thread_id).await?;
     perms_source.ensure(Permission::ViewChannel)?;
     perms_source.ensure(Permission::VoiceMove)?;
-    let perms_target = srv.perms.for_channel(auth_user.id, json.target_id).await?;
+    let perms_target = srv.perms.for_channel(auth.user.id, json.target_id).await?;
     perms_target.ensure(Permission::ViewChannel)?;
     perms_target.ensure(Permission::VoiceMove)?;
     let _perms_user = srv
@@ -215,8 +215,8 @@ async fn voice_state_move(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::MemberMove {
                 user_id: target_user_id,
@@ -249,11 +249,11 @@ struct VoiceStateMove {
 )]
 async fn voice_state_list(
     Path(thread_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let states: Vec<_> = srv
         .voice
