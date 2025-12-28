@@ -3,44 +3,27 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{ChannelId, RoomId, SessionToken};
+use crate::v1::types::SessionToken;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct SyncFilterId(pub String);
+// pub enum MessageClient {
+//     /// initial message
+//     Hello {
+//         // TODO: include this (or something more structured)
+//         user_agent: String,
+//     },
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum SyncFilter {
-    /// subscribe to **everything**
-    SubAll {
-        id: SyncFilterId,
-    },
+//     /// replace current filter
+//     Subscribe {
+//         // only receive events from this room
+//         room_id: Vec<RoomId>,
 
-    /// subscribe to events in a room (excluding child thread events)
-    SubRoom {
-        id: SyncFilterId,
-        room_id: RoomId,
-    },
+//         // TODO(#368): pubsub for single items?
+//         invites: Vec<InviteCode>,
+//         media: Vec<MediaId>,
+//     },
+// }
 
-    /// subscribe to events in a room (including child thread events)
-    SubRoomAll {
-        id: SyncFilterId,
-        room_id: RoomId,
-    },
-
-    /// subscribe to events in a thread
-    SubThread {
-        id: SyncFilterId,
-        thread_id: ChannelId,
-    },
-
-    // SubEvents { id: SyncFilterId, want: SyncEventType },
-    Unsub {
-        id: SyncFilterId,
-    },
-}
-
+// maybe copy discord intents here
 // #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 // /// minimize bandwidth by only sending requested data
@@ -60,6 +43,7 @@ pub enum SyncFilter {
 // }
 
 /// how to receive events
+// i should probably add some way to shard; see twitch's conduit system
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
@@ -162,31 +146,4 @@ pub enum Command<R, T> {
         #[serde(flatten)]
         data: T,
     },
-}
-
-/// errors you may receive
-pub enum SyncError<T> {
-    /// you were sent a Ping but didn't respond with a Pong in time
-    Timeout,
-
-    /// you tried to do something that you can't do
-    Unauthorized,
-
-    /// you tried to send a Hello or Resume but were already authenticated
-    Unauthenticated,
-
-    /// the token sent in Hello or Resume is invalid
-    AuthFailure,
-
-    /// you sent data that i couldn't decode
-    InvalidData,
-
-    /// you sent a sequence number that was invalid
-    InvalidSequence,
-
-    /// you're sending requests too quickly
-    Ratelimit,
-
-    /// sync specific error
-    Custom(T),
 }
