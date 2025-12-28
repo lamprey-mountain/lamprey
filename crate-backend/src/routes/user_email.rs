@@ -12,14 +12,11 @@ use common::v1::types::AuditLogEntryId;
 use common::v1::types::AuditLogEntryType;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::AuthWithSession;
-use crate::routes::util::HeaderReason;
+use crate::routes::util::{Auth2, HeaderReason};
 use crate::types::UserIdReq;
 use crate::ServerState;
 
 use crate::error::{Error, Result};
-
-use super::util::Auth;
 
 /// Email add
 #[utoipa::path(
@@ -37,17 +34,17 @@ use super::util::Auth;
 )]
 async fn email_add(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -93,8 +90,8 @@ async fn email_add(
             s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id: target_user_id.into_inner().into(),
-                user_id: auth_user.id,
-                session_id: Some(session.id),
+                user_id: auth.user.id,
+                session_id: Some(auth.session.id),
                 reason,
                 ty: AuditLogEntryType::EmailCreate {
                     email: email_addr,
@@ -126,19 +123,19 @@ async fn email_add(
 )]
 async fn email_delete(
     Path((target_user_id_req, email)): Path<(UserIdReq, String)>,
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     // we need to keep email addresses in case we need to tell the suspended user anything
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let email: EmailAddr = email.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -155,8 +152,8 @@ async fn email_delete(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::EmailDelete {
             email,
@@ -180,14 +177,14 @@ async fn email_delete(
 )]
 async fn email_list(
     Path(target_user_id_req): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -209,17 +206,17 @@ async fn email_list(
 )]
 async fn email_update(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<EmailInfoPatch>,
 ) -> Result<impl IntoResponse> {
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -251,8 +248,8 @@ async fn email_update(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::EmailUpdate {
             email: email_addr,
@@ -283,16 +280,16 @@ async fn email_update(
 )]
 async fn email_verification_resend(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -350,17 +347,17 @@ async fn email_verification_resend(
 )]
 async fn email_verification_finish(
     Path((target_user_id_req, email_addr, code)): Path<(UserIdReq, String, String)>,
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user.id != target_user_id {
+    if auth.user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -371,8 +368,8 @@ async fn email_verification_finish(
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::EmailUpdate {
             email: email_addr,
