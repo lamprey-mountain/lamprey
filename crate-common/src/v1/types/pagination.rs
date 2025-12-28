@@ -11,6 +11,7 @@ pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
     fn max() -> Self;
 }
 
+// TODO: use strings instead of PaginationKey?
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

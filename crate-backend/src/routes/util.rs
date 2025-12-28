@@ -1,7 +1,9 @@
 use std::{sync::Arc, time::Duration};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
-use common::v1::types::{application::Scope, application::Scopes, util::Time, SessionToken, User, UserId};
+use common::v1::types::{
+    application::Scope, application::Scopes, util::Time, SessionToken, User, UserId,
+};
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 
 use crate::{

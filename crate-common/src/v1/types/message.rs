@@ -22,6 +22,8 @@ use super::{
     ChannelId, MessageId, MessageVerId,
 };
 
+pub mod components;
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

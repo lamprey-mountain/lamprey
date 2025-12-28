@@ -119,25 +119,6 @@ pub enum MessagePayload {
         seq: u64,
     },
 
-    // /// extra data for the client to function
-    // ReadySupplemental {
-    //     rooms: Vec<Room>,
-    //     channels: Vec<Channel>, // includes threads/dms?
-    //     /// only contains the auth user's members (one for each room)
-    //     room_members: Vec<RoomMember>,
-
-    //     /// only contains the auth user's members (one for each thread)
-    //     // remove? thread_member is included in thread channels already
-    //     thread_members: Vec<ThreadMember>,
-
-    //     config: UserConfigGlobal,
-    //     friends: Vec<User>,
-    //     emojis: Vec<CustomEmoji>,
-    //     roles: Vec<Role>,
-
-    //     /// sequence id for reconnecting
-    //     seq: u64,
-    // },
     /// send all missed messages, now tailing live event stream
     Resumed,
 
@@ -152,6 +133,45 @@ pub enum MessagePayload {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageSync {
+    // TODO: move Ready here
+    // /// successfully connected
+    // Ready {
+    //     /// current user, null if session is unauthed
+    //     user: Box<Option<User>>,
+
+    //     // /// the application this bot user belongs, if the user is a bot
+    //     // application: Box<Option<Application>>,
+    //     /// current session
+    //     session: Session,
+
+    //     /// connection id
+    //     conn: String,
+    // },
+
+    // /// extra data for the client to function, sent after Ready
+    // ReadySupplemental {
+    //     /// all rooms the user can see
+    //     rooms: Vec<Room>,
+
+    //     /// all roles in all rooms the user can see
+    //     roles: Vec<Role>,
+
+    //     /// all channels the user can see
+    //     channels: Vec<Channel>,
+
+    //     /// all threads the user can see
+    //     threads: Vec<Channel>,
+
+    //     /// only contains the auth user's members (one for each room)
+    //     room_members: Vec<RoomMember>,
+
+    //     /// user's global config
+    //     config: UserConfigGlobal,
+
+    //     // unsure about these
+    //     friends: Vec<User>,
+    //     emojis: Vec<CustomEmoji>,
+    // },
     RoomCreate {
         room: Room,
     },
