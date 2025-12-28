@@ -12,7 +12,7 @@ use common::v1::types::{
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 use crate::error::Result;
 use crate::{Error, ServerState};
 
@@ -35,13 +35,13 @@ use crate::{Error, ServerState};
 )]
 async fn reaction_list(
     Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let list = data
         .reaction_list(channel_id, message_id, reaction_key, q)
@@ -74,30 +74,30 @@ async fn reaction_add(
         ReactionKeyParam,
         UserIdReq,
     )>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionAdd)?;
 
-    if auth_user.id != user_id {
+    if auth.user.id != user_id {
         return Err(Error::BadStatic("cannot act on behalf of other users"));
     }
 
     let thread = s
         .services()
         .channels
-        .get(channel_id, Some(auth_user.id))
+        .get(channel_id, Some(auth.user.id))
         .await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
@@ -160,19 +160,19 @@ async fn reaction_remove(
         ReactionKeyParam,
         UserIdReq,
     )>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id {
-        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    if auth_user.id == user_id {
+    if auth.user.id == user_id {
         perms.ensure(Permission::ReactionAdd)?;
     } else {
         perms.ensure(Permission::ReactionPurge)?;
@@ -181,7 +181,7 @@ async fn reaction_remove(
     let chan = s
         .services()
         .channels
-        .get(channel_id, Some(auth_user.id))
+        .get(channel_id, Some(auth.user.id))
         .await?;
     if chan.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
@@ -209,8 +209,8 @@ async fn reaction_remove(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::ReactionDeleteUser {
                 channel_id,
@@ -224,7 +224,7 @@ async fn reaction_remove(
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::ReactionDelete {
             channel_id,
             user_id,
@@ -255,18 +255,18 @@ async fn reaction_remove(
 )]
 async fn reaction_remove_key(
     Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionPurge)?;
 
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if chan.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -292,8 +292,8 @@ async fn reaction_remove_key(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::ReactionDeleteKey {
                 channel_id,
@@ -306,7 +306,7 @@ async fn reaction_remove_key(
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::ReactionDeleteKey {
             channel_id,
             message_id,
@@ -335,18 +335,18 @@ async fn reaction_remove_key(
 )]
 async fn reaction_remove_all(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionPurge)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -363,8 +363,8 @@ async fn reaction_remove_all(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason: reason.clone(),
             ty: AuditLogEntryType::ReactionDeleteAll {
                 channel_id,
@@ -376,7 +376,7 @@ async fn reaction_remove_all(
 
     s.broadcast_channel(
         channel_id,
-        auth_user.id,
+        auth.user.id,
         MessageSync::ReactionDeleteAll {
             channel_id,
             message_id,
