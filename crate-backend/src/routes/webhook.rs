@@ -18,7 +18,7 @@ use common::v1::types::{
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth2, HeaderReason};
 use crate::{
     error::{Error, Result},
     types::{ChannelId, RoomId},
@@ -41,15 +41,15 @@ mod slack;
 )]
 async fn webhook_create(
     Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     let chan = srv.channels.get(channel_id, None).await?;
     let room_id = chan
         .room_id
@@ -62,14 +62,14 @@ async fn webhook_create(
 
     let webhook = s
         .data()
-        .webhook_create(channel_id, auth_user.id, json.clone())
+        .webhook_create(channel_id, auth.user.id, json.clone())
         .await?;
 
     let audit_entry = AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::WebhookCreate {
             webhook_id: webhook.id,
@@ -84,7 +84,7 @@ async fn webhook_create(
     let sync_msg = MessageSync::WebhookCreate {
         webhook: webhook.clone(),
     };
-    s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
+    s.broadcast_room(room_id, auth.user.id, sync_msg).await?;
 
     Ok((StatusCode::CREATED, Json(webhook)))
 }
@@ -104,14 +104,14 @@ async fn webhook_create(
 )]
 async fn webhook_list_channel(
     Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     let chan = srv.channels.get(channel_id, None).await?;
     let _room_id = chan
         .room_id
@@ -145,11 +145,11 @@ async fn webhook_list_channel(
 )]
 async fn webhook_list_room(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     let webhooks = s.data().webhook_list_room(room_id, pagination).await?;
@@ -169,7 +169,7 @@ async fn webhook_list_room(
 )]
 async fn webhook_get(
     Path(webhook_id): Path<WebhookId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get(webhook_id).await?;
@@ -177,7 +177,7 @@ async fn webhook_get(
     let srv = s.services();
     let perms = srv
         .perms
-        .for_channel(auth_user.id, webhook.channel_id)
+        .for_channel(auth.user.id, webhook.channel_id)
         .await?;
     let chan = srv.channels.get(webhook.channel_id, None).await?;
     let _room_id = chan
@@ -225,16 +225,16 @@ async fn webhook_get_with_token(
 )]
 async fn webhook_delete(
     Path(webhook_id): Path<WebhookId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
     let webhook = s.data().webhook_get(webhook_id).await?;
     let channel_id = webhook.channel_id;
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     let chan = srv.channels.get(channel_id, None).await?;
     let room_id = chan
         .room_id
@@ -250,8 +250,8 @@ async fn webhook_delete(
     let audit_entry = AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: auth_user.id,
-        session_id: None,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::WebhookDelete {
             webhook_id,
@@ -269,7 +269,7 @@ async fn webhook_delete(
         room_id: webhook.room_id,
         channel_id: webhook.channel_id,
     };
-    s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
+    s.broadcast_room(room_id, auth.user.id, sync_msg).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -309,7 +309,7 @@ async fn webhook_delete_with_token(
 )]
 async fn webhook_update(
     Path(webhook_id): Path<WebhookId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookUpdate>,
@@ -318,7 +318,7 @@ async fn webhook_update(
     let room_id = before_webhook
         .room_id
         .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     let updated_webhook = s.data().webhook_update(webhook_id, json.clone()).await?;
@@ -345,8 +345,8 @@ async fn webhook_update(
         let audit_entry = AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::WebhookUpdate {
                 webhook_id,
@@ -359,7 +359,7 @@ async fn webhook_update(
     let sync_msg = MessageSync::WebhookUpdate {
         webhook: updated_webhook.clone(),
     };
-    s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
+    s.broadcast_room(room_id, auth.user.id, sync_msg).await?;
 
     let user_id: UserId = (*webhook_id).into();
     let srv = s.services();

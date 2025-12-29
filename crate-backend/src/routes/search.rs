@@ -12,7 +12,7 @@ use validator::Validate;
 
 use crate::{Error, ServerState};
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::error::Result;
 
 /// Search messages
@@ -25,7 +25,7 @@ use crate::error::Result;
     )
 )]
 pub async fn search_messages(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Json(json): Json<SearchMessageRequest>,
@@ -34,7 +34,7 @@ pub async fn search_messages(
     let res = s
         .services()
         .search
-        .search_messages(auth_user.id, json, q)
+        .search_messages(auth.user.id, json, q)
         .await?;
     Ok(Json(res))
 }
@@ -49,7 +49,7 @@ pub async fn search_messages(
     )
 )]
 pub async fn search_channels(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<ChannelId>>,
     Json(json): Json<SearchChannelsRequest>,
@@ -58,7 +58,7 @@ pub async fn search_channels(
     let res = s
         .services()
         .search
-        .search_channels(auth_user.id, json, q)
+        .search_channels(auth.user.id, json, q)
         .await?;
     Ok(Json(res))
 }
@@ -73,7 +73,7 @@ pub async fn search_channels(
     )
 )]
 pub async fn search_rooms(
-    Auth(_user_id): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Query(_q): Query<PaginationQuery<RoomId>>,
     Json(_json): Json<SearchRoomsRequest>,

@@ -11,7 +11,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::services::embed::ServiceEmbed;
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::error::Result;
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -249,12 +249,12 @@ async fn debug_version() -> Result<impl IntoResponse> {
     )
 )]
 async fn debug_embed_url(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let mut embed = ServiceEmbed::generate_inner(&s.inner, auth_user.id, json.url).await?;
+    auth.user.ensure_unsuspended()?;
+    let mut embed = ServiceEmbed::generate_inner(&s.inner, auth.user.id, json.url).await?;
     if let Some(m) = &mut embed.media {
         s.presign(m).await?;
     }
@@ -288,17 +288,17 @@ async fn debug_panic() {
     responses((status = OK, body = TestPermissionsResponse, description = "success")),
 )]
 async fn debug_test_permissions(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TestPermissionsRequest>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     // check that the user has permissions for the room
     let _ = s
         .services()
         .perms
-        .for_room(auth_user.id, json.room_id)
+        .for_room(auth.user.id, json.room_id)
         .await?;
 
     let permissions = if let Some(channel_id) = json.channel_id {

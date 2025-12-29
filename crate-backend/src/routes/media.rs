@@ -23,7 +23,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::Auth2;
 
 /// Media create
 ///
@@ -37,11 +37,11 @@ use super::util::Auth;
     )
 )]
 async fn media_create(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
     match &json.source {
         MediaCreateSource::Upload { size, .. } => {
@@ -52,7 +52,7 @@ async fn media_create(
             let media_id = MediaId::new();
             let srv = s.services();
             srv.media
-                .create_upload(media_id, auth_user.id, json.clone())
+                .create_upload(media_id, auth.user.id, json.clone())
                 .await?;
             let upload_url = Some(
                 s.config()
@@ -74,7 +74,7 @@ async fn media_create(
             }
 
             let srv = s.services();
-            let media = srv.media.import_from_url(auth_user.id, json).await?;
+            let media = srv.media.import_from_url(auth.user.id, json).await?;
             let mut headers = HeaderMap::new();
             let size = media.source.size;
             headers.insert("content-length", size.into());
@@ -100,14 +100,14 @@ async fn media_create(
 )]
 async fn media_patch(
     Path(media_id): Path<MediaId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaPatch>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
     if let Some(mut up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == auth_user.id {
+        if up.user_id == auth.user.id {
             if let Some(alt) = json.alt {
                 up.create.alt = alt;
             }
@@ -128,7 +128,7 @@ async fn media_patch(
     if media.deleted_at.is_some() {
         return Err(Error::NotFound);
     }
-    if media.user_id != auth_user.id {
+    if media.user_id != auth.user.id {
         return Err(Error::MissingPermissions);
     }
     s.data().media_update(media_id, json).await?;
@@ -157,7 +157,7 @@ async fn media_patch(
 )]
 async fn media_done(
     Path(media_id): Path<MediaId>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -166,7 +166,7 @@ async fn media_done(
         .uploads
         .get_mut(&media_id)
         .ok_or(Error::NotFound)?;
-    if up.user_id != user.id {
+    if up.user_id != auth.user.id {
         return Err(Error::NotFound);
     }
     debug!(
@@ -204,7 +204,7 @@ async fn media_done(
             let mut media = s
                 .services()
                 .media
-                .process_upload(up, media_id, user.id, &filename)
+                .process_upload(up, media_id, auth.user.id, &filename)
                 .await?;
             debug!("finished processing media");
             s.presign(&mut media).await?;
@@ -226,7 +226,7 @@ async fn media_done(
 /// Media upload
 async fn media_upload(
     Path(media_id): Path<MediaId>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Body,
@@ -237,7 +237,7 @@ async fn media_upload(
         .uploads
         .get_mut(&media_id)
         .ok_or(Error::NotFound)?;
-    if up.user_id != user.id {
+    if up.user_id != auth.user.id {
         return Err(Error::NotFound);
     }
     debug!(
@@ -305,7 +305,7 @@ async fn media_upload(
             let mut media = s
                 .services()
                 .media
-                .process_upload(up, media_id, user.id, &filename)
+                .process_upload(up, media_id, auth.user.id, &filename)
                 .await?;
             debug!("finished processing media");
             s.presign(&mut media).await?;
@@ -337,7 +337,7 @@ async fn media_upload(
 )]
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
-    Auth(_user): Auth,
+    _auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let media = s.data().media_select(media_id).await?;
@@ -363,11 +363,11 @@ async fn media_get(
 // )]
 async fn media_check(
     Path(media_id): Path<MediaId>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == user.id {
+        if up.user_id == auth.user.id {
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
             headers.insert(
@@ -404,12 +404,12 @@ async fn media_check(
 )]
 async fn media_delete(
     Path(media_id): Path<MediaId>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == auth_user.id {
+        if up.user_id == auth.user.id {
             s.services().media.uploads.remove(&media_id);
         }
         Ok(StatusCode::NO_CONTENT)

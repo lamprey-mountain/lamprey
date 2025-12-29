@@ -8,7 +8,7 @@ use axum::{
 use common::v1::types::automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::{
     error::{Error, Result},
     types::{AutomodRuleId, PaginationResponse, RoomId},
@@ -27,7 +27,7 @@ use crate::{
 )]
 async fn list_rules(
     Path(_room_id): Path<RoomId>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -45,7 +45,7 @@ async fn list_rules(
 )]
 async fn create_rule(
     Path(_room_id): Path<RoomId>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<AutomodRuleCreate>,
 ) -> Result<impl IntoResponse> {
@@ -67,7 +67,7 @@ async fn create_rule(
 )]
 async fn get_rule(
     Path((_room_id, _rule_id)): Path<(RoomId, AutomodRuleId)>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -88,7 +88,7 @@ async fn get_rule(
 )]
 async fn update_rule(
     Path((_room_id, _rule_id)): Path<(RoomId, AutomodRuleId)>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<AutomodRuleUpdate>,
 ) -> Result<impl IntoResponse> {
@@ -110,7 +110,7 @@ async fn update_rule(
 )]
 async fn delete_rule(
     Path((_room_id, _rule_id)): Path<(RoomId, AutomodRuleId)>,
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)

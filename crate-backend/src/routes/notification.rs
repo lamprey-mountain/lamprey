@@ -11,7 +11,7 @@ use common::v1::types::notifications::{
 use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
+use super::util::Auth2;
 use crate::error::Result;
 use crate::ServerState;
 
@@ -26,14 +26,14 @@ use crate::ServerState;
     responses((status = OK, body = NotificationPagination, description = "success"))
 )]
 async fn inbox_get(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     Query(pagination): Query<PaginationQuery<NotificationId>>,
     Query(params): Query<InboxListParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let notifications = s
         .data()
-        .notification_list(auth_user.id, pagination, params)
+        .notification_list(auth.user.id, pagination, params)
         .await?;
 
     let mut channel_ids = std::collections::HashSet::new();
@@ -45,7 +45,7 @@ async fn inbox_get(
 
     let mut channels = Vec::new();
     for thread_id in channel_ids {
-        if let Ok(thread) = srv.channels.get(thread_id, Some(auth_user.id)).await {
+        if let Ok(thread) = srv.channels.get(thread_id, Some(auth.user.id)).await {
             channels.push(thread);
         }
     }
@@ -59,7 +59,7 @@ async fn inbox_get(
 
     let mut rooms = Vec::new();
     for room_id in room_ids {
-        if let Ok(room) = srv.rooms.get(room_id, Some(auth_user.id)).await {
+        if let Ok(room) = srv.rooms.get(room_id, Some(auth.user.id)).await {
             rooms.push(room);
         }
     }
@@ -68,7 +68,7 @@ async fn inbox_get(
     for notif in &notifications.items {
         if let Ok(mut message) = s
             .data()
-            .message_get(notif.channel_id, notif.message_id, auth_user.id)
+            .message_get(notif.channel_id, notif.message_id, auth.user.id)
             .await
         {
             s.presign_message(&mut message).await?;
@@ -96,14 +96,14 @@ async fn inbox_get(
     responses((status = CREATED, body = Notification, description = "success"))
 )]
 async fn inbox_post(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationCreate>,
 ) -> Result<impl IntoResponse> {
     let perms = s
         .services()
         .perms
-        .for_channel(auth_user.id, json.channel_id)
+        .for_channel(auth.user.id, json.channel_id)
         .await?;
     perms.ensure(Permission::ViewChannel)?;
 
@@ -117,7 +117,7 @@ async fn inbox_post(
     };
 
     s.data()
-        .notification_add(auth_user.id, notif.clone())
+        .notification_add(auth.user.id, notif.clone())
         .await?;
 
     Ok((StatusCode::CREATED, Json(notif)))
@@ -131,11 +131,11 @@ async fn inbox_post(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_read(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
-    s.data().notification_mark_read(auth_user.id, json).await?;
+    s.data().notification_mark_read(auth.user.id, json).await?;
     Ok(StatusCode::OK)
 }
 
@@ -147,12 +147,12 @@ async fn inbox_mark_read(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_unread(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .notification_mark_unread(auth_user.id, json)
+        .notification_mark_unread(auth.user.id, json)
         .await?;
     Ok(StatusCode::OK)
 }
@@ -167,11 +167,11 @@ async fn inbox_mark_unread(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_flush(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationFlush>,
 ) -> Result<impl IntoResponse> {
-    s.data().notification_flush(auth_user.id, json).await?;
+    s.data().notification_flush(auth.user.id, json).await?;
     Ok(StatusCode::OK)
 }
 

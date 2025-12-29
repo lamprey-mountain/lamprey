@@ -17,7 +17,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::Auth2;
 
 /// Room template create (TODO)
 ///
@@ -32,11 +32,11 @@ use super::util::Auth;
     )
 )]
 async fn room_template_create(
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplateCreate>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
 
     Ok(Error::Unimplemented)
@@ -56,10 +56,10 @@ async fn room_template_create(
 )]
 async fn room_template_list(
     Query(_q): Query<PaginationQuery<RoomTemplateCode>>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)
 }
@@ -76,10 +76,10 @@ async fn room_template_list(
 )]
 async fn room_template_get(
     Path(_code): Path<RoomTemplateCode>,
-    Auth(user): Auth,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)
 }
@@ -97,11 +97,11 @@ async fn room_template_get(
 )]
 async fn room_template_edit(
     Path(_code): Path<RoomTemplateCode>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplatePatch>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     json.validate()?;
 
     Ok(Error::Unimplemented)
@@ -119,10 +119,10 @@ async fn room_template_edit(
 )]
 async fn room_template_delete(
     Path(_code): Path<RoomTemplateCode>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)
 }
@@ -139,10 +139,10 @@ async fn room_template_delete(
 )]
 async fn room_template_sync(
     Path(_code): Path<RoomTemplateCode>,
-    Auth(auth_user): Auth,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
 }
 
