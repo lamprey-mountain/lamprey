@@ -26,18 +26,12 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use crate::routes::util::AuthSudoWithSession;
-use crate::routes::util::HeaderReason;
+use crate::routes::util::{Auth2, HeaderReason};
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
 use crate::ServerState;
 
 use crate::error::{Error, Result};
-
-use super::util::Auth;
-use super::util::AuthRelaxed;
-use super::util::AuthSudo;
-use super::util::AuthWithSession;
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct OauthRedirectQuery {
@@ -62,10 +56,10 @@ pub struct OauthInitResponse {
 )]
 async fn auth_oauth_init(
     Path(provider): Path<String>,
-    AuthRelaxed(session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let url = s.services().oauth.create_url(&provider, session.id)?;
+    let url = s.services().oauth.create_url(&provider, auth.session.id)?;
     Ok(Json(OauthInitResponse { url }))
 }
 
@@ -303,19 +297,20 @@ async fn auth_oauth_redirect(
 )]
 async fn auth_oauth_delete(
     Path(provider): Path<String>,
-    AuthSudoWithSession(session, auth_user): AuthSudoWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    let start_state = fetch_auth_state(&s, auth_user.id).await?;
+    auth.ensure_sudo()?;
+    let start_state = fetch_auth_state(&s, auth.user.id).await?;
     let data = s.data();
-    data.auth_oauth_delete(provider, auth_user.id).await?;
-    let end_state = fetch_auth_state(&s, auth_user.id).await?;
+    data.auth_oauth_delete(provider, auth.user.id).await?;
+    let end_state = fetch_auth_state(&s, auth.user.id).await?;
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
-        room_id: auth_user.id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::AuthUpdate {
             changes: Changes::new()
@@ -343,14 +338,19 @@ async fn auth_oauth_delete(
 )]
 async fn auth_email_exec(
     Path(email): Path<EmailAddr>,
-    AuthRelaxed(session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let srv = s.services();
     let code = Uuid::new_v4().to_string();
-    d.auth_email_create(code.clone(), email.clone(), session.id, EmailPurpose::Authn)
-        .await?;
+    d.auth_email_create(
+        code.clone(),
+        email.clone(),
+        auth.session.id,
+        EmailPurpose::Authn,
+    )
+    .await?;
     let mut url = s.config.html_url.join("email-auth")?;
     url.set_query(Some(&format!("code={code}")));
     let message = format!(
@@ -374,14 +374,19 @@ async fn auth_email_exec(
 )]
 async fn auth_email_reset(
     Path(email): Path<EmailAddr>,
-    AuthRelaxed(session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let srv = s.services();
     let code = Uuid::new_v4().to_string();
-    d.auth_email_create(code.clone(), email.clone(), session.id, EmailPurpose::Reset)
-        .await?;
+    d.auth_email_create(
+        code.clone(),
+        email.clone(),
+        auth.session.id,
+        EmailPurpose::Reset,
+    )
+    .await?;
     let mut url = s.config.html_url.join("email-auth")?;
     url.set_query(Some(&format!("code={code}")));
     let message = format!("click this link to reset password: {url}\n\nif you didn't request this, ignore this email.");
@@ -403,7 +408,7 @@ async fn auth_email_reset(
 )]
 async fn auth_email_complete(
     Path(email): Path<EmailAddr>,
-    AuthRelaxed(session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AuthEmailComplete>,
@@ -417,12 +422,12 @@ async fn auth_email_complete(
         return Err(Error::BadStatic("invalid or expired code"));
     }
 
-    if req_session != session.id {
+    if req_session != auth.session.id {
         debug!("wrong session");
         return Err(Error::BadStatic("invalid or expired code"));
     }
 
-    if session.status != SessionStatus::Unauthorized {
+    if auth.session.status != SessionStatus::Unauthorized {
         debug!("already authenticated");
         return Err(Error::BadStatic("invalid or expired code"));
     }
@@ -439,9 +444,10 @@ async fn auth_email_complete(
             sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
         },
     };
-    d.session_set_status(session.id, status.clone()).await?;
-    srv.sessions.invalidate(session.id).await;
-    let session = srv.sessions.get(session.id).await?;
+    d.session_set_status(auth.session.id, status.clone())
+        .await?;
+    srv.sessions.invalidate(auth.session.id).await;
+    let session = srv.sessions.get(auth.session.id).await?;
     s.broadcast(MessageSync::SessionCreate {
         session: session.clone(),
     })?;
@@ -490,10 +496,8 @@ struct AuthEmailComplete {
     tags = ["auth", "badge.sudo"],
     responses((status = OK, body = TotpStateWithSecret, description = "success")),
 )]
-async fn auth_totp_init(
-    AuthSudo(_auth_user): AuthSudo,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
+async fn auth_totp_init(auth: Auth2, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+    auth.ensure_sudo()?;
     Err(Error::Unimplemented)
 }
 
@@ -505,7 +509,7 @@ async fn auth_totp_init(
     responses((status = OK, body = TotpState, description = "success")),
 )]
 async fn auth_totp_exec(
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<TotpVerificationRequest>,
 ) -> Result<Json<()>> {
@@ -520,9 +524,10 @@ async fn auth_totp_exec(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_get(
-    AuthSudo(_auth_user): AuthSudo,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
+    auth.ensure_sudo()?;
     Err(Error::Unimplemented)
 }
 
@@ -534,9 +539,10 @@ async fn auth_totp_recovery_get(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_rotate(
-    AuthSudo(_auth_user): AuthSudo,
+    auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
+    auth.ensure_sudo()?;
     Err(Error::Unimplemented)
 }
 
@@ -547,10 +553,8 @@ async fn auth_totp_recovery_rotate(
     tags = ["auth", "badge.sudo"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn auth_totp_delete(
-    AuthSudo(_auth_user): AuthSudo,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
+async fn auth_totp_delete(auth: Auth2, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+    auth.ensure_sudo()?;
     Err(Error::Unimplemented)
 }
 
@@ -562,13 +566,14 @@ async fn auth_totp_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_set(
-    AuthSudoWithSession(session, auth_user): AuthSudoWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordSet>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
     let data = s.data();
-    let start_has_password = data.auth_password_get(auth_user.id).await?.is_some();
+    let start_has_password = data.auth_password_get(auth.user.id).await?.is_some();
 
     let config = argon2::Config::default();
     let salt = {
@@ -577,9 +582,9 @@ async fn auth_password_set(
         salt
     };
     let hash = argon2::hash_raw(json.password.as_bytes(), &salt, &config).unwrap();
-    data.auth_password_set(auth_user.id, &hash, &salt).await?;
+    data.auth_password_set(auth.user.id, &hash, &salt).await?;
 
-    let end_has_password = data.auth_password_get(auth_user.id).await?.is_some();
+    let end_has_password = data.auth_password_get(auth.user.id).await?.is_some();
 
     let mut changes = Vec::new();
     changes.push(AuditLogChange {
@@ -590,9 +595,9 @@ async fn auth_password_set(
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
-        room_id: auth_user.id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::AuthUpdate { changes },
     })
@@ -608,23 +613,24 @@ async fn auth_password_set(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_delete(
-    AuthSudoWithSession(session, auth_user): AuthSudoWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
     let data = s.data();
-    let has_password = data.auth_password_get(auth_user.id).await?.is_some();
+    let has_password = data.auth_password_get(auth.user.id).await?.is_some();
     if !has_password {
         return Ok(StatusCode::NO_CONTENT);
     }
 
-    data.auth_password_delete(auth_user.id).await?;
+    data.auth_password_delete(auth.user.id).await?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
-        room_id: auth_user.id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::AuthUpdate {
             changes: Changes::new()
@@ -645,7 +651,7 @@ async fn auth_password_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_exec(
-    AuthRelaxed(session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordExec>,
@@ -664,19 +670,19 @@ async fn auth_password_exec(
         .map_err(|_| Error::NotFound)?;
     if valid {
         // TODO: allow entering sudo mode via password
-        data.session_set_status(session.id, SessionStatus::Authorized { user_id })
+        data.session_set_status(auth.session.id, SessionStatus::Authorized { user_id })
             .await?;
         let srv = s.services();
-        srv.sessions.invalidate(session.id).await;
+        srv.sessions.invalidate(auth.session.id).await;
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id: user_id.into_inner().into(),
             user_id,
-            session_id: Some(session.id),
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::SessionLogin {
                 user_id,
-                session_id: session.id,
+                session_id: auth.session.id,
             },
         })
         .await?;
@@ -695,11 +701,8 @@ async fn auth_password_exec(
     tags = ["auth"],
     responses((status = OK, body = AuthState, description = "success")),
 )]
-async fn auth_state(
-    Auth(auth_user): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let auth_state = fetch_auth_state(&s, auth_user.id).await?;
+async fn auth_state(auth: Auth2, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
     Ok(Json(auth_state))
 }
 
@@ -725,10 +728,7 @@ pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthSt
     tags = ["auth"],
     responses((status = OK, body = CaptchaChallenge, description = "success")),
 )]
-async fn auth_captcha_init(
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
+async fn auth_captcha_init(_auth: Auth2, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
     Err(Error::Unimplemented)
 }
 
@@ -743,7 +743,7 @@ async fn auth_captcha_init(
     ),
 )]
 async fn auth_captcha_submit(
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<CaptchaResponse>,
 ) -> Result<Json<()>> {
@@ -758,7 +758,7 @@ async fn auth_captcha_submit(
     responses((status = OK, body = WebauthnChallenge, description = "webauthn challenge")),
 )]
 async fn auth_webauthn_init(
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -776,7 +776,7 @@ async fn auth_webauthn_init(
     ),
 )]
 async fn auth_webauthn_exec(
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<WebauthnFinish>,
 ) -> Result<impl IntoResponse> {
@@ -793,7 +793,7 @@ async fn auth_webauthn_exec(
     ),
 )]
 async fn auth_webauthn_patch(
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Path(_authenticator_id): Path<Uuid>,
     Json(_json): Json<WebauthnPatch>,
@@ -811,7 +811,7 @@ async fn auth_webauthn_patch(
     ),
 )]
 async fn auth_webauthn_delete(
-    Auth(_auth_user): Auth,
+    _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
     Path(_authenticator_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
@@ -828,28 +828,28 @@ async fn auth_webauthn_delete(
     responses((status = NO_CONTENT, description = "ok")),
 )]
 async fn auth_sudo(
-    AuthWithSession(session, auth_user): AuthWithSession,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     s.data()
         .session_set_status(
-            session.id,
+            auth.session.id,
             SessionStatus::Sudo {
-                user_id: auth_user.id,
+                user_id: auth.user.id,
                 sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
             },
         )
         .await?;
-    s.services().sessions.invalidate(session.id).await;
+    s.services().sessions.invalidate(auth.session.id).await;
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
-        room_id: auth_user.id.into_inner().into(),
-        user_id: auth_user.id,
-        session_id: Some(session.id),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::AuthSudo {
-            session_id: session.id,
+            session_id: auth.session.id,
         },
     })
     .await?;

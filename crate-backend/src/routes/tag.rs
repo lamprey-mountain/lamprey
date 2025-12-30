@@ -18,7 +18,7 @@ use validator::Validate;
 
 use crate::{
     error::Result,
-    routes::util::{Auth, HeaderReason},
+    routes::util::{Auth2, HeaderReason},
     Error, ServerState,
 };
 
@@ -41,33 +41,33 @@ struct TagDeleteQuery {
 async fn tag_create(
     Path(channel_id): Path<ChannelId>,
     State(s): State<Arc<ServerState>>,
-    Auth(user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     Json(create): Json<TagCreate>,
 ) -> Result<impl IntoResponse> {
-    user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     create.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::TagManage)?;
 
-    let channel = srv.channels.get(channel_id, Some(user.id)).await?;
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !channel.ty.has_tags() {
         return Err(Error::BadStatic("channel does not support tags"));
     }
 
-    let chan_old = srv.channels.get(channel_id, Some(user.id)).await?;
+    let chan_old = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     let tag = s.data().tag_create(channel_id, create).await?;
 
     srv.channels.invalidate(channel_id).await;
-    let chan_new = srv.channels.get(channel_id, Some(user.id)).await?;
+    let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = chan_new.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason: reason.clone(), // No reason header here
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
@@ -86,7 +86,7 @@ async fn tag_create(
 
     s.broadcast_channel(
         channel_id,
-        user.id,
+        auth.user.id,
         MessageSync::ChannelUpdate {
             channel: Box::new(chan_new),
         },
@@ -112,14 +112,14 @@ async fn tag_create(
 async fn tag_update(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     State(s): State<Arc<ServerState>>,
-    Auth(user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<TagPatch>,
 ) -> Result<impl IntoResponse> {
-    user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     patch.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::TagManage)?;
 
     let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
@@ -127,18 +127,18 @@ async fn tag_update(
         return Err(Error::NotFound);
     }
 
-    let chan_old = srv.channels.get(channel_id, Some(user.id)).await?;
+    let chan_old = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     let tag = s.data().tag_update(tag_id, patch).await?;
 
     srv.channels.invalidate(channel_id).await;
-    let chan_new = srv.channels.get(channel_id, Some(user.id)).await?;
+    let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = chan_new.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
@@ -157,7 +157,7 @@ async fn tag_update(
 
     s.broadcast_channel(
         channel_id,
-        user.id,
+        auth.user.id,
         MessageSync::ChannelUpdate {
             channel: Box::new(chan_new),
         },
@@ -184,12 +184,12 @@ async fn tag_delete(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     Query(query): Query<TagDeleteQuery>,
     State(s): State<Arc<ServerState>>,
-    Auth(user): Auth,
+    auth: Auth2,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::TagManage)?;
 
     let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
@@ -203,18 +203,18 @@ async fn tag_delete(
         return Ok(StatusCode::CONFLICT.into_response());
     }
 
-    let chan_old = srv.channels.get(channel_id, Some(user.id)).await?;
+    let chan_old = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     s.data().tag_delete(tag_id).await?;
 
     srv.channels.invalidate(channel_id).await;
-    let chan_new = srv.channels.get(channel_id, Some(user.id)).await?;
+    let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = chan_new.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: user.id,
-            session_id: None,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
@@ -233,7 +233,7 @@ async fn tag_delete(
 
     s.broadcast_channel(
         channel_id,
-        user.id,
+        auth.user.id,
         MessageSync::ChannelUpdate {
             channel: Box::new(chan_new),
         },
@@ -263,7 +263,7 @@ pub struct TagSearchQuery {
 )]
 async fn tag_search(
     Path(_channel_id): Path<ChannelId>,
-    Auth(_user): Auth,
+    _auth: Auth2,
     Query(_q): Query<TagSearchQuery>,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {

@@ -18,7 +18,6 @@ use crate::routes::util::{Auth2, HeaderReason};
 use crate::types::{DbSessionCreate, SessionIdReq};
 use crate::ServerState;
 
-use super::util::AuthRelaxed;
 use crate::error::{Error, Result};
 
 /// Session create
@@ -85,24 +84,24 @@ pub async fn session_list(
 )]
 pub async fn session_update(
     Path(target_session_id): Path<SessionIdReq>,
-    AuthRelaxed(auth_session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let target_session_id = match target_session_id {
-        SessionIdReq::SessionSelf => auth_session.id,
+        SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
     let data = s.data();
     let srv = s.services();
     let target_session = srv.sessions.get(target_session_id).await?;
 
-    let mut allowed = auth_session.can_see(&target_session);
+    let mut allowed = auth.session.can_see(&target_session);
     if !allowed {
         if let (Some(auth_user_id), Some(target_user_id)) =
-            (auth_session.user_id(), target_session.user_id())
+            (auth.session.user_id(), target_session.user_id())
         {
             let target_user = srv.users.get(target_user_id, None).await?;
             if let Some(bot) = target_user.bot {
@@ -132,7 +131,7 @@ pub async fn session_update(
             id: AuditLogEntryId::new(),
             room_id: uid.into_inner().into(),
             user_id: uid,
-            session_id: Some(auth_session.id),
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::SessionUpdate {
                 session_id: target_session_new.id,
@@ -160,25 +159,25 @@ pub async fn session_update(
 )]
 pub async fn session_delete(
     Path(target_session_id): Path<SessionIdReq>,
-    AuthRelaxed(auth_session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_session_id = match target_session_id {
-        SessionIdReq::SessionSelf => auth_session.id,
+        SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(target_session_id) => target_session_id,
     };
-    if auth_session.status == SessionStatus::Unauthorized && auth_session.id != target_session_id {
+    if auth.session.status == SessionStatus::Unauthorized && auth.session.id != target_session_id {
         return Err(Error::NotFound);
     }
     let data = s.data();
     let srv = s.services();
     let target_session = srv.sessions.get(target_session_id).await?;
 
-    let mut allowed = auth_session.can_see(&target_session);
+    let mut allowed = auth.session.can_see(&target_session);
     if !allowed {
         if let (Some(auth_user_id), Some(target_user_id)) =
-            (auth_session.user_id(), target_session.user_id())
+            (auth.session.user_id(), target_session.user_id())
         {
             let target_user = srv.users.get(target_user_id, None).await?;
             if let Some(bot) = target_user.bot {
@@ -200,12 +199,12 @@ pub async fn session_delete(
         id: target_session_id,
         user_id: target_session.user_id(),
     })?;
-    if let Some(uid) = auth_session.user_id() {
+    if let Some(uid) = auth.session.user_id() {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id: uid.into_inner().into(),
             user_id: uid,
-            session_id: Some(auth_session.id),
+            session_id: Some(auth.session.id),
             reason,
             ty: AuditLogEntryType::SessionDelete {
                 session_id: target_session_id,
@@ -227,11 +226,11 @@ pub async fn session_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 pub async fn session_delete_all(
-    AuthRelaxed(auth_session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    let Some(user_id) = auth_session.user_id() else {
+    let Some(user_id) = auth.session.user_id() else {
         return Err(Error::UnauthSession);
     };
 
@@ -246,7 +245,7 @@ pub async fn session_delete_all(
         id: AuditLogEntryId::new(),
         room_id: user_id.into_inner().into(),
         user_id: user_id,
-        session_id: Some(auth_session.id),
+        session_id: Some(auth.session.id),
         reason,
         ty: AuditLogEntryType::SessionDeleteAll,
     })
@@ -269,16 +268,16 @@ pub async fn session_delete_all(
 )]
 pub async fn session_get(
     Path(session_id): Path<SessionIdReq>,
-    AuthRelaxed(session): AuthRelaxed,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let session_id = match session_id {
-        SessionIdReq::SessionSelf => session.id,
+        SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
     let srv = s.services();
     let target_session = srv.sessions.get(session_id).await?;
-    if !session.can_see(&target_session) {
+    if !auth.session.can_see(&target_session) {
         return Err(Error::NotFound);
     }
     Ok(Json(target_session))

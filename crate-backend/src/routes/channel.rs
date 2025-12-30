@@ -17,7 +17,6 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    routes::util::AuthSudo,
     types::{
         Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelCreate, DbChannelType,
         DbRoomCreate, MessageSync, MessageVerId, Permission, RoomId,
@@ -856,11 +855,12 @@ struct TransferOwnership {
 )]
 async fn channel_transfer_ownership(
     Path(channel_id): Path<ChannelId>,
-    AuthSudo(auth_user): AuthSudo,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_sudo()?;
 
     let srv = s.services();
     let target_user_id = json.owner_id;
@@ -870,16 +870,16 @@ async fn channel_transfer_ownership(
         .thread_member_get(channel_id, target_user_id)
         .await?;
 
-    let _perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    let thread_start = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if thread_start.owner_id != Some(auth_user.id) {
+    let _perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let thread_start = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if thread_start.owner_id != Some(auth.user.id) {
         return Err(Error::BadStatic("you aren't the thread owner"));
     }
 
     let thread = srv
         .channels
         .update(
-            auth_user.id,
+            auth.user.id,
             channel_id,
             ChannelPatch {
                 owner_id: Some(Some(target_user_id)),
@@ -892,7 +892,7 @@ async fn channel_transfer_ownership(
     let msg = MessageSync::ChannelUpdate {
         channel: Box::new(thread.clone()),
     };
-    s.broadcast_channel(channel_id, auth_user.id, msg).await?;
+    s.broadcast_channel(channel_id, auth.user.id, msg).await?;
     Ok(Json(thread))
 }
 
