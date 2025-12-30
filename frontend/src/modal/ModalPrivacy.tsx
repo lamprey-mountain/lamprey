@@ -8,6 +8,7 @@ interface ModalPrivacyProps {
 
 export const ModalPrivacy = (props: ModalPrivacyProps) => {
 	const [dms, setDms] = createSignal(false);
+	const [friends, setFriends] = createSignal(false);
 	const [rpc, setRpc] = createSignal(false);
 	const [exif, setExif] = createSignal(false);
 
@@ -29,6 +30,22 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 						<div class="dim">
 							Let others send direct messages to you. Bots, moderators, and
 							friends can always start dms.
+						</div>
+					</label>
+				</div>
+				<div class="option">
+					<input
+						id="opt-friends"
+						type="checkbox"
+						checked={friends()}
+						onInput={(e) => setFriends(e.currentTarget.checked)}
+						style="display: none;"
+					/>
+					<Checkbox checked={friends()} />
+					<label for="opt-friends">
+						<div>Allow friend requests</div>
+						<div class="dim">
+							Let others send friend requests to you.
 						</div>
 					</label>
 				</div>
