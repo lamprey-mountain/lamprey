@@ -7,7 +7,10 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch},
+    calendar::{
+        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
+        CalendarOverwrite, CalendarOverwritePut,
+    },
     misc::UserIdReq,
     permission::Permission,
     CalendarEventId, ChannelId, UserId,
@@ -43,7 +46,7 @@ async fn calendar_event_list_user(
 /// Calendar event list
 #[utoipa::path(
     get,
-    path = "/channel/{channel_id}/event",
+    path = "/calendar/{channel_id}/event",
     tags = ["calendar"],
     params(("channel_id" = ChannelId, description = "Channel id")),
     responses((status = OK, description = "ok"))
@@ -73,7 +76,7 @@ async fn calendar_event_list(
 /// Calendar event create
 #[utoipa::path(
     post,
-    path = "/channel/{channel_id}/event",
+    path = "/calendar/{channel_id}/event",
     tags = ["calendar"],
     params(("channel_id" = ChannelId, description = "Channel id")),
     request_body = CalendarEventCreate,
@@ -120,8 +123,8 @@ async fn calendar_event_create(
                 .add("title", &event.title)
                 .add("description", &event.description)
                 .add("location", &event.location)
-                .add("start", &event.start)
-                .add("end", &event.end)
+                .add("starts_at", &event.starts_at)
+                .add("ends_at", &event.ends_at)
                 .build(),
         },
     })
@@ -133,16 +136,16 @@ async fn calendar_event_create(
 /// Calendar event get
 #[utoipa::path(
     get,
-    path = "/channel/{channel_id}/event/{calendar_event_id}",
+    path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
+        ("event_id" = CalendarEventId, description = "Calendar event id")
     ),
     responses((status = OK, body = CalendarEvent, description = "Get calendar event success"))
 )]
 async fn calendar_event_get(
-    Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
+    Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -155,7 +158,7 @@ async fn calendar_event_get(
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
-    let event = s.data().calendar_event_get(calendar_event_id).await?;
+    let event = s.data().calendar_event_get(event_id).await?;
 
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
@@ -167,17 +170,17 @@ async fn calendar_event_get(
 /// Calendar event update
 #[utoipa::path(
     patch,
-    path = "/channel/{channel_id}/event/{calendar_event_id}",
+    path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
+        ("event_id" = CalendarEventId, description = "Calendar event id")
     ),
     request_body = CalendarEventPatch,
     responses((status = OK, body = CalendarEvent, description = "Update calendar event success"))
 )]
 async fn calendar_event_update(
-    Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
+    Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -193,7 +196,7 @@ async fn calendar_event_update(
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
-    let old_event = s.data().calendar_event_get(calendar_event_id).await?;
+    let old_event = s.data().calendar_event_get(event_id).await?;
     if old_event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
@@ -206,7 +209,7 @@ async fn calendar_event_update(
 
     let updated_event = s
         .data()
-        .calendar_event_update(calendar_event_id, json.clone())
+        .calendar_event_update(event_id, json.clone())
         .await?;
 
     let room_id = srv
@@ -231,8 +234,8 @@ async fn calendar_event_update(
                     &updated_event.description,
                 )
                 .change("location", &old_event.location, &updated_event.location)
-                .change("start", &old_event.start, &updated_event.start)
-                .change("end", &old_event.end, &updated_event.end)
+                .change("starts_at", &old_event.starts_at, &updated_event.starts_at)
+                .change("ends_at", &old_event.ends_at, &updated_event.ends_at)
                 .build(),
         },
     })
@@ -244,16 +247,16 @@ async fn calendar_event_update(
 /// Calendar event delete
 #[utoipa::path(
     delete,
-    path = "/channel/{channel_id}/event/{calendar_event_id}",
+    path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
+        ("event_id" = CalendarEventId, description = "Calendar event id")
     ),
     responses((status = NO_CONTENT, description = "Delete calendar event success"))
 )]
 async fn calendar_event_delete(
-    Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
+    Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -267,7 +270,7 @@ async fn calendar_event_delete(
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
-    let event = s.data().calendar_event_get(calendar_event_id).await?;
+    let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
@@ -277,7 +280,7 @@ async fn calendar_event_delete(
         perms.ensure(Permission::CalendarEventManage)?;
     }
 
-    s.data().calendar_event_delete(calendar_event_id).await?;
+    s.data().calendar_event_delete(event_id).await?;
 
     let room_id = srv
         .channels
@@ -298,8 +301,8 @@ async fn calendar_event_delete(
                 .remove("title", &event.title)
                 .remove("description", &event.description)
                 .remove("location", &event.location)
-                .remove("start", &event.start)
-                .remove("end", &event.end)
+                .remove("starts_at", &event.starts_at)
+                .remove("ends_at", &event.ends_at)
                 .build(),
         },
     })
@@ -308,19 +311,159 @@ async fn calendar_event_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Calendar rsvp list
+/// Calendar overwrite list
 #[utoipa::path(
     get,
-    path = "/channel/{channel_id}/event/{calendar_event_id}/rsvp",
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite",
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
+        ("event_id" = CalendarEventId, description = "Calendar event id")
+    ),
+    responses((status = OK, body = Vec<CalendarOverwrite>, description = "List calendar overwrites success"))
+)]
+async fn calendar_overwrite_list(
+    Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    // Validate existence of channel and event
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+    let event = s.data().calendar_event_get(event_id).await?;
+    if event.channel_id != channel_id {
+        return Err(Error::NotFound);
+    }
+
+    Ok(Error::Unimplemented)
+}
+
+/// Calendar overwrite get
+#[utoipa::path(
+    get,
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
+    tags = ["calendar"],
+    params(
+        ("channel_id" = ChannelId, description = "Channel id"),
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("seq" = u64, description = "Sequence number")
+    ),
+    responses((status = OK, body = CalendarOverwrite, description = "Get calendar overwrite success"))
+)]
+async fn calendar_overwrite_get(
+    Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    // Validate existence of channel and event
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+    let event = s.data().calendar_event_get(event_id).await?;
+    if event.channel_id != channel_id {
+        return Err(Error::NotFound);
+    }
+
+    Ok(Error::Unimplemented)
+}
+
+/// Calendar overwrite update
+#[utoipa::path(
+    patch,
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
+    tags = ["calendar"],
+    params(
+        ("channel_id" = ChannelId, description = "Channel id"),
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("seq" = u64, description = "Sequence number")
+    ),
+    request_body = CalendarOverwritePut,
+    responses((status = OK, body = CalendarOverwrite, description = "Update calendar overwrite success"))
+)]
+async fn calendar_overwrite_update(
+    Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<CalendarOverwritePut>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::CalendarEventManage)?; // Assuming managing overwrites needs same perm as event
+
+    // Validate existence of channel and event
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+    let event = s.data().calendar_event_get(event_id).await?;
+    if event.channel_id != channel_id {
+        return Err(Error::NotFound);
+    }
+
+    Ok(Error::Unimplemented)
+}
+
+/// Calendar overwrite delete
+#[utoipa::path(
+    delete,
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
+    tags = ["calendar"],
+    params(
+        ("channel_id" = ChannelId, description = "Channel id"),
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("seq" = u64, description = "Sequence number")
+    ),
+    responses((status = NO_CONTENT, description = "Delete calendar overwrite success"))
+)]
+async fn calendar_overwrite_delete(
+    Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::CalendarEventManage)?;
+
+    // Validate existence of channel and event
+    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if !chan.ty.has_calendar() {
+        return Err(Error::BadStatic("channel is not a calendar"));
+    }
+    let event = s.data().calendar_event_get(event_id).await?;
+    if event.channel_id != channel_id {
+        return Err(Error::NotFound);
+    }
+
+    Ok(Error::Unimplemented)
+}
+
+/// Calendar rsvp list
+#[utoipa::path(
+    get,
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp",
+    tags = ["calendar"],
+    params(
+        ("channel_id" = ChannelId, description = "Channel id"),
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("seq" = u64, description = "Sequence number")
     ),
     responses((status = OK, body = Vec<UserId>, description = "ok"))
 )]
 async fn calendar_rsvp_list(
-    Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
+    Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -333,31 +476,37 @@ async fn calendar_rsvp_list(
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
-    let event = s.data().calendar_event_get(calendar_event_id).await?;
+    let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
 
-    let rsvps = s.data().calendar_event_rsvp_list(calendar_event_id).await?;
-    Ok(Json(rsvps))
+    if seq == 0 {
+        let rsvps = s.data().calendar_event_rsvp_list(event_id).await?;
+        Ok(Json(rsvps))
+    } else {
+        Err(Error::Unimplemented)
+    }
 }
 
 /// Calendar rsvp get
 #[utoipa::path(
     get,
-    path = "/channel/{channel_id}/event/{calendar_event_id}/rsvp/{user_id}",
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("seq" = u64, description = "Sequence number"),
         ("user_id" = UserIdReq, description = "@self or user id"),
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_rsvp_get(
-    Path((channel_id, calendar_event_id, user_id_req)): Path<(
+    Path((channel_id, event_id, seq, user_id_req)): Path<(
         ChannelId,
         CalendarEventId,
+        u64,
         UserIdReq,
     )>,
     auth: Auth2,
@@ -377,35 +526,41 @@ async fn calendar_rsvp_get(
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
-    let event = s.data().calendar_event_get(calendar_event_id).await?;
+    let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
 
-    let rsvps = s.data().calendar_event_rsvp_list(calendar_event_id).await?;
-    if rsvps.contains(&user_id) {
-        Ok(StatusCode::OK)
+    if seq == 0 {
+        let rsvps = s.data().calendar_event_rsvp_list(event_id).await?;
+        if rsvps.contains(&user_id) {
+            Ok(StatusCode::OK)
+        } else {
+            Err(Error::NotFound)
+        }
     } else {
-        Err(Error::NotFound)
+        Err(Error::Unimplemented)
     }
 }
 
 /// Calendar rsvp create
 #[utoipa::path(
     put,
-    path = "/channel/{channel_id}/event/{calendar_event_id}/rsvp/{user_id}",
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("seq" = u64, description = "Sequence number"),
         ("user_id" = UserIdReq, description = "@self or user id"),
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_rsvp_update(
-    Path((channel_id, calendar_event_id, user_id_req)): Path<(
+    Path((channel_id, event_id, seq, user_id_req)): Path<(
         ChannelId,
         CalendarEventId,
+        u64,
         UserIdReq,
     )>,
     auth: Auth2,
@@ -429,34 +584,37 @@ async fn calendar_rsvp_update(
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
-    let event = s.data().calendar_event_get(calendar_event_id).await?;
+    let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
 
-    s.data()
-        .calendar_event_rsvp_put(calendar_event_id, user_id)
-        .await?;
-
-    Ok(StatusCode::OK)
+    if seq == 0 {
+        s.data().calendar_event_rsvp_put(event_id, user_id).await?;
+        Ok(StatusCode::OK)
+    } else {
+        Err(Error::Unimplemented)
+    }
 }
 
 /// Calendar rsvp delete
 #[utoipa::path(
     delete,
-    path = "/channel/{channel_id}/event/{calendar_event_id}/rsvp/{user_id}",
+    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("seq" = u64, description = "Sequence number"),
         ("user_id" = inline(UserIdReq), description = "@self or user id"),
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_rsvp_delete(
-    Path((channel_id, calendar_event_id, user_id_req)): Path<(
+    Path((channel_id, event_id, seq, user_id_req)): Path<(
         ChannelId,
         CalendarEventId,
+        u64,
         UserIdReq,
     )>,
     auth: Auth2,
@@ -480,16 +638,19 @@ async fn calendar_rsvp_delete(
         return Err(Error::BadStatic("channel is not a calendar"));
     }
 
-    let event = s.data().calendar_event_get(calendar_event_id).await?;
+    let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
 
-    s.data()
-        .calendar_event_rsvp_delete(calendar_event_id, user_id)
-        .await?;
-
-    Ok(StatusCode::OK)
+    if seq == 0 {
+        s.data()
+            .calendar_event_rsvp_delete(event_id, user_id)
+            .await?;
+        Ok(StatusCode::OK)
+    } else {
+        Err(Error::Unimplemented)
+    }
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -500,6 +661,10 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(calendar_event_get))
         .routes(routes!(calendar_event_update))
         .routes(routes!(calendar_event_delete))
+        .routes(routes!(calendar_overwrite_list))
+        .routes(routes!(calendar_overwrite_get))
+        .routes(routes!(calendar_overwrite_update))
+        .routes(routes!(calendar_overwrite_delete))
         .routes(routes!(calendar_rsvp_list))
         .routes(routes!(calendar_rsvp_get))
         .routes(routes!(calendar_rsvp_update))

@@ -41,12 +41,9 @@ impl From<DbCalendarEvent> for CalendarEvent {
             location: val.location,
             url: val.url.and_then(|u| u.parse().ok()),
             timezone: val.timezone,
-            recurrence: val
-                .recurrence
-                .and_then(|v| serde_json::from_value(v).ok())
-                .unwrap_or_default(),
-            start: val.start_at.into(),
-            end: val.end_at.into(),
+            recurrence: val.recurrence.and_then(|v| serde_json::from_value(v).ok()),
+            starts_at: val.start_at.into(),
+            ends_at: val.end_at.into(),
         }
     }
 }
@@ -60,10 +57,10 @@ impl DataCalendar for Postgres {
         creator_id: UserId,
     ) -> Result<CalendarEvent> {
         let event_id = CalendarEventId::new();
-        let recurrence = if create.recurrence.is_empty() {
-            None
+        let recurrence = if let Some(rec) = create.recurrence {
+            Some(serde_json::to_value(&rec)?)
         } else {
-            Some(serde_json::to_value(&create.recurrence)?)
+            None
         };
         let event = query_as!(
             DbCalendarEvent,
@@ -81,8 +78,8 @@ impl DataCalendar for Postgres {
             create.url.as_ref().map(|u| u.as_str()),
             create.timezone,
             recurrence,
-            PrimitiveDateTime::from(create.start),
-            PrimitiveDateTime::from(create.end),
+            PrimitiveDateTime::from(create.starts_at),
+            PrimitiveDateTime::from(create.ends_at),
         )
         .fetch_one(&self.pool)
         .await?;
@@ -190,11 +187,31 @@ impl DataCalendar for Postgres {
             .unwrap_or(event.url);
         let channel_id = patch.channel_id.map(|c| *c).unwrap_or(event.channel_id);
 
+        let start_at = patch
+            .starts_at
+            .map(PrimitiveDateTime::from)
+            .unwrap_or(event.start_at);
+        let end_at = patch
+            .ends_at
+            .map(PrimitiveDateTime::from)
+            .unwrap_or(event.end_at);
+
+        let recurrence = if let Some(r_opt) = patch.recurrence {
+            if let Some(r) = r_opt {
+                Some(serde_json::to_value(&r)?)
+            } else {
+                None
+            }
+        } else {
+            event.recurrence.clone()
+        };
+
         let updated_event = query_as!(
             DbCalendarEvent,
             r#"
             UPDATE calendar_event
-            SET title = $2, description = $3, location = $4, url = $5, channel_id = $6, updated_at = now()
+            SET title = $2, description = $3, location = $4, url = $5, channel_id = $6, updated_at = now(),
+                recurrence = $7, start_at = $8, end_at = $9
             WHERE id = $1
             RETURNING id, channel_id, creator_id, title, description, location, url, timezone, recurrence, start_at, end_at
             "#,
@@ -204,6 +221,9 @@ impl DataCalendar for Postgres {
             location,
             url,
             channel_id,
+            recurrence,
+            start_at,
+            end_at
         )
         .fetch_one(&mut *tx)
         .await?;
