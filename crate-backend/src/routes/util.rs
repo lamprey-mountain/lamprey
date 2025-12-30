@@ -32,6 +32,22 @@ impl Auth2 {
     pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
         self.scopes.ensure_all(scopes).map_err(Into::into)
     }
+
+    pub fn ensure_sudo(&self) -> Result<(), Error> {
+        match &self.session.status {
+            SessionStatus::Unauthorized => Err(Error::UnauthSession),
+            SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
+            SessionStatus::Sudo {
+                sudo_expires_at, ..
+            } => {
+                if *sudo_expires_at < Time::now_utc() {
+                    Err(Error::BadStatic("sudo session expired"))
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
 }
 
 /// extract the client's Session
