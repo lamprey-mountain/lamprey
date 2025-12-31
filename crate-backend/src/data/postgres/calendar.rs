@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch},
+    calendar::{
+        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
+        CalendarOverwrite, CalendarOverwritePut,
+    },
     pagination::{PaginationDirection, PaginationResponse},
     CalendarEventId, ChannelId, PaginationKey, UserId,
 };
@@ -10,7 +13,7 @@ use uuid::Uuid;
 
 use crate::{
     data::{postgres::Pagination, DataCalendar},
-    error::Result,
+    error::{Error, Result},
     gen_paginate,
 };
 
@@ -44,6 +47,34 @@ impl From<DbCalendarEvent> for CalendarEvent {
             recurrence: val.recurrence.and_then(|v| serde_json::from_value(v).ok()),
             starts_at: val.start_at.into(),
             ends_at: val.end_at.into(),
+        }
+    }
+}
+
+pub struct DbCalendarOverwrite {
+    pub event_id: Uuid,
+    pub seq: i64,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub url: Option<String>,
+    pub start_at: Option<PrimitiveDateTime>,
+    pub end_at: Option<PrimitiveDateTime>,
+    pub cancelled: bool,
+}
+
+impl From<DbCalendarOverwrite> for CalendarOverwrite {
+    fn from(val: DbCalendarOverwrite) -> Self {
+        Self {
+            event_id: val.event_id.into(),
+            seq: val.seq as u64,
+            title: val.title,
+            extra_description: val.description,
+            location: val.location.map(Some),
+            url: val.url.and_then(|u| u.parse().ok()).map(Some),
+            starts_at: val.start_at.map(Into::into),
+            ends_at: val.end_at.map(Into::into),
+            cancelled: val.cancelled,
         }
     }
 }
@@ -281,5 +312,170 @@ impl DataCalendar for Postgres {
         .fetch_all(&self.pool)
         .await?;
         Ok(user_ids.into_iter().map(Into::into).collect())
+    }
+
+    async fn calendar_overwrite_put(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+        put: CalendarOverwritePut,
+    ) -> Result<CalendarOverwrite> {
+        let overwrite = query_as!(
+            DbCalendarOverwrite,
+            r#"
+            INSERT INTO calendar_overwrite (event_id, seq, title, description, start_at, end_at, cancelled)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (event_id, seq) DO UPDATE SET
+                title = EXCLUDED.title,
+                description = EXCLUDED.description,
+                start_at = EXCLUDED.start_at,
+                end_at = EXCLUDED.end_at,
+                cancelled = EXCLUDED.cancelled
+            RETURNING event_id, seq as "seq!", title, description, location, url, start_at, end_at, cancelled
+            "#,
+            *event_id,
+            seq as i64,
+            put.title,
+            put.extra_description,
+            put.starts_at.map(PrimitiveDateTime::from),
+            put.ends_at.map(PrimitiveDateTime::from),
+            put.cancelled.unwrap_or(false)
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(overwrite.into())
+    }
+
+    async fn calendar_overwrite_get(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+    ) -> Result<CalendarOverwrite> {
+        let overwrite = query_as!(
+            DbCalendarOverwrite,
+            r#"
+            SELECT event_id, seq as "seq!", title, description, location, url, start_at, end_at, cancelled
+            FROM calendar_overwrite
+            WHERE event_id = $1 AND seq = $2
+            "#,
+            *event_id,
+            seq as i64
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(overwrite.into())
+    }
+
+    async fn calendar_overwrite_list(
+        &self,
+        event_id: CalendarEventId,
+    ) -> Result<Vec<CalendarOverwrite>> {
+        let overwrites = query_as!(
+            DbCalendarOverwrite,
+            r#"
+            SELECT event_id, seq as "seq!", title, description, location, url, start_at, end_at, cancelled
+            FROM calendar_overwrite
+            WHERE event_id = $1
+            "#,
+            *event_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(overwrites.into_iter().map(Into::into).collect())
+    }
+
+    async fn calendar_overwrite_delete(&self, event_id: CalendarEventId, seq: u64) -> Result<()> {
+        query!(
+            "DELETE FROM calendar_overwrite WHERE event_id = $1 AND seq = $2",
+            *event_id,
+            seq as i64
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn calendar_overwrite_rsvp_put(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+        user_id: UserId,
+        attending: bool,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        // Ensure overwrite row exists to satisfy foreign key
+        query!(
+            "INSERT INTO calendar_overwrite (event_id, seq) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            *event_id,
+            seq as i64
+        ).execute(&mut *tx).await?;
+
+        query!(
+            "INSERT INTO calendar_overwrite_rsvp (event_id, seq, user_id, attending) VALUES ($1, $2, $3, $4)
+             ON CONFLICT (event_id, seq, user_id) DO UPDATE SET attending = $4",
+            *event_id,
+            seq as i64,
+            *user_id,
+            attending
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn calendar_overwrite_rsvp_delete(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+        user_id: UserId,
+    ) -> Result<()> {
+        let series_rsvped = query_scalar!(
+            "SELECT EXISTS (SELECT 1 FROM calendar_event_rsvp WHERE event_id = $1 AND user_id = $2)",
+            *event_id,
+            *user_id
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .unwrap_or(false);
+
+        if series_rsvped {
+            // Upsert an explicit "not attending" record for this overwrite
+            self.calendar_overwrite_rsvp_put(event_id, seq, user_id, false).await?;
+        } else {
+            // Just delete the overwrite rsvp, reverting to series default (not attending)
+            query!(
+                "DELETE FROM calendar_overwrite_rsvp WHERE event_id = $1 AND seq = $2 AND user_id = $3",
+                *event_id,
+                seq as i64,
+                *user_id
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn calendar_overwrite_rsvp_list(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+    ) -> Result<Vec<(UserId, bool)>> {
+        let rsvps = query!(
+            "SELECT user_id, attending FROM calendar_overwrite_rsvp WHERE event_id = $1 AND seq = $2",
+            *event_id,
+            seq as i64
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|r| (r.user_id.into(), r.attending))
+        .collect();
+
+        Ok(rsvps)
     }
 }

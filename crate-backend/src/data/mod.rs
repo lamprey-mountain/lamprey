@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scopes};
 use common::v1::types::calendar::{
     CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
+    CalendarOverwrite, CalendarOverwritePut,
 };
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
@@ -1095,6 +1096,8 @@ pub trait DataCalendar {
         patch: CalendarEventPatch,
     ) -> Result<CalendarEvent>;
     async fn calendar_event_delete(&self, event_id: CalendarEventId) -> Result<()>;
+    
+    // RSVP methods for the event (series)
     async fn calendar_event_rsvp_put(
         &self,
         event_id: CalendarEventId,
@@ -1106,6 +1109,48 @@ pub trait DataCalendar {
         user_id: UserId,
     ) -> Result<()>;
     async fn calendar_event_rsvp_list(&self, event_id: CalendarEventId) -> Result<Vec<UserId>>;
+
+    // Overwrite methods
+    async fn calendar_overwrite_put(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+        put: CalendarOverwritePut,
+    ) -> Result<CalendarOverwrite>;
+    async fn calendar_overwrite_get(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+    ) -> Result<CalendarOverwrite>;
+    async fn calendar_overwrite_list(
+        &self,
+        event_id: CalendarEventId,
+    ) -> Result<Vec<CalendarOverwrite>>;
+    async fn calendar_overwrite_delete(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+    ) -> Result<()>;
+
+    // RSVP methods for overwrites
+    async fn calendar_overwrite_rsvp_put(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+        user_id: UserId,
+        attending: bool,
+    ) -> Result<()>;
+    async fn calendar_overwrite_rsvp_delete(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+        user_id: UserId,
+    ) -> Result<()>;
+    async fn calendar_overwrite_rsvp_list(
+        &self,
+        event_id: CalendarEventId,
+        seq: u64,
+    ) -> Result<Vec<(UserId, bool)>>; // Returns user_id and whether they are attending
 }
 
 #[async_trait]
