@@ -411,10 +411,7 @@ async fn calendar_overwrite_update(
         return Err(Error::NotFound);
     }
 
-    let overwrite = s
-        .data()
-        .calendar_overwrite_put(event_id, seq, json)
-        .await?;
+    let overwrite = s.data().calendar_overwrite_put(event_id, seq, json).await?;
     Ok(Json(overwrite))
 }
 
@@ -571,9 +568,7 @@ async fn calendar_event_rsvp_put(
         return Err(Error::NotFound);
     }
 
-    s.data()
-        .calendar_event_rsvp_put(event_id, user_id)
-        .await?;
+    s.data().calendar_event_rsvp_put(event_id, user_id).await?;
 
     Ok(StatusCode::OK)
 }
@@ -656,10 +651,7 @@ async fn calendar_overwrite_rsvp_list(
         return Err(Error::NotFound);
     }
 
-    let rsvps = s
-        .data()
-        .calendar_overwrite_rsvp_list(event_id, seq)
-        .await?;
+    let rsvps = s.data().calendar_overwrite_rsvp_list(event_id, seq).await?;
     Ok(Json(rsvps))
 }
 

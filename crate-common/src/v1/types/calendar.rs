@@ -8,7 +8,9 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{pagination::PaginationDirection, CalendarEventId, ChannelId, UserId};
+use crate::v1::types::{
+    pagination::PaginationDirection, util::some_option, CalendarEventId, ChannelId, UserId,
+};
 
 use super::util::Time;
 
@@ -30,12 +32,21 @@ pub struct CalendarEvent {
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
     pub location: Option<String>,
     pub url: Option<Url>,
-    pub timezone: Option<String>,
+
+    /// the timezone that this event should be calculated in
+    pub timezone: Option<Timezone>,
 
     pub recurrence: Option<Recurrence>,
     pub starts_at: Time,
-    pub ends_at: Time,
+    pub ends_at: Option<Time>,
 }
+
+/// a timezone
+// TODO: validate? maybe allow only specific timezones?
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Timezone(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -51,11 +62,10 @@ pub struct CalendarEventCreate {
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
     pub location: Option<String>,
     pub url: Option<Url>,
-    pub timezone: Option<String>,
-
+    pub timezone: Option<Timezone>,
     pub recurrence: Option<Recurrence>,
     pub starts_at: Time,
-    pub ends_at: Time,
+    pub ends_at: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,18 +75,30 @@ pub struct CalendarEventPatch {
     #[cfg_attr(feature = "utoipa", schema(max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(max = 64)))]
     pub title: Option<String>,
+
     #[cfg_attr(feature = "utoipa", schema(max_length = 4096))]
     #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
+
     #[cfg_attr(feature = "utoipa", schema(max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
+    #[serde(default, deserialize_with = "some_option")]
     pub location: Option<Option<String>>,
-    pub url: Option<Option<Url>>,
-    pub channel_id: Option<ChannelId>,
 
-    pub recurrence: Option<Option<Recurrence>>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub url: Option<Option<Url>>,
+
     pub starts_at: Option<Time>,
-    pub ends_at: Option<Time>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub ends_at: Option<Option<Time>>,
+    // NOTE: undecided features
+    // how will moving events between channels work? what happens to rsvps for users who can no longer see an event?
+    // pub channel_id: Option<ChannelId>,
+    //
+    // how will ceruccence work with event overwrites?
+    // pub recurrence: Option<Option<Recurrence>>,
 }
 
 /// an overwrite to a calendar event instance
@@ -100,15 +122,18 @@ pub struct CalendarOverwrite {
 
     #[cfg_attr(feature = "utoipa", schema(max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
+    #[serde(default, deserialize_with = "some_option")]
     pub location: Option<Option<String>>,
 
+    #[serde(default, deserialize_with = "some_option")]
     pub url: Option<Option<Url>>,
 
     /// Overwrite the start time for this event
     pub starts_at: Option<Time>,
 
     /// Overwrite the end time for this event
-    pub ends_at: Option<Time>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub ends_at: Option<Option<Time>>,
 
     /// if this event is cancelled
     pub cancelled: bool,
@@ -130,14 +155,18 @@ pub struct CalendarOverwritePut {
 
     #[cfg_attr(feature = "utoipa", schema(max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
+    #[serde(default, deserialize_with = "some_option")]
     pub location: Option<Option<String>>,
+
+    #[serde(default, deserialize_with = "some_option")]
     pub url: Option<Option<Url>>,
 
     /// Overwrite the start time for this event
     pub starts_at: Option<Time>,
 
     /// Overwrite the end time for this event
-    pub ends_at: Option<Time>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub ends_at: Option<Option<Time>>,
 
     /// if this event is cancelled
     pub cancelled: Option<bool>,
@@ -238,7 +267,7 @@ impl Recurrence {
         todo!()
     }
 
-    /// if this event ends, gets te last day this series ends on
+    /// if this event ends, gets the last day this series ends on
     pub fn series_ends_at(&self) -> Option<Time> {
         todo!()
     }
@@ -255,6 +284,13 @@ impl Recurrence {
 
     /// calculate the default end date/time of the nth event
     pub fn nth_event_ends_at(&self, seq: u64) -> Option<Time> {
+        todo!()
+    }
+}
+
+impl CalendarEvent {
+    /// calculate the duration of this event in milliseconds
+    pub fn duration(&self) -> Option<u64> {
         todo!()
     }
 }

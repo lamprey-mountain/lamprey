@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::v1::types::{
     calendar::{
         CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
-        CalendarOverwrite, CalendarOverwritePut,
+        CalendarOverwrite, CalendarOverwritePut, Timezone,
     },
     pagination::{PaginationDirection, PaginationResponse},
     CalendarEventId, ChannelId, PaginationKey, UserId,
@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use crate::{
     data::{postgres::Pagination, DataCalendar},
-    error::{Error, Result},
+    error::Result,
     gen_paginate,
 };
 
@@ -30,7 +30,7 @@ pub struct DbCalendarEvent {
     pub timezone: Option<String>,
     pub recurrence: Option<serde_json::Value>,
     pub start_at: PrimitiveDateTime,
-    pub end_at: PrimitiveDateTime,
+    pub end_at: Option<PrimitiveDateTime>,
 }
 
 impl From<DbCalendarEvent> for CalendarEvent {
@@ -43,10 +43,10 @@ impl From<DbCalendarEvent> for CalendarEvent {
             description: val.description,
             location: val.location,
             url: val.url.and_then(|u| u.parse().ok()),
-            timezone: val.timezone,
+            timezone: val.timezone.map(Timezone),
             recurrence: val.recurrence.and_then(|v| serde_json::from_value(v).ok()),
             starts_at: val.start_at.into(),
-            ends_at: val.end_at.into(),
+            ends_at: val.end_at.map(|e| e.into()),
         }
     }
 }
@@ -73,7 +73,7 @@ impl From<DbCalendarOverwrite> for CalendarOverwrite {
             location: val.location.map(Some),
             url: val.url.and_then(|u| u.parse().ok()).map(Some),
             starts_at: val.start_at.map(Into::into),
-            ends_at: val.end_at.map(Into::into),
+            ends_at: val.end_at.map(|e| Some(e.into())),
             cancelled: val.cancelled,
         }
     }
@@ -107,10 +107,10 @@ impl DataCalendar for Postgres {
             create.description,
             create.location,
             create.url.as_ref().map(|u| u.as_str()),
-            create.timezone,
+            create.timezone.as_ref().map(|u| &u.0),
             recurrence,
             PrimitiveDateTime::from(create.starts_at),
-            PrimitiveDateTime::from(create.ends_at),
+            create.ends_at.map(PrimitiveDateTime::from)
         )
         .fetch_one(&self.pool)
         .await?;
@@ -216,7 +216,6 @@ impl DataCalendar for Postgres {
             .url
             .map(|u| u.map(|u| u.to_string()))
             .unwrap_or(event.url);
-        let channel_id = patch.channel_id.map(|c| *c).unwrap_or(event.channel_id);
 
         let start_at = patch
             .starts_at
@@ -224,25 +223,14 @@ impl DataCalendar for Postgres {
             .unwrap_or(event.start_at);
         let end_at = patch
             .ends_at
-            .map(PrimitiveDateTime::from)
+            .map(|e| e.map(PrimitiveDateTime::from))
             .unwrap_or(event.end_at);
-
-        let recurrence = if let Some(r_opt) = patch.recurrence {
-            if let Some(r) = r_opt {
-                Some(serde_json::to_value(&r)?)
-            } else {
-                None
-            }
-        } else {
-            event.recurrence.clone()
-        };
 
         let updated_event = query_as!(
             DbCalendarEvent,
             r#"
             UPDATE calendar_event
-            SET title = $2, description = $3, location = $4, url = $5, channel_id = $6, updated_at = now(),
-                recurrence = $7, start_at = $8, end_at = $9
+            SET title = $2, description = $3, location = $4, url = $5, updated_at = now(), start_at = $6, end_at = $7
             WHERE id = $1
             RETURNING id, channel_id, creator_id, title, description, location, url, timezone, recurrence, start_at, end_at
             "#,
@@ -251,8 +239,6 @@ impl DataCalendar for Postgres {
             description,
             location,
             url,
-            channel_id,
-            recurrence,
             start_at,
             end_at
         )
@@ -338,7 +324,7 @@ impl DataCalendar for Postgres {
             put.title,
             put.extra_description,
             put.starts_at.map(PrimitiveDateTime::from),
-            put.ends_at.map(PrimitiveDateTime::from),
+            put.ends_at.flatten().map(PrimitiveDateTime::from),
             put.cancelled.unwrap_or(false)
         )
         .fetch_one(&self.pool)
@@ -411,7 +397,9 @@ impl DataCalendar for Postgres {
             "INSERT INTO calendar_overwrite (event_id, seq) VALUES ($1, $2) ON CONFLICT DO NOTHING",
             *event_id,
             seq as i64
-        ).execute(&mut *tx).await?;
+        )
+        .execute(&mut *tx)
+        .await?;
 
         query!(
             "INSERT INTO calendar_overwrite_rsvp (event_id, seq, user_id, attending) VALUES ($1, $2, $3, $4)
@@ -444,7 +432,8 @@ impl DataCalendar for Postgres {
 
         if series_rsvped {
             // Upsert an explicit "not attending" record for this overwrite
-            self.calendar_overwrite_rsvp_put(event_id, seq, user_id, false).await?;
+            self.calendar_overwrite_rsvp_put(event_id, seq, user_id, false)
+                .await?;
         } else {
             // Just delete the overwrite rsvp, reverting to series default (not attending)
             query!(

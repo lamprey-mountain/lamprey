@@ -1096,7 +1096,7 @@ pub trait DataCalendar {
         patch: CalendarEventPatch,
     ) -> Result<CalendarEvent>;
     async fn calendar_event_delete(&self, event_id: CalendarEventId) -> Result<()>;
-    
+
     // RSVP methods for the event (series)
     async fn calendar_event_rsvp_put(
         &self,
@@ -1126,11 +1126,7 @@ pub trait DataCalendar {
         &self,
         event_id: CalendarEventId,
     ) -> Result<Vec<CalendarOverwrite>>;
-    async fn calendar_overwrite_delete(
-        &self,
-        event_id: CalendarEventId,
-        seq: u64,
-    ) -> Result<()>;
+    async fn calendar_overwrite_delete(&self, event_id: CalendarEventId, seq: u64) -> Result<()>;
 
     // RSVP methods for overwrites
     async fn calendar_overwrite_rsvp_put(
