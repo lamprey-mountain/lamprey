@@ -1,6 +1,78 @@
 import { Channel } from "sdk";
 import { createMemo, createSignal, Match, Switch } from "solid-js";
 
+const CalendarEvent = (props: {}) => {
+	// TODO: show icons next to each input
+	// TODO: show tooltip for each input
+	return (
+		<div>
+			<menu>
+				<button>event</button>
+				{/* TODO: only show if this event repeats */}
+				{/* TODO: show n if there is a limited number of instances */}
+				<button>(n) instances</button>
+				{/* TODO: show number of participants */}
+				<button>123 participants</button>
+			</menu>
+			<div style="display:flex;flex-direction:column">
+				<h3>event</h3>
+				<input placeholder="event name" />
+				<input type="date" />
+				<div style="display:flex">
+					{/* starts..ends */}
+					<input type="time" />
+					<input type="time" />
+				</div>
+				<hr />
+				<div>all day</div>
+				{/* TODO: checkbox for all day option */}
+				<div>timezone</div>
+				{/* TODO: remove timezone? this could be a user config thing instead? */}
+				<div>recurrence</div>
+				{/* TODO: on click, open context menu with options: every day, every week, every other week, every year, every weekday, annually, custom... */}
+				<hr />
+				<input type="text" placeholder="location" />
+				<input type="url" placeholder="url" />
+				<textarea placeholder="description"></textarea>
+				<hr />
+				<div>reminders</div>
+				{/* TODO: list reminders */}
+				{/* TODO: show x button next to each reminder to close it */}
+				{/* TODO: on click, open context menu with options: at start of event, 15 minutes before, 1 hour before, 1 day before, 3 days before, 1 week before, custom... */}
+				{/* TODO: show savebar when dirty */}
+			</div>
+			<div>
+				<h3>instances</h3>
+				{/* TODO: show a list of event instances */}
+			</div>
+			<div>
+				<h3>participants</h3>
+				{/* TODO: show a list of participants */}
+			</div>
+		</div>
+	);
+};
+
+/*
+calendar event context menu:
+start event
+edit event (only this event, all events in series)
+cancel event (only this event, all events in series)
+copy link (only this event, all events in series)
+---
+copy event id
+copy event seq
+log to console
+*/
+
+/*
+custom repeat modal:
+- repeat every {n} {day|week|month|year}
+- for week: on {su,mo,tu,we,th,fr,sa}
+- for month: {on the {day}th, on the {n}th {weekday}}
+- ends {never, on {time}, after {n} times}
+*/
+
 export const Calendar = (props: { channel: Channel }) => {
 	// TODO: load calendar events from api
 	// TODO: update calendar events from sync
@@ -97,6 +169,7 @@ export const Calendar = (props: { channel: Channel }) => {
 					<CalendarTimeline channel={props.channel} events={events} />
 				</Match>
 			</Switch>
+			<CalendarEvent />
 		</div>
 	);
 };
