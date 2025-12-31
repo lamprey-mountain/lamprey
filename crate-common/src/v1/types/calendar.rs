@@ -205,9 +205,6 @@ pub struct Recurrence {
 
     /// repeat every n (days/weeks/months/years)
     pub interval: u32,
-
-    #[serde(default)]
-    pub except_date: Vec<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -262,9 +259,8 @@ impl Recurrence {
                 self.frequency,
                 RecurrenceFrequency::Weekly | RecurrenceFrequency::Monthly
             ) {
-                errors.push(
-                    "by_weekday is only valid for Weekly and Monthly frequency".to_string(),
-                );
+                errors
+                    .push("by_weekday is only valid for Weekly and Monthly frequency".to_string());
             }
         }
 
@@ -312,7 +308,55 @@ impl Recurrence {
 
     /// convert to a rfc rrule string
     pub fn to_rrule(&self) -> String {
-        todo!()
+        let mut rrule = vec![];
+
+        let freq = match self.frequency {
+            RecurrenceFrequency::Daily => "DAILY",
+            RecurrenceFrequency::Weekly => "WEEKLY",
+            RecurrenceFrequency::Monthly => "MONTHLY",
+            RecurrenceFrequency::Yearly => "YEARLY",
+        };
+        rrule.push(format!("FREQ={}", freq));
+
+        rrule.push(format!("INTERVAL={}", self.interval));
+
+        if !self.by_weekday.is_empty() {
+            let days: Vec<&str> = self
+                .by_weekday
+                .iter()
+                .map(|d| match d {
+                    DayOfWeek::Monday => "MO",
+                    DayOfWeek::Tuesday => "TU",
+                    DayOfWeek::Wednesday => "WE",
+                    DayOfWeek::Thursday => "TH",
+                    DayOfWeek::Friday => "FR",
+                    DayOfWeek::Saturday => "SA",
+                    DayOfWeek::Sunday => "SU",
+                })
+                .collect();
+            rrule.push(format!("BYDAY={}", days.join(",")));
+        }
+
+        if !self.by_month_day.is_empty() {
+            let days: Vec<String> = self.by_month_day.iter().map(|d| d.to_string()).collect();
+            rrule.push(format!("BYMONTHDAY={}", days.join(",")));
+        }
+
+        match &self.range {
+            RecurrenceRange::Count { count } => {
+                rrule.push(format!("COUNT={}", count));
+            }
+            RecurrenceRange::Until { time } => {
+                let dt = time.to_offset(time::UtcOffset::UTC);
+                let fmt =
+                    time::format_description::parse("[year][month][day]T[hour][minute][second]Z")
+                        .unwrap();
+                rrule.push(format!("UNTIL={}", dt.format(&fmt).unwrap()));
+            }
+            RecurrenceRange::Infinite => {}
+        }
+
+        rrule.join(";")
     }
 
     /// if this event ends, gets the last day this series ends on
@@ -354,9 +398,8 @@ impl CalendarEvent {
             if let RecurrenceRange::Until { time } = recurrence.range {
                 let end_time = self.ends_at.unwrap_or(self.starts_at);
                 if time <= end_time {
-                    errors.push(
-                        "Recurrence until time must be after the event end time".to_string(),
-                    );
+                    errors
+                        .push("Recurrence until time must be after the event end time".to_string());
                 }
             }
         }
