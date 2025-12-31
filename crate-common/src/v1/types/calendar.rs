@@ -1,5 +1,6 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use url::Url;
 
 #[cfg(feature = "utoipa")]
@@ -233,7 +234,7 @@ pub enum RecurrenceFrequency {
 }
 
 /// a day of the week
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum DayOfWeek {
     Monday,
@@ -253,6 +254,53 @@ impl Recurrence {
         let mut errors = vec![];
         if self.interval == 0 {
             errors.push("Interval must be at least 1".to_string());
+        }
+
+        // by_weekday only valid for Weekly and Monthly
+        if !self.by_weekday.is_empty() {
+            if !matches!(
+                self.frequency,
+                RecurrenceFrequency::Weekly | RecurrenceFrequency::Monthly
+            ) {
+                errors.push(
+                    "by_weekday is only valid for Weekly and Monthly frequency".to_string(),
+                );
+            }
+        }
+
+        // by_month_day only valid for Monthly, Yearly
+        if !self.by_month_day.is_empty() {
+            if !matches!(
+                self.frequency,
+                RecurrenceFrequency::Monthly | RecurrenceFrequency::Yearly
+            ) {
+                errors.push(
+                    "by_month_day is only valid for Monthly and Yearly frequency".to_string(),
+                );
+            }
+
+            // range 1..=31
+            for day in &self.by_month_day {
+                if *day < 1 || *day > 31 {
+                    errors.push(format!(
+                        "by_month_day values must be between 1 and 31, found {}",
+                        day
+                    ));
+                }
+            }
+        }
+
+        // by_weekday no duplicates
+        let unique_weekdays: HashSet<_> = self.by_weekday.iter().collect();
+        if unique_weekdays.len() != self.by_weekday.len() {
+            errors.push("by_weekday must not contain duplicates".to_string());
+        }
+
+        // Count >= 1
+        if let RecurrenceRange::Count { count } = self.range {
+            if count < 1 {
+                errors.push("Recurrence count must be at least 1".to_string());
+            }
         }
 
         if errors.is_empty() {
@@ -289,6 +337,37 @@ impl Recurrence {
 }
 
 impl CalendarEvent {
+    pub fn validate(&self) -> Result<(), Vec<String>> {
+        let mut errors = vec![];
+
+        if let Some(ends_at) = self.ends_at {
+            if ends_at <= self.starts_at {
+                errors.push("ends_at must be after starts_at".to_string());
+            }
+        }
+
+        if let Some(recurrence) = &self.recurrence {
+            if let Err(rec_errors) = recurrence.validate() {
+                errors.extend(rec_errors);
+            }
+
+            if let RecurrenceRange::Until { time } = recurrence.range {
+                let end_time = self.ends_at.unwrap_or(self.starts_at);
+                if time <= end_time {
+                    errors.push(
+                        "Recurrence until time must be after the event end time".to_string(),
+                    );
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
     /// calculate the duration of this event in milliseconds
     pub fn duration(&self) -> Option<u64> {
         todo!()
