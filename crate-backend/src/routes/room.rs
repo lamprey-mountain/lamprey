@@ -17,7 +17,6 @@ use validator::Validate;
 
 use crate::{
     error::Result,
-    routes::util::AuthSudo,
     types::{
         DbRoomCreate, MediaLinkType, MessageSync, PaginationQuery, PaginationResponse, Permission,
         Room, RoomCreate, RoomId, RoomPatch,
@@ -405,11 +404,12 @@ async fn room_ack(
 )]
 async fn room_transfer_ownership(
     Path(room_id): Path<RoomId>,
-    AuthSudo(auth_user): AuthSudo,
+    auth: Auth2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_sudo()?;
 
     let srv = s.services();
     let data = s.data();
@@ -418,19 +418,19 @@ async fn room_transfer_ownership(
     // ensure that target user is a room member
     data.room_member_get(room_id, target_user_id).await?;
 
-    let _perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    let room_start = srv.rooms.get(room_id, Some(auth_user.id)).await?;
-    if room_start.owner_id != Some(auth_user.id) {
+    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let room_start = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room_start.owner_id != Some(auth.user.id) {
         return Err(Error::BadStatic("you aren't the room owner"));
     }
 
     data.room_set_owner(room_id, target_user_id).await?;
-    srv.perms.invalidate_room(auth_user.id, room_id).await;
+    srv.perms.invalidate_room(auth.user.id, room_id).await;
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.rooms.invalidate(room_id).await;
-    let room = srv.rooms.get(room_id, Some(auth_user.id)).await?;
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
     let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(room_id, auth_user.id, msg).await?;
+    s.broadcast_room(room_id, auth.user.id, msg).await?;
     Ok(Json(room))
 }
 

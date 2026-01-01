@@ -13,7 +13,6 @@ use crate::{
 };
 
 /// extract authentication info for a request
-// TODO: use this instead of the existing Auth stuff
 pub struct Auth2 {
     /// the effective user making this request
     pub user: User,
@@ -51,21 +50,8 @@ impl Auth2 {
 }
 
 /// extract the client's Session
+// TODO: remove?
 pub struct AuthRelaxed(pub Session);
-
-/// extract the client's Session iff it is authenticated
-// TODO: remove
-pub struct AuthWithSession(pub Session, pub User);
-
-/// extract the client's Session iff it is authenticated and return the user
-// TODO: remove
-pub struct Auth(pub User);
-
-/// extract the client's Session iff it is in sudo mode and return the user
-pub struct AuthSudo(pub User);
-
-/// extract the client's Session iff it is in sudo mode and return the session and user
-pub struct AuthSudoWithSession(pub Session, pub User);
 
 /// extract the X-Reason header
 pub struct HeaderReason(pub Option<String>);
@@ -104,99 +90,6 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
             srv.sessions.invalidate(session.id).await;
         }
         Ok(Self(session))
-    }
-}
-
-impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
-    type Rejection = Error;
-
-    async fn from_request_parts(
-        parts: &mut Parts,
-        s: &Arc<ServerState>,
-    ) -> Result<Self, Self::Rejection> {
-        let AuthRelaxed(session) = AuthRelaxed::from_request_parts(parts, s).await?;
-        match session.status {
-            SessionStatus::Unauthorized => Err(Error::UnauthSession),
-            SessionStatus::Authorized { user_id } | SessionStatus::Sudo { user_id, .. } => {
-                let HeaderPuppetId(puppet_id) =
-                    HeaderPuppetId::from_request_parts(parts, s).await?;
-                let mut user = s.services().users.get(user_id, None).await?;
-                if let Some(puppet_id) = puppet_id {
-                    let puppet = s.services().users.get(puppet_id, None).await?;
-
-                    if let Some(bot) = &puppet.bot {
-                        if bot.owner_id == user.id {
-                            return Ok(Self(session, puppet));
-                        }
-                    }
-
-                    let Some(bot) = user.bot else {
-                        return Err(Error::BadStatic("user is not a bot"));
-                    };
-
-                    if !bot.is_bridge {
-                        return Err(Error::BadStatic("bot is not a bridge"));
-                    }
-
-                    let Some(p) = &puppet.puppet else {
-                        return Err(Error::BadStatic("can only puppet users of type Puppet"));
-                    };
-
-                    if p.owner_id != user.id {
-                        return Err(Error::BadStatic("can only puppet your own puppets"));
-                    }
-
-                    Ok(Self(session, puppet))
-                } else {
-                    if let Some(puppet) = &user.puppet {
-                        let bot = s.services().users.get(puppet.owner_id, None).await?;
-
-                        if let Some(bot) = &bot.bot {
-                            let owner = s.services().users.get(bot.owner_id, None).await?;
-                            user.suspended = owner.suspended;
-                        }
-
-                        user.suspended = bot.suspended;
-                    } else if let Some(bot) = &user.bot {
-                        let owner = s.services().users.get(bot.owner_id, None).await?;
-                        user.suspended = owner.suspended;
-                    }
-
-                    Ok(Self(session, user))
-                }
-            }
-        }
-    }
-}
-
-impl FromRequestParts<Arc<ServerState>> for Auth {
-    type Rejection = Error;
-
-    async fn from_request_parts(
-        parts: &mut Parts,
-        s: &Arc<ServerState>,
-    ) -> Result<Self, Self::Rejection> {
-        let AuthWithSession(_session, user) = AuthWithSession::from_request_parts(parts, s).await?;
-        Ok(Self(user))
-    }
-}
-
-impl FromRequestParts<Arc<ServerState>> for AuthSudo {
-    type Rejection = Error;
-
-    async fn from_request_parts(
-        parts: &mut Parts,
-        s: &Arc<ServerState>,
-    ) -> Result<Self, Self::Rejection> {
-        let AuthRelaxed(session) = AuthRelaxed::from_request_parts(parts, s).await?;
-        match session.status {
-            SessionStatus::Unauthorized => Err(Error::UnauthSession),
-            SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
-            SessionStatus::Sudo { user_id, .. } => {
-                let user = s.services().users.get(user_id, None).await?;
-                Ok(Self(user))
-            }
-        }
     }
 }
 
@@ -257,25 +150,6 @@ impl FromRequestParts<Arc<ServerState>> for HeaderPuppetId {
     }
 }
 
-impl FromRequestParts<Arc<ServerState>> for AuthSudoWithSession {
-    type Rejection = Error;
-
-    async fn from_request_parts(
-        parts: &mut Parts,
-        s: &Arc<ServerState>,
-    ) -> Result<Self, Self::Rejection> {
-        let AuthRelaxed(session) = AuthRelaxed::from_request_parts(parts, s).await?;
-        match session.status {
-            SessionStatus::Unauthorized => Err(Error::UnauthSession),
-            SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
-            SessionStatus::Sudo { user_id, .. } => {
-                let user = s.services().users.get(user_id, None).await?;
-                Ok(Self(session, user))
-            }
-        }
-    }
-}
-
 impl FromRequestParts<Arc<ServerState>> for Auth2 {
     type Rejection = Error;
 
@@ -283,9 +157,29 @@ impl FromRequestParts<Arc<ServerState>> for Auth2 {
         parts: &mut Parts,
         s: &Arc<ServerState>,
     ) -> Result<Self, Self::Rejection> {
-        let AuthRelaxed(session) = AuthRelaxed::from_request_parts(parts, s).await?;
-        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+        // load existing session
+        let auth: Authorization<Bearer> = parts
+            .headers
+            .typed_get()
+            .ok_or_else(|| Error::MissingAuth)?;
         let srv = s.services();
+        let session = srv
+            .sessions
+            .get_by_token(SessionToken(auth.token().to_string()))
+            .await
+            .map_err(|err| match err {
+                Error::NotFound => Error::MissingAuth,
+                other => other,
+            })?;
+        if session.expires_at.is_some_and(|t| t < Time::now_utc()) {
+            return Err(Error::MissingAuth);
+        }
+        if session.last_seen_at < Time::now_utc() - Duration::from_secs(60) {
+            s.data().session_set_last_seen_at(session.id).await?;
+            srv.sessions.invalidate(session.id).await;
+        }
+
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
         let real_user = srv.users.get(user_id, None).await?;
