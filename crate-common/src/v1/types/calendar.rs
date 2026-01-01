@@ -370,12 +370,12 @@ impl Recurrence {
     }
 
     /// calculate the default start date/time of the nth event
-    pub fn nth_event_starts_at(&self, seq: u64) -> Option<Time> {
+    pub fn nth_event_starts_at(&self, _seq: u64) -> Option<Time> {
         todo!()
     }
 
     /// calculate the default end date/time of the nth event
-    pub fn nth_event_ends_at(&self, seq: u64) -> Option<Time> {
+    pub fn nth_event_ends_at(&self, _seq: u64) -> Option<Time> {
         todo!()
     }
 }
