@@ -276,12 +276,13 @@ async fn channel_list(
         .channel_list(room_id, auth.user.id, pagination, q.parent_id)
         .await?;
     let srv = s.services();
-    let mut threads = vec![];
-    for t in &res.items {
-        // FIXME: dubious performance
-        threads.push(srv.channels.get(t.id, Some(auth.user.id)).await?);
-    }
-    res.items = threads;
+    let ids: Vec<_> = res.items.iter().map(|t| t.id).collect();
+    let channels = srv.channels.get_many(&ids, Some(auth.user.id)).await?;
+    let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
+    res.items = ids
+        .into_iter()
+        .filter_map(|id| channels_map.remove(&id))
+        .collect();
     Ok(Json(res))
 }
 
@@ -315,11 +316,13 @@ async fn channel_list_removed(
         .channel_list_removed(room_id, auth.user.id, pagination, q.parent_id)
         .await?;
     let srv = s.services();
-    let mut threads = vec![];
-    for t in &res.items {
-        threads.push(srv.channels.get(t.id, Some(auth.user.id)).await?);
-    }
-    res.items = threads;
+    let ids: Vec<_> = res.items.iter().map(|t| t.id).collect();
+    let channels = srv.channels.get_many(&ids, Some(auth.user.id)).await?;
+    let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
+    res.items = ids
+        .into_iter()
+        .filter_map(|id| channels_map.remove(&id))
+        .collect();
     Ok(Json(res))
 }
 
