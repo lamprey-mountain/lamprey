@@ -583,7 +583,7 @@ async fn calendar_event_rsvp_put(
         ("event_id" = CalendarEventId, description = "Calendar event id"),
         ("user_id" = inline(UserIdReq), description = "@self or user id"),
     ),
-    responses((status = OK, description = "ok"))
+    responses((status = NO_CONTENT, description = "Delete calendar event RSVP success"))
 )]
 async fn calendar_event_rsvp_delete(
     Path((channel_id, event_id, user_id_req)): Path<(ChannelId, CalendarEventId, UserIdReq)>,
@@ -617,7 +617,7 @@ async fn calendar_event_rsvp_delete(
         .calendar_event_rsvp_delete(event_id, user_id)
         .await?;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Calendar Overwrite RSVP list
@@ -719,7 +719,7 @@ async fn calendar_overwrite_rsvp_put(
         ("seq" = u64, description = "Sequence number"),
         ("user_id" = inline(UserIdReq), description = "@self or user id"),
     ),
-    responses((status = OK, description = "ok"))
+    responses((status = NO_CONTENT, description = "Delete calendar overwrite RSVP success"))
 )]
 async fn calendar_overwrite_rsvp_delete(
     Path((channel_id, event_id, seq, user_id_req)): Path<(
@@ -758,7 +758,7 @@ async fn calendar_overwrite_rsvp_delete(
         .calendar_overwrite_rsvp_delete(event_id, seq, user_id)
         .await?;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
