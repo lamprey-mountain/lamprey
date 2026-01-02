@@ -1,12 +1,15 @@
 use async_trait::async_trait;
 use common::v1::types::{
     calendar::{
-        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
-        CalendarOverwrite, CalendarOverwritePut, Timezone,
+        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
+        CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
+        CalendarRsvpStatus, Timezone,
     },
     pagination::{PaginationDirection, PaginationResponse},
     CalendarEventId, ChannelId, PaginationKey, UserId,
 };
+use std::collections::HashSet;
+
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
 use uuid::Uuid;
@@ -290,14 +293,27 @@ impl DataCalendar for Postgres {
         Ok(())
     }
 
-    async fn calendar_event_rsvp_list(&self, event_id: CalendarEventId) -> Result<Vec<UserId>> {
+    async fn calendar_event_rsvp_list(
+        &self,
+        event_id: CalendarEventId,
+        _query: CalendarEventParticipantQuery,
+    ) -> Result<Vec<CalendarEventParticipant>> {
         let user_ids = query_scalar!(
             "SELECT user_id FROM calendar_event_rsvp WHERE event_id = $1",
             *event_id
         )
         .fetch_all(&self.pool)
         .await?;
-        Ok(user_ids.into_iter().map(Into::into).collect())
+
+        Ok(user_ids
+            .into_iter()
+            .map(|uid| CalendarEventParticipant {
+                user_id: uid.into(),
+                status: CalendarRsvpStatus::Interested,
+                user: None,
+                member: None,
+            })
+            .collect())
     }
 
     async fn calendar_overwrite_put(
@@ -453,18 +469,47 @@ impl DataCalendar for Postgres {
         &self,
         event_id: CalendarEventId,
         seq: u64,
-    ) -> Result<Vec<(UserId, bool)>> {
-        let rsvps = query!(
+        _query: CalendarEventParticipantQuery,
+    ) -> Result<Vec<CalendarEventParticipant>> {
+        let parent_rsvps: Vec<Uuid> = query_scalar!(
+            "SELECT user_id FROM calendar_event_rsvp WHERE event_id = $1",
+            *event_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        struct OverwriteRsvp {
+            user_id: Uuid,
+            attending: bool,
+        }
+
+        let overwrite_rsvps = query_as!(
+            OverwriteRsvp,
             "SELECT user_id, attending FROM calendar_overwrite_rsvp WHERE event_id = $1 AND seq = $2",
             *event_id,
             seq as i64
         )
         .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|r| (r.user_id.into(), r.attending))
-        .collect();
+        .await?;
 
-        Ok(rsvps)
+        let mut participants: HashSet<Uuid> = parent_rsvps.into_iter().collect();
+
+        for r in overwrite_rsvps {
+            if r.attending {
+                participants.insert(r.user_id);
+            } else {
+                participants.remove(&r.user_id);
+            }
+        }
+
+        Ok(participants
+            .into_iter()
+            .map(|uid| CalendarEventParticipant {
+                user_id: uid.into(),
+                status: CalendarRsvpStatus::Interested,
+                user: None,
+                member: None,
+            })
+            .collect())
     }
 }

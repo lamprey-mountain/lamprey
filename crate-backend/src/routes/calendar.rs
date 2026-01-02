@@ -8,8 +8,9 @@ use axum::{
 };
 use common::v1::types::{
     calendar::{
-        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
-        CalendarOverwrite, CalendarOverwritePut,
+        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
+        CalendarEventParticipantPut, CalendarEventParticipantQuery, CalendarEventPatch,
+        CalendarOverwrite, CalendarOverwritePut, CalendarRsvpStatus,
     },
     misc::UserIdReq,
     permission::Permission,
@@ -450,6 +451,8 @@ async fn calendar_overwrite_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+use std::collections::HashMap;
+
 /// Calendar Event RSVP list
 #[utoipa::path(
     get,
@@ -457,12 +460,14 @@ async fn calendar_overwrite_delete(
     tags = ["calendar"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id")
+        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        CalendarEventParticipantQuery
     ),
-    responses((status = OK, body = Vec<UserId>, description = "ok"))
+    responses((status = OK, body = Vec<CalendarEventParticipant>, description = "ok"))
 )]
 async fn calendar_event_rsvp_list(
     Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
+    Query(query): Query<CalendarEventParticipantQuery>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -480,8 +485,34 @@ async fn calendar_event_rsvp_list(
         return Err(Error::NotFound);
     }
 
-    let rsvps = s.data().calendar_event_rsvp_list(event_id).await?;
-    Ok(Json(rsvps))
+    let mut participants = s
+        .data()
+        .calendar_event_rsvp_list(event_id, query.clone())
+        .await?;
+
+    if query.include_member && !participants.is_empty() {
+        let user_ids: Vec<UserId> = participants.iter().map(|p| p.user_id).collect();
+        // TODO: get_many users with user config
+        let users = srv.users.get_many(&user_ids).await?;
+        let mut users_map: HashMap<_, _> = users.into_iter().map(|u| (u.id, u)).collect();
+
+        let mut members_map = HashMap::new();
+        if let Some(room_id) = chan.room_id {
+            // TODO: bulk fetch members
+            for uid in &user_ids {
+                if let Ok(member) = s.data().room_member_get(room_id, *uid).await {
+                    members_map.insert(*uid, member);
+                }
+            }
+        }
+
+        for p in &mut participants {
+            p.user = users_map.remove(&p.user_id);
+            p.member = members_map.remove(&p.user_id);
+        }
+    }
+
+    Ok(Json(participants))
 }
 
 /// Calendar Event RSVP get
@@ -520,8 +551,12 @@ async fn calendar_event_rsvp_get(
         return Err(Error::NotFound);
     }
 
-    let rsvps = s.data().calendar_event_rsvp_list(event_id).await?;
-    if rsvps.contains(&user_id) {
+    // NOTE: query is returned here
+    let rsvps = s
+        .data()
+        .calendar_event_rsvp_list(event_id, CalendarEventParticipantQuery::default())
+        .await?;
+    if rsvps.iter().any(|p| p.user_id == user_id) {
         Ok(StatusCode::OK)
     } else {
         Err(Error::NotFound)
@@ -538,12 +573,14 @@ async fn calendar_event_rsvp_get(
         ("event_id" = CalendarEventId, description = "Calendar event id"),
         ("user_id" = UserIdReq, description = "@self or user id"),
     ),
+    request_body = CalendarEventParticipantPut,
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_event_rsvp_put(
     Path((channel_id, event_id, user_id_req)): Path<(ChannelId, CalendarEventId, UserIdReq)>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
+    Json(json): Json<CalendarEventParticipantPut>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
         UserIdReq::UserSelf => auth.user.id,
@@ -568,7 +605,16 @@ async fn calendar_event_rsvp_put(
         return Err(Error::NotFound);
     }
 
-    s.data().calendar_event_rsvp_put(event_id, user_id).await?;
+    match json.status {
+        CalendarRsvpStatus::Interested => {
+            s.data().calendar_event_rsvp_put(event_id, user_id).await?;
+        }
+        CalendarRsvpStatus::Uninterested => {
+            s.data()
+                .calendar_event_rsvp_delete(event_id, user_id)
+                .await?;
+        }
+    }
 
     Ok(StatusCode::OK)
 }
@@ -628,12 +674,14 @@ async fn calendar_event_rsvp_delete(
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("seq" = u64, description = "Sequence number")
+        ("seq" = u64, description = "Sequence number"),
+        CalendarEventParticipantQuery
     ),
-    responses((status = OK, body = Vec<(UserId, bool)>, description = "ok"))
+    responses((status = OK, body = Vec<CalendarEventParticipant>, description = "ok"))
 )]
 async fn calendar_overwrite_rsvp_list(
     Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
+    Query(query): Query<CalendarEventParticipantQuery>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -651,8 +699,34 @@ async fn calendar_overwrite_rsvp_list(
         return Err(Error::NotFound);
     }
 
-    let rsvps = s.data().calendar_overwrite_rsvp_list(event_id, seq).await?;
-    Ok(Json(rsvps))
+    let mut participants = s
+        .data()
+        .calendar_overwrite_rsvp_list(event_id, seq, query.clone())
+        .await?;
+
+    if query.include_member && !participants.is_empty() {
+        let user_ids: Vec<UserId> = participants.iter().map(|p| p.user_id).collect();
+        // TODO: populate user_config, same as above
+        let users = srv.users.get_many(&user_ids).await?;
+        let mut users_map: HashMap<_, _> = users.into_iter().map(|u| (u.id, u)).collect();
+
+        let mut members_map = HashMap::new();
+        if let Some(room_id) = chan.room_id {
+            // TODO: bulk fetch members
+            for uid in &user_ids {
+                if let Ok(member) = s.data().room_member_get(room_id, *uid).await {
+                    members_map.insert(*uid, member);
+                }
+            }
+        }
+
+        for p in &mut participants {
+            p.user = users_map.remove(&p.user_id);
+            p.member = members_map.remove(&p.user_id);
+        }
+    }
+
+    Ok(Json(participants))
 }
 
 /// Calendar Overwrite RSVP create
@@ -666,6 +740,7 @@ async fn calendar_overwrite_rsvp_list(
         ("seq" = u64, description = "Sequence number"),
         ("user_id" = UserIdReq, description = "@self or user id"),
     ),
+    request_body = CalendarEventParticipantPut,
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_overwrite_rsvp_put(
@@ -677,6 +752,7 @@ async fn calendar_overwrite_rsvp_put(
     )>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
+    Json(json): Json<CalendarEventParticipantPut>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
         UserIdReq::UserSelf => auth.user.id,
@@ -701,9 +777,18 @@ async fn calendar_overwrite_rsvp_put(
         return Err(Error::NotFound);
     }
 
-    s.data()
-        .calendar_overwrite_rsvp_put(event_id, seq, user_id, true)
-        .await?;
+    match json.status {
+        CalendarRsvpStatus::Interested => {
+            s.data()
+                .calendar_overwrite_rsvp_put(event_id, seq, user_id, true)
+                .await?;
+        }
+        CalendarRsvpStatus::Uninterested => {
+            s.data()
+                .calendar_overwrite_rsvp_put(event_id, seq, user_id, false)
+                .await?;
+        }
+    }
 
     Ok(StatusCode::OK)
 }

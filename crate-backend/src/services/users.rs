@@ -61,6 +61,7 @@ impl ServiceUsers {
         Ok(usr)
     }
 
+    // TODO: cache
     pub async fn get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>> {
         if user_ids.is_empty() {
             return Ok(vec![]);

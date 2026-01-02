@@ -10,7 +10,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    pagination::PaginationDirection, util::some_option, CalendarEventId, ChannelId, UserId,
+    pagination::PaginationDirection, util::some_option, CalendarEventId, ChannelId, RoomMember,
+    User, UserId,
 };
 
 use super::util::Time;
@@ -173,7 +174,7 @@ pub struct CalendarOverwritePut {
     pub cancelled: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CalendarEventListQuery {
@@ -415,4 +416,41 @@ impl CalendarEvent {
     pub fn duration(&self) -> Option<u64> {
         todo!()
     }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct CalendarEventParticipantQuery {
+    /// whether to include user and member
+    #[serde(default)]
+    pub include_member: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct CalendarEventParticipant {
+    pub user_id: UserId,
+    pub status: CalendarRsvpStatus,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<User>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub member: Option<RoomMember>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum CalendarRsvpStatus {
+    Interested,
+    Uninterested,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct CalendarEventParticipantPut {
+    pub status: CalendarRsvpStatus,
 }

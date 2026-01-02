@@ -3,8 +3,8 @@
 use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scopes};
 use common::v1::types::calendar::{
-    CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
-    CalendarOverwrite, CalendarOverwritePut,
+    CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
+    CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
 };
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
@@ -1108,7 +1108,11 @@ pub trait DataCalendar {
         event_id: CalendarEventId,
         user_id: UserId,
     ) -> Result<()>;
-    async fn calendar_event_rsvp_list(&self, event_id: CalendarEventId) -> Result<Vec<UserId>>;
+    async fn calendar_event_rsvp_list(
+        &self,
+        event_id: CalendarEventId,
+        query: CalendarEventParticipantQuery,
+    ) -> Result<Vec<CalendarEventParticipant>>;
 
     // Overwrite methods
     async fn calendar_overwrite_put(
@@ -1146,7 +1150,8 @@ pub trait DataCalendar {
         &self,
         event_id: CalendarEventId,
         seq: u64,
-    ) -> Result<Vec<(UserId, bool)>>; // Returns user_id and whether they are attending
+        query: CalendarEventParticipantQuery,
+    ) -> Result<Vec<CalendarEventParticipant>>;
 }
 
 #[async_trait]
