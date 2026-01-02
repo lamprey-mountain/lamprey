@@ -1108,6 +1108,11 @@ pub trait DataCalendar {
         event_id: CalendarEventId,
         user_id: UserId,
     ) -> Result<()>;
+    async fn calendar_event_rsvp_get(
+        &self,
+        event_id: CalendarEventId,
+        user_id: UserId,
+    ) -> Result<CalendarEventParticipant>;
     async fn calendar_event_rsvp_list(
         &self,
         event_id: CalendarEventId,

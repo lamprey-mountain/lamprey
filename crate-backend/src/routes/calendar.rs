@@ -525,7 +525,7 @@ async fn calendar_event_rsvp_list(
         ("event_id" = CalendarEventId, description = "Calendar event id"),
         ("user_id" = UserIdReq, description = "@self or user id"),
     ),
-    responses((status = OK, description = "ok"))
+    responses((status = OK, body = CalendarEventParticipant, description = "ok"))
 )]
 async fn calendar_event_rsvp_get(
     Path((channel_id, event_id, user_id_req)): Path<(ChannelId, CalendarEventId, UserIdReq)>,
@@ -551,16 +551,8 @@ async fn calendar_event_rsvp_get(
         return Err(Error::NotFound);
     }
 
-    // NOTE: query is returned here
-    let rsvps = s
-        .data()
-        .calendar_event_rsvp_list(event_id, CalendarEventParticipantQuery::default())
-        .await?;
-    if rsvps.iter().any(|p| p.user_id == user_id) {
-        Ok(StatusCode::OK)
-    } else {
-        Err(Error::NotFound)
-    }
+    let rsvp = s.data().calendar_event_rsvp_get(event_id, user_id).await?;
+    Ok(Json(rsvp))
 }
 
 /// Calendar Event RSVP create

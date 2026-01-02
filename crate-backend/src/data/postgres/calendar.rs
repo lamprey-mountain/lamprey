@@ -293,6 +293,31 @@ impl DataCalendar for Postgres {
         Ok(())
     }
 
+    async fn calendar_event_rsvp_get(
+        &self,
+        event_id: CalendarEventId,
+        user_id: UserId,
+    ) -> Result<CalendarEventParticipant> {
+        let exists = query_scalar!(
+            "SELECT 1 FROM calendar_event_rsvp WHERE event_id = $1 AND user_id = $2",
+            *event_id,
+            *user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if exists.is_some() {
+            Ok(CalendarEventParticipant {
+                user_id,
+                status: CalendarRsvpStatus::Interested,
+                user: None,
+                member: None,
+            })
+        } else {
+            Err(crate::error::Error::NotFound)
+        }
+    }
+
     async fn calendar_event_rsvp_list(
         &self,
         event_id: CalendarEventId,
