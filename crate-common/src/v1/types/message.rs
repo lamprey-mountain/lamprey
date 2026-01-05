@@ -320,7 +320,6 @@ pub enum MessageType {
 
     /// The channel's icon was changed
     ChannelIcon(MessageChannelIcon),
-
     // /// (TODO) receive announcement threads from this room
     // // but where does this get sent to???
     // RoomFollowed(MessageRoomFollowed),

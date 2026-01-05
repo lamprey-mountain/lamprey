@@ -315,30 +315,33 @@ async fn emoji_lookup(
     Ok(Json(emoji))
 }
 
-#[allow(unused)] // TEMP
+// TODO: move to common
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct EmojiSearchQuery {
     pub query: String,
 }
 
-/// Emoji search (TODO)
+/// Emoji search
 ///
 /// Search all emoji the user can see.
 #[utoipa::path(
     get,
     path = "/emoji/search",
+    params(EmojiSearchQuery, PaginationQuery<EmojiId>),
     tags = ["emoji"],
     responses(
-        (status = OK, body = Vec<EmojiCustom>, description = "success"),
+        (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
     )
 )]
 async fn emoji_search(
-    Path(_emoji_id): Path<EmojiId>,
-    _auth: Auth2,
-    Query(_q): Query<EmojiSearchQuery>,
-    State(_s): State<Arc<ServerState>>,
+    auth: Auth2,
+    Query(q): Query<EmojiSearchQuery>,
+    Query(pagination): Query<PaginationQuery<EmojiId>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let data = s.data();
+    let emojis = data.emoji_search(auth.user.id, q.query, pagination).await?;
+    Ok(Json(emojis))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

@@ -9,7 +9,8 @@ use axum::{
 use common::v1::types::{
     tag::{Tag, TagCreate, TagPatch},
     util::Changes,
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, Permission, TagId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, TagId,
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -243,31 +244,46 @@ async fn tag_delete(
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
-#[allow(unused)] // TEMP
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct TagSearchQuery {
     pub query: String,
 }
 
-/// Tag search (TODO)
+/// Tag search
 ///
-/// Search all emoji the user can see.
+/// Search for tags in a forum channel.
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/tag/search",
-    params(("channel_id", description = "The ID of the forum channel to search for tags in.")),
+    params(
+        ("channel_id", description = "The ID of the forum channel to search for tags in."),
+        TagSearchQuery,
+        PaginationQuery<TagId>,
+    ),
     tags = ["tag"],
     responses(
-        (status = OK, body = Vec<Tag>, description = "success"),
+        (status = OK, body = PaginationResponse<Tag>, description = "success"),
     )
 )]
 async fn tag_search(
-    Path(_channel_id): Path<ChannelId>,
-    _auth: Auth2,
-    Query(_q): Query<TagSearchQuery>,
-    State(_s): State<Arc<ServerState>>,
+    Path(channel_id): Path<ChannelId>,
+    auth: Auth2,
+    Query(q): Query<TagSearchQuery>,
+    Query(pagination): Query<PaginationQuery<TagId>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if !channel.ty.has_tags() {
+        return Err(Error::BadStatic("channel does not support tags"));
+    }
+
+    let tags = s.data().tag_search(channel_id, q.query, pagination).await?;
+
+    Ok(Json(tags))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

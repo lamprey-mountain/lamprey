@@ -4,12 +4,17 @@ use common::v1::types::{
     tag::{Tag, TagCreate, TagPatch},
     ChannelId, TagId,
 };
-use sqlx::{query, query_as};
+use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
 
 use crate::{data::DataTag, error::Result};
 
-use super::Postgres;
+use crate::{
+    gen_paginate,
+    types::{PaginationDirection, PaginationQuery, PaginationResponse},
+};
+
+use super::{Pagination, Postgres};
 
 struct DbTag {
     id: Uuid,
@@ -151,5 +156,45 @@ impl DataTag for Postgres {
             .fetch_one(&self.pool)
             .await?;
         Ok(forum_id.into())
+    }
+
+    async fn tag_search(
+        &self,
+        forum_channel_id: ChannelId,
+        query: String,
+        pagination: PaginationQuery<TagId>,
+    ) -> Result<PaginationResponse<Tag>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        let query = format!("%{}%", query);
+
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbTag,
+                r#"
+                SELECT
+                    t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                    (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
+                    (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
+                FROM tag t
+                WHERE t.channel_id = $1 AND t.name ILIKE $2
+                AND t.id > $3 AND t.id < $4
+                ORDER BY (CASE WHEN $5 = 'f' THEN t.id END), t.id DESC LIMIT $6
+                "#,
+                *forum_channel_id,
+                query,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                "SELECT count(*) FROM tag WHERE channel_id = $1 AND name ILIKE $2",
+                *forum_channel_id,
+                query
+            ),
+            |i: &Tag| i.id.to_string()
+        )
     }
 }

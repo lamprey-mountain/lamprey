@@ -174,4 +174,48 @@ impl DataEmoji for Postgres {
         .await?;
         Ok(())
     }
+
+    async fn emoji_search(
+        &self,
+        user_id: UserId,
+        query: String,
+        pagination: PaginationQuery<EmojiId>,
+    ) -> Result<PaginationResponse<EmojiCustom>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        let query = format!("%{}%", query);
+
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbEmojiCustom,
+                r#"
+                SELECT e.id, e.name, e.creator_id, e.animated, e.media_id, e.room_id
+                FROM custom_emoji e
+                JOIN room_member rm ON e.room_id = rm.room_id
+                WHERE rm.user_id = $1 AND rm.membership = 'Join' AND e.name ILIKE $2
+                AND e.id > $3 AND e.id < $4 AND e.deleted_at IS NULL
+            	ORDER BY (CASE WHEN $5 = 'f' THEN e.id END), e.id DESC LIMIT $6
+                "#,
+                *user_id,
+                query,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"
+                SELECT count(*)
+                FROM custom_emoji e
+                JOIN room_member rm ON e.room_id = rm.room_id
+                WHERE rm.user_id = $1 AND rm.membership = 'Join' AND e.name ILIKE $2
+                AND e.deleted_at IS NULL
+                "#,
+                *user_id,
+                query
+            ),
+            |i: &EmojiCustom| i.id.to_string()
+        )
+    }
 }

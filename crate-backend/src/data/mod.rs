@@ -238,6 +238,12 @@ pub trait DataTag {
     async fn tag_delete(&self, tag_id: TagId) -> Result<()>;
     async fn tag_get(&self, tag_id: TagId) -> Result<Tag>;
     async fn tag_get_forum_id(&self, tag_id: TagId) -> Result<ChannelId>;
+    async fn tag_search(
+        &self,
+        forum_channel_id: ChannelId,
+        query: String,
+        pagination: PaginationQuery<TagId>,
+    ) -> Result<PaginationResponse<Tag>>;
 }
 
 #[async_trait]
@@ -973,6 +979,12 @@ pub trait DataEmoji {
     ) -> Result<PaginationResponse<EmojiCustom>>;
     async fn emoji_update(&self, emoji_id: EmojiId, patch: EmojiCustomPatch) -> Result<()>;
     async fn emoji_delete(&self, emoji_id: EmojiId) -> Result<()>;
+    async fn emoji_search(
+        &self,
+        user_id: UserId,
+        query: String,
+        pagination: PaginationQuery<EmojiId>,
+    ) -> Result<PaginationResponse<EmojiCustom>>;
 }
 
 #[async_trait]

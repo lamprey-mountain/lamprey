@@ -5,7 +5,10 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, MessageChannelIcon, MessageSync, MessageThreadRename, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId, SERVER_USER_ID, ThreadMemberPut, User, UserId
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
+    ChannelPatch, ChannelType, MessageChannelIcon, MessageSync, MessageThreadRename, MessageType,
+    PaginationQuery, Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId,
+    SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
