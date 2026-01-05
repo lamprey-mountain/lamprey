@@ -566,8 +566,12 @@ impl ChannelType {
                 | ChannelType::Dm
                 | ChannelType::Gdm
                 | ChannelType::Forum
-                | ChannelType::Forum2
         )
+    }
+
+    /// whether this is a forum2 channel
+    pub fn has_forum2_threads(&self) -> bool {
+        matches!(self, ChannelType::Forum2)
     }
 
     /// whether private threads can be created inside this channel
@@ -579,7 +583,7 @@ impl ChannelType {
     }
 
     pub fn has_threads(&self) -> bool {
-        self.has_public_threads() || self.has_private_threads()
+        self.has_public_threads() || self.has_private_threads() || self.has_forum2_threads()
     }
 
     pub fn has_voice(&self) -> bool {

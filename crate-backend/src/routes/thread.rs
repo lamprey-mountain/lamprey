@@ -496,7 +496,7 @@ async fn thread_create(
 
     if !matches!(
         json.ty,
-        ChannelType::ThreadPublic | ChannelType::ThreadPrivate
+        ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2
     ) {
         return Err(Error::BadStatic("invalid thread type"));
     }
@@ -572,7 +572,7 @@ async fn thread_create_from_message(
         .channels
         .get(parent_channel_id, Some(auth.user.id))
         .await?;
-    if !parent_channel.ty.has_public_threads() {
+    if !parent_channel.ty.has_public_threads() && !parent_channel.ty.has_forum2_threads() {
         return Err(Error::BadStatic(
             "Cannot create a thread in this channel type",
         ));
@@ -611,7 +611,11 @@ async fn thread_create_from_message(
         name: json.name.clone(),
         description: json.description.clone(),
         url: json.url.clone(),
-        ty: DbChannelType::ThreadPublic,
+        ty: if parent_channel.ty.has_forum2_threads() {
+            DbChannelType::ThreadForum2
+        } else {
+            DbChannelType::ThreadPublic
+        },
         nsfw: json.nsfw,
         bitrate: json.bitrate.map(|b| b as i32),
         user_limit: json.user_limit.map(|u| u as i32),

@@ -118,7 +118,7 @@ impl DataThread for Postgres {
             WHERE
                 archived_at IS NULL
                 AND deleted_at IS NULL
-                AND type IN ('ThreadPublic', 'ThreadPrivate')
+                AND type IN ('ThreadPublic', 'ThreadPrivate', 'ThreadForum2')
                 AND auto_archive_duration IS NOT NULL
                 AND last_activity_at IS NOT NULL
                 AND last_activity_at + (auto_archive_duration * INTERVAL '1 second') < NOW()
@@ -154,7 +154,7 @@ impl DataThread for Postgres {
                 c.room_id = $1
                 AND c.archived_at IS NULL
                 AND c.deleted_at IS NULL
-                AND c.type IN ('ThreadPublic', 'ThreadPrivate')
+                AND c.type IN ('ThreadPublic', 'ThreadPrivate', 'ThreadForum2')
             ORDER BY c.last_activity_at DESC NULLS LAST
             "#,
             room_id.into_inner()

@@ -21,6 +21,6 @@ from message as msg
 left join att_json on att_json.version_id = msg.version_id
 left join hydrated_mentions hm on hm.message_id = msg.id
 where is_latest and channel_id = $1 and msg.deleted_at is null
-  and msg.type IN ('MessagePinned', 'MemberAdd', 'MemberRemove', 'ThreadRename')
+  and msg.type IN ('MessagePinned', 'MemberAdd', 'MemberRemove', 'ThreadRename', 'ChannelIcon')
   and msg.id > $2 AND msg.id < $3
 order by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5

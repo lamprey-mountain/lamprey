@@ -286,14 +286,50 @@ impl ServiceThreads {
             | ChannelType::Info => {
                 perms.ensure(Permission::ChannelManage)?;
             }
-            ChannelType::ThreadPublic | ChannelType::ThreadForum2 => {
+            ChannelType::ThreadPublic => {
                 let parent_id = json
                     .parent_id
                     .ok_or(Error::BadStatic("threads must have a parent channel"))?;
                 let parent = srv.channels.get(parent_id, Some(user_id)).await?;
                 if !parent.ty.has_public_threads() {
                     return Err(Error::BadStatic(
-                        "threads can only be created in specific channel types",
+                        "public threads can only be created in specific channel types",
+                    ));
+                }
+                perms.ensure(Permission::ThreadCreatePublic)?;
+
+                if !perms.can_bypass_slowmode() {
+                    if let Some(parent_id) = parent_id_opt {
+                        if let Some(thread_slowmode_expire_at) = data
+                            .channel_get_thread_slowmode_expire_at(parent_id, user_id)
+                            .await?
+                        {
+                            if thread_slowmode_expire_at > Time::now_utc() {
+                                return Err(Error::BadStatic("slowmode in effect"));
+                            }
+                        }
+
+                        if let Some(slowmode_delay) = parent.slowmode_thread {
+                            let next_thread_time =
+                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                            data.channel_set_thread_slowmode_expire_at(
+                                parent_id,
+                                user_id,
+                                next_thread_time,
+                            )
+                            .await?;
+                        }
+                    }
+                }
+            }
+            ChannelType::ThreadForum2 => {
+                let parent_id = json
+                    .parent_id
+                    .ok_or(Error::BadStatic("threads must have a parent channel"))?;
+                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                if !parent.ty.has_forum2_threads() {
+                    return Err(Error::BadStatic(
+                        "forum2 threads can only be created in forum2 channels",
                     ));
                 }
                 perms.ensure(Permission::ThreadCreatePublic)?;
