@@ -547,6 +547,7 @@ pub enum MessageSync {
     /// an auto moderation rule was deleted. only sent to users with RoomManage.
     AutomodRuleDelete {
         rule_id: AutomodRuleId,
+        room_id: RoomId,
     },
 
     /// an auto moderation rule was executed. only sent to users with RoomManage.

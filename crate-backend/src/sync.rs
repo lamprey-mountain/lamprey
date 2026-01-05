@@ -596,6 +596,18 @@ impl Connection {
             MessageSync::BanDelete { room_id, .. } => {
                 AuthCheck::RoomPerm(*room_id, Permission::MemberBan)
             }
+            MessageSync::AutomodRuleCreate { rule } => {
+                AuthCheck::RoomPerm(rule.room_id, Permission::RoomManage)
+            }
+            MessageSync::AutomodRuleUpdate { rule } => {
+                AuthCheck::RoomPerm(rule.room_id, Permission::RoomManage)
+            }
+            MessageSync::AutomodRuleDelete { room_id, .. } => {
+                AuthCheck::RoomPerm(*room_id, Permission::RoomManage)
+            }
+            MessageSync::AutomodRuleExecute { execution } => {
+                AuthCheck::RoomPerm(execution.rule.room_id, Permission::RoomManage)
+            }
             MessageSync::MemberListSync { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxNotificationCreate { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxMarkRead { user_id, .. } => AuthCheck::User(*user_id),
