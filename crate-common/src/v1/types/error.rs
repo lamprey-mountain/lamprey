@@ -62,26 +62,167 @@ pub enum SyncError {
     Api(#[from] Error),
 }
 
-// struct Error2 {
-//     /// human readable error message
-//     message: String,
+pub mod next {
+    #[cfg(feature = "serde")]
+    use serde::{Deserialize, Serialize};
+    use thiserror::Error;
 
-//     /// error code
-//     code: ApiErrorCode,
+    #[cfg(feature = "utoipa")]
+    use utoipa::ToSchema;
 
-//     /// errors in the request body
-//     #[serde(skip_serializing_if = "Vec::is_empty")]
-//     fields: Vec<ApiErrorField>,
+    use crate::v1::types::{
+        application::{Scope, Scopes},
+        Permission,
+    };
 
-//     /// required room permissions
-//     #[serde(skip_serializing_if = "Vec::is_empty")]
-//     required_permissions: Vec<String>,
+    // FIXME: cfg_attr serde
+    // TODO: impl Error
+    /// an error that may be returned from the api
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct Error {
+        /// human readable error message
+        pub message: String,
 
-//     /// required server permissions
-//     #[serde(skip_serializing_if = "Vec::is_empty")]
-//     required_permissions_server: Vec<String>,
+        /// error code
+        pub code: ErrorCode,
 
-//     /// required oauth scopes
-//     #[serde(skip_serializing_if = "Vec::is_empty")]
-//     required_scopes: Vec<String>,
-// }
+        /// errors in the request body
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub fields: Vec<ErrorField>,
+
+        /// required room permissions
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub required_permissions: Vec<Permission>,
+
+        /// required server permissions
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub required_permissions_server: Vec<Permission>,
+
+        /// required oauth scopes
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub required_scopes: Vec<Scope>,
+    }
+
+    /// a field that has an error
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct ErrorField {
+        /// path to this field inside the request object
+        pub key: Vec<String>,
+
+        /// human readable error message
+        pub message: String,
+
+        #[serde(flatten)]
+        pub ty: ErrorFieldType,
+    }
+
+    /// the type of error in the field
+    #[derive(Debug, Clone)]
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(rename = "type")
+    )]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub enum ErrorFieldType {
+        /// this field was required but not specified
+        Required,
+
+        /// the specified number is out of range
+        Range { min: Option<u64>, max: Option<u64> },
+
+        /// the specified string or array length is out of range
+        Length { min: Option<u64>, max: Option<u64> },
+
+        /// the incorrect type was passed
+        Type { got: String, expected: String },
+
+        /// some other validation error
+        Other { message: String },
+    }
+
+    #[derive(Debug, Error, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub enum ErrorCode {
+        /// invalid data was provided
+        ///
+        /// aka malformed request body, http 400, bad request
+        #[error("invalid data was provided")]
+        InvalidData,
+
+        /// user is suspended
+        #[error("user is suspended")]
+        UserSuspended,
+
+        /// missing scopes
+        #[error("missing scopes {scopes:?}")]
+        MissingScopes { scopes: Scopes },
+
+        /// sudo mode required for this endpoint
+        #[error("sudo mode required for this endpoint")]
+        SudoRequired,
+        // /// this user type cant use this endpoint
+        // ///
+        // /// some endpoints can only be used by bots, can't be used by puppets, etc
+        // // replace with specific errors?
+        // BadUserType,
+
+        // not bot owner
+        // user is not a bot
+        // bot is not a bridge
+        // you can only puppet users of type Puppet
+        // you can only puppet your own pupets
+
+        // missing permissions (Forbidden)
+        // slowmode
+        // invalid data
+
+        // channel is archived
+        // channel is removed
+        // you are not the gdm owner
+        // only gdms can be upgraded
+        // dm/gdm channel missing recepients
+        // dms can only be with a single person
+        // gdm has too many members
+        // can only create dms/gdms outside of rooms
+
+        // bitrate is too high
+        // cannot set bitrate for non voice thread
+        // cannot set user_limit for non voice thread
+        // only gdms can have icons
+        // icon is not an image
+    }
+
+    /// warnings that require ?force=true
+    // maybe require header instead? `X-Force: Warning1, Warning2`
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub enum Warning {
+        /// this role is applied to one or more room member
+        RoleNotEmpty,
+
+        /// this tag is applied to one or more post
+        TagNotEmpty,
+        // this will revoke view access to existing thread members
+        // this will revoke view access to existing rsvpers
+    }
+
+    impl Error {
+        pub fn new(message: String, code: ErrorCode) -> Self {
+            Self {
+                message,
+                code,
+                fields: vec![],
+                required_permissions: vec![],
+                required_permissions_server: vec![],
+                required_scopes: vec![],
+            }
+        }
+    }
+}

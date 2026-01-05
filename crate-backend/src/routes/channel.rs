@@ -19,7 +19,7 @@ use validator::Validate;
 use crate::{
     types::{
         Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelCreate, DbChannelType,
-        DbRoomCreate, MessageSync, MessageVerId, Permission, RoomId,
+        DbRoomCreate, MediaLinkType, MessageSync, MessageVerId, Permission, RoomId,
     },
     Error, ServerState,
 };
@@ -77,6 +77,8 @@ async fn channel_create_room(
 }
 
 // TODO: rename to /api/v1/user/@self/channel
+// TODO: move to channels service
+// TODO: unhardcode bitrate
 /// Channel create dm
 ///
 /// Create a dm or group dm thread (outside of a room)
@@ -185,12 +187,8 @@ async fn channel_create_dm(
         .await?;
 
     if let Some(icon) = json.icon {
-        data.media_link_create_exclusive(
-            icon,
-            *channel_id,
-            crate::types::MediaLinkType::IconThread,
-        )
-        .await?;
+        data.media_link_create_exclusive(icon, *channel_id, MediaLinkType::IconThread)
+            .await?;
     }
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -444,15 +442,11 @@ async fn channel_update(
 
     if let Some(icon) = json.icon {
         s.data()
-            .media_link_delete(*channel_id, crate::types::MediaLinkType::IconThread)
+            .media_link_delete(*channel_id, MediaLinkType::IconThread)
             .await?;
         if let Some(icon) = icon {
             s.data()
-                .media_link_create_exclusive(
-                    icon,
-                    *channel_id,
-                    crate::types::MediaLinkType::IconThread,
-                )
+                .media_link_create_exclusive(icon, *channel_id, MediaLinkType::IconThread)
                 .await?;
         }
     }
@@ -736,6 +730,7 @@ async fn channel_upgrade(
     }
 
     if chan.room_id.is_some() {
+        // NOTE: should this be a panic? gdms can't be in rooms anyways?
         return Err(Error::BadStatic("thread is already in a room"));
     }
 
@@ -757,10 +752,12 @@ async fn channel_upgrade(
         )
         .await?;
 
+    // TODO: run in a transaction
+    // TODO: move to room create? i need to delete the thread icon before linking the room avatar
     if let Some(icon) = chan.icon {
-        data.media_link_delete(*channel_id, crate::types::MediaLinkType::IconThread)
+        data.media_link_delete(*channel_id, MediaLinkType::IconThread)
             .await?;
-        data.media_link_create_exclusive(icon, *room.id, crate::types::MediaLinkType::AvatarRoom)
+        data.media_link_create_exclusive(icon, *room.id, MediaLinkType::AvatarRoom)
             .await?;
     }
 
