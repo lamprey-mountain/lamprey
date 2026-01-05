@@ -37,6 +37,7 @@ struct ServerInfo {
 }
 
 /// shows some parts of config
+// TODO: migrate to types/server
 #[derive(Debug, Serialize, ToSchema)]
 struct ServerFeatures {
     registration: Option<features::Registration>,

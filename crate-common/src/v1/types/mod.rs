@@ -29,6 +29,7 @@ pub mod room_analytics;
 pub mod room_member;
 pub mod room_template;
 pub mod search;
+pub mod server;
 pub mod session;
 pub mod sync;
 pub mod tag;

@@ -196,6 +196,12 @@ pub mod next {
         // cannot set user_limit for non voice thread
         // only gdms can have icons
         // icon is not an image
+
+        // /// unknown builtin automod list
+        // UnknownAutomodList,
+
+        // /// unknown builtin media scanner
+        // UnknownMediaScanner,
     }
 
     /// warnings that require ?force=true

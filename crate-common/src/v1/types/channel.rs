@@ -11,7 +11,7 @@ use crate::v1::types::tag::Tag;
 use crate::v1::types::user_config::UserConfigChannel;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
-use crate::v1::types::{MediaId, MessageVerId, TagId, ThreadMember, User};
+use crate::v1::types::{MediaId, MessageVerId, RoleId, TagId, ThreadMember, User};
 
 use super::{ChannelId, RoomId, UserId};
 
@@ -78,7 +78,8 @@ pub struct Channel {
     /// a locked channel can only be interacted with (sending messages,
     /// (un)archiving, etc) by people with the `ThreadLock` permission
     pub locked: bool,
-
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub locked: Option<Locked>,
     /// the channel this channel is in, if any
     pub parent_id: Option<ChannelId>,
 
@@ -439,7 +440,8 @@ pub struct ChannelPatch {
 
     pub archived: Option<bool>,
     pub locked: Option<bool>,
-
+    // #[serde(default, deserialize_with = "some_option")]
+    // pub locked: Option<Option<Locked>>,
     pub invitable: Option<bool>,
 
     #[serde(default, deserialize_with = "some_option")]
@@ -456,6 +458,18 @@ pub struct ChannelPatch {
 
     #[serde(default, deserialize_with = "some_option")]
     pub default_slowmode_message: Option<Option<u64>>,
+}
+
+/// indicates that a channel is locked
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct Locked {
+    /// if present, the lock automatically expires and is removed at this time
+    pub until: Option<Time>,
+
+    /// if present, users with these roles bypass the lock
+    pub allow_roles: Vec<RoleId>,
 }
 
 /// reorder some channels

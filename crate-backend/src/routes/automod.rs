@@ -25,7 +25,7 @@ use crate::{
         (status = OK, body = PaginationResponse<AutomodRule>, description = "List automod rules success"),
     )
 )]
-async fn list_rules(
+async fn automod_rule_list(
     Path(_room_id): Path<RoomId>,
     _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
@@ -43,7 +43,7 @@ async fn list_rules(
         (status = CREATED, body = AutomodRule, description = "Create automod rule success"),
     )
 )]
-async fn create_rule(
+async fn automod_rule_create(
     Path(_room_id): Path<RoomId>,
     _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
@@ -65,7 +65,7 @@ async fn create_rule(
         (status = OK, body = AutomodRule, description = "Get automod rule success"),
     )
 )]
-async fn get_rule(
+async fn automod_rule_get(
     Path((_room_id, _rule_id)): Path<(RoomId, AutomodRuleId)>,
     _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
@@ -86,7 +86,7 @@ async fn get_rule(
         (status = OK, body = AutomodRule, description = "Update automod rule success"),
     )
 )]
-async fn update_rule(
+async fn automod_rule_update(
     Path((_room_id, _rule_id)): Path<(RoomId, AutomodRuleId)>,
     _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
@@ -108,8 +108,29 @@ async fn update_rule(
         (status = NO_CONTENT, description = "Delete automod rule success"),
     )
 )]
-async fn delete_rule(
+async fn automod_rule_delete(
     Path((_room_id, _rule_id)): Path<(RoomId, AutomodRuleId)>,
+    _auth: Auth2,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+/// Automod rule test (TODO)
+#[utoipa::path(
+    post,
+    path = "/room/{room_id}/automod/test",
+    params(
+        ("room_id", description = "Room id"),
+        ("rule_id", description = "Rule id")
+    ),
+    tags = ["automod"],
+    responses(
+        (status = OK, description = "Text was scanned"),
+    )
+)]
+async fn automod_rule_test(
+    Path((_room_id,)): Path<(RoomId,)>,
     _auth: Auth2,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -118,9 +139,10 @@ async fn delete_rule(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(list_rules))
-        .routes(routes!(create_rule))
-        .routes(routes!(get_rule))
-        .routes(routes!(update_rule))
-        .routes(routes!(delete_rule))
+        .routes(routes!(automod_rule_list))
+        .routes(routes!(automod_rule_create))
+        .routes(routes!(automod_rule_get))
+        .routes(routes!(automod_rule_update))
+        .routes(routes!(automod_rule_delete))
+        .routes(routes!(automod_rule_test))
 }

@@ -5,9 +5,13 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Connection, presence::Presence, util::Time, webhook::Webhook, ApplicationId,
-    AuditLogEntry, CalendarEventId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan,
-    ThreadMember, WebhookId,
+    application::Connection,
+    automod::{AutomodRule, AutomodRuleExecution},
+    presence::Presence,
+    util::Time,
+    webhook::Webhook,
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, InviteTargetId,
+    InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
 };
 
 use super::{
@@ -527,6 +531,27 @@ pub enum MessageSync {
         webhook_id: WebhookId,
         room_id: Option<RoomId>,
         channel_id: ChannelId,
+    },
+
+    // TODO: split out AutomodManage with RoomManage?
+    /// an auto moderation rule was created. only sent to users with RoomManage.
+    AutomodRuleCreate {
+        rule: AutomodRule,
+    },
+
+    /// an auto moderation rule was updated. only sent to users with RoomManage.
+    AutomodRuleUpdate {
+        rule: AutomodRule,
+    },
+
+    /// an auto moderation rule was deleted. only sent to users with RoomManage.
+    AutomodRuleDelete {
+        rule_id: AutomodRuleId,
+    },
+
+    /// an auto moderation rule was executed. only sent to users with RoomManage.
+    AutomodRuleExecute {
+        execution: AutomodRuleExecution,
     },
 
     RatelimitUpdate {

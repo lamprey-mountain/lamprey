@@ -232,14 +232,10 @@ pub struct MessageSnapshot {
 pub enum AttachmentType {
     /// a piece of media
     // or should this be called File? should i differentiate files and media?
-    Media {
-        media: Media,
-    },
+    Media { media: Media },
 
     /// a forwarded message
-    Forward {
-        snapshot: MessageSnapshot,
-    },
+    Forward { snapshot: MessageSnapshot },
     // should i have Embed for explicitly added embeds vs generated embeds?
     // TODO: Geolocation,
     // TODO: Moderation, (automod execution? or should this be a message type?)
