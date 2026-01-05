@@ -818,7 +818,7 @@ async fn auth_webauthn_delete(
     Ok(Error::Unimplemented)
 }
 
-/// Auth sudo (TEMP)
+/// Auth sudo upgrade (TEMP)
 ///
 /// instantly upgrade to sudo mode; this is intended for debugging
 #[utoipa::path(
@@ -827,7 +827,7 @@ async fn auth_webauthn_delete(
     tags = ["auth"],
     responses((status = NO_CONTENT, description = "ok")),
 )]
-async fn auth_sudo(
+async fn auth_sudo_upgrade(
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -856,6 +856,31 @@ async fn auth_sudo(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Auth sudo delete
+///
+/// downgrade yourself from sudo mode
+#[utoipa::path(
+    post,
+    path = "/auth/sudo",
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "ok")),
+)]
+async fn auth_sudo_delete(
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    s.data()
+        .session_set_status(
+            auth.session.id,
+            SessionStatus::Authorized {
+                user_id: auth.user.id,
+            },
+        )
+        .await?;
+    s.services().sessions.invalidate(auth.session.id).await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(auth_oauth_init))
@@ -879,5 +904,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_webauthn_patch))
         .routes(routes!(auth_webauthn_delete))
         .routes(routes!(auth_state))
-        .routes(routes!(auth_sudo))
+        .routes(routes!(auth_sudo_upgrade))
+        .routes(routes!(auth_sudo_delete))
 }
