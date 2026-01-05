@@ -13,7 +13,7 @@ use crate::v1::types::reaction::ReactionCounts;
 use crate::v1::types::reaction::ReactionKey;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
-use crate::v1::types::{ChannelType, EmojiId, RoomId};
+use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
 
 use super::channel::Channel;
 use super::EmbedCreate;
@@ -317,6 +317,10 @@ pub enum MessageType {
     // needs some sort of antispam system. again, see github.
     // doesnt necessarily reference a thread in the same room, but usually should
     ThreadPingback(MessageThreadPingback),
+
+    /// The channel's icon was changed
+    ChannelIcon(MessageChannelIcon),
+
     // /// (TODO) receive announcement threads from this room
     // // but where does this get sent to???
     // RoomFollowed(MessageRoomFollowed),
@@ -330,9 +334,6 @@ pub enum MessageType {
 
     // /// (TODO) someone nudged you!
     // Nudge,
-
-    // /// (TODO) someone changed this thread's icon
-    // ChannelIcon(MessageThreadIcon),
 }
 
 /// Information about a message being pinned
@@ -368,6 +369,14 @@ pub struct MessageThreadPingback {
     pub source_room_id: RoomId,
     pub source_channel_id: ChannelId,
     pub source_user_id: UserId,
+}
+
+/// Information about a channel icon change
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageChannelIcon {
+    pub icon_id_old: Option<MediaId>,
+    pub icon_id_new: Option<MediaId>,
 }
 
 #[cfg(feature = "feat_message_move")]
@@ -638,6 +647,7 @@ impl MessageType {
             MessageType::MemberJoin => true,
             MessageType::ThreadRename(_) => false,
             MessageType::ThreadPingback(_) => true,
+            MessageType::ChannelIcon(_) => false,
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
@@ -670,6 +680,7 @@ impl MessageType {
             MessageType::MemberJoin => false,
             MessageType::ThreadRename(_) => true,
             MessageType::ThreadPingback(_) => true,
+            MessageType::ChannelIcon(_) => true,
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,

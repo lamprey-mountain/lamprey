@@ -5,9 +5,7 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
-    ChannelPatch, ChannelType, MessageSync, MessageThreadRename, MessageType, PaginationQuery,
-    Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, MessageChannelIcon, MessageSync, MessageThreadRename, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId, SERVER_USER_ID, ThreadMemberPut, User, UserId
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -842,6 +840,36 @@ impl ServiceThreads {
                     user_id,
                     MessageSync::MessageCreate {
                         message: rename_message,
+                    },
+                )
+                .await?;
+        }
+
+        if chan_old.icon != chan_new.icon {
+            let icon_message_id = data
+                .message_create(DbMessageCreate {
+                    channel_id: thread_id,
+                    attachment_ids: vec![],
+                    author_id: user_id,
+                    embeds: vec![],
+                    message_type: MessageType::ChannelIcon(MessageChannelIcon {
+                        icon_id_old: chan_old.icon,
+                        icon_id_new: chan_new.icon,
+                    }),
+                    edited_at: None,
+                    created_at: None,
+                    mentions: Default::default(),
+                })
+                .await?;
+            let icon_message = data
+                .message_get(thread_id, icon_message_id, user_id)
+                .await?;
+            self.state
+                .broadcast_channel(
+                    thread_id,
+                    user_id,
+                    MessageSync::MessageCreate {
+                        message: icon_message,
                     },
                 )
                 .await?;

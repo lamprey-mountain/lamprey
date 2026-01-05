@@ -53,6 +53,7 @@ pub enum DbMessageType {
     MemberJoin,
     MessagePinned,
     ThreadCreated,
+    ChannelIcon,
 }
 
 impl From<MessageType> for DbMessageType {
@@ -65,6 +66,7 @@ impl From<MessageType> for DbMessageType {
             MessageType::MemberJoin => DbMessageType::MemberJoin,
             MessageType::MessagePinned(_) => DbMessageType::MessagePinned,
             MessageType::ThreadCreated(_) => DbMessageType::ThreadCreated,
+            MessageType::ChannelIcon(_) => DbMessageType::ChannelIcon,
             _ => todo!(),
         }
     }
@@ -113,6 +115,11 @@ impl From<DbMessage> for Message {
                         .expect("invalid data in db"),
                 ),
                 DbMessageType::ThreadCreated => MessageType::ThreadCreated(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::ChannelIcon => MessageType::ChannelIcon(
                     row.metadata
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),
