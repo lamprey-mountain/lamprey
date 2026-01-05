@@ -120,9 +120,17 @@ pub struct ParseMentions {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
+    /// the users that were mentioned
     pub users: Vec<MentionsUser>,
+
+    /// the roles that were mentioned
     pub roles: Vec<MentionsRole>,
+
+    /// the channels that were mentioned
+    // NOTE: this may not be necessary; the user should already have all channels. this is only needed for forwards, but in that case do i really want to leak channel names/types?
     pub channels: Vec<MentionsChannel>,
+
+    /// the custom emojis that were used in this message
     pub emojis: Vec<MentionsEmoji>,
 
     /// if this message mentions everyone
@@ -281,10 +289,12 @@ pub struct MessagePatch {
 #[serde(tag = "type")]
 pub enum MessageType {
     /// a basic message, using markdown
+    // NOTE(v2): rename to Default
     DefaultMarkdown(MessageDefaultMarkdown),
 
     #[cfg(feature = "feat_message_forwarding")]
     /// (TODO) a message copied from somewhere else
+    // NOTE(v2): remove
     Forward(MessageDefaultTagged),
 
     /// a message was pinned
