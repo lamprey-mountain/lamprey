@@ -1,5 +1,6 @@
 // TODO: move into data mod
 
+use common::v1::types::automod::{AutomodAction, AutomodTrigger};
 use common::v1::types::Mentions;
 use common::v1::types::{
     util::Time, Channel, ChannelId, ChannelType, ChannelVerId, Embed, MediaId, MessageId,
@@ -13,6 +14,13 @@ use uuid::Uuid;
 
 pub use common::v1::types::ids::*;
 pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
+
+// deserialize from jsonb
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AutomodRuleData {
+    pub trigger: AutomodTrigger,
+    pub actions: Vec<AutomodAction>,
+}
 
 pub struct DbRoom {
     pub id: Uuid,

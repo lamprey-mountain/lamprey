@@ -8,10 +8,11 @@ use uuid::Uuid;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
-    util::Time, ApplicationId, AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem,
-    ChannelType, EmojiId, InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId,
-    RoomId, SessionId, UserId, WebhookId,
+    application::Scopes, automod::AutomodRuleExecution, email::EmailAddr,
+    reaction::ReactionKeyParam, role::RoleReorderItem, util::Time, ApplicationId, AuditLogEntryId,
+    AutomodRuleId, CalendarEventId, ChannelId, ChannelReorderItem, ChannelType, EmojiId,
+    InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId,
+    UserId, WebhookId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
@@ -473,6 +474,23 @@ pub enum AuditLogEntryType {
         user_id: UserId,
         slowmode_thread_expire_at: Option<Time>,
         slowmode_message_expire_at: Option<Time>,
+    },
+
+    AutomodRuleCreate {
+        rule_id: AutomodRuleId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    AutomodRuleUpdate {
+        rule_id: AutomodRuleId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    AutomodRuleDelete {
+        rule_id: AutomodRuleId,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
     },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,

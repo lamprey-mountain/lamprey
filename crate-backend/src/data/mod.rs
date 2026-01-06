@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scopes};
+use common::v1::types::automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate};
 use common::v1::types::calendar::{
     CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
     CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
@@ -27,8 +28,8 @@ use common::v1::types::util::Time;
 use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
 
 use common::v1::types::{
-    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, CalendarEventId, Channel,
-    ChannelId, ChannelPatch, ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, AutomodRuleId, CalendarEventId,
+    Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch,
     InviteWithMetadata, MediaPatch, NotificationId, PaginationQuery, PaginationResponse,
     Permission, PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin,
@@ -87,6 +88,7 @@ pub trait Data:
     + DataMetrics
     + DataRoomAnalytics
     + DataAdmin
+    + DataAutomod
     + Send
     + Sync
 {
@@ -116,6 +118,23 @@ pub struct InstanceMetrics {
     pub channel_count_thread_private: i64,
     pub channel_count_dm: i64,
     pub channel_count_gdm: i64,
+}
+
+#[async_trait]
+pub trait DataAutomod {
+    async fn automod_rule_create(
+        &self,
+        room_id: RoomId,
+        create: AutomodRuleCreate,
+    ) -> Result<AutomodRule>;
+    async fn automod_rule_get(&self, rule_id: AutomodRuleId) -> Result<AutomodRule>;
+    async fn automod_rule_update(
+        &self,
+        rule_id: AutomodRuleId,
+        update: AutomodRuleUpdate,
+    ) -> Result<AutomodRule>;
+    async fn automod_rule_delete(&self, rule_id: AutomodRuleId) -> Result<()>;
+    async fn automod_rule_list(&self, room_id: RoomId) -> Result<Vec<AutomodRule>>;
 }
 
 #[async_trait]

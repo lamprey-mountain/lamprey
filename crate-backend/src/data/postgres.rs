@@ -13,6 +13,7 @@ mod admin;
 mod application;
 mod audit_logs;
 mod auth;
+mod automod;
 mod calendar;
 mod channel;
 mod connection;
