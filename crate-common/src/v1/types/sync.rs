@@ -15,7 +15,7 @@ use crate::v1::types::{
 };
 
 use super::{
-    calendar::{CalendarEvent, CalendarOverwrite, CalendarEventParticipant},
+    calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
     emoji::EmojiCustom,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,

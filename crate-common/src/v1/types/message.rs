@@ -138,6 +138,16 @@ pub struct Mentions {
     pub everyone: bool,
 }
 
+impl Mentions {
+    pub fn is_empty(&self) -> bool {
+        self.users.is_empty()
+            && self.roles.is_empty()
+            && self.channels.is_empty()
+            && self.emojis.is_empty()
+            && !self.everyone
+    }
+}
+
 /// a mentioned user
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

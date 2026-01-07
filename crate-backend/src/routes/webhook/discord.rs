@@ -2,7 +2,8 @@ use std::default::Default;
 use std::sync::Arc;
 
 use axum::{
-    extract::{multipart, Path, State},
+    body::Body,
+    extract::{multipart, FromRequest, Path, Request, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -88,10 +89,11 @@ fn convert_embed(embed: DiscordEmbed) -> EmbedCreate {
 pub async fn webhook_execute_discord(
     Path((webhook_id, token)): Path<(WebhookId, String)>,
     State(s): State<Arc<ServerState>>,
-    mut multipart: multipart::Multipart,
+    req: Request<Body>,
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
     let webhook_user_id: types::UserId = (*webhook.id).into();
+    let mut multipart = multipart::Multipart::from_request(req, &s).await?;
 
     let mut message_create = MessageCreate::default();
     let mut file_fields = Vec::new();

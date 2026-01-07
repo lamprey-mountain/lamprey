@@ -1,6 +1,6 @@
 use std::num::{ParseFloatError, ParseIntError};
 
-use axum::extract::multipart::MultipartError;
+use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{Error as ApiError, SyncError};
@@ -120,6 +120,9 @@ pub enum Error {
 
     #[error("{0}")]
     MultipartError(#[from] MultipartError),
+
+    #[error("{0}")]
+    MultipartRejection(#[from] MultipartRejection),
 
     #[error("missing scopes {0:?}")]
     MissingScopes(Scopes),

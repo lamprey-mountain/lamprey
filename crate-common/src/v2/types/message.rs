@@ -69,6 +69,8 @@ pub struct MessageVersion {
     #[serde(flatten)]
     pub message_type: MessageType,
 
+    /// who this message mentioned
+    #[serde(skip_serializing_if = "Mentions::is_empty")]
     pub mentions: Mentions,
 
     /// when this message version was created, use this as edited_at

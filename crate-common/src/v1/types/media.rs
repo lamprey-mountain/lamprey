@@ -121,6 +121,26 @@ pub enum MediaCreateSource {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaClone {
+    /// Set to override the filename
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 256)
+    )]
+    pub filename: Option<String>,
+
+    /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    pub alt: Option<String>,
+}
+
 #[cfg(feature = "validator")]
 mod val {
     use super::MediaCreateSource;

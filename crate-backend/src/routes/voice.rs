@@ -8,7 +8,7 @@ use axum::{
 use common::v1::types::{
     misc::UserIdReq,
     util::Changes,
-    voice::{SfuCommand, SfuPermissions, VoiceState},
+    voice::{SfuCommand, SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk},
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, PaginationResponse, Permission,
 };
 use http::StatusCode;
@@ -21,6 +21,8 @@ use super::util::{Auth2, HeaderReason};
 use crate::error::Result;
 use crate::{Error, ServerState};
 
+// TODO: rename thread_id to channel_id in all routes
+
 /// Voice state get
 #[utoipa::path(
     get,
@@ -31,7 +33,7 @@ use crate::{Error, ServerState};
     ),
     tags = ["voice"],
     responses(
-        (status = OK, body = (), description = "ok"),
+        (status = OK, body = VoiceState, description = "ok"),
     )
 )]
 async fn voice_state_get(
@@ -47,7 +49,11 @@ async fn voice_state_get(
     let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let state = srv.voice.state_get(target_user_id);
-    Ok(Json(state))
+    if let Some(state) = state {
+        Ok(Json(state))
+    } else {
+        Err(Error::NotFound)
+    }
 }
 
 /// Voice state disconnect
@@ -231,9 +237,32 @@ async fn voice_state_move(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(Debug, ToSchema, Deserialize)]
-struct VoiceStateMove {
-    target_id: ChannelId,
+/// Voice state move bulk (TODO)
+// TODO: rename this to "voice state move" and deprecate current voice state move route?
+#[utoipa::path(
+    post,
+    path = "/voice/{thread_id}/move",
+    params(("thread_id", description = "Thread id")),
+    tags = ["voice", "badge.perm.VoiceMove"],
+    responses(
+        (status = OK, body = (), description = "ok"),
+    )
+)]
+async fn voice_state_move_bulk(
+    Path((thread_id,)): Path<(ChannelId,)>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<VoiceStateMoveBulk>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let perms_source = srv.perms.for_channel(auth.user.id, thread_id).await?;
+    perms_source.ensure(Permission::ViewChannel)?;
+    perms_source.ensure(Permission::VoiceMove)?;
+
+    Ok(Error::Unimplemented)
 }
 
 /// Voice state list
@@ -291,6 +320,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(voice_state_disconnect))
         .routes(routes!(voice_state_disconnect_all))
         .routes(routes!(voice_state_move))
+        .routes(routes!(voice_state_move_bulk))
         .routes(routes!(voice_state_list))
         .routes(routes!(voice_region_list))
 }

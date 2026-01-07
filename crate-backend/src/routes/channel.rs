@@ -984,6 +984,47 @@ async fn channel_ratelimit_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Ratelimit delete all (TODO)
+///
+/// Immediately expires a slowmode ratelimit for all users, allowing all users to send messages again
+/// Requires either ChannelManage, ThreadManage, or MemberTimeout
+#[utoipa::path(
+    delete,
+    path = "/channel/{channel_id}/ratelimit",
+    params(
+        ("channel_id", description = "Channel id"),
+    ),
+    tags = [
+        "channel",
+        "badge.perm-opt.ChannelManage",
+        "badge.perm-opt.ThreadManage",
+        "badge.perm-opt.MemberTimeout",
+    ],
+    responses(
+        (status = NO_CONTENT, description = "Rate limit expired"),
+    )
+)]
+async fn channel_ratelimit_delete_all(
+    Path((channel_id,)): Path<(ChannelId,)>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+
+    if !perms.has(Permission::ChannelManage)
+        && !perms.has(Permission::ThreadManage)
+        && !perms.has(Permission::MemberTimeout)
+    {
+        return Err(Error::MissingPermissions);
+    }
+
+    Ok(Error::Unimplemented)
+}
+
 /// Ratelimit update
 ///
 /// Immediately creates a slowmode ratelimit
@@ -1117,4 +1158,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(channel_transfer_ownership))
         .routes(routes!(channel_ratelimit_update))
         .routes(routes!(channel_ratelimit_delete))
+        .routes(routes!(channel_ratelimit_delete_all))
 }

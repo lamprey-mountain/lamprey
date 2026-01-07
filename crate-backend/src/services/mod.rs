@@ -14,8 +14,9 @@ use users::ServiceUsers;
 
 use crate::{
     services::{
-        admin::ServiceAdmin, http::ServiceHttp, members::ServiceMembers, presence::ServicePresence,
-        search::ServiceSearch, voice::ServiceVoice,
+        admin::ServiceAdmin, http::ServiceHttp, members::ServiceMembers,
+        notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
+        unread::ServiceUnread, voice::ServiceVoice,
     },
     ServerStateInner,
 };
@@ -28,6 +29,7 @@ pub mod http;
 pub mod media;
 pub mod members;
 pub mod messages;
+pub mod notifications;
 pub mod oauth2;
 pub mod permissions;
 pub mod presence;
@@ -35,6 +37,7 @@ pub mod room;
 pub mod room_analytics;
 pub mod search;
 pub mod sessions;
+pub mod unread;
 pub mod users;
 pub mod voice;
 
@@ -48,6 +51,7 @@ pub struct Services {
     pub media: ServiceMedia,
     pub members: ServiceMembers,
     pub messages: ServiceMessages,
+    pub notifications: ServiceNotifications,
     pub oauth: ServiceOauth,
     pub perms: ServicePermissions,
     pub presence: ServicePresence,
@@ -55,6 +59,7 @@ pub struct Services {
     pub rooms: ServiceRooms,
     pub search: ServiceSearch,
     pub sessions: ServiceSessions,
+    pub unread: ServiceUnread,
     pub users: ServiceUsers,
     pub voice: ServiceVoice,
 }
@@ -70,6 +75,7 @@ impl Services {
             media: ServiceMedia::new(state.clone()),
             members: ServiceMembers::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),
+            notifications: ServiceNotifications::new(state.clone()),
             oauth: ServiceOauth::new(state.clone()),
             perms: ServicePermissions::new(state.clone()),
             presence: ServicePresence::new(state.clone()),
@@ -77,6 +83,7 @@ impl Services {
             rooms: ServiceRooms::new(state.clone()),
             search: ServiceSearch::new(state.clone()),
             sessions: ServiceSessions::new(state.clone()),
+            unread: ServiceUnread::new(state.clone()),
             users: ServiceUsers::new(state.clone()),
             voice: ServiceVoice::new(state.clone()),
             state,

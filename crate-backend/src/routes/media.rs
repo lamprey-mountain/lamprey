@@ -2,13 +2,13 @@ use std::{cmp::Ordering, sync::Arc};
 
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Multipart, Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing, Json,
 };
 use common::{
-    v1::types::{MediaCreateSource, MediaPatch},
+    v1::types::{media::MediaClone, MediaCreateSource, MediaPatch},
     v2::types::media::MediaDoneParams,
 };
 use futures_util::StreamExt;
@@ -224,6 +224,7 @@ async fn media_done(
 }
 
 /// Media upload
+// TODO: only begin processing media on media_done? or maybe begin processing, but don't block on this endpoint.
 async fn media_upload(
     Path(media_id): Path<MediaId>,
     auth: Auth2,
@@ -424,6 +425,113 @@ async fn media_delete(
     }
 }
 
+/// Media clone (TODO)
+///
+/// Create a new unconsumed copy of a piece of media
+#[utoipa::path(
+    post,
+    path = "/media/{media_id}/clone",
+    tags = ["media"],
+    params(("media_id", description = "Media id")),
+    responses(
+        (status = OK, description = "success"),
+    )
+)]
+async fn media_clone(
+    Path(_media_id): Path<MediaId>,
+    auth: Auth2,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<MediaClone>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    Ok(Error::Unimplemented)
+}
+
+/// Media upload direct
+///
+/// Directly upload a piece of media without doing the whole create/patch/done dance. Only use this for small media.
+#[utoipa::path(
+    post,
+    path = "/media/direct",
+    tags = ["media"],
+    responses((status = CREATED, description = "success")),
+)]
+async fn media_upload_direct(
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    mut multipart: Multipart,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let media_id = MediaId::new();
+    let mut data = None;
+
+    while let Some(field) = multipart.next_field().await? {
+        match field
+            .name()
+            .ok_or(Error::BadStatic("field is missing name"))?
+        {
+            // TODO: parse json alt, filename, async
+            "json" => return Err(Error::Unimplemented),
+            "file" => {
+                // TODO: filename = json.filename or this file name
+                // field.file_name();
+                data = Some(field.bytes().await?);
+            }
+            _ => return Err(Error::BadStatic("unknown field")),
+        }
+    }
+
+    let Some(data) = data else {
+        return Err(Error::BadStatic("no data"));
+    };
+
+    srv.media
+        .create_upload(
+            media_id,
+            auth.user.id,
+            MediaCreate {
+                alt: None,
+                source: MediaCreateSource::Upload {
+                    filename: "unknown".to_owned(),
+                    size: data.len() as u64,
+                },
+            },
+        )
+        .await?;
+
+    let mut up = srv.media.uploads.get_mut(&media_id).unwrap();
+    if let Err(err) = up.write(&data).await {
+        srv.media.uploads.remove(&media_id);
+        return Err(err);
+    }
+
+    up.temp_writer.flush().await?;
+
+    let (_, up) = s
+        .services()
+        .media
+        .uploads
+        .remove(&media_id)
+        .expect("it was there a few milliseconds ago");
+
+    let filename = match &up.create.source {
+        MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+        MediaCreateSource::Download { .. } => panic!("can only patch upload"),
+    };
+    let mut media = s
+        .services()
+        .media
+        .process_upload(up, media_id, auth.user.id, &filename)
+        .await?;
+    debug!("finished processing media");
+    s.presign(&mut media).await?;
+
+    Ok((StatusCode::CREATED, Json(media)))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(media_create))
@@ -431,6 +539,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(media_get))
         .routes(routes!(media_delete))
         .routes(routes!(media_done))
+        .routes(routes!(media_clone))
+        .routes(routes!(media_upload_direct))
         // TODO: move these to cdn?
         .route(
             "/internal/media-upload/{media_id}",

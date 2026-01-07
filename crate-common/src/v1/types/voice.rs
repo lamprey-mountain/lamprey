@@ -273,6 +273,24 @@ impl VoiceState {
     }
 }
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct VoiceStateMove {
+    pub target_id: ChannelId,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct VoiceStateMoveBulk {
+    /// set to None to move everyone
+    pub user_ids: Option<Vec<UserId>>,
+
+    /// target channel id
+    pub channel_id: ChannelId,
+}
+
 // ========== EVERYTHING BELOW IS INTERNAL FOR BACKEND/VOICE ==========
 
 /// emitted by backend, handled by the sfu
