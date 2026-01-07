@@ -239,7 +239,7 @@ impl Handle {
                 self_deaf: true,
                 self_mute: false,
                 self_video: false,
-                self_screen: false,
+                screenshare: None,
             }),
         })
         .await?;

@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{MediaKind, SfuPermissions, SignallingMessage, Speaking, VoiceState},
+    voice::{MediaKind, SfuPermissions, SignallingMessage, Speaking, TrackKey, VoiceState},
     ChannelId, UserId,
 };
 use str0m::{
@@ -108,7 +108,7 @@ pub struct PeerEventEnvelope {
 pub struct TrackMetadataServer {
     pub source_mid: Mid,
     pub kind: MediaKind,
-    pub key: String,
+    pub key: TrackKey,
 }
 
 #[derive(Debug, Clone)]
@@ -117,7 +117,7 @@ pub struct TrackMetadataSfu {
     pub peer_id: UserId,
     pub channel_id: ChannelId,
     pub kind: MediaKindStr0m,
-    pub key: String,
+    pub key: TrackKey,
 }
 
 #[derive(Debug)]
@@ -125,7 +125,7 @@ pub struct TrackIn {
     pub kind: MediaKindStr0m,
     pub state: TrackState,
     pub channel_id: ChannelId,
-    pub key: String,
+    pub key: TrackKey,
 }
 
 #[derive(Debug)]
@@ -136,7 +136,7 @@ pub struct TrackOut {
     pub source_mid: Mid,
     pub enabled: bool,
     pub channel_id: ChannelId,
-    pub key: String,
+    pub key: TrackKey,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -167,6 +167,7 @@ pub struct MediaData {
 }
 
 /// errors that can be emitted from the sfu
+// TODO: move this to common
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// no voice state exists for this user

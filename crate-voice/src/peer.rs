@@ -11,7 +11,7 @@ use crate::{
 use anyhow::Result;
 use common::v1::types::{
     voice::{
-        SessionDescription, SfuPermissions, Speaking, SpeakingWithoutUserId, TrackId,
+        SessionDescription, SfuPermissions, Speaking, SpeakingWithoutUserId, TrackId, TrackKey,
         TrackMetadata, VoiceState,
     },
     UserId,
@@ -342,6 +342,7 @@ impl Peer {
                         mid: TrackId(mid.to_string()),
                         kind: t.kind,
                         key: t.key,
+                        layers: vec![],
                     });
                 } else {
                     warn!("track not open (peer_id={}, track={:?})", user_id, t);
@@ -409,11 +410,12 @@ impl Peer {
                     self.rtc.add_remote_candidate(candidate);
                 }
             }
-            SignallingMessage::Want { tracks: _ } => todo!(),
+            SignallingMessage::Want { subscriptions: _ } => todo!(),
             SignallingMessage::Have { .. } => return Err(Error::HaveServerOnly.into()),
             SignallingMessage::Reconnect => panic!("handled by sfu"),
             SignallingMessage::VoiceState { .. } => {}
             SignallingMessage::Ready { .. } => {}
+            SignallingMessage::Error { .. } => {}
         }
         Ok(())
     }
@@ -563,12 +565,17 @@ impl Peer {
             return Ok(());
         }
 
-        if !self.voice_state.self_video && track.key == "user" && track.kind == MediaKind::Video {
+        if !self.voice_state.self_video
+            && track.key == TrackKey::User
+            && track.kind == MediaKind::Video
+        {
             trace!("user is not transmitting self_video");
             return Ok(());
         }
 
-        if !self.voice_state.self_screen && track.key == "screen" && track.kind == MediaKind::Video
+        if self.voice_state.screenshare.is_none()
+            && track.key == TrackKey::Screen
+            && track.kind == MediaKind::Video
         {
             trace!("user is not transmitting self_screen");
             return Ok(());
@@ -634,6 +641,10 @@ impl Peer {
                         mid: TrackId(t.source_mid.to_string()),
                         kind: t.kind,
                         key: t.key.clone(),
+                        // FIXME: include at least one TrackLayer for video
+                        layers: vec![
+                            // TrackLayer { rid: todo!(), encoding: TrackEncoding::Source }
+                        ],
                     })
                     .collect(),
             }));

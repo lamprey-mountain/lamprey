@@ -8,12 +8,12 @@ use axum::{
 use common::v1::types::{
     misc::UserIdReq,
     util::Changes,
-    voice::{SfuCommand, SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk},
+    voice::{
+        SfuCommand, SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
+    },
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, PaginationResponse, Permission,
 };
 use http::StatusCode;
-use serde::Deserialize;
-use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth2, HeaderReason};
@@ -54,6 +54,36 @@ async fn voice_state_get(
     } else {
         Err(Error::NotFound)
     }
+}
+
+/// Voice state patch (TODO)
+#[utoipa::path(
+    patch,
+    path = "/voice/{thread_id}/member/{user_id}",
+    params(
+        ("thread_id", description = "Thread id"),
+        ("user_id", description = "User id"),
+    ),
+    tags = ["voice"],
+    responses(
+        (status = OK, body = VoiceState, description = "ok"),
+    )
+)]
+async fn voice_state_patch(
+    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    Json(_json): Json<VoiceStatePatch>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth.user.id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let _state = srv.voice.state_get(target_user_id);
+    Ok(Error::Unimplemented)
 }
 
 /// Voice state disconnect
@@ -317,6 +347,7 @@ async fn voice_region_list(State(_s): State<Arc<ServerState>>) -> Result<Json<()
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(voice_state_get))
+        .routes(routes!(voice_state_patch))
         .routes(routes!(voice_state_disconnect))
         .routes(routes!(voice_state_disconnect_all))
         .routes(routes!(voice_state_move))

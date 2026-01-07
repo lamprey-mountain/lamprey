@@ -1,4 +1,7 @@
-use common::v1::types::sync::{SyncCompression, SyncParams};
+use common::v1::types::{
+    sync::{SyncCompression, SyncParams},
+    voice::VoiceStateScreenshare,
+};
 use flate2::{
     write::{ZlibDecoder, ZlibEncoder},
     Compression as FlateCompression,
@@ -352,6 +355,7 @@ impl Connection {
                         if thread.locked && !perms.can_use_locked_threads() {
                             return Err(Error::MissingPermissions);
                         }
+                        let old_state = srv.voice.state_get(user_id);
                         let mut state = VoiceState {
                             user_id,
                             channel_id: state.channel_id,
@@ -362,7 +366,23 @@ impl Connection {
                             self_deaf: state.self_deaf,
                             self_mute: state.self_mute,
                             self_video: state.self_video,
-                            self_screen: state.self_screen,
+                            screenshare: match (old_state, state.screenshare.as_ref()) {
+                                (Some(old), Some(new)) => Some(VoiceStateScreenshare {
+                                    started_at: old
+                                        .screenshare
+                                        .map(|s| s.started_at)
+                                        .unwrap_or_else(|| Time::now_utc()),
+                                    thumbnail: new.thumbnail,
+                                }),
+                                (None, Some(new)) => Some(VoiceStateScreenshare {
+                                    started_at: Time::now_utc(),
+                                    thumbnail: new.thumbnail,
+                                }),
+                                (_, None) => None,
+                            },
+                            // TODO: suppress by default in broadcast room
+                            suppress: false,
+                            requested_to_speak_at: None,
                         };
                         if let Some(room_id) = thread.room_id {
                             let rm = self.s.data().room_member_get(room_id, user_id).await?;

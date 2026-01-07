@@ -1,5 +1,5 @@
 use common::v1::types::voice::{
-    MediaKind, SessionDescription, SignallingMessage, TrackId, TrackMetadata,
+    MediaKind, SessionDescription, SignallingMessage, TrackId, TrackKey, TrackMetadata,
 };
 use std::{
     net::{SocketAddr, ToSocketAddrs},
@@ -121,7 +121,8 @@ impl Player {
                             tracks: vec![TrackMetadata {
                                 mid: TrackId(mid.to_string()),
                                 kind: MediaKind::Audio,
-                                key: "music".into(),
+                                key: TrackKey::User,
+                                layers: vec![],
                             }],
                         }))
                         .await?;

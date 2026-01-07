@@ -611,6 +611,7 @@ pub enum MessageSync {
 }
 
 // TODO: skip sending room_members/thread_members/users if the client already has them
+// TODO: move member list stuff to a submodule
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
