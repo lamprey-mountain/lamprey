@@ -519,7 +519,7 @@ async fn app_rotate_secret(
 #[utoipa::path(
     get,
     path = "/oauth/authorize",
-    tags = ["oauth"],
+    tags = ["oauth", "badge.scope.identify"],
     params(OauthAuthorizeParams),
     responses(
         (status = OK, description = "success", body = OauthAuthorizeInfo)
@@ -567,7 +567,7 @@ async fn oauth_info(
 #[utoipa::path(
     post,
     path = "/oauth/authorize",
-    tags = ["oauth"],
+    tags = ["oauth", "badge.scope.identify"],
     params(OauthAuthorizeParams),
     responses(
         (status = OK, description = "success", body = OauthAuthorizeResponse)
@@ -826,7 +826,7 @@ async fn oauth_token(
 #[utoipa::path(
     post,
     path = "/oauth/introspect",
-    tags = ["oauth"],
+    tags = ["oauth", "badge.scope.identify"],
     responses(
         (status = OK, description = "success", body = OauthIntrospectResponse)
     )
@@ -853,7 +853,7 @@ async fn oauth_introspect(
 #[utoipa::path(
     post,
     path = "/oauth/revoke",
-    tags = ["oauth"],
+    tags = ["oauth", "badge.scope.identify"],
     responses(
         (status = NO_CONTENT, description = "success")
     )
@@ -902,7 +902,7 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
 #[utoipa::path(
     get,
     path = "/oauth/userinfo",
-    tags = ["oauth"],
+    tags = ["oauth", "badge.scope.identify", "badge.scope-opt.email"],
     responses(
         (status = OK, description = "success", body = Userinfo)
     )

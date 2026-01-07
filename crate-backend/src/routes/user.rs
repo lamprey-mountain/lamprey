@@ -273,7 +273,7 @@ async fn user_undelete(
     params(
         ("user_id", description = "User id"),
     ),
-    tags = ["user"],
+    tags = ["user", "badge.scope.identify", "badge.scope-opt.email"],
     responses(
         (status = OK, body = UserWithRelationship, description = "success"),
     )

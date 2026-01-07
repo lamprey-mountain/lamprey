@@ -16,7 +16,9 @@
 		</script>
 		<style>
 			.markdown-alert-permission-required,
-			.markdown-alert-permission-optional {
+			.markdown-alert-permission-optional,
+			.markdown-alert-scope-required,
+			.markdown-alert-scope-optional {
 				color: var(--badge-text-color, var(--scalar-color-2));
 				background: var(--badge-background-color, var(--scalar-background-2));
 				border: var(--scalar-border-width) solid
@@ -52,6 +54,25 @@
 				}
 				&::before {
 					content: "optional permission";
+				}
+			}
+
+			/* TODO: give scopes different colors */
+			.markdown-alert-permission-required {
+				&::after {
+					background: #b1e27d;
+				}
+				&::before {
+					content: "required oauth scope";
+				}
+			}
+
+			.markdown-alert-permission-optional {
+				&::after {
+					background: #c7e6a6;
+				}
+				&::before {
+					content: "optional oauth scope";
 				}
 			}
 		</style>

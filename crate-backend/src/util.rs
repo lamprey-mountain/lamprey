@@ -32,6 +32,8 @@ impl Modify for BadgeModifier {
                 let mut badges = Vec::new();
                 let mut perms = Vec::new();
                 let mut optional_perms = Vec::new();
+                let mut scopes = Vec::new();
+                let mut optional_scopes = Vec::new();
 
                 if let Some(tags) = &mut op.tags {
                     tags.retain(|tag| {
@@ -46,6 +48,12 @@ impl Modify for BadgeModifier {
                             false
                         } else if let Some(perm) = tag.strip_prefix("badge.perm-opt.") {
                             optional_perms.push(perm.to_string());
+                            false
+                        } else if let Some(scope) = tag.strip_prefix("badge.scope.") {
+                            scopes.push(scope.to_string());
+                            false
+                        } else if let Some(scope) = tag.strip_prefix("badge.scope-opt.") {
+                            optional_scopes.push(scope.to_string());
                             false
                         } else {
                             true
@@ -70,22 +78,34 @@ impl Modify for BadgeModifier {
                     }));
                 }
 
-                let mut perms_formatted = vec![];
+                let mut requirements_formatted = vec![];
 
                 for perm in perms {
-                    perms_formatted.push(format!(
+                    requirements_formatted.push(format!(
                         r#"<div class="markdown-alert-permission-required">{perm}</div>"#
                     ));
                 }
 
                 for perm in optional_perms {
-                    perms_formatted.push(format!(
+                    requirements_formatted.push(format!(
                         r#"<div class="markdown-alert-permission-optional">{perm}</div>"#
                     ));
                 }
 
+                for scope in scopes {
+                    requirements_formatted.push(format!(
+                        r#"<div class="markdown-alert-scope-required">{scope}</div>"#
+                    ));
+                }
+
+                for scope in optional_scopes {
+                    requirements_formatted.push(format!(
+                        r#"<div class="markdown-alert-scope-optional">{scope}</div>"#
+                    ));
+                }
+
                 let desc = op.description.get_or_insert_default();
-                *desc = format!("{}\n\n{desc}", perms_formatted.join("\n"));
+                *desc = format!("{}\n\n{desc}", requirements_formatted.join("\n"));
             }
         }
     }
