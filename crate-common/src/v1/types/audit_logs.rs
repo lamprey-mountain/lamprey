@@ -8,11 +8,10 @@ use uuid::Uuid;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Scopes, automod::AutomodRuleExecution, email::EmailAddr,
-    reaction::ReactionKeyParam, role::RoleReorderItem, util::Time, ApplicationId, AuditLogEntryId,
-    AutomodRuleId, CalendarEventId, ChannelId, ChannelReorderItem, ChannelType, EmojiId,
-    InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId,
-    UserId, WebhookId,
+    application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
+    util::Time, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, ChannelId,
+    ChannelReorderItem, ChannelType, EmojiId, InviteCode, MessageId, MessageVerId,
+    PermissionOverwriteType, RoleId, RoomId, SessionId, UserId, WebhookId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
