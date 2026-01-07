@@ -14,6 +14,7 @@ use common::v1::types::{
     },
     misc::UserIdReq,
     permission::Permission,
+    sync::MessageSync,
     CalendarEventId, ChannelId, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -131,6 +132,12 @@ async fn calendar_event_create(
     })
     .await?;
 
+    s.broadcast_room(
+        room_id,auth.user.id,
+        MessageSync::CalendarEventCreate { event: event.clone() },
+    )
+    .await?;
+
     Ok((StatusCode::CREATED, Json(event)))
 }
 
@@ -242,6 +249,12 @@ async fn calendar_event_update(
     })
     .await?;
 
+    s.broadcast_room(
+        room_id,auth.user.id,
+        MessageSync::CalendarEventUpdate { event: updated_event.clone() },
+    )
+    .await?;
+
     Ok(Json(updated_event))
 }
 
@@ -307,6 +320,15 @@ async fn calendar_event_delete(
                 .build(),
         },
     })
+    .await?;
+
+    s.broadcast_room(
+        room_id,auth.user.id,
+        MessageSync::CalendarEventDelete {
+            channel_id,
+            event_id: event.id,
+        },
+    )
     .await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -413,6 +435,35 @@ async fn calendar_overwrite_update(
     }
 
     let overwrite = s.data().calendar_overwrite_put(event_id, seq, json).await?;
+
+    let room_id = srv
+        .channels
+        .get(channel_id, Some(auth.user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    // Check if this is a new overwrite or an update
+    let is_new = s.data().calendar_overwrite_get(event_id, seq).await.is_ok();
+
+    let sync_event = if is_new {
+        MessageSync::CalendarOverwriteCreate {
+            channel_id,
+            overwrite: overwrite.clone(),
+        }
+    } else {
+        MessageSync::CalendarOverwriteUpdate {
+            channel_id,
+            overwrite: overwrite.clone(),
+        }
+    };
+
+    s.broadcast_room(
+        room_id,auth.user.id,
+        sync_event,
+    )
+    .await?;
+
     Ok(Json(overwrite))
 }
 
@@ -448,6 +499,24 @@ async fn calendar_overwrite_delete(
     }
 
     s.data().calendar_overwrite_delete(event_id, seq).await?;
+
+    let room_id = srv
+        .channels
+        .get(channel_id, Some(auth.user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    s.broadcast_room(
+        room_id,auth.user.id,
+        MessageSync::CalendarOverwriteDelete {
+            channel_id,
+            event_id,
+            seq,
+        },
+    )
+    .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -597,14 +666,46 @@ async fn calendar_event_rsvp_put(
         return Err(Error::NotFound);
     }
 
+    let room_id = srv
+        .channels
+        .get(channel_id, Some(auth.user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
     match json.status {
         CalendarRsvpStatus::Interested => {
             s.data().calendar_event_rsvp_put(event_id, user_id).await?;
+
+            s.broadcast_room(
+                room_id,auth.user.id,
+                MessageSync::CalendarRsvpCreate {
+                    channel_id,
+                    event_id,
+                    participant: CalendarEventParticipant {
+                        user_id,
+                        status: json.status,
+                        user: None,
+                        member: None,
+                    },
+                },
+            )
+            .await?;
         }
         CalendarRsvpStatus::Uninterested => {
             s.data()
                 .calendar_event_rsvp_delete(event_id, user_id)
                 .await?;
+
+            s.broadcast_room(
+                room_id,auth.user.id,
+                MessageSync::CalendarRsvpDelete {
+                    channel_id,
+                    event_id,
+                    user_id,
+                },
+            )
+            .await?;
         }
     }
 
@@ -654,6 +755,23 @@ async fn calendar_event_rsvp_delete(
     s.data()
         .calendar_event_rsvp_delete(event_id, user_id)
         .await?;
+
+    let room_id = srv
+        .channels
+        .get(channel_id, Some(auth.user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    s.broadcast_room(
+        room_id,auth.user.id,
+        MessageSync::CalendarRsvpDelete {
+            channel_id,
+            event_id,
+            user_id,
+        },
+    )
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -769,16 +887,50 @@ async fn calendar_overwrite_rsvp_put(
         return Err(Error::NotFound);
     }
 
+    let room_id = srv
+        .channels
+        .get(channel_id, Some(auth.user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
     match json.status {
         CalendarRsvpStatus::Interested => {
             s.data()
                 .calendar_overwrite_rsvp_put(event_id, seq, user_id, true)
                 .await?;
+
+            s.broadcast_room(
+                room_id,auth.user.id,
+                MessageSync::CalendarOverwriteRsvpCreate {
+                    channel_id,
+                    event_id,
+                    seq,
+                    participant: CalendarEventParticipant {
+                        user_id,
+                        status: json.status,
+                        user: None,
+                        member: None,
+                    },
+                },
+            )
+            .await?;
         }
         CalendarRsvpStatus::Uninterested => {
             s.data()
                 .calendar_overwrite_rsvp_put(event_id, seq, user_id, false)
                 .await?;
+
+            s.broadcast_room(
+                room_id,auth.user.id,
+                MessageSync::CalendarOverwriteRsvpDelete {
+                    channel_id,
+                    event_id,
+                    seq,
+                    user_id,
+                },
+            )
+            .await?;
         }
     }
 
@@ -834,6 +986,24 @@ async fn calendar_overwrite_rsvp_delete(
     s.data()
         .calendar_overwrite_rsvp_delete(event_id, seq, user_id)
         .await?;
+
+    let room_id = srv
+        .channels
+        .get(channel_id, Some(auth.user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    s.broadcast_room(
+        room_id,auth.user.id,
+        MessageSync::CalendarOverwriteRsvpDelete {
+            channel_id,
+            event_id,
+            seq,
+            user_id,
+        },
+    )
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

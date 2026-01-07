@@ -15,7 +15,7 @@ use crate::v1::types::{
 };
 
 use super::{
-    calendar::CalendarEvent,
+    calendar::{CalendarEvent, CalendarOverwrite, CalendarEventParticipant},
     emoji::EmojiCustom,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,
@@ -517,6 +517,48 @@ pub enum MessageSync {
     CalendarEventDelete {
         channel_id: ChannelId,
         event_id: CalendarEventId,
+    },
+
+    CalendarOverwriteCreate {
+        channel_id: ChannelId,
+        overwrite: CalendarOverwrite,
+    },
+
+    CalendarOverwriteUpdate {
+        channel_id: ChannelId,
+        overwrite: CalendarOverwrite,
+    },
+
+    CalendarOverwriteDelete {
+        channel_id: ChannelId,
+        event_id: CalendarEventId,
+        seq: u64,
+    },
+
+    CalendarRsvpCreate {
+        channel_id: ChannelId,
+        event_id: CalendarEventId,
+        participant: CalendarEventParticipant,
+    },
+
+    CalendarRsvpDelete {
+        channel_id: ChannelId,
+        event_id: CalendarEventId,
+        user_id: UserId,
+    },
+
+    CalendarOverwriteRsvpCreate {
+        channel_id: ChannelId,
+        event_id: CalendarEventId,
+        seq: u64,
+        participant: CalendarEventParticipant,
+    },
+
+    CalendarOverwriteRsvpDelete {
+        channel_id: ChannelId,
+        event_id: CalendarEventId,
+        seq: u64,
+        user_id: UserId,
     },
 
     WebhookCreate {

@@ -616,6 +616,13 @@ impl Connection {
             MessageSync::CalendarEventCreate { event } => AuthCheck::Channel(event.channel_id),
             MessageSync::CalendarEventUpdate { event } => AuthCheck::Channel(event.channel_id),
             MessageSync::CalendarEventDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::CalendarOverwriteCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::CalendarOverwriteUpdate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::CalendarOverwriteDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::CalendarRsvpCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::CalendarRsvpDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::CalendarOverwriteRsvpCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::CalendarOverwriteRsvpDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::WebhookCreate { webhook } => {
                 AuthCheck::ChannelPerm(webhook.channel_id, Permission::IntegrationsManage)
             }
