@@ -265,6 +265,11 @@ pub trait DataTag {
         query: String,
         pagination: PaginationQuery<TagId>,
     ) -> Result<PaginationResponse<Tag>>;
+    async fn tag_list(
+        &self,
+        forum_channel_id: ChannelId,
+        pagination: PaginationQuery<TagId>,
+    ) -> Result<PaginationResponse<Tag>>;
 }
 
 #[async_trait]
