@@ -41,6 +41,11 @@ pub struct DbMessage {
     pub mentions: Option<serde_json::Value>,
 }
 
+#[derive(Debug)]
+pub struct DbMessageVersion {
+    // TODO
+}
+
 #[derive(Debug, sqlx::Type)]
 #[sqlx(type_name = "message_type")]
 pub enum DbMessageType {

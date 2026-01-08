@@ -202,6 +202,8 @@ pub mod next {
 
         // /// unknown builtin media scanner
         // UnknownMediaScanner,
+
+        // latest message version cannot be deleted
     }
 
     /// warnings that require ?force=true
