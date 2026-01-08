@@ -19,6 +19,65 @@ import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
 import type { Api } from "../api.tsx";
 
+type MessageV2 = {
+	id: string;
+	channel_id: string;
+	latest_version: {
+		version_id: string;
+		author_id?: string;
+		[K: string]: any;
+	};
+	pinned?: { time: string; position: number };
+	reactions?: any[];
+	deleted_at?: string;
+	removed_at?: string;
+	created_at: string;
+	author_id: string;
+	thread?: any;
+	[K: string]: any;
+};
+
+function convertV2MessageToV1(message: MessageV2): Message {
+	return {
+		...message.latest_version,
+		id: message.id,
+		channel_id: message.channel_id,
+		version_id: message.latest_version.version_id,
+		nonce: message.nonce ?? null,
+		author_id: message.author_id,
+		pinned: message.pinned,
+		reactions: message.reactions,
+		created_at: message.created_at,
+		deleted_at: message.deleted_at,
+		removed_at: message.removed_at,
+		edited_at: message.latest_version.version_id !== message.id
+			? message.latest_version.created_at
+			: null,
+		thread: message.thread,
+	};
+}
+
+function maybeConvertMessage(data: any): Message {
+	if ("latest_version" in data) {
+		return convertV2MessageToV1(data);
+	}
+	return data as Message;
+}
+
+function maybeConvertMessages(data: any[]): Message[] {
+	return data.map(maybeConvertMessage);
+}
+
+function maybeConvertPagination(data: any): PaginationResponseMessage {
+	if (Array.isArray(data.items) && data.items.length > 0 && "latest_version" in data.items[0]) {
+		return {
+			...data,
+			items: data.items.map((item: MessageV2) => convertV2MessageToV1(item)),
+		};
+	}
+	return data;
+}
+
 export type MessageMutator = {
 	mutate: (r: MessageRange) => void;
 	query: MessageListAnchor;
@@ -409,7 +468,7 @@ export class Messages {
 			console.error(error);
 			throw new Error(error);
 		}
-		return data;
+		return maybeConvertMessage(data);
 	}
 
 	fetch(thread_id: () => string, message_id: () => string): Resource<Message> {
@@ -434,7 +493,7 @@ export class Messages {
 					console.error(error);
 					throw new Error(error);
 				}
-				return data;
+				return maybeConvertMessage(data);
 			},
 		);
 		createEffect(() => {
@@ -470,7 +529,7 @@ export class Messages {
 			console.error(error);
 			throw new Error(error);
 		}
-		return data;
+		return maybeConvertPagination(data);
 	}
 
 	private async fetchContext(
@@ -491,7 +550,13 @@ export class Messages {
 			console.error(error);
 			throw new Error(error);
 		}
-		return data;
+		return {
+			items: maybeConvertMessages(data.items),
+			has_more: data.has_more,
+			total: data.total,
+			has_after: data.has_after,
+			has_before: data.has_before,
+		};
 	}
 
 	async edit(thread_id: string, message_id: string, content: string) {
@@ -529,7 +594,7 @@ export class Messages {
 			if (error) {
 				throw new Error(error);
 			}
-			return data;
+			return maybeConvertMessage(data);
 		} catch (e) {
 			if (originalMessage) {
 				this.cache.set(message_id, originalMessage);
@@ -588,13 +653,18 @@ export class Messages {
 
 				if (error) throw error;
 
+				const convertedData = {
+					...data,
+					items: data.items.map(maybeConvertMessage),
+				};
+
 				batch(() => {
-					for (const item of data.items) {
+					for (const item of convertedData.items) {
 						this.cache.set(item.id, item);
 					}
 				});
 
-				return data;
+				return convertedData;
 			},
 		);
 		return resource;
@@ -632,7 +702,10 @@ export class Messages {
 			},
 		);
 		if (error) throw error;
-		return data;
+		return {
+			...data,
+			items: data.items.map(maybeConvertMessage),
+		};
 	}
 
 	listPinned(thread_id_signal: () => string): Resource<Pagination<Message>> {
@@ -659,15 +732,17 @@ export class Messages {
 				throw error;
 			}
 
+			const convertedItems = data.items.map(maybeConvertMessage);
+
 			batch(() => {
-				for (const item of data.items) {
+				for (const item of convertedItems) {
 					this.cache.set(item.id, item);
 				}
 			});
 
 			return {
 				...data,
-				items: [...pagination?.items ?? [], ...data.items],
+				items: [...pagination?.items ?? [], ...convertedItems],
 			};
 		};
 
@@ -732,8 +807,9 @@ export class Messages {
 	): MessageRange {
 		let items: Array<Message> = [];
 		for (const item of data.items) {
-			this.cache.set(item.id, item);
-			const existing = ranges.find(item.id);
+			const convertedItem = maybeConvertMessage(item);
+			this.cache.set(convertedItem.id, convertedItem);
+			const existing = ranges.find(convertedItem.id);
 			if (existing) {
 				if (existing !== range) {
 					console.log("merge (after)!");
@@ -742,7 +818,7 @@ export class Messages {
 					range = ranges.merge(range, existing);
 				}
 			} else {
-				items.push(item);
+				items.push(convertedItem);
 			}
 		}
 		range.items.push(...items);
@@ -758,8 +834,9 @@ export class Messages {
 	): MessageRange {
 		let items: Array<Message> = [];
 		for (const item of data.items) {
-			this.cache.set(item.id, item);
-			const existing = ranges.find(item.id);
+			const convertedItem = maybeConvertMessage(item);
+			this.cache.set(convertedItem.id, convertedItem);
+			const existing = ranges.find(convertedItem.id);
 			if (existing) {
 				if (existing !== range) {
 					console.log("merge (before)!");
@@ -768,7 +845,7 @@ export class Messages {
 					range = ranges.merge(range, existing);
 				}
 			} else {
-				items.push(item);
+				items.push(convertedItem);
 			}
 		}
 		range.items.unshift(...items);

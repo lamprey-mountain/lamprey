@@ -17,6 +17,7 @@ import type {
 	ClientState,
 	Media,
 	MemberListGroup,
+	Message,
 	MessageCreate,
 	MessageReady,
 	MessageSync,
@@ -60,6 +61,44 @@ export type Json =
 	| boolean
 	| Array<Json>
 	| { [k in string]: Json };
+
+type MessageV2 = {
+	id: string;
+	channel_id: string;
+	latest_version: {
+		version_id: string;
+		author_id?: string;
+		[K: string]: any;
+	};
+	pinned?: { time: string; position: number };
+	reactions?: any[];
+	deleted_at?: string;
+	removed_at?: string;
+	created_at: string;
+	author_id: string;
+	thread?: any;
+	[K: string]: any;
+};
+
+function convertV2MessageToV1(message: MessageV2): Message {
+	return {
+		...message.latest_version,
+		id: message.id,
+		channel_id: message.channel_id,
+		version_id: message.latest_version.version_id,
+		nonce: message.nonce ?? null,
+		author_id: message.author_id,
+		pinned: message.pinned,
+		reactions: message.reactions,
+		created_at: message.created_at,
+		deleted_at: message.deleted_at,
+		removed_at: message.removed_at,
+		edited_at: message.latest_version.version_id !== message.id
+			? message.latest_version.created_at
+			: null,
+		thread: message.thread,
+	};
+}
 
 const ApiContext = createContext<Api>();
 
@@ -259,7 +298,9 @@ export function createApi(
 		} else if (msg.type === "ChannelAck") {
 			// TODO
 		} else if (msg.type === "MessageCreate") {
-			const m = msg.message;
+			const m = "latest_version" in msg.message
+				? convertV2MessageToV1(msg.message)
+				: msg.message;
 
 			const me = users.cache.get("@self");
 			if (
@@ -392,7 +433,9 @@ export function createApi(
 				media.cacheInfo.set(att.id, att);
 			}
 		} else if (msg.type === "MessageUpdate") {
-			const m = msg.message;
+			const m = "latest_version" in msg.message
+				? convertV2MessageToV1(msg.message)
+				: msg.message;
 			const r = messages.cacheRanges.get(m.channel_id);
 			if (r) {
 				const idx = r.live.items.findIndex((i) => i.id === m.id);
