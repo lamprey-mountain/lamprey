@@ -11,13 +11,14 @@ use common::v1::types::{
     MessageMigrate, MessageModerate, MessagePin, MessageType, PinsReorder, RepliesQuery,
     ThreadMemberPut, ThreadMembership,
 };
+use common::v2::types::message::Message;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
     error::Error,
     types::{
-        ChannelId, DbMessageCreate, Message, MessageCreate, MessageId, MessagePatch, MessageSync,
+        ChannelId, DbMessageCreate, MessageCreate, MessageId, MessagePatch, MessageSync,
         MessageVerId, PaginationQuery, PaginationResponse, Permission,
     },
     ServerState,
