@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    tag::{Tag, TagCreate, TagDeleteQuery, TagPatch, TagSearchQuery},
+    tag::{Tag, TagCreate, TagDeleteQuery, TagListQuery, TagPatch, TagSearchQuery},
     util::Changes,
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, PaginationQuery,
     PaginationResponse, Permission, TagId,
@@ -268,7 +268,10 @@ async fn tag_search(
         return Err(Error::BadStatic("channel does not support tags"));
     }
 
-    let tags = s.data().tag_search(channel_id, q.query, pagination).await?;
+    let tags = s
+        .data()
+        .tag_search(channel_id, q.query, q.archived, pagination)
+        .await?;
 
     Ok(Json(tags))
 }
@@ -281,6 +284,7 @@ async fn tag_search(
     path = "/channel/{channel_id}/tag",
     params(
         ("channel_id", description = "The ID of the forum channel to list tags from."),
+        TagListQuery,
         PaginationQuery<TagId>,
     ),
     tags = ["tag"],
@@ -291,6 +295,7 @@ async fn tag_search(
 async fn tag_list(
     Path(channel_id): Path<ChannelId>,
     auth: Auth2,
+    Query(q): Query<TagListQuery>,
     Query(pagination): Query<PaginationQuery<TagId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -303,7 +308,7 @@ async fn tag_list(
         return Err(Error::BadStatic("channel does not support tags"));
     }
 
-    let tags = s.data().tag_list(channel_id, pagination).await?;
+    let tags = s.data().tag_list(channel_id, q.archived, pagination).await?;
 
     Ok(Json(tags))
 }

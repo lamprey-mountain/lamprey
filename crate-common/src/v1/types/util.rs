@@ -38,6 +38,10 @@ where
     Option::<bool>::deserialize(deserializer).map(|b| b.unwrap_or(true))
 }
 
+pub fn default_false_opt() -> Option<bool> {
+    Some(false)
+}
+
 pub fn deserialize_sorted<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
     D: serde::Deserializer<'de>,

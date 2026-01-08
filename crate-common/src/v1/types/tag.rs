@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{misc::Color, util::some_option, TagId};
+use crate::v1::types::{misc::Color, util::{default_false_opt, some_option}, TagId};
 
 /// a tag that can be applied to a thread
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -96,4 +96,21 @@ pub struct TagDeleteQuery {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TagSearchQuery {
     pub query: String,
+
+    /// deny, allow, require tag to be archived
+    ///
+    /// default: deny
+    #[serde(default = "default_false_opt")]
+    pub archived: Option<bool>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct TagListQuery {
+    /// deny, allow, require tag to be archived
+    ///
+    /// default: deny
+    #[serde(default = "default_false_opt")]
+    pub archived: Option<bool>,
 }

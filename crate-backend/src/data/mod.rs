@@ -263,11 +263,13 @@ pub trait DataTag {
         &self,
         forum_channel_id: ChannelId,
         query: String,
+        archived: Option<bool>,
         pagination: PaginationQuery<TagId>,
     ) -> Result<PaginationResponse<Tag>>;
     async fn tag_list(
         &self,
         forum_channel_id: ChannelId,
+        archived: Option<bool>,
         pagination: PaginationQuery<TagId>,
     ) -> Result<PaginationResponse<Tag>>;
 }
