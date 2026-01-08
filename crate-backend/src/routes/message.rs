@@ -234,7 +234,7 @@ async fn message_delete(
     let message = data
         .message_get(channel_id, message_id, auth.user.id)
         .await?;
-    if !message.message_type.is_deletable() {
+    if !message.latest_version.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
     if message.author_id == auth.user.id {
@@ -413,7 +413,7 @@ async fn message_moderate(
         // TODO: fix n+1 query
         for id in &json.delete {
             let message = data.message_get(channel_id, *id, auth.user.id).await?;
-            if !message.message_type.is_deletable() {
+            if !message.latest_version.message_type.is_deletable() {
                 return Err(Error::BadStatic("cant delete one of the messages"));
             }
         }
@@ -454,7 +454,7 @@ async fn message_moderate(
         // TODO: fix n+1 query
         for id in &json.remove {
             let message = data.message_get(channel_id, *id, auth.user.id).await?;
-            if !message.message_type.is_deletable() {
+            if !message.latest_version.message_type.is_deletable() {
                 return Err(Error::BadStatic("cant remove one of the messages"));
             }
         }

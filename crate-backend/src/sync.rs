@@ -237,7 +237,7 @@ impl Connection {
                                     channel_id,
                                     user_id: typing_user_id,
                                     until: until.into(),
-                                });
+                                }, None);
                             }
                         }
                     }
@@ -259,7 +259,7 @@ impl Connection {
                                     user_id: voice_state.user_id,
                                     state: Some(voice_state),
                                     old_state: None,
-                                });
+                                }, None);
                             }
                         }
                     }
@@ -442,7 +442,11 @@ impl Connection {
     }
 
     #[tracing::instrument(level = "debug", skip(self), fields(id = self.get_id()))]
-    pub async fn queue_message(&mut self, msg: Box<MessageSync>) -> Result<()> {
+    pub async fn queue_message(
+        &mut self,
+        msg: Box<MessageSync>,
+        nonce: Option<String>,
+    ) -> Result<()> {
         let mut session = match &self.state {
             ConnectionState::Authenticated { session }
             | ConnectionState::Disconnected { session } => session.clone(),
@@ -681,7 +685,7 @@ impl Connection {
                             .message_get(message.channel_id, message.id, session.user_id().unwrap())
                             .await?;
                         self.s.presign_message(&mut m).await?;
-                        m.nonce = message.nonce;
+                        // FIXME: include nonce
                         m
                     },
                 },
@@ -691,7 +695,7 @@ impl Connection {
                             .message_get(message.channel_id, message.id, session.user_id().unwrap())
                             .await?;
                         self.s.presign_message(&mut m).await?;
-                        m.nonce = message.nonce;
+                        // FIXME: include nonce
                         m
                     },
                 },
@@ -733,17 +737,18 @@ impl Connection {
                 }
                 m => m,
             };
-            self.push_sync(msg);
+            self.push_sync(msg, nonce);
         }
         Ok(())
     }
 
-    fn push_sync(&mut self, sync: MessageSync) {
+    fn push_sync(&mut self, sync: MessageSync, nonce: Option<String>) {
         let seq = self.seq_server;
         let msg = MessageEnvelope {
             payload: types::MessagePayload::Sync {
                 data: Box::new(sync),
                 seq,
+                nonce,
             },
         };
         self.push(msg, Some(seq));

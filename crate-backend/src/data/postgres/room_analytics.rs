@@ -233,9 +233,10 @@ impl DataRoomAnalytics for Postgres {
                     count(DISTINCT ma.media_id) AS media_count,
                     sum(mts.total_size) as media_size
                 FROM message msg
-                JOIN message_attachment ma ON ma.version_id = msg.version_id
+                JOIN message_version mv ON msg.latest_version_id = mv.version_id
+                JOIN message_attachment ma ON ma.version_id = mv.version_id
                 JOIN media_total_size mts ON mts.media_id = ma.media_id
-                WHERE msg.is_latest AND msg.deleted_at IS NULL
+                WHERE msg.deleted_at IS NULL
                 GROUP BY msg.channel_id
             ),
             channel_message_stats AS (
@@ -243,7 +244,7 @@ impl DataRoomAnalytics for Postgres {
                     channel_id,
                     count(*) as message_count
                 FROM message
-                WHERE is_latest AND deleted_at IS NULL
+                WHERE deleted_at IS NULL
                 GROUP BY channel_id
             )
             INSERT INTO metric_channel (ts, channel_id, room_id, message_count, media_count, media_size)

@@ -511,11 +511,15 @@ impl ServiceEmbed {
             return Ok(());
         };
         let data = state.data();
-        let message = data
+        let mut message = data
+            .message_get(mref.thread_id, mref.message_id, user_id)
+            .await?;
+        let ver = data
             .message_version_get(mref.thread_id, mref.version_id, user_id)
             .await?;
+        message.latest_version = ver;
 
-        let mut message_type = message.message_type;
+        let mut message_type = message.latest_version.message_type;
         let (embeds, attachments) = match &mut message_type {
             MessageType::DefaultMarkdown(m) => {
                 if m.embeds
@@ -571,9 +575,11 @@ impl ServiceEmbed {
                 author_id: message.author_id,
                 embeds,
                 message_type,
-                edited_at: message.edited_at.map(|t| t.into()),
-                created_at: message.created_at.map(|t| t.into()),
-                mentions: message.mentions,
+                // NOTE: edited_at is used to set the version created_at
+                edited_at: Some(message.latest_version.created_at.into()),
+                // NOTE: created_at is ignored
+                created_at: None,
+                mentions: message.latest_version.mentions,
             },
         )
         .await?;
@@ -581,7 +587,7 @@ impl ServiceEmbed {
         let mut message = data
             .message_get(mref.thread_id, mref.message_id, user_id)
             .await?;
-        if message.version_id == mref.version_id {
+        if message.latest_version.version_id == mref.version_id {
             state.presign_message(&mut message).await?;
             state
                 .broadcast_channel(

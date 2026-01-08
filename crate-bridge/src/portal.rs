@@ -8,9 +8,8 @@ use crate::discord::DiscordMessage;
 
 use anyhow::Result;
 use common::v1::types::util::Diff;
-use common::v1::types::{
-    self, media::MediaRef, ChannelId, EmbedCreate, Message, MessageId, RoomId,
-};
+use common::v1::types::{self, media::MediaRef, ChannelId, EmbedCreate, MessageId, RoomId};
+use common::v2::types::message::Message;
 use reqwest::Url;
 use serenity::all::{
     ChannelId as DcChannelId, CreateAllowedMentions, CreateAttachment, CreateEmbed,
@@ -188,7 +187,7 @@ impl Portal {
         }
 
         let existing = self.globals.get_message(message.id).await?;
-        let msg_inner = match message.message_type {
+        let msg_inner = match message.latest_version.message_type {
             types::MessageType::DefaultMarkdown(m) => m,
             _ => {
                 debug!("unknown lamprey message type");

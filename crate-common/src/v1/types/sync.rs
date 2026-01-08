@@ -14,6 +14,8 @@ use crate::v1::types::{
     InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
 };
 
+use crate::v2::types::message::Message as MessageV2;
+
 use super::{
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
     emoji::EmojiCustom,
@@ -22,8 +24,8 @@ use super::{
     role::RoleReorderItem,
     user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
     voice::{SignallingMessage, VoiceState},
-    Channel, ChannelId, EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room,
-    RoomId, RoomMember, Session, SessionId, SessionToken, User, UserId,
+    Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
+    RoomMember, Session, SessionId, SessionToken, User, UserId,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,9 +97,10 @@ pub enum MessagePayload {
 
         /// the sequence number of this event, for resuming
         seq: u64,
-        // /// the nonce, if this is in response to a request with the `Idempotency-Key` header set
-        // #[serde(skip_serializing_if = "Option::is_none")]
-        // nonce: Option<String>,
+
+        /// the nonce, if this is in response to a request with the `Idempotency-Key` header set
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nonce: Option<String>,
     },
 
     /// some kind of error
@@ -211,7 +214,8 @@ pub enum MessageSync {
     },
 
     MessageCreate {
-        message: Message,
+        // i know, it's cursed to return v2 messages in a v1 api. but this is still in pre alpha so i don't really care.
+        message: MessageV2,
         // /// the room member of the author, if this was sent in a room
         // room_member: Option<RoomMember>,
 
@@ -223,7 +227,7 @@ pub enum MessageSync {
     },
 
     MessageUpdate {
-        message: Message,
+        message: MessageV2,
         // /// the room member of the author, if this was sent in a room
         // room_member: Option<RoomMember>,
 

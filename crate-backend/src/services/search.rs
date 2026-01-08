@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use common::v1::types::{
     search::{SearchChannelsRequest, SearchMessageRequest},
-    Channel, ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, UserId,
+    Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
 };
+use common::v2::types::message::Message;
 
 use crate::{error::Result, ServerStateInner};
 

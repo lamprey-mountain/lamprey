@@ -48,7 +48,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
             member_list_res = conn.member_list.poll() => {
                 match member_list_res {
                     Ok(msg) => {
-                        if let Err(err) = conn.queue_message(Box::new(msg)).await {
+                        if let Err(err) = conn.queue_message(Box::new(msg), None).await {
                             tracing::error!("failed to queue member list message: {err}");
                         }
                     }
@@ -77,8 +77,8 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                     _ => break,
                 }
             }
-            Ok(msg) = sushi.recv() => {
-                if let Err(_err) = conn.queue_message(Box::new(msg)).await {
+            Ok((msg, nonce)) = sushi.recv() => {
+                if let Err(_err) = conn.queue_message(Box::new(msg), nonce).await {
                     // most of the errors that are returned are auth check failures, which we don't need to log
                     // error!("{err}");
                 }

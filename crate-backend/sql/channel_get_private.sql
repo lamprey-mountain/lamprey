@@ -1,8 +1,9 @@
 with last_id as (
-    select channel_id, max(version_id) as last_version_id
-    from message
-    where deleted_at is null
-    group by channel_id
+    select m.channel_id, max(mv.version_id) as last_version_id
+    from message m
+    join message_version mv on m.latest_version_id = mv.version_id
+    where m.deleted_at is null
+    group by m.channel_id
 )
 select
     channel.id,

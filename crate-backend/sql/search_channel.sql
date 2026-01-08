@@ -11,16 +11,17 @@ with
         where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
     ),
     last_id as (
-        select channel_id, max(version_id) as last_version_id
-        from message
-        where deleted_at is null
-        group by channel_id
+        select m.channel_id, max(mv.version_id) as last_version_id
+        from message m
+        join message_version mv on m.latest_version_id = mv.version_id
+        where m.deleted_at is null
+        group by m.channel_id
     ),
     message_count as (
-        select channel_id, count(*) as count
-        from message
-        where is_latest
-        group by channel_id
+        select m.channel_id, count(*) as count
+        from message m
+        where m.deleted_at is null
+        group by m.channel_id
     ),
     member_count as (
         select channel_id, count(*) as count

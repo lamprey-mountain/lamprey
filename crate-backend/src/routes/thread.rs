@@ -583,7 +583,7 @@ async fn thread_create_from_message(
         .messages
         .get(parent_channel_id, source_message_id, auth.user.id)
         .await?;
-    if !source_message.message_type.is_threadable() {
+    if !source_message.latest_version.message_type.is_threadable() {
         return Err(Error::BadStatic(
             "Cannot create a thread from this message type",
         ));
@@ -649,10 +649,7 @@ async fn thread_create_from_message(
 
     // 6. Conditionally create system message in the original thread
     let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
-    if source_message
-        .created_at
-        .map_or(false, |t| t.into_inner() < four_hours_ago)
-    {
+    if source_message.created_at.into_inner() < four_hours_ago {
         let system_message_id = data
             .message_create(DbMessageCreate {
                 channel_id: parent_channel_id,

@@ -8,9 +8,9 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    util::Time, Channel, ChannelId, Message, MessageId, NotificationId, PaginationResponse, Room,
-    RoomId,
+    util::Time, Channel, ChannelId, MessageId, NotificationId, PaginationResponse, Room, RoomId,
 };
+use crate::v2::types::message::Message;
 
 /// how to handle an event
 #[derive(Debug, Clone, PartialEq, Eq)]

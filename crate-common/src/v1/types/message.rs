@@ -15,6 +15,8 @@ use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
 use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
 
+use crate::v2::types::message::Message as MessageV2;
+
 use super::channel::Channel;
 use super::EmbedCreate;
 use super::{
@@ -23,6 +25,8 @@ use super::{
 };
 
 pub mod components;
+
+// TODO: merge v2 api back into v1
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -628,7 +632,7 @@ pub struct RatelimitPut {
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ContextResponse {
-    pub items: Vec<Message>,
+    pub items: Vec<MessageV2>,
     pub total: u64,
     pub has_after: bool,
     pub has_before: bool,

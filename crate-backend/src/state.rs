@@ -3,10 +3,12 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{
-    voice::SfuCommand, AuditLogEntry, ChannelId, Media, Message, RoomId, UserId,
-};
 use common::v1::types::{MessageSync, MessageType};
+use common::v2::types::message::Message;
+use common::{
+    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, Media, RoomId, UserId},
+    v2::types::message::MessageVersion,
+};
 use dashmap::DashMap;
 
 use sqlx::PgPool;
@@ -27,7 +29,7 @@ pub struct ServerStateInner {
     pub services: Weak<Services>,
 
     // this is fine probably
-    pub sushi: Sender<MessageSync>,
+    pub sushi: Sender<(MessageSync, Option<String>)>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
     pub sushi_sfu: Sender<SfuCommand>,
 
@@ -69,7 +71,7 @@ impl ServerStateInner {
         _user_id: UserId, // TODO: remove
         msg: MessageSync,
     ) -> Result<()> {
-        let _ = self.sushi.send(msg);
+        let _ = self.sushi.send((msg, None));
         Ok(())
     }
 
@@ -81,19 +83,29 @@ impl ServerStateInner {
         _user_id: UserId, // TODO: remove
         msg: MessageSync,
     ) -> Result<()> {
-        let _ = self.sushi.send(msg);
+        let _ = self.sushi.send((msg, None));
+        Ok(())
+    }
+
+    pub async fn broadcast_channel2(
+        &self,
+        _channel_id: ChannelId,
+        nonce: Option<&str>,
+        msg: MessageSync,
+    ) -> Result<()> {
+        let _ = self.sushi.send((msg, nonce.map(|s| s.to_owned())));
         Ok(())
     }
 
     /// emit a message to a user
     pub async fn broadcast_user(&self, _user_id: UserId, msg: MessageSync) -> Result<()> {
-        let _ = self.sushi.send(msg);
+        let _ = self.sushi.send((msg, None));
         Ok(())
     }
 
     /// emit a message to everyone
     pub fn broadcast(&self, msg: MessageSync) -> Result<()> {
-        let _ = self.sushi.send(msg);
+        let _ = self.sushi.send((msg, None));
         Ok(())
     }
 
@@ -124,12 +136,18 @@ impl ServerStateInner {
 
     /// presigns every relevant url in a Message
     pub async fn presign_message(&self, message: &mut Message) -> Result<()> {
-        match &mut message.message_type {
-            MessageType::DefaultMarkdown(message) => {
-                for media in &mut message.attachments {
+        self.presign_message_version(&mut message.latest_version)
+            .await
+    }
+
+    /// presigns every relevant url in a MessageVersion
+    pub async fn presign_message_version(&self, ver: &mut MessageVersion) -> Result<()> {
+        match &mut ver.message_type {
+            MessageType::DefaultMarkdown(m) => {
+                for media in &mut m.attachments {
                     self.presign(media).await?;
                 }
-                for emb in &mut message.embeds {
+                for emb in &mut m.embeds {
                     if let Some(m) = &mut emb.media {
                         self.presign(m).await?;
                     }

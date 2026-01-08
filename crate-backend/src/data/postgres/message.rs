@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelType, Embed, MessageDefaultMarkdown, MessageType, UserId};
+use common::v1::types::{
+    ChannelType, Embed, Mentions, MessageDefaultMarkdown, MessageType, UserId,
+};
+use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
@@ -10,7 +13,7 @@ use crate::consts::MAX_PINNED_MESSAGES;
 use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
-    ChannelId, DbChannelType, DbMessageCreate, MentionsIds, Message, MessageId, MessageVerId,
+    ChannelId, DbChannelType, DbMessageCreate, MentionsIds, MessageId, MessageVerId,
     PaginationDirection, PaginationQuery, PaginationResponse,
 };
 
@@ -21,29 +24,39 @@ use super::{Pagination, Postgres};
 
 #[derive(Debug)]
 pub struct DbMessage {
-    pub message_type: DbMessageType,
     pub id: MessageId,
     pub channel_id: ChannelId,
-    pub version_id: MessageVerId,
-    pub ordering: i32,
-    pub content: Option<String>,
-    pub attachments: serde_json::Value,
-    pub metadata: Option<serde_json::Value>,
-    pub reply_id: Option<uuid::Uuid>,
-    pub override_name: Option<String>, // temp?
     pub author_id: UserId,
-    pub embeds: Option<serde_json::Value>,
-    pub created_at: Option<time::PrimitiveDateTime>,
-    pub edited_at: Option<time::PrimitiveDateTime>,
+    pub created_at: time::PrimitiveDateTime,
     pub deleted_at: Option<time::PrimitiveDateTime>,
     pub removed_at: Option<time::PrimitiveDateTime>,
     pub pinned: Option<serde_json::Value>,
-    pub mentions: Option<serde_json::Value>,
+    pub message_type: DbMessageType,
+    pub version_id: MessageVerId,
+    pub version_author_id: UserId,
+    pub content: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    pub reply_id: Option<uuid::Uuid>,
+    pub override_name: Option<String>, // temp?
+    pub embeds: Option<serde_json::Value>,
+    pub version_created_at: time::PrimitiveDateTime,
+    pub version_deleted_at: Option<time::PrimitiveDateTime>,
+    pub attachments: serde_json::Value,
 }
 
 #[derive(Debug)]
 pub struct DbMessageVersion {
-    // TODO
+    pub version_id: MessageVerId,
+    pub author_id: UserId,
+    pub message_type: DbMessageType,
+    pub content: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    pub reply_id: Option<uuid::Uuid>,
+    pub override_name: Option<String>,
+    pub embeds: Option<serde_json::Value>,
+    pub created_at: time::PrimitiveDateTime,
+    pub deleted_at: Option<time::PrimitiveDateTime>,
+    pub attachments: serde_json::Value,
 }
 
 #[derive(Debug, sqlx::Type)]
@@ -77,10 +90,41 @@ impl From<MessageType> for DbMessageType {
     }
 }
 
-impl From<DbMessage> for Message {
+impl From<DbMessage> for MessageV2 {
     fn from(row: DbMessage) -> Self {
-        Message {
+        MessageV2 {
             id: row.id,
+            channel_id: row.channel_id,
+            author_id: row.author_id,
+            created_at: Time::from(row.created_at),
+            deleted_at: row.deleted_at.map(Time::from),
+            removed_at: row.removed_at.map(Time::from),
+            pinned: row.pinned.and_then(|p| serde_json::from_value(p).ok()),
+            reactions: ReactionCounts(vec![]),
+            latest_version: DbMessageVersion {
+                version_id: row.version_id,
+                author_id: row.version_author_id,
+                message_type: row.message_type,
+                content: row.content,
+                metadata: row.metadata,
+                reply_id: row.reply_id,
+                override_name: row.override_name,
+                embeds: row.embeds,
+                created_at: row.version_created_at,
+                deleted_at: row.version_deleted_at,
+                attachments: row.attachments,
+            }
+            .into(),
+            thread: None,
+        }
+    }
+}
+
+impl From<DbMessageVersion> for MessageVersionV2 {
+    fn from(row: DbMessageVersion) -> Self {
+        MessageVersionV2 {
+            version_id: row.version_id,
+            author_id: Some(row.author_id),
             message_type: match row.message_type {
                 DbMessageType::DefaultMarkdown => {
                     let attachments: Vec<serde_json::Value> =
@@ -133,21 +177,9 @@ impl From<DbMessage> for Message {
                     panic!("{ty:?} messages are deprecated and shouldn't exist in the database anymore")
                 }
             },
-            channel_id: row.channel_id,
-            version_id: row.version_id,
-            nonce: None,
-            author_id: row.author_id,
+            mentions: Mentions::default(),
+            created_at: Time::from(row.created_at),
             deleted_at: row.deleted_at.map(Time::from),
-            edited_at: row.edited_at.map(Time::from),
-            created_at: row.created_at.map(Time::from),
-            removed_at: row.removed_at.map(Time::from),
-            pinned: row.pinned.and_then(|p| serde_json::from_value(p).ok()),
-            reactions: ReactionCounts(vec![]),
-            mentions: row
-                .mentions
-                .map(|a| serde_json::from_value(a).unwrap())
-                .unwrap_or_default(),
-            thread: None,
         }
     }
 }
@@ -156,6 +188,8 @@ impl From<DbMessage> for Message {
 impl DataMessage for Postgres {
     async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId> {
         let message_id = Uuid::now_v7();
+        // the version_id of the first version of a message is the same as the message id itself
+        let version_id = message_id;
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
 
@@ -176,35 +210,53 @@ impl DataMessage for Postgres {
             .await?;
         }
 
-        let embeds = serde_json::to_value(create.embeds.clone())?;
+        let embeds = create.embeds.clone();
+        let embeds_json = serde_json::to_value(&embeds)?;
         let mentions: MentionsIds = create.mentions.clone().into();
-        let mentions = serde_json::to_value(mentions)?;
-        query!(r#"
-    	    INSERT INTO message (id, channel_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, mentions)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE channel_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()), $12)
-        "#,
+        let mentions_json = serde_json::to_value(mentions)?;
+        let created_at = create
+            .created_at
+            .map(|t| t.assume_utc())
+            .unwrap_or_else(time::OffsetDateTime::now_utc);
+        let created_at = time::PrimitiveDateTime::new(created_at.date(), created_at.time());
+
+        query!(
+            r#"INSERT INTO message (id, channel_id, author_id, created_at, latest_version_id)
+            VALUES ($1, $2, $3, $4, $5)"#,
             message_id,
             *create.channel_id,
-            message_id,
-            create.content(),
-            create.metadata(),
-            create.reply_id().map(|i| i.into_inner()),
             create.author_id.into_inner(),
-            message_type as _,
-            create.override_name(),
-            embeds,
-            create.created_at.map(|t| t.assume_utc()),
-            mentions,
+            created_at,
+            version_id,
         )
         .execute(&mut *tx)
         .await?;
+
+        query!(
+            r#"INSERT INTO message_version (version_id, message_id, author_id, type, content, metadata, reply_id, mentions, embeds, created_at, override_name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
+            version_id,
+            message_id,
+            create.author_id.into_inner(),
+            message_type as _,
+            create.content(),
+            create.metadata(),
+            create.reply_id().map(|i| i.into_inner()),
+            mentions_json,
+            embeds_json,
+            created_at,
+            create.override_name(),
+        )
+        .execute(&mut *tx)
+        .await?;
+
         for (ord, att) in create.attachment_ids.iter().enumerate() {
             query!(
                 r#"
-        	    INSERT INTO message_attachment (version_id, media_id, ordering)
-        	    VALUES ($1, $2, $3)
+                INSERT INTO message_attachment (version_id, media_id, ordering)
+                VALUES ($1, $2, $3)
                 "#,
-                message_id,
+                version_id,
                 att.into_inner(),
                 ord as i32
             )
@@ -225,39 +277,50 @@ impl DataMessage for Postgres {
         let ver_id = Uuid::now_v7();
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
+
+        let embeds = create.embeds.clone();
+        let embeds_json = serde_json::to_value(&embeds)?;
+        let mentions: MentionsIds = create.mentions.clone().into();
+        let mentions_json = serde_json::to_value(mentions)?;
+        let created_at = create
+            .edited_at
+            .map(|t| t.assume_utc())
+            .unwrap_or_else(time::OffsetDateTime::now_utc);
+        let created_at = time::PrimitiveDateTime::new(created_at.date(), created_at.time());
+
         query!(
-            r#"UPDATE message SET is_latest = false WHERE id = $1"#,
-            message_id.into_inner(),
+            r#"UPDATE message SET latest_version_id = $1 WHERE id = $2"#,
+            ver_id,
+            *message_id,
         )
         .execute(&mut *tx)
         .await?;
-        let embeds = serde_json::to_value(create.embeds.clone())?;
-        query!(r#"
-    	    INSERT INTO message (id, channel_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, edited_at)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE channel_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11, coalesce($12, now()))
-        "#,
-            *message_id,
-            *create.channel_id,
+
+        query!(
+            r#"INSERT INTO message_version (version_id, message_id, author_id, type, content, metadata, reply_id, mentions, embeds, created_at, override_name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
             ver_id,
+            *message_id,
+            create.author_id.into_inner(),
+            message_type as _,
             create.content(),
             create.metadata(),
-            create.reply_id().map(|i| *i),
-            *create.author_id,
-            message_type as _,
+            create.reply_id().map(|i| i.into_inner()),
+            mentions_json,
+            embeds_json,
+            created_at,
             create.override_name(),
-            embeds,
-            create.created_at,
-            create.edited_at.map(|t| t.assume_utc()),
         )
         .execute(&mut *tx)
         .await?;
+
         for (ord, att) in create.attachment_ids.iter().enumerate() {
             query!(
                 r#"
-        	    INSERT INTO message_attachment (version_id, media_id, ordering)
-        	    VALUES ($1, $2, $3)
+                INSERT INTO message_attachment (version_id, media_id, ordering)
+                VALUES ($1, $2, $3)
                 "#,
-                *message_id,
+                ver_id,
                 att.into_inner(),
                 ord as i32
             )
@@ -278,10 +341,16 @@ impl DataMessage for Postgres {
     ) -> Result<()> {
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
-        let embeds = serde_json::to_value(create.embeds.clone())?;
+        let embeds = create.embeds.clone();
+        let embeds_json = serde_json::to_value(&embeds)?;
+        let mentions: MentionsIds = create.mentions.clone().into();
+        let mentions_json = serde_json::to_value(mentions)?;
+        let created_at = create.edited_at.map(|t| t.assume_utc());
+        let created_at = created_at.map(|t| time::PrimitiveDateTime::new(t.date(), t.time()));
+
         query!(
             r#"
-            UPDATE message SET
+            UPDATE message_version SET
                 content = $2,
                 metadata = $3,
                 reply_id = $4,
@@ -289,20 +358,20 @@ impl DataMessage for Postgres {
                 type = $6,
                 override_name = $7,
                 embeds = $8,
-                created_at = $9,
-                edited_at = $10
+                mentions = $9,
+                created_at = $10
             WHERE version_id = $1
         "#,
             *version_id,
             create.content(),
             create.metadata(),
-            create.reply_id().map(|i| *i),
-            *create.author_id,
+            create.reply_id().map(|i| i.into_inner()),
+            create.author_id.into_inner(),
             message_type as _,
             create.override_name(),
-            embeds,
-            create.created_at,
-            create.edited_at,
+            embeds_json,
+            mentions_json,
+            created_at,
         )
         .execute(&mut *tx)
         .await?;
@@ -316,7 +385,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         id: MessageId,
         _user_id: UserId,
-    ) -> Result<Message> {
+    ) -> Result<MessageV2> {
         let row = query_file_as!(DbMessage, "sql/message_get.sql", *channel_id, *id)
             .fetch_one(&self.pool)
             .await?;
@@ -328,7 +397,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageV2>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -343,7 +412,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_count.sql", channel_id.into_inner()),
-            |i: &Message| i.id.to_string()
+            |i: &MessageV2| i.id.to_string()
         )
     }
 
@@ -352,7 +421,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageV2>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -367,7 +436,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_count_deleted.sql", channel_id.into_inner()),
-            |i: &Message| i.id.to_string()
+            |i: &MessageV2| i.id.to_string()
         )
     }
 
@@ -376,7 +445,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageV2>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -391,7 +460,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_count_removed.sql", channel_id.into_inner()),
-            |i: &Message| i.id.to_string()
+            |i: &MessageV2| i.id.to_string()
         )
     }
 
@@ -400,7 +469,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageV2>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -415,7 +484,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_activity_count.sql", channel_id.into_inner()),
-            |i: &Message| i.id.to_string()
+            |i: &MessageV2| i.id.to_string()
         )
     }
 
@@ -488,9 +557,9 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         version_id: MessageVerId,
         _user_id: UserId,
-    ) -> Result<Message> {
+    ) -> Result<MessageVersionV2> {
         let row = query_file_as!(
-            DbMessage,
+            DbMessageVersion,
             "sql/message_version_get.sql",
             *channel_id,
             *version_id,
@@ -508,7 +577,7 @@ impl DataMessage for Postgres {
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
-            "UPDATE message SET deleted_at = $2 WHERE version_id = $1",
+            "UPDATE message_version SET deleted_at = $2 WHERE version_id = $1",
             version_id.into_inner(),
             now
         )
@@ -523,13 +592,13 @@ impl DataMessage for Postgres {
         message_id: MessageId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageVersionV2>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
             self.pool,
             query_file_as!(
-                DbMessage,
+                DbMessageVersion,
                 "sql/message_version_paginate.sql",
                 *channel_id,
                 *message_id,
@@ -543,7 +612,7 @@ impl DataMessage for Postgres {
                 channel_id.into_inner(),
                 message_id.into_inner(),
             ),
-            |i: &Message| i.version_id.to_string()
+            |i: &MessageVersionV2| i.version_id.to_string()
         )
     }
 
@@ -555,7 +624,7 @@ impl DataMessage for Postgres {
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageV2>> {
         let p: Pagination<_> = pagination.try_into()?;
         let rmid = root_message_id.map(|i| *i);
         gen_paginate!(
@@ -580,7 +649,7 @@ impl DataMessage for Postgres {
                 depth as i32,
                 breadth.map(|b| b as i64)
             ),
-            |i: &Message| i.id.to_string()
+            |i: &MessageV2| i.id.to_string()
         )
     }
 
@@ -692,7 +761,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageV2>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -707,7 +776,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_pin_list_count.sql", *channel_id),
-            |i: &Message| i.id.to_string()
+            |i: &MessageV2| i.id.to_string()
         )
     }
 
@@ -715,7 +784,7 @@ impl DataMessage for Postgres {
         &self,
         message_id: MessageId,
         limit: u16,
-    ) -> Result<Vec<Message>> {
+    ) -> Result<Vec<MessageV2>> {
         let rows = query_file_as!(
             DbMessage,
             "sql/message_get_ancestors.sql",
@@ -726,5 +795,36 @@ impl DataMessage for Postgres {
         .await?;
 
         Ok(rows.into_iter().map(Into::into).collect())
+    }
+
+    async fn message_fetch_mention_ids(
+        &self,
+        _channel_id: ChannelId,
+        version_ids: &[MessageVerId],
+    ) -> Result<Vec<MentionsIds>> {
+        let version_uuids: Vec<Uuid> = version_ids.iter().map(|id| **id).collect();
+
+        let rows = query!(
+            r#"
+            SELECT mentions
+            FROM message_version
+            WHERE version_id = ANY($1)
+            "#,
+            &version_uuids[..]
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut result = Vec::with_capacity(rows.len());
+        for row in rows {
+            if let Some(mentions_json) = row.mentions {
+                let mentions: MentionsIds = serde_json::from_value(mentions_json)?;
+                result.push(mentions);
+            } else {
+                result.push(MentionsIds::default());
+            }
+        }
+
+        Ok(result)
     }
 }

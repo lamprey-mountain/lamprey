@@ -8,6 +8,7 @@ use common::v1::types::{
     presence, Channel, ChannelId, ChannelType, Media, MediaCreate, MediaCreateSource,
     MessageCreate, MessageId, MessageSync, RoomId, RoomMemberPut, Session, User, UserId,
 };
+use common::v2::types::message::Message;
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
@@ -219,7 +220,7 @@ impl LampreyHandle {
         &self,
         thread_id: ChannelId,
         message_id: MessageId,
-    ) -> Result<types::Message> {
+    ) -> Result<Message> {
         let res = self.http.message_get(thread_id, message_id).await?;
         Ok(res)
     }
@@ -228,7 +229,7 @@ impl LampreyHandle {
         &self,
         thread_id: ChannelId,
         query: &PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<types::Message>> {
+    ) -> Result<PaginationResponse<Message>> {
         let res = self.http.message_list(thread_id, query).await?;
         Ok(res)
     }
@@ -238,7 +239,7 @@ impl LampreyHandle {
         thread_id: ChannelId,
         user_id: UserId,
         req: MessageCreate,
-    ) -> Result<types::Message> {
+    ) -> Result<Message> {
         let res = self
             .http
             .for_puppet(user_id)
@@ -253,7 +254,7 @@ impl LampreyHandle {
         message_id: MessageId,
         user_id: UserId,
         req: types::MessagePatch,
-    ) -> Result<types::Message> {
+    ) -> Result<Message> {
         let res = self
             .http
             .for_puppet(user_id)

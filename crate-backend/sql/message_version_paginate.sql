@@ -1,25 +1,18 @@
-select
-    msg.type as "message_type: DbMessageType",
-    msg.id,
-    msg.channel_id,
-    msg.version_id,
-    msg.ordering,
-    msg.content,
-    msg.metadata,
-    msg.reply_id,
-    msg.override_name,
-    msg.author_id,
-    msg.created_at,
-    msg.edited_at,
-    msg.deleted_at,
-    msg.removed_at,
-    msg.pinned,
-    hm.mentions,
-    coalesce(att_json.attachments, '{}') as "attachments!",
-    msg.embeds as "embeds"
-from message as msg
-left join att_json on att_json.version_id = msg.version_id
-left join hydrated_mentions hm on hm.message_id = msg.id
-where channel_id = $1 and msg.id = $2 and msg.deleted_at is null
-  and msg.id > $3 and msg.id < $4
-order by (case when $5 = 'f' then msg.version_id end), msg.version_id desc limit $6
+SELECT
+    mv.version_id,
+    mv.author_id,
+    mv.type as "message_type: DbMessageType",
+    mv.content,
+    mv.metadata,
+    mv.reply_id,
+    mv.override_name,
+    mv.embeds as "embeds",
+    mv.created_at,
+    mv.deleted_at,
+    coalesce(att_json.attachments, '{}') as "attachments!"
+FROM message_version AS mv
+JOIN message AS m ON m.id = mv.message_id
+LEFT JOIN att_json ON att_json.version_id = mv.version_id
+WHERE m.channel_id = $1 AND mv.message_id = $2 AND m.deleted_at IS NULL
+  AND mv.version_id > $3 AND mv.version_id < $4
+ORDER BY (CASE WHEN $5 = 'f' THEN mv.version_id END), mv.version_id DESC LIMIT $6

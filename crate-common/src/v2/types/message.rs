@@ -14,7 +14,8 @@ use crate::v1::types::{
     Channel, ChannelId, Embed, EmbedCreate, Mentions, MessageDefaultMarkdown, MessageId,
     MessageType, MessageVerId, ParseMentions, Pinned, UserId,
 };
-use crate::v2::types::media::{Media, MediaReference};
+// use crate::v2::types::media::{Media, MediaReference};
+use crate::v1::types::media::Media;
 
 /// a message
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,6 +23,9 @@ use crate::v2::types::media::{Media, MediaReference};
 pub struct Message {
     pub id: MessageId,
     pub channel_id: ChannelId,
+
+    // TODO: rename to something better?
+    // this is a bit unwieldy, and incorrect if i fetched an old version
     pub latest_version: MessageVersion,
 
     /// exists if this message is pinned
@@ -186,9 +190,9 @@ pub struct MessagePatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageAttachmentCreate {
-    #[serde(flatten)]
-    pub media: MediaReference,
-
+    // FIXME
+    // #[serde(flatten)]
+    // pub media: MediaReference,
     /// Shortcut for setting alt text on the media item
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
@@ -265,6 +269,20 @@ impl Diff<Message> for MessagePatch {
                 // })
             }
             // this edit is invalid!
+            _ => false,
+        }
+    }
+}
+
+impl Diff<Message> for crate::v1::types::MessagePatch {
+    fn changes(&self, other: &Message) -> bool {
+        match &other.latest_version.message_type {
+            MessageType::DefaultMarkdown(m) => {
+                self.content.changes(&m.content)
+                    || self.reply_id.changes(&m.reply_id)
+                    || self.embeds.is_some()
+                    || self.attachments.is_some()
+            }
             _ => false,
         }
     }

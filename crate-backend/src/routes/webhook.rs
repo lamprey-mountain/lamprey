@@ -575,7 +575,7 @@ async fn webhook_message_delete(
         return Err(Error::NotFound);
     }
 
-    if !message.message_type.is_deletable() {
+    if !message.latest_version.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
 

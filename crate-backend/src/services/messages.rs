@@ -9,19 +9,17 @@ use std::time::Duration;
 use tracing::error;
 
 use common::v1::types::misc::Color;
-
 use common::v1::types::notifications::{Notification, NotificationReason};
-
 use common::v1::types::util::{Diff, Time};
-
 use common::v1::types::{
     Channel, ChannelId, ChannelPatch, ContextQuery, ContextResponse, Embed, EmbedCreate, EmbedId,
-    EmbedType, Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, Message,
-    MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync, MessageType,
-    NotificationId, PaginationDirection, PaginationQuery, PaginationResponse, Permission,
-    RepliesQuery, RoomId, ThreadMembership,
+    EmbedType, Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageCreate,
+    MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync, MessageType, NotificationId,
+    PaginationDirection, PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId,
+    ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
+use common::v2::types::message::{Message, MessageVersion};
 use http::StatusCode;
 use linkify::LinkFinder;
 use url::Url;
@@ -93,7 +91,7 @@ impl ServiceMessages {
                             Some(crate::types::MessageRef {
                                 thread_id: message.channel_id,
                                 message_id: message.id,
-                                version_id: message.version_id,
+                                version_id: message.latest_version.version_id,
                             }),
                             user_id,
                             url,
@@ -323,7 +321,6 @@ impl ServiceMessages {
             }
         }
         s.presign_message(&mut message).await?;
-        message.nonce = nonce;
 
         let tm = data.thread_member_get(thread_id, user_id).await;
         if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
@@ -340,7 +337,8 @@ impl ServiceMessages {
             message: message.clone(),
         };
         srv.channels.invalidate(thread_id).await; // message count
-        s.broadcast_channel(thread_id, user_id, msg).await?;
+        s.broadcast_channel2(thread_id, nonce.as_deref(), msg)
+            .await?;
 
         let s_clone = self.state.clone();
         let author_id = user_id;
@@ -389,7 +387,7 @@ impl ServiceMessages {
                             u.id,
                             thread_id,
                             message_id,
-                            message.version_id,
+                            message.latest_version.version_id,
                             1,
                         )
                         .await
@@ -455,7 +453,7 @@ impl ServiceMessages {
                                         member.user_id,
                                         thread_id,
                                         message_id,
-                                        message.version_id,
+                                        message.latest_version.version_id,
                                         1,
                                     )
                                     .await
@@ -513,7 +511,7 @@ impl ServiceMessages {
                                 user_id,
                                 thread_id,
                                 message_id,
-                                message.version_id,
+                                message.latest_version.version_id,
                                 1,
                             )
                             .await
@@ -574,7 +572,7 @@ impl ServiceMessages {
             perms.ensure(Permission::ViewChannel)?;
         }
 
-        let message = match self.get(thread_id, message_id, user_id).await {
+        let mut message = match self.get(thread_id, message_id, user_id).await {
             Ok(m) => m,
             Err(e) => {
                 if is_webhook {
@@ -584,7 +582,7 @@ impl ServiceMessages {
             }
         };
 
-        if !message.message_type.is_editable() {
+        if !message.latest_version.message_type.is_editable() {
             return Err(Error::BadStatic("cant edit that message"));
         }
         if message.author_id != user_id {
@@ -613,6 +611,7 @@ impl ServiceMessages {
 
         if json.edited_at.is_some() {
             if is_webhook {
+                // TODO: allow this once webhook permissions exist?
                 return Err(Error::BadStatic("webhook cannot set edited_at"));
             }
             let usr = data.user_get(user_id).await?;
@@ -631,7 +630,7 @@ impl ServiceMessages {
         let attachment_ids: Vec<_> = json
             .attachments
             .map(|ats| ats.into_iter().map(|r| r.id).collect())
-            .unwrap_or_else(|| match &message.message_type {
+            .unwrap_or_else(|| match &message.latest_version.message_type {
                 MessageType::DefaultMarkdown(msg) => {
                     msg.attachments.iter().map(|media| media.id).collect()
                 }
@@ -656,7 +655,7 @@ impl ServiceMessages {
             embeds = futures_util::future::try_join_all(embed_futs).await?;
         }
 
-        let (content, payload) = match message.message_type.clone() {
+        let (content, payload) = match message.latest_version.message_type.clone() {
             MessageType::DefaultMarkdown(msg) => {
                 let content = json.content.unwrap_or(msg.content);
                 Result::Ok((
@@ -684,8 +683,9 @@ impl ServiceMessages {
                     embeds,
                     message_type: payload,
                     edited_at: json.edited_at.map(|t| t.into()),
-                    created_at: message.created_at.map(|t| t.into()),
-                    mentions: message.mentions,
+                    // NOTE: this field is ignored
+                    created_at: None,
+                    mentions: message.latest_version.mentions,
                 },
             )
             .await?;
@@ -697,9 +697,11 @@ impl ServiceMessages {
                 .await?;
         }
 
-        let mut message = data
+        let mut ver = data
             .message_version_get(thread_id, version_id, user_id)
             .await?;
+
+        message.latest_version = ver;
 
         if let Some(content) = &content {
             let can_embed = if let Some(perms) = &perms {
@@ -861,30 +863,33 @@ impl ServiceMessages {
         user_id: UserId,
         messages: &mut [Message],
     ) -> Result<()> {
-        // MentionsIds -> Mentions
+        if messages.is_empty() {
+            return Ok(());
+        }
 
-        // currently using this very slow sql:
-        // CREATE VIEW hydrated_mentions AS
-        // SELECT
-        //     msg.id as message_id,
-        //     jsonb_build_object(
-        //         'users', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', u.id, 'resolved_name', COALESCE(rm.override_name, u.name))) FROM jsonb_array_elements_text(msg.mentions->'users') AS uid JOIN usr u ON u.id = uid::uuid LEFT JOIN room_member rm ON rm.user_id = u.id AND rm.room_id = ch.room_id), '[]'::jsonb),
-        //         'roles', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', r.id)) FROM jsonb_array_elements_text(msg.mentions->'roles') AS rid JOIN role r ON r.id = rid::uuid), '[]'::jsonb),
-        //         'channels', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'room_id', c.room_id, 'type', c.type, 'name', c.name)) FROM jsonb_array_elements_text(msg.mentions->'channels') AS cid JOIN channel c ON c.id = cid::uuid), '[]'::jsonb),
-        //         'emojis', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', e.id, 'name', e.name, 'animated', e.animated)) FROM jsonb_array_elements_text(msg.mentions->'emojis') AS eid JOIN custom_emoji e ON e.id = eid::uuid), '[]'::jsonb),
-        //         'everyone', COALESCE(msg.mentions->'everyone', 'false'::jsonb)
-        //     ) as mentions
-        // FROM message msg
-        // JOIN channel ch on msg.channel_id = ch.id;
+        let data = self.state.data();
+        let channel = self
+            .state
+            .services()
+            .channels
+            .get(channel_id, Some(user_id))
+            .await?;
+        let room_id = channel.room_id;
 
-        let m: MentionsIds = todo!();
-        let m = Mentions {
-            users: todo!(),
-            roles: m.roles.into_iter().map(|id| MentionsRole { id }).collect(),
-            channels: todo!(),
-            emojis: todo!(),
-            everyone: m.everyone,
-        };
+        let version_ids: Vec<MessageVerId> = messages
+            .iter()
+            .map(|m| m.latest_version.version_id)
+            .collect();
+        let mentions_ids: Vec<MentionsIds> = data
+            .message_fetch_mention_ids(channel_id, &version_ids)
+            .await?;
+
+        for (message, mentions_ids) in messages.iter_mut().zip(mentions_ids) {
+            let full_mentions = self
+                .fetch_full_mentions_from_ids(mentions_ids, room_id)
+                .await?;
+            message.latest_version.mentions = full_mentions;
+        }
 
         Ok(())
     }
@@ -1123,7 +1128,7 @@ impl ServiceMessages {
         message_id: MessageId,
         user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageVersion>> {
         let s = &self.state;
         let data = s.data();
         let mut res = data
@@ -1131,7 +1136,7 @@ impl ServiceMessages {
             .await?;
 
         for message in &mut res.items {
-            s.presign_message(message).await?;
+            s.presign_message_version(message).await?;
         }
 
         Ok(res)
@@ -1142,13 +1147,13 @@ impl ServiceMessages {
         channel_id: ChannelId,
         version_id: MessageVerId,
         user_id: UserId,
-    ) -> Result<Message> {
+    ) -> Result<MessageVersion> {
         let s = &self.state;
         let data = s.data();
         let mut message = data
             .message_version_get(channel_id, version_id, user_id)
             .await?;
-        s.presign_message(&mut message).await?;
+        s.presign_message_version(&mut message).await?;
         Ok(message)
     }
 

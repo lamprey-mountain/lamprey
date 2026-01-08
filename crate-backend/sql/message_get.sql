@@ -1,23 +1,23 @@
 SELECT
-    msg.type as "message_type: DbMessageType",
-    msg.id,
-    msg.channel_id,
-    msg.version_id,
-    msg.ordering,
-    msg.content,
-    msg.metadata,
-    msg.reply_id,
-    msg.override_name,
-    msg.author_id,
-    msg.created_at,
-    msg.edited_at,
-    msg.deleted_at,
-    msg.removed_at,
-    msg.pinned,
-    hm.mentions,
-    coalesce(att_json.attachments, '{}') as "attachments!",
-    msg.embeds as "embeds"
-from message as msg
-left join att_json on att_json.version_id = msg.version_id
-left join hydrated_mentions hm on hm.message_id = msg.id
-where is_latest and channel_id = $1 and msg.id = $2 and msg.deleted_at is null
+    mv.type as "message_type: DbMessageType",
+    m.id,
+    m.channel_id,
+    m.author_id,
+    m.created_at,
+    m.deleted_at,
+    m.removed_at,
+    m.pinned,
+    mv.version_id,
+    mv.author_id as version_author_id,
+    mv.content,
+    mv.metadata,
+    mv.reply_id,
+    mv.override_name,
+    mv.embeds as "embeds",
+    mv.created_at as version_created_at,
+    mv.deleted_at as version_deleted_at,
+    coalesce(att_json.attachments, '{}') as "attachments!"
+FROM message AS m
+JOIN message_version AS mv ON m.latest_version_id = mv.version_id
+LEFT JOIN att_json ON att_json.version_id = mv.version_id
+WHERE m.channel_id = $1 AND m.id = $2 AND m.deleted_at IS NULL

@@ -176,11 +176,12 @@ pub mod next {
         // user is not a bot
         // bot is not a bridge
         // you can only puppet users of type Puppet
-        // you can only puppet your own pupets
+        // you can only puppet your own puppets
+        // user is not a puppet
 
         // missing permissions (Forbidden)
-        // slowmode
-        // invalid data
+        // slowmode in effect
+        // invalid data (populate fields)
 
         // channel is archived
         // channel is removed
@@ -190,6 +191,8 @@ pub mod next {
         // dms can only be with a single person
         // gdm has too many members
         // can only create dms/gdms outside of rooms
+        // channel doesnt have text
+        // channel doesnt have voice
 
         // bitrate is too high
         // cannot set bitrate for non voice thread
@@ -204,6 +207,23 @@ pub mod next {
         // UnknownMediaScanner,
 
         // latest message version cannot be deleted
+        // cannot delete that message type
+        // cannot edit that message type
+        // cannot edit other user's messages
+        // maximum number of pinned messages reached
+        // invalid message content (must contain content, attachments, or embeds)
+
+        // duplicate media id
+        // media already used
+
+        // room not found
+        // channel not found
+        // thread not found
+        // message not found
+        // message version not found
+        // user not found
+        // media not found
+        // ...etc
     }
 
     /// warnings that require ?force=true

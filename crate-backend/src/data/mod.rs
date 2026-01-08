@@ -47,7 +47,7 @@ use crate::services::admin::AdminCollectGarbageMode;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
     DbSessionCreate, DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink,
-    MediaLinkType, Message as MessageV1, MessageId, MessageRef, MessageVerId, Permissions, RoleId,
+    MediaLinkType, MentionsIds, MessageId, MessageRef, MessageVerId, Permissions, RoleId,
     RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
     UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
@@ -534,6 +534,11 @@ pub trait DataMessage {
         message_id: MessageId,
         limit: u16,
     ) -> Result<Vec<MessageV2>>;
+    async fn message_fetch_mention_ids(
+        &self,
+        channel_id: ChannelId,
+        version_ids: &[MessageVerId],
+    ) -> Result<Vec<MentionsIds>>;
 }
 
 #[async_trait]
@@ -731,7 +736,7 @@ pub trait DataSearch {
         query: SearchMessageRequest,
         paginate: PaginationQuery<MessageId>,
         channel_visibility: &[(ChannelId, bool)],
-    ) -> Result<PaginationResponse<MessageV1>>;
+    ) -> Result<PaginationResponse<MessageV2>>;
     async fn search_channel(
         &self,
         user_id: UserId,

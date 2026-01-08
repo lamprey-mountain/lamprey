@@ -1,60 +1,62 @@
-with recursive message_tree as (
-    select
-        id,
-        reply_id,
-        1 as depth
-    from
-        message
-    where
-        ($2::uuid is not null and id = $2::uuid)
-        or ($2::uuid is null and reply_id is null)
-    union all
-    select
+WITH recursive message_tree AS (
+    SELECT
         m.id,
-        m.reply_id,
-        mt.depth + 1
-    from
+        mv.reply_id,
+        1 AS depth
+    FROM
         message m
-        join message_tree mt on m.reply_id = mt.id
-    where
+        JOIN message_version mv ON m.latest_version_id = mv.version_id
+    WHERE
+        ($2::uuid IS NOT NULL AND m.id = $2::uuid)
+        OR ($2::uuid IS NULL AND mv.reply_id IS NULL)
+    UNION ALL
+    SELECT
+        m.id,
+        mv2.reply_id,
+        mt.depth + 1
+    FROM
+        message m
+        JOIN message_version mv2 ON m.latest_version_id = mv2.version_id
+        JOIN message_tree mt ON mv2.reply_id = mt.id
+    WHERE
         mt.depth < $3
 ),
-ranked_messages as (
-    select
+ranked_messages AS (
+    SELECT
         id,
         depth,
-        row_number() over (partition by reply_id order by id) as rn
-    from
+        row_number() OVER (PARTITION BY reply_id ORDER BY id) AS rn
+    FROM
         message_tree
 ),
-filtered_messages as (
-    select id
-    from ranked_messages
-    where (depth = 1 or rn <= $4 or $4 is null)
+filtered_messages AS (
+    SELECT id
+    FROM ranked_messages
+    WHERE (depth = 1 OR rn <= $4 OR $4 IS NULL)
 )
-select
-    msg.type as "message_type: DbMessageType",
-    msg.id,
-    msg.channel_id,
-    msg.version_id,
-    msg.ordering,
-    msg.content,
-    msg.metadata,
-    msg.reply_id,
-    msg.override_name,
-    msg.author_id,
-    msg.created_at,
-    msg.edited_at,
-    msg.deleted_at,
-    msg.removed_at,
-    msg.pinned,
-    hm.mentions,
-    coalesce(att_json.attachments, '{}') as "attachments!",
-    msg.embeds as "embeds"
-from message as msg
-join filtered_messages fm on msg.id = fm.id
-left join att_json on att_json.version_id = msg.version_id
-left join hydrated_mentions hm on hm.message_id = msg.id
-where is_latest and channel_id = $1 and msg.deleted_at is null
-  and msg.id > $5 AND msg.id < $6
-order by (CASE WHEN $7 = 'f' THEN msg.id END), msg.id DESC LIMIT $8
+SELECT
+    mv.type as "message_type: DbMessageType",
+    m.id,
+    m.channel_id,
+    m.author_id,
+    m.created_at,
+    m.deleted_at,
+    m.removed_at,
+    m.pinned,
+    mv.version_id,
+    mv.author_id as version_author_id,
+    mv.content,
+    mv.metadata,
+    mv.reply_id,
+    mv.override_name,
+    mv.embeds as "embeds",
+    mv.created_at as version_created_at,
+    mv.deleted_at as version_deleted_at,
+    coalesce(att_json.attachments, '{}') as "attachments!"
+FROM message AS m
+JOIN filtered_messages fm ON m.id = fm.id
+JOIN message_version AS mv ON m.latest_version_id = mv.version_id
+LEFT JOIN att_json ON att_json.version_id = mv.version_id
+WHERE m.channel_id = $1 AND m.deleted_at IS NULL
+  AND m.id > $5 AND m.id < $6
+ORDER BY (CASE WHEN $7 = 'f' THEN m.id END), m.id DESC LIMIT $8
