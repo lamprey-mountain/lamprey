@@ -20,7 +20,7 @@ pub enum Permission {
     /// probably a major footgun. i'd like to remove it, but theres legit purposes for it right now...
     Admin,
 
-    /// can configure all bots and kick all bots
+    /// can add, configure, and kick bots
     IntegrationsManage,
 
     /// can add and remove emoji
