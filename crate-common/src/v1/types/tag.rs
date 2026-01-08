@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -83,9 +83,8 @@ pub struct TagPatch {
     pub restricted: Option<bool>,
 }
 
-
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TagDeleteQuery {
     #[serde(default)]
@@ -93,7 +92,7 @@ pub struct TagDeleteQuery {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TagSearchQuery {
     pub query: String,

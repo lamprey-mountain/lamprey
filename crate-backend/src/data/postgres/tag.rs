@@ -197,4 +197,40 @@ impl DataTag for Postgres {
             |i: &Tag| i.id.to_string()
         )
     }
+
+    async fn tag_list(
+        &self,
+        forum_channel_id: ChannelId,
+        pagination: PaginationQuery<TagId>,
+    ) -> Result<PaginationResponse<Tag>> {
+        let p: Pagination<_> = pagination.try_into()?;
+
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbTag,
+                r#"
+                SELECT
+                    t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                    (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
+                    (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
+                FROM tag t
+                WHERE t.channel_id = $1
+                AND t.id > $2 AND t.id < $3
+                ORDER BY (CASE WHEN $4 = 'f' THEN t.id END), t.id DESC LIMIT $5
+                "#,
+                *forum_channel_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                "SELECT count(*) FROM tag WHERE channel_id = $1",
+                *forum_channel_id
+            ),
+            |i: &Tag| i.id.to_string()
+        )
+    }
 }

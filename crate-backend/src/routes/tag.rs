@@ -7,13 +7,11 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    tag::{Tag, TagCreate, TagPatch},
+    tag::{Tag, TagCreate, TagDeleteQuery, TagPatch, TagSearchQuery},
     util::Changes,
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, PaginationQuery,
     PaginationResponse, Permission, TagId,
 };
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -275,10 +273,46 @@ async fn tag_search(
     Ok(Json(tags))
 }
 
+/// Tag list
+///
+/// List all tags in a forum channel.
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/tag",
+    params(
+        ("channel_id", description = "The ID of the forum channel to list tags from."),
+        PaginationQuery<TagId>,
+    ),
+    tags = ["tag"],
+    responses(
+        (status = OK, body = PaginationResponse<Tag>, description = "success"),
+    )
+)]
+async fn tag_list(
+    Path(channel_id): Path<ChannelId>,
+    auth: Auth2,
+    Query(pagination): Query<PaginationQuery<TagId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if !channel.ty.has_tags() {
+        return Err(Error::BadStatic("channel does not support tags"));
+    }
+
+    let tags = s.data().tag_list(channel_id, pagination).await?;
+
+    Ok(Json(tags))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(tag_create))
         .routes(routes!(tag_update))
         .routes(routes!(tag_delete))
         .routes(routes!(tag_search))
+        .routes(routes!(tag_list))
 }
