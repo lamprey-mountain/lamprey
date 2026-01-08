@@ -23,12 +23,6 @@ use crate::{
     Error, ServerState,
 };
 
-#[derive(Debug, Deserialize)]
-struct TagDeleteQuery {
-    #[serde(default)]
-    force: bool,
-}
-
 /// Tag create
 #[utoipa::path(
     post,
@@ -242,11 +236,6 @@ async fn tag_delete(
     .await?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
-}
-
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
-pub struct TagSearchQuery {
-    pub query: String,
 }
 
 /// Tag search

@@ -82,3 +82,19 @@ pub struct TagPatch {
     pub archived: Option<bool>,
     pub restricted: Option<bool>,
 }
+
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct TagDeleteQuery {
+    #[serde(default)]
+    pub force: bool,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct TagSearchQuery {
+    pub query: String,
+}

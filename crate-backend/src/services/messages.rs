@@ -697,7 +697,7 @@ impl ServiceMessages {
                 .await?;
         }
 
-        let mut ver = data
+        let ver = data
             .message_version_get(thread_id, version_id, user_id)
             .await?;
 
