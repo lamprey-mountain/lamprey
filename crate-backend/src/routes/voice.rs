@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::IntoResponse,
     Json,
 };
@@ -9,9 +9,11 @@ use common::v1::types::{
     misc::UserIdReq,
     util::{Changes, Time},
     voice::{
-        SfuCommand, SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
+        CallCreate, CallDeleteParams, CallPatch, RingEligibility, RingStart, RingStop, SfuCommand,
+        SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
     },
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, PaginationResponse, Permission,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, PaginationResponse,
+    Permission,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -112,7 +114,7 @@ async fn voice_state_patch(
         });
 
         old_state.channel_id = channel_id;
-        srv.voice.state_put(old_state.clone());
+        srv.voice.state_put(old_state.clone()).await;
 
         if let Some(room_id) = thread.room_id {
             s.audit_log_append(AuditLogEntry {
@@ -167,7 +169,7 @@ async fn voice_state_patch(
             },
         });
 
-        srv.voice.state_put(state.clone());
+        srv.voice.state_put(state.clone()).await;
         old_state = state;
 
         if let Some(room_id) = thread.room_id {
@@ -225,7 +227,7 @@ async fn voice_state_patch(
             },
         });
 
-        srv.voice.state_put(state.clone());
+        srv.voice.state_put(state.clone()).await;
         old_state = state;
     }
 
@@ -317,7 +319,7 @@ async fn voice_state_disconnect_all(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::VoiceDisconnect)?;
-    srv.voice.disconnect_everyone(channel_id)?;
+    srv.voice.disconnect_everyone(channel_id).await?;
     let thread = srv.channels.get(channel_id, None).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
@@ -477,17 +479,198 @@ async fn voice_state_list(
     }))
 }
 
-/// Voice region list (TODO)
+/// Voice call create
+#[utoipa::path(
+    post,
+    path = "/voice",
+    tags = ["voice"],
+    responses(
+        (status = NO_CONTENT, description = "ok"),
+    )
+)]
+async fn voice_call_create(
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<CallCreate>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let perms = s
+        .services()
+        .perms
+        .for_channel(auth.user.id, json.channel_id)
+        .await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let channel = s.services().channels.get(json.channel_id, None).await?;
+    if channel.ty != ChannelType::Broadcast {
+        return Err(Error::BadStatic(
+            "calls can only be created in Broadcast channels",
+        ));
+    }
+    s.services().voice.call_create(json).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Voice call delete
+#[utoipa::path(
+    delete,
+    path = "/voice/{channel_id}",
+    params(("channel_id", description = "Channel id")),
+    tags = ["voice"],
+    responses(
+        (status = NO_CONTENT, description = "ok"),
+    )
+)]
+async fn voice_call_delete(
+    Path(channel_id): Path<ChannelId>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    Query(params): Query<CallDeleteParams>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let perms = s
+        .services()
+        .perms
+        .for_channel(auth.user.id, channel_id)
+        .await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let channel = s.services().channels.get(channel_id, None).await?;
+    if channel.ty != ChannelType::Broadcast {
+        return Err(Error::BadStatic(
+            "calls can only be deleted in Broadcast channels",
+        ));
+    }
+    if params.force {
+        perms.ensure(Permission::VoiceDisconnect)?;
+    }
+    s.services()
+        .voice
+        .call_delete(channel_id, params.force)
+        .await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Voice call get
 #[utoipa::path(
     get,
-    path = "/voice/region",
+    path = "/voice/{channel_id}",
+    params(("channel_id", description = "Channel id")),
     tags = ["voice"],
     responses(
         (status = OK, body = (), description = "ok"),
     )
 )]
-async fn voice_region_list(State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+async fn voice_call_get(
+    Path(channel_id): Path<ChannelId>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let perms = s
+        .services()
+        .perms
+        .for_channel(auth.user.id, channel_id)
+        .await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let call = s.services().voice.call_get(channel_id)?;
+    Ok(Json(call))
+}
+
+/// Voice call update
+#[utoipa::path(
+    patch,
+    path = "/voice/{channel_id}",
+    params(("channel_id", description = "Channel id")),
+    tags = ["voice"],
+    responses(
+        (status = OK, body = (), description = "ok"),
+    )
+)]
+async fn voice_call_update(
+    Path(channel_id): Path<ChannelId>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<CallPatch>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let perms = s
+        .services()
+        .perms
+        .for_channel(auth.user.id, channel_id)
+        .await?;
+    perms.ensure(Permission::ViewChannel)?;
+    s.services().voice.call_update(channel_id, json)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Voice ring check
+#[utoipa::path(
+    get,
+    path = "/voice/{channel_id}/ring",
+    params(("channel_id", description = "Channel id")),
+    tags = ["voice"],
+    responses(
+        (status = OK, body = RingEligibility, description = "ok"),
+    )
+)]
+async fn voice_ring_check(
+    Path(channel_id): Path<ChannelId>,
+    auth: Auth2,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let perms = s
+        .services()
+        .perms
+        .for_channel(auth.user.id, channel_id)
+        .await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let channel = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth.user.id))
+        .await?;
+    let ringable = matches!(channel.ty, ChannelType::Dm | ChannelType::Gdm);
+    Ok(Json(RingEligibility { ringable }))
+}
+
+/// Voice ring start (TODO)
+#[utoipa::path(
+    post,
+    path = "/voice/{channel_id}/ring",
+    params(("channel_id", description = "Channel id")),
+    tags = ["voice"],
+    responses(
+        (status = NO_CONTENT, description = "ok"),
+    )
+)]
+async fn voice_ring_start(
+    Path(_channel_id): Path<ChannelId>,
+    auth: Auth2,
+    State(_s): State<Arc<ServerState>>,
+    _json: Json<RingStart>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    Ok(Error::Unimplemented)
+}
+
+/// Voice ring stop (TODO)
+#[utoipa::path(
+    post,
+    path = "/voice/{channel_id}/ring/ack",
+    params(("channel_id", description = "Channel id")),
+    tags = ["voice"],
+    responses(
+        (status = NO_CONTENT, description = "ok"),
+    )
+)]
+async fn voice_ring_stop(
+    Path(_channel_id): Path<ChannelId>,
+    auth: Auth2,
+    State(_s): State<Arc<ServerState>>,
+    _json: Json<RingStop>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    Ok(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -499,5 +682,11 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(voice_state_move))
         .routes(routes!(voice_state_move_bulk))
         .routes(routes!(voice_state_list))
-        .routes(routes!(voice_region_list))
+        .routes(routes!(voice_call_create))
+        .routes(routes!(voice_call_delete))
+        .routes(routes!(voice_call_get))
+        .routes(routes!(voice_call_update))
+        .routes(routes!(voice_ring_check))
+        .routes(routes!(voice_ring_start))
+        .routes(routes!(voice_ring_stop))
 }

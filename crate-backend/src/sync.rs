@@ -587,6 +587,9 @@ impl Connection {
                 (Some(s), None) => AuthCheck::Channel(s.channel_id),
                 (Some(s), Some(o)) => AuthCheck::EitherChannel(s.channel_id, o.channel_id),
             },
+            MessageSync::CallCreate { call } => AuthCheck::Channel(call.channel_id),
+            MessageSync::CallUpdate { call } => AuthCheck::Channel(call.channel_id),
+            MessageSync::CallDelete { channel_id } => AuthCheck::Channel(*channel_id),
             MessageSync::EmojiCreate { emoji } => match emoji
                 .owner
                 .as_ref()

@@ -6,6 +6,7 @@ use serde::Serialize;
 use crate::{Result, ServerStateInner};
 
 pub struct ServiceNotifications {
+    #[allow(unused)] // TEMP
     state: Arc<ServerStateInner>,
 }
 
@@ -27,6 +28,7 @@ impl ServiceNotifications {
     }
 
     /// send a notification to a user through the web push api
+    #[allow(unused)] // TEMP
     pub async fn push(&self, payload: NotificationPayload) -> Result<()> {
         todo!()
     }

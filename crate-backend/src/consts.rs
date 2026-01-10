@@ -33,3 +33,6 @@ pub const RETENTION_AUDIT_LOG: u32 = 90;
 
 /// how many days to retain room analytics entries
 pub const RETENTION_ROOM_ANALYTICS: u32 = 180;
+
+/// how long to retain calls without any users for, in seconds (for Broadcast channels)
+pub const EMPTY_CALL_TIMEOUT: u64 = 300;

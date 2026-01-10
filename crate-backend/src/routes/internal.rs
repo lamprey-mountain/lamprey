@@ -147,9 +147,9 @@ impl SfuConnection {
                 debug!("change voice state {user_id} {old:?} {state:?}");
                 let srv = self.s.services();
                 if let Some(state) = &state {
-                    srv.voice.state_put(state.clone());
+                    srv.voice.state_put(state.clone()).await;
                 } else {
-                    srv.voice.state_remove(&user_id);
+                    srv.voice.state_remove(&user_id).await;
                 }
 
                 self.s.broadcast(MessageSync::VoiceState {

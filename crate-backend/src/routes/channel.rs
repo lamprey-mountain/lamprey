@@ -444,15 +444,10 @@ async fn channel_update(
         s.data()
             .media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
             .await?;
-        if let Some(icon) = json.icon {
+        if let Some(icon) = icon {
             s.data()
-                .media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
+                .media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
                 .await?;
-            if let Some(icon) = icon {
-                s.data()
-                    .media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
-                    .await?;
-            }
         }
     }
 
@@ -568,7 +563,7 @@ async fn channel_remove(
     }
     data.channel_delete(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
-    srv.voice.disconnect_everyone(channel_id)?;
+    srv.voice.disconnect_everyone(channel_id).await?;
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {

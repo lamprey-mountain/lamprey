@@ -1,15 +1,19 @@
 use std::ops::Deref;
 
+use thiserror::Error;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use thiserror::Error;
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
+
+#[cfg(feature = "validator")]
+use validator::Validate;
 
 use crate::v1::types::{
     util::{some_option, Time},
-    MediaId, SessionId, SfuId, UserId,
+    MediaId, RoomId, SessionId, SfuId, UserId,
 };
 
 use super::ChannelId;
@@ -405,4 +409,81 @@ pub struct VoiceStatePatch {
     /// - you must have VoiceRequest to set this
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub requested_to_speak_at: Option<Option<Time>>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct CallCreate {
+    /// channel to create a call in
+    ///
+    /// must be a Broadcast channel
+    pub channel_id: ChannelId,
+
+    /// call topic
+    ///
+    /// must have VoiceMute permission in target channel to set
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 512))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 512)))]
+    pub topic: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Call {
+    pub room_id: Option<RoomId>,
+    pub channel_id: ChannelId,
+    pub topic: Option<String>,
+    pub created_at: Time,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct CallPatch {
+    /// the current call topic
+    ///
+    /// only unsuppressed users can change the call topic
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 512))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 512)))]
+    #[serde(default, deserialize_with = "some_option")]
+    pub topic: Option<Option<String>>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct CallDeleteParams {
+    /// if people are still connected to this channel, try to forcibly disconnect them
+    ///
+    /// requires VoiceDisconnect permission
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub force: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RingEligibility {
+    /// whether ring endpoints can be used
+    ///
+    /// true in dms and gdms, false otherwise
+    pub ringable: bool,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RingStart {
+    pub user_ids: Vec<UserId>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RingStop {
+    pub user_ids: Vec<UserId>,
 }

@@ -5,6 +5,7 @@ use common::v1::types::{ChannelId, MessageId, MessageVerId, UserId};
 use crate::{Result, ServerStateInner};
 
 pub struct ServiceUnread {
+    #[allow(unused)] // TEMP
     state: Arc<ServerStateInner>,
 }
 
@@ -13,6 +14,7 @@ impl ServiceUnread {
         Self { state }
     }
 
+    #[allow(unused)] // TEMP
     pub async fn ack(
         &self,
         user_id: UserId,

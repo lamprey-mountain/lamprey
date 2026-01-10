@@ -224,6 +224,9 @@ pub mod next {
         // user not found
         // media not found
         // ...etc
+
+        // calls can only be created in Broadcast channels
+        // calls can only be deleted in Broadcast channels
     }
 
     /// warnings that require ?force=true

@@ -5,13 +5,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Connection,
-    automod::{AutomodRule, AutomodRuleExecution},
-    presence::Presence,
-    util::Time,
-    webhook::Webhook,
-    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, InviteTargetId,
-    InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId, application::Connection, automod::{AutomodRule, AutomodRuleExecution}, presence::Presence, util::Time, voice::Call, webhook::Webhook
 };
 
 use crate::v2::types::message::Message as MessageV2;
@@ -383,6 +377,18 @@ pub enum MessageSync {
         // HACK: make it possible to use this for auth checks
         #[serde(skip)]
         old_state: Option<VoiceState>,
+    },
+
+    CallCreate {
+        call: Call,
+    },
+
+    CallUpdate {
+        call: Call,
+    },
+
+    CallDelete {
+        channel_id: ChannelId,
     },
 
     UserCreate {
