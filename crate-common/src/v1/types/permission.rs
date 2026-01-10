@@ -198,6 +198,9 @@ pub enum Permission {
     /// can create calendar events and delete their own calendar events
     CalendarEventCreate,
 
+    /// can rsvp to calendar events
+    CalendarEventRsvp,
+
     /// can manage calendar events
     CalendarEventManage,
 }

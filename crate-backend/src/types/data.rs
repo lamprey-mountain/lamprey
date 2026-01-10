@@ -475,6 +475,7 @@ impl_perms!(
     ChannelEdit,
     CalendarEventCreate,
     CalendarEventManage,
+    CalendarEventRsvp,
 );
 
 impl From<RoomMembership> for DbMembership {

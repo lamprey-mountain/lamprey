@@ -222,6 +222,12 @@ export const permissions: Array<Perm> = [
 		group: "calendar",
 	},
 	{
+		id: "CalendarEventRsvp",
+		name: "RSVP to calendar events",
+		description: "Can RSVP to calendar events",
+		group: "calendar",
+	},
+	{
 		id: "CalendarEventManage",
 		name: "Manage calendar events",
 		description:
@@ -273,7 +279,7 @@ export const permissions: Array<Perm> = [
 	{
 		id: "VoiceVad",
 		name: "Use voice activity detection",
-		description: "Can use voice activity detection",
+		description: "(todo) Can use voice activity detection",
 		group: "voice",
 	},
 	{
@@ -285,7 +291,7 @@ export const permissions: Array<Perm> = [
 	{
 		id: "VoiceBroadcast",
 		name: "Broadcast voice",
-		description: "Can broadcast voice to all channels in a category",
+		description: "(todo) Can broadcast voice to all channels in a category",
 		group: "voice",
 	},
 	{
@@ -546,7 +552,7 @@ export const permissionsOverwrites: Array<Perm> = [
 	{
 		id: "VoiceVad",
 		name: "Use voice activity detection",
-		description: "Can use voice activity detection",
+		description: "(todo) Can use voice activity detection",
 		group: "voice",
 		types: ["Voice", "Broadcast", "Category"],
 	},
@@ -560,7 +566,7 @@ export const permissionsOverwrites: Array<Perm> = [
 	{
 		id: "VoiceBroadcast",
 		name: "Broadcast voice",
-		description: "Can broadcast voice to all channels in a category",
+		description: "(todo) Can broadcast voice to all channels in a category",
 		group: "voice",
 		types: ["Voice", "Broadcast", "Category"],
 	},
@@ -575,6 +581,12 @@ export const permissionsOverwrites: Array<Perm> = [
 		id: "CalendarEventCreate",
 		name: "Create calendar events",
 		description: "Can create events. Can edit and delete their own events.",
+		types: ["Calendar", "Category"],
+	},
+	{
+		id: "CalendarEventRsvp",
+		name: "RSVP to calendar events",
+		description: "Can RSVP to calendar events",
 		types: ["Calendar", "Category"],
 	},
 	{

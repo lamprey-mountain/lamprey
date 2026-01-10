@@ -655,6 +655,7 @@ async fn calendar_event_rsvp_put(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::CalendarEventRsvp)?;
 
     if auth.user.id != user_id {
         return Err(Error::BadStatic("cannot rsvp other people"));
@@ -746,6 +747,8 @@ async fn calendar_event_rsvp_delete(
     perms.ensure(Permission::ViewChannel)?;
     if auth.user.id != user_id {
         perms.ensure(Permission::CalendarEventManage)?;
+    } else {
+        perms.ensure(Permission::CalendarEventRsvp)?;
     }
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -879,6 +882,7 @@ async fn calendar_overwrite_rsvp_put(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::CalendarEventRsvp)?;
 
     if auth.user.id != user_id {
         return Err(Error::BadStatic("cannot rsvp other people"));
@@ -980,6 +984,8 @@ async fn calendar_overwrite_rsvp_delete(
     perms.ensure(Permission::ViewChannel)?;
     if auth.user.id != user_id {
         perms.ensure(Permission::CalendarEventManage)?;
+    } else {
+        perms.ensure(Permission::CalendarEventRsvp)?;
     }
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
