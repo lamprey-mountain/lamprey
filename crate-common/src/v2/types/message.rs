@@ -12,10 +12,9 @@ use crate::v1::types::{
     reaction::ReactionCounts,
     util::{some_option, Diff},
     Channel, ChannelId, Embed, EmbedCreate, Mentions, MessageDefaultMarkdown, MessageId,
-    MessageType, MessageVerId, ParseMentions, Pinned, UserId,
+    MessageType, MessageVerId, ParseMentions, Pinned, RoomId, UserId,
 };
-// use crate::v2::types::media::{Media, MediaReference};
-use crate::v1::types::media::Media;
+use crate::v2::types::media::{Media, MediaReference};
 
 /// a message
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,24 +189,12 @@ pub struct MessagePatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageAttachmentCreate {
-    // FIXME
-    // #[serde(flatten)]
-    // pub media: MediaReference,
-    /// Shortcut for setting alt text on the media item
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub alt: Option<Option<String>>,
-
-    /// Shortcut for setting filename on the media item
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 256)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
-    pub filename: Option<String>,
+    #[serde(flatten)]
+    pub ty: MessageAttachmentCreateType,
 
     /// if this is a spoiler and should be blurred
-    pub spoiler: Option<bool>,
+    #[serde(default)]
+    pub spoiler: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -223,19 +210,56 @@ pub struct MessageAttachment {
     pub spoiler: bool,
 }
 
-/// for forwards
+/// a snapshot of a message at a point in time, for forwards
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageSnapshot {
+    pub room_id: Option<RoomId>,
+    pub channel_id: ChannelId,
+    pub message_id: MessageId,
+    pub version_id: MessageVerId,
+    pub created_at: Time,
     #[serde(flatten)]
     pub message_type: MessageType,
+
+    /// who this message mentioned
+    #[serde(skip_serializing_if = "Mentions::is_empty")]
+    pub mentions: Mentions,
 }
 
-// // forwards as attachments?
+// FIXME: validator
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum MessageAttachmentCreateType {
+    Media {
+        #[serde(flatten)]
+        media: MediaReference,
+
+        /// Shortcut for setting alt text on the media item
+        #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+        // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+        alt: Option<Option<String>>,
+
+        /// Shortcut for setting filename on the media item
+        #[cfg_attr(
+            feature = "utoipa",
+            schema(required = false, min_length = 1, max_length = 256)
+        )]
+        // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+        filename: Option<String>,
+    },
+
+    Forward {
+        channel_id: ChannelId,
+        message_id: MessageId,
+    },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
-pub enum AttachmentType {
+pub enum MessageAttachmentType {
     /// a piece of media
     // or should this be called File? should i differentiate files and media?
     Media { media: Media },

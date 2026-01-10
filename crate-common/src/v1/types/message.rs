@@ -125,16 +125,20 @@ pub struct ParseMentions {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
     /// the users that were mentioned
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub users: Vec<MentionsUser>,
 
     /// the roles that were mentioned
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub roles: Vec<MentionsRole>,
 
     /// the channels that were mentioned
     // NOTE: this may not be necessary; the user should already have all channels. this is only needed for forwards, but in that case do i really want to leak channel names/types?
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub channels: Vec<MentionsChannel>,
 
     /// the custom emojis that were used in this message
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub emojis: Vec<MentionsEmoji>,
 
     /// if this message mentions everyone
@@ -231,6 +235,7 @@ pub struct MessageCreate {
     ///
     /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
+    // TODO: remove
     pub metadata: Option<serde_json::Value>,
 
     /// the message this message is replying to
@@ -239,6 +244,7 @@ pub struct MessageCreate {
     /// override the name of this message's sender
     ///
     /// deprecated: create new puppets for each bridged user instead
+    // TODO: remove
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     #[serde(default)]
     pub override_name: Option<String>,
@@ -252,6 +258,7 @@ pub struct MessageCreate {
     pub embeds: Vec<EmbedCreate>,
 
     /// custom timestamps (timestamp massaging), for bridge bots
+    // TODO: remove (use header instead)
     pub created_at: Option<Time>,
 
     #[serde(default)]
@@ -278,6 +285,7 @@ pub struct MessagePatch {
     /// arbitrary metadata associated with a message
     ///
     /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
+    // TODO: remove (use header instead)
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     #[serde(default, deserialize_with = "some_option")]
     pub metadata: Option<Option<serde_json::Value>>,
@@ -289,11 +297,13 @@ pub struct MessagePatch {
     /// override the name of this message's sender
     ///
     /// deprecated: create new puppets for each bridged user instead
+    // TODO: remove
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<Option<String>>,
 
     pub embeds: Option<Vec<EmbedCreate>>,
 
+    // TODO: remove (use header instead)
     pub edited_at: Option<Time>,
 }
 

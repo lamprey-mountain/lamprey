@@ -233,11 +233,14 @@ impl Connection {
                     for (channel_id, typing_user_id, until) in typing_states {
                         if let Ok(perms) = srv.perms.for_channel(user_id, channel_id).await {
                             if perms.has(Permission::ViewChannel) {
-                                self.push_sync(MessageSync::ChannelTyping {
-                                    channel_id,
-                                    user_id: typing_user_id,
-                                    until: until.into(),
-                                }, None);
+                                self.push_sync(
+                                    MessageSync::ChannelTyping {
+                                        channel_id,
+                                        user_id: typing_user_id,
+                                        until: until.into(),
+                                    },
+                                    None,
+                                );
                             }
                         }
                     }
@@ -255,11 +258,14 @@ impl Connection {
                                 if !is_ours {
                                     voice_state.session_id = None;
                                 }
-                                self.push_sync(MessageSync::VoiceState {
-                                    user_id: voice_state.user_id,
-                                    state: Some(voice_state),
-                                    old_state: None,
-                                }, None);
+                                self.push_sync(
+                                    MessageSync::VoiceState {
+                                        user_id: voice_state.user_id,
+                                        state: Some(voice_state),
+                                        old_state: None,
+                                    },
+                                    None,
+                                );
                             }
                         }
                     }

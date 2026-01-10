@@ -308,7 +308,10 @@ async fn tag_list(
         return Err(Error::BadStatic("channel does not support tags"));
     }
 
-    let tags = s.data().tag_list(channel_id, q.archived, pagination).await?;
+    let tags = s
+        .data()
+        .tag_list(channel_id, q.archived, pagination)
+        .await?;
 
     Ok(Json(tags))
 }

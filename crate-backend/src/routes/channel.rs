@@ -446,14 +446,14 @@ async fn channel_update(
             .await?;
         if let Some(icon) = json.icon {
             s.data()
-            .media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
-            .await?;
-        if let Some(icon) = icon {
-            s.data()
-                .media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
+                .media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
                 .await?;
+            if let Some(icon) = icon {
+                s.data()
+                    .media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
+                    .await?;
+            }
         }
-    }
     }
 
     Ok(Json(chan))
