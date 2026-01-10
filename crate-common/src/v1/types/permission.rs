@@ -63,7 +63,7 @@ pub enum Permission {
     /// send messages
     MessageCreate,
 
-    /// can send messages in threads (TODO)
+    /// can send messages in threads
     ///
     /// in threads, this must be used instead of MessageCreate.
     MessageCreateThread,

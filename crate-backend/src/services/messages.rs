@@ -147,7 +147,11 @@ impl ServiceMessages {
         let can_use_external_emoji = if !is_webhook {
             let perms = srv.perms.for_channel(user_id, thread_id).await?;
             perms.ensure(Permission::ViewChannel)?;
-            perms.ensure(Permission::MessageCreate)?;
+            if thread.ty.is_thread() {
+                perms.ensure(Permission::MessageCreateThread)?;
+            } else {
+                perms.ensure(Permission::MessageCreate)?;
+            }
 
             if !perms.can_bypass_slowmode() {
                 if let Some(message_slowmode_expire_at) = data
