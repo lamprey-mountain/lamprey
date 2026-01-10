@@ -7,6 +7,7 @@ use crate::ServerState;
 mod admin;
 mod application;
 mod auth;
+mod oauth;
 mod automod;
 mod calendar;
 mod channel;
@@ -50,6 +51,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(auth::routes())
         .merge(automod::routes())
         .merge(calendar::routes())
+        .merge(channel::routes())
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(emoji::routes())
@@ -59,6 +61,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(message::routes())
         .merge(moderation::routes())
         .merge(notification::routes())
+        .merge(oauth::routes())
         .merge(permission_overwrite::routes())
         .merge(public::routes())
         .merge(reaction::routes())
@@ -72,7 +75,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(server::routes())
         .merge(session::routes())
         .merge(sync::routes())
-        .merge(channel::routes())
         .merge(tag::routes())
         .merge(thread::routes())
         .merge(user::routes())
