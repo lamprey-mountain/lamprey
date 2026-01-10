@@ -7,7 +7,7 @@ use axum::{
 };
 use common::v1::types::{
     misc::UserIdReq,
-    util::Changes,
+    util::{Changes, Time},
     voice::{
         SfuCommand, SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
     },
@@ -56,7 +56,7 @@ async fn voice_state_get(
     }
 }
 
-/// Voice state patch (TODO)
+/// Voice state patch
 #[utoipa::path(
     patch,
     path = "/voice/{thread_id}/member/{user_id}",
@@ -64,7 +64,7 @@ async fn voice_state_get(
         ("thread_id", description = "Thread id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice"],
+    tags = ["voice", "badge.perm-opt.VoiceMute", "badge.perm-opt.VoiceDeafen", "badge.perm-opt.VoiceRequest", "badge.perm-opt.VoiceMove"],
     responses(
         (status = OK, body = VoiceState, description = "ok"),
     )
@@ -73,8 +73,10 @@ async fn voice_state_patch(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth2,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<VoiceStatePatch>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<VoiceStatePatch>,
 ) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -82,8 +84,152 @@ async fn voice_state_patch(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
     perms.ensure(Permission::ViewChannel)?;
-    let _state = srv.voice.state_get(target_user_id);
-    Ok(Error::Unimplemented)
+    let Some(mut old_state) = srv.voice.state_get(target_user_id) else {
+        return Err(Error::NotFound);
+    };
+    let thread = srv.channels.get(thread_id, None).await?;
+
+    // handle move
+    if let Some(channel_id) = json.channel_id {
+        perms.ensure(Permission::VoiceMove)?;
+        let target_thread = srv.channels.get(channel_id, None).await?;
+        if target_thread.room_id != thread.room_id {
+            return Err(Error::BadStatic("cannot move to different room"));
+        }
+        let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
+        target_perms.ensure(Permission::ViewChannel)?;
+
+        let old_channel_id = old_state.channel_id;
+
+        let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+            user_id: target_user_id,
+            state: None,
+            permissions: SfuPermissions {
+                speak: target_perms.has(Permission::VoiceSpeak),
+                video: target_perms.has(Permission::VoiceVideo),
+                priority: target_perms.has(Permission::VoicePriority),
+            },
+        });
+
+        old_state.channel_id = channel_id;
+        srv.voice.state_put(old_state.clone());
+
+        if let Some(room_id) = thread.room_id {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth.user.id,
+                session_id: Some(auth.session.id),
+                reason: reason.clone(),
+                ty: AuditLogEntryType::MemberMove {
+                    user_id: target_user_id,
+                    changes: Changes::new()
+                        .change("thread_id", &old_channel_id, &channel_id)
+                        .build(),
+                },
+            })
+            .await?;
+        }
+    }
+
+    // handle mute/deaf/suppress
+    // TODO: audit logging for suppress
+    if json.mute.is_some() || json.deaf.is_some() || json.suppress.is_some() {
+        if json.mute.is_some() {
+            perms.ensure(Permission::VoiceMute)?;
+        }
+        if json.deaf.is_some() {
+            perms.ensure(Permission::VoiceDeafen)?;
+        }
+        if json.suppress.is_some() {
+            perms.ensure(Permission::VoiceMute)?;
+        }
+
+        let mute = json.mute.unwrap_or(old_state.mute);
+        let deaf = json.deaf.unwrap_or(old_state.deaf);
+        let suppress = json.suppress.unwrap_or(old_state.suppress);
+
+        let state = VoiceState {
+            mute,
+            deaf,
+            suppress,
+            ..old_state
+        };
+
+        let perms_user = srv.perms.for_channel(target_user_id, thread_id).await?;
+        let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+            user_id: target_user_id,
+            state: Some(state.clone()),
+            permissions: SfuPermissions {
+                speak: perms_user.has(Permission::VoiceSpeak),
+                video: perms_user.has(Permission::VoiceVideo),
+                priority: perms_user.has(Permission::VoicePriority),
+            },
+        });
+
+        srv.voice.state_put(state.clone());
+        old_state = state;
+
+        if let Some(room_id) = thread.room_id {
+            if json.mute.is_some() || json.deaf.is_some() {
+                let changes = Changes::new()
+                    .change("mute", &json.mute.unwrap_or(old_state.mute), &mute)
+                    .change("deaf", &json.deaf.unwrap_or(old_state.deaf), &deaf)
+                    .build();
+                if !changes.is_empty() {
+                    s.audit_log_append(AuditLogEntry {
+                        id: AuditLogEntryId::new(),
+                        room_id,
+                        user_id: auth.user.id,
+                        session_id: Some(auth.session.id),
+                        reason: reason.clone(),
+                        ty: AuditLogEntryType::MemberUpdate {
+                            room_id,
+                            user_id: target_user_id,
+                            changes,
+                        },
+                    })
+                    .await?;
+                }
+            }
+        }
+    }
+
+    // TODO: create and enforce permission
+    if let Some(requested_to_speak_at) = json.requested_to_speak_at {
+        if target_user_id != auth.user.id {
+            return Err(Error::BadStatic(
+                "cannot set requested_to_speak_at for others",
+            ));
+        }
+
+        let new_requested_to_speak_at = if requested_to_speak_at.is_some() {
+            Some(Time::now_utc())
+        } else {
+            None
+        };
+
+        let state = VoiceState {
+            requested_to_speak_at: new_requested_to_speak_at,
+            ..old_state
+        };
+
+        let perms_user = srv.perms.for_channel(target_user_id, thread_id).await?;
+        let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+            user_id: target_user_id,
+            state: Some(state.clone()),
+            permissions: SfuPermissions {
+                speak: perms_user.has(Permission::VoiceSpeak),
+                video: perms_user.has(Permission::VoiceVideo),
+                priority: perms_user.has(Permission::VoicePriority),
+            },
+        });
+
+        srv.voice.state_put(state.clone());
+        old_state = state;
+    }
+
+    Ok(Json(old_state))
 }
 
 /// Voice state disconnect
