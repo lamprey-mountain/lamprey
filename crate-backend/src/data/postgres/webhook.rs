@@ -69,7 +69,7 @@ impl DataWebhook for Postgres {
 
         if let Some(avatar_id) = create.avatar {
             sqlx::query!(
-                "INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')",
+                "INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'UserAvatar')",
                 *avatar_id,
                 *webhook_id
             )
@@ -244,13 +244,13 @@ impl DataWebhook for Postgres {
         }
         if let Some(avatar) = patch.avatar {
             sqlx::query!(
-                "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'",
+                "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'UserAvatar'",
                 *webhook_id
             )
             .execute(&mut *tx)
             .await?;
             if let Some(avatar_id) = avatar {
-                sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')", *avatar_id, *webhook_id)
+                sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'UserAvatar')", *avatar_id, *webhook_id)
                     .execute(&mut *tx).await?;
             }
             sqlx::query!(
@@ -342,13 +342,13 @@ impl DataWebhook for Postgres {
         }
         if let Some(avatar) = patch.avatar {
             sqlx::query!(
-                "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'AvatarUser'",
+                "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'UserAvatar'",
                 *webhook_id
             )
             .execute(&mut *tx)
             .await?;
             if let Some(avatar_id) = avatar {
-                sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'AvatarUser')", *avatar_id, *webhook_id)
+                sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'UserAvatar')", *avatar_id, *webhook_id)
                     .execute(&mut *tx).await?;
             }
             sqlx::query!(

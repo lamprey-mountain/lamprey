@@ -61,7 +61,7 @@ async fn room_create(
     let room = s.services().rooms.create(json, auth.user.id, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
-        data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::AvatarRoom)
+        data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::RoomIcon)
             .await?;
     }
 
@@ -187,13 +187,13 @@ async fn room_edit(
 
     if let Some(maybe_media_id) = json.icon {
         let data = s.data();
-        data.media_link_delete(room_id.into_inner(), MediaLinkType::AvatarRoom)
+        data.media_link_delete(room_id.into_inner(), MediaLinkType::RoomIcon)
             .await?;
         if let Some(media_id) = maybe_media_id {
             data.media_link_create_exclusive(
                 media_id,
                 room_id.into_inner(),
-                MediaLinkType::AvatarRoom,
+                MediaLinkType::RoomIcon,
             )
             .await?;
         }

@@ -525,18 +525,13 @@ pub struct RoleDeleteQuery {
 pub enum MediaLinkType {
     Message,
     MessageVersion,
-    // TODO: rename to UserAvatar
-    AvatarUser,
-    // TODO: rename to UserBanner
-    BannerUser,
-    // TODO: rename to ChannelIcon
-    IconThread,
-    // TODO: rename to RoomIcon
-    AvatarRoom,
+    UserAvatar,
+    UserBanner,
+    ChannelIcon,
+    RoomIcon,
+    RoomBanner,
     Embed,
-    // TODO: rename to EmojiCustom
     CustomEmoji,
-    // TODO: add RoomBanner
 }
 
 // TODO: surely there's a better way than manually managing media links/references

@@ -509,7 +509,7 @@ impl ServiceThreads {
             data.media_link_create_exclusive(
                 icon,
                 *channel_id,
-                crate::types::MediaLinkType::IconThread,
+                crate::types::MediaLinkType::ChannelIcon,
             )
             .await?;
         }

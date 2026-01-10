@@ -187,7 +187,7 @@ async fn channel_create_dm(
         .await?;
 
     if let Some(icon) = json.icon {
-        data.media_link_create_exclusive(icon, *channel_id, MediaLinkType::IconThread)
+        data.media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
             .await?;
     }
 
@@ -442,13 +442,18 @@ async fn channel_update(
 
     if let Some(icon) = json.icon {
         s.data()
-            .media_link_delete(*channel_id, MediaLinkType::IconThread)
+            .media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
+            .await?;
+        if let Some(icon) = json.icon {
+            s.data()
+            .media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
             .await?;
         if let Some(icon) = icon {
             s.data()
-                .media_link_create_exclusive(icon, *channel_id, MediaLinkType::IconThread)
+                .media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
                 .await?;
         }
+    }
     }
 
     Ok(Json(chan))
@@ -759,9 +764,9 @@ async fn channel_upgrade(
     // TODO: run in a transaction
     // TODO: move to room create? i need to delete the thread icon before linking the room avatar
     if let Some(icon) = chan.icon {
-        data.media_link_delete(*channel_id, MediaLinkType::IconThread)
+        data.media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
             .await?;
-        data.media_link_create_exclusive(icon, *room.id, MediaLinkType::AvatarRoom)
+        data.media_link_create_exclusive(icon, *room.id, MediaLinkType::RoomIcon)
             .await?;
     }
 

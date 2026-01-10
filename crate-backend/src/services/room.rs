@@ -88,7 +88,7 @@ impl ServiceRooms {
                 data.media_link_delete_all(*room_id).await?;
             }
             if let Some(media_id) = icon {
-                data.media_link_insert(*media_id, *room_id, MediaLinkType::AvatarRoom)
+                data.media_link_insert(*media_id, *room_id, MediaLinkType::RoomIcon)
                     .await?;
             }
         }

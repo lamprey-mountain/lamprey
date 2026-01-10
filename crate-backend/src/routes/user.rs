@@ -78,25 +78,25 @@ async fn user_update(
     }
     data.user_update(target_user_id, patch.clone()).await?;
     if let Some(maybe_avatar) = patch.avatar {
-        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
+        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserAvatar)
             .await?;
         if let Some(avatar_media_id) = maybe_avatar {
             data.media_link_create_exclusive(
                 avatar_media_id,
                 target_user_id.into_inner(),
-                MediaLinkType::AvatarUser,
+                MediaLinkType::UserAvatar,
             )
             .await?;
         }
     }
     if let Some(maybe_banner) = patch.banner {
-        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::BannerUser)
+        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserBanner)
             .await?;
         if let Some(banner_media_id) = maybe_banner {
             data.media_link_create_exclusive(
                 banner_media_id,
                 target_user_id.into_inner(),
-                MediaLinkType::BannerUser,
+                MediaLinkType::UserBanner,
             )
             .await?;
         }
@@ -166,7 +166,7 @@ async fn user_delete(
     }
     let user_to_delete = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     data.user_delete(target_user_id).await?;
-    data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
+    data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserAvatar)
         .await?;
     let srv = s.services();
     srv.users.invalidate(target_user_id).await;
@@ -228,7 +228,7 @@ async fn user_undelete(
             .media_link_create_exclusive(
                 media_id,
                 target_user_id.into_inner(),
-                MediaLinkType::AvatarUser,
+                MediaLinkType::UserAvatar,
             )
             .await
             .is_err()
