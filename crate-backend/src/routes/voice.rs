@@ -195,8 +195,8 @@ async fn voice_state_patch(
         }
     }
 
-    // TODO: create and enforce permission
     if let Some(requested_to_speak_at) = json.requested_to_speak_at {
+        perms.ensure(Permission::VoiceRequest)?;
         if target_user_id != auth.user.id {
             return Err(Error::BadStatic(
                 "cannot set requested_to_speak_at for others",

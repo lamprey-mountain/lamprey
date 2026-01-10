@@ -50,6 +50,11 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::VoicePriority,
     Permission::VoiceSpeak,
     Permission::VoiceVideo,
+    Permission::VoiceVad,
+    Permission::VoiceRequest,
+    Permission::VoiceBroadcast,
+    Permission::MessageCreateThread,
+    Permission::BypassSlowmode,
     Permission::ChannelManage,
     Permission::ChannelEdit,
 ];
@@ -96,6 +101,11 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::VoicePriority,
     Permission::VoiceSpeak,
     Permission::VoiceVideo,
+    Permission::VoiceVad,
+    Permission::VoiceRequest,
+    Permission::VoiceBroadcast,
+    Permission::MessageCreateThread,
+    Permission::BypassSlowmode,
     Permission::ChannelEdit,
 ];
 
@@ -124,6 +134,10 @@ pub const EVERYONE_TRUSTED: &[Permission] = &[
     Permission::VoiceConnect,
     Permission::VoiceSpeak,
     Permission::VoiceVideo,
+    Permission::VoiceVad,
+    Permission::VoiceRequest,
+    Permission::MessageCreateThread,
+    Permission::BypassSlowmode,
     Permission::ChannelEdit,
 ];
 
@@ -145,6 +159,10 @@ pub const EVERYONE_UNTRUSTED: &[Permission] = &[
     Permission::VoiceConnect,
     Permission::VoiceSpeak,
     Permission::VoiceVideo,
+    Permission::VoiceVad,
+    Permission::VoiceRequest,
+    Permission::MessageCreateThread,
+    Permission::BypassSlowmode,
 ];
 
 /// extra permissions for someone who moderates stuff
@@ -173,4 +191,8 @@ pub const MODERATOR: &[Permission] = &[
     Permission::VoiceMove,
     Permission::VoiceMute,
     Permission::VoicePriority, // maybe?
+    Permission::VoiceVad,
+    Permission::VoiceBroadcast,
+    Permission::MessageCreateThread,
+    Permission::BypassSlowmode,
 ];

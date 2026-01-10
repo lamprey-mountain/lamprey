@@ -63,6 +63,11 @@ pub enum Permission {
     /// send messages
     MessageCreate,
 
+    /// can send messages in threads (TODO)
+    ///
+    /// in threads, this must be used instead of MessageCreate.
+    MessageCreateThread,
+
     /// delete other people's messages
     MessageDelete,
 
@@ -118,6 +123,9 @@ pub enum Permission {
     /// (unimplemented) create and delete tags
     // TODO: merge with ChannelManage or ChannelEdit?
     TagManage,
+
+    /// unaffected by slowmode (TODO)
+    BypassSlowmode,
 
     /// can change channel names and topics
     ChannelEdit,
@@ -177,6 +185,15 @@ pub enum Permission {
     /// stream video and screenshare in voice threads
     /// requires VoiceConnect
     VoiceVideo,
+
+    /// use voice activity detection (TODO)
+    VoiceVad,
+
+    /// can request to speak in broadcast channels
+    VoiceRequest,
+
+    /// can broadcast voice to all channels in a category (TODO)
+    VoiceBroadcast,
 
     /// can create calendar events and delete their own calendar events
     CalendarEventCreate,
