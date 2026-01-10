@@ -124,7 +124,7 @@ pub enum Permission {
     // TODO: merge with ChannelManage or ChannelEdit?
     TagManage,
 
-    /// unaffected by slowmode (TODO)
+    /// unaffected by slowmode
     BypassSlowmode,
 
     /// can change channel names and topics

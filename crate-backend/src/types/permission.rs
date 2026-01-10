@@ -72,6 +72,7 @@ impl Permissions {
         self.has(Permission::ChannelManage)
             || self.has(Permission::ThreadManage)
             || self.has(Permission::MemberTimeout)
+            || self.has(Permission::BypassSlowmode)
     }
 
     pub fn can_use_locked_threads(&self) -> bool {
