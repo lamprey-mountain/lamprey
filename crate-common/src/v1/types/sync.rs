@@ -26,7 +26,7 @@ use super::{
     user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
     voice::{SignallingMessage, VoiceState},
     Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
-    RoomMember, Session, SessionId, SessionToken, User, UserId,
+    RoomMember, Session, SessionId, SessionToken, User, UserId, Harvest,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -269,6 +269,8 @@ pub enum MessageSync {
         // TODO: add `messages`
         // messages: Vec<Message>,
     },
+
+    HarvestUpdate { harvest: Harvest },
 
     RoomMemberCreate {
         member: RoomMember,

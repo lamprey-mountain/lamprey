@@ -210,6 +210,7 @@ genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
 genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
 genid!(Webhook, "00000000-0000-0000-0000-00000webhook");
 genid!(CalendarEvent, "00000000-0000-0000-0000-calendarevent");
+genid!(Harvest);
 
 #[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");

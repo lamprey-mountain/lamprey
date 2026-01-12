@@ -10,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::v1::types::{
     application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
     util::Time, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, ChannelId,
-    ChannelReorderItem, ChannelType, EmojiId, InviteCode, MessageId, MessageVerId,
+    ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId, MessageVerId,
     PermissionOverwriteType, RoleId, RoomId, SessionId, UserId, WebhookId,
 };
 
@@ -388,6 +388,10 @@ pub enum AuditLogEntryType {
 
     UserUndelete {
         user_id: UserId,
+    },
+
+    HarvestCreate {
+        harvest_id: HarvestId,
     },
 
     AdminWhisper {

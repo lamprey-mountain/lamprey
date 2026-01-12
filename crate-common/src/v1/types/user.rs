@@ -12,7 +12,7 @@ use crate::v1::types::error::Error;
 use crate::v1::types::presence::Presence;
 use crate::v1::types::user_config::UserConfigUser;
 use crate::v1::types::util::{some_option, Diff, Time};
-use crate::v1::types::MediaId;
+use crate::v1::types::{HarvestId, MediaId};
 
 use super::email::EmailInfo;
 use super::user_config::UserConfigGlobal;
@@ -402,4 +402,50 @@ impl User {
     pub fn can_friend(&self) -> bool {
         self.webhook.is_none() && self.bot.is_none() && self.puppet.is_none()
     }
+}
+
+/// how to create a harvest
+///
+/// including extra data will make the export slower
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct HarvestCreate {
+    /// include all messages you have sent
+    pub include_messages: bool,
+
+    /// include all reactions you have sent
+    pub include_reactions: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Harvest {
+    pub id: HarvestId,
+    pub user_id: UserId,
+    pub created_at: Time,
+
+    #[serde(flatten)]
+    pub status: HarvestStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "status")]
+pub enum HarvestStatus {
+    /// this is in progress or is running
+    Queued,
+
+    /// the export failed, contact support for help
+    Failed { failed_at: Time, message: String },
+
+    /// the export completed successfully
+    Completed {
+        completed_at: Time,
+        url: Url,
+        expires_at: Time,
+    },
+
+    /// the export was cancelled. try again, contact support if this keeps happening?
+    // reason: cancelled by user | cancelled by staff
+    Cancelled { cancelled_at: Time, message: String },
 }

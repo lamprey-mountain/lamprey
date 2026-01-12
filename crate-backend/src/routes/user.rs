@@ -8,8 +8,9 @@ use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus,
-    User, UserCreate, UserId, UserPatch, UserWithRelationship,
+    Harvest, HarvestCreate, HarvestId, MediaTrackInfo, MessageSync, PaginationQuery,
+    PaginationResponse, Room, RoomId, SessionStatus, User, UserCreate, UserId, UserPatch,
+    UserWithRelationship,
 };
 use common::v1::types::{
     AuditLogFilter, Permission, SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID,
@@ -682,6 +683,67 @@ async fn user_list(
     Ok(Json(users))
 }
 
+/// Harvest get
+#[utoipa::path(
+    get,
+    path = "/user/@self/harvest",
+    tags = ["user"],
+    responses(
+        (status = OK, body = Harvest, description = "success"),
+        (status = NOT_FOUND, description = "no harvest found"),
+    )
+)]
+async fn harvest_get(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    if auth.user.bot.is_some() || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
+        return Err(Error::BadStatic("bots cannot use this endpoint"));
+    }
+    auth.user.ensure_unsuspended()?;
+
+    Ok(Error::Unimplemented)
+}
+
+/// Harvest create
+#[utoipa::path(
+    post,
+    path = "/user/@self/harvest",
+    tags = ["user"],
+    responses(
+        (status = ACCEPTED, description = "harvest has been queued"),
+    )
+)]
+async fn harvest_create(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<HarvestCreate>,
+) -> Result<impl IntoResponse> {
+    if auth.user.bot.is_some() || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
+        return Err(Error::BadStatic("bots cannot use this endpoint"));
+    }
+    auth.user.ensure_unsuspended()?;
+
+    Ok(Error::Unimplemented)
+}
+
+/// Harvest download
+#[utoipa::path(
+    get,
+    path = "/internal/harvest/{harvest_id}/{token}/download",
+    params(
+        ("harvest_id", description = "Harvest ID"),
+        ("token", description = "Download token")
+    ),
+    tags = ["user"],
+    responses(
+        (status = OK, description = "success"),
+    )
+)]
+async fn harvest_download(
+    Path((_harvest_id, _token)): Path<(HarvestId, String)>,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
@@ -697,4 +759,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(guest_create))
         .routes(routes!(user_presence_set))
         .routes(routes!(user_list))
+        .routes(routes!(harvest_get))
+        .routes(routes!(harvest_create))
+        .routes(routes!(harvest_download))
 }
