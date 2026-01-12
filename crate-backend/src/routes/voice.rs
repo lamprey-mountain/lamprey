@@ -231,6 +231,19 @@ async fn voice_state_patch(
         old_state = state;
     }
 
+    if let Some(room_id) = thread.room_id {
+        let d = s.data();
+        let res = d.room_member_get(room_id, target_user_id).await?;
+        s.broadcast_room(
+            room_id,
+            auth.user.id,
+            MessageSync::RoomMemberUpdate {
+                member: res.clone(),
+            },
+        )
+        .await?;
+    }
+
     Ok(Json(old_state))
 }
 
