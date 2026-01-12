@@ -58,7 +58,6 @@ pub struct Message {
 
 /// a message at a point in time
 // TODO: add error "latest message version cannot be deleted"
-// TODO: strip content instead of deleting
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageVersion {
@@ -80,12 +79,12 @@ pub struct MessageVersion {
     pub created_at: Time,
 
     /// when this message version was deleted
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<Time>,
 }
 
 impl MessageVersion {
     pub fn strip(mut self) -> Self {
-        self.mentions = Mentions::default();
         self.message_type = match self.message_type {
             MessageType::DefaultMarkdown(m) => {
                 MessageType::DefaultMarkdown(MessageDefaultMarkdown {
@@ -197,15 +196,13 @@ pub struct MessageAttachmentCreate {
     pub spoiler: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageAttachment {
     #[serde(flatten)]
-    pub media: Media,
+    pub ty: MessageAttachmentType,
 
-    // #[serde(flatten)]
-    // pub inner: AttachmentType,
     /// if this is a spoiler and should be blurred
     pub spoiler: bool,
 }

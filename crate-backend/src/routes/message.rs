@@ -346,6 +346,109 @@ async fn message_version_get(
     Ok(Json(message))
 }
 
+/// Message version delete
+///
+/// Note that this endpoint allows deleting message versions, while message
+/// moderate always requires the full permission
+#[utoipa::path(
+    delete,
+    path = "/channel/{channel_id}/message/{message_id}/version/{version_id}",
+    params(
+        ("channel_id", description = "Channel id"),
+        ("message_id", description = "Message id"),
+        ("version_id", description = "Version id")
+    ),
+    tags = [
+        "message",
+        "badge.perm-opt.MessageDelete",
+    ],
+    responses(
+        (status = NO_CONTENT, description = "delete message version success"),
+    )
+)]
+async fn message_version_delete(
+    Path((channel_id, message_id, version_id)): Path<(ChannelId, MessageId, MessageVerId)>,
+    auth: Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let data = s.data();
+    let srv = s.services();
+
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("channel doesnt have text"));
+    }
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+
+    let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    if thread.locked && !perms.can_use_locked_threads() {
+        return Err(Error::MissingPermissions);
+    }
+    perms.ensure(Permission::ViewChannel)?;
+
+    // Get message to check owner
+    let message = data
+        .message_get(channel_id, message_id, auth.user.id)
+        .await?;
+
+    // Cannot delete latest version
+    if message.latest_version.version_id == version_id {
+        return Err(Error::BadStatic("cannot delete latest message version"));
+    }
+
+    let version = data
+        .message_version_get(channel_id, version_id, auth.user.id)
+        .await?;
+
+    if !version.message_type.is_deletable() {
+        return Err(Error::BadStatic("cant delete that message type"));
+    }
+
+    if message.author_id == auth.user.id {
+        perms.add(Permission::MessageDelete);
+    }
+    perms.ensure(Permission::MessageDelete)?;
+
+    data.message_version_delete(channel_id, version_id).await?;
+
+    if let Some(room_id) = thread.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth.user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MessageVersionDelete {
+                channel_id,
+                message_id,
+                version_id,
+            },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        thread.id,
+        auth.user.id,
+        MessageSync::MessageVersionDelete {
+            channel_id,
+            message_id,
+            version_id,
+        },
+    )
+    .await?;
+
+    // no need to invalidate channel cache as message count doesn't change
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Message moderate
 ///
 /// Bulk remove, restore, or delete messages.

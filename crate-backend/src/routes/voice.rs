@@ -12,8 +12,8 @@ use common::v1::types::{
         CallCreate, CallDeleteParams, CallPatch, RingEligibility, RingStart, RingStop, SfuCommand,
         SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
     },
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, PaginationResponse,
-    Permission,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, MessageSync,
+    PaginationResponse, Permission,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -23,14 +23,12 @@ use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 use crate::{Error, ServerState};
 
-// TODO: rename thread_id to channel_id in all routes
-
 /// Voice state get
 #[utoipa::path(
     get,
-    path = "/voice/{thread_id}/member/{user_id}",
+    path = "/voice/{channel_id}/member/{user_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
     tags = ["voice"],
@@ -39,7 +37,7 @@ use crate::{Error, ServerState};
     )
 )]
 async fn voice_state_get(
-    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
+    Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -48,7 +46,7 @@ async fn voice_state_get(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let state = srv.voice.state_get(target_user_id);
     if let Some(state) = state {
@@ -61,9 +59,9 @@ async fn voice_state_get(
 /// Voice state patch
 #[utoipa::path(
     patch,
-    path = "/voice/{thread_id}/member/{user_id}",
+    path = "/voice/{channel_id}/member/{user_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
     tags = ["voice", "badge.perm-opt.VoiceMute", "badge.perm-opt.VoiceDeafen", "badge.perm-opt.VoiceRequest", "badge.perm-opt.VoiceMove"],
@@ -72,7 +70,7 @@ async fn voice_state_get(
     )
 )]
 async fn voice_state_patch(
-    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
+    Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -84,21 +82,24 @@ async fn voice_state_patch(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let Some(mut old_state) = srv.voice.state_get(target_user_id) else {
         return Err(Error::NotFound);
     };
-    let thread = srv.channels.get(thread_id, None).await?;
+    let chan = srv.channels.get(channel_id, None).await?;
 
     // handle move
-    if let Some(channel_id) = json.channel_id {
+    if let Some(new_channel_id) = json.channel_id {
         perms.ensure(Permission::VoiceMove)?;
-        let target_thread = srv.channels.get(channel_id, None).await?;
-        if target_thread.room_id != thread.room_id {
+        let target_chan = srv.channels.get(new_channel_id, None).await?;
+        if target_chan.room_id != chan.room_id {
             return Err(Error::BadStatic("cannot move to different room"));
         }
-        let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
+        let target_perms = srv
+            .perms
+            .for_channel(target_user_id, new_channel_id)
+            .await?;
         target_perms.ensure(Permission::ViewChannel)?;
 
         let old_channel_id = old_state.channel_id;
@@ -113,10 +114,10 @@ async fn voice_state_patch(
             },
         });
 
-        old_state.channel_id = channel_id;
+        old_state.channel_id = new_channel_id;
         srv.voice.state_put(old_state.clone()).await;
 
-        if let Some(room_id) = thread.room_id {
+        if let Some(room_id) = chan.room_id {
             s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id,
@@ -158,7 +159,7 @@ async fn voice_state_patch(
             ..old_state
         };
 
-        let perms_user = srv.perms.for_channel(target_user_id, thread_id).await?;
+        let perms_user = srv.perms.for_channel(target_user_id, channel_id).await?;
         let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
             user_id: target_user_id,
             state: Some(state.clone()),
@@ -172,7 +173,7 @@ async fn voice_state_patch(
         srv.voice.state_put(state.clone()).await;
         old_state = state;
 
-        if let Some(room_id) = thread.room_id {
+        if let Some(room_id) = chan.room_id {
             if json.mute.is_some() || json.deaf.is_some() {
                 let changes = Changes::new()
                     .change("mute", &json.mute.unwrap_or(old_state.mute), &mute)
@@ -216,7 +217,7 @@ async fn voice_state_patch(
             ..old_state
         };
 
-        let perms_user = srv.perms.for_channel(target_user_id, thread_id).await?;
+        let perms_user = srv.perms.for_channel(target_user_id, channel_id).await?;
         let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
             user_id: target_user_id,
             state: Some(state.clone()),
@@ -231,7 +232,7 @@ async fn voice_state_patch(
         old_state = state;
     }
 
-    if let Some(room_id) = thread.room_id {
+    if let Some(room_id) = chan.room_id {
         let d = s.data();
         let res = d.room_member_get(room_id, target_user_id).await?;
         s.broadcast_room(
@@ -250,9 +251,9 @@ async fn voice_state_patch(
 /// Voice state disconnect
 #[utoipa::path(
     delete,
-    path = "/voice/{thread_id}/member/{user_id}",
+    path = "/voice/{channel_id}/member/{user_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
     tags = ["voice", "badge.perm.VoiceDisconnect"],
@@ -289,8 +290,8 @@ async fn voice_state_disconnect(
             priority: target_perms.has(Permission::VoicePriority),
         },
     });
-    let thread = srv.channels.get(channel_id, None).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, None).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -310,9 +311,9 @@ async fn voice_state_disconnect(
 /// Voice state disconnect all
 #[utoipa::path(
     delete,
-    path = "/voice/{thread_id}/member",
+    path = "/voice/{channel_id}/member",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
     tags = ["voice", "badge.perm.VoiceDisconnect"],
@@ -351,9 +352,9 @@ async fn voice_state_disconnect_all(
 /// Voice state move
 #[utoipa::path(
     post,
-    path = "/voice/{thread_id}/member/{user_id}/move",
+    path = "/voice/{channel_id}/member/{user_id}/move",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
     tags = ["voice", "badge.perm.VoiceMove"],
@@ -362,7 +363,7 @@ async fn voice_state_disconnect_all(
     )
 )]
 async fn voice_state_move(
-    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
+    Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -375,7 +376,7 @@ async fn voice_state_move(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms_source = srv.perms.for_channel(auth.user.id, thread_id).await?;
+    let perms_source = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms_source.ensure(Permission::ViewChannel)?;
     perms_source.ensure(Permission::VoiceMove)?;
     let perms_target = srv.perms.for_channel(auth.user.id, json.target_id).await?;
@@ -396,7 +397,7 @@ async fn voice_state_move(
         ..old
     };
 
-    let target_perms = srv.perms.for_channel(target_user_id, thread_id).await?;
+    let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
@@ -407,8 +408,8 @@ async fn voice_state_move(
         },
     });
 
-    let thread = srv.channels.get(thread_id, None).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, None).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -432,15 +433,15 @@ async fn voice_state_move(
 // TODO: rename this to "voice state move" and deprecate current voice state move route?
 #[utoipa::path(
     post,
-    path = "/voice/{thread_id}/move",
-    params(("thread_id", description = "Thread id")),
+    path = "/voice/{channel_id}/move",
+    params(("channel_id", description = "Channel id")),
     tags = ["voice", "badge.perm.VoiceMove"],
     responses(
         (status = OK, body = (), description = "ok"),
     )
 )]
 async fn voice_state_move_bulk(
-    Path((thread_id,)): Path<(ChannelId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(_reason): HeaderReason,
@@ -449,7 +450,7 @@ async fn voice_state_move_bulk(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let perms_source = srv.perms.for_channel(auth.user.id, thread_id).await?;
+    let perms_source = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms_source.ensure(Permission::ViewChannel)?;
     perms_source.ensure(Permission::VoiceMove)?;
 
@@ -459,27 +460,27 @@ async fn voice_state_move_bulk(
 /// Voice state list
 #[utoipa::path(
     get,
-    path = "/voice/{thread_id}/member",
+    path = "/voice/{channel_id}/member",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
     tags = ["voice"],
     responses((status = OK, description = "ok"))
 )]
 async fn voice_state_list(
-    Path(thread_id): Path<ChannelId>,
+    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let states: Vec<_> = srv
         .voice
         .state_list()
         .into_iter()
-        .filter(|s| s.channel_id == thread_id)
+        .filter(|s| s.channel_id == channel_id)
         .collect();
     // this endpoint doesn't support pagination, but the results are returned in
     // a PaginationResponse anyways for consistency

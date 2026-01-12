@@ -574,15 +574,43 @@ impl DataMessage for Postgres {
         _channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
+        let version_uuid = version_id.into_inner();
+
         query!(
-            "UPDATE message_version SET deleted_at = $2 WHERE version_id = $1",
-            version_id.into_inner(),
+            r#"
+            UPDATE message_version 
+            SET 
+                deleted_at = $2,
+                content = NULL,
+                embeds = '[]'::jsonb
+            WHERE version_id = $1
+            "#,
+            version_uuid,
             now
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        // Delete associated attachments from message_attachment table
+        query!(
+            "DELETE FROM message_attachment WHERE version_id = $1",
+            version_uuid
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        // And from media_link. The link_type is 'message_version'
+        query!(
+            "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'message_version'",
+            version_uuid
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 
