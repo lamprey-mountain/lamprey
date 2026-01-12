@@ -14,7 +14,7 @@ use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 use crate::ServerState;
 
@@ -36,7 +36,7 @@ use crate::ServerState;
     )
 )]
 async fn emoji_create(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
     HeaderReason(reason): HeaderReason,
@@ -105,7 +105,7 @@ async fn emoji_create(
 )]
 async fn emoji_get(
     Path((_room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    _auth: Auth2,
+    _auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -133,7 +133,7 @@ async fn emoji_get(
 )]
 async fn emoji_delete(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -194,7 +194,7 @@ async fn emoji_delete(
 )]
 async fn emoji_update(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<EmojiCustomPatch>,
@@ -258,7 +258,7 @@ async fn emoji_update(
 )]
 async fn emoji_list(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<EmojiId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -284,7 +284,7 @@ async fn emoji_list(
 )]
 async fn emoji_lookup(
     Path(emoji_id): Path<EmojiId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -334,7 +334,7 @@ pub struct EmojiSearchQuery {
     )
 )]
 async fn emoji_search(
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<EmojiSearchQuery>,
     Query(pagination): Query<PaginationQuery<EmojiId>>,
     State(s): State<Arc<ServerState>>,

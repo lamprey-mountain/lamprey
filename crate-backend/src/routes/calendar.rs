@@ -22,7 +22,7 @@ use validator::Validate;
 
 use crate::{
     error::{Error, Result},
-    routes::util::{Auth2, HeaderReason},
+    routes::util::{Auth, HeaderReason},
     ServerState,
 };
 use common::v1::types::{util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType};
@@ -39,7 +39,7 @@ use common::v1::types::{util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogE
 )]
 async fn calendar_event_list_user(
     Query(_query): Query<CalendarEventListQuery>,
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -56,7 +56,7 @@ async fn calendar_event_list_user(
 async fn calendar_event_list(
     Path(channel_id): Path<ChannelId>,
     Query(query): Query<CalendarEventListQuery>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     query.validate()?;
@@ -86,7 +86,7 @@ async fn calendar_event_list(
 )]
 async fn calendar_event_create(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<CalendarEventCreate>,
@@ -157,7 +157,7 @@ async fn calendar_event_create(
 )]
 async fn calendar_event_get(
     Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -192,7 +192,7 @@ async fn calendar_event_get(
 )]
 async fn calendar_event_update(
     Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<CalendarEventPatch>,
@@ -277,7 +277,7 @@ async fn calendar_event_update(
 )]
 async fn calendar_event_delete(
     Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -354,7 +354,7 @@ async fn calendar_event_delete(
 )]
 async fn calendar_overwrite_list(
     Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -388,7 +388,7 @@ async fn calendar_overwrite_list(
 )]
 async fn calendar_overwrite_get(
     Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -423,7 +423,7 @@ async fn calendar_overwrite_get(
 )]
 async fn calendar_overwrite_update(
     Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarOverwritePut>,
 ) -> Result<impl IntoResponse> {
@@ -484,7 +484,7 @@ async fn calendar_overwrite_update(
 )]
 async fn calendar_overwrite_delete(
     Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -541,7 +541,7 @@ use std::collections::HashMap;
 async fn calendar_event_rsvp_list(
     Path((channel_id, event_id)): Path<(ChannelId, CalendarEventId)>,
     Query(query): Query<CalendarEventParticipantQuery>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -602,7 +602,7 @@ async fn calendar_event_rsvp_list(
 )]
 async fn calendar_event_rsvp_get(
     Path((channel_id, event_id, user_id_req)): Path<(ChannelId, CalendarEventId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
@@ -643,7 +643,7 @@ async fn calendar_event_rsvp_get(
 )]
 async fn calendar_event_rsvp_put(
     Path((channel_id, event_id, user_id_req)): Path<(ChannelId, CalendarEventId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarEventParticipantPut>,
 ) -> Result<impl IntoResponse> {
@@ -733,7 +733,7 @@ async fn calendar_event_rsvp_put(
 )]
 async fn calendar_event_rsvp_delete(
     Path((channel_id, event_id, user_id_req)): Path<(ChannelId, CalendarEventId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
@@ -802,7 +802,7 @@ async fn calendar_event_rsvp_delete(
 async fn calendar_overwrite_rsvp_list(
     Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
     Query(query): Query<CalendarEventParticipantQuery>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -870,7 +870,7 @@ async fn calendar_overwrite_rsvp_put(
         u64,
         UserIdReq,
     )>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarEventParticipantPut>,
 ) -> Result<impl IntoResponse> {
@@ -970,7 +970,7 @@ async fn calendar_overwrite_rsvp_delete(
         u64,
         UserIdReq,
     )>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {

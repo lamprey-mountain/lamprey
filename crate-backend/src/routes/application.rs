@@ -22,7 +22,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    routes::util::{Auth2, HeaderReason},
+    routes::util::{Auth, HeaderReason},
     types::{DbSessionCreate, DbUserCreate},
     ServerState,
 };
@@ -40,7 +40,7 @@ use crate::error::{Error, Result};
     )
 )]
 async fn app_create(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ApplicationCreate>,
@@ -101,7 +101,7 @@ async fn app_create(
     )
 )]
 async fn app_list(
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<ApplicationId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -124,7 +124,7 @@ async fn app_list(
 )]
 async fn app_get(
     Path((app_id,)): Path<(ApplicationIdReq,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let app_id = match app_id {
@@ -153,7 +153,7 @@ async fn app_get(
 )]
 async fn app_patch(
     Path((app_id,)): Path<(ApplicationIdReq,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<ApplicationPatch>,
@@ -226,7 +226,7 @@ async fn app_patch(
 )]
 async fn app_delete(
     Path((app_id,)): Path<(ApplicationId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -269,7 +269,7 @@ async fn app_delete(
 )]
 async fn app_create_session(
     Path((app_id,)): Path<(ApplicationIdReq,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionCreate>,
@@ -339,7 +339,7 @@ struct AppInviteBot {
 )]
 async fn app_invite_bot(
     Path((app_id,)): Path<(ApplicationId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AppInviteBot>,
@@ -416,7 +416,7 @@ async fn app_invite_bot(
 )]
 async fn puppet_ensure(
     Path((app_id, puppet_id)): Path<(ApplicationIdReq, String)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PuppetCreate>,
 ) -> Result<impl IntoResponse> {
@@ -473,7 +473,7 @@ async fn puppet_ensure(
 )]
 async fn app_rotate_secret(
     Path((app_id,)): Path<(ApplicationIdReq,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {

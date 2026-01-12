@@ -21,7 +21,7 @@ use validator::Validate;
 use crate::types::{DbChannelCreate, DbChannelType, DbMessageCreate, UserIdReq};
 use crate::ServerState;
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
 /// Thread member list
@@ -40,7 +40,7 @@ use crate::error::{Error, Result};
 async fn thread_member_list(
     Path(thread_id): Path<ChannelId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -69,7 +69,7 @@ async fn thread_member_list(
 )]
 async fn thread_member_get(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -108,7 +108,7 @@ async fn thread_member_get(
 )]
 async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadMemberPut>,
@@ -241,7 +241,7 @@ async fn thread_member_add(
 )]
 async fn thread_member_delete(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -356,7 +356,7 @@ async fn thread_member_delete(
 async fn thread_list(
     Path(channel_id): Path<ChannelId>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -393,7 +393,7 @@ async fn thread_list(
 async fn thread_list_archived(
     Path(channel_id): Path<ChannelId>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -430,7 +430,7 @@ async fn thread_list_archived(
 async fn thread_list_removed(
     Path(channel_id): Path<ChannelId>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -465,7 +465,7 @@ async fn thread_list_removed(
 async fn thread_list_atom(
     Path(_channel_id): Path<ChannelId>,
     Query(_pagination): Query<PaginationQuery<ChannelId>>,
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -487,7 +487,7 @@ async fn thread_list_atom(
 )]
 async fn thread_create(
     Path(parent_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(mut json): Json<ChannelCreate>,
@@ -548,7 +548,7 @@ async fn thread_create(
 )]
 async fn thread_create_from_message(
     Path((parent_channel_id, source_message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(mut json): Json<ChannelCreate>,
@@ -727,7 +727,7 @@ pub struct ThreadListRoom {
 )]
 async fn thread_list_room(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -786,7 +786,7 @@ async fn thread_list_room(
 async fn thread_activity(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -824,7 +824,7 @@ async fn thread_activity(
 async fn channel_member_search(
     Path(channel_id): Path<ChannelId>,
     Query(search): Query<ChannelMemberSearch>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let _d = s.data();

@@ -18,7 +18,7 @@ use common::v1::types::{
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 
 use crate::error::Result;
 use crate::{Error, ServerState};
@@ -40,7 +40,7 @@ use crate::{Error, ServerState};
 )]
 async fn voice_state_get(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -73,7 +73,7 @@ async fn voice_state_get(
 )]
 async fn voice_state_patch(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<VoiceStatePatch>,
@@ -249,7 +249,7 @@ async fn voice_state_patch(
 )]
 async fn voice_state_disconnect(
     Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -309,7 +309,7 @@ async fn voice_state_disconnect(
 )]
 async fn voice_state_disconnect_all(
     Path((channel_id,)): Path<(ChannelId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -350,7 +350,7 @@ async fn voice_state_disconnect_all(
 )]
 async fn voice_state_move(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<VoiceStateMove>,
@@ -428,7 +428,7 @@ async fn voice_state_move(
 )]
 async fn voice_state_move_bulk(
     Path((thread_id,)): Path<(ChannelId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(_reason): HeaderReason,
     Json(_json): Json<VoiceStateMoveBulk>,
@@ -456,7 +456,7 @@ async fn voice_state_move_bulk(
 )]
 async fn voice_state_list(
     Path(thread_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -489,7 +489,7 @@ async fn voice_state_list(
     )
 )]
 async fn voice_call_create(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CallCreate>,
 ) -> Result<impl IntoResponse> {
@@ -522,7 +522,7 @@ async fn voice_call_create(
 )]
 async fn voice_call_delete(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(params): Query<CallDeleteParams>,
 ) -> Result<impl IntoResponse> {
@@ -561,7 +561,7 @@ async fn voice_call_delete(
 )]
 async fn voice_call_get(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -587,7 +587,7 @@ async fn voice_call_get(
 )]
 async fn voice_call_update(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CallPatch>,
 ) -> Result<impl IntoResponse> {
@@ -614,7 +614,7 @@ async fn voice_call_update(
 )]
 async fn voice_ring_check(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -645,7 +645,7 @@ async fn voice_ring_check(
 )]
 async fn voice_ring_start(
     Path(_channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
     _json: Json<RingStart>,
 ) -> Result<impl IntoResponse> {
@@ -665,7 +665,7 @@ async fn voice_ring_start(
 )]
 async fn voice_ring_stop(
     Path(_channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
     _json: Json<RingStop>,
 ) -> Result<impl IntoResponse> {

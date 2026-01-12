@@ -24,7 +24,7 @@ use crate::{
     Error, ServerState,
 };
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 
 /// Room create
 #[utoipa::path(
@@ -33,7 +33,7 @@ use super::util::{Auth2, HeaderReason};
     tags = ["room"],
 )]
 async fn room_create(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
@@ -81,7 +81,7 @@ async fn room_create(
 )]
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
-    auth: Auth2,
+    auth: Auth,
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -117,7 +117,7 @@ async fn room_get(
 )]
 async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -158,7 +158,7 @@ async fn room_list(
 )]
 async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomPatch>,
@@ -216,7 +216,7 @@ async fn room_edit(
 )]
 async fn room_delete(
     Path((room_id,)): Path<(RoomId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -285,7 +285,7 @@ async fn room_delete(
 )]
 async fn room_undelete(
     Path((room_id,)): Path<(RoomId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -346,7 +346,7 @@ async fn room_audit_logs(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
     Query(filter): Query<AuditLogFilter>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -374,7 +374,7 @@ async fn room_audit_logs(
 )]
 async fn room_ack(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     let data = s.data();
@@ -404,7 +404,7 @@ async fn room_ack(
 )]
 async fn room_transfer_ownership(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
@@ -446,7 +446,7 @@ async fn room_transfer_ownership(
 )]
 async fn room_integration_list(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<ApplicationId>>,
 ) -> Result<impl IntoResponse> {
@@ -485,7 +485,7 @@ async fn room_integration_list(
 )]
 async fn room_quarantine(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -536,7 +536,7 @@ async fn room_quarantine(
 )]
 async fn room_unquarantine(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {

@@ -11,7 +11,7 @@ use common::v1::types::notifications::{
 use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth2;
+use super::util::Auth;
 use crate::error::Result;
 use crate::ServerState;
 
@@ -26,7 +26,7 @@ use crate::ServerState;
     responses((status = OK, body = NotificationPagination, description = "success"))
 )]
 async fn inbox_get(
-    auth: Auth2,
+    auth: Auth,
     Query(pagination): Query<PaginationQuery<NotificationId>>,
     Query(params): Query<InboxListParams>,
     State(s): State<Arc<ServerState>>,
@@ -96,7 +96,7 @@ async fn inbox_get(
     responses((status = CREATED, body = Notification, description = "success"))
 )]
 async fn inbox_post(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationCreate>,
 ) -> Result<impl IntoResponse> {
@@ -131,7 +131,7 @@ async fn inbox_post(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_read(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
@@ -147,7 +147,7 @@ async fn inbox_mark_read(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_unread(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
@@ -167,7 +167,7 @@ async fn inbox_mark_unread(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_flush(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationFlush>,
 ) -> Result<impl IntoResponse> {

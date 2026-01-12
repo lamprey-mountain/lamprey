@@ -22,7 +22,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use crate::{
-    routes::util::{Auth2, HeaderReason},
+    routes::util::{Auth, HeaderReason},
     types::DbSessionCreate,
     ServerState,
 };
@@ -40,7 +40,7 @@ use crate::error::{Error, Result};
     )
 )]
 async fn oauth_info(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
 ) -> Result<impl IntoResponse> {
@@ -88,7 +88,7 @@ async fn oauth_info(
     )
 )]
 async fn oauth_authorize(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
     HeaderReason(reason): HeaderReason,
@@ -346,7 +346,7 @@ async fn oauth_token(
     )
 )]
 async fn oauth_introspect(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let Some(app_id) = auth.session.app_id else {
@@ -372,7 +372,7 @@ async fn oauth_introspect(
         (status = NO_CONTENT, description = "success")
     )
 )]
-async fn oauth_revoke(auth: Auth2, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+async fn oauth_revoke(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     data.session_delete(auth.session.id).await?;
@@ -422,7 +422,7 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
     )
 )]
 async fn oauth_userinfo(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();

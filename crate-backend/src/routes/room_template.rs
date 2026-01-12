@@ -17,7 +17,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth2;
+use super::util::Auth;
 
 /// Room template create (TODO)
 ///
@@ -32,7 +32,7 @@ use super::util::Auth2;
     )
 )]
 async fn room_template_create(
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplateCreate>,
 ) -> Result<impl IntoResponse> {
@@ -56,7 +56,7 @@ async fn room_template_create(
 )]
 async fn room_template_list(
     Query(_q): Query<PaginationQuery<RoomTemplateCode>>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -76,7 +76,7 @@ async fn room_template_list(
 )]
 async fn room_template_get(
     Path(_code): Path<RoomTemplateCode>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -97,7 +97,7 @@ async fn room_template_get(
 )]
 async fn room_template_edit(
     Path(_code): Path<RoomTemplateCode>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplatePatch>,
 ) -> Result<impl IntoResponse> {
@@ -119,7 +119,7 @@ async fn room_template_edit(
 )]
 async fn room_template_delete(
     Path(_code): Path<RoomTemplateCode>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -139,7 +139,7 @@ async fn room_template_delete(
 )]
 async fn room_template_sync(
     Path(_code): Path<RoomTemplateCode>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;

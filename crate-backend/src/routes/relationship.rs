@@ -11,7 +11,7 @@ use common::v1::types::{
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::{Auth2, HeaderReason};
+use crate::routes::util::{Auth, HeaderReason};
 use crate::ServerState;
 
 use crate::error::{Error, Result};
@@ -32,7 +32,7 @@ use crate::error::{Error, Result};
     )
 )]
 async fn friend_list(
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -57,7 +57,7 @@ async fn friend_list(
     )
 )]
 async fn friend_list_pending(
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -78,7 +78,7 @@ async fn friend_list_pending(
 )]
 async fn friend_add(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -220,7 +220,7 @@ async fn friend_add(
 )]
 async fn friend_remove(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -299,7 +299,7 @@ async fn friend_remove(
     )
 )]
 async fn block_list(
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -320,7 +320,7 @@ async fn block_list(
 )]
 async fn block_add(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -391,7 +391,7 @@ async fn block_add(
 )]
 async fn block_remove(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -445,7 +445,7 @@ async fn block_remove(
     )
 )]
 async fn ignore_list(
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -466,7 +466,7 @@ async fn ignore_list(
 )]
 async fn ignore_add(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(ignore): Json<Ignore>,
@@ -521,7 +521,7 @@ async fn ignore_add(
 )]
 async fn ignore_remove(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {

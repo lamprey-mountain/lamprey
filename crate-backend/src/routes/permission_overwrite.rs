@@ -14,7 +14,7 @@ use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use super::util::Auth2;
+use super::util::Auth;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
@@ -30,7 +30,7 @@ use crate::ServerState;
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_overwrite(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
     HeaderReason(reason): HeaderReason,
@@ -191,7 +191,7 @@ async fn permission_overwrite(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_delete(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
     HeaderReason(reason): HeaderReason,

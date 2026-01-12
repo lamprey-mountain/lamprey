@@ -9,7 +9,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::error::Result;
 use crate::ServerState;
 
-use super::util::Auth2;
+use super::util::Auth;
 
 /// Server information
 #[utoipa::path(
@@ -40,7 +40,7 @@ async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespo
     )
 )]
 async fn server_moderation(
-    _auth: Auth2, // requires auth
+    _auth: Auth, // requires auth
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     // TODO: let server admins configure this

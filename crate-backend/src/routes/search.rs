@@ -12,7 +12,7 @@ use validator::Validate;
 
 use crate::{Error, ServerState};
 
-use super::util::Auth2;
+use super::util::Auth;
 use crate::error::Result;
 
 /// Search messages
@@ -25,7 +25,7 @@ use crate::error::Result;
     )
 )]
 pub async fn search_messages(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Json(json): Json<SearchMessageRequest>,
@@ -49,7 +49,7 @@ pub async fn search_messages(
     )
 )]
 pub async fn search_channels(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<ChannelId>>,
     Json(json): Json<SearchChannelsRequest>,
@@ -73,7 +73,7 @@ pub async fn search_channels(
     )
 )]
 pub async fn search_rooms(
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Query(_q): Query<PaginationQuery<RoomId>>,
     Json(_json): Json<SearchRoomsRequest>,

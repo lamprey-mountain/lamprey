@@ -25,7 +25,7 @@ use crate::{
 };
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
 /// Room channel create
@@ -47,7 +47,7 @@ use crate::error::Result;
 )]
 async fn channel_create_room(
     Path((room_id,)): Path<(RoomId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(mut json): Json<ChannelCreate>,
@@ -91,7 +91,7 @@ async fn channel_create_room(
     )
 )]
 async fn channel_create_dm(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
@@ -225,7 +225,7 @@ async fn channel_create_dm(
 )]
 async fn channel_get(
     Path((channel_id,)): Path<(ChannelId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s
@@ -265,7 +265,7 @@ async fn channel_list(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<ChannelListQuery>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -304,7 +304,7 @@ async fn channel_list_removed(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<ChannelListQuery>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -338,7 +338,7 @@ async fn channel_list_removed(
 )]
 async fn channel_reorder(
     Path((room_id,)): Path<(RoomId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ChannelReorder>,
@@ -422,7 +422,7 @@ async fn channel_reorder(
 )]
 async fn channel_update(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ChannelPatch>,
@@ -492,7 +492,7 @@ struct AckRes {
 )]
 async fn channel_ack(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {
@@ -543,7 +543,7 @@ async fn channel_ack(
 )]
 async fn channel_remove(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -603,7 +603,7 @@ async fn channel_remove(
 )]
 async fn channel_restore(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -668,7 +668,7 @@ async fn channel_restore(
 )]
 async fn channel_typing(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -715,7 +715,7 @@ async fn channel_typing(
 )]
 async fn channel_upgrade(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -859,7 +859,7 @@ struct TransferOwnership {
 )]
 async fn channel_transfer_ownership(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
@@ -923,7 +923,7 @@ async fn channel_transfer_ownership(
 )]
 async fn channel_ratelimit_delete(
     Path((channel_id, user_id)): Path<(ChannelId, UserId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -1010,7 +1010,7 @@ async fn channel_ratelimit_delete(
 )]
 async fn channel_ratelimit_delete_all(
     Path((channel_id,)): Path<(ChannelId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(_reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -1053,7 +1053,7 @@ async fn channel_ratelimit_delete_all(
 )]
 async fn channel_ratelimit_update(
     Path((channel_id, user_id)): Path<(ChannelId, UserId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RatelimitPut>,

@@ -20,7 +20,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth2;
+use super::util::Auth;
 
 /// Room analytics members count
 #[utoipa::path(
@@ -30,7 +30,7 @@ use super::util::Auth2;
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersCount>)),
 )]
 async fn room_analytics_members_count(
-    auth: Auth2,
+    auth: Auth,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
@@ -55,7 +55,7 @@ async fn room_analytics_members_count(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersJoin>)),
 )]
 async fn room_analytics_members_join(
-    auth: Auth2,
+    auth: Auth,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
@@ -75,7 +75,7 @@ async fn room_analytics_members_join(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersLeave>)),
 )]
 async fn room_analytics_members_leave(
-    auth: Auth2,
+    auth: Auth,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
@@ -95,7 +95,7 @@ async fn room_analytics_members_leave(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsChannel>)),
 )]
 async fn room_analytics_channels(
-    auth: Auth2,
+    auth: Auth,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     Query(q2): Query<RoomAnalyticsChannelParams>,
@@ -118,7 +118,7 @@ async fn room_analytics_channels(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsOverview>)),
 )]
 async fn room_analytics_overview(
-    auth: Auth2,
+    auth: Auth,
     Path(room_id): Path<RoomId>,
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
@@ -138,7 +138,7 @@ async fn room_analytics_overview(
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsInvites>)),
 )]
 async fn room_analytics_invites(
-    auth: Auth2,
+    auth: Auth,
     Path(_room_id): Path<RoomId>,
     Query(_q): Query<RoomAnalyticsParams>,
     State(_s): State<Arc<ServerState>>,

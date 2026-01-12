@@ -12,7 +12,7 @@ use common::v1::types::{
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 use crate::{Error, ServerState};
 
@@ -35,7 +35,7 @@ use crate::{Error, ServerState};
 )]
 async fn reaction_list(
     Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -74,7 +74,7 @@ async fn reaction_add(
         ReactionKeyParam,
         UserIdReq,
     )>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -160,7 +160,7 @@ async fn reaction_remove(
         ReactionKeyParam,
         UserIdReq,
     )>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -255,7 +255,7 @@ async fn reaction_remove(
 )]
 async fn reaction_remove_key(
     Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -335,7 +335,7 @@ async fn reaction_remove_key(
 )]
 async fn reaction_remove_all(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {

@@ -24,7 +24,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::{Auth2, HeaderIdempotencyKey, HeaderReason};
+use super::util::{Auth, HeaderIdempotencyKey, HeaderReason};
 use crate::error::Result;
 
 /// Message create
@@ -47,7 +47,7 @@ use crate::error::Result;
 )]
 async fn message_create(
     Path((channel_id,)): Path<(ChannelId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
@@ -88,7 +88,7 @@ async fn message_create(
 async fn message_context(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<ContextQuery>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -118,7 +118,7 @@ async fn message_context(
 async fn message_list(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -143,7 +143,7 @@ async fn message_list(
 )]
 async fn message_get(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -172,7 +172,7 @@ async fn message_get(
 )]
 async fn message_edit(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
@@ -223,7 +223,7 @@ async fn message_edit(
 )]
 async fn message_delete(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -304,7 +304,7 @@ async fn message_delete(
 async fn message_version_list(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -333,7 +333,7 @@ async fn message_version_list(
 )]
 async fn message_version_get(
     Path((channel_id, _message_id, version_id)): Path<(ChannelId, MessageId, MessageVerId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -378,7 +378,7 @@ async fn message_version_get(
 )]
 async fn message_moderate(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageModerate>,
@@ -538,7 +538,7 @@ async fn message_moderate(
 )]
 async fn message_move(
     Path(_channel_id): Path<ChannelId>,
-    _auth: Auth2,
+    _auth: Auth,
     HeaderReason(_reason): HeaderReason,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<MessageMigrate>,
@@ -566,7 +566,7 @@ async fn message_reply_query(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
@@ -599,7 +599,7 @@ async fn message_reply_roots(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
@@ -634,7 +634,7 @@ async fn message_reply_roots(
 )]
 async fn message_pin_create(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -745,7 +745,7 @@ async fn message_pin_create(
 )]
 async fn message_pin_delete(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -814,7 +814,7 @@ async fn message_pin_delete(
 )]
 async fn message_pin_reorder(
     Path((channel_id,)): Path<(ChannelId,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PinsReorder>,
@@ -885,7 +885,7 @@ async fn message_pin_reorder(
 async fn message_pin_list(
     Path(channel_id): Path<ChannelId>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -910,7 +910,7 @@ async fn message_pin_list(
 async fn message_list_deleted(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -938,7 +938,7 @@ async fn message_list_deleted(
 async fn message_list_removed(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -966,7 +966,7 @@ async fn message_list_removed(
 pub async fn message_list_atom(
     Path(_channel_id): Path<ChannelId>,
     Query(_pagination): Query<PaginationQuery<ChannelId>>,
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -983,7 +983,7 @@ pub async fn message_list_atom(
 )]
 pub async fn message_nudge(
     Path(_channel_id): Path<ChannelId>,
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)

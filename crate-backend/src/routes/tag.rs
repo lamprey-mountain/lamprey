@@ -17,7 +17,7 @@ use validator::Validate;
 
 use crate::{
     error::Result,
-    routes::util::{Auth2, HeaderReason},
+    routes::util::{Auth, HeaderReason},
     Error, ServerState,
 };
 
@@ -34,7 +34,7 @@ use crate::{
 async fn tag_create(
     Path(channel_id): Path<ChannelId>,
     State(s): State<Arc<ServerState>>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     Json(create): Json<TagCreate>,
 ) -> Result<impl IntoResponse> {
@@ -105,7 +105,7 @@ async fn tag_create(
 async fn tag_update(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     State(s): State<Arc<ServerState>>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<TagPatch>,
 ) -> Result<impl IntoResponse> {
@@ -177,7 +177,7 @@ async fn tag_delete(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     Query(query): Query<TagDeleteQuery>,
     State(s): State<Arc<ServerState>>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -254,7 +254,7 @@ async fn tag_delete(
 )]
 async fn tag_search(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<TagSearchQuery>,
     Query(pagination): Query<PaginationQuery<TagId>>,
     State(s): State<Arc<ServerState>>,
@@ -294,7 +294,7 @@ async fn tag_search(
 )]
 async fn tag_list(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<TagListQuery>,
     Query(pagination): Query<PaginationQuery<TagId>>,
     State(s): State<Arc<ServerState>>,

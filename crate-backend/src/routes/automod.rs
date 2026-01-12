@@ -10,7 +10,7 @@ use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use super::util::Auth2;
+use super::util::Auth;
 use crate::{
     error::{Error, Result},
     types::{AutomodRuleId, RoomId},
@@ -34,7 +34,7 @@ use common::v1::types::{
 )]
 async fn automod_rule_list(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -57,7 +57,7 @@ async fn automod_rule_list(
 )]
 async fn automod_rule_create(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AutomodRuleCreate>,
 ) -> Result<impl IntoResponse> {
@@ -116,7 +116,7 @@ async fn automod_rule_create(
 )]
 async fn automod_rule_get(
     Path((room_id, rule_id)): Path<(RoomId, AutomodRuleId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -146,7 +146,7 @@ async fn automod_rule_get(
 )]
 async fn automod_rule_update(
     Path((room_id, rule_id)): Path<(RoomId, AutomodRuleId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AutomodRuleUpdate>,
 ) -> Result<impl IntoResponse> {
@@ -214,7 +214,7 @@ async fn automod_rule_update(
 )]
 async fn automod_rule_delete(
     Path((room_id, rule_id)): Path<(RoomId, AutomodRuleId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -275,7 +275,7 @@ async fn automod_rule_delete(
 )]
 async fn automod_rule_test(
     Path((_room_id,)): Path<(RoomId,)>,
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)

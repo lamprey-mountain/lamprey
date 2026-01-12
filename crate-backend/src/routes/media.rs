@@ -23,7 +23,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth2;
+use super::util::Auth;
 
 /// Media create
 ///
@@ -37,7 +37,7 @@ use super::util::Auth2;
     )
 )]
 async fn media_create(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
@@ -100,7 +100,7 @@ async fn media_create(
 )]
 async fn media_patch(
     Path(media_id): Path<MediaId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaPatch>,
 ) -> Result<impl IntoResponse> {
@@ -157,7 +157,7 @@ async fn media_patch(
 )]
 async fn media_done(
     Path(media_id): Path<MediaId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -227,7 +227,7 @@ async fn media_done(
 // TODO: only begin processing media on media_done? or maybe begin processing, but don't block on this endpoint.
 async fn media_upload(
     Path(media_id): Path<MediaId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Body,
@@ -338,7 +338,7 @@ async fn media_upload(
 )]
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
-    _auth: Auth2,
+    _auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let media = s.data().media_select(media_id).await?;
@@ -364,7 +364,7 @@ async fn media_get(
 // )]
 async fn media_check(
     Path(media_id): Path<MediaId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
@@ -405,7 +405,7 @@ async fn media_check(
 )]
 async fn media_delete(
     Path(media_id): Path<MediaId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -439,7 +439,7 @@ async fn media_delete(
 )]
 async fn media_clone(
     Path(_media_id): Path<MediaId>,
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<MediaClone>,
 ) -> Result<impl IntoResponse> {
@@ -458,7 +458,7 @@ async fn media_clone(
     responses((status = CREATED, description = "success")),
 )]
 async fn media_upload_direct(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse> {

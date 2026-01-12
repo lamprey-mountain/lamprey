@@ -17,7 +17,7 @@ use validator::Validate;
 use crate::types::{DbRoleCreate, RoleDeleteQuery};
 use crate::ServerState;
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
 /// Role create
@@ -34,7 +34,7 @@ use crate::error::{Error, Result};
 )]
 async fn role_create(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoleCreate>,
@@ -127,7 +127,7 @@ async fn role_create(
 )]
 async fn role_update(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RolePatch>,
@@ -238,7 +238,7 @@ async fn role_update(
 async fn role_delete(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(query): Query<RoleDeleteQuery>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -305,7 +305,7 @@ async fn role_delete(
 )]
 async fn role_get(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -330,7 +330,7 @@ async fn role_get(
 async fn role_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<RoleId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -355,7 +355,7 @@ async fn role_list(
 async fn role_member_list(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -380,7 +380,7 @@ async fn role_member_list(
 )]
 async fn role_member_add(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -441,7 +441,7 @@ async fn role_member_add(
 )]
 async fn role_member_remove(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -506,7 +506,7 @@ async fn role_member_remove(
 )]
 async fn role_member_bulk_edit(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleMemberBulkPatch>,
@@ -611,7 +611,7 @@ async fn role_member_bulk_edit(
 )]
 async fn role_reorder(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleReorder>,

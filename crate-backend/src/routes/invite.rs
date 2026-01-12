@@ -20,7 +20,7 @@ use crate::error::Result;
 use crate::routes::auth::fetch_auth_state;
 use crate::{Error, ServerState};
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 
 /// Invite delete
 #[utoipa::path(
@@ -36,7 +36,7 @@ use super::util::{Auth2, HeaderReason};
 )]
 async fn invite_delete(
     Path(code): Path<InviteCode>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -160,7 +160,7 @@ async fn invite_delete(
 )]
 async fn invite_resolve(
     Path(code): Path<InviteCode>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -215,7 +215,7 @@ async fn invite_resolve(
 )]
 async fn invite_use(
     Path(code): Path<InviteCode>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -381,7 +381,7 @@ async fn invite_use(
 )]
 async fn invite_room_create(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<InviteCreate>,
@@ -463,7 +463,7 @@ enum InviteWithPotentialMetadata {
 async fn invite_room_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -512,7 +512,7 @@ async fn invite_room_list(
 )]
 async fn invite_channel_create(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<InviteCreate>,
@@ -595,7 +595,7 @@ async fn invite_channel_create(
 async fn invite_channel_list(
     Path(channel_id): Path<ChannelId>,
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -657,7 +657,7 @@ async fn invite_channel_list(
 )]
 async fn invite_patch(
     Path(code): Path<InviteCode>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<InvitePatch>,
@@ -759,7 +759,7 @@ async fn invite_patch(
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_server_create(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
@@ -829,7 +829,7 @@ async fn invite_server_create(
 )]
 async fn invite_server_list(
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -860,7 +860,7 @@ async fn invite_server_list(
 )]
 async fn invite_user_create(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
@@ -932,7 +932,7 @@ async fn invite_user_create(
 async fn invite_user_list(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<InviteCode>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {

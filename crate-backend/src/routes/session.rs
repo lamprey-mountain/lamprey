@@ -14,7 +14,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::{Auth2, HeaderReason};
+use crate::routes::util::{Auth, HeaderReason};
 use crate::types::{DbSessionCreate, SessionIdReq};
 use crate::ServerState;
 
@@ -61,7 +61,7 @@ pub async fn session_create(
 )]
 pub async fn session_list(
     Query(q): Query<PaginationQuery<SessionId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -84,7 +84,7 @@ pub async fn session_list(
 )]
 pub async fn session_update(
     Path(target_session_id): Path<SessionIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionPatch>,
@@ -159,7 +159,7 @@ pub async fn session_update(
 )]
 pub async fn session_delete(
     Path(target_session_id): Path<SessionIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -226,7 +226,7 @@ pub async fn session_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 pub async fn session_delete_all(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -268,7 +268,7 @@ pub async fn session_delete_all(
 )]
 pub async fn session_get(
     Path(session_id): Path<SessionIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let session_id = match session_id {

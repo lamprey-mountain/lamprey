@@ -26,7 +26,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use crate::routes::util::{Auth2, HeaderReason};
+use crate::routes::util::{Auth, HeaderReason};
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
 use crate::ServerState;
@@ -56,7 +56,7 @@ pub struct OauthInitResponse {
 )]
 async fn auth_oauth_init(
     Path(provider): Path<String>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let url = s.services().oauth.create_url(&provider, auth.session.id)?;
@@ -297,7 +297,7 @@ async fn auth_oauth_redirect(
 )]
 async fn auth_oauth_delete(
     Path(provider): Path<String>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -338,7 +338,7 @@ async fn auth_oauth_delete(
 )]
 async fn auth_email_exec(
     Path(email): Path<EmailAddr>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -374,7 +374,7 @@ async fn auth_email_exec(
 )]
 async fn auth_email_reset(
     Path(email): Path<EmailAddr>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -408,7 +408,7 @@ async fn auth_email_reset(
 )]
 async fn auth_email_complete(
     Path(email): Path<EmailAddr>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AuthEmailComplete>,
@@ -496,7 +496,7 @@ struct AuthEmailComplete {
     tags = ["auth", "badge.sudo"],
     responses((status = OK, body = TotpStateWithSecret, description = "success")),
 )]
-async fn auth_totp_init(auth: Auth2, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+async fn auth_totp_init(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
     auth.ensure_sudo()?;
     Err(Error::Unimplemented)
 }
@@ -509,7 +509,7 @@ async fn auth_totp_init(auth: Auth2, State(_s): State<Arc<ServerState>>) -> Resu
     responses((status = OK, body = TotpState, description = "success")),
 )]
 async fn auth_totp_exec(
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<TotpVerificationRequest>,
 ) -> Result<Json<()>> {
@@ -524,7 +524,7 @@ async fn auth_totp_exec(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_get(
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     auth.ensure_sudo()?;
@@ -539,7 +539,7 @@ async fn auth_totp_recovery_get(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_rotate(
-    auth: Auth2,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     auth.ensure_sudo()?;
@@ -553,7 +553,7 @@ async fn auth_totp_recovery_rotate(
     tags = ["auth", "badge.sudo"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn auth_totp_delete(auth: Auth2, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+async fn auth_totp_delete(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
     auth.ensure_sudo()?;
     Err(Error::Unimplemented)
 }
@@ -566,7 +566,7 @@ async fn auth_totp_delete(auth: Auth2, State(_s): State<Arc<ServerState>>) -> Re
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_set(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordSet>,
@@ -613,7 +613,7 @@ async fn auth_password_set(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_delete(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -651,7 +651,7 @@ async fn auth_password_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_exec(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordExec>,
@@ -701,7 +701,7 @@ async fn auth_password_exec(
     tags = ["auth"],
     responses((status = OK, body = AuthState, description = "success")),
 )]
-async fn auth_state(auth: Auth2, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+async fn auth_state(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let auth_state = fetch_auth_state(&s, auth.user.id).await?;
     Ok(Json(auth_state))
 }
@@ -728,7 +728,7 @@ pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthSt
     tags = ["auth"],
     responses((status = OK, body = CaptchaChallenge, description = "success")),
 )]
-async fn auth_captcha_init(_auth: Auth2, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+async fn auth_captcha_init(_auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
     Err(Error::Unimplemented)
 }
 
@@ -743,7 +743,7 @@ async fn auth_captcha_init(_auth: Auth2, State(_s): State<Arc<ServerState>>) -> 
     ),
 )]
 async fn auth_captcha_submit(
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<CaptchaResponse>,
 ) -> Result<Json<()>> {
@@ -758,7 +758,7 @@ async fn auth_captcha_submit(
     responses((status = OK, body = WebauthnChallenge, description = "webauthn challenge")),
 )]
 async fn auth_webauthn_init(
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
@@ -776,7 +776,7 @@ async fn auth_webauthn_init(
     ),
 )]
 async fn auth_webauthn_exec(
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<WebauthnFinish>,
 ) -> Result<impl IntoResponse> {
@@ -793,7 +793,7 @@ async fn auth_webauthn_exec(
     ),
 )]
 async fn auth_webauthn_patch(
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Path(_authenticator_id): Path<Uuid>,
     Json(_json): Json<WebauthnPatch>,
@@ -811,7 +811,7 @@ async fn auth_webauthn_patch(
     ),
 )]
 async fn auth_webauthn_delete(
-    _auth: Auth2,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Path(_authenticator_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
@@ -828,7 +828,7 @@ async fn auth_webauthn_delete(
     responses((status = NO_CONTENT, description = "ok")),
 )]
 async fn auth_sudo_upgrade(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -866,7 +866,7 @@ async fn auth_sudo_upgrade(
     responses((status = NO_CONTENT, description = "ok")),
 )]
 async fn auth_sudo_delete(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     s.data()

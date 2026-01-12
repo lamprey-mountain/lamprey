@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// extract authentication info for a request
-pub struct Auth2 {
+pub struct Auth {
     /// the effective user making this request
     pub user: User,
 
@@ -27,7 +27,7 @@ pub struct Auth2 {
     pub scopes: Scopes,
 }
 
-impl Auth2 {
+impl Auth {
     pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
         self.scopes.ensure_all(scopes).map_err(Into::into)
     }
@@ -150,7 +150,7 @@ impl FromRequestParts<Arc<ServerState>> for HeaderPuppetId {
     }
 }
 
-impl FromRequestParts<Arc<ServerState>> for Auth2 {
+impl FromRequestParts<Arc<ServerState>> for Auth {
     type Rejection = Error;
 
     async fn from_request_parts(
@@ -253,7 +253,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth2 {
             Scopes::default()
         };
 
-        Ok(Auth2 {
+        Ok(Auth {
             user: effective_user,
             real_user: if puppet_id.is_some() {
                 Some(real_user)

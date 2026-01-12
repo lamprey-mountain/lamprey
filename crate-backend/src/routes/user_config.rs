@@ -10,7 +10,7 @@ use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
 use tower_http::limit::RequestBodyLimitLayer;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth2;
+use super::util::Auth;
 use crate::error::Result;
 use crate::ServerState;
 
@@ -22,7 +22,7 @@ use crate::ServerState;
     responses((status = OK, body = UserConfigGlobal, description = "success"))
 )]
 async fn user_config_global_put(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<UserConfigGlobal>,
 ) -> Result<impl IntoResponse> {
@@ -43,7 +43,7 @@ async fn user_config_global_put(
     responses((status = OK, body = UserConfigRoom, description = "success"))
 )]
 async fn user_config_room_put(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
     Json(json): Json<UserConfigRoom>,
@@ -68,7 +68,7 @@ async fn user_config_room_put(
     responses((status = OK, body = UserConfigChannel, description = "success"))
 )]
 async fn user_config_channel_put(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(channel_id): Path<ChannelId>,
     Json(json): Json<UserConfigChannel>,
@@ -93,7 +93,7 @@ async fn user_config_channel_put(
     responses((status = OK, body = UserConfigUser, description = "success"))
 )]
 async fn user_config_user_put(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(user_id): Path<UserId>,
     Json(json): Json<UserConfigUser>,
@@ -117,7 +117,7 @@ async fn user_config_user_put(
     responses((status = OK, body = UserConfigGlobal, description = "success"))
 )]
 async fn user_config_global_get(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let config = s.data().user_config_get(auth.user.id).await?;
@@ -133,7 +133,7 @@ async fn user_config_global_get(
     responses((status = OK, body = UserConfigRoom, description = "success"))
 )]
 async fn user_config_room_get(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
 ) -> Result<impl IntoResponse> {
@@ -150,7 +150,7 @@ async fn user_config_room_get(
     responses((status = OK, body = UserConfigChannel, description = "success"))
 )]
 async fn user_config_channel_get(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(channel_id): Path<ChannelId>,
 ) -> Result<impl IntoResponse> {
@@ -170,7 +170,7 @@ async fn user_config_channel_get(
     responses((status = OK, body = UserConfigUser, description = "success"))
 )]
 async fn user_config_user_get(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(user_id): Path<UserId>,
 ) -> Result<impl IntoResponse> {

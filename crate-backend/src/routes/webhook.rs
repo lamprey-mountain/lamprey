@@ -18,7 +18,7 @@ use common::v1::types::{
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 use crate::{
     error::{Error, Result},
     types::{ChannelId, RoomId},
@@ -41,7 +41,7 @@ mod slack;
 )]
 async fn webhook_create(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookCreate>,
@@ -104,7 +104,7 @@ async fn webhook_create(
 )]
 async fn webhook_list_channel(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
@@ -145,7 +145,7 @@ async fn webhook_list_channel(
 )]
 async fn webhook_list_room(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
@@ -169,7 +169,7 @@ async fn webhook_list_room(
 )]
 async fn webhook_get(
     Path(webhook_id): Path<WebhookId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get(webhook_id).await?;
@@ -225,7 +225,7 @@ async fn webhook_get_with_token(
 )]
 async fn webhook_delete(
     Path(webhook_id): Path<WebhookId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -309,7 +309,7 @@ async fn webhook_delete_with_token(
 )]
 async fn webhook_update(
     Path(webhook_id): Path<WebhookId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookUpdate>,

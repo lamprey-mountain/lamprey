@@ -11,7 +11,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::services::embed::ServiceEmbed;
 use crate::ServerState;
 
-use super::util::Auth2;
+use super::util::Auth;
 use crate::error::Result;
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -250,7 +250,7 @@ async fn debug_version() -> Result<impl IntoResponse> {
     )
 )]
 async fn debug_embed_url(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
 ) -> Result<impl IntoResponse> {
@@ -289,7 +289,7 @@ async fn debug_panic() {
     responses((status = OK, body = TestPermissionsResponse, description = "success")),
 )]
 async fn debug_test_permissions(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TestPermissionsRequest>,
 ) -> Result<impl IntoResponse> {

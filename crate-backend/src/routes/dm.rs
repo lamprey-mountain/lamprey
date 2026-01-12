@@ -12,7 +12,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::types::UserIdReq;
 use crate::ServerState;
 
-use super::util::Auth2;
+use super::util::Auth;
 use crate::error::{Error, Result};
 
 // TODO: merge with channel_create_dm
@@ -31,7 +31,7 @@ use crate::error::{Error, Result};
 )]
 async fn dm_init(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -68,7 +68,7 @@ async fn dm_init(
 )]
 async fn dm_get(
     Path(target_user_id): Path<UserId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -100,7 +100,7 @@ async fn dm_get(
 )]
 async fn dm_list(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<MessageVerId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {

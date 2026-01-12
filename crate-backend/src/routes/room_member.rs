@@ -23,7 +23,7 @@ use validator::Validate;
 use crate::types::UserIdReq;
 use crate::ServerState;
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
 #[derive(Debug, Deserialize, ToSchema, IntoParams)]
@@ -47,7 +47,7 @@ pub struct RoomBanSearchQuery {
 async fn room_member_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -77,7 +77,7 @@ async fn room_member_list(
 )]
 async fn room_member_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -122,7 +122,7 @@ async fn room_member_get(
 )]
 async fn room_member_add(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(mut json): Json<RoomMemberPut>,
@@ -466,7 +466,7 @@ async fn room_member_add(
 )]
 async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(mut json): Json<RoomMemberPatch>,
@@ -633,7 +633,7 @@ struct LeaveQuery {
 )]
 async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     Query(_q): Query<LeaveQuery>,
     State(s): State<Arc<ServerState>>,
@@ -726,7 +726,7 @@ async fn room_member_delete(
 async fn room_member_search(
     Path(room_id): Path<RoomId>,
     Query(search): Query<RoomMemberSearch>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -763,7 +763,7 @@ async fn room_member_search(
 )]
 async fn room_member_search_advanced(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(search): Json<RoomMemberSearchAdvanced>,
 ) -> Result<impl IntoResponse> {
@@ -796,7 +796,7 @@ async fn room_member_search_advanced(
 )]
 async fn room_member_prune(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PruneBegin>,
 ) -> Result<impl IntoResponse> {
@@ -824,7 +824,7 @@ async fn room_member_prune(
 )]
 async fn room_ban_create(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanCreate>,
@@ -913,7 +913,7 @@ async fn room_ban_create(
 )]
 async fn room_ban_create_bulk(
     Path(room_id): Path<RoomId>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanBulkCreate>,
@@ -1008,7 +1008,7 @@ async fn room_ban_create_bulk(
 )]
 async fn room_ban_remove(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -1067,7 +1067,7 @@ async fn room_ban_remove(
 )]
 async fn room_ban_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -1097,7 +1097,7 @@ async fn room_ban_get(
 async fn room_ban_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -1132,7 +1132,7 @@ async fn room_ban_search(
     Path(room_id): Path<RoomId>,
     Query(search): Query<RoomBanSearchQuery>,
     Query(pagination): Query<PaginationQuery<UserId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();

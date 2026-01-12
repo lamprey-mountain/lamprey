@@ -18,7 +18,7 @@ use http::StatusCode;
 use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::{Auth2, HeaderReason};
+use crate::routes::util::{Auth, HeaderReason};
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
@@ -40,7 +40,7 @@ use crate::error::{Error, Result};
 )]
 async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<UserPatch>,
@@ -148,7 +148,7 @@ async fn user_update(
 )]
 async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -203,7 +203,7 @@ async fn user_delete(
 )]
 async fn user_undelete(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -280,7 +280,7 @@ async fn user_undelete(
 )]
 async fn user_get(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Identify])?;
@@ -321,7 +321,7 @@ async fn user_get(
 )]
 async fn user_room_list(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     Query(q): Query<PaginationQuery<RoomId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -366,7 +366,7 @@ async fn user_audit_logs(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
     Query(filter): Query<AuditLogFilter>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -452,7 +452,7 @@ async fn guest_create(
 )]
 async fn user_suspend(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SuspendRequest>,
@@ -505,7 +505,7 @@ async fn user_suspend(
 )]
 async fn user_unsuspend(
     Path(target_user_id): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -550,7 +550,7 @@ async fn user_unsuspend(
 async fn connection_list(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<ApplicationId>>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -579,7 +579,7 @@ async fn connection_list(
 )]
 async fn connection_revoke(
     Path((target_user_id, app_id)): Path<(UserIdReq, ApplicationId)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -625,7 +625,7 @@ async fn connection_revoke(
 )]
 async fn user_presence_set(
     Path((target_user_id,)): Path<(UserIdReq,)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<Presence>,
 ) -> Result<impl IntoResponse> {
@@ -664,7 +664,7 @@ async fn user_presence_set(
 async fn user_list(
     Query(paginate): Query<PaginationQuery<UserId>>,
     Query(q): Query<UserListParams>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;

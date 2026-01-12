@@ -12,7 +12,7 @@ use common::v1::types::AuditLogEntryId;
 use common::v1::types::AuditLogEntryType;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::{Auth2, HeaderReason};
+use crate::routes::util::{Auth, HeaderReason};
 use crate::types::UserIdReq;
 use crate::ServerState;
 
@@ -34,7 +34,7 @@ use crate::error::{Error, Result};
 )]
 async fn email_add(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -123,7 +123,7 @@ async fn email_add(
 )]
 async fn email_delete(
     Path((target_user_id_req, email)): Path<(UserIdReq, String)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -177,7 +177,7 @@ async fn email_delete(
 )]
 async fn email_list(
     Path(target_user_id_req): Path<UserIdReq>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id_req {
@@ -206,7 +206,7 @@ async fn email_list(
 )]
 async fn email_update(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    auth: Auth2,
+    auth: Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<EmailInfoPatch>,
@@ -280,7 +280,7 @@ async fn email_update(
 )]
 async fn email_verification_resend(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -347,7 +347,7 @@ async fn email_verification_resend(
 )]
 async fn email_verification_finish(
     Path((target_user_id_req, email_addr, code)): Path<(UserIdReq, String, String)>,
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {

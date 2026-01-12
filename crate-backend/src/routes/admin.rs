@@ -12,7 +12,7 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth2, HeaderReason};
+use super::util::{Auth, HeaderReason};
 
 use crate::{
     error::Result,
@@ -50,7 +50,7 @@ struct AdminRegisterUser {
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_whisper(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminWhisper>,
@@ -117,7 +117,7 @@ async fn admin_whisper(
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_broadcast(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminBroadcast>,
@@ -215,7 +215,7 @@ async fn admin_broadcast(
     responses((status = NO_CONTENT, description = "User registered"))
 )]
 async fn admin_register_user(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminRegisterUser>,
@@ -261,7 +261,7 @@ async fn admin_register_user(
     ),
 )]
 async fn admin_purge_cache(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AdminPurgeCache>,
 ) -> Result<impl IntoResponse> {
@@ -288,7 +288,7 @@ async fn admin_purge_cache(
     )
 )]
 async fn admin_collect_garbage(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AdminCollectGarbage>,
 ) -> Result<impl IntoResponse> {

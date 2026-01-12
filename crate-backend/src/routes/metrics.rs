@@ -11,13 +11,13 @@ use crate::{
         ROOM_COUNT_TOTAL, USER_COUNT_BOT, USER_COUNT_GUEST, USER_COUNT_PUPPET,
         USER_COUNT_PUPPET_BOT, USER_COUNT_REGISTERED, USER_COUNT_TOTAL, USER_COUNT_WEBHOOK,
     },
-    routes::util::Auth2,
+    routes::util::Auth,
     types::{Permission, SERVER_ROOM_ID},
     Error, Result, ServerState,
 };
 
 pub async fn get_metrics(
-    auth: Auth2,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s
