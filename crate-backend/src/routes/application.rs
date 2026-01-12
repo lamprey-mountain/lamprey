@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
-    response::IntoResponse, Json,
+    response::IntoResponse,
+    Json,
 };
 use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch},

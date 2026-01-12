@@ -581,8 +581,8 @@ impl DataMessage for Postgres {
 
         query!(
             r#"
-            UPDATE message_version 
-            SET 
+            UPDATE message_version
+            SET
                 deleted_at = $2,
                 content = NULL,
                 embeds = '[]'::jsonb
@@ -594,7 +594,6 @@ impl DataMessage for Postgres {
         .execute(&mut *tx)
         .await?;
 
-        // Delete associated attachments from message_attachment table
         query!(
             "DELETE FROM message_attachment WHERE version_id = $1",
             version_uuid
@@ -602,9 +601,8 @@ impl DataMessage for Postgres {
         .execute(&mut *tx)
         .await?;
 
-        // And from media_link. The link_type is 'message_version'
         query!(
-            "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'message_version'",
+            "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'MessageVersion'",
             version_uuid
         )
         .execute(&mut *tx)

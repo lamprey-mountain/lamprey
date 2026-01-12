@@ -393,12 +393,10 @@ async fn message_version_delete(
     }
     perms.ensure(Permission::ViewChannel)?;
 
-    // Get message to check owner
     let message = data
         .message_get(channel_id, message_id, auth.user.id)
         .await?;
 
-    // Cannot delete latest version
     if message.latest_version.version_id == version_id {
         return Err(Error::BadStatic("cannot delete latest message version"));
     }
@@ -1105,6 +1103,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_delete))
         .routes(routes!(message_version_list))
         .routes(routes!(message_version_get))
+        .routes(routes!(message_version_delete))
         .routes(routes!(message_reply_query))
         .routes(routes!(message_reply_roots))
         .routes(routes!(message_moderate))

@@ -5,7 +5,14 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId, application::Connection, automod::{AutomodRule, AutomodRuleExecution}, presence::Presence, util::Time, voice::Call, webhook::Webhook
+    application::Connection,
+    automod::{AutomodRule, AutomodRuleExecution},
+    presence::Presence,
+    util::Time,
+    voice::Call,
+    webhook::Webhook,
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, InviteTargetId,
+    InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
 };
 
 use crate::v2::types::message::Message as MessageV2;

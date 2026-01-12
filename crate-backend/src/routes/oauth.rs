@@ -12,8 +12,8 @@ use common::v1::types::{
         Autoconfig, OauthAuthorizeInfo, OauthAuthorizeParams, OauthAuthorizeResponse,
         OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
     },
-    util::Time, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, SessionStatus,
-    SessionToken, SessionType,
+    util::Time,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, SessionStatus, SessionToken, SessionType,
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
