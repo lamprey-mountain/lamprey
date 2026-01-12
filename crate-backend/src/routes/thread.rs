@@ -378,6 +378,12 @@ async fn thread_list(
 }
 
 /// Thread list archived
+///
+/// Lists archived threads in this channel.
+///
+/// - Includes all archived public threads.
+/// - If you have the `ThreadManage` permission, includes all archived private threads.
+/// - Otherwise, only includes archived private threads you're a member of.
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/thread/archived",
