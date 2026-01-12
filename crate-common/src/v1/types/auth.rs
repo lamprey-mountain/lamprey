@@ -5,37 +5,35 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::v1::types::{email::EmailAddr, util::Time, SessionId, UserId};
+use crate::v1::types::{email::EmailAddr, util::Time, UserId};
 
-// #[cfg(feature = "validator")]
-// use validator::Validate;
+#[cfg(feature = "validator")]
+use validator::Validate;
 
+/// response to a totp init request
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct TotpState {
-    pub is_valid: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct TotpStateWithSecret {
-    #[serde(flatten)]
-    pub state: TotpState,
+pub struct TotpInit {
     pub secret: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// request body for totp_validate or totp_exec
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TotpVerificationRequest {
+    // FIXME: max length 6 chars
+    // #[cfg_attr(feature = "utoipa", schema())]
+    // #[cfg_attr(feature = "validator", validate())]
     pub code: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TotpRecoveryCodes {
-    pub items: Vec<TotpRecoveryCode>,
+    pub codes: Vec<TotpRecoveryCode>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,17 +42,7 @@ pub struct TotpRecoveryCode {
     pub code: String,
 
     /// if this is Some the code can no longer be used
-    pub used: Option<TotpRecoveryCodeUsed>,
-}
-
-/// information about who used this code
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct TotpRecoveryCodeUsed {
-    pub used_at: Time,
-
-    /// is None if session no longer exists
-    pub used_by: Option<SessionId>,
+    pub used_at: Option<Time>,
 }
 
 // TODO(#267): look into zeroing out/erasing passwords after handling
@@ -130,10 +118,10 @@ pub struct WebauthnPatch {
 pub struct AuthState {
     /// if there is at least one verified and primary email address
     ///
-    /// (this is used for magic links and password resets)
+    /// this is used for magic links and password resets
     pub has_email: bool,
 
-    /// if local totp state is_valid
+    /// if the user has registered a totp provider
     pub has_totp: bool,
 
     /// if a password has been set

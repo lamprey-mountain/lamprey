@@ -217,4 +217,32 @@ impl DataAuth for Postgres {
         .await?;
         Ok(row.session_id.into())
     }
+
+    async fn auth_totp_set(
+        &self,
+        user_id: UserId,
+        secret: Option<String>,
+        enabled: bool,
+    ) -> Result<()> {
+        sqlx::query!(
+            "update usr set totp_secret = $2, totp_enabled = $3 where id = $1",
+            *user_id,
+            secret,
+            enabled
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn auth_totp_get(&self, user_id: UserId) -> Result<Option<(String, bool)>> {
+        let row = sqlx::query!(
+            "select totp_secret, totp_enabled from usr where id = $1",
+            *user_id,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.and_then(|r| r.totp_secret.map(|secret| (secret, r.totp_enabled))))
+    }
 }

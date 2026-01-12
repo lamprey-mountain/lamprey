@@ -5,10 +5,11 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use axum::Json;
+use common::v1::types::auth::TotpInit;
+use common::v1::types::auth::TotpVerificationRequest;
 use common::v1::types::auth::{
     AuthState, CaptchaChallenge, CaptchaResponse, PasswordExec, PasswordExecIdent, PasswordSet,
-    TotpRecoveryCodes, TotpState, TotpStateWithSecret, TotpVerificationRequest,
-    WebauthnAuthenticator, WebauthnChallenge, WebauthnFinish, WebauthnPatch,
+    TotpRecoveryCodes, WebauthnAuthenticator, WebauthnChallenge, WebauthnFinish, WebauthnPatch,
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::util::{Changes, Time};
@@ -19,6 +20,7 @@ use common::v1::types::{
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use time::Duration;
+use totp_rs::{Algorithm as TotpAlgorithm, Secret as TotpSecret, TOTP as Totp};
 use tracing::debug;
 use url::Url;
 use utoipa::IntoParams;
@@ -489,31 +491,168 @@ struct AuthEmailComplete {
     code: String,
 }
 
-/// Auth totp init (TODO)
+/// Auth totp init
+///
+/// Begin totp registration by generating a secret
 #[utoipa::path(
     post,
     path = "/auth/totp/init",
     tags = ["auth", "badge.sudo"],
-    responses((status = OK, body = TotpStateWithSecret, description = "success")),
+    responses((status = OK, body = TotpInit, description = "success")),
 )]
-async fn auth_totp_init(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+async fn auth_totp_init(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    Err(Error::Unimplemented)
+
+    let mut secret_bytes = [0u8; 20];
+    rand::fill(&mut secret_bytes);
+
+    let secret = base32::encode(base32::Alphabet::Rfc4648 { padding: false }, &secret_bytes);
+
+    s.data()
+        .auth_totp_set(auth.user.id, Some(secret.clone()), false)
+        .await?;
+
+    Ok(Json(TotpInit { secret }))
 }
 
-/// Auth totp execute (TODO)
+/// Auth totp complete
+///
+/// Complete the totp registration process
+#[utoipa::path(
+    post,
+    path = "/auth/totp/complete",
+    request_body = TotpVerificationRequest,
+    tags = ["auth", "badge.sudo"],
+    responses((status = OK, body = AuthState, description = "success")),
+)]
+async fn auth_totp_complete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<TotpVerificationRequest>,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    let (secret, enabled) = s
+        .data()
+        .auth_totp_get(auth.user.id)
+        .await?
+        .ok_or(Error::BadStatic("totp not initialized"))?;
+
+    if enabled {
+        return Err(Error::BadStatic("totp already enabled"));
+    }
+
+    let secret_bytes = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, &secret)
+        .ok_or_else(|| Error::Internal("failed to decode totp secret".to_owned()))?;
+
+    let totp = Totp::new(
+        TotpAlgorithm::SHA1,
+        6,
+        1,
+        30,
+        TotpSecret::Raw(secret_bytes).to_bytes().unwrap(),
+    )
+    .map_err(|e| {
+        tracing::error!("failed to create totp: {}", e);
+        Error::Internal("failed to create totp".to_owned())
+    })?;
+
+    if !totp.check_current(&json.code).unwrap_or(false) {
+        return Err(Error::BadStatic("invalid totp code"));
+    }
+
+    s.data()
+        .auth_totp_set(auth.user.id, Some(secret), true)
+        .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
+        reason,
+        ty: AuditLogEntryType::AuthUpdate {
+            changes: Changes::new().change("has_totp", &false, &true).build(),
+        },
+    })
+    .await?;
+
+    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
+
+    Ok(Json(auth_state))
+}
+
+/// Auth totp execute
 #[utoipa::path(
     post,
     path = "/auth/totp",
+    request_body = TotpVerificationRequest,
     tags = ["auth"],
-    responses((status = OK, body = TotpState, description = "success")),
+    responses((status = OK, body = AuthState, description = "success")),
 )]
 async fn auth_totp_exec(
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<TotpVerificationRequest>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<TotpVerificationRequest>,
+) -> Result<impl IntoResponse> {
+    let (secret, enabled) = s
+        .data()
+        .auth_totp_get(auth.user.id)
+        .await?
+        .ok_or(Error::BadStatic("totp not enabled"))?;
+
+    if !enabled {
+        return Err(Error::BadStatic("totp not enabled"));
+    }
+
+    let secret_bytes = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, &secret)
+        .ok_or_else(|| Error::Internal("failed to decode totp secret".to_owned()))?;
+
+    let totp = Totp::new(
+        TotpAlgorithm::SHA1,
+        6,
+        1,
+        30,
+        TotpSecret::Raw(secret_bytes).to_bytes().unwrap(),
+    )
+    .map_err(|e| {
+        tracing::error!("failed to create totp: {}", e);
+        Error::Internal("failed to create totp".to_owned())
+    })?;
+
+    if !totp.check_current(&json.code).unwrap_or(false) {
+        return Err(Error::BadStatic("invalid totp code"));
+    }
+
+    s.data()
+        .session_set_status(
+            auth.session.id,
+            SessionStatus::Sudo {
+                user_id: auth.user.id,
+                sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
+            },
+        )
+        .await?;
+    s.services().sessions.invalidate(auth.session.id).await;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
+        reason,
+        ty: AuditLogEntryType::AuthSudo {
+            session_id: auth.session.id,
+        },
+    })
+    .await?;
+
+    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
+
+    Ok(Json(auth_state))
 }
 
 /// Auth totp recovery codes get (TODO)
@@ -546,16 +685,46 @@ async fn auth_totp_recovery_rotate(
     Err(Error::Unimplemented)
 }
 
-/// Auth totp delete (TODO)
+/// Auth totp delete
 #[utoipa::path(
     delete,
     path = "/auth/totp",
     tags = ["auth", "badge.sudo"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn auth_totp_delete(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+async fn auth_totp_delete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    Err(Error::Unimplemented)
+    let had_totp = s
+        .data()
+        .auth_totp_get(auth.user.id)
+        .await?
+        .map(|(_, enabled)| enabled)
+        .unwrap_or(false);
+
+    if !had_totp {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
+    s.data()
+        .auth_totp_set(auth.user.id, None, false)
+        .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
+        reason,
+        ty: AuditLogEntryType::AuthUpdate {
+            changes: Changes::new().change("has_totp", &true, &false).build(),
+        },
+    })
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth password set
@@ -711,9 +880,10 @@ pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthSt
     let oauth_providers = data.auth_oauth_get_all(user_id).await?;
     let email = data.user_email_list(user_id).await?;
     let password = data.auth_password_get(user_id).await?;
+    let totp = data.auth_totp_get(user_id).await?;
     let auth_state = AuthState {
         has_email: email.iter().any(|e| e.is_verified && e.is_primary),
-        has_totp: false, // totp not implemented yet
+        has_totp: totp.map(|(_, enabled)| enabled).unwrap_or(false),
         has_password: password.is_some(),
         oauth_providers,
         authenticators: vec![], // webauthn not implemented yet
@@ -890,6 +1060,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_email_reset))
         .routes(routes!(auth_email_complete))
         .routes(routes!(auth_totp_init))
+        .routes(routes!(auth_totp_complete))
         .routes(routes!(auth_totp_exec))
         .routes(routes!(auth_totp_delete))
         .routes(routes!(auth_totp_recovery_get))
