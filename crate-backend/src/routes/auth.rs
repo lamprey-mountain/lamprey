@@ -9,7 +9,8 @@ use common::v1::types::auth::TotpInit;
 use common::v1::types::auth::TotpVerificationRequest;
 use common::v1::types::auth::{
     AuthState, CaptchaChallenge, CaptchaResponse, PasswordExec, PasswordExecIdent, PasswordSet,
-    TotpRecoveryCodes, WebauthnAuthenticator, WebauthnChallenge, WebauthnFinish, WebauthnPatch,
+    TotpRecoveryCode, TotpRecoveryCodes, WebauthnAuthenticator, WebauthnChallenge, WebauthnFinish,
+    WebauthnPatch,
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::util::{Changes, Time};
@@ -655,7 +656,7 @@ async fn auth_totp_exec(
     Ok(Json(auth_state))
 }
 
-/// Auth totp recovery codes get (TODO)
+/// Auth totp recovery codes get
 #[utoipa::path(
     get,
     path = "/auth/totp/recovery",
@@ -664,13 +665,20 @@ async fn auth_totp_exec(
 )]
 async fn auth_totp_recovery_get(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
+    State(s): State<Arc<ServerState>>,
+) -> Result<Json<TotpRecoveryCodes>> {
     auth.ensure_sudo()?;
-    Err(Error::Unimplemented)
+    let codes_with_used_at = s.data().auth_totp_recovery_get_all(auth.user.id).await?;
+    let recovery_codes = codes_with_used_at
+        .into_iter()
+        .map(|(code, used_at)| TotpRecoveryCode { code, used_at })
+        .collect();
+    Ok(Json(TotpRecoveryCodes {
+        codes: recovery_codes,
+    }))
 }
 
-/// Auth totp recovery codes rotate (TODO)
+/// Auth totp recovery codes rotate
 #[utoipa::path(
     post,
     path = "/auth/totp/recovery",
@@ -679,10 +687,45 @@ async fn auth_totp_recovery_get(
 )]
 async fn auth_totp_recovery_rotate(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<Json<TotpRecoveryCodes>> {
     auth.ensure_sudo()?;
-    Err(Error::Unimplemented)
+    let mut codes = Vec::with_capacity(5);
+    for _ in 0..5 {
+        codes.push(Uuid::new_v4().to_string());
+    }
+
+    s.data()
+        .auth_totp_recovery_generate(auth.user.id, &codes)
+        .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
+        reason,
+        ty: AuditLogEntryType::AuthUpdate {
+            changes: vec![AuditLogChange {
+                key: "totp_recovery_codes_rotated".into(),
+                old: Value::Null,
+                new: Value::Null,
+            }],
+        },
+    })
+    .await?;
+
+    let recovery_codes = codes
+        .into_iter()
+        .map(|code| TotpRecoveryCode {
+            code,
+            used_at: None,
+        })
+        .collect();
+    Ok(Json(TotpRecoveryCodes {
+        codes: recovery_codes,
+    }))
 }
 
 /// Auth totp delete
@@ -709,9 +752,7 @@ async fn auth_totp_delete(
         return Ok(StatusCode::NO_CONTENT);
     }
 
-    s.data()
-        .auth_totp_set(auth.user.id, None, false)
-        .await?;
+    s.data().auth_totp_set(auth.user.id, None, false).await?;
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -725,6 +766,61 @@ async fn auth_totp_delete(
     })
     .await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth totp recovery exec
+#[utoipa::path(
+    post,
+    path = "/auth/totp/recovery/exec",
+    request_body = TotpVerificationRequest,
+    tags = ["auth"],
+    responses((status = OK, body = AuthState, description = "success")),
+)]
+async fn auth_totp_recovery_exec(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<TotpVerificationRequest>,
+) -> Result<impl IntoResponse> {
+    let (secret, enabled) = s
+        .data()
+        .auth_totp_get(auth.user.id)
+        .await?
+        .ok_or(Error::BadStatic("totp not enabled"))?;
+
+    if !enabled {
+        return Err(Error::BadStatic("totp not enabled"));
+    }
+
+    s.data()
+        .auth_totp_recovery_use(auth.user.id, &json.code)
+        .await?;
+
+    s.data()
+        .session_set_status(
+            auth.session.id,
+            SessionStatus::Sudo {
+                user_id: auth.user.id,
+                sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
+            },
+        )
+        .await?;
+    s.services().sessions.invalidate(auth.session.id).await;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth.user.id.into_inner().into(),
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
+        reason,
+        ty: AuditLogEntryType::AuthSudo {
+            session_id: auth.session.id,
+        },
+    })
+    .await?;
+
+    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
+
+    Ok(Json(auth_state))
 }
 
 /// Auth password set
@@ -1065,6 +1161,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_totp_delete))
         .routes(routes!(auth_totp_recovery_get))
         .routes(routes!(auth_totp_recovery_rotate))
+        .routes(routes!(auth_totp_recovery_exec))
         .routes(routes!(auth_password_set))
         .routes(routes!(auth_password_delete))
         .routes(routes!(auth_password_exec))

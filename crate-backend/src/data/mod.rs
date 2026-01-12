@@ -710,8 +710,20 @@ pub trait DataAuth {
         purpose: EmailPurpose,
     ) -> Result<()>;
     async fn auth_email_use(&self, code: String) -> Result<(EmailAddr, SessionId, EmailPurpose)>;
-    async fn auth_totp_set(&self, user_id: UserId, secret: Option<String>, enabled: bool) -> Result<()>;
+    async fn auth_totp_set(
+        &self,
+        user_id: UserId,
+        secret: Option<String>,
+        enabled: bool,
+    ) -> Result<()>;
     async fn auth_totp_get(&self, user_id: UserId) -> Result<Option<(String, bool)>>;
+    async fn auth_totp_recovery_generate(&self, user_id: UserId, codes: &[String]) -> Result<()>;
+    async fn auth_totp_recovery_get_all(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<(String, Option<Time>)>>;
+    async fn auth_totp_recovery_use(&self, user_id: UserId, code: &str) -> Result<()>;
+    async fn auth_totp_recovery_delete_all(&self, user_id: UserId) -> Result<()>;
 
     // TODO: move these into a new DataOauth trait?
     async fn oauth_auth_code_create(

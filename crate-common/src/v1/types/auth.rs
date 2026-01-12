@@ -24,9 +24,7 @@ pub struct TotpInit {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TotpVerificationRequest {
-    // FIXME: max length 6 chars
-    // #[cfg_attr(feature = "utoipa", schema())]
-    // #[cfg_attr(feature = "validator", validate())]
+    /// the totp code or recovery code
     pub code: String,
 }
 

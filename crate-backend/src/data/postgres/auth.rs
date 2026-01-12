@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::application::Scopes;
 use common::v1::types::email::EmailAddr;
+use common::v1::types::util::Time;
 use common::v1::types::{ApplicationId, SessionId};
 use sqlx::{query, query_scalar};
 
@@ -224,14 +225,25 @@ impl DataAuth for Postgres {
         secret: Option<String>,
         enabled: bool,
     ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
         sqlx::query!(
             "update usr set totp_secret = $2, totp_enabled = $3 where id = $1",
             *user_id,
             secret,
             enabled
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        if secret.is_none() {
+            // If secret is set to None, delete all recovery codes
+            sqlx::query!("delete from totp_recovery where user_id = $1", *user_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        tx.commit().await?;
         Ok(())
     }
 
@@ -244,5 +256,66 @@ impl DataAuth for Postgres {
         .await?;
 
         Ok(row.and_then(|r| r.totp_secret.map(|secret| (secret, r.totp_enabled))))
+    }
+
+    async fn auth_totp_recovery_generate(&self, user_id: UserId, codes: &[String]) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!("delete from totp_recovery where user_id = $1", *user_id)
+            .execute(&mut *tx)
+            .await?;
+
+        for code in codes {
+            sqlx::query!(
+                "insert into totp_recovery (user_id, code) values ($1, $2)",
+                *user_id,
+                code
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn auth_totp_recovery_get_all(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<(String, Option<Time>)>> {
+        Ok(sqlx::query!(
+            "select code, used_at from totp_recovery where user_id = $1",
+            *user_id
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|r| (r.code, r.used_at.map(|t| t.into())))
+        .collect())
+    }
+
+    async fn auth_totp_recovery_use(&self, user_id: UserId, code: &str) -> Result<()> {
+        let rows_affected = sqlx::query!(
+            "update totp_recovery set used_at = now() where user_id = $1 and code = $2 and used_at is null",
+            *user_id,
+            code
+        )
+        .execute(&self.pool)
+        .await?
+        .rows_affected();
+
+        if rows_affected == 0 {
+            return Err(crate::error::Error::BadStatic("invalid or used code"));
+        }
+
+        Ok(())
+    }
+
+    async fn auth_totp_recovery_delete_all(&self, user_id: UserId) -> Result<()> {
+        sqlx::query!("delete from totp_recovery where user_id = $1", *user_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }

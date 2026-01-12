@@ -25,8 +25,8 @@ use super::{
     role::RoleReorderItem,
     user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
     voice::{SignallingMessage, VoiceState},
-    Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
-    RoomMember, Session, SessionId, SessionToken, User, UserId, Harvest,
+    Channel, ChannelId, EmojiId, Harvest, InviteCode, MessageId, MessageVerId, Role, RoleId, Room,
+    RoomId, RoomMember, Session, SessionId, SessionToken, User, UserId,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,7 +270,9 @@ pub enum MessageSync {
         // messages: Vec<Message>,
     },
 
-    HarvestUpdate { harvest: Harvest },
+    HarvestUpdate {
+        harvest: Harvest,
+    },
 
     RoomMemberCreate {
         member: RoomMember,
