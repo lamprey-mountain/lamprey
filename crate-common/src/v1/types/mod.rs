@@ -22,6 +22,7 @@ pub mod oauth;
 pub mod pagination;
 pub mod permission;
 pub mod presence;
+pub mod push;
 pub mod reaction;
 pub mod role;
 pub mod room;

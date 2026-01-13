@@ -134,7 +134,7 @@ impl Modify for NestedTags {
             {
                 "name": "user",
                 "description": "working with users",
-                "tags": ["user", "user_email", "user_config", "relationship", "dm", "inbox"],
+                "tags": ["user", "user_email", "user_config", "relationship", "dm", "inbox", "push"],
             },
             {
                 "name": "integrations",
