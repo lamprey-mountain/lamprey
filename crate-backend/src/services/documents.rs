@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::v1::types::{ChannelId, DocumentBranchId, MessageId, MessageVerId, UserId};
+use common::v1::types::{ChannelId, DocumentBranchId};
 use dashmap::DashMap;
 use tokio::sync::RwLock;
 
