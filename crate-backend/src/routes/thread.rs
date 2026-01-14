@@ -175,6 +175,7 @@ async fn thread_member_add(
                 message_type: MessageType::MemberAdd(MessageMember { target_user_id }),
                 edited_at: None,
                 created_at: None,
+                removed_at: None,
                 mentions: Mentions {
                     users: vec![MentionsUser {
                         id: target_user_id,
@@ -297,6 +298,7 @@ async fn thread_member_delete(
                 message_type: MessageType::MemberRemove(MessageMember { target_user_id }),
                 edited_at: None,
                 created_at: None,
+                removed_at: None,
                 mentions: Default::default(),
             })
             .await?;
@@ -667,6 +669,7 @@ async fn thread_create_from_message(
                 }),
                 edited_at: None,
                 created_at: None,
+                removed_at: None,
                 mentions: Default::default(),
             })
             .await?;

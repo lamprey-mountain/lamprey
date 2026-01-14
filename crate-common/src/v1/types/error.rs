@@ -166,10 +166,6 @@ pub mod next {
         /// sudo mode required for this endpoint
         #[error("sudo mode required for this endpoint")]
         SudoRequired,
-        // /// this user type cant use this endpoint
-        // ///
-        // /// some endpoints can only be used by bots, can't be used by puppets, etc
-        // // replace with specific errors?
         // BadUserType,
 
         // not bot owner
@@ -229,6 +225,9 @@ pub mod next {
         // calls can only be deleted in Broadcast channels
 
         // your account must have mfa enabled to use this operation
+
+        // message create blocked by automod
+        // message edit blocked by automod
     }
 
     /// warnings that require ?force=true
@@ -247,9 +246,20 @@ pub mod next {
     }
 
     impl Error {
-        pub fn new(message: String, code: ErrorCode) -> Self {
+        pub fn with_message(code: ErrorCode, message: String) -> Self {
             Self {
                 message,
+                code,
+                fields: vec![],
+                required_permissions: vec![],
+                required_permissions_server: vec![],
+                required_scopes: vec![],
+            }
+        }
+
+        pub fn from_code(code: ErrorCode) -> Self {
+            Self {
+                message: code.to_string(),
                 code,
                 fields: vec![],
                 required_permissions: vec![],

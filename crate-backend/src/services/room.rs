@@ -311,6 +311,7 @@ impl ServiceRooms {
                     message_type: MessageType::MemberJoin,
                     edited_at: None,
                     created_at: None,
+                    removed_at: None,
                     mentions: Default::default(),
                 })
                 .await?;

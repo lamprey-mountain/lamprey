@@ -386,6 +386,7 @@ pub struct DbMessageCreate {
     pub message_type: MessageType,
     pub edited_at: Option<time::PrimitiveDateTime>,
     pub created_at: Option<time::PrimitiveDateTime>,
+    pub removed_at: Option<time::PrimitiveDateTime>,
     pub mentions: Mentions,
 }
 

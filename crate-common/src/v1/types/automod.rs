@@ -149,6 +149,28 @@ pub struct AutomodRuleTest {
     pub actions: Vec<AutomodAction>,
 }
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AutomodMatches {
+    /// the original text
+    pub text: String,
+
+    /// the sanitized text that was matched against
+    pub sanitized_text: String,
+
+    /// the substrings in the input text that matched
+    pub matches: Vec<String>,
+
+    /// the keywords in the automod rule that matched
+    pub keywords: Vec<String>,
+
+    /// the regexes in the automod rule that matched
+    pub regexes: Vec<String>,
+    // /// where this piece of text was found
+    // pub location: AutomodTextLocation,
+}
+
 /// where a piece of text was found
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
@@ -171,7 +193,7 @@ pub enum AutomodTextLocation {
 }
 
 // TODO: configure exactly what AutomodTextLocation the trigger should match on
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodTrigger {
@@ -221,7 +243,7 @@ pub enum AutomodTrigger {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodAction {

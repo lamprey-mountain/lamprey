@@ -1,10 +1,11 @@
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc, time::Duration};
 
 use common::{
     v1::types::{
-        automod::{AutomodAction, AutomodRule, AutomodTarget, AutomodTrigger},
+        automod::{AutomodAction, AutomodMatches, AutomodRule, AutomodTarget, AutomodTrigger},
+        util::Time,
         AutomodRuleId, Channel, ChannelCreate, ChannelPatch, MessageCreate, MessagePatch, RoomId,
-        RoomMember, User,
+        RoomMember, RoomMemberPatch, User, UserId,
     },
     v2::types::message::Message,
 };
@@ -13,23 +14,24 @@ use linkify::{LinkFinder, LinkKind};
 use tracing::warn;
 use url::Url;
 
-use crate::{Result, ServerStateInner};
+use crate::{Error, Result, ServerStateInner};
 
 pub struct ServiceAutomod {
     #[allow(unused)] // TEMP
     state: Arc<ServerStateInner>,
     #[allow(unused)] // TEMP
-    rulesets: DashMap<RoomId, AutomodRuleset>,
+    rulesets: DashMap<RoomId, Arc<AutomodRuleset>>,
 }
 
-struct AutomodRuleset {
+#[derive(Debug, Clone)]
+pub struct AutomodRuleset {
     rules: Vec<AutomodRule>,
 }
 
 // TODO: move to common?
 /// the result of scanning
 #[derive(Default)]
-struct AutomodResult {
+pub struct AutomodResult {
     /// the rules that were triggered
     rules: Vec<AutomodRuleId>,
 
@@ -37,30 +39,30 @@ struct AutomodResult {
     actions: AutomodResultActions,
 
     /// what was matched
-    matched_text: Option<AutomodResultMatch>,
+    matched_text: Option<AutomodMatches>,
+}
+
+impl AutomodResult {
+    pub fn is_triggered(&self) -> bool {
+        !self.rules.is_empty()
+    }
+
+    pub fn rules(&self) -> &[AutomodRuleId] {
+        &self.rules
+    }
+
+    pub fn actions(&self) -> &[AutomodAction] {
+        &self.actions.inner
+    }
+
+    pub fn matched(&self) -> Option<&AutomodMatches> {
+        self.matched_text.as_ref()
+    }
 }
 
 #[derive(Default)]
 struct AutomodResultActions {
     inner: Vec<AutomodAction>,
-}
-
-struct AutomodResultMatch {
-    /// the original text that was matched against
-    text: String,
-
-    /// the cured text that was matched against
-    cured_text: String,
-
-    /// the substrings in the input text that matched
-    matches: Vec<String>,
-
-    /// the keywords in the automod rule that matched
-    keywords: Vec<String>,
-
-    /// the regexes in the automod rule that matched
-    regexes: Vec<String>,
-    // location: AutomodTextLocation,
 }
 
 impl AutomodResultActions {
@@ -151,15 +153,13 @@ impl AutomodRuleset {
                         continue;
                     }
 
-                    let m = result
-                        .matched_text
-                        .get_or_insert_with(|| AutomodResultMatch {
-                            text: input.to_owned(),
-                            cured_text: cured_str.to_string(),
-                            matches: vec![],
-                            keywords: vec![],
-                            regexes: vec![],
-                        });
+                    let m = result.matched_text.get_or_insert_with(|| AutomodMatches {
+                        text: input.to_owned(),
+                        sanitized_text: cured_str.to_string(),
+                        matches: vec![],
+                        keywords: vec![],
+                        regexes: vec![],
+                    });
 
                     for mat in found {
                         let matched_cured = cured_str[mat.start..mat.end].to_string();
@@ -200,15 +200,13 @@ impl AutomodRuleset {
                         continue;
                     }
 
-                    let m = result
-                        .matched_text
-                        .get_or_insert_with(|| AutomodResultMatch {
-                            text: input.to_owned(),
-                            cured_text: cured_str.to_string(),
-                            matches: vec![],
-                            keywords: vec![],
-                            regexes: vec![],
-                        });
+                    let m = result.matched_text.get_or_insert_with(|| AutomodMatches {
+                        text: input.to_owned(),
+                        sanitized_text: cured_str.to_string(),
+                        matches: vec![],
+                        keywords: vec![],
+                        regexes: vec![],
+                    });
 
                     for index in matches {
                         let pattern = &deny[index];
@@ -265,15 +263,13 @@ impl AutomodRuleset {
                         // if whitelist is true: we want matches_target to be true. if false, violation.
                         // if whitelist is false: we want matches_target to be false. if true, violation.
                         if *whitelist != matches_target {
-                            let m = result
-                                .matched_text
-                                .get_or_insert_with(|| AutomodResultMatch {
-                                    text: input.to_owned(),
-                                    cured_text: cured_str.to_string(),
-                                    matches: vec![],
-                                    keywords: vec![],
-                                    regexes: vec![],
-                                });
+                            let m = result.matched_text.get_or_insert_with(|| AutomodMatches {
+                                text: input.to_owned(),
+                                sanitized_text: cured_str.to_string(),
+                                matches: vec![],
+                                keywords: vec![],
+                                regexes: vec![],
+                            });
 
                             let link_str = link.as_str().to_string();
                             if !m.matches.contains(&link_str) {
@@ -290,7 +286,7 @@ impl AutomodRuleset {
                         }
                     }
                 }
-                AutomodTrigger::MediaScan { scanner } => todo!("media scanning"),
+                AutomodTrigger::MediaScan { scanner: _ } => todo!("media scanning"),
             }
         }
 
@@ -324,13 +320,70 @@ impl ServiceAutomod {
     }
 
     /// load the automod ruleset for a room
-    pub async fn load(&self, room_id: RoomId) -> Result<AutomodRuleset> {
-        todo!()
+    pub async fn load(&self, room_id: RoomId) -> Result<Arc<AutomodRuleset>> {
+        if let Some(ruleset) = self.rulesets.get(&room_id) {
+            return Ok(ruleset.clone());
+        }
+
+        let rules = self.state.data().automod_rule_list(room_id).await?;
+        let ruleset = Arc::new(AutomodRuleset { rules });
+        self.rulesets.insert(room_id, ruleset.clone());
+        Ok(ruleset)
     }
 
-    // /// load a document into memory
-    // #[allow(unused)] // TEMP
-    // pub async fn scan(&self, channel_id: ChannelId, branch_id: DocumentBranchId) -> Result<()> {
-    //     todo!()
-    // }
+    /// invalidate the automod ruleset for a room
+    pub fn invalidate(&self, room_id: RoomId) {
+        self.rulesets.remove(&room_id);
+    }
+
+    /// enforce automod rules for message creation
+    ///
+    /// returns true if the message should be removed
+    pub async fn enforce_message_create(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        scan: &AutomodResult,
+    ) -> Result<bool> {
+        let mut removed = false;
+
+        for action in scan.actions() {
+            match action {
+                AutomodAction::Block { message } => {
+                    return Err(Error::BadRequest(
+                        message
+                            .clone()
+                            .unwrap_or_else(|| "message blocked by automod".to_string()),
+                    ));
+                }
+                AutomodAction::Timeout { duration } => {
+                    let timeout_until = Time::now_utc() + Duration::from_millis(*duration);
+                    let data = self.state.data();
+                    let srv = self.state.services();
+                    data.room_member_patch(
+                        room_id,
+                        user_id,
+                        RoomMemberPatch {
+                            timeout_until: Some(Some(timeout_until)),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
+                    srv.perms.invalidate_room(user_id, room_id).await;
+                    srv.perms
+                        .update_timeout_task(user_id, room_id, Some(timeout_until))
+                        .await;
+                }
+                AutomodAction::Remove => {
+                    // handled by upstream
+                    removed = true;
+                }
+                AutomodAction::SendAlert { channel_id: _ } => {
+                    todo!("SendAlert action not yet implemented (or designed)")
+                }
+            }
+        }
+
+        Ok(removed)
+    }
 }

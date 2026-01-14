@@ -7,6 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRule};
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 #[cfg(feature = "feat_interaction_reaction")]
@@ -374,6 +375,21 @@ pub enum MessageType {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagePin {
     pub pinned_message_id: MessageId,
+}
+
+/// Information about an auto moderation action
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageAutomod {
+    /// the rules that were triggered
+    pub rules: Vec<AutomodRule>,
+
+    /// the actions that were executed
+    pub actions: Vec<AutomodAction>,
+
+    pub matches: Option<AutomodMatches>,
+    pub channel_id: Option<ChannelId>,
+    pub flagged_message_id: Option<MessageId>,
 }
 
 /// Information about a thread being renamed

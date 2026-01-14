@@ -220,13 +220,17 @@ impl DataMessage for Postgres {
             .unwrap_or_else(time::OffsetDateTime::now_utc);
         let created_at = time::PrimitiveDateTime::new(created_at.date(), created_at.time());
 
+        let removed_at = create.removed_at.map(|t| t.assume_utc());
+        let removed_at = removed_at.map(|t| time::PrimitiveDateTime::new(t.date(), t.time()));
+
         query!(
-            r#"INSERT INTO message (id, channel_id, author_id, created_at, latest_version_id)
-            VALUES ($1, $2, $3, $4, $5)"#,
+            r#"INSERT INTO message (id, channel_id, author_id, created_at, removed_at, latest_version_id)
+            VALUES ($1, $2, $3, $4, $5, $6)"#,
             message_id,
             *create.channel_id,
             create.author_id.into_inner(),
             created_at,
+            removed_at,
             version_id,
         )
         .execute(&mut *tx)

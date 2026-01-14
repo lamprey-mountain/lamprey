@@ -209,7 +209,7 @@ impl ServiceMessages {
             true
         };
 
-        // TODO: move this to validation
+        // TODO: move this to validation?
         if json.content.as_ref().is_none_or(|s| s.is_empty())
             && json.attachments.is_empty()
             && json.embeds.is_empty()
@@ -269,6 +269,23 @@ impl ServiceMessages {
 
         let content = json.content.clone();
 
+        let mut removed_at = None;
+
+        // enforce automod just before message is sent
+        if let Some(room_id) = thread.room_id {
+            let automod = srv.automod.load(room_id).await?;
+            let scan = automod.scan_message_create(&json);
+            if scan.is_triggered() {
+                let removed = srv
+                    .automod
+                    .enforce_message_create(room_id, user_id, &scan)
+                    .await?;
+                if removed {
+                    removed_at = Some(Time::now_utc());
+                }
+            }
+        }
+
         let parsed_mentions =
             mentions::parse(content.as_deref().unwrap_or_default(), &json.mentions);
         let mentions = self
@@ -300,6 +317,7 @@ impl ServiceMessages {
                 message_type: payload,
                 edited_at: None,
                 created_at: json.created_at.map(|t| t.into()),
+                removed_at: removed_at.map(|t| t.into()),
                 mentions: mentions.clone(),
             })
             .await?;
@@ -689,6 +707,7 @@ impl ServiceMessages {
                     edited_at: json.edited_at.map(|t| t.into()),
                     // NOTE: this field is ignored
                     created_at: None,
+                    removed_at: None,
                     mentions: message.latest_version.mentions,
                 },
             )

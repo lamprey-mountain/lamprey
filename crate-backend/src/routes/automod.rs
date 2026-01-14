@@ -69,6 +69,7 @@ async fn automod_rule_create(
     perms.ensure(Permission::RoomManage)?;
 
     let rule = s.data().automod_rule_create(room_id, json.clone()).await?;
+    srv.automod.invalidate(room_id);
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -163,6 +164,7 @@ async fn automod_rule_update(
     }
 
     let rule = s.data().automod_rule_update(rule_id, json.clone()).await?;
+    srv.automod.invalidate(room_id);
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -229,6 +231,7 @@ async fn automod_rule_delete(
     }
 
     s.data().automod_rule_delete(rule_id).await?;
+    srv.automod.invalidate(room_id);
 
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),

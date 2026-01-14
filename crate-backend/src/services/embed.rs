@@ -579,6 +579,7 @@ impl ServiceEmbed {
                 edited_at: Some(message.latest_version.created_at.into()),
                 // NOTE: created_at is ignored
                 created_at: None,
+                removed_at: None,
                 mentions: message.latest_version.mentions,
             },
         )
