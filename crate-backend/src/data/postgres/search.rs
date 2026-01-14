@@ -145,6 +145,9 @@ impl DataSearch for Postgres {
                     ChannelType::Dm => "Dm",
                     ChannelType::Gdm => "Gdm",
                     ChannelType::Info => "Info",
+                    ChannelType::Wiki => "Wiki",
+                    ChannelType::Document => "Document",
+                    ChannelType::DocumentComment => "DocumentComment",
                 };
                 s.to_string()
             })

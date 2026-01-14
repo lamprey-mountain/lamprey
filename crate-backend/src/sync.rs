@@ -443,6 +443,9 @@ impl Connection {
                     error!("failed to send to sushi_sfu: {err}");
                 }
             }
+            MessageClient::DocumentSubscribe { channel_id } => todo!(),
+            MessageClient::DocumentEdit { channel_id } => todo!(),
+            MessageClient::DocumentPresence { channel_id } => todo!(),
         }
         Ok(())
     }
@@ -677,6 +680,11 @@ impl Connection {
             }
             MessageSync::RatelimitUpdate { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::HarvestUpdate { harvest, .. } => AuthCheck::User(harvest.user_id),
+            MessageSync::DocumentCreate { channel } => AuthCheck::Channel(channel.id),
+            MessageSync::DocumentUpdate { channel } => AuthCheck::Channel(channel.id),
+            MessageSync::DocumentDelete { channel_id } => AuthCheck::Channel(*channel_id),
+            MessageSync::DocumentEdit { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::DocumentPresence { channel_id, .. } => AuthCheck::Channel(*channel_id),
         };
         let should_send = auth_check.should_send(&session, &self.s).await?;
         if should_send {
@@ -688,6 +696,12 @@ impl Connection {
                 },
                 MessageSync::ChannelUpdate { channel } => MessageSync::ChannelUpdate {
                     channel: Box::new(srv.channels.get(channel.id, session.user_id()).await?),
+                },
+                MessageSync::DocumentCreate { channel } => MessageSync::DocumentCreate {
+                    channel: srv.channels.get(channel.id, session.user_id()).await?,
+                },
+                MessageSync::DocumentUpdate { channel } => MessageSync::DocumentUpdate {
+                    channel: srv.channels.get(channel.id, session.user_id()).await?,
                 },
                 MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
                     message: {

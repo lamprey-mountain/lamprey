@@ -9,6 +9,8 @@ use validator::Validate;
 
 use crate::v1::types::{ids::DocumentBranchId, misc::Time, ChannelId, UserId};
 
+/// info about a document
+// NOTE: this will probably be included in Channel as `document: Option<Document>`
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

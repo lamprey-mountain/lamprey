@@ -286,7 +286,8 @@ impl ServiceThreads {
             | ChannelType::Category
             | ChannelType::Calendar
             | ChannelType::Ticket
-            | ChannelType::Info => {
+            | ChannelType::Info
+            | ChannelType::Wiki => {
                 perms.ensure(Permission::ChannelManage)?;
             }
             ChannelType::ThreadPublic => {
@@ -401,6 +402,21 @@ impl ServiceThreads {
                 return Err(Error::BadStatic(
                     "can't create a direct message thread in a room",
                 ))
+            }
+            ChannelType::Document => {
+                if let Some(parent_id) = json.parent_id {
+                    let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                    if parent.ty == ChannelType::Wiki {
+                        perms.ensure(Permission::DocumentCreate)?;
+                    } else {
+                        perms.ensure(Permission::ChannelManage)?;
+                    }
+                } else {
+                    perms.ensure(Permission::ChannelManage)?;
+                }
+            }
+            ChannelType::DocumentComment => {
+                perms.ensure(Permission::DocumentComment)?;
             }
         };
         if json.bitrate.is_some_and(|b| b > 393216) {

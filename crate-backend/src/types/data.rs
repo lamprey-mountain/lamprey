@@ -204,6 +204,9 @@ pub enum DbChannelType {
     Calendar,
     Info,
     Ticket,
+    Wiki,
+    Document,
+    DocumentComment,
 }
 
 impl From<DbChannelType> for ChannelType {
@@ -224,6 +227,9 @@ impl From<DbChannelType> for ChannelType {
             DbChannelType::Calendar => ChannelType::Calendar,
             DbChannelType::Info => ChannelType::Info,
             DbChannelType::Ticket => ChannelType::Ticket,
+            DbChannelType::Wiki => ChannelType::Wiki,
+            DbChannelType::Document => ChannelType::Document,
+            DbChannelType::DocumentComment => ChannelType::DocumentComment,
         }
     }
 }
@@ -246,6 +252,9 @@ impl From<ChannelType> for DbChannelType {
             ChannelType::Calendar => DbChannelType::Calendar,
             ChannelType::Info => DbChannelType::Info,
             ChannelType::Ticket => DbChannelType::Ticket,
+            ChannelType::Wiki => DbChannelType::Wiki,
+            ChannelType::Document => DbChannelType::Document,
+            ChannelType::DocumentComment => DbChannelType::DocumentComment,
         }
     }
 }
@@ -512,6 +521,9 @@ impl_perms!(
     CalendarEventCreate,
     CalendarEventManage,
     CalendarEventRsvp,
+    DocumentCreate,
+    DocumentEdit,
+    DocumentComment,
 );
 
 impl From<RoomMembership> for DbMembership {

@@ -59,6 +59,9 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::VoiceSpeak,
     Permission::VoiceVad,
     Permission::VoiceVideo,
+    Permission::DocumentCreate,
+    Permission::DocumentEdit,
+    Permission::DocumentComment,
 ];
 
 /// Which permissions are granted to someone with Admin in a thread
@@ -111,6 +114,9 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::VoiceSpeak,
     Permission::VoiceVad,
     Permission::VoiceVideo,
+    Permission::DocumentCreate,
+    Permission::DocumentEdit,
+    Permission::DocumentComment,
 ];
 
 /// Default permissions for everyone in a trusted room (eg. with friends)
@@ -145,6 +151,9 @@ pub const EVERYONE_TRUSTED: &[Permission] = &[
     Permission::CalendarEventCreate,
     Permission::CalendarEventRsvp,
     Permission::ChannelEdit,
+    Permission::DocumentCreate,
+    Permission::DocumentEdit,
+    Permission::DocumentComment,
 ];
 
 /// Default permissions for everyone in an untrusted room (eg. public)
@@ -171,6 +180,9 @@ pub const EVERYONE_UNTRUSTED: &[Permission] = &[
     Permission::BypassSlowmode,
     Permission::CalendarEventCreate,
     Permission::CalendarEventRsvp,
+    // Permission::DocumentCreate, // maybe
+    // Permission::DocumentEdit,   // maybe
+    Permission::DocumentComment,
 ];
 
 /// extra permissions for someone who moderates stuff
@@ -206,4 +218,7 @@ pub const MODERATOR: &[Permission] = &[
     Permission::CalendarEventCreate,
     Permission::CalendarEventManage,
     Permission::CalendarEventRsvp,
+    Permission::DocumentCreate,
+    Permission::DocumentEdit,
+    Permission::DocumentComment,
 ];

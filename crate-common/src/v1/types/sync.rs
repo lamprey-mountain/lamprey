@@ -67,6 +67,31 @@ pub enum MessageClient {
         /// the ranges to subscribe to
         ranges: Vec<(u64, u64)>,
     },
+
+    #[cfg(feature = "feat_documents")]
+    DocumentSubscribe {
+        channel_id: ChannelId,
+        // TODO: subscribing to multiple channels at once
+        // channel_ids: Vec<ChannelId>,
+    },
+
+    /// edit a document
+    ///
+    /// must be subscribed via DocumentSubscribe
+    #[cfg(feature = "feat_documents")]
+    DocumentEdit {
+        channel_id: ChannelId,
+        // TODO: crdt data here
+    },
+
+    /// update your document presence
+    ///
+    /// must be subscribed via DocumentSubscribe
+    #[cfg(feature = "feat_documents")]
+    DocumentPresence {
+        channel_id: ChannelId,
+        // TODO: crdt data here
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -214,6 +239,17 @@ pub enum MessageSync {
         version_id: MessageVerId,
     },
 
+    // ThreadCreate {
+    //     thread: Box<Channel>,
+    // },
+
+    // ThreadUpdate {
+    //     thread: Box<Channel>,
+    // },
+
+    // ThreadDelete {
+    //     thread_id: ChannelId,
+    // },
     MessageCreate {
         // i know, it's cursed to return v2 messages in a v1 api. but this is still in pre alpha so i don't really care.
         message: MessageV2,
@@ -641,12 +677,14 @@ pub enum MessageSync {
     },
 
     #[cfg(feature = "feat_documents")]
+    // only returned if subscribed
     DocumentEdit {
         channel_id: ChannelId,
         // TODO: crdt data here
     },
 
     #[cfg(feature = "feat_documents")]
+    // only returned if subscribed
     DocumentPresence {
         channel_id: ChannelId,
         // TODO: presence data (eg. cursors and selections) here

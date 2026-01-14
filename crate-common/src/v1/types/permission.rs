@@ -203,6 +203,15 @@ pub enum Permission {
 
     /// can manage calendar events
     CalendarEventManage,
+
+    /// can create, edit, and remove their own documents in wiki channels.
+    DocumentCreate,
+
+    /// can edit documents, including documents outside of wikis.
+    DocumentEdit,
+
+    /// can comment on documents, including documents outside of wikis.
+    DocumentComment,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
