@@ -25,7 +25,7 @@ use common::v1::types::{
 /// Automod rule list
 #[utoipa::path(
     get,
-    path = "/room/{room_id}/automod",
+    path = "/room/{room_id}/automod/rule",
     params(("room_id", description = "Room id")),
     tags = ["automod"],
     responses(
@@ -48,7 +48,7 @@ async fn automod_rule_list(
 /// Automod rule create
 #[utoipa::path(
     post,
-    path = "/room/{room_id}/automod",
+    path = "/room/{room_id}/automod/rule",
     params(("room_id", description = "Room id")),
     tags = ["automod"],
     responses(
@@ -105,7 +105,7 @@ async fn automod_rule_create(
 /// Automod rule get
 #[utoipa::path(
     get,
-    path = "/room/{room_id}/automod/{rule_id}",
+    path = "/room/{room_id}/automod/rule/{rule_id}",
     params(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
@@ -135,7 +135,7 @@ async fn automod_rule_get(
 /// Automod rule update
 #[utoipa::path(
     patch,
-    path = "/room/{room_id}/automod/{rule_id}",
+    path = "/room/{room_id}/automod/rule/{rule_id}",
     params(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
@@ -204,7 +204,7 @@ async fn automod_rule_update(
 /// Automod rule delete
 #[utoipa::path(
     delete,
-    path = "/room/{room_id}/automod/{rule_id}",
+    path = "/room/{room_id}/automod/rule/{rule_id}",
     params(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
@@ -267,7 +267,7 @@ async fn automod_rule_delete(
 /// Automod rule test (TODO)
 #[utoipa::path(
     post,
-    path = "/room/{room_id}/automod/test",
+    path = "/room/{room_id}/automod/rule/test",
     params(
         ("room_id", description = "Room id"),
     ),
