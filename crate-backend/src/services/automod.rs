@@ -76,6 +76,7 @@ impl AutomodResultActions {
                     .iter()
                     .any(|a| matches!(a, AutomodAction::Block { .. }))
                 {
+                    self.inner.retain(|a| !matches!(a, AutomodAction::Remove));
                     self.inner.push(action.clone());
                 }
             }
@@ -97,7 +98,7 @@ impl AutomodResultActions {
                 if !self
                     .inner
                     .iter()
-                    .any(|a| matches!(a, AutomodAction::Remove))
+                    .any(|a| matches!(a, AutomodAction::Block { .. } | AutomodAction::Remove))
                 {
                     self.inner.push(AutomodAction::Remove);
                 }
