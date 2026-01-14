@@ -22,8 +22,8 @@ impl DataRoom for Postgres {
         let ty: DbRoomType = extra.ty.into();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, public, type, quarantined, security_require_mfa, security_require_sudo)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    	    INSERT INTO room (id, version_id, name, description, icon, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ",
             room_id,
             room_id,
@@ -35,6 +35,8 @@ impl DataRoom for Postgres {
             false,
             false,
             false,
+            None::<uuid::Uuid>,
+            300000,
         )
         .execute(&mut *conn)
         .await?;
@@ -63,7 +65,9 @@ impl DataRoom for Postgres {
                 (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
                 room.quarantined,
                 room.security_require_mfa,
-                room.security_require_sudo
+                room.security_require_sudo,
+                room.afk_channel_id,
+                room.afk_channel_timeout
             FROM room
             WHERE id = $1
             "#,
@@ -102,7 +106,9 @@ impl DataRoom for Postgres {
                     (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
                     room.quarantined,
                     room.security_require_mfa,
-                    room.security_require_sudo
+                    room.security_require_sudo,
+                    room.afk_channel_id,
+                    room.afk_channel_timeout
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
@@ -157,7 +163,9 @@ impl DataRoom for Postgres {
                     (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
                     room.quarantined,
                     room.security_require_mfa,
-                    room.security_require_sudo
+                    room.security_require_sudo,
+                    room.afk_channel_id,
+                    room.afk_channel_timeout
                 FROM room
                 WHERE room.id > $1 AND room.id < $2
                 ORDER BY (CASE WHEN $3 = 'f' THEN room.id END), room.id DESC LIMIT $4
@@ -181,7 +189,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT id, name, description, icon, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo
+            SELECT id, name, description, icon, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -192,7 +200,7 @@ impl DataRoom for Postgres {
         .await?;
         let version_id = RoomVerId::new();
         query!(
-            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6, welcome_channel_id = $7 WHERE id = $1",
+            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6, welcome_channel_id = $7, afk_channel_id = $8, afk_channel_timeout = $9 WHERE id = $1",
             id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(room.name),
@@ -200,6 +208,8 @@ impl DataRoom for Postgres {
             patch.icon.map(|i| i.map(|i| *i)).unwrap_or(room.icon),
             patch.public.unwrap_or(room.public),
             patch.welcome_channel_id.map(|i| i.map(|i| *i)).unwrap_or(room.welcome_channel_id),
+            patch.afk_channel_id.map(|i| i.map(|i| *i)).unwrap_or(room.afk_channel_id),
+            patch.afk_channel_timeout.map(|i| i as i64).unwrap_or(room.afk_channel_timeout),
         )
         .execute(&mut *tx)
         .await?;
@@ -234,6 +244,8 @@ impl DataRoom for Postgres {
                     r.quarantined,
                     r.security_require_mfa,
                     r.security_require_sudo,
+                    r.afk_channel_id,
+                    r.afk_channel_timeout,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS "member_count!",
                     (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!"
                 FROM room_member rm1

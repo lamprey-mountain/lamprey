@@ -38,6 +38,8 @@ pub struct DbRoom {
     pub quarantined: bool,
     pub security_require_mfa: bool,
     pub security_require_sudo: bool,
+    pub afk_channel_id: Option<Uuid>,
+    pub afk_channel_timeout: i64,
 }
 
 pub struct DbRoomCreate {
@@ -87,6 +89,8 @@ impl From<DbRoom> for Room {
                 require_mfa: row.security_require_mfa,
                 require_sudo: row.security_require_sudo,
             },
+            afk_channel_id: row.afk_channel_id.map(|i| i.into()),
+            afk_channel_timeout: row.afk_channel_timeout as u64,
         }
     }
 }

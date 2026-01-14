@@ -79,6 +79,10 @@ pub struct Room {
     pub quarantined: bool,
     pub user_config: Option<UserConfigRoom>,
     pub security: RoomSecurity,
+    /// automatically move afk people to this channel
+    pub afk_channel_id: Option<ChannelId>,
+    /// how long to wait before moving idle people to the afk channel, in milliseconds
+    pub afk_channel_timeout: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -172,6 +176,10 @@ pub struct RoomPatch {
 
     /// where member join messages will be sent
     pub welcome_channel_id: Option<Option<ChannelId>>,
+    /// automatically move afk people to this channel
+    pub afk_channel_id: Option<Option<ChannelId>>,
+    /// how long to wait before moving idle people to the afk channel, in milliseconds
+    pub afk_channel_timeout: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -209,5 +217,7 @@ impl Diff<Room> for RoomPatch {
             || self.icon.changes(&other.icon)
             || self.public.changes(&other.public)
             || self.welcome_channel_id.changes(&other.welcome_channel_id)
+            || self.afk_channel_id.changes(&other.afk_channel_id)
+            || self.afk_channel_timeout.changes(&other.afk_channel_timeout)
     }
 }

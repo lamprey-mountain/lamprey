@@ -115,6 +115,12 @@ impl ServiceRooms {
                 &start.welcome_channel_id,
                 &end.welcome_channel_id,
             )
+            .change("afk_channel_id", &start.afk_channel_id, &end.afk_channel_id)
+            .change(
+                "afk_channel_timeout",
+                &start.afk_channel_timeout,
+                &end.afk_channel_timeout,
+            )
             .build();
 
         self.state
@@ -226,6 +232,8 @@ impl ServiceRooms {
                 description: None,
                 icon: None,
                 public: None,
+                afk_channel_id: None,
+                afk_channel_timeout: None,
             },
         )
         .await?;
