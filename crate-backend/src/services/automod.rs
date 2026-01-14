@@ -67,10 +67,48 @@ impl AutomodResultActions {
     /// add an action to this action set, deduplicating similar actions
     pub fn add(&mut self, action: &AutomodAction) {
         match action {
-            AutomodAction::Block { message } => todo!("return the first message"),
-            AutomodAction::Timeout { duration } => todo!("take the maximum duration"),
-            AutomodAction::Remove => todo!("deduplicate removes"),
-            AutomodAction::SendAlert { channel_id } => todo!("send multiple alerts"),
+            // return the first message
+            AutomodAction::Block { .. } => {
+                if !self
+                    .inner
+                    .iter()
+                    .any(|a| matches!(a, AutomodAction::Block { .. }))
+                {
+                    self.inner.push(action.clone());
+                }
+            }
+            // take the maximum duration
+            AutomodAction::Timeout { duration } => {
+                let mut found = false;
+                for existing in &mut self.inner {
+                    if let AutomodAction::Timeout { duration: d } = existing {
+                        *d = (*d).max(*duration);
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    self.inner.push(action.clone());
+                }
+            }
+            AutomodAction::Remove => {
+                if !self
+                    .inner
+                    .iter()
+                    .any(|a| matches!(a, AutomodAction::Remove))
+                {
+                    self.inner.push(AutomodAction::Remove);
+                }
+            }
+            AutomodAction::SendAlert { channel_id } => {
+                if !self
+                    .inner
+                    .iter()
+                    .any(|a| matches!(a, AutomodAction::SendAlert { channel_id: cid } if cid == channel_id))
+                {
+                    self.inner.push(action.clone());
+                }
+            }
         }
     }
 }

@@ -171,7 +171,7 @@ pub enum AutomodTextLocation {
 }
 
 // TODO: configure exactly what AutomodTextLocation the trigger should match on
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodTrigger {
@@ -221,7 +221,7 @@ pub enum AutomodTrigger {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodAction {
