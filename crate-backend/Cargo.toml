@@ -69,6 +69,7 @@ prometheus = { version = "0.14.0", features = ["process"] }
 flate2 = "1.1.5"
 totp-rs = "5.7.0"
 base32 = "0.5.1"
+yrs = "0.25.0"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
