@@ -22,8 +22,11 @@ pub struct AutomodRule {
 
     // TODO: support multiple triggers?
     pub trigger: AutomodTrigger,
-
-    #[schema(max_items = 8)]
+    // /// execute this rule when ANY of these triggers match
+    // #[cfg_attr(feature = "utoipa", schema(max_items = 8))]
+    // pub triggers: Vec<AutomodTrigger>,
+    /// when executed, do ALL of these actions
+    #[cfg_attr(feature = "utoipa", schema(max_items = 8))]
     pub actions: Vec<AutomodAction>,
 
     /// what roles should be exempt from this rule. users with RoomManage are always exempt.
@@ -31,26 +34,40 @@ pub struct AutomodRule {
 
     /// what channels should be exempt from this rule.
     pub except_channels: Vec<ChannelId>,
-    // /// whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out)
-    // pub include_everyone: bool,
+    /// if nsfw channels should be exempt from this rule.
+    pub except_nsfw: bool,
+
+    /// whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out)
+    pub include_everyone: bool,
+
+    pub target: AutomodTarget,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct AutomodRuleCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
     pub trigger: AutomodTrigger,
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    // pub triggers: Vec<AutomodTrigger>,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
     pub actions: Vec<AutomodAction>,
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub except_roles: Vec<RoleId>,
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub except_channels: Vec<ChannelId>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub except_nsfw: bool,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub include_everyone: bool,
+    pub target: AutomodTarget,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct AutomodRuleUpdate {
@@ -58,15 +75,32 @@ pub struct AutomodRuleUpdate {
     pub name: Option<String>,
     pub enabled: Option<bool>,
     pub trigger: Option<AutomodTrigger>,
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    // pub triggers: Option<Vec<AutomodTrigger>>,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
     pub actions: Option<Vec<AutomodAction>>,
     pub except_roles: Option<Vec<RoleId>>,
     pub except_channels: Option<Vec<ChannelId>>,
+    pub except_nsfw: Option<bool>,
+    pub include_everyone: Option<bool>,
+    pub target: Option<AutomodTarget>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// what this rule should be evaluated on
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+pub enum AutomodTarget {
+    /// messages, threads, voice statuses
+    Content,
+
+    /// user names, bios, and nicknames
+    Member,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AutomodRuleExecution {
     /// the rule that was executed
     pub rule: AutomodRule,
@@ -90,7 +124,8 @@ pub struct AutomodRuleExecution {
     pub text_location: Option<AutomodTextLocation>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct AutomodRuleTestRequest {
@@ -98,9 +133,9 @@ pub struct AutomodRuleTestRequest {
     pub text: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct AutomodRuleTest {
     /// the rules that matched the text
     pub matched_rules: Vec<AutomodRule>,
@@ -115,7 +150,8 @@ pub struct AutomodRuleTest {
 }
 
 /// where a piece of text was found
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodTextLocation {
     /// the user's name
@@ -135,8 +171,9 @@ pub enum AutomodTextLocation {
 }
 
 // TODO: configure exactly what AutomodTextLocation the trigger should match on
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodTrigger {
     /// scan text based on regex. regexes are case insensitive.
     TextRegex {
@@ -184,8 +221,9 @@ pub enum AutomodTrigger {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodAction {
     /// block the message from being sent
     Block {
@@ -194,12 +232,6 @@ pub enum AutomodAction {
         message: Option<String>,
     },
 
-    // /// quarantine the user from being able to interact with the room
-    // Quarantine {
-    //     /// a custom message to show to the user
-    //     // TODO: enforce that this is between 1-256 chars
-    //     message: Option<String>,
-    // },
     /// timeout a user
     Timeout {
         /// in milliseconds
@@ -215,11 +247,4 @@ pub enum AutomodAction {
         // TODO: enforce that this channel exists and is a text channel
         channel_id: ChannelId,
     },
-    // TODO: automatic reactions?
-    // /// add a reaction to the message
-    // React {
-    //     /// the reaction to add
-    //     // TODO: use ReactionKeyParam here? or at least for patching
-    //     reaction: ReactionKey,
-    // },
 }

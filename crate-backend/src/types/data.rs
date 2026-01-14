@@ -1,6 +1,6 @@
 // TODO: move into data mod
 
-use common::v1::types::automod::{AutomodAction, AutomodTrigger};
+use common::v1::types::automod::{AutomodAction, AutomodTarget, AutomodTrigger};
 use common::v1::types::{
     util::Time, Channel, ChannelId, ChannelType, ChannelVerId, Embed, MediaId, MessageId,
     MessageType, MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomMembership, RoomType,
@@ -20,6 +20,31 @@ pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
 pub struct AutomodRuleData {
     pub trigger: AutomodTrigger,
     pub actions: Vec<AutomodAction>,
+}
+
+#[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[sqlx(type_name = "automod_target")]
+pub enum DbAutomodTarget {
+    Content,
+    Member,
+}
+
+impl From<DbAutomodTarget> for AutomodTarget {
+    fn from(value: DbAutomodTarget) -> Self {
+        match value {
+            DbAutomodTarget::Content => AutomodTarget::Content,
+            DbAutomodTarget::Member => AutomodTarget::Member,
+        }
+    }
+}
+
+impl From<AutomodTarget> for DbAutomodTarget {
+    fn from(value: AutomodTarget) -> Self {
+        match value {
+            AutomodTarget::Content => DbAutomodTarget::Content,
+            AutomodTarget::Member => DbAutomodTarget::Member,
+        }
+    }
 }
 
 pub struct DbRoom {
