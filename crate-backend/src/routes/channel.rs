@@ -550,8 +550,23 @@ async fn channel_remove(
     auth.user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if let Some(room_id) = channel.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_sudo {
+            auth.ensure_sudo()?;
+        }
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     if channel.ty.is_thread() {
         perms.ensure(Permission::ThreadManage)?;
     } else {
@@ -610,8 +625,23 @@ async fn channel_restore(
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if let Some(room_id) = channel.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_sudo {
+            auth.ensure_sudo()?;
+        }
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     if channel.ty.is_thread() {
         perms.ensure(Permission::ThreadManage)?;
     } else {

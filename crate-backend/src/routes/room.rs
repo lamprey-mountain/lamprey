@@ -9,7 +9,8 @@ use axum::{
 use axum_extra::TypedHeader;
 use common::v1::types::{
     application::Integration, util::Changes, ApplicationId, AuditLogEntry, AuditLogEntryId,
-    AuditLogEntryType, AuditLogFilter, RoomType, TransferOwnership, SERVER_ROOM_ID,
+    AuditLogEntryType, AuditLogFilter, RoomSecurityUpdate, RoomType, TransferOwnership,
+    SERVER_ROOM_ID,
 };
 use headers::ETag;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -578,6 +579,87 @@ async fn room_unquarantine(
     Ok(Json(updated_room))
 }
 
+/// Room security set
+#[utoipa::path(
+    put,
+    path = "/room/{room_id}/security",
+    params(("room_id", description = "Room id")),
+    request_body = RoomSecurityUpdate,
+    tags = ["room", "badge.sudo"],
+    responses(
+        (status = OK, description = "success", body = Room),
+    )
+)]
+async fn room_security_set(
+    Path(room_id): Path<RoomId>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<RoomSecurityUpdate>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_sudo()?;
+
+    let srv = s.services();
+    let data = s.data();
+
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+
+    if room.owner_id != Some(auth.user.id) {
+        return Err(Error::MissingPermissions);
+    }
+
+    if json.require_mfa.is_none() && json.require_sudo.is_none() {
+        return Ok(Json(room));
+    }
+
+    if let Some(true) = json.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = data.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("room owner must have mfa enabled"));
+        }
+    }
+
+    let start_security = room.security;
+
+    data.room_security_update(room_id, json.require_mfa, json.require_sudo)
+        .await?;
+
+    srv.rooms.invalidate(room_id).await;
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+
+    let changes = Changes::new()
+        .change(
+            "require_mfa",
+            &start_security.require_mfa,
+            &room.security.require_mfa,
+        )
+        .change(
+            "require_sudo",
+            &start_security.require_sudo,
+            &room.security.require_sudo,
+        )
+        .build();
+
+    if !changes.is_empty() {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
+            reason,
+            ty: AuditLogEntryType::RoomUpdate { changes },
+        })
+        .await?;
+    }
+
+    let msg = MessageSync::RoomUpdate { room: room.clone() };
+    s.broadcast_room(room_id, auth.user.id, msg).await?;
+
+    Ok(Json(room))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_create))
@@ -592,4 +674,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_integration_list))
         .routes(routes!(room_quarantine))
         .routes(routes!(room_unquarantine))
+        .routes(routes!(room_security_set))
 }

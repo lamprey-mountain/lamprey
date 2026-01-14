@@ -140,4 +140,11 @@ impl AuthState {
         // (technically, you *can* login with user id + password, but people probably won't remember their user id)
         !self.oauth_providers.is_empty() || self.has_email || !self.authenticators.is_empty()
     }
+
+    /// if this user is considered to have multi factor authentication enabled on their account
+    pub fn has_mfa(&self) -> bool {
+        // NOTE: maybe i should add a server-side configuration option for if a given oauth provider counts for mfa
+        // though this will come later, since there are some tricky nuances
+        self.has_totp || !self.authenticators.is_empty()
+    }
 }

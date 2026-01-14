@@ -78,6 +78,16 @@ pub struct Room {
     /// whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user.
     pub quarantined: bool,
     pub user_config: Option<UserConfigRoom>,
+    pub security: RoomSecurity,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoomSecurity {
+    pub require_mfa: bool,
+    pub require_sudo: bool,
 }
 
 // NOTE: may be removed later, i dont see that much of a reason for this
@@ -162,6 +172,15 @@ pub struct RoomPatch {
 
     /// where member join messages will be sent
     pub welcome_channel_id: Option<Option<ChannelId>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoomSecurityUpdate {
+    pub require_mfa: Option<bool>,
+    pub require_sudo: Option<bool>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

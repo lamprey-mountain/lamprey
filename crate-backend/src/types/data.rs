@@ -1,12 +1,12 @@
 // TODO: move into data mod
 
 use common::v1::types::automod::{AutomodAction, AutomodTrigger};
-use common::v1::types::Mentions;
 use common::v1::types::{
     util::Time, Channel, ChannelId, ChannelType, ChannelVerId, Embed, MediaId, MessageId,
     MessageType, MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomMembership, RoomType,
     Session, SessionStatus, SessionToken, SessionType, ThreadMembership, UserId,
 };
+use common::v1::types::{Mentions, RoomSecurity};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use time::PrimitiveDateTime;
@@ -36,6 +36,8 @@ pub struct DbRoom {
     pub member_count: i64,
     pub channel_count: i64,
     pub quarantined: bool,
+    pub security_require_mfa: bool,
+    pub security_require_sudo: bool,
 }
 
 pub struct DbRoomCreate {
@@ -81,6 +83,10 @@ impl From<DbRoom> for Room {
             online_count: Default::default(),
             channel_count: row.channel_count as u64,
             user_config: None,
+            security: RoomSecurity {
+                require_mfa: row.security_require_mfa,
+                require_sudo: row.security_require_sudo,
+            },
         }
     }
 }

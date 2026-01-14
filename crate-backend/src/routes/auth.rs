@@ -783,7 +783,7 @@ async fn auth_totp_recovery_exec(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<TotpVerificationRequest>,
 ) -> Result<impl IntoResponse> {
-    let (secret, enabled) = s
+    let (_secret, enabled) = s
         .data()
         .auth_totp_get(auth.user.id)
         .await?

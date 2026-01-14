@@ -129,10 +129,22 @@ async fn room_member_add(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
+    let data = s.data();
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
+
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+
+    // allow self joins
+    if room.security.require_mfa && target_user_id != auth.user.id {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = data.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
 
     // handle joining public rooms
     if target_user_id == auth.user.id {
@@ -480,6 +492,17 @@ async fn room_member_update(
     let d = s.data();
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let srv = s.services();
+
+    // FIXME: allow editing self
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Ok(Json(start));
@@ -645,6 +668,17 @@ async fn room_member_delete(
     };
     let d = s.data();
     let srv = s.services();
+
+    // FIXME: allow leaving rooms
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     if target_user_id != auth.user.id {
         perms.ensure(Permission::MemberKick)?;
@@ -802,6 +836,18 @@ async fn room_member_prune(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     json.validate()?;
+    let srv = s.services();
+    let data = s.data();
+
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = data.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberKick)?;
     perms.ensure(Permission::RoomManage)?;
@@ -836,6 +882,16 @@ async fn room_ban_create(
     };
     let srv = s.services();
     let d = s.data();
+
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     if room_id == SERVER_ROOM_ID {
@@ -922,6 +978,16 @@ async fn room_ban_create_bulk(
     create.validate()?;
     let srv = s.services();
     let d = s.data();
+
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     if room_id == SERVER_ROOM_ID {
@@ -1019,6 +1085,16 @@ async fn room_ban_remove(
     };
     let d = s.data();
     let srv = s.services();
+
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
 

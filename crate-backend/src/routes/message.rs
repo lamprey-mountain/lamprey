@@ -230,6 +230,21 @@ async fn message_delete(
     auth.user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
+
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+
+    // FIXME: allow deleting your own messages without mfa
+    if let Some(room_id) = thread.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
     let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let message = data
@@ -377,6 +392,19 @@ async fn message_version_delete(
     let srv = s.services();
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+
+    // FIXME: allow deleting your own messages without mfa
+    if let Some(room_id) = thread.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("channel doesnt have text"));
     }
@@ -493,6 +521,21 @@ async fn message_moderate(
 
     let data = s.data();
     let srv = s.services();
+
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+
+    // FIXME: allow deleting your own messages without mfa
+    if let Some(room_id) = thread.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
@@ -742,6 +785,20 @@ async fn message_pin_create(
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
+
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+
+    if let Some(room_id) = thread.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
@@ -852,6 +909,20 @@ async fn message_pin_delete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
+    let data = s.data();
+
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if let Some(room_id) = thread.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
@@ -923,6 +994,20 @@ async fn message_pin_reorder(
     auth.user.ensure_unsuspended()?;
     json.validate()?;
     let srv = s.services();
+    let data = s.data();
+
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if let Some(room_id) = thread.room_id {
+        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        if room.security.require_mfa {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = data.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+    }
+
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 

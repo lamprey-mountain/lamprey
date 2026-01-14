@@ -42,6 +42,21 @@ async fn role_create(
     auth.user.ensure_unsuspended()?;
     json.validate()?;
 
+    let srv = s.services();
+    let data = s.data();
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+
+    if room.security.require_sudo {
+        auth.ensure_sudo()?;
+    }
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = data.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let allow_set: HashSet<_> = json.allow.iter().collect();
     let deny_set: HashSet<_> = json.deny.iter().collect();
 
@@ -51,8 +66,6 @@ async fn role_create(
         ));
     }
 
-    let d = s.data();
-    let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoleManage)?;
 
@@ -68,7 +81,7 @@ async fn role_create(
         // able to be edited or applied
         return Err(Error::BadStatic("your rank is too low"));
     }
-    let role = d
+    let role = data
         .role_create(
             DbRoleCreate {
                 id: RoleId::new(),
@@ -136,6 +149,20 @@ async fn role_update(
     json.validate()?;
     let d = s.data();
     let srv = s.services();
+
+    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+
+    if room.security.require_sudo {
+        auth.ensure_sudo()?;
+    }
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoleManage)?;
     let start_role = d.role_select(room_id, role_id).await?;
@@ -248,6 +275,20 @@ async fn role_delete(
     }
     let d = s.data();
     let srv = s.services();
+
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if room.security.require_sudo {
+        auth.ensure_sudo()?;
+    }
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoleManage)?;
     let role = d.role_select(room_id, role_id).await?;
@@ -390,8 +431,20 @@ async fn role_member_add(
     }
     let d = s.data();
     let srv = s.services();
+
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoleApply)?;
+
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
@@ -453,6 +506,17 @@ async fn role_member_remove(
     }
     let d = s.data();
     let srv = s.services();
+
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoleApply)?;
     let role = d.role_select(room_id, role_id).await?;
@@ -522,6 +586,16 @@ async fn role_member_bulk_edit(
 
     let d = s.data();
     let srv = s.services();
+
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
 
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoleApply)?;
@@ -621,6 +695,20 @@ async fn role_reorder(
 
     let d = s.data();
     let srv = s.services();
+
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if room.security.require_sudo {
+        auth.ensure_sudo()?;
+    }
+    if room.security.require_mfa {
+        let user = srv.users.get(auth.user.id, None).await?;
+        let totp = d.auth_totp_get(user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoleManage)?;
 
