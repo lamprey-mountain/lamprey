@@ -207,6 +207,20 @@ pub enum ChannelType {
 
     /// A channel for support tickets, where each thread is a private conversation.
     Ticket,
+
+    /// a single document, either in the sidebar (eg. for rules) or in a wiki
+    ///
+    /// document channels dont count towards the channel or active thread cap (and won't be returned in Ready, when Ready gets more data)
+    #[cfg(feature = "feat_documents")]
+    Document,
+
+    /// a comment thread in a document
+    #[cfg(feature = "feat_documents")]
+    DocumentComment,
+
+    /// a channel that holds documents
+    #[cfg(feature = "feat_documents")]
+    Wiki,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

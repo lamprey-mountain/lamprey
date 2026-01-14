@@ -7,6 +7,7 @@ pub mod auth;
 pub mod automod;
 pub mod calendar;
 pub mod channel;
+pub mod document;
 pub mod email;
 pub mod embed;
 pub mod emoji;

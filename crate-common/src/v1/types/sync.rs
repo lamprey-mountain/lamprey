@@ -624,6 +624,33 @@ pub enum MessageSync {
         slowmode_thread_expire_at: Option<Time>,
         slowmode_message_expire_at: Option<Time>,
     },
+
+    #[cfg(feature = "feat_documents")]
+    DocumentCreate {
+        channel: Channel,
+    },
+
+    #[cfg(feature = "feat_documents")]
+    DocumentUpdate {
+        channel: Channel,
+    },
+
+    #[cfg(feature = "feat_documents")]
+    DocumentDelete {
+        channel_id: ChannelId,
+    },
+
+    #[cfg(feature = "feat_documents")]
+    DocumentEdit {
+        channel_id: ChannelId,
+        // TODO: crdt data here
+    },
+
+    #[cfg(feature = "feat_documents")]
+    DocumentPresence {
+        channel_id: ChannelId,
+        // TODO: presence data (eg. cursors and selections) here
+    },
     // TODO(#915): media v2
     // /// A piece of media has processed and is now in the `Uploaded` state.
     // MediaProcessed {

@@ -12,6 +12,7 @@ mod calendar;
 mod channel;
 mod debug;
 mod dm;
+mod document;
 mod emoji;
 mod internal;
 mod invite;
@@ -55,6 +56,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(channel::routes())
         .merge(debug::routes())
         .merge(dm::routes())
+        .merge(document::routes())
         .merge(emoji::routes())
         .merge(internal::routes())
         .merge(invite::routes())
