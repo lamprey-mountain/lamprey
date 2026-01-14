@@ -424,10 +424,12 @@ async fn calendar_overwrite_get(
 async fn calendar_overwrite_update(
     Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
     auth: Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarOverwritePut>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
+    let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::CalendarEventManage)?;
@@ -436,34 +438,79 @@ async fn calendar_overwrite_update(
     if !chan.ty.has_calendar() {
         return Err(Error::BadStatic("channel is not a calendar"));
     }
-    let event = s.data().calendar_event_get(event_id).await?;
+    let event = data.calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
 
-    let overwrite = s.data().calendar_overwrite_put(event_id, seq, json).await?;
+    let old_overwrite = data.calendar_overwrite_get(event_id, seq).await.ok();
 
-    let room_id = srv
-        .channels
-        .get(channel_id, Some(auth.user.id))
-        .await?
+    let overwrite = data.calendar_overwrite_put(event_id, seq, json).await?;
+
+    let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    // Check if this is a new overwrite or an update
-    let is_new = s.data().calendar_overwrite_get(event_id, seq).await.is_ok();
+    let sync_event;
+    if let Some(old) = old_overwrite {
+        sync_event = MessageSync::CalendarOverwriteUpdate {
+            channel_id,
+            overwrite: overwrite.clone(),
+        };
 
-    let sync_event = if is_new {
-        MessageSync::CalendarOverwriteCreate {
-            channel_id,
-            overwrite: overwrite.clone(),
-        }
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
+            reason: reason.clone(),
+            ty: AuditLogEntryType::CalendarOverwriteUpdate {
+                event_id,
+                seq,
+                changes: Changes::new()
+                    .change("title", &old.title, &overwrite.title)
+                    .change(
+                        "extra_description",
+                        &old.extra_description,
+                        &overwrite.extra_description,
+                    )
+                    .change("location", &old.location, &overwrite.location)
+                    .change("url", &old.url, &overwrite.url)
+                    .change("starts_at", &old.starts_at, &overwrite.starts_at)
+                    .change("ends_at", &old.ends_at, &overwrite.ends_at)
+                    .change("cancelled", &old.cancelled, &overwrite.cancelled)
+                    .build(),
+            },
+        })
+        .await?;
     } else {
-        MessageSync::CalendarOverwriteUpdate {
+        sync_event = MessageSync::CalendarOverwriteCreate {
             channel_id,
             overwrite: overwrite.clone(),
-        }
-    };
+        };
+
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
+            reason: reason.clone(),
+            ty: AuditLogEntryType::CalendarOverwriteCreate {
+                event_id,
+                seq,
+                changes: Changes::new()
+                    .add("title", &overwrite.title)
+                    .add("extra_description", &overwrite.extra_description)
+                    .add("location", &overwrite.location)
+                    .add("url", &overwrite.url)
+                    .add("starts_at", &overwrite.starts_at)
+                    .add("ends_at", &overwrite.ends_at)
+                    .add("cancelled", &overwrite.cancelled)
+                    .build(),
+            },
+        })
+        .await?;
+    }
 
     s.broadcast_room(room_id, auth.user.id, sync_event).await?;
 
@@ -485,6 +532,7 @@ async fn calendar_overwrite_update(
 async fn calendar_overwrite_delete(
     Path((channel_id, event_id, seq)): Path<(ChannelId, CalendarEventId, u64)>,
     auth: Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -501,14 +549,34 @@ async fn calendar_overwrite_delete(
         return Err(Error::NotFound);
     }
 
+    let overwrite = s.data().calendar_overwrite_get(event_id, seq).await?;
     s.data().calendar_overwrite_delete(event_id, seq).await?;
 
-    let room_id = srv
-        .channels
-        .get(channel_id, Some(auth.user.id))
-        .await?
+    let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth.user.id,
+        session_id: Some(auth.session.id),
+        reason: reason.clone(),
+        ty: AuditLogEntryType::CalendarOverwriteDelete {
+            event_id,
+            seq,
+            changes: Changes::new()
+                .remove("title", &overwrite.title)
+                .remove("extra_description", &overwrite.extra_description)
+                .remove("location", &overwrite.location)
+                .remove("url", &overwrite.url)
+                .remove("starts_at", &overwrite.starts_at)
+                .remove("ends_at", &overwrite.ends_at)
+                .remove("cancelled", &overwrite.cancelled)
+                .build(),
+        },
+    })
+    .await?;
 
     s.broadcast_room(
         room_id,
@@ -734,6 +802,7 @@ async fn calendar_event_rsvp_put(
 async fn calendar_event_rsvp_delete(
     Path((channel_id, event_id, user_id_req)): Path<(ChannelId, CalendarEventId, UserIdReq)>,
     auth: Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
@@ -765,12 +834,25 @@ async fn calendar_event_rsvp_delete(
         .calendar_event_rsvp_delete(event_id, user_id)
         .await?;
 
-    let room_id = srv
-        .channels
-        .get(channel_id, Some(auth.user.id))
-        .await?
+    let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    if auth.user.id != user_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
+            reason: reason.clone(),
+            ty: AuditLogEntryType::CalendarRsvpDelete {
+                event_id,
+                seq: None,
+                user_id,
+            },
+        })
+        .await?;
+    }
 
     s.broadcast_room(
         room_id,
@@ -971,6 +1053,7 @@ async fn calendar_overwrite_rsvp_delete(
         UserIdReq,
     )>,
     auth: Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id_req {
@@ -1002,12 +1085,25 @@ async fn calendar_overwrite_rsvp_delete(
         .calendar_overwrite_rsvp_delete(event_id, seq, user_id)
         .await?;
 
-    let room_id = srv
-        .channels
-        .get(channel_id, Some(auth.user.id))
-        .await?
+    let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    if auth.user.id != user_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth.user.id,
+            session_id: Some(auth.session.id),
+            reason: reason.clone(),
+            ty: AuditLogEntryType::CalendarRsvpDelete {
+                event_id,
+                seq: Some(seq),
+                user_id,
+            },
+        })
+        .await?;
+    }
 
     s.broadcast_room(
         room_id,

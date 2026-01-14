@@ -455,6 +455,38 @@ pub enum AuditLogEntryType {
         changes: Vec<AuditLogChange>,
     },
 
+    CalendarOverwriteCreate {
+        event_id: CalendarEventId,
+        seq: u64,
+        changes: Vec<AuditLogChange>,
+    },
+
+    CalendarOverwriteUpdate {
+        event_id: CalendarEventId,
+        seq: u64,
+        changes: Vec<AuditLogChange>,
+    },
+
+    CalendarOverwriteDelete {
+        event_id: CalendarEventId,
+        seq: u64,
+
+        #[serde(default)]
+        changes: Vec<AuditLogChange>,
+    },
+
+    /// someone else's rsvp was deleted
+    ///
+    /// not emitted when someone deletes their own rsvp
+    CalendarRsvpDelete {
+        event_id: CalendarEventId,
+
+        /// populated if this is for an overwrite
+        seq: Option<u64>,
+
+        user_id: UserId,
+    },
+
     WebhookCreate {
         webhook_id: WebhookId,
         changes: Vec<AuditLogChange>,
