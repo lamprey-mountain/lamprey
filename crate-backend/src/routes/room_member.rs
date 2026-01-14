@@ -114,6 +114,7 @@ async fn room_member_get(
         "badge.perm-opt.VoiceDeafen",
         "badge.perm-opt.MemberManage",
         "badge.perm-opt.RoleApply",
+        "badge.room-mfa-opt",
     ],
     responses(
         (status = OK, body = RoomMember, description = "success"),
@@ -470,6 +471,7 @@ async fn room_member_add(
         "badge.perm-opt.VoiceDeafen",
         "badge.perm-opt.MemberManage",
         "badge.perm-opt.RoleApply",
+        "badge.room-mfa",
     ],
     responses(
         (status = OK, body = RoomMember, description = "success"),
@@ -649,7 +651,7 @@ struct LeaveQuery {
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm-opt.MemberKick"],
+    tags = ["room_member", "badge.perm-opt.MemberKick", "badge.room-mfa-opt"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -822,7 +824,7 @@ async fn room_member_search_advanced(
     post,
     path = "/room/{room_id}/prune",
     request_body = PruneBegin,
-    tags = ["room_member", "badge.perm.MemberKick", "badge.perm.RoomManage"],
+    tags = ["room_member", "badge.perm.MemberKick", "badge.perm.RoomManage", "badge.room-mfa"],
     responses(
         (status = OK, body = PruneResponse, description = "success"),
         (status = ACCEPTED, description = "prune started"),
@@ -863,7 +865,7 @@ async fn room_member_prune(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan"],
+    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -963,8 +965,7 @@ async fn room_ban_create(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/ban",
-    params(("room_id" = RoomId, description = "Room id")),
-    tags = ["room_member", "badge.perm.MemberBan"],
+    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn room_ban_create_bulk(
@@ -1067,7 +1068,7 @@ async fn room_ban_create_bulk(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan"],
+    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

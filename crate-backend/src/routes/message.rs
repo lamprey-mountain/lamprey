@@ -215,8 +215,8 @@ async fn message_edit(
     tags = [
         "message",
         "badge.perm-opt.MessageDelete",
+        "badge.room-mfa-opt",
     ],
-    tags = ["message"],
     responses(
         (status = NO_CONTENT, description = "delete message success"),
     )
@@ -376,6 +376,7 @@ async fn message_version_get(
     tags = [
         "message",
         "badge.perm-opt.MessageDelete",
+        "badge.room-mfa-opt",
     ],
     responses(
         (status = NO_CONTENT, description = "delete message version success"),
@@ -502,6 +503,7 @@ async fn message_version_delete(
         "message",
         "badge.perm-opt.MessageDelete",
         "badge.perm-opt.MessageRemove",
+        "badge.room-mfa",
     ],
     responses((status = OK, description = "success")),
 )]
@@ -979,6 +981,7 @@ async fn message_pin_delete(
     tags = [
         "message",
         "badge.perm.MessagePin",
+        "badge.room-mfa",
     ],
     responses(
         (status = OK, description = "Reorder pinned messages success"),

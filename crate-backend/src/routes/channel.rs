@@ -538,7 +538,7 @@ async fn channel_ack(
     put,
     path = "/channel/{channel_id}/remove",
     params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadDelete"],
+    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn channel_remove(
@@ -613,7 +613,7 @@ async fn channel_remove(
     delete,
     path = "/channel/{channel_id}/remove",
     params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadDelete"],
+    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn channel_restore(

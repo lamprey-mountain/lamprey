@@ -43,6 +43,15 @@ impl Modify for BadgeModifier {
                         } else if tag == "badge.sudo" {
                             badges.push("requires sudo".to_string());
                             false
+                        } else if tag == "badge.room-mfa" {
+                            badges.push("requires mfa".to_string());
+                            false
+                        } else if tag == "badge.room-mfa-opt" {
+                            badges.push("optional mfa".to_string());
+                            false
+                        } else if tag == "badge.room-sudo" {
+                            badges.push("optional sudo".to_string());
+                            false
                         } else if let Some(perm) = tag.strip_prefix("badge.perm.") {
                             perms.push(perm.to_string());
                             false

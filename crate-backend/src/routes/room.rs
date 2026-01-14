@@ -151,7 +151,7 @@ async fn room_list(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.perm.RoomManage"],
+    tags = ["room", "badge.perm.RoomManage", "badge.room-sudo", "badge.room-mfa"],
     responses(
         (status = OK, description = "edit success"),
         (status = NOT_MODIFIED, description = "no change"),
