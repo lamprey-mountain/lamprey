@@ -58,6 +58,16 @@ impl Permissions {
         }
     }
 
+    // PERF: optimize checking
+    // TODO: better error messages - return all permissions that are required instead of only the first one
+    pub fn ensure_all(&self, perms: &[Permission]) -> Result<()> {
+        for perm in perms {
+            self.ensure(*perm)?;
+        }
+
+        Ok(())
+    }
+
     pub fn mask(&mut self, perms: &[Permission]) {
         let mut new = HashSet::new();
         for p in perms {

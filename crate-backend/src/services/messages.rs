@@ -146,12 +146,21 @@ impl ServiceMessages {
 
         let can_use_external_emoji = if !is_webhook {
             let perms = srv.perms.for_channel(user_id, thread_id).await?;
-            perms.ensure(Permission::ViewChannel)?;
+            let mut required_perms = vec![Permission::ViewChannel];
             if thread.ty.is_thread() {
-                perms.ensure(Permission::MessageCreateThread)?;
+                required_perms.push(Permission::MessageCreateThread);
             } else {
-                perms.ensure(Permission::MessageCreate)?;
+                required_perms.push(Permission::MessageCreate);
             }
+
+            if !json.attachments.is_empty() {
+                required_perms.push(Permission::MessageAttachments);
+            }
+            if !json.embeds.is_empty() {
+                required_perms.push(Permission::MessageEmbeds);
+            }
+
+            perms.ensure_all(&required_perms)?;
 
             if !perms.can_bypass_slowmode() {
                 if let Some(message_slowmode_expire_at) = data
@@ -188,17 +197,11 @@ impl ServiceMessages {
                     )
                     .await?;
             }
-            if !json.attachments.is_empty() {
-                perms.ensure(Permission::MessageAttachments)?;
-            }
-            if !json.embeds.is_empty() {
-                perms.ensure(Permission::MessageEmbeds)?;
-            }
             if json.created_at.is_some() {
                 if let Some(puppet) = user.puppet {
                     let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
-                    owner_perms.ensure(Permission::ViewChannel)?;
-                    owner_perms.ensure(Permission::MemberBridge)?;
+                    let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
+                    owner_perms.ensure_all(&required_perms)?;
                 } else {
                     return Err(Error::BadStatic("not a puppet"));
                 }
@@ -623,12 +626,14 @@ impl ServiceMessages {
         }
 
         if let Some(perms) = &perms {
+            let mut required_perms = vec![];
             if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
-                perms.ensure(Permission::MessageAttachments)?;
+                required_perms.push(Permission::MessageAttachments);
             }
             if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
-                perms.ensure(Permission::MessageEmbeds)?;
+                required_perms.push(Permission::MessageEmbeds);
             }
+            perms.ensure_all(&required_perms)?;
         }
 
         if json.edited_at.is_some() {
@@ -639,8 +644,8 @@ impl ServiceMessages {
             let usr = data.user_get(user_id).await?;
             if let Some(puppet) = usr.puppet {
                 let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
-                owner_perms.ensure(Permission::ViewChannel)?;
-                owner_perms.ensure(Permission::MemberBridge)?;
+                let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
+                owner_perms.ensure_all(&required_perms)?;
             } else {
                 return Err(Error::BadStatic("not a puppet"));
             }
