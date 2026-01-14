@@ -161,8 +161,18 @@ impl AutomodRuleset {
                             regexes: vec![],
                         });
 
-                    // TODO: populate m.keywords
-                    // TODO: populate m.matches
+                    for mat in found {
+                        let matched_cured = cured_str[mat.start..mat.end].to_string();
+
+                        if !m.keywords.contains(&matched_cured) {
+                            m.keywords.push(matched_cured.clone());
+                        }
+
+                        if !m.matches.contains(&matched_cured) {
+                            m.matches.push(matched_cured);
+                        }
+                    }
+
                     result.rules.push(rule.id);
                     for action in &rule.actions {
                         result.actions.add(action);
@@ -171,9 +181,11 @@ impl AutomodRuleset {
                 AutomodTrigger::TextBuiltin { list: _ } => todo!("server builtin lists"),
                 AutomodTrigger::TextRegex { deny, allow } => {
                     let deny_set = regex::RegexSetBuilder::new(deny.iter())
+                        .case_insensitive(true)
                         .build()
                         .expect("already validated to be valid regexes");
                     let allow_set = regex::RegexSetBuilder::new(allow.iter())
+                        .case_insensitive(true)
                         .build()
                         .expect("already validated to be valid regexes");
 
@@ -182,7 +194,8 @@ impl AutomodRuleset {
                         continue;
                     }
 
-                    if !deny_set.matches(input).matched_any() {
+                    let matches = deny_set.matches(input);
+                    if !matches.matched_any() {
                         // no bad regexes matched
                         continue;
                     }
@@ -197,8 +210,25 @@ impl AutomodRuleset {
                             regexes: vec![],
                         });
 
-                    // TODO: populate m.regexes
-                    // TODO: populate m.matches
+                    for index in matches {
+                        let pattern = &deny[index];
+                        if !m.regexes.contains(pattern) {
+                            m.regexes.push(pattern.clone());
+                        }
+
+                        let re = regex::RegexBuilder::new(pattern)
+                            .case_insensitive(true)
+                            .build()
+                            .expect("already validated to be valid regexes");
+
+                        for mat in re.find_iter(input) {
+                            let matched_text = mat.as_str().to_string();
+                            if !m.matches.contains(&matched_text) {
+                                m.matches.push(matched_text);
+                            }
+                        }
+                    }
+
                     result.rules.push(rule.id);
                     for action in &rule.actions {
                         result.actions.add(action);
@@ -208,32 +238,57 @@ impl AutomodRuleset {
                     hostnames,
                     whitelist,
                 } => {
+                    let mut triggered = false;
                     // PERF: use a trie or something here instead
                     for link in LinkFinder::new().links(input) {
-                        if matches!(link.kind(), LinkKind::Url) {
+                        if !matches!(link.kind(), LinkKind::Url) {
                             // LinkFinder will find email addresses too
                             continue;
                         }
 
-                        let url = Url::from_str(link.as_str())
-                            .expect("LinkFinder should only find links");
+                        let Ok(url) = Url::from_str(link.as_str()) else {
+                            continue;
+                        };
                         let Some(host) = url.host_str() else {
                             // no hostname, ie. data: uri
                             continue;
                         };
 
+                        let mut matches_target = false;
                         for target in hostnames {
-                            // FIXME: match subdomains (host = foo.example.com, target = example.com should be a match)
-                            // TODO: populate `result.matched_text.matches`, but keep scanning to match other hosts
+                            if host == target || host.ends_with(&format!(".{}", target)) {
+                                matches_target = true;
+                                break;
+                            }
+                        }
+
+                        // if whitelist is true: we want matches_target to be true. if false, violation.
+                        // if whitelist is false: we want matches_target to be false. if true, violation.
+                        if *whitelist != matches_target {
+                            let m = result
+                                .matched_text
+                                .get_or_insert_with(|| AutomodResultMatch {
+                                    text: input.to_owned(),
+                                    cured_text: cured_str.to_string(),
+                                    matches: vec![],
+                                    keywords: vec![],
+                                    regexes: vec![],
+                                });
+
+                            let link_str = link.as_str().to_string();
+                            if !m.matches.contains(&link_str) {
+                                m.matches.push(link_str);
+                            }
+                            triggered = true;
                         }
                     }
 
-                    // TODO: populate m.matches with links
-                    // result.rules.push(rule.id);
-                    // for action in &rule.actions {
-                    //     result.actions.add(action);
-                    // }
-                    todo!("regex links")
+                    if triggered {
+                        result.rules.push(rule.id);
+                        for action in &rule.actions {
+                            result.actions.add(action);
+                        }
+                    }
                 }
                 AutomodTrigger::MediaScan { scanner } => todo!("media scanning"),
             }
@@ -242,7 +297,7 @@ impl AutomodRuleset {
         result
     }
 
-    // TODO: other scanning situations
+    // TODO: other scanners
     pub fn scan_message_update(&self, _message: &Message, _req: &MessagePatch) -> AutomodResult {
         todo!()
     }
@@ -268,8 +323,8 @@ impl ServiceAutomod {
         }
     }
 
-    #[allow(unused)] // TEMP
-    pub async fn load(&self, room_id: RoomId) -> Result<()> {
+    /// load the automod ruleset for a room
+    pub async fn load(&self, room_id: RoomId) -> Result<AutomodRuleset> {
         todo!()
     }
 
