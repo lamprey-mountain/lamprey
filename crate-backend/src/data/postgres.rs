@@ -18,6 +18,7 @@ mod calendar;
 mod channel;
 mod connection;
 mod dm;
+mod document;
 mod email_queue;
 mod embed;
 mod emoji;

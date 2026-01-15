@@ -7,6 +7,9 @@ use common::v1::types::calendar::{
     CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
     CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
 };
+use common::v1::types::document::{
+    DocumentBranch, DocumentBranchCreate, DocumentBranchPatch, DocumentBranchState,
+};
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::media::MediaWithAdmin;
@@ -29,13 +32,13 @@ use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
 
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, AutomodRuleId, CalendarEventId,
-    Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch,
-    InviteWithMetadata, MediaPatch, NotificationId, PaginationQuery, PaginationResponse,
-    Permission, PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch,
-    RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin,
-    RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced, RoomMemberSearchResponse,
-    RoomMembership, SessionPatch, SessionStatus, SessionToken, Suspended, TagId, ThreadMember,
-    ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
+    Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId, DocumentBranchId, Embed,
+    EmojiId, InvitePatch, InviteWithMetadata, MediaPatch, NotificationId, PaginationQuery,
+    PaginationResponse, Permission, PermissionOverwriteType, PinsReorder, Relationship,
+    RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
+    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
+    RoomMemberSearchResponse, RoomMembership, SessionPatch, SessionStatus, SessionToken, Suspended,
+    TagId, ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
 };
 
 use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
@@ -44,12 +47,13 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::services::admin::AdminCollectGarbageMode;
+use crate::services::documents::EditContextId;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
-    DbSessionCreate, DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink,
-    MediaLinkType, MentionsIds, MessageId, MessageRef, MessageVerId, Permissions, RoleId,
-    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
-    UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    DbSessionCreate, DbUserCreate, DehydratedDocument, EmailPurpose, InviteCode, Media, MediaId,
+    MediaLink, MediaLinkType, MentionsIds, MessageId, MessageRef, MessageVerId, Permissions,
+    RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session,
+    SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -91,6 +95,7 @@ pub trait Data:
     + DataRoomAnalytics
     + DataAdmin
     + DataAutomod
+    + DataDocument
     + Send
     + Sync
 {
@@ -1333,4 +1338,83 @@ pub trait DataAdmin {
     ///
     /// returns rows affected
     async fn gc_audit_logs(&self, mode: AdminCollectGarbageMode) -> Result<u64>;
+}
+
+#[async_trait]
+pub trait DataDocument {
+    /// save a new snapshot
+    async fn document_compact(
+        &self,
+        context_id: EditContextId,
+        last_snapshot_id: Uuid,
+        last_seq: u32,
+        snapshot: Vec<u8>,
+    ) -> Result<()>;
+
+    /// loads the latest snapshot of a document, along with the last changes applied to it
+    async fn document_load(&self, context_id: EditContextId) -> Result<DehydratedDocument>;
+
+    /// attempts to create a new document if it doesnt already exist (create default branch, create initial snapshot)
+    async fn document_create(
+        &self,
+        context_id: EditContextId,
+        creator_id: UserId,
+        snapshot: Vec<u8>,
+    ) -> Result<()>;
+
+    /// save an update. uses latest snapshot_id and increments seq. returns the update's seq number.
+    async fn document_update(
+        &self,
+        context_id: EditContextId,
+        author_id: UserId,
+        update: Vec<u8>,
+    ) -> Result<u32>;
+
+    /// create a new branch
+    async fn document_fork(
+        &self,
+        context_id: EditContextId,
+        creator_id: UserId,
+        create: DocumentBranchCreate,
+    ) -> Result<DocumentBranchId>;
+
+    /// get a branch
+    async fn document_branch_get(
+        &self,
+        document_id: ChannelId,
+        branch_id: DocumentBranchId,
+    ) -> Result<DocumentBranch>;
+
+    /// update a branch
+    async fn document_branch_update(
+        &self,
+        document_id: ChannelId,
+        branch_id: DocumentBranchId,
+        patch: DocumentBranchPatch,
+    ) -> Result<()>;
+
+    /// set a branch's state
+    async fn document_branch_set_state(
+        &self,
+        document_id: ChannelId,
+        branch_id: DocumentBranchId,
+        status: DocumentBranchState,
+    ) -> Result<()>;
+
+    /// list all active branches
+    async fn document_branch_list(&self, document_id: ChannelId) -> Result<Vec<DocumentBranch>>;
+
+    /// paginate through closed branches
+    async fn document_branch_list_closed(
+        &self,
+        document_id: ChannelId,
+        pagination: PaginationQuery<DocumentBranchId>,
+    ) -> Result<PaginationResponse<DocumentBranch>>;
+
+    /// paginate through merged branches
+    async fn document_branch_list_merged(
+        &self,
+        document_id: ChannelId,
+        pagination: PaginationQuery<DocumentBranchId>,
+    ) -> Result<PaginationResponse<DocumentBranch>>;
 }

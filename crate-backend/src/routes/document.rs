@@ -7,9 +7,10 @@ use axum::{
 };
 use common::v1::types::ids::DocumentBranchId;
 use common::v1::types::{
-    document::{BranchCreate, BranchMerge, BranchPatch},
+    document::{DocumentBranchCreate, DocumentBranchMerge, DocumentBranchPatch},
     ChannelId,
 };
+
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -84,7 +85,7 @@ async fn document_branch_update(
     Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    _json: Json<BranchPatch>,
+    _json: Json<DocumentBranchPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
@@ -128,7 +129,7 @@ async fn document_branch_create(
     Path(_channel_id): Path<ChannelId>,
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    _json: Json<BranchCreate>,
+    _json: Json<DocumentBranchCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
@@ -151,7 +152,7 @@ async fn document_branch_merge(
     Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    _json: Json<BranchMerge>,
+    _json: Json<DocumentBranchMerge>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)

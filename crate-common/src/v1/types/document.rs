@@ -43,7 +43,7 @@ pub struct DocumentArchived {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Branch {
+pub struct DocumentBranch {
     pub id: DocumentBranchId,
     pub document_id: ChannelId,
 
@@ -69,25 +69,27 @@ pub struct Branch {
     pub private: bool,
 
     /// the current state of this branch
-    pub state: BranchState,
+    pub state: DocumentBranchState,
 
     /// the parent branch that this branch was forked from
     ///
     /// is None if this is the default branch
     pub parent_branch_id: Option<DocumentBranchId>,
     // pub parent_commit_id: Option<DocumentCommitId>,
+    // pub merged_at: Option<Time>,
+    // pub merged_into: Option<DocumentBranchId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum BranchState {
+pub enum DocumentBranchState {
     /// currently being edited
-    Open,
+    Active,
 
     /// this branch was closed without being merged
     ///
     /// this branch no longer shows up in any listings
-    Canceled,
+    Closed,
 
     /// this has been merged into a document
     ///
@@ -99,7 +101,7 @@ pub enum BranchState {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct BranchCreate {
+pub struct DocumentBranchCreate {
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 256))]
     #[cfg_attr(feature = "validator", validate(length(max = 256)))]
     pub name: Option<String>,
@@ -112,7 +114,7 @@ pub struct BranchCreate {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct BranchPatch {
+pub struct DocumentBranchPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 256))]
     #[cfg_attr(feature = "validator", validate(length(max = 256)))]
     pub name: Option<Option<String>>,
@@ -126,20 +128,20 @@ pub struct BranchPatch {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct BranchMerge {
+pub struct DocumentBranchMerge {
     // /// overwrite where to merge to, defaults to the parent branch
     // pub target_branch_id: Option<DocumentBranchId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct BranchMergeResult {
-    pub status: BranchMergeResultStatus,
+pub struct DocumentBranchMergeResult {
+    pub status: DocumentBranchMergeResultStatus,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum BranchMergeResultStatus {
+pub enum DocumentBranchMergeResultStatus {
     /// no existing changes! the cleanest merge
     FastForward,
 

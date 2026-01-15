@@ -1,29 +1,30 @@
 use std::sync::Arc;
 
+use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{ChannelId, DocumentBranchId, MessageSync, UserId};
 use dashmap::DashMap;
 use tokio::sync::RwLock;
 use yrs::{
     updates::{decoder::Decode, encoder::Encode},
-    Doc, GetString, ReadTxn, StateVector, Text, Transact, Update,
+    Doc, GetString, ReadTxn, StateVector, Text, Transact, Update, Xml, XmlElementPrelim,
+    XmlFragment,
 };
 
 use crate::{Result, ServerStateInner};
 
-type EditContextId = (ChannelId, DocumentBranchId);
+mod validate;
+
+pub type EditContextId = (ChannelId, DocumentBranchId);
 
 pub struct ServiceDocuments {
-    #[allow(unused)] // TEMP
     state: Arc<ServerStateInner>,
-
-    #[allow(unused)] // TEMP
     edit_contexts: DashMap<EditContextId, Arc<RwLock<EditContext>>>,
 }
 
 struct EditContext {
     /// the live crdt document
     doc: Doc,
-    // last_snapshot_at
+    status: ContextStatus,
 }
 
 // TODO: better error handling (add yrs errors to to crate::Error)
@@ -40,53 +41,63 @@ impl ServiceDocuments {
         let entry = match self.edit_contexts.entry(context_id) {
             dashmap::Entry::Occupied(o) => Arc::clone(o.get()),
             dashmap::Entry::Vacant(_v) => {
-                todo!("load from postgres")
+                // TODO: load doc from postgres
+
+                // if the doc doesn't exist yet...
+                let doc = Doc::new();
+                doc.get_or_insert_xml_fragment("doc");
+                let ctx = Arc::new(RwLock::new(EditContext {
+                    doc,
+                    status: ContextStatus::Open {},
+                }));
+                // TODO: save in postgres
+                ctx
             }
         };
         Ok(entry)
     }
 
     /// apply a patch to a document
-    pub async fn patch(&self, context_id: EditContextId, diff: Vec<u8>) -> Result<()> {
-        let update = Update::decode_v1(&diff).unwrap();
+    pub async fn patch(&self, context_id: EditContextId, diff: &[u8]) -> Result<()> {
+        let update = Update::decode_v1(diff).unwrap();
         let ctx = self.load(context_id).await?;
         let ctx = ctx.write().await;
         ctx.doc.transact_mut().apply_update(update).unwrap();
         drop(ctx);
-        // let mut doc = yrs::Doc::new();
-        // let txt = doc.get_or_insert_text("content");
-        // let mut tx = doc.transact_mut();
-        // txt.insert(&mut tx, 0, "hello, world!");
-        // assert_eq!(txt.get_string(&doc.transact()), "hello, world!");
-        // let ts = doc.transact().state_vector().encode_v1();
-        // let diff = doc
-        //     .transact()
-        //     .encode_diff_v1(&StateVector::decode_v1(&ts).unwrap());
-        // doc.transact_mut()
-        //     .apply_update(Update::decode_v1(&diff).unwrap())
-        //     .unwrap();
-        // TODO: broadcast diff to all peers
         self.state
             .broadcast_channel(
                 context_id.0,
-                UserId::new(), // this is ignored anyways... i should really remove it!
+                UserId::new(), // this is ignored, i should really remove user_id!
                 MessageSync::DocumentEdit {
                     channel_id: context_id.0,
+                    branch_id: context_id.1,
+                    update: BASE64_URL_SAFE_NO_PAD.encode(&diff),
                 },
             )
             .await?;
         Ok(())
     }
 
-    pub async fn diff(&self, context_id: EditContextId, diff: Vec<u8>) -> Result<()> {
-        todo!()
+    pub async fn diff(&self, context_id: EditContextId, state_vector: &[u8]) -> Result<Vec<u8>> {
+        let s = StateVector::decode_v1(state_vector).unwrap();
+        let ctx = self.load(context_id).await?;
+        let ctx = ctx.read().await;
+        let serialized = ctx.doc.transact().encode_diff_v1(&s);
+        Ok(serialized)
     }
+
+    // pub async fn fork(&self) -> Result<()>;
+    // pub async fn merge(&self) -> Result<()>;
+
+    // /// remove dead edit contexts
+    // pub async fn cleanup(&self) -> Result<()>;
 }
 
 struct DocumentSyncer {
     context_id: Option<EditContextId>,
 }
 
+//
 // enum ActorMessage {
 //     GetInitialRanges {
 //         user_id: UserId,
@@ -107,4 +118,35 @@ impl DocumentSyncer {
         // MessageSync::DocumentPresence { channel_id: () };
         todo!()
     }
+}
+
+enum ContextStatus {
+    /// at least one person is connected to this document
+    Open {
+        // last_snapshot_at: Time,
+    },
+
+    /// at least one person is connected to this document
+    Closing {
+        // closing_since: Time,
+    },
+
+    /// this document is dead and should be cleaned up
+    Dead {
+        // dead_since: Time
+    },
+}
+
+impl ContextStatus {
+    pub fn should_commit(&self) -> bool {
+        // - every N updates (eg. 256)
+        // - every N seconds (eg. 30s)
+        // - when all clients disconnect (after some debounce time, eg. 5s)
+        // - if commit while Closing, set state to Dead?
+        todo!()
+    }
+
+    // pub fn set_open(&mut self);
+    // pub fn set_closing(&mut self);
+    // pub fn set_dead(&mut self);
 }

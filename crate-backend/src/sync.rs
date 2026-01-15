@@ -443,9 +443,10 @@ impl Connection {
                     error!("failed to send to sushi_sfu: {err}");
                 }
             }
-            MessageClient::DocumentSubscribe { channel_id } => todo!(),
-            MessageClient::DocumentEdit { channel_id } => todo!(),
-            MessageClient::DocumentPresence { channel_id } => todo!(),
+            // FIXME: document events
+            MessageClient::DocumentSubscribe { .. } => todo!(),
+            MessageClient::DocumentEdit { .. } => todo!(),
+            MessageClient::DocumentPresence { .. } => todo!(),
         }
         Ok(())
     }

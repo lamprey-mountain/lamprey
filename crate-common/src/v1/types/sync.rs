@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
+#[cfg(feature = "feat_documents")]
+use crate::v1::types::DocumentBranchId;
 use crate::v1::types::{
     application::Connection,
     automod::{AutomodRule, AutomodRuleExecution},
@@ -28,6 +30,8 @@ use super::{
     Channel, ChannelId, EmojiId, Harvest, InviteCode, MessageId, MessageVerId, Role, RoleId, Room,
     RoomId, RoomMember, Session, SessionId, SessionToken, User, UserId,
 };
+
+// TODO: encode binary data as base64 for json, binary for msgpack
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -71,7 +75,9 @@ pub enum MessageClient {
     #[cfg(feature = "feat_documents")]
     DocumentSubscribe {
         channel_id: ChannelId,
-        // TODO: subscribing to multiple channels at once
+        branch_id: DocumentBranchId,
+        state_vector: Option<String>,
+        // TODO: subscribing to multiple documents at once
         // channel_ids: Vec<ChannelId>,
     },
 
@@ -80,8 +86,13 @@ pub enum MessageClient {
     /// must be subscribed via DocumentSubscribe
     #[cfg(feature = "feat_documents")]
     DocumentEdit {
+        /// the document thats being edited
         channel_id: ChannelId,
-        // TODO: crdt data here
+
+        branch_id: DocumentBranchId,
+
+        /// the encoded update to this document
+        update: String,
     },
 
     /// update your document presence
@@ -90,7 +101,9 @@ pub enum MessageClient {
     #[cfg(feature = "feat_documents")]
     DocumentPresence {
         channel_id: ChannelId,
-        // TODO: crdt data here
+        branch_id: DocumentBranchId,
+        cursor_head: String,
+        cursor_tail: Option<String>,
     },
 }
 
@@ -680,14 +693,20 @@ pub enum MessageSync {
     // only returned if subscribed
     DocumentEdit {
         channel_id: ChannelId,
-        // TODO: crdt data here
+        branch_id: DocumentBranchId,
+
+        /// the encoded update to this document
+        update: String,
     },
 
     #[cfg(feature = "feat_documents")]
     // only returned if subscribed
     DocumentPresence {
         channel_id: ChannelId,
-        // TODO: presence data (eg. cursors and selections) here
+        branch_id: DocumentBranchId,
+        user_id: UserId,
+        cursor_head: String,
+        cursor_tail: Option<String>,
     },
     // TODO(#915): media v2
     // /// A piece of media has processed and is now in the `Uploaded` state.
