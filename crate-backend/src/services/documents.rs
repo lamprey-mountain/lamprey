@@ -3,7 +3,7 @@ use std::sync::Arc;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{ChannelId, DocumentBranchId, MessageSync, UserId};
 use dashmap::DashMap;
-use tokio::sync::RwLock;
+use tokio::sync::{broadcast, Mutex, RwLock};
 use uuid::Uuid;
 use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
 
@@ -33,6 +33,8 @@ struct EditContext {
 
     /// the sequence number of the last persisted update or snapshot
     last_seq: u32,
+
+    update_tx: broadcast::Sender<Vec<u8>>,
 }
 
 struct PendingChange {
@@ -80,12 +82,15 @@ impl ServiceDocuments {
                 }
                 drop(tx);
 
+                let (update_tx, _) = broadcast::channel(100);
+
                 Arc::new(RwLock::new(EditContext {
                     doc,
                     status: EditContextStatus::Open {},
                     changes_since_last_snapshot: dehydrated.changes.len() as u64,
                     pending_changes: vec![],
                     last_seq: dehydrated.snapshot_seq,
+                    update_tx,
                 }))
             }
             Err(Error::NotFound) => {
@@ -100,12 +105,15 @@ impl ServiceDocuments {
                     data.document_create(context_id, author_id, snapshot)
                         .await?;
 
+                    let (update_tx, _) = broadcast::channel(100);
+
                     Arc::new(RwLock::new(EditContext {
                         doc,
                         status: EditContextStatus::Open {},
                         changes_since_last_snapshot: 0,
                         pending_changes: vec![],
                         last_seq: 0,
+                        update_tx,
                     }))
                 } else {
                     return Err(Error::NotFound);
@@ -165,18 +173,20 @@ impl ServiceDocuments {
             ctx.changes_since_last_snapshot = 0;
         }
 
+        let _ = ctx.update_tx.send(update_bytes.to_vec());
+
         drop(ctx);
-        self.state
-            .broadcast_channel(
-                context_id.0,
-                author_id,
-                MessageSync::DocumentEdit {
-                    channel_id: context_id.0,
-                    branch_id: context_id.1,
-                    update: BASE64_URL_SAFE_NO_PAD.encode(&update_bytes),
-                },
-            )
-            .await?;
+        // self.state
+        //     .broadcast_channel(
+        //         context_id.0,
+        //         author_id,
+        //         MessageSync::DocumentEdit {
+        //             channel_id: context_id.0,
+        //             branch_id: context_id.1,
+        //             update: BASE64_URL_SAFE_NO_PAD.encode(&update_bytes),
+        //         },
+        //     )
+        //     .await?;
         Ok(())
     }
 
@@ -187,32 +197,125 @@ impl ServiceDocuments {
         let serialized = ctx.doc.transact().encode_diff_v1(&s);
         Ok(serialized)
     }
+
+    pub async fn subscribe(
+        &self,
+        context_id: EditContextId,
+    ) -> Result<broadcast::Receiver<Vec<u8>>> {
+        let ctx = self.load(context_id, None).await?;
+        let ctx = ctx.read().await;
+        Ok(ctx.update_tx.subscribe())
+    }
+
+    /// create a new DocumentSyncer for a session
+    pub fn create_syncer(&self) -> DocumentSyncer {
+        let (query_tx, query_rx) = tokio::sync::watch::channel(None);
+        DocumentSyncer {
+            s: self.state.clone(),
+            query_tx,
+            query_rx,
+            ops_rx: Mutex::new(None),
+        }
+    }
 }
 
-struct DocumentSyncer {
-    #[allow(dead_code)] // TODO: use this
-    context_id: Option<EditContextId>,
+pub struct DocumentSyncer {
+    s: Arc<ServerStateInner>,
+    query_tx: tokio::sync::watch::Sender<Option<(EditContextId, Option<Vec<u8>>)>>,
+    query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
+    ops_rx: Mutex<Option<(EditContextId, broadcast::Receiver<Vec<u8>>)>>,
 }
 
 // enum ActorMessage {
-//     GetInitialRanges {
+//     GetInitialDocument {
 //         user_id: UserId,
-//         ranges: Vec<(u64, u64)>,
 //         callback: oneshot::Sender<MessageSync>,
 //     },
 // }
 
 impl DocumentSyncer {
     /// set the edit context id for this syncer
-    pub async fn set_context_id(&self, _context_id: Option<EditContextId>) {
-        // debug!("set context_id to {context_id:?}");
-        // *self.context_id.lock().await = context_id;
+    pub async fn set_context_id(
+        &self,
+        context_id: EditContextId,
+        state_vector: Option<Vec<u8>>,
+    ) -> Result<()> {
+        let rx = self.s.services().documents.subscribe(context_id).await?;
+        *self.ops_rx.lock().await = Some((context_id, rx));
+        self.query_tx
+            .send(Some((context_id, state_vector)))
+            .unwrap();
+        Ok(())
     }
 
     pub async fn poll(&mut self) -> Result<MessageSync> {
-        // MessageSync::DocumentEdit { channel_id: () };
-        // MessageSync::DocumentPresence { channel_id: () };
-        todo!()
+        loop {
+            let mut ops_guard = self.ops_rx.lock().await;
+            let qrx = &mut self.query_rx;
+
+            if let Some((context_id, rx)) = &mut *ops_guard {
+                tokio::select! {
+                    res = rx.recv() => {
+                        match res {
+                            Ok(update) => {
+                                return Ok(MessageSync::DocumentEdit {
+                                    channel_id: context_id.0,
+                                    branch_id: context_id.1,
+                                    update: BASE64_URL_SAFE_NO_PAD.encode(&update),
+                                });
+                            }
+                            Err(broadcast::error::RecvError::Lagged(_)) => {
+                                // TODO: handle lagged
+                                continue;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => {
+                                // TODO: handle closed
+                                *ops_guard = None;
+                                continue;
+                            }
+                        }
+                    }
+                    _ = qrx.changed() => {
+                        // break to handle query
+                    }
+                }
+            } else {
+                qrx.changed().await.unwrap();
+            }
+
+            let (context_id, state_vector) = {
+                let q = qrx.borrow();
+                match q.clone() {
+                    Some(q) => q,
+                    None => {
+                        // query cleared
+                        *ops_guard = None;
+                        continue;
+                    }
+                }
+            };
+
+            // NOTE: subscription is already updated in set_context_id
+
+            let srv = self.s.services();
+            let update = if let Some(sv) = state_vector {
+                srv.documents.diff(context_id, &sv).await?
+            } else {
+                let ctx = srv.documents.load(context_id, None).await?;
+                let ctx = ctx.read().await;
+                let update = ctx
+                    .doc
+                    .transact()
+                    .encode_state_as_update_v1(&StateVector::default());
+                update
+            };
+
+            return Ok(MessageSync::DocumentEdit {
+                channel_id: context_id.0,
+                branch_id: context_id.1,
+                update: BASE64_URL_SAFE_NO_PAD.encode(&update),
+            });
+        }
     }
 }
 

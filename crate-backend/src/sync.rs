@@ -1,3 +1,4 @@
+use base64::Engine;
 use common::v1::types::{
     sync::{SyncCompression, SyncParams},
     voice::VoiceStateScreenshare,
@@ -23,10 +24,13 @@ use common::v1::types::{
 use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
 
-use crate::error::{Error, Result};
 use crate::services::members::{MemberListSyncer, MemberListTarget};
 use crate::sync::permissions::AuthCheck;
 use crate::ServerState;
+use crate::{
+    error::{Error, Result},
+    services::documents::DocumentSyncer,
+};
 
 mod permissions;
 
@@ -48,8 +52,10 @@ pub struct Connection {
     seq_server: u64,
     seq_client: u64,
     id: String,
-    pub member_list: Box<MemberListSyncer>,
     compression: Option<Compression>,
+
+    pub member_list: Box<MemberListSyncer>,
+    pub document: Box<DocumentSyncer>,
 }
 
 pub enum Compression {
@@ -83,6 +89,7 @@ impl Connection {
             seq_client: 0,
             id: format!("{}", uuid::Uuid::new_v4().hyphenated()),
             member_list: Box::new(s.services().members.create_syncer()),
+            document: Box::new(s.services().documents.create_syncer()),
             compression,
             s,
         }
@@ -443,9 +450,58 @@ impl Connection {
                     error!("failed to send to sushi_sfu: {err}");
                 }
             }
-            // FIXME: document events
-            MessageClient::DocumentSubscribe { .. } => todo!(),
-            MessageClient::DocumentEdit { .. } => todo!(),
+            MessageClient::DocumentSubscribe {
+                channel_id,
+                branch_id,
+                state_vector,
+            } => {
+                let session = self
+                    .state
+                    .session()
+                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                let srv = self.s.services();
+                let perms = srv.perms.for_channel(user_id, channel_id).await?;
+                perms.ensure(Permission::ViewChannel)?;
+
+                let sv = if let Some(sv_str) = state_vector {
+                    Some(
+                        base64::prelude::BASE64_URL_SAFE_NO_PAD
+                            .decode(sv_str)
+                            .map_err(|_| Error::BadStatic("bad base64"))?,
+                    )
+                } else {
+                    None
+                };
+
+                self.document
+                    .set_context_id((channel_id, branch_id), sv)
+                    .await?;
+            }
+            MessageClient::DocumentEdit {
+                channel_id,
+                branch_id,
+                update,
+            } => {
+                let session = self
+                    .state
+                    .session()
+                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                let srv = self.s.services();
+                let perms = srv.perms.for_channel(user_id, channel_id).await?;
+                // FIXME: proper permissions
+                perms.ensure(Permission::ViewChannel)?;
+
+                let update_bytes = base64::prelude::BASE64_URL_SAFE_NO_PAD
+                    .decode(update)
+                    .map_err(|_| Error::BadStatic("bad base64"))?;
+
+                srv.documents
+                    .apply_update((channel_id, branch_id), user_id, &update_bytes)
+                    .await?;
+            }
+            // FIXME: document presence/awareness
             MessageClient::DocumentPresence { .. } => todo!(),
         }
         Ok(())

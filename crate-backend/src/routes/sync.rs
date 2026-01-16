@@ -58,6 +58,19 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                     }
                 }
             }
+            doc_res = conn.document.poll() => {
+                match doc_res {
+                    Ok(msg) => {
+                        if let Err(err) = conn.queue_message(Box::new(msg), None).await {
+                            tracing::error!("failed to queue document message: {err}");
+                        }
+                    }
+                    Err(err) => {
+                        let _ = ws.send(err.into()).await;
+                        break;
+                    }
+                }
+            }
             ws_msg = ws.recv() => {
                 match ws_msg {
                     Some(Ok(Message::Close(_))) => break,
