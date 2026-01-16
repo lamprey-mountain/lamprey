@@ -139,9 +139,6 @@ enum ContextStatus {
 
 impl ContextStatus {
     pub fn should_commit(&self) -> bool {
-        // - every N updates (eg. 256)
-        // - every N seconds (eg. 30s)
-        // - when all clients disconnect (after some debounce time, eg. 5s)
         // - if commit while Closing, set state to Dead?
         todo!()
     }
@@ -150,3 +147,35 @@ impl ContextStatus {
     // pub fn set_closing(&mut self);
     // pub fn set_dead(&mut self);
 }
+
+// struct Asdf {
+//     /// the number of changes since the last snapshot
+//     changes_since_last_snapshot: u64,
+
+//     /// changes that have not been persisted yet
+//     pending_changes: Vec<Change>,
+// }
+
+// trait Foo {
+//     fn handle_change(change: &[u8]) {
+//         // write change to a log; flush to postgres occasionally
+//         // immediately update document
+//     }
+// }
+
+// struct SnapshotLimiter {
+//     // - every N updates (eg. 256)
+//     // - every N seconds (eg. 30s)
+//     // - when all clients disconnect (after some debounce time, eg. 5s)
+// }
+
+// impl SnapshotLimiter {
+//     /// whether we should create a new snapshot
+//     pub fn should_snapshot(&self) -> bool {
+//         todo!()
+//     }
+
+//     pub fn snapshotted(&mut self) -> bool {
+//         todo!()
+//     }
+// }

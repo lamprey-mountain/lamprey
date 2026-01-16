@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
+use crate::v1::types::{util::Time, RoomMember, User, UserId};
+
 pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
     fn min() -> Self;
     fn max() -> Self;
@@ -102,15 +104,58 @@ pub struct PaginationResponse<T> {
     pub cursor: Option<String>,
 }
 
-// pub trait HasKey {
-//     type PaginationKey: PaginationKey;
-// }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
+pub struct HistoryParams {
+    /// split group whenever author changes
+    pub by_author: Option<bool>,
 
-// #[derive(Debug, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct PaginationResponse2<T: core::fmt::Debug + Serialize + Deserialize<'_> + HasKey> {
-//     pub items: Vec<T>,
-//     pub total: u64,
-//     pub after: Option<T::PaginationKey>,
-//     pub before: Option<T::PaginationKey>,
-// }
+    /// split group whenever a tag is created
+    pub by_tag: Option<bool>,
+
+    /// every n seconds
+    pub by_time: Option<u32>,
+
+    /// every n changes
+    pub by_changes: Option<u32>,
+
+    /// continue listing history from here
+    pub cursor: Option<String>,
+
+    /// the maximum number of items to return.
+    // FIXME: default 10, max 1024
+    pub limit: Option<u16>,
+}
+
+/// a set of changes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Changeset {
+    /// the created_at time of the first change
+    pub start_time: Time,
+
+    /// the created_at time of the last change
+    pub end_time: Time,
+
+    /// every author that contributed to this change group
+    pub authors: Vec<UserId>,
+
+    /// number of graphemes added
+    pub stat_added: u64,
+
+    /// number of graphemes removed
+    pub stat_removed: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct HistoryPagination {
+    /// the resulting changesets, ordered oldest to newest
+    pub changesets: Vec<Changeset>,
+
+    /// a user object for every referenced user_id
+    pub users: Vec<User>,
+
+    /// a room member object for every referenced user_id
+    pub room_member: Vec<RoomMember>,
+}

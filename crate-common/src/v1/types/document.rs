@@ -7,7 +7,11 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{ids::DocumentBranchId, misc::Time, ChannelId, UserId};
+use crate::v1::types::{
+    ids::{DocumentBranchId, DocumentTagId},
+    misc::Time,
+    ChannelId, UserId,
+};
 
 /// info about a document
 // NOTE: this will probably be included in Channel as `document: Option<Document>`
@@ -150,4 +154,144 @@ pub enum DocumentBranchMergeResultStatus {
 
     /// can't merge because there are too many conflicts
     Conflicted,
+}
+
+/// a revision of a document at a point in time
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum DocumentRevisionId {
+    /// the current head of this branch
+    ///
+    /// serialized as `branch-id`
+    Branch {
+        branch_id: DocumentBranchId,
+    },
+
+    /// this one specific revision
+    ///
+    /// serialized as `branch-uuid@seq`
+    Revision {
+        branch_id: DocumentBranchId,
+        seq: u64,
+    },
+
+    /// this one specific revision
+    ///
+    /// serialized as `~tag`
+    Tag {
+        tag_id: DocumentTagId,
+    },
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for DocumentRevisionId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            DocumentRevisionId::Branch { branch_id } => {
+                serializer.serialize_str(&branch_id.to_string())
+            }
+            DocumentRevisionId::Revision { branch_id, seq } => {
+                serializer.serialize_str(&format!("{}@{}", branch_id, seq))
+            }
+            DocumentRevisionId::Tag { tag_id } => {
+                serializer.serialize_str(&format!("~{}", tag_id))
+            }
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for DocumentRevisionId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        if let Some(tag_str) = s.strip_prefix('~') {
+            let tag_id = tag_str
+                .parse()
+                .map_err(serde::de::Error::custom)?;
+            Ok(DocumentRevisionId::Tag { tag_id })
+        } else if let Some((branch_str, seq_str)) = s.split_once('@') {
+            let branch_id = branch_str
+                .parse()
+                .map_err(serde::de::Error::custom)?;
+            let seq = seq_str
+                .parse()
+                .map_err(serde::de::Error::custom)?;
+            Ok(DocumentRevisionId::Revision { branch_id, seq })
+        } else {
+            let branch_id = s
+                .parse()
+                .map_err(serde::de::Error::custom)?;
+            Ok(DocumentRevisionId::Branch { branch_id })
+        }
+    }
+}
+
+/// a named version
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct DocumentTag {
+    /// the unique identifier for this tag
+    pub id: DocumentTagId,
+
+    /// when this tag was created
+    pub created_at: Time,
+
+    /// who created this tag
+    pub creator_id: UserId,
+
+    pub branch_id: DocumentBranchId,
+    pub revision_seq: u64,
+
+    /// one line description
+    #[cfg_attr(feature = "utoipa", schema(max_length = 128))]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    pub summary: String,
+
+    /// optional more detailed description
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
+    #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct DocumentTagCreate {
+    /// one line description
+    #[cfg_attr(feature = "utoipa", schema(max_length = 128))]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    pub summary: String,
+
+    /// optional more detailed description
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
+    #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
+    pub description: Option<String>,
+
+    pub revision: DocumentRevisionId,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct DocumentTagPatch {
+    /// one line description
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 128))]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    pub summary: Option<String>,
+
+    /// optional more detailed description
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
+    #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "crate::v1::types::util::some_option"))]
+    pub description: Option<Option<String>>,
 }
