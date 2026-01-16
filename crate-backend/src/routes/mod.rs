@@ -67,7 +67,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(oauth::routes())
         .merge(permission_overwrite::routes())
         .merge(public::routes())
-        .merge(public::routes())
         .merge(push::routes())
         .merge(reaction::routes())
         .merge(relationship::routes())

@@ -163,9 +163,7 @@ pub enum DocumentRevisionId {
     /// the current head of this branch
     ///
     /// serialized as `branch-id`
-    Branch {
-        branch_id: DocumentBranchId,
-    },
+    Branch { branch_id: DocumentBranchId },
 
     /// this one specific revision
     ///
@@ -178,9 +176,7 @@ pub enum DocumentRevisionId {
     /// this one specific revision
     ///
     /// serialized as `~tag`
-    Tag {
-        tag_id: DocumentTagId,
-    },
+    Tag { tag_id: DocumentTagId },
 }
 
 #[cfg(feature = "serde")]
@@ -196,9 +192,7 @@ impl Serialize for DocumentRevisionId {
             DocumentRevisionId::Revision { branch_id, seq } => {
                 serializer.serialize_str(&format!("{}@{}", branch_id, seq))
             }
-            DocumentRevisionId::Tag { tag_id } => {
-                serializer.serialize_str(&format!("~{}", tag_id))
-            }
+            DocumentRevisionId::Tag { tag_id } => serializer.serialize_str(&format!("~{}", tag_id)),
         }
     }
 }
@@ -211,22 +205,14 @@ impl<'de> Deserialize<'de> for DocumentRevisionId {
     {
         let s = String::deserialize(deserializer)?;
         if let Some(tag_str) = s.strip_prefix('~') {
-            let tag_id = tag_str
-                .parse()
-                .map_err(serde::de::Error::custom)?;
+            let tag_id = tag_str.parse().map_err(serde::de::Error::custom)?;
             Ok(DocumentRevisionId::Tag { tag_id })
         } else if let Some((branch_str, seq_str)) = s.split_once('@') {
-            let branch_id = branch_str
-                .parse()
-                .map_err(serde::de::Error::custom)?;
-            let seq = seq_str
-                .parse()
-                .map_err(serde::de::Error::custom)?;
+            let branch_id = branch_str.parse().map_err(serde::de::Error::custom)?;
+            let seq = seq_str.parse().map_err(serde::de::Error::custom)?;
             Ok(DocumentRevisionId::Revision { branch_id, seq })
         } else {
-            let branch_id = s
-                .parse()
-                .map_err(serde::de::Error::custom)?;
+            let branch_id = s.parse().map_err(serde::de::Error::custom)?;
             Ok(DocumentRevisionId::Branch { branch_id })
         }
     }
@@ -292,6 +278,9 @@ pub struct DocumentTagPatch {
     /// optional more detailed description
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
     #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "crate::v1::types::util::some_option"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "crate::v1::types::util::some_option")
+    )]
     pub description: Option<Option<String>>,
 }

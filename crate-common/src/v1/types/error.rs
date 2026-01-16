@@ -103,6 +103,10 @@ pub mod next {
         /// required oauth scopes
         #[serde(skip_serializing_if = "Vec::is_empty")]
         pub required_scopes: Vec<Scope>,
+
+        /// unacknowledged warnings
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub warnings: Vec<Warning>,
     }
 
     /// a field that has an error
@@ -183,7 +187,7 @@ pub mod next {
         // channel is removed
         // you are not the gdm owner
         // only gdms can be upgraded
-        // dm/gdm channel missing recepients
+        // dm/gdm channel missing recipients
         // dms can only be with a single person
         // gdm has too many members
         // can only create dms/gdms outside of rooms
@@ -228,6 +232,10 @@ pub mod next {
 
         // message create blocked by automod
         // message edit blocked by automod
+
+        // invalid or expired session (same as AuthFailure?)
+
+        // warning
     }
 
     /// warnings that require ?force=true
@@ -243,6 +251,7 @@ pub mod next {
         TagNotEmpty,
         // this will revoke view access to existing thread members
         // this will revoke view access to existing rsvpers
+        // this will remove all permission overwrites and sync access with parent channel
     }
 
     impl Error {
@@ -254,6 +263,7 @@ pub mod next {
                 required_permissions: vec![],
                 required_permissions_server: vec![],
                 required_scopes: vec![],
+                warnings: vec![],
             }
         }
 
@@ -265,6 +275,7 @@ pub mod next {
                 required_permissions: vec![],
                 required_permissions_server: vec![],
                 required_scopes: vec![],
+                warnings: vec![],
             }
         }
     }

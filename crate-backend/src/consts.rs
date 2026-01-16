@@ -36,3 +36,10 @@ pub const RETENTION_ROOM_ANALYTICS: u32 = 180;
 
 /// how long to retain calls without any users for, in seconds (for Broadcast channels)
 pub const EMPTY_CALL_TIMEOUT: u64 = 300;
+
+/// the maximum number of active branches a document can have
+pub const MAX_DOCUMENT_BRANCHES: usize = 64;
+
+// TODO: pinning documents to sidebar in ui
+// /// the maximum number of pinned documents per wiki a user can have
+// pub const MAX_DOCUMENT_PINS: usize = 32;

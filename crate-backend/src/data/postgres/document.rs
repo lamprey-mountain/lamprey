@@ -131,6 +131,7 @@ impl DataDocument for Postgres {
 
         Ok(DehydratedDocument {
             last_snapshot,
+            snapshot_seq: start_seq as u32,
             changes: updates.into_iter().map(|row| row.data).collect(),
         })
     }
@@ -248,6 +249,24 @@ impl DataDocument for Postgres {
         create: DocumentBranchCreate,
     ) -> Result<DocumentBranchId> {
         let (document_id, parent_branch_id) = context_id;
+
+        let mut tx = self.pool.begin().await?;
+
+        let count: i64 = query_scalar!(
+            "SELECT count(*) FROM document_branch WHERE document_id = $1 AND state = 'Active'::branch_state",
+            document_id.into_inner()
+        )
+        .fetch_one(&mut *tx)
+        .await?
+        .unwrap_or(0);
+
+        if count as usize >= crate::consts::MAX_DOCUMENT_BRANCHES {
+            return Err(Error::BadRequest(format!(
+                "too many active branches (max {})",
+                crate::consts::MAX_DOCUMENT_BRANCHES
+            )));
+        }
+
         let branch_id = DocumentBranchId::new();
 
         query!(
@@ -262,8 +281,10 @@ impl DataDocument for Postgres {
             create.private,
             parent_branch_id.into_inner()
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await?;
 
         Ok(branch_id)
     }
@@ -326,14 +347,42 @@ impl DataDocument for Postgres {
         branch_id: DocumentBranchId,
         status: DocumentBranchState,
     ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        if status == DocumentBranchState::Active {
+            let document_id = query_scalar!(
+                "SELECT document_id FROM document_branch WHERE id = $1",
+                branch_id.into_inner()
+            )
+            .fetch_one(&mut *tx)
+            .await?;
+
+            let count: i64 = query_scalar!(
+                "SELECT count(*) FROM document_branch WHERE document_id = $1 AND state = 'Active'::branch_state",
+                document_id
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(0);
+
+            if count as usize >= crate::consts::MAX_DOCUMENT_BRANCHES {
+                return Err(Error::BadRequest(format!(
+                    "too many active branches (max {})",
+                    crate::consts::MAX_DOCUMENT_BRANCHES
+                )));
+            }
+        }
+
         let status: DbBranchState = status.into();
         query!(
             r#"UPDATE document_branch SET state = $1::branch_state WHERE id = $2"#,
             status as DbBranchState,
             branch_id.into_inner()
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 

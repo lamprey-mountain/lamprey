@@ -694,5 +694,6 @@ impl Into<MentionsIds> for Mentions {
 
 pub struct DehydratedDocument {
     pub last_snapshot: Vec<u8>,
+    pub snapshot_seq: u32,
     pub changes: Vec<Vec<u8>>,
 }
