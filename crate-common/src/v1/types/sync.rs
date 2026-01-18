@@ -669,19 +669,6 @@ pub enum MessageSync {
         slowmode_message_expire_at: Option<Time>,
     },
 
-    // TODO: remove?
-    DocumentCreate {
-        channel: Channel,
-    },
-
-    DocumentUpdate {
-        channel: Channel,
-    },
-
-    DocumentDelete {
-        channel_id: ChannelId,
-    },
-
     /// an edit to a document
     ///
     /// only returned if subscribed
