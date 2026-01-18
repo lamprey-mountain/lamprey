@@ -36,7 +36,6 @@ feat_interaction = []
 feat_interaction_reaction = ["feat_interaction"]
 feat_interaction_status = ["feat_interaction"]
 feat_search_ordering = []
-feat_documents = []
 
 default = [
   "utoipa",
@@ -46,5 +45,4 @@ default = [
   "feat_interaction",
   "feat_interaction_reaction",
   "str0m",
-  "feat_documents",
 ]

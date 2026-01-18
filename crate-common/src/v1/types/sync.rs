@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
-#[cfg(feature = "feat_documents")]
-use crate::v1::types::DocumentBranchId;
 use crate::v1::types::{
     application::Connection,
     automod::{AutomodRule, AutomodRuleExecution},
@@ -13,7 +11,7 @@ use crate::v1::types::{
     util::Time,
     voice::Call,
     webhook::Webhook,
-    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, InviteTargetId,
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, DocumentBranchId, InviteTargetId,
     InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
 };
 
@@ -72,7 +70,6 @@ pub enum MessageClient {
         ranges: Vec<(u64, u64)>,
     },
 
-    #[cfg(feature = "feat_documents")]
     DocumentSubscribe {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
@@ -84,7 +81,6 @@ pub enum MessageClient {
     /// edit a document
     ///
     /// must be subscribed via DocumentSubscribe
-    #[cfg(feature = "feat_documents")]
     DocumentEdit {
         /// the document thats being edited
         channel_id: ChannelId,
@@ -98,7 +94,6 @@ pub enum MessageClient {
     /// update your document presence
     ///
     /// must be subscribed via DocumentSubscribe
-    #[cfg(feature = "feat_documents")]
     DocumentPresence {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
@@ -674,23 +669,22 @@ pub enum MessageSync {
         slowmode_message_expire_at: Option<Time>,
     },
 
-    #[cfg(feature = "feat_documents")]
+    // TODO: remove?
     DocumentCreate {
         channel: Channel,
     },
 
-    #[cfg(feature = "feat_documents")]
     DocumentUpdate {
         channel: Channel,
     },
 
-    #[cfg(feature = "feat_documents")]
     DocumentDelete {
         channel_id: ChannelId,
     },
 
-    #[cfg(feature = "feat_documents")]
-    // only returned if subscribed
+    /// an edit to a document
+    ///
+    /// only returned if subscribed
     DocumentEdit {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
@@ -699,8 +693,9 @@ pub enum MessageSync {
         update: String,
     },
 
-    #[cfg(feature = "feat_documents")]
-    // only returned if subscribed
+    /// user presence in a document
+    ///
+    /// only returned if subscribed
     DocumentPresence {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
