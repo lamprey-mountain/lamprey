@@ -3433,3 +3433,8 @@ input[type="color"] {
 		border-top: solid 1px $sep-400;
 	}
 }
+
+.document {
+	grid-area: main;
+	background-color: $bg-200;
+}

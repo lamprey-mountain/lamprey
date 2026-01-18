@@ -7,6 +7,7 @@ import { createEffect, onCleanup, onMount } from "solid-js";
 import { initTurndownService } from "./turndown.ts";
 import { decorate, md } from "./markdown.tsx";
 import { useCtx } from "./context";
+import { createWrapCommand } from "./editor-utils.ts";
 
 const turndown = initTurndownService();
 
@@ -102,37 +103,6 @@ const schema = new Schema({
 	},
 });
 
-function createWrap(wrap: string): Command {
-	const len = wrap.length;
-
-	return (state, dispatch) => {
-		const { from, to } = state.selection;
-		const tr = state.tr;
-
-		const isWrapped = (
-			tr.doc.textBetween(from - len, from) === wrap &&
-			tr.doc.textBetween(to, to + len) === wrap
-		) || (
-			false
-			// FIXME: fails?
-			// tr.doc.textBetween(from, from + len) === wrap &&
-			// tr.doc.textBetween(to - len, to) === wrap
-		);
-
-		if (isWrapped) {
-			tr.delete(to, to + len);
-			tr.delete(from - len, from);
-		} else {
-			tr.insertText(wrap, to);
-			tr.insertText(wrap, from);
-			tr.setSelection(TextSelection.create(tr.doc, from + len, to + len));
-		}
-
-		dispatch?.(tr);
-		return true;
-	};
-}
-
 type EditorProps = {
 	initialContent?: string;
 	keymap?: { [key: string]: Command };
@@ -194,9 +164,9 @@ export const createEditor = (opts: EditorProps) => {
 					"Ctrl-z": undo,
 					"Ctrl-Shift-z": redo,
 					"Ctrl-y": redo,
-					"Ctrl-b": createWrap("**"),
-					"Ctrl-i": createWrap("*"),
-					"Ctrl-`": createWrap("`"),
+					"Ctrl-b": createWrapCommand("**"),
+					"Ctrl-i": createWrapCommand("*"),
+					"Ctrl-`": createWrapCommand("`"),
 					"Ctrl-m": (_state) => {
 						return false;
 					},

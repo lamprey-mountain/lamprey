@@ -28,6 +28,7 @@ import { createStore } from "solid-js/store";
 import { RoomT } from "./types.ts";
 import { Friends } from "./Friends.tsx";
 import { Calendar } from "./Calendar.tsx";
+import { DocumentMain, Wiki } from "./Document.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -293,6 +294,12 @@ export const RouteChannel = (p: RouteSectionProps) => {
 						</Show>
 						<Show when={channel()!.type === "Voice"}>
 							<Voice channel={channel()!} />
+						</Show>
+						<Show when={channel()!.type === "Document"}>
+							<Document channel={channel()!} />
+						</Show>
+						<Show when={channel()!.type === "Wiki"}>
+							<Wiki channel={channel()!} />
 						</Show>
 						<Show when={channel()!.type === "Forum"}>
 							<Forum channel={channel()!} />

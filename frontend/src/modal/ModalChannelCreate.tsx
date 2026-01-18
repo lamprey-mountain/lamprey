@@ -10,7 +10,9 @@ export type ChannelTypeOption =
 	| "Voice"
 	| "Category"
 	| "Forum"
-	| "Calendar";
+	| "Calendar"
+	| "Document"
+	| "Wiki";
 
 interface ModalChannelCreateProps {
 	room_id: string;
@@ -75,6 +77,17 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 									label: "calendar channel",
 									type: "Calendar",
 									description: "experiment, may be removed later",
+								}]
+								: []),
+							...(flags.has("channel_documents")
+								? [{
+									label: "document channel",
+									type: "Document",
+									description: "a single document",
+								}, {
+									label: "wiki channel",
+									type: "Wiki",
+									description: "collection of documents",
 								}]
 								: []),
 						]}
