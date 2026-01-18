@@ -3,7 +3,7 @@ use std::sync::Arc;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{ChannelId, DocumentBranchId, MessageSync, UserId};
 use dashmap::DashMap;
-use tokio::sync::{broadcast, Mutex, RwLock};
+use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
 
@@ -214,7 +214,7 @@ impl ServiceDocuments {
             s: self.state.clone(),
             query_tx,
             query_rx,
-            ops_rx: Mutex::new(None),
+            current_rx: None,
         }
     }
 }
@@ -223,7 +223,7 @@ pub struct DocumentSyncer {
     s: Arc<ServerStateInner>,
     query_tx: tokio::sync::watch::Sender<Option<(EditContextId, Option<Vec<u8>>)>>,
     query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
-    ops_rx: Mutex<Option<(EditContextId, broadcast::Receiver<Vec<u8>>)>>,
+    current_rx: Option<(EditContextId, broadcast::Receiver<Vec<u8>>)>,
 }
 
 // enum ActorMessage {
@@ -240,8 +240,6 @@ impl DocumentSyncer {
         context_id: EditContextId,
         state_vector: Option<Vec<u8>>,
     ) -> Result<()> {
-        let rx = self.s.services().documents.subscribe(context_id).await?;
-        *self.ops_rx.lock().await = Some((context_id, rx));
         self.query_tx
             .send(Some((context_id, state_vector)))
             .unwrap();
@@ -250,10 +248,42 @@ impl DocumentSyncer {
 
     pub async fn poll(&mut self) -> Result<MessageSync> {
         loop {
-            let mut ops_guard = self.ops_rx.lock().await;
-            let qrx = &mut self.query_rx;
+            if self.query_rx.has_changed().unwrap_or(false) {
+                let _ = self.query_rx.borrow_and_update();
+                let query = self.query_rx.borrow().clone();
 
-            if let Some((context_id, rx)) = &mut *ops_guard {
+                match query {
+                    Some((context_id, state_vector)) => {
+                        let rx = self.s.services().documents.subscribe(context_id).await?;
+                        self.current_rx = Some((context_id, rx));
+
+                        let srv = self.s.services();
+                        let update = if let Some(sv) = state_vector {
+                            srv.documents.diff(context_id, &sv).await?
+                        } else {
+                            let ctx = srv.documents.load(context_id, None).await?;
+                            let ctx = ctx.read().await;
+                            let update = ctx
+                                .doc
+                                .transact()
+                                .encode_state_as_update_v1(&StateVector::default());
+                            update
+                        };
+
+                        return Ok(MessageSync::DocumentEdit {
+                            channel_id: context_id.0,
+                            branch_id: context_id.1,
+                            update: BASE64_URL_SAFE_NO_PAD.encode(&update),
+                        });
+                    }
+                    None => {
+                        self.current_rx = None;
+                        continue;
+                    }
+                }
+            }
+
+            if let Some((context_id, rx)) = &mut self.current_rx {
                 tokio::select! {
                     res = rx.recv() => {
                         match res {
@@ -264,57 +294,15 @@ impl DocumentSyncer {
                                     update: BASE64_URL_SAFE_NO_PAD.encode(&update),
                                 });
                             }
-                            Err(broadcast::error::RecvError::Lagged(_)) => {
-                                // TODO: handle lagged
-                                continue;
-                            }
-                            Err(broadcast::error::RecvError::Closed) => {
-                                // TODO: handle closed
-                                *ops_guard = None;
-                                continue;
-                            }
+                            Err(_) => continue,
                         }
                     }
-                    _ = qrx.changed() => {
-                        // break to handle query
-                    }
+                    _ = self.query_rx.changed() => continue,
                 }
             } else {
-                qrx.changed().await.unwrap();
+                self.query_rx.changed().await.unwrap();
+                continue;
             }
-
-            let (context_id, state_vector) = {
-                let q = qrx.borrow();
-                match q.clone() {
-                    Some(q) => q,
-                    None => {
-                        // query cleared
-                        *ops_guard = None;
-                        continue;
-                    }
-                }
-            };
-
-            // NOTE: subscription is already updated in set_context_id
-
-            let srv = self.s.services();
-            let update = if let Some(sv) = state_vector {
-                srv.documents.diff(context_id, &sv).await?
-            } else {
-                let ctx = srv.documents.load(context_id, None).await?;
-                let ctx = ctx.read().await;
-                let update = ctx
-                    .doc
-                    .transact()
-                    .encode_state_as_update_v1(&StateVector::default());
-                update
-            };
-
-            return Ok(MessageSync::DocumentEdit {
-                channel_id: context_id.0,
-                branch_id: context_id.1,
-                update: BASE64_URL_SAFE_NO_PAD.encode(&update),
-            });
         }
     }
 }
