@@ -277,12 +277,12 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Auth sudo (TEMP)
+		 * Auth sudo upgrade (TEMP)
 		 * @description
 		 *
 		 *     instantly upgrade to sudo mode; this is intended for debugging
 		 */
-		post: operations["auth_sudo"];
+		post: operations["auth_sudo_upgrade"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -470,6 +470,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/auth/sudo": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Auth sudo delete
+		 * @description
+		 *
+		 *     downgrade yourself from sudo mode
+		 */
+		post: operations["auth_sudo_delete"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/auth/totp": {
 		parameters: {
 			query?: never;
@@ -480,15 +502,37 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Auth totp execute (TODO)
+		 * Auth totp execute
 		 * @description
 		 */
 		post: operations["auth_totp_exec"];
 		/**
-		 * Auth totp delete (TODO)
+		 * Auth totp delete
 		 * @description
 		 */
 		delete: operations["auth_totp_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/auth/totp/complete": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Auth totp complete
+		 * @description
+		 *
+		 *     Complete the totp registration process
+		 */
+		post: operations["auth_totp_complete"];
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -504,8 +548,10 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Auth totp init (TODO)
+		 * Auth totp init
 		 * @description
+		 *
+		 *     Begin totp registration by generating a secret
 		 */
 		post: operations["auth_totp_init"];
 		delete?: never;
@@ -522,16 +568,36 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Auth totp recovery codes get (TODO)
+		 * Auth totp recovery codes get
 		 * @description
 		 */
 		get: operations["auth_totp_recovery_get"];
 		put?: never;
 		/**
-		 * Auth totp recovery codes rotate (TODO)
+		 * Auth totp recovery codes rotate
 		 * @description
 		 */
 		post: operations["auth_totp_recovery_rotate"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/auth/totp/recovery/exec": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Auth totp recovery exec
+		 * @description
+		 */
+		post: operations["auth_totp_recovery_exec"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -621,6 +687,199 @@ export interface paths {
 		put?: never;
 		post?: never;
 		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar event list
+		 * @description
+		 */
+		get: operations["calendar_event_list"];
+		put?: never;
+		/**
+		 * Calendar event create
+		 * @description
+		 */
+		post: operations["calendar_event_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar event get
+		 * @description
+		 */
+		get: operations["calendar_event_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Calendar event delete
+		 * @description
+		 */
+		delete: operations["calendar_event_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Calendar event update
+		 * @description
+		 */
+		patch: operations["calendar_event_update"];
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar overwrite list
+		 * @description
+		 */
+		get: operations["calendar_overwrite_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite/{seq}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar overwrite get
+		 * @description
+		 */
+		get: operations["calendar_overwrite_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Calendar overwrite delete
+		 * @description
+		 */
+		delete: operations["calendar_overwrite_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Calendar overwrite update
+		 * @description
+		 */
+		patch: operations["calendar_overwrite_update"];
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar Overwrite RSVP list
+		 * @description
+		 */
+		get: operations["calendar_overwrite_rsvp_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}":
+		{
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			get?: never;
+			/**
+			 * Calendar Overwrite RSVP create
+			 * @description
+			 */
+			put: operations["calendar_overwrite_rsvp_put"];
+			post?: never;
+			/**
+			 * Calendar Overwrite RSVP delete
+			 * @description
+			 */
+			delete: operations["calendar_overwrite_rsvp_delete"];
+			options?: never;
+			head?: never;
+			patch?: never;
+			trace?: never;
+		};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/rsvp": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar Event RSVP list
+		 * @description
+		 */
+		get: operations["calendar_event_rsvp_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/rsvp/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar Event RSVP get
+		 * @description
+		 */
+		get: operations["calendar_event_rsvp_get"];
+		/**
+		 * Calendar Event RSVP create
+		 * @description
+		 */
+		put: operations["calendar_event_rsvp_put"];
+		post?: never;
+		/**
+		 * Calendar Event RSVP delete
+		 * @description
+		 */
+		delete: operations["calendar_event_rsvp_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -734,106 +993,6 @@ export interface paths {
 		put?: never;
 		post?: never;
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/event": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar event list
-		 * @description
-		 */
-		get: operations["calendar_event_list"];
-		put?: never;
-		/**
-		 * Calendar event create
-		 * @description
-		 */
-		post: operations["calendar_event_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/event/{calendar_event_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar event get
-		 * @description
-		 */
-		get: operations["calendar_event_get"];
-		put?: never;
-		post?: never;
-		/**
-		 * Calendar event delete
-		 * @description
-		 */
-		delete: operations["calendar_event_delete"];
-		options?: never;
-		head?: never;
-		/**
-		 * Calendar event update
-		 * @description
-		 */
-		patch: operations["calendar_event_update"];
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/event/{calendar_event_id}/rsvp": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar rsvp list
-		 * @description
-		 */
-		get: operations["calendar_rsvp_list"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/event/{calendar_event_id}/rsvp/{user_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar rsvp get
-		 * @description
-		 */
-		get: operations["calendar_rsvp_get"];
-		/**
-		 * Calendar rsvp create
-		 * @description
-		 */
-		put: operations["calendar_rsvp_update"];
-		post?: never;
-		/**
-		 * Calendar rsvp delete
-		 * @description
-		 */
-		delete: operations["calendar_rsvp_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1027,7 +1186,7 @@ export interface paths {
 		post?: never;
 		/**
 		 * Message delete (TEMP?)
-		 * @description
+		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
 		 *
 		 *     Note that this endpoint allows deleting your own messages, while message
 		 *     moderate always requires the full permission
@@ -1179,7 +1338,14 @@ export interface paths {
 		get: operations["message_version_get"];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/**
+		 * Message version delete
+		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
+		 *
+		 *     Note that this endpoint allows deleting message versions, while message
+		 *     moderate always requires the full permission
+		 */
+		delete: operations["message_version_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1305,6 +1471,31 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/ratelimit": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Ratelimit delete all (TODO)
+		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadManage</div>
+		 *     <div class="markdown-alert-permission-optional">MemberTimeout</div>
+		 *
+		 *     Immediately expires a slowmode ratelimit for all users, allowing all users to send messages again
+		 *     Requires either ChannelManage, ThreadManage, or MemberTimeout
+		 */
+		delete: operations["channel_ratelimit_delete_all"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/ratelimit/{user_id}": {
 		parameters: {
 			query?: never;
@@ -1414,7 +1605,13 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
+		/**
+		 * Tag list
+		 * @description
+		 *
+		 *     List all tags in a forum channel.
+		 */
+		get: operations["tag_list"];
 		put?: never;
 		/**
 		 * Tag create
@@ -1435,10 +1632,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Tag search (TODO)
+		 * Tag search
 		 * @description
 		 *
-		 *     Search all emoji the user can see.
+		 *     Search for tags in a forum channel.
 		 */
 		get: operations["tag_search"];
 		put?: never;
@@ -1530,6 +1727,12 @@ export interface paths {
 		/**
 		 * Thread list archived
 		 * @description
+		 *
+		 *     Lists archived threads in this channel.
+		 *
+		 *     - Includes all archived public threads.
+		 *     - If you have the `ThreadManage` permission, includes all archived private threads.
+		 *     - Otherwise, only includes archived private threads you're a member of.
 		 */
 		get: operations["thread_list_archived"];
 		put?: never;
@@ -1864,6 +2067,166 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/document/{channel_id}/branch": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Document branch list (TODO)
+		 * @description
+		 */
+		get: operations["document_branch_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/document/{channel_id}/branch/{branch_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Document branch get (TODO)
+		 * @description
+		 */
+		get: operations["document_branch_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Document branch delete (TODO)
+		 * @description
+		 */
+		delete: operations["document_branch_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Document branch update (TODO)
+		 * @description
+		 */
+		patch: operations["document_branch_update"];
+		trace?: never;
+	};
+	"/api/v1/document/{channel_id}/branch/{branch_id}/history": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Document history (TODO)
+		 * @description
+		 */
+		get: operations["document_history"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/document/{channel_id}/branch/{branch_id}/merge": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Document branch merge (TODO)
+		 * @description
+		 */
+		post: operations["document_branch_merge"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/document/{channel_id}/branch/{parent_id}/fork": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Document branch fork (TODO)
+		 * @description
+		 */
+		post: operations["document_branch_fork"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/document/{channel_id}/tag": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Document tag list (TODO)
+		 * @description
+		 */
+		get: operations["document_tag_list"];
+		put?: never;
+		/**
+		 * Document tag create (TODO)
+		 * @description
+		 */
+		post: operations["document_tag_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/document/{channel_id}/tag/{tag_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Document tag get (TODO)
+		 * @description
+		 */
+		get: operations["document_tag_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Document tag delete (TODO)
+		 * @description
+		 */
+		delete: operations["document_tag_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Document tag update (TODO)
+		 * @description
+		 */
+		patch: operations["document_tag_update"];
+		trace?: never;
+	};
 	"/api/v1/emoji/search": {
 		parameters: {
 			query?: never;
@@ -1872,7 +2235,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Emoji search (TODO)
+		 * Emoji search
 		 * @description
 		 *
 		 *     Search all emoji the user can see.
@@ -2024,6 +2387,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/internal/harvest/{harvest_id}/{token}/download": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Harvest download
+		 * @description
+		 */
+		get: operations["harvest_download"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/internal/rpc": {
 		parameters: {
 			query?: never;
@@ -2109,6 +2492,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/media/direct": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Media upload direct
+		 * @description
+		 *
+		 *     Directly upload a piece of media without doing the whole create/patch/done dance. Only use this for small media.
+		 */
+		post: operations["media_upload_direct"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/media/{media_id}": {
 		parameters: {
 			query?: never;
@@ -2137,6 +2542,28 @@ export interface paths {
 		 * @description
 		 */
 		patch: operations["media_patch"];
+		trace?: never;
+	};
+	"/api/v1/media/{media_id}/clone": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Media clone (TODO)
+		 * @description
+		 *
+		 *     Create a new unconsumed copy of a piece of media
+		 */
+		post: operations["media_clone"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/media/{media_id}/done": {
@@ -2190,13 +2617,13 @@ export interface paths {
 		};
 		/**
 		 * Oauth info
-		 * @description
+		 * @description <div class="markdown-alert-scope-required">identify</div>
 		 */
 		get: operations["oauth_info"];
 		put?: never;
 		/**
 		 * Oauth authorize
-		 * @description
+		 * @description <div class="markdown-alert-scope-required">identify</div>
 		 */
 		post: operations["oauth_authorize"];
 		delete?: never;
@@ -2216,7 +2643,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Oauth introspect
-		 * @description
+		 * @description <div class="markdown-alert-scope-required">identify</div>
 		 */
 		post: operations["oauth_introspect"];
 		delete?: never;
@@ -2236,7 +2663,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Oauth revoke
-		 * @description
+		 * @description <div class="markdown-alert-scope-required">identify</div>
 		 */
 		post: operations["oauth_revoke"];
 		delete?: never;
@@ -2276,7 +2703,8 @@ export interface paths {
 		};
 		/**
 		 * Oauth userinfo
-		 * @description
+		 * @description <div class="markdown-alert-scope-required">identify</div>
+		 *     <div class="markdown-alert-scope-optional">email</div>
 		 */
 		get: operations["oauth_userinfo"];
 		put?: never;
@@ -2322,6 +2750,34 @@ export interface paths {
 		put?: never;
 		post?: never;
 		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/push": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Push register (TODO)
+		 * @description
+		 *
+		 *     register web push for this session
+		 */
+		post: operations["push_register"];
+		/**
+		 * Push delete (TODO)
+		 * @description
+		 *
+		 *     remove web push for this session
+		 */
+		delete: operations["push_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2621,7 +3077,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/room/{room_id}/automod": {
+	"/api/v1/room/{room_id}/automod/rule": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2629,23 +3085,43 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Automod rule list (TODO)
+		 * Automod rule list
 		 * @description
 		 */
-		get: operations["list_rules"];
+		get: operations["automod_rule_list"];
 		put?: never;
 		/**
-		 * Automod rule create (TODO)
+		 * Automod rule create
 		 * @description
 		 */
-		post: operations["create_rule"];
+		post: operations["automod_rule_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/room/{room_id}/automod/{rule_id}": {
+	"/api/v1/room/{room_id}/automod/rule/test": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Automod rule test (TODO)
+		 * @description
+		 */
+		post: operations["automod_rule_test"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/automod/rule/{rule_id}": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2653,24 +3129,24 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Automod rule get (TODO)
+		 * Automod rule get
 		 * @description
 		 */
-		get: operations["get_rule"];
+		get: operations["automod_rule_get"];
 		put?: never;
 		post?: never;
 		/**
-		 * Automod rule delete (TODO)
+		 * Automod rule delete
 		 * @description
 		 */
-		delete: operations["delete_rule"];
+		delete: operations["automod_rule_delete"];
 		options?: never;
 		head?: never;
 		/**
-		 * Automod rule update (TODO)
+		 * Automod rule update
 		 * @description
 		 */
-		patch: operations["update_rule"];
+		patch: operations["automod_rule_update"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/ban": {
@@ -3173,6 +3649,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/security": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Room security set
+		 * @description
+		 */
+		put: operations["room_security_set"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}/thread": {
 		parameters: {
 			query?: never;
@@ -3309,6 +3805,46 @@ export interface paths {
 		 * @description
 		 */
 		post: operations["search_rooms"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/server/@self": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Server information
+		 * @description
+		 */
+		get: operations["server_info"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/server/@self/moderation": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Server moderation capabilities
+		 * @description
+		 */
+		get: operations["server_moderation"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3593,6 +4129,30 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/@self/harvest": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Harvest get
+		 * @description
+		 */
+		get: operations["harvest_get"];
+		put?: never;
+		/**
+		 * Harvest create
+		 * @description
+		 */
+		post: operations["harvest_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/@self/ignore/{target_id}": {
 		parameters: {
 			query?: never;
@@ -3630,7 +4190,8 @@ export interface paths {
 		};
 		/**
 		 * User get
-		 * @description
+		 * @description <div class="markdown-alert-scope-required">identify</div>
+		 *     <div class="markdown-alert-scope-optional">email</div>
 		 *
 		 *     Get another user, including your relationship
 		 */
@@ -4026,7 +4587,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/voice/region": {
+	"/api/v1/voice": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Voice call create
+		 * @description
+		 */
+		post: operations["voice_call_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{channel_id}": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -4034,19 +4615,27 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Voice region list (TODO)
+		 * Voice call get
 		 * @description
 		 */
-		get: operations["voice_region_list"];
+		get: operations["voice_call_get"];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/**
+		 * Voice call delete
+		 * @description
+		 */
+		delete: operations["voice_call_delete"];
 		options?: never;
 		head?: never;
-		patch?: never;
+		/**
+		 * Voice call update
+		 * @description
+		 */
+		patch: operations["voice_call_update"];
 		trace?: never;
 	};
-	"/api/v1/voice/{thread_id}/member": {
+	"/api/v1/voice/{channel_id}/member": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -4060,13 +4649,17 @@ export interface paths {
 		get: operations["voice_state_list"];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/**
+		 * Voice state disconnect all
+		 * @description <div class="markdown-alert-permission-required">VoiceDisconnect</div>
+		 */
+		delete: operations["voice_state_disconnect_all"];
 		options?: never;
 		head?: never;
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/voice/{thread_id}/member/{user_id}": {
+	"/api/v1/voice/{channel_id}/member/{user_id}": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -4087,10 +4680,17 @@ export interface paths {
 		delete: operations["voice_state_disconnect"];
 		options?: never;
 		head?: never;
-		patch?: never;
+		/**
+		 * Voice state patch
+		 * @description <div class="markdown-alert-permission-optional">VoiceMute</div>
+		 *     <div class="markdown-alert-permission-optional">VoiceDeafen</div>
+		 *     <div class="markdown-alert-permission-optional">VoiceRequest</div>
+		 *     <div class="markdown-alert-permission-optional">VoiceMove</div>
+		 */
+		patch: operations["voice_state_patch"];
 		trace?: never;
 	};
-	"/api/v1/voice/{thread_id}/member/{user_id}/move": {
+	"/api/v1/voice/{channel_id}/member/{user_id}/move": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -4104,6 +4704,70 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
 		 */
 		post: operations["voice_state_move"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{channel_id}/move": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Voice state move bulk (TODO)
+		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
+		 */
+		post: operations["voice_state_move_bulk"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{channel_id}/ring": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Voice ring check
+		 * @description
+		 */
+		get: operations["voice_ring_check"];
+		put?: never;
+		/**
+		 * Voice ring start (TODO)
+		 * @description
+		 */
+		post: operations["voice_ring_start"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{channel_id}/ring/ack": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Voice ring stop (TODO)
+		 * @description
+		 */
+		post: operations["voice_ring_stop"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4252,6 +4916,26 @@ export interface paths {
 		 * @description
 		 */
 		post: operations["webhook_execute_slack"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/wiki/{channel_id}/history": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Wiki history (TODO)
+		 * @description
+		 */
+		get: operations["wiki_history"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4483,6 +5167,7 @@ export interface components {
 			type: "RoleUpdate";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				role_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
@@ -4507,6 +5192,7 @@ export interface components {
 			type: "InviteUpdate";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				code: components["schemas"]["InviteCode"];
 			};
 			/** @enum {string} */
@@ -4563,6 +5249,7 @@ export interface components {
 			type: "EmojiUpdate";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				emoji_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
@@ -4631,6 +5318,12 @@ export interface components {
 			};
 			/** @enum {string} */
 			type: "MemberDisconnect";
+		} | {
+			metadata: {
+				channel_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "MemberDisconnectAll";
 		} | {
 			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
@@ -4751,6 +5444,7 @@ export interface components {
 			type: "SessionUpdate";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				session_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
@@ -4789,6 +5483,7 @@ export interface components {
 		} | {
 			metadata: {
 				application_id: components["schemas"]["Id"];
+				changes?: components["schemas"]["AuditLogChange"][];
 			};
 			/** @enum {string} */
 			type: "ApplicationDelete";
@@ -4808,6 +5503,7 @@ export interface components {
 			type: "EmailUpdate";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				email: components["schemas"]["EmailAddr"];
 			};
 			/** @enum {string} */
@@ -4815,7 +5511,7 @@ export interface components {
 		} | {
 			metadata: {
 				application_id: components["schemas"]["Id"];
-				scopes: components["schemas"]["Scope"][];
+				scopes: components["schemas"]["Scopes"];
 			};
 			/** @enum {string} */
 			type: "ConnectionCreate";
@@ -4833,6 +5529,7 @@ export interface components {
 			type: "UserRegistered";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				user_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
@@ -4843,6 +5540,12 @@ export interface components {
 			};
 			/** @enum {string} */
 			type: "UserUndelete";
+		} | {
+			metadata: {
+				harvest_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "HarvestCreate";
 		} | {
 			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
@@ -4858,6 +5561,7 @@ export interface components {
 			type: "AdminBroadcast";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				room_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
@@ -4920,11 +5624,53 @@ export interface components {
 			type: "CalendarEventUpdate";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				event_id: components["schemas"]["Id"];
-				title: string;
 			};
 			/** @enum {string} */
 			type: "CalendarEventDelete";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				event_id: components["schemas"]["Id"];
+				/** Format: int64 */
+				seq: number;
+			};
+			/** @enum {string} */
+			type: "CalendarOverwriteCreate";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				event_id: components["schemas"]["Id"];
+				/** Format: int64 */
+				seq: number;
+			};
+			/** @enum {string} */
+			type: "CalendarOverwriteUpdate";
+		} | {
+			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
+				event_id: components["schemas"]["Id"];
+				/** Format: int64 */
+				seq: number;
+			};
+			/** @enum {string} */
+			type: "CalendarOverwriteDelete";
+		} | {
+			/** @description someone else's rsvp was deleted
+			 *
+			 *     not emitted when someone deletes their own rsvp */
+			metadata: {
+				event_id: components["schemas"]["Id"];
+				/**
+				 * Format: int64
+				 * @description populated if this is for an overwrite
+				 */
+				seq?: number | null;
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "CalendarRsvpDelete";
 		} | {
 			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
@@ -4941,6 +5687,7 @@ export interface components {
 			type: "WebhookUpdate";
 		} | {
 			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
 				webhook_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
@@ -4954,6 +5701,27 @@ export interface components {
 			};
 			/** @enum {string} */
 			type: "RatelimitUpdate";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				rule_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "AutomodRuleCreate";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				rule_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "AutomodRuleUpdate";
+		} | {
+			metadata: {
+				changes?: components["schemas"]["AuditLogChange"][];
+				rule_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "AutomodRuleDelete";
 		};
 		AuthEmailComplete: {
 			code: string;
@@ -4963,11 +5731,11 @@ export interface components {
 			authenticators: components["schemas"]["WebauthnAuthenticator"][];
 			/** @description if there is at least one verified and primary email address
 			 *
-			 *     (this is used for magic links and password resets) */
+			 *     this is used for magic links and password resets */
 			has_email: boolean;
 			/** @description if a password has been set */
 			has_password: boolean;
-			/** @description if local totp state is_valid */
+			/** @description if the user has registered a totp provider */
 			has_totp: boolean;
 			/** @description the oauth providers this user has authenticated with */
 			oauth_providers: string[];
@@ -4989,6 +5757,8 @@ export interface components {
 			userinfo_endpoint: string;
 		};
 		AutomodAction: {
+			/** @description a custom message to show to the user */
+			message?: string | null;
 			/** @enum {string} */
 			type: "Block";
 		} | {
@@ -5009,39 +5779,110 @@ export interface components {
 			type: "SendAlert";
 		};
 		AutomodRule: {
+			/** @description when executed, do ALL of these actions */
 			actions: components["schemas"]["AutomodAction"][];
 			enabled: boolean;
+			/** @description what channels should be exempt from this rule. */
 			except_channels: components["schemas"]["Id"][];
+			/** @description if nsfw channels should be exempt from this rule. */
+			except_nsfw: boolean;
+			/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
 			except_roles: components["schemas"]["Id"][];
 			id: components["schemas"]["Id"];
+			/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
+			include_everyone: boolean;
 			name: string;
 			room_id: components["schemas"]["Id"];
+			target: components["schemas"]["AutomodTarget"];
 			trigger: components["schemas"]["AutomodTrigger"];
 		};
 		AutomodRuleCreate: {
 			actions: components["schemas"]["AutomodAction"][];
 			except_channels?: components["schemas"]["Id"][];
+			except_nsfw?: boolean;
 			except_roles?: components["schemas"]["Id"][];
+			include_everyone?: boolean;
 			name: string;
+			target: components["schemas"]["AutomodTarget"];
 			trigger: components["schemas"]["AutomodTrigger"];
+		};
+		AutomodRuleExecution: {
+			channel_id?: null | components["schemas"]["Id"];
+			message_id?: null | components["schemas"]["Id"];
+			/** @description the rule that was executed */
+			rule: components["schemas"]["AutomodRule"];
+			/** @description the text that was matched against (eg. message content) */
+			text?: string | null;
+			text_location?: null | components["schemas"]["AutomodTextLocation"];
+			/** @description the keyword or regex that was matched in the content */
+			text_matched?: string | null;
+			/** @description the user who triggered this rule */
+			user_id: components["schemas"]["Id"];
 		};
 		AutomodRuleUpdate: {
 			actions?: components["schemas"]["AutomodAction"][] | null;
 			enabled?: boolean | null;
 			except_channels?: components["schemas"]["Id"][] | null;
+			except_nsfw?: boolean | null;
 			except_roles?: components["schemas"]["Id"][] | null;
+			include_everyone?: boolean | null;
 			name?: string | null;
+			target?: null | components["schemas"]["AutomodTarget"];
 			trigger?: null | components["schemas"]["AutomodTrigger"];
 		};
+		/**
+		 * @description what this rule should be evaluated on
+		 * @enum {string}
+		 */
+		AutomodTarget: "Content" | "Member";
+		/** @description where a piece of text was found */
+		AutomodTextLocation: {
+			/** @enum {string} */
+			type: "UserName";
+		} | {
+			/** @enum {string} */
+			type: "UserBio";
+		} | {
+			/** @enum {string} */
+			type: "MemberNickname";
+		} | {
+			/** @enum {string} */
+			type: "MessageContent";
+		} | {
+			/** @enum {string} */
+			type: "ThreadTitle";
+		};
 		AutomodTrigger: {
+			/** @description allow content that matches any of these regexes. overrides deny. */
 			allow: string[];
+			/** @description deny content that matches any of these regexes. */
 			deny: string[];
 			/** @enum {string} */
-			type: "MessageRegex";
+			type: "TextRegex";
 		} | {
+			allow: string[];
 			keywords: string[];
 			/** @enum {string} */
-			type: "MessageKeywords";
+			type: "TextKeywords";
+		} | {
+			/** @description which hostnames to block or allow. works recursively (ie. foo.example.com is blocked if example.com is blocked) */
+			hostnames: string[];
+			/** @enum {string} */
+			type: "TextLinks";
+			/** @description whether this is a list of allowed link domains, otherwise this is a blacklist */
+			whitelist: boolean;
+		} | {
+			/** @description the name of the server defined list */
+			list: string;
+			/** @enum {string} */
+			type: "TextBuiltin";
+		} | {
+			/** @description the name of a server defined media scanner
+			 *
+			 *     for example, `Nsfw` or `Malware` */
+			scanner: string;
+			/** @enum {string} */
+			type: "MediaScan";
 		};
 		/** @description a special type of bot designed to represent a user on another platform */
 		Bot: {
@@ -5063,34 +5904,99 @@ export interface components {
 			channel_id: components["schemas"]["Id"];
 			creator_id?: null | components["schemas"]["Id"];
 			description?: string | null;
-			end: components["schemas"]["Time"];
+			ends_at?: null | components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
 			location?: string | null;
-			recurrence: components["schemas"]["Recurrence"][];
-			start: components["schemas"]["Time"];
-			timezone?: string | null;
+			recurrence?: null | components["schemas"]["Recurrence"];
+			starts_at: components["schemas"]["Time"];
+			timezone?: null | components["schemas"]["Timezone"];
 			title: string;
 			/** Format: uri */
 			url?: string | null;
 		};
 		CalendarEventCreate: {
 			description?: string | null;
-			end: components["schemas"]["Time"];
+			ends_at?: null | components["schemas"]["Time"];
 			location?: string | null;
-			recurrence: components["schemas"]["Recurrence"][];
-			start: components["schemas"]["Time"];
-			timezone?: string | null;
+			recurrence?: null | components["schemas"]["Recurrence"];
+			starts_at: components["schemas"]["Time"];
+			timezone?: null | components["schemas"]["Timezone"];
 			title: string;
 			/** Format: uri */
 			url?: string | null;
 		};
+		CalendarEventParticipant: {
+			member?: null | components["schemas"]["RoomMember"];
+			status: components["schemas"]["CalendarRsvpStatus"];
+			user?: null | components["schemas"]["User"];
+			user_id: components["schemas"]["Id"];
+		};
+		CalendarEventParticipantPut: {
+			status: components["schemas"]["CalendarRsvpStatus"];
+		};
 		CalendarEventPatch: {
-			channel_id?: null | components["schemas"]["Id"];
 			description?: string | null;
+			ends_at?: null | components["schemas"]["Time"];
 			location?: string | null;
+			starts_at?: null | components["schemas"]["Time"];
 			title?: string | null;
 			/** Format: uri */
 			url?: string | null;
+		};
+		/** @description an overwrite to a calendar event instance */
+		CalendarOverwrite: {
+			/** @description if this event is cancelled */
+			cancelled: boolean;
+			ends_at?: null | components["schemas"]["Time"];
+			event_id: components["schemas"]["Id"];
+			/** @description shown before the description */
+			extra_description?: string | null;
+			location?: string | null;
+			/**
+			 * Format: int64
+			 * @description the sequence number of this instance
+			 */
+			seq: number;
+			starts_at?: null | components["schemas"]["Time"];
+			title?: string | null;
+			/** Format: uri */
+			url?: string | null;
+		};
+		CalendarOverwritePut: {
+			/** @description if this event is cancelled */
+			cancelled?: boolean | null;
+			ends_at?: null | components["schemas"]["Time"];
+			/** @description shown before the description */
+			extra_description?: string | null;
+			location?: string | null;
+			starts_at?: null | components["schemas"]["Time"];
+			title?: string | null;
+			/** Format: uri */
+			url?: string | null;
+		};
+		/** @enum {string} */
+		CalendarRsvpStatus: "interested" | "uninterested";
+		Call: {
+			channel_id: components["schemas"]["Id"];
+			created_at: components["schemas"]["Time"];
+			room_id?: null | components["schemas"]["Id"];
+			topic?: string | null;
+		};
+		CallCreate: {
+			/** @description channel to create a call in
+			 *
+			 *     must be a Broadcast channel */
+			channel_id: components["schemas"]["Id"];
+			/** @description call topic
+			 *
+			 *     must have VoiceMute permission in target channel to set */
+			topic?: string | null;
+		};
+		CallPatch: {
+			/** @description the current call topic
+			 *
+			 *     only unsuppressed users can change the call topic */
+			topic?: string | null;
 		};
 		Captcha: Record<string, never>;
 		CaptchaChallenge: {
@@ -5098,6 +6004,25 @@ export interface components {
 		};
 		CaptchaResponse: {
 			code: string;
+		};
+		/** @description a set of changes */
+		Changeset: {
+			/** @description every author that contributed to this change group */
+			authors: components["schemas"]["Id"][];
+			/** @description the created_at time of the last change */
+			end_time: components["schemas"]["Time"];
+			/** @description the created_at time of the first change */
+			start_time: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description number of graphemes added
+			 */
+			stat_added: number;
+			/**
+			 * Format: int64
+			 * @description number of graphemes removed
+			 */
+			stat_removed: number;
 		};
 		/** @description A channel */
 		Channel: {
@@ -5191,6 +6116,8 @@ export interface components {
 			thread_member?: null | components["schemas"]["ThreadMember"];
 			/** @description type specific data for this channel */
 			type: components["schemas"]["ChannelType"];
+			/** @description url that this info channel should link to */
+			url?: string | null;
 			user_config?: null | components["schemas"]["UserConfigChannel"];
 			/**
 			 * Format: int64
@@ -5228,6 +6155,8 @@ export interface components {
 			tags?: components["schemas"]["Id"][] | null;
 			/** @description The type of this channel */
 			type?: components["schemas"]["ChannelType"];
+			/** Format: uri */
+			url?: string | null;
 			/** Format: int64 */
 			user_limit?: number | null;
 		};
@@ -5267,6 +6196,8 @@ export interface components {
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
 			ty?: null | components["schemas"]["ChannelType"];
+			/** Format: uri */
+			url?: string | null;
 			/** Format: int64 */
 			user_limit?: number | null;
 		};
@@ -5287,6 +6218,7 @@ export interface components {
 			| "Announcement"
 			| "ThreadPublic"
 			| "ThreadPrivate"
+			| "ThreadForum2"
 			| "Dm"
 			| "Gdm"
 			| "Forum"
@@ -5295,14 +6227,18 @@ export interface components {
 			| "Category"
 			| "Calendar"
 			| "Forum2"
-			| "Info";
+			| "Info"
+			| "Ticket"
+			| "Document"
+			| "DocumentComment"
+			| "Wiki";
 		/** @description a color */
 		Color: string;
 		/** @description an application that is authorized to a user */
 		Connection: {
 			application: components["schemas"]["Application"];
 			created_at: components["schemas"]["Time"];
-			scopes: components["schemas"]["Scope"][];
+			scopes: components["schemas"]["Scopes"];
 		};
 		ContextResponse: {
 			has_after: boolean;
@@ -5311,7 +6247,66 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
-		Cron: string;
+		/**
+		 * @description a day of the week
+		 * @enum {string}
+		 */
+		DayOfWeek:
+			| "Monday"
+			| "Tuesday"
+			| "Wednesday"
+			| "Thursday"
+			| "Friday"
+			| "Saturday"
+			| "Sunday";
+		DocumentBranchCreate: {
+			name?: string | null;
+			private?: boolean;
+		};
+		DocumentBranchMerge: Record<string, never>;
+		DocumentBranchPatch: {
+			name?: string | null;
+			/** @description once public, branches cannot be made private again */
+			private?: boolean;
+		};
+		/** @description a revision of a document at a point in time */
+		DocumentRevisionId: {
+			/** @description the current head of this branch
+			 *
+			 *     serialized as `branch-id` */
+			Branch: {
+				branch_id: components["schemas"]["Id"];
+			};
+		} | {
+			/** @description this one specific revision
+			 *
+			 *     serialized as `branch-uuid@seq` */
+			Revision: {
+				branch_id: components["schemas"]["Id"];
+				/** Format: int64 */
+				seq: number;
+			};
+		} | {
+			/** @description this one specific revision
+			 *
+			 *     serialized as `~tag` */
+			Tag: {
+				tag_id: components["schemas"]["Id"];
+			};
+		};
+		DocumentTagCreate: {
+			/** @description optional more detailed description */
+			description?: string | null;
+			revision: components["schemas"]["DocumentRevisionId"];
+			/** @description one line description */
+			summary: string;
+		};
+		DocumentTagPatch: {
+			/** @description optional more detailed description */
+			description?: string | null;
+			/** @description one line description */
+			summary?: string | null;
+		};
 		Email: Record<string, never>;
 		/**
 		 * Format: email
@@ -5409,6 +6404,49 @@ export interface components {
 		};
 		Experiments: Record<string, never>;
 		ExternalPlatform: null | string;
+		Harvest: components["schemas"]["HarvestStatus"] & {
+			created_at: components["schemas"]["Time"];
+			id: components["schemas"]["Id"];
+			user_id: components["schemas"]["Id"];
+		};
+		/** @description how to create a harvest
+		 *
+		 *     including extra data will make the export slower */
+		HarvestCreate: {
+			/** @description include all messages you have sent */
+			include_messages: boolean;
+			/** @description include all reactions you have sent */
+			include_reactions: boolean;
+		};
+		HarvestStatus: {
+			/** @enum {string} */
+			status: "Queued";
+		} | {
+			failed_at: components["schemas"]["Time"];
+			message: string;
+			/** @enum {string} */
+			status: "Failed";
+		} | {
+			completed_at: components["schemas"]["Time"];
+			expires_at: components["schemas"]["Time"];
+			/** @enum {string} */
+			status: "Completed";
+			/** Format: uri */
+			url: string;
+		} | {
+			cancelled_at: components["schemas"]["Time"];
+			message: string;
+			/** @enum {string} */
+			status: "Cancelled";
+		};
+		HistoryPagination: {
+			/** @description the resulting changesets, ordered oldest to newest */
+			changesets: components["schemas"]["Changeset"][];
+			/** @description a room member object for every referenced user_id */
+			room_member: components["schemas"]["RoomMember"][];
+			/** @description a user object for every referenced user_id */
+			users: components["schemas"]["User"][];
+		};
 		/** @description webrtc ice candidate */
 		IceCandidate: string;
 		/**
@@ -5526,6 +6564,8 @@ export interface components {
 		};
 		/** @description a language */
 		Language: string;
+		/** @description a unique identifier for a track layer (corresponds to a rid in webrtc) */
+		LayerId: string;
 		/** @description A distinct logical item of media. */
 		Media: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
@@ -5535,6 +6575,12 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description The source (Uploaded, Downloaded) */
 			source: components["schemas"]["MediaTrack"];
+		};
+		MediaClone: {
+			/** @description Descriptive alt text, not entirely unlike a caption */
+			alt?: string | null;
+			/** @description Set to override the filename */
+			filename?: string | null;
 		};
 		MediaCreate: components["schemas"]["MediaCreateSource"] & {
 			/** @description Descriptive alt text, not entirely unlike a caption */
@@ -5569,6 +6615,13 @@ export interface components {
 			 * @description A url to download your media to
 			 */
 			upload_url?: string | null;
+		};
+		/** @description request body for `media_done` */
+		MediaDoneParams: {
+			/** @description Whether to process this media asynchronously.
+			 *
+			 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing. */
+			async?: boolean;
 		};
 		/**
 		 * @description the kind of media this track is for
@@ -5670,12 +6723,16 @@ export interface components {
 		};
 		/** @description who/what this message notified on send */
 		Mentions: {
-			channels: components["schemas"]["MentionsChannel"][];
-			emojis: components["schemas"]["MentionsEmoji"][];
+			/** @description the channels that were mentioned */
+			channels?: components["schemas"]["MentionsChannel"][];
+			/** @description the custom emojis that were used in this message */
+			emojis?: components["schemas"]["MentionsEmoji"][];
 			/** @description if this message mentions everyone */
 			everyone?: boolean;
-			roles: components["schemas"]["MentionsRole"][];
-			users: components["schemas"]["MentionsUser"][];
+			/** @description the roles that were mentioned */
+			roles?: components["schemas"]["MentionsRole"][];
+			/** @description the users that were mentioned */
+			users?: components["schemas"]["MentionsUser"][];
 		};
 		/** @description a mentioned channel */
 		MentionsChannel: {
@@ -5708,27 +6765,30 @@ export interface components {
 			/** @description the resolved name (either the room member nickname or the user's name) */
 			resolved_name: string;
 		};
-		Message: components["schemas"]["MessageType"] & {
+		/** @description a message */
+		Message: {
 			/** @description the id of who sent this message */
 			author_id: components["schemas"]["Id"];
 			channel_id: components["schemas"]["Id"];
-			created_at?: null | components["schemas"]["Time"];
+			/** @description when this message was created */
+			created_at: components["schemas"]["Time"];
 			deleted_at?: null | components["schemas"]["Time"];
-			edited_at?: null | components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
-			mentions: components["schemas"]["Mentions"];
-			/** @description unique string sent by the client via idempotency-key to identify this message */
-			nonce?: string | null;
+			latest_version: components["schemas"]["MessageVersion"];
 			pinned?: null | components["schemas"]["Pinned"];
 			reactions?: components["schemas"]["ReactionCounts"];
 			removed_at?: null | components["schemas"]["Time"];
 			thread?: null | components["schemas"]["Channel"];
-			version_id: components["schemas"]["Id"];
 		};
 		MessageCall: {
 			ended_at?: null | components["schemas"]["Time"];
 			/** @description the people who joined the call */
 			participants: components["schemas"]["Id"][];
+		};
+		/** @description Information about a channel icon change */
+		MessageChannelIcon: {
+			icon_id_new?: null | components["schemas"]["Id"];
+			icon_id_old?: null | components["schemas"]["Id"];
 		};
 		MessageCreate: {
 			attachments?: components["schemas"]["MediaRef"][];
@@ -5904,6 +6964,11 @@ export interface components {
 				type: "MessageRestore";
 			}
 			| {
+				harvest: components["schemas"]["Harvest"];
+				/** @enum {string} */
+				type: "HarvestUpdate";
+			}
+			| {
 				member: components["schemas"]["RoomMember"];
 				/** @enum {string} */
 				type: "RoomMemberCreate";
@@ -6024,6 +7089,21 @@ export interface components {
 				/** @enum {string} */
 				type: "VoiceState";
 				user_id: components["schemas"]["Id"];
+			}
+			| {
+				call: components["schemas"]["Call"];
+				/** @enum {string} */
+				type: "CallCreate";
+			}
+			| {
+				call: components["schemas"]["Call"];
+				/** @enum {string} */
+				type: "CallUpdate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "CallDelete";
 			}
 			| {
 				/** @enum {string} */
@@ -6187,6 +7267,58 @@ export interface components {
 				type: "CalendarEventDelete";
 			}
 			| {
+				channel_id: components["schemas"]["Id"];
+				overwrite: components["schemas"]["CalendarOverwrite"];
+				/** @enum {string} */
+				type: "CalendarOverwriteCreate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				overwrite: components["schemas"]["CalendarOverwrite"];
+				/** @enum {string} */
+				type: "CalendarOverwriteUpdate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				event_id: components["schemas"]["Id"];
+				/** Format: int64 */
+				seq: number;
+				/** @enum {string} */
+				type: "CalendarOverwriteDelete";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				event_id: components["schemas"]["Id"];
+				participant: components["schemas"]["CalendarEventParticipant"];
+				/** @enum {string} */
+				type: "CalendarRsvpCreate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				event_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "CalendarRsvpDelete";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				event_id: components["schemas"]["Id"];
+				participant: components["schemas"]["CalendarEventParticipant"];
+				/** Format: int64 */
+				seq: number;
+				/** @enum {string} */
+				type: "CalendarOverwriteRsvpCreate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				event_id: components["schemas"]["Id"];
+				/** Format: int64 */
+				seq: number;
+				/** @enum {string} */
+				type: "CalendarOverwriteRsvpDelete";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
 				/** @enum {string} */
 				type: "WebhookCreate";
 				webhook: components["schemas"]["Webhook"];
@@ -6204,11 +7336,64 @@ export interface components {
 				webhook_id: components["schemas"]["Id"];
 			}
 			| {
+				rule: components["schemas"]["AutomodRule"];
+				/** @enum {string} */
+				type: "AutomodRuleCreate";
+			}
+			| {
+				rule: components["schemas"]["AutomodRule"];
+				/** @enum {string} */
+				type: "AutomodRuleUpdate";
+			}
+			| {
+				room_id: components["schemas"]["Id"];
+				rule_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "AutomodRuleDelete";
+			}
+			| {
+				execution: components["schemas"]["AutomodRuleExecution"];
+				/** @enum {string} */
+				type: "AutomodRuleExecute";
+			}
+			| {
 				channel_id: components["schemas"]["Id"];
 				slowmode_message_expire_at?: null | components["schemas"]["Time"];
 				slowmode_thread_expire_at?: null | components["schemas"]["Time"];
 				/** @enum {string} */
 				type: "RatelimitUpdate";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				channel: components["schemas"]["Channel"];
+				/** @enum {string} */
+				type: "DocumentCreate";
+			}
+			| {
+				channel: components["schemas"]["Channel"];
+				/** @enum {string} */
+				type: "DocumentUpdate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "DocumentDelete";
+			}
+			| {
+				branch_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "DocumentEdit";
+				/** @description the encoded update to this document */
+				update: string;
+			}
+			| {
+				branch_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
+				cursor_head: string;
+				cursor_tail?: string | null;
+				/** @enum {string} */
+				type: "DocumentPresence";
 				user_id: components["schemas"]["Id"];
 			};
 		/** @description Information about a thread being created */
@@ -6262,7 +7447,21 @@ export interface components {
 			| (components["schemas"]["MessageThreadPingback"] & {
 				/** @enum {string} */
 				type: "ThreadPingback";
+			})
+			| (components["schemas"]["MessageChannelIcon"] & {
+				/** @enum {string} */
+				type: "ChannelIcon";
 			});
+		/** @description a message at a point in time */
+		MessageVersion: components["schemas"]["MessageType"] & {
+			author_id?: null | components["schemas"]["Id"];
+			/** @description when this message version was created, use this as edited_at */
+			created_at: components["schemas"]["Time"];
+			deleted_at?: null | components["schemas"]["Time"];
+			/** @description who this message mentioned */
+			mentions?: components["schemas"]["Mentions"];
+			version_id: components["schemas"]["Id"];
+		};
 		/**
 		 * Mime
 		 * @description a mime/media type
@@ -6388,7 +7587,7 @@ export interface components {
 			client_id: components["schemas"]["Id"];
 			/** Format: int64 */
 			exp?: number | null;
-			scopes: components["schemas"]["Scope"][];
+			scopes: components["schemas"]["Scopes"];
 			/** @description this is specified to be "human readable", but in practice it would be
 			 *     simpler and more useful to return the unique id of the user */
 			username: components["schemas"]["Id"];
@@ -6474,22 +7673,6 @@ export interface components {
 				/** @description User who caused this entry to be created */
 				user_id: components["schemas"]["Id"];
 			})[];
-			/** Format: int64 */
-			total: number;
-		};
-		PaginationResponse_AutomodRule: {
-			cursor?: string | null;
-			has_more: boolean;
-			items: {
-				actions: components["schemas"]["AutomodAction"][];
-				enabled: boolean;
-				except_channels: components["schemas"]["Id"][];
-				except_roles: components["schemas"]["Id"][];
-				id: components["schemas"]["Id"];
-				name: string;
-				room_id: components["schemas"]["Id"];
-				trigger: components["schemas"]["AutomodTrigger"];
-			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -6587,6 +7770,8 @@ export interface components {
 				thread_member?: null | components["schemas"]["ThreadMember"];
 				/** @description type specific data for this channel */
 				type: components["schemas"]["ChannelType"];
+				/** @description url that this info channel should link to */
+				url?: string | null;
 				user_config?: null | components["schemas"]["UserConfigChannel"];
 				/**
 				 * Format: int64
@@ -6605,7 +7790,7 @@ export interface components {
 			items: {
 				application: components["schemas"]["Application"];
 				created_at: components["schemas"]["Time"];
-				scopes: components["schemas"]["Scope"][];
+				scopes: components["schemas"]["Scopes"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -6661,23 +7846,20 @@ export interface components {
 		PaginationResponse_Message: {
 			cursor?: string | null;
 			has_more: boolean;
-			items: (components["schemas"]["MessageType"] & {
+			items: {
 				/** @description the id of who sent this message */
 				author_id: components["schemas"]["Id"];
 				channel_id: components["schemas"]["Id"];
-				created_at?: null | components["schemas"]["Time"];
+				/** @description when this message was created */
+				created_at: components["schemas"]["Time"];
 				deleted_at?: null | components["schemas"]["Time"];
-				edited_at?: null | components["schemas"]["Time"];
 				id: components["schemas"]["Id"];
-				mentions: components["schemas"]["Mentions"];
-				/** @description unique string sent by the client via idempotency-key to identify this message */
-				nonce?: string | null;
+				latest_version: components["schemas"]["MessageVersion"];
 				pinned?: null | components["schemas"]["Pinned"];
 				reactions?: components["schemas"]["ReactionCounts"];
 				removed_at?: null | components["schemas"]["Time"];
 				thread?: null | components["schemas"]["Channel"];
-				version_id: components["schemas"]["Id"];
-			})[];
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -6749,6 +7931,12 @@ export interface components {
 			cursor?: string | null;
 			has_more: boolean;
 			items: {
+				afk_channel_id?: null | components["schemas"]["Id"];
+				/**
+				 * Format: int64
+				 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+				 */
+				afk_channel_timeout: number;
 				archived_at?: null | components["schemas"]["Time"];
 				/**
 				 * Format: int64
@@ -6775,6 +7963,7 @@ export interface components {
 				public: boolean;
 				/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 				quarantined: boolean;
+				security: components["schemas"]["RoomSecurity"];
 				type: components["schemas"]["RoomType"];
 				user_config?: null | components["schemas"]["UserConfigRoom"];
 				/**
@@ -6862,6 +8051,32 @@ export interface components {
 				name?: string | null;
 				type: components["schemas"]["SessionType"];
 			})[];
+			/** Format: int64 */
+			total: number;
+		};
+		PaginationResponse_Tag: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				/**
+				 * Format: int64
+				 * @description total number of threads with this tag (excluding archived threads)
+				 */
+				active_thread_count: number;
+				/** @description whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker. */
+				archived: boolean;
+				color?: null | components["schemas"]["Color"];
+				description?: string | null;
+				id: components["schemas"]["Id"];
+				name: string;
+				/** @description only members with ThreadEdit or ThreadManage can apply this tag */
+				restricted: boolean;
+				/**
+				 * Format: int64
+				 * @description total number of threads with this tag (including archived threads)
+				 */
+				total_thread_count: number;
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -6961,6 +8176,7 @@ export interface components {
 			| "MemberTimeout"
 			| "MessageAttachments"
 			| "MessageCreate"
+			| "MessageCreateThread"
 			| "MessageDelete"
 			| "MessageRemove"
 			| "MessageEmbeds"
@@ -6977,6 +8193,7 @@ export interface components {
 			| "ServerReports"
 			| "TagApply"
 			| "TagManage"
+			| "BypassSlowmode"
 			| "ChannelEdit"
 			| "ChannelManage"
 			| "ThreadCreatePrivate"
@@ -6995,8 +8212,15 @@ export interface components {
 			| "VoicePriority"
 			| "VoiceSpeak"
 			| "VoiceVideo"
+			| "VoiceVad"
+			| "VoiceRequest"
+			| "VoiceBroadcast"
 			| "CalendarEventCreate"
-			| "CalendarEventManage";
+			| "CalendarEventRsvp"
+			| "CalendarEventManage"
+			| "DocumentCreate"
+			| "DocumentEdit"
+			| "DocumentComment";
 		PermissionOverwrite: {
 			/** @description extra permissions allowed here */
 			allow: components["schemas"]["Permission"][];
@@ -7092,6 +8316,14 @@ export interface components {
 			/** @description if this is for the service itself. usually paired with bot: true */
 			system: boolean;
 		};
+		PushCreate: {
+			endpoint: string;
+			keys: components["schemas"]["PushCreateKeys"];
+		};
+		PushCreateKeys: {
+			auth: string;
+			p256dh: string;
+		};
 		RatelimitPut: {
 			slowmode_message_expire_at?: null | components["schemas"]["Time"];
 			slowmode_thread_expire_at?: null | components["schemas"]["Time"];
@@ -7125,23 +8357,36 @@ export interface components {
 		ReactionListItem: {
 			user_id: components["schemas"]["Id"];
 		};
-		Recurrence:
-			| {
-				/** Format: int32 */
-				count?: number | null;
-				cron: components["schemas"]["Cron"];
-				/** @enum {string} */
-				type: "Rule";
-				until?: null | components["schemas"]["Time"];
-			}
-			| (components["schemas"]["Time"][] & {
-				/** @enum {string} */
-				type: "Include";
-			})
-			| (components["schemas"]["Time"][] & {
-				/** @enum {string} */
-				type: "Exclude";
-			});
+		Recurrence: {
+			/** @description only repeat on these days of the month */
+			by_month_day?: number[];
+			/** @description only repeat on these days of the week */
+			by_weekday?: components["schemas"]["DayOfWeek"][];
+			/** @description how often to recur */
+			frequency: components["schemas"]["RecurrenceFrequency"];
+			/**
+			 * Format: int32
+			 * @description repeat every n (days/weeks/months/years)
+			 */
+			interval: number;
+			/** @description when to end */
+			range: components["schemas"]["RecurrenceRange"];
+		};
+		/** @enum {string} */
+		RecurrenceFrequency: "Daily" | "Weekly" | "Monthly" | "Yearly";
+		RecurrenceRange: {
+			/** @enum {string} */
+			type: "Infinite";
+		} | {
+			/** Format: int32 */
+			count: number;
+			/** @enum {string} */
+			type: "Count";
+		} | {
+			time: components["schemas"]["Time"];
+			/** @enum {string} */
+			type: "Until";
+		};
 		Registration: Record<string, never>;
 		Relationship: (null | components["schemas"]["Ignore"]) & {
 			relation?: null | components["schemas"]["RelationshipType"];
@@ -7199,6 +8444,18 @@ export interface components {
 			| "BanEvasion"
 			| "Underage"
 			| "Other";
+		RingEligibility: {
+			/** @description whether ring endpoints can be used
+			 *
+			 *     true in dms and gdms, false otherwise */
+			ringable: boolean;
+		};
+		RingStart: {
+			user_ids: components["schemas"]["Id"][];
+		};
+		RingStop: {
+			user_ids: components["schemas"]["Id"][];
+		};
 		Role: {
 			/** @description the permissions to grant for this role */
 			allow: components["schemas"]["Permission"][];
@@ -7263,6 +8520,12 @@ export interface components {
 		 *     Default rooms, which most people are concerned with, contain threads, emoji,
 		 *     and so on for instant messaging. */
 		Room: {
+			afk_channel_id?: null | components["schemas"]["Id"];
+			/**
+			 * Format: int64
+			 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+			 */
+			afk_channel_timeout: number;
 			archived_at?: null | components["schemas"]["Time"];
 			/**
 			 * Format: int64
@@ -7289,6 +8552,7 @@ export interface components {
 			public: boolean;
 			/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 			quarantined: boolean;
+			security: components["schemas"]["RoomSecurity"];
 			type: components["schemas"]["RoomType"];
 			user_config?: null | components["schemas"]["UserConfigRoom"];
 			/**
@@ -7513,11 +8777,25 @@ export interface components {
 		RoomMembership: "Join" | "Leave";
 		/** @description An update to a room */
 		RoomPatch: {
+			afk_channel_id?: null | components["schemas"]["Id"];
+			/**
+			 * Format: int64
+			 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+			 */
+			afk_channel_timeout?: number | null;
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
 			name?: string | null;
 			public?: boolean | null;
 			welcome_channel_id?: null | components["schemas"]["Id"];
+		};
+		RoomSecurity: {
+			require_mfa: boolean;
+			require_sudo: boolean;
+		};
+		RoomSecurityUpdate: {
+			require_mfa?: boolean | null;
+			require_sudo?: boolean | null;
 		};
 		/** @description A template for creating rooms. */
 		RoomTemplate: {
@@ -7576,10 +8854,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		Scope: "identify" | "email" | "full" | "auth";
+		Scopes: components["schemas"]["Scope"][];
 		SearchChannelsRequest: {
 			/** @description Only return archived (or unarchived) threads */
 			archived?: boolean | null;
-			/** @description Only return threads with these parents. Defaults to all threads. */
+			/** @description Only return threads in these channels. Defaults to all channels. */
 			parent_id?: components["schemas"]["Id"][];
 			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
 			query?: string | null;
@@ -7628,6 +8907,10 @@ export interface components {
 			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
 			query?: string;
 		};
+		ServerAutomodList: {
+			description: string;
+			name: string;
+		};
 		/** @description shows some parts of config */
 		ServerFeatures: {
 			catptcha?: null | components["schemas"]["Captcha"];
@@ -7648,6 +8931,15 @@ export interface components {
 			/** Format: uri */
 			html_url: string;
 			version: components["schemas"]["ServerVersion"];
+		};
+		ServerMediaScanner: {
+			description: string;
+			name: string;
+		};
+		/** @description public moderation capabilities for a server */
+		ServerModeration: {
+			automod_lists: components["schemas"]["ServerAutomodList"][];
+			media_scanners: components["schemas"]["ServerMediaScanner"][];
 		};
 		ServerVersion: {
 			debug: boolean;
@@ -7721,7 +9013,7 @@ export interface components {
 			type: "Have";
 			user_id: components["schemas"]["Id"];
 		} | {
-			tracks: components["schemas"]["TrackId"][];
+			subscriptions: components["schemas"]["Subscription"][];
 			/** @enum {string} */
 			type: "Want";
 		} | {
@@ -7731,9 +9023,25 @@ export interface components {
 		} | {
 			/** @enum {string} */
 			type: "Reconnect";
+		} | {
+			/** @description what exactly went wrong */
+			code: components["schemas"]["VoiceErrorCode"];
+			/** @description human readable error message */
+			message: string;
+			/** @enum {string} */
+			type: "Error";
 		};
 		/** @enum {string} */
 		Status: "Offline" | "Online" | "Away" | "Busy" | "Available";
+		Subscription: {
+			mid: components["schemas"]["TrackId"];
+			/** @description the layers of the track to subscribe to
+			 *
+			 *     - clients should only subscribe to one layer at a time, but multiple can be subscribed if needed
+			 *     - the server may subscribe to multiple depending on if multiple resolutions are requested
+			 *     - leave empty for audio tracks */
+			rid: components["schemas"]["LayerId"][];
+		};
 		SuspendRequest: {
 			expires_at?: null | components["schemas"]["Time"];
 		};
@@ -7815,39 +9123,49 @@ export interface components {
 			duration: number;
 			language?: null | components["schemas"]["Language"];
 		};
-		TotpRecoveryCode: {
-			code: string;
-			used?: null | components["schemas"]["TotpRecoveryCodeUsed"];
-		};
-		/** @description information about who used this code */
-		TotpRecoveryCodeUsed: {
-			used_at: components["schemas"]["Time"];
-			used_by?: null | components["schemas"]["Id"];
-		};
-		TotpRecoveryCodes: {
-			items: components["schemas"]["TotpRecoveryCode"][];
-		};
-		TotpState: {
-			is_valid: boolean;
-		};
-		TotpStateWithSecret: components["schemas"]["TotpState"] & {
+		/** @description a timezone */
+		Timezone: string;
+		/** @description response to a totp init request */
+		TotpInit: {
 			secret: string;
 		};
+		TotpRecoveryCode: {
+			code: string;
+			used_at?: null | components["schemas"]["Time"];
+		};
+		TotpRecoveryCodes: {
+			codes: components["schemas"]["TotpRecoveryCode"][];
+		};
+		/** @description request body for totp_validate or totp_exec */
 		TotpVerificationRequest: {
+			/** @description the totp code or recovery code */
 			code: string;
 		};
+		/** @enum {string} */
+		TrackEncoding: "Source" | "Reduced";
 		/** @description a unique identifier for a media track (corresponds to a transceiver in webrtc, or a Mid in str0m)
 		 *
 		 *     media track ids are unique per peer connection */
 		TrackId: string;
+		/**
+		 * @description which stream this track is associated with. generally there will be one video track and one audio track per stream.
+		 * @enum {string}
+		 */
+		TrackKey: "user" | "screen";
+		TrackLayer: {
+			encoding: components["schemas"]["TrackEncoding"];
+			rid: components["schemas"]["LayerId"];
+		};
 		/** @description metadata about a track */
 		TrackMetadata: {
 			/** @description group tracks together into streams; identical to ssrc but easier to manage client side
 			 *
 			 *     currently there are two streams `user` and `screen` used by frontend */
-			key: string;
+			key: components["schemas"]["TrackKey"];
 			/** @description whether this track is for audio or video */
 			kind: components["schemas"]["MediaKind"];
+			/** @description simulcasting layers, only applicable for video */
+			layers?: components["schemas"]["TrackLayer"][];
 			/** @description unique identifier for this track. equivalent to transceiver.mid */
 			mid: components["schemas"]["TrackId"];
 		};
@@ -7998,6 +9316,8 @@ export interface components {
 			 */
 			volume: number;
 		};
+		/** @enum {string} */
+		VoiceErrorCode: "UnknownTrack" | "UnknownLayer" | "Other";
 		/** @description represents a user that is connected to a voice channel (older docs call this a "voice connection")
 		 *
 		 *     connection limits:
@@ -8013,23 +9333,56 @@ export interface components {
 			joined_at: components["schemas"]["Time"];
 			/** @description whether this user is muted by a moderator */
 			mute: boolean;
+			requested_to_speak_at?: null | components["schemas"]["Time"];
+			screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+			/** @description whether this user has deafened themselves */
 			self_deaf: boolean;
+			/** @description whether this user has muted themselves */
 			self_mute: boolean;
-			self_screen: boolean;
+			/** @description whether this user has enabled their camera */
 			self_video: boolean;
 			session_id?: null | components["schemas"]["Id"];
+			/** @description whether this user is suppressed, similar to a transient `mute: true` */
+			suppress: boolean;
 			/** @description the user this state belongs to */
 			user_id: components["schemas"]["Id"];
 		};
 		VoiceStateMove: {
 			target_id: components["schemas"]["Id"];
 		};
+		VoiceStateMoveBulk: {
+			/** @description target channel id */
+			channel_id: components["schemas"]["Id"];
+			/** @description set to None to move everyone */
+			user_ids?: components["schemas"]["Id"][] | null;
+		};
+		VoiceStatePatch: {
+			channel_id?: null | components["schemas"]["Id"];
+			/** @description same as room member deaf */
+			deaf?: boolean | null;
+			/** @description same as room member mute */
+			mute?: boolean | null;
+			requested_to_speak_at?: null | components["schemas"]["Time"];
+			/** @description allow this user to speak in the current channel
+			 *
+			 *     requires VoiceMute permission */
+			suppress?: boolean | null;
+		};
+		/** @description info about a user's screen share */
+		VoiceStateScreenshare: {
+			/** @description when this user started sharing their screen */
+			started_at: components["schemas"]["Time"];
+			thumbnail?: null | components["schemas"]["Id"];
+		};
+		VoiceStateStreamUpdate: {
+			thumbnail?: null | components["schemas"]["Id"];
+		};
 		/** @description represents an update that a user would like to make to their voice state */
 		VoiceStateUpdate: {
 			channel_id: components["schemas"]["Id"];
+			screenshare?: null | components["schemas"]["VoiceStateStreamUpdate"];
 			self_deaf: boolean;
 			self_mute: boolean;
-			self_screen: boolean;
 			self_video: boolean;
 		};
 		WebauthnAuthenticator: {
@@ -8447,7 +9800,7 @@ export interface operations {
 			};
 		};
 	};
-	auth_sudo: {
+	auth_sudo_upgrade: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -8708,6 +10061,24 @@ export interface operations {
 			};
 		};
 	};
+	auth_sudo_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	auth_totp_exec: {
 		parameters: {
 			query?: never;
@@ -8727,7 +10098,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["TotpState"];
+					"application/json": components["schemas"]["AuthState"];
 				};
 			};
 		};
@@ -8750,6 +10121,30 @@ export interface operations {
 			};
 		};
 	};
+	auth_totp_complete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TotpVerificationRequest"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["AuthState"];
+				};
+			};
+		};
+	};
 	auth_totp_init: {
 		parameters: {
 			query?: never;
@@ -8765,7 +10160,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["TotpStateWithSecret"];
+					"application/json": components["schemas"]["TotpInit"];
 				};
 			};
 		};
@@ -8806,6 +10201,30 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["TotpRecoveryCodes"];
+				};
+			};
+		};
+	};
+	auth_totp_recovery_exec: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TotpVerificationRequest"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["AuthState"];
 				};
 			};
 		};
@@ -8916,6 +10335,440 @@ export interface operations {
 		responses: {
 			/** @description ok */
 			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CalendarEventCreate"];
+			};
+		};
+		responses: {
+			/** @description Create calendar event success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_event_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get calendar event success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_event_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar event success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CalendarEventPatch"];
+			};
+		};
+		responses: {
+			/** @description Update calendar event success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_overwrite_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List calendar overwrites success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarOverwrite"][];
+				};
+			};
+		};
+	};
+	calendar_overwrite_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description Sequence number */
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get calendar overwrite success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarOverwrite"];
+				};
+			};
+		};
+	};
+	calendar_overwrite_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description Sequence number */
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar overwrite success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_overwrite_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description Sequence number */
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CalendarOverwritePut"];
+			};
+		};
+		responses: {
+			/** @description Update calendar overwrite success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarOverwrite"];
+				};
+			};
+		};
+	};
+	calendar_overwrite_rsvp_list: {
+		parameters: {
+			query?: {
+				/** @description whether to include user and member */
+				include_member?: boolean;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description Sequence number */
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["CalendarEventParticipant"][];
+				};
+			};
+		};
+	};
+	calendar_overwrite_rsvp_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description Sequence number */
+				seq: number;
+				/** @description @self or user id */
+				user_id: components["schemas"]["UserIdReq"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json":
+					components["schemas"]["CalendarEventParticipantPut"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_overwrite_rsvp_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description Sequence number */
+				seq: number;
+				/** @description @self or user id */
+				user_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar overwrite RSVP success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_rsvp_list: {
+		parameters: {
+			query?: {
+				/** @description whether to include user and member */
+				include_member?: boolean;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["CalendarEventParticipant"][];
+				};
+			};
+		};
+	};
+	calendar_event_rsvp_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description @self or user id */
+				user_id: components["schemas"]["UserIdReq"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEventParticipant"];
+				};
+			};
+		};
+	};
+	calendar_event_rsvp_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description @self or user id */
+				user_id: components["schemas"]["UserIdReq"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json":
+					components["schemas"]["CalendarEventParticipantPut"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_rsvp_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				event_id: components["schemas"]["Id"];
+				/** @description @self or user id */
+				user_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar event RSVP success */
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -9086,231 +10939,6 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["ContextResponse"];
 				};
-			};
-		};
-	};
-	calendar_event_list: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_event_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["CalendarEventCreate"];
-			};
-		};
-		responses: {
-			/** @description Create calendar event success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["CalendarEvent"];
-				};
-			};
-		};
-	};
-	calendar_event_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Get calendar event success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["CalendarEvent"];
-				};
-			};
-		};
-	};
-	calendar_event_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Delete calendar event success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_event_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["CalendarEventPatch"];
-			};
-		};
-		responses: {
-			/** @description Update calendar event success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["CalendarEvent"];
-				};
-			};
-		};
-	};
-	calendar_rsvp_list: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Id"][];
-				};
-			};
-		};
-	};
-	calendar_rsvp_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-				/** @description @self or user id */
-				user_id: components["schemas"]["UserIdReq"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_rsvp_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-				/** @description @self or user id */
-				user_id: components["schemas"]["UserIdReq"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_rsvp_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-				/** @description @self or user id */
-				user_id: null | components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
 			};
 		};
 	};
@@ -9874,6 +11502,31 @@ export interface operations {
 			};
 		};
 	};
+	message_version_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+				/** @description Version id */
+				version_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description delete message version success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	message_move: {
 		parameters: {
 			query?: never;
@@ -10062,6 +11715,27 @@ export interface operations {
 			};
 		};
 	};
+	channel_ratelimit_delete_all: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Rate limit expired */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	channel_ratelimit_update: {
 		parameters: {
 			query?: never;
@@ -10161,6 +11835,8 @@ export interface operations {
 				depth?: number;
 				/** @description how many replies to fetch per branch */
 				breadth?: number | null;
+				/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
+				context?: number | null;
 			};
 			header?: never;
 			path: {
@@ -10190,6 +11866,8 @@ export interface operations {
 				depth?: number;
 				/** @description how many replies to fetch per branch */
 				breadth?: number | null;
+				/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
+				context?: number | null;
 			};
 			header?: never;
 			path: {
@@ -10210,6 +11888,38 @@ export interface operations {
 				content: {
 					"application/json":
 						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	tag_list: {
+		parameters: {
+			query?: {
+				/** @description deny, allow, require tag to be archived
+				 *
+				 *     default: deny */
+				archived?: boolean | null;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description The ID of the forum channel to list tags from. */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PaginationResponse_Tag"];
 				};
 			};
 		};
@@ -10243,7 +11953,17 @@ export interface operations {
 	};
 	tag_search: {
 		parameters: {
-			query?: never;
+			query: {
+				query: string;
+				/** @description deny, allow, require tag to be archived
+				 *
+				 *     default: deny */
+				archived?: boolean | null;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
 				/** @description The ID of the forum channel to search for tags in. */
@@ -10259,7 +11979,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["Tag"][];
+					"application/json": components["schemas"]["PaginationResponse_Tag"];
 				};
 			};
 		};
@@ -10871,9 +12591,322 @@ export interface operations {
 			};
 		};
 	};
-	emoji_search: {
+	document_branch_list: {
 		parameters: {
 			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_branch_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Branch id */
+				branch_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_branch_delete: {
+		parameters: {
+			query?: {
+				force?: boolean;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Branch id */
+				branch_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_branch_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Branch id */
+				branch_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["DocumentBranchPatch"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_history: {
+		parameters: {
+			query?: {
+				/** @description split group whenever author changes */
+				by_author?: boolean | null;
+				/** @description split group whenever a tag is created */
+				by_tag?: boolean | null;
+				/** @description every n seconds */
+				by_time?: number | null;
+				/** @description every n changes */
+				by_changes?: number | null;
+				/** @description continue listing history from here */
+				cursor?: string | null;
+				/** @description the maximum number of items to return. */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Branch id */
+				branch_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["HistoryPagination"];
+				};
+			};
+		};
+	};
+	document_branch_merge: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Branch id */
+				branch_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["DocumentBranchMerge"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_branch_fork: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+				/** @description Parent branch id */
+				parent_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["DocumentBranchCreate"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_tag_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_tag_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["DocumentTagCreate"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_tag_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Tag id */
+				tag_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_tag_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Tag id */
+				tag_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_tag_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Tag id */
+				tag_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["DocumentTagPatch"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	emoji_search: {
+		parameters: {
+			query: {
+				query: string;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -10886,7 +12919,8 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["EmojiCustom"][];
+					"application/json":
+						components["schemas"]["PaginationResponse_EmojiCustom"];
 				};
 			};
 		};
@@ -11065,6 +13099,29 @@ export interface operations {
 			};
 		};
 	};
+	harvest_download: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Harvest ID */
+				harvest_id: components["schemas"]["Id"];
+				/** @description Download token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	internal_rpc: {
 		parameters: {
 			query?: never;
@@ -11206,6 +13263,24 @@ export interface operations {
 			};
 		};
 	};
+	media_upload_direct: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	media_get: {
 		parameters: {
 			query?: never;
@@ -11291,6 +13366,31 @@ export interface operations {
 			};
 		};
 	};
+	media_clone: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Media id */
+				media_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MediaClone"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	media_done: {
 		parameters: {
 			query?: never;
@@ -11301,7 +13401,11 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MediaDoneParams"];
+			};
+		};
 		responses: {
 			/** @description Success */
 			200: {
@@ -11311,6 +13415,13 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Media"];
 				};
+			};
+			/** @description Processing in background */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -11495,6 +13606,50 @@ export interface operations {
 		};
 	};
 	public_rooms: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	push_register: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PushCreate"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	push_delete: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -11957,7 +14112,7 @@ export interface operations {
 			};
 		};
 	};
-	list_rules: {
+	automod_rule_list: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -11975,13 +14130,12 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_AutomodRule"];
+					"application/json": components["schemas"]["AutomodRule"][];
 				};
 			};
 		};
 	};
-	create_rule: {
+	automod_rule_create: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12008,7 +14162,28 @@ export interface operations {
 			};
 		};
 	};
-	get_rule: {
+	automod_rule_test: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Text was scanned */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	automod_rule_get: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12033,7 +14208,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_rule: {
+	automod_rule_delete: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12056,7 +14231,7 @@ export interface operations {
 			};
 		};
 	};
-	update_rule: {
+	automod_rule_update: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12118,10 +14293,7 @@ export interface operations {
 		parameters: {
 			query?: never;
 			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: components["schemas"]["Id"];
-			};
+			path?: never;
 			cookie?: never;
 		};
 		requestBody: {
@@ -13150,6 +15322,33 @@ export interface operations {
 			};
 		};
 	};
+	room_security_set: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoomSecurityUpdate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Room"];
+				};
+			};
+		};
+	};
 	thread_list_room: {
 		parameters: {
 			query?: never;
@@ -13318,6 +15517,46 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["PaginationResponse_Room"];
+				};
+			};
+		};
+	};
+	server_info: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get server info success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ServerInfo"];
+				};
+			};
+		};
+	};
+	server_moderation: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get server moderation capabilities success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ServerModeration"];
 				};
 			};
 		};
@@ -13809,6 +16048,55 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	harvest_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Harvest"];
+				};
+			};
+			/** @description no harvest found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	harvest_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["HarvestCreate"];
+			};
+		};
+		responses: {
+			/** @description harvest has been queued */
+			202: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -14501,14 +16789,87 @@ export interface operations {
 			};
 		};
 	};
-	voice_region_list: {
+	voice_call_create: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;
 		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CallCreate"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_call_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
 		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	voice_call_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_call_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CallPatch"];
+			};
+		};
 		responses: {
 			/** @description ok */
 			200: {
@@ -14526,8 +16887,8 @@ export interface operations {
 			query?: never;
 			header?: never;
 			path: {
-				/** @description Thread id */
-				thread_id: string;
+				/** @description Channel id */
+				channel_id: string;
 				/** @description User id */
 				user_id: string;
 			};
@@ -14544,13 +16905,36 @@ export interface operations {
 			};
 		};
 	};
+	voice_state_disconnect_all: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	voice_state_get: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
 				/** @description User id */
 				user_id: components["schemas"]["UserIdReq"];
 			};
@@ -14564,7 +16948,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": unknown;
+					"application/json": components["schemas"]["VoiceState"];
 				};
 			};
 		};
@@ -14574,8 +16958,8 @@ export interface operations {
 			query?: never;
 			header?: never;
 			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
 				/** @description User id */
 				user_id: components["schemas"]["UserIdReq"];
 			};
@@ -14592,13 +16976,42 @@ export interface operations {
 			};
 		};
 	};
+	voice_state_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["UserIdReq"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["VoiceStatePatch"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["VoiceState"];
+				};
+			};
+		};
+	};
 	voice_state_move: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
 				/** @description User id */
 				user_id: components["schemas"]["UserIdReq"];
 			};
@@ -14618,6 +17031,106 @@ export interface operations {
 				content: {
 					"application/json": unknown;
 				};
+			};
+		};
+	};
+	voice_state_move_bulk: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["VoiceStateMoveBulk"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	voice_ring_check: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RingEligibility"];
+				};
+			};
+		};
+	};
+	voice_ring_start: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RingStart"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_ring_stop: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RingStop"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -14955,6 +17468,42 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	wiki_history: {
+		parameters: {
+			query?: {
+				/** @description split group whenever author changes */
+				by_author?: boolean | null;
+				/** @description split group whenever a tag is created */
+				by_tag?: boolean | null;
+				/** @description every n seconds */
+				by_time?: number | null;
+				/** @description every n changes */
+				by_changes?: number | null;
+				/** @description continue listing history from here */
+				cursor?: string | null;
+				/** @description the maximum number of items to return. */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["HistoryPagination"];
+				};
 			};
 		};
 	};
