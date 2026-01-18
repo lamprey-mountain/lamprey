@@ -3,17 +3,18 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
+use common::unstable::types::harvest::{Harvest, HarvestCreate};
 use common::v1::types::application::Scope;
 use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    Harvest, HarvestCreate, HarvestId, MediaTrackInfo, MessageSync, PaginationQuery,
-    PaginationResponse, Room, RoomId, SessionStatus, User, UserCreate, UserId, UserPatch,
-    UserWithRelationship,
+    MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus,
+    User, UserCreate, UserId, UserPatch, UserWithRelationship,
 };
 use common::v1::types::{
-    AuditLogFilter, Permission, SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID,
+    AuditLogFilter, HarvestId, Permission, SuspendRequest, Suspended, UserListParams,
+    SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use tracing::warn;
@@ -694,7 +695,7 @@ async fn user_list(
     )
 )]
 async fn harvest_get(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
-    if auth.user.bot.is_some() || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
+    if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
         return Err(Error::BadStatic("bots cannot use this endpoint"));
     }
     auth.user.ensure_unsuspended()?;
@@ -716,7 +717,7 @@ async fn harvest_create(
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<HarvestCreate>,
 ) -> Result<impl IntoResponse> {
-    if auth.user.bot.is_some() || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
+    if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
         return Err(Error::BadStatic("bots cannot use this endpoint"));
     }
     auth.user.ensure_unsuspended()?;

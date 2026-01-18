@@ -278,14 +278,19 @@ async fn room_member_add(
     let Some(puppet) = target_user.puppet else {
         return Err(Error::BadStatic("can't add that user"));
     };
-    let Some(bot) = auth_user.bot else {
+    if !auth_user.bot {
         return Err(Error::BadStatic("only bots can use this"));
     };
-    if !bot.is_bridge {
+
+    let app = s
+        .data()
+        .application_get(auth.user.id.into_inner().into())
+        .await?;
+    if app.bridge.is_none() {
         return Err(Error::BadStatic("bot is not a bridge"));
     }
 
-    if puppet.owner_id != auth.user.id {
+    if puppet.owner_id.into_inner() != *auth.user.id {
         return Err(Error::BadStatic("not puppet owner"));
     }
 

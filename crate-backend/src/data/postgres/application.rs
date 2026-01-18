@@ -16,50 +16,94 @@ use crate::Result;
 #[async_trait]
 impl DataApplication for Postgres {
     async fn application_insert(&self, app: Application) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
         query!(
             r#"
-            insert into application (id, owner_id, name, description, bridge, public, oauth_secret, oauth_redirect_uris, oauth_confidential)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            insert into application (id, owner_id, name, description, public, oauth_secret, oauth_redirect_uris, oauth_confidential)
+            values ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
             *app.id,
             *app.owner_id,
             app.name,
             app.description,
-            app.bridge,
             app.public,
             app.oauth_secret,
             serde_json::to_value(app.oauth_redirect_uris).unwrap(),
             app.oauth_confidential,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        if let Some(bridge) = app.bridge {
+            query!(
+                r#"
+                insert into application_bridge (application_id, platform_name, platform_url, platform_description)
+                values ($1, $2, $3, $4)
+                "#,
+                *app.id,
+                bridge.platform_name,
+                bridge.platform_url,
+                bridge.platform_description,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
         Ok(())
     }
 
     async fn application_update(&self, app: Application) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
         query!(
             r#"
             update application set
                 name = $2,
                 description = $3,
-                bridge = $4,
-                public = $5,
-                oauth_secret = $6,
-                oauth_redirect_uris = $7,
-                oauth_confidential = $8
+                public = $4,
+                oauth_secret = $5,
+                oauth_redirect_uris = $6,
+                oauth_confidential = $7
             where id = $1
             "#,
             *app.id,
             app.name,
             app.description,
-            app.bridge,
             app.public,
             app.oauth_secret,
             serde_json::to_value(app.oauth_redirect_uris).unwrap(),
             app.oauth_confidential,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        if let Some(bridge) = app.bridge {
+            query!(
+                r#"
+                insert into application_bridge (application_id, platform_name, platform_url, platform_description)
+                values ($1, $2, $3, $4)
+                on conflict (application_id) do update set
+                    platform_name = $2,
+                    platform_url = $3,
+                    platform_description = $4
+                "#,
+                *app.id,
+                bridge.platform_name,
+                bridge.platform_url,
+                bridge.platform_description,
+            )
+            .execute(&mut *tx)
+            .await?;
+        } else {
+            query!(
+                "delete from application_bridge where application_id = $1",
+                *app.id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
         Ok(())
     }
 
@@ -76,21 +120,34 @@ impl DataApplication for Postgres {
     async fn application_get(&self, id: ApplicationId) -> Result<Application> {
         let app = query!(
             r#"
-        	SELECT id, owner_id, name, description, bridge, public, oauth_secret, oauth_redirect_uris, oauth_confidential
-            FROM application
-        	WHERE id = $1
+        	SELECT
+                a.id, a.owner_id, a.name, a.description, a.public, a.oauth_secret, a.oauth_redirect_uris, a.oauth_confidential,
+                b.application_id as "bridge_id?", b.platform_name, b.platform_url, b.platform_description
+            FROM application a
+            LEFT JOIN application_bridge b ON a.id = b.application_id
+        	WHERE a.id = $1
             "#,
             *id
         )
         .fetch_one(&self.pool)
         .await?;
 
+        let bridge = if app.bridge_id.is_some() {
+            Some(common::v1::types::application::Bridge {
+                platform_name: app.platform_name,
+                platform_url: app.platform_url,
+                platform_description: app.platform_description,
+            })
+        } else {
+            None
+        };
+
         Ok(Application {
             id: app.id.into(),
             owner_id: app.owner_id.into(),
             name: app.name,
             description: app.description,
-            bridge: app.bridge,
+            bridge,
             public: app.public,
             oauth_secret: app.oauth_secret,
             oauth_redirect_uris: serde_json::from_value(app.oauth_redirect_uris)
@@ -110,10 +167,13 @@ impl DataApplication for Postgres {
             self.pool,
             query!(
                 r#"
-            	SELECT id, owner_id, name, description, bridge, public, oauth_secret, oauth_redirect_uris, oauth_confidential
-                FROM application
-            	WHERE owner_id = $1 AND id > $2 AND id < $3
-            	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
+            	SELECT
+                    a.id, a.owner_id, a.name, a.description, a.public, a.oauth_secret, a.oauth_redirect_uris, a.oauth_confidential,
+                    b.application_id as "bridge_id?", b.platform_name, b.platform_url, b.platform_description
+                FROM application a
+                LEFT JOIN application_bridge b ON a.id = b.application_id
+            	WHERE a.owner_id = $1 AND a.id > $2 AND a.id < $3
+            	ORDER BY (CASE WHEN $4 = 'f' THEN a.id END), a.id DESC LIMIT $5
                 "#,
                 *owner_id,
                 *p.after,
@@ -125,17 +185,29 @@ impl DataApplication for Postgres {
                 "SELECT count(*) FROM application WHERE owner_id = $1",
                 *owner_id
             ),
-            |row| Application {
-                id: row.id.into(),
-                owner_id: row.owner_id.into(),
-                name: row.name,
-                description: row.description,
-                bridge: row.bridge,
-                public: row.public,
-                oauth_secret: row.oauth_secret,
-                oauth_redirect_uris: serde_json::from_value(row.oauth_redirect_uris)
-                    .unwrap_or_default(),
-                oauth_confidential: row.oauth_confidential,
+            |row| {
+                let bridge = if row.bridge_id.is_some() {
+                    Some(common::v1::types::application::Bridge {
+                        platform_name: row.platform_name,
+                        platform_url: row.platform_url,
+                        platform_description: row.platform_description,
+                    })
+                } else {
+                    None
+                };
+
+                Application {
+                    id: row.id.into(),
+                    owner_id: row.owner_id.into(),
+                    name: row.name,
+                    description: row.description,
+                    bridge,
+                    public: row.public,
+                    oauth_secret: row.oauth_secret,
+                    oauth_redirect_uris: serde_json::from_value(row.oauth_redirect_uris)
+                        .unwrap_or_default(),
+                    oauth_confidential: row.oauth_confidential,
+                }
             },
             |i: &Application| i.id.to_string()
         )

@@ -9,10 +9,10 @@ use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch},
     misc::ApplicationIdReq,
     util::{Changes, Diff, Time},
-    ApplicationId, AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    ExternalPlatform, MessageSync, PaginationQuery, PaginationResponse, Permission, Puppet,
-    PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
-    SessionToken, SessionType, SessionWithToken, User, UserId,
+    ApplicationId, AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
+    PaginationQuery, PaginationResponse, Permission, Puppet, PuppetCreate, RoomId,
+    RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionType,
+    SessionWithToken, User, UserId,
 };
 use http::StatusCode;
 use serde::Deserialize;
@@ -47,6 +47,12 @@ async fn app_create(
     Json(json): Json<ApplicationCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    if let Some(bridge) = &json.bridge {
+        if bridge.platform_name.is_none() {
+            return Err(Error::BadStatic("platform_name is required for bridge"));
+        }
+    }
+
     let data = s.data();
     let user = data
         .user_create(DbUserCreate {
@@ -169,6 +175,12 @@ async fn app_patch(
     let start = data.application_get(app_id).await?;
     if start.owner_id != auth.user.id && *start.id != *auth.user.id {
         return Err(Error::MissingPermissions);
+    }
+
+    if let Some(Some(bridge)) = &patch.bridge {
+        if bridge.platform_name.is_none() {
+            return Err(Error::BadStatic("platform_name is required for bridge"));
+        }
     }
 
     if !patch.changes(&start) {
@@ -435,7 +447,8 @@ async fn puppet_ensure(
     let data = s.data();
     let srv = s.services();
     let parent = srv.users.get(auth.user.id, None).await?;
-    if !parent.bot.is_some_and(|b| b.is_bridge) {
+    if !parent.bot {
+        // TODO: check if it is a bridge?
         return Err(Error::BadStatic("can't create that user"));
     };
     let existing = data.user_lookup_puppet(auth.user.id, &puppet_id).await?;
@@ -450,8 +463,7 @@ async fn puppet_ensure(
             name: json.name,
             description: json.description,
             puppet: Some(Puppet {
-                owner_id: auth.user.id,
-                external_platform: ExternalPlatform::Discord,
+                owner_id: auth.user.id.into_inner().into(), // ApplicationId
                 external_id: puppet_id.clone(),
                 external_url: None,
                 alias_id: None,

@@ -20,22 +20,34 @@ struct DbConnection {
     app_owner_id: uuid::Uuid,
     app_name: String,
     app_description: Option<String>,
-    app_bridge: bool,
     app_public: bool,
     app_oauth_secret: Option<String>,
     app_oauth_redirect_uris: serde_json::Value,
     app_oauth_confidential: bool,
+    bridge_platform_name: Option<String>,
+    bridge_platform_url: Option<String>,
+    bridge_platform_description: Option<String>,
 }
 
 impl From<DbConnection> for Connection {
     fn from(val: DbConnection) -> Self {
+        let bridge = if val.bridge_platform_name.is_some() {
+            Some(common::v1::types::application::Bridge {
+                platform_name: val.bridge_platform_name,
+                platform_url: val.bridge_platform_url,
+                platform_description: val.bridge_platform_description,
+            })
+        } else {
+            None
+        };
+
         Connection {
             application: Application {
                 id: val.application_id.into(),
                 owner_id: val.app_owner_id.into(),
                 name: val.app_name,
                 description: val.app_description,
-                bridge: val.app_bridge,
+                bridge,
                 public: val.app_public,
                 oauth_secret: val.app_oauth_secret,
                 oauth_redirect_uris: serde_json::from_value(val.app_oauth_redirect_uris)
@@ -83,10 +95,12 @@ impl DataConnection for Postgres {
             select
                 c.application_id, c.scopes as scopes, c.created_at,
                 a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,
-                a.bridge as app_bridge, a.public as app_public, a.oauth_secret as app_oauth_secret,
-                a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential
+                a.public as app_public, a.oauth_secret as app_oauth_secret,
+                a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential,
+                b.platform_name as "bridge_platform_name?", b.platform_url as "bridge_platform_url?", b.platform_description as "bridge_platform_description?"
             from connection c
             join application a on c.application_id = a.id
+            left join application_bridge b on a.id = b.application_id
             where c.user_id = $1 and c.application_id = $2
             "#,
             *user_id,
@@ -113,10 +127,12 @@ impl DataConnection for Postgres {
                 select
                     c.application_id, c.scopes as scopes, c.created_at,
                     a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,
-                    a.bridge as app_bridge, a.public as app_public, a.oauth_secret as app_oauth_secret,
-                    a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential
+                    a.public as app_public, a.oauth_secret as app_oauth_secret,
+                    a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential,
+                    b.platform_name as "bridge_platform_name?", b.platform_url as "bridge_platform_url?", b.platform_description as "bridge_platform_description?"
                 from connection c
                 join application a on c.application_id = a.id
+                left join application_bridge b on a.id = b.application_id
                 where c.user_id = $1 and c.application_id > $2 and c.application_id < $3
                 order by (case when $4 = 'f' then c.application_id end), c.application_id desc limit $5
                 "#,

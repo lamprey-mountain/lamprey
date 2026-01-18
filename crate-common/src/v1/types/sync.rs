@@ -20,13 +20,14 @@ use crate::v2::types::message::Message as MessageV2;
 use super::{
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
     emoji::EmojiCustom,
+    harvest::Harvest,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,
     role::RoleReorderItem,
     user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
     voice::{SignallingMessage, VoiceState},
-    Channel, ChannelId, EmojiId, Harvest, InviteCode, MessageId, MessageVerId, Role, RoleId, Room,
-    RoomId, RoomMember, Session, SessionId, SessionToken, User, UserId,
+    Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
+    RoomMember, Session, SessionId, SessionToken, User, UserId,
 };
 
 // TODO: encode binary data as base64 for json, binary for msgpack

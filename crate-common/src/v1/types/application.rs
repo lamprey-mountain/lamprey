@@ -36,7 +36,7 @@ pub struct Application {
     pub description: Option<String>,
 
     /// enables managing Puppet users
-    pub bridge: bool,
+    pub bridge: Option<Bridge>,
 
     /// if anyone can use this
     pub public: bool,
@@ -50,6 +50,12 @@ pub struct Application {
 
     /// oauth whether this client can keep secrets confidential
     pub oauth_confidential: bool,
+    // do i really need all these urls properties, or can i get away with a vec?
+    // url_terms_of_service: Option<Url>,
+    // url_privacy_policy: Option<Url>,
+    // url_help_docs: Vec<Url>,
+    // url_main_site: Vec<Url>,
+    // url_interactions: Vec<Url>, // webhook
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,7 +75,7 @@ pub struct ApplicationCreate {
 
     /// enables managing Puppet users
     #[serde(default)]
-    pub bridge: bool,
+    pub bridge: Option<Bridge>,
 
     /// if anyone can use this
     #[serde(default)]
@@ -100,7 +106,7 @@ pub struct ApplicationPatch {
     pub description: Option<Option<String>>,
 
     /// enables managing Puppet users
-    pub bridge: Option<bool>,
+    pub bridge: Option<Option<Bridge>>,
 
     /// if anyone can use this
     pub public: Option<bool>,
@@ -127,6 +133,28 @@ pub struct Integration {
     pub application: Application,
     pub bot: User,
     pub member: RoomMember,
+}
+
+/// where this application bridge content to
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct Bridge {
+    /// the human readable name of the platform
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    pub platform_name: Option<String>,
+
+    /// the url where this platform can be reached
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 2048))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048), url))]
+    // FIXME: use Url type instead of String
+    pub platform_url: Option<String>,
+
+    /// a description of this platform
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    pub platform_description: Option<String>,
 }
 
 // TODO: move to oauth

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
-use crate::v1::types::{util::Time, RoomMember, User, UserId};
+use crate::v1::types::{util::Time, RoomMember, ThreadMember, User, UserId};
 
 pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
     fn min() -> Self;
@@ -104,6 +104,7 @@ pub struct PaginationResponse<T> {
     pub cursor: Option<String>,
 }
 
+// TODO: move to document.rs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct HistoryParams {
@@ -127,7 +128,8 @@ pub struct HistoryParams {
     pub limit: Option<u16>,
 }
 
-/// a set of changes
+// TODO: move to document.rs
+/// a set of changes made to a document
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Changeset {
@@ -147,6 +149,7 @@ pub struct Changeset {
     pub stat_removed: u64,
 }
 
+// TODO: move to document.rs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct HistoryPagination {
@@ -157,5 +160,8 @@ pub struct HistoryPagination {
     pub users: Vec<User>,
 
     /// a room member object for every referenced user_id
-    pub room_member: Vec<RoomMember>,
+    pub room_members: Vec<RoomMember>,
+
+    /// a thread member object for every referenced user_id
+    pub thread_members: Vec<ThreadMember>,
 }

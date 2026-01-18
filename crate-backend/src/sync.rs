@@ -239,9 +239,7 @@ impl Connection {
                 channel_id,
                 branch_id,
                 update,
-            } => {
-                Box::pin(self.handle_document_edit(channel_id, branch_id, update)).await?
-            }
+            } => Box::pin(self.handle_document_edit(channel_id, branch_id, update)).await?,
             // FIXME: document presence/awareness
             MessageClient::DocumentPresence { .. } => todo!(),
         }

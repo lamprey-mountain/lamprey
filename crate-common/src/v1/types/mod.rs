@@ -12,6 +12,7 @@ pub mod email;
 pub mod embed;
 pub mod emoji;
 pub mod error;
+pub mod harvest;
 pub mod ids;
 pub mod invite;
 pub mod media;

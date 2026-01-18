@@ -199,7 +199,10 @@ impl ServiceMessages {
             }
             if json.created_at.is_some() {
                 if let Some(puppet) = user.puppet {
-                    let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
+                    let owner_perms = srv
+                        .perms
+                        .for_channel(puppet.owner_id.into_inner().into(), thread_id)
+                        .await?;
                     let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
                     owner_perms.ensure_all(&required_perms)?;
                 } else {
@@ -643,7 +646,10 @@ impl ServiceMessages {
             }
             let usr = data.user_get(user_id).await?;
             if let Some(puppet) = usr.puppet {
-                let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
+                let owner_perms = srv
+                    .perms
+                    .for_channel(puppet.owner_id.into_inner().into(), thread_id)
+                    .await?;
                 let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
                 owner_perms.ensure_all(&required_perms)?;
             } else {

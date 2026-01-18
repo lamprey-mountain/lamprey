@@ -188,18 +188,28 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
         let mut effective_user = if let Some(puppet_id) = puppet_id {
             let puppet = srv.users.get(puppet_id, None).await?;
 
-            if let Some(bot) = &puppet.bot {
-                if bot.owner_id == real_user.id {
+            if puppet.bot {
+                // check if we own this application
+                let app = s
+                    .data()
+                    .application_get(puppet.id.into_inner().into())
+                    .await?;
+                if app.owner_id == real_user.id {
                     puppet
                 } else {
                     return Err(Error::BadStatic("not bot owner"));
                 }
             } else {
-                let Some(bot) = &real_user.bot else {
+                if !real_user.bot {
                     return Err(Error::BadStatic("user is not a bot"));
-                };
+                }
 
-                if !bot.is_bridge {
+                // check if we are a bridge
+                let app = s
+                    .data()
+                    .application_get(real_user.id.into_inner().into())
+                    .await?;
+                if app.bridge.is_none() {
                     return Err(Error::BadStatic("bot is not a bridge"));
                 }
 
@@ -207,7 +217,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
                     return Err(Error::BadStatic("can only puppet users of type Puppet"));
                 };
 
-                if p.owner_id != real_user.id {
+                if p.owner_id.into_inner() != *real_user.id {
                     return Err(Error::BadStatic("can only puppet your own puppets"));
                 }
 
@@ -224,19 +234,29 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
 
         if effective_user.suspended.is_none() {
             if let Some(puppet) = &effective_user.puppet {
-                let bot = srv.users.get(puppet.owner_id, None).await?;
-                if bot.is_suspended() {
-                    effective_user.suspended = bot.suspended.clone();
-                } else if let Some(bot_info) = &bot.bot {
-                    let owner = srv.users.get(bot_info.owner_id, None).await?;
+                let bot_app_id = puppet.owner_id;
+                let bot_user = srv.users.get(bot_app_id.into_inner().into(), None).await?;
+                if bot_user.is_suspended() {
+                    effective_user.suspended = bot_user.suspended.clone();
+                } else if bot_user.bot {
+                    // check the owner of the bot
+                    if let Ok(app) = s.data().application_get(bot_app_id).await {
+                        let owner = srv.users.get(app.owner_id, None).await?;
+                        if owner.is_suspended() {
+                            effective_user.suspended = owner.suspended.clone();
+                        }
+                    }
+                }
+            } else if effective_user.bot {
+                if let Ok(app) = s
+                    .data()
+                    .application_get(effective_user.id.into_inner().into())
+                    .await
+                {
+                    let owner = srv.users.get(app.owner_id, None).await?;
                     if owner.is_suspended() {
                         effective_user.suspended = owner.suspended.clone();
                     }
-                }
-            } else if let Some(bot) = &effective_user.bot {
-                let owner = srv.users.get(bot.owner_id, None).await?;
-                if owner.is_suspended() {
-                    effective_user.suspended = owner.suspended.clone();
                 }
             }
         }

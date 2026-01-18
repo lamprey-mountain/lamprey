@@ -486,7 +486,7 @@ impl Portal {
                 name: puppet.name,
                 avatar: puppet.avatar.map(|a| a.to_string()),
                 banner: puppet.banner.map(|b| b.to_string()),
-                bot: Some(puppet.bot.is_some()),
+                bot: Some(puppet.bot),
             })
             .await?;
         debug!("inserted puppet");

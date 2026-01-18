@@ -104,9 +104,15 @@ pub async fn session_update(
             (auth.session.user_id(), target_session.user_id())
         {
             let target_user = srv.users.get(target_user_id, None).await?;
-            if let Some(bot) = target_user.bot {
-                if bot.owner_id == auth_user_id {
-                    allowed = true;
+            if target_user.bot {
+                if let Ok(app) = s
+                    .data()
+                    .application_get(target_user_id.into_inner().into())
+                    .await
+                {
+                    if app.owner_id == auth_user_id {
+                        allowed = true;
+                    }
                 }
             }
         }
@@ -180,9 +186,15 @@ pub async fn session_delete(
             (auth.session.user_id(), target_session.user_id())
         {
             let target_user = srv.users.get(target_user_id, None).await?;
-            if let Some(bot) = target_user.bot {
-                if bot.owner_id == auth_user_id {
-                    allowed = true;
+            if target_user.bot {
+                if let Ok(app) = s
+                    .data()
+                    .application_get(target_user_id.into_inner().into())
+                    .await
+                {
+                    if app.owner_id == auth_user_id {
+                        allowed = true;
+                    }
                 }
             }
         }

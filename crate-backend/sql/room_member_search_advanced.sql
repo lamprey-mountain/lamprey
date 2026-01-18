@@ -28,17 +28,15 @@ SELECT
     u.description as u_description,
     u.avatar as u_avatar,
     u.banner as u_banner,
+    u.bot as u_bot,
     u.system as u_system,
     u.registered_at as u_registered_at,
     u.deleted_at as u_deleted_at,
     u.suspended as u_suspended,
-    a.owner_id as "u_app_owner_id?",
-    a.bridge as "u_app_bridge?",
-    a.public as "u_app_public?",
     w.channel_id as "u_webhook_channel_id?",
     w.creator_id as "u_webhook_creator_id?",
     c.room_id as "u_webhook_room_id?",
-    p.external_platform as "u_puppet_external_platform?",
+    p.application_id as "u_puppet_application_id?",
     p.external_id as "u_puppet_external_id?",
     p.external_url as "u_puppet_external_url?",
     p.alias_id as "u_puppet_alias_id?"
@@ -46,7 +44,6 @@ FROM
     room_member m
     JOIN usr u ON m.user_id = u.id
     LEFT JOIN r ON r.user_id = m.user_id
-    LEFT JOIN application a ON u.id = a.id
     LEFT JOIN webhook w ON u.id = w.id
     LEFT JOIN channel c ON w.channel_id = c.id
     LEFT JOIN puppet p on u.id = p.id
