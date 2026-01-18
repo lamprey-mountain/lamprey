@@ -1,7 +1,8 @@
 use base64::Engine;
 use common::v1::types::{
-    sync::{SyncCompression, SyncParams},
+    sync::{SyncCompression, SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
+    ChannelId, DocumentBranchId, SessionToken, UserId,
 };
 use flate2::{
     write::{ZlibDecoder, ZlibEncoder},
@@ -165,122 +166,7 @@ impl Connection {
                 token,
                 resume: reconnect,
                 presence,
-            } => {
-                let srv = self.s.services();
-                let session = srv
-                    .sessions
-                    .get_by_token(token)
-                    .await
-                    .map_err(|err| match err {
-                        Error::NotFound => SyncError::AuthFailure.into(),
-                        other => other,
-                    })?;
-
-                // TODO: more forgiving reconnections?
-                if let Some(r) = reconnect {
-                    debug!("attempting to resume");
-                    if let Some((_, mut conn)) = self.s.syncers.remove(&r.conn) {
-                        debug!("resume conn exists");
-                        if let Some(recon_session) = conn.state.session() {
-                            debug!("resume session exists");
-                            if session.id == recon_session.id {
-                                debug!("session id matches, resuming");
-                                conn.rewind(r.seq)?;
-                                conn.push(
-                                    MessageEnvelope {
-                                        payload: types::MessagePayload::Resumed,
-                                    },
-                                    None,
-                                );
-                                std::mem::swap(self, &mut conn);
-                                return Ok(());
-                            }
-                        }
-                    }
-                    return Err(Error::BadStatic("bad or expired reconnection info"));
-                }
-
-                if let ConnectionState::Authenticated { .. } = self.state {
-                    return Err(SyncError::AlreadyAuthenticated.into());
-                }
-
-                let user = if let Some(user_id) = session.user_id() {
-                    let srv = self.s.services();
-                    let mut user = srv.users.get(user_id, Some(user_id)).await?;
-                    if user.is_suspended() {
-                        Some(user)
-                    } else {
-                        let user_with_new_status = srv
-                            .presence
-                            .set(user_id, presence.unwrap_or(Presence::online()))
-                            .await?;
-                        user.presence = user_with_new_status.presence;
-                        Some(user)
-                    }
-                } else {
-                    None
-                };
-
-                let msg = MessageEnvelope {
-                    payload: types::MessagePayload::Ready {
-                        user: Box::new(user),
-                        session: session.clone(),
-                        conn: self.get_id().to_owned(),
-                        seq: 0,
-                    },
-                };
-
-                ws.send(self.serialize_and_compress(&msg)?).await?;
-
-                self.seq_server += 1;
-
-                if let Some(user_id) = session.user_id() {
-                    // send typing states
-                    let typing_states = srv.channels.typing_list();
-                    for (channel_id, typing_user_id, until) in typing_states {
-                        if let Ok(perms) = srv.perms.for_channel(user_id, channel_id).await {
-                            if perms.has(Permission::ViewChannel) {
-                                self.push_sync(
-                                    MessageSync::ChannelTyping {
-                                        channel_id,
-                                        user_id: typing_user_id,
-                                        until: until.into(),
-                                    },
-                                    None,
-                                );
-                            }
-                        }
-                    }
-
-                    // send voice states
-                    let voice_states = srv.voice.state_list();
-                    for voice_state in voice_states {
-                        if let Ok(perms) =
-                            srv.perms.for_channel(user_id, voice_state.channel_id).await
-                        {
-                            let is_ours = self.state.session().and_then(|s| s.user_id())
-                                == Some(voice_state.user_id);
-                            if perms.has(Permission::ViewChannel) || is_ours {
-                                let mut voice_state = voice_state.clone();
-                                if !is_ours {
-                                    voice_state.session_id = None;
-                                }
-                                self.push_sync(
-                                    MessageSync::VoiceState {
-                                        user_id: voice_state.user_id,
-                                        state: Some(voice_state),
-                                        old_state: None,
-                                    },
-                                    None,
-                                );
-                            }
-                        }
-                    }
-                }
-
-                self.member_list.set_user_id(session.user_id()).await;
-                self.state = ConnectionState::Authenticated { session };
-            }
+            } => Box::pin(self.handle_hello(token, reconnect, presence, ws)).await?,
             MessageClient::Presence { presence } => {
                 let session = match &self.state {
                     ConnectionState::Unauthed => return Err(SyncError::Unauthenticated.into()),
@@ -338,172 +224,321 @@ impl Connection {
                     self.member_list.clear_query().await;
                 }
             }
-            MessageClient::VoiceDispatch {
-                user_id: _,
-                payload,
-            } => {
-                let Some(session) = self.state.session() else {
-                    return Err(Error::BadStatic("no session"));
-                };
-                let Some(user_id) = session.user_id() else {
-                    return Err(Error::BadStatic("no user"));
-                };
-
-                let srv = self.s.services();
-                let user = srv.users.get(user_id, Some(user_id)).await?;
-                user.ensure_unsuspended()?;
-
-                match &payload {
-                    SignallingMessage::VoiceState { state: Some(state) } => {
-                        let perms = srv.perms.for_channel(user_id, state.channel_id).await?;
-                        perms.ensure(Permission::ViewChannel)?;
-                        perms.ensure(Permission::VoiceConnect)?;
-                        let thread = srv.channels.get(state.channel_id, Some(user_id)).await?;
-                        if thread.archived_at.is_some() {
-                            return Err(Error::BadStatic("thread is archived"));
-                        }
-                        if thread.deleted_at.is_some() {
-                            return Err(Error::BadStatic("thread is removed"));
-                        }
-                        if thread.locked && !perms.can_use_locked_threads() {
-                            return Err(Error::MissingPermissions);
-                        }
-                        let old_state = srv.voice.state_get(user_id);
-                        let mut state = VoiceState {
-                            user_id,
-                            channel_id: state.channel_id,
-                            session_id: Some(session.id),
-                            joined_at: Time::now_utc(),
-                            mute: false,
-                            deaf: false,
-                            self_deaf: state.self_deaf,
-                            self_mute: state.self_mute,
-                            self_video: state.self_video,
-                            screenshare: match (old_state, state.screenshare.as_ref()) {
-                                (Some(old), Some(new)) => Some(VoiceStateScreenshare {
-                                    started_at: old
-                                        .screenshare
-                                        .map(|s| s.started_at)
-                                        .unwrap_or_else(|| Time::now_utc()),
-                                    thumbnail: new.thumbnail,
-                                }),
-                                (None, Some(new)) => Some(VoiceStateScreenshare {
-                                    started_at: Time::now_utc(),
-                                    thumbnail: new.thumbnail,
-                                }),
-                                (_, None) => None,
-                            },
-                            // TODO: suppress by default in broadcast room
-                            suppress: false,
-                            requested_to_speak_at: None,
-                        };
-                        if let Some(room_id) = thread.room_id {
-                            let rm = self.s.data().room_member_get(room_id, user_id).await?;
-                            state.mute = rm.mute;
-                            state.deaf = rm.deaf;
-                        }
-                        srv.voice.alloc_sfu(state.channel_id).await?;
-                        if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
-                            user_id,
-                            state: Some(state),
-                            permissions: SfuPermissions {
-                                speak: perms.has(Permission::VoiceSpeak),
-                                video: perms.has(Permission::VoiceVideo),
-                                priority: perms.has(Permission::VoicePriority),
-                            },
-                        }) {
-                            error!("failed to send to sushi_sfu: {err}");
-                        }
-                        return Ok(());
-                    }
-                    SignallingMessage::VoiceState { state: None } => {
-                        if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
-                            user_id,
-                            state: None,
-                            permissions: SfuPermissions {
-                                speak: false,
-                                video: false,
-                                priority: false,
-                            },
-                        }) {
-                            error!("failed to send to sushi_sfu: {err}");
-                        }
-                        return Ok(());
-                    }
-                    SignallingMessage::Offer { .. } => {
-                        // TODO: also verify sdp and/or send permissions to sfu instead of only parsing tracks
-                        // let perms = srv.perms.for_thread(user_id, voice_state.thread_id).await?;
-                        // if tracks.iter().any(|t| t.kind == MediaKindSerde::Audio) {
-                        //     perms.ensure(Permission::VoiceSpeak)?;
-                        // }
-                        // if tracks.iter().any(|t| t.kind == MediaKindSerde::Video) {
-                        //     perms.ensure(Permission::VoiceVideo)?;
-                        // }
-                    }
-                    _ => {}
-                }
-
-                if let Err(err) = self.s.sushi_sfu.send(SfuCommand::Signalling {
-                    user_id,
-                    inner: payload,
-                }) {
-                    error!("failed to send to sushi_sfu: {err}");
-                }
+            MessageClient::VoiceDispatch { user_id, payload } => {
+                Box::pin(self.handle_voice_dispatch(user_id, payload)).await?
             }
             MessageClient::DocumentSubscribe {
                 channel_id,
                 branch_id,
                 state_vector,
             } => {
-                let session = self
-                    .state
-                    .session()
-                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
-                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                let srv = self.s.services();
-                let perms = srv.perms.for_channel(user_id, channel_id).await?;
-                perms.ensure(Permission::ViewChannel)?;
-
-                let sv = if let Some(sv_str) = state_vector {
-                    Some(
-                        base64::prelude::BASE64_URL_SAFE_NO_PAD
-                            .decode(sv_str)
-                            .map_err(|_| Error::BadStatic("bad base64"))?,
-                    )
-                } else {
-                    None
-                };
-
-                self.document
-                    .set_context_id((channel_id, branch_id), sv)
-                    .await?;
+                Box::pin(self.handle_document_subscribe(channel_id, branch_id, state_vector))
+                    .await?
             }
             MessageClient::DocumentEdit {
                 channel_id,
                 branch_id,
                 update,
             } => {
-                let session = self
-                    .state
-                    .session()
-                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
-                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                let srv = self.s.services();
-                let perms = srv.perms.for_channel(user_id, channel_id).await?;
-                // FIXME: proper permissions
-                perms.ensure(Permission::ViewChannel)?;
-
-                let update_bytes = base64::prelude::BASE64_URL_SAFE_NO_PAD
-                    .decode(update)
-                    .map_err(|_| Error::BadStatic("bad base64"))?;
-
-                srv.documents
-                    .apply_update((channel_id, branch_id), user_id, &update_bytes)
-                    .await?;
+                Box::pin(self.handle_document_edit(channel_id, branch_id, update)).await?
             }
             // FIXME: document presence/awareness
             MessageClient::DocumentPresence { .. } => todo!(),
         }
+        Ok(())
+    }
+
+    async fn handle_hello(
+        &mut self,
+        token: SessionToken,
+        reconnect: Option<SyncResume>,
+        presence: Option<Presence>,
+        ws: &mut WebSocket,
+    ) -> Result<()> {
+        let srv = self.s.services();
+        let session = srv
+            .sessions
+            .get_by_token(token)
+            .await
+            .map_err(|err| match err {
+                Error::NotFound => SyncError::AuthFailure.into(),
+                other => other,
+            })?;
+
+        // TODO: more forgiving reconnections?
+        if let Some(r) = reconnect {
+            debug!("attempting to resume");
+            if let Some((_, mut conn)) = self.s.syncers.remove(&r.conn) {
+                debug!("resume conn exists");
+                if let Some(recon_session) = conn.state.session() {
+                    debug!("resume session exists");
+                    if session.id == recon_session.id {
+                        debug!("session id matches, resuming");
+                        conn.rewind(r.seq)?;
+                        conn.push(
+                            MessageEnvelope {
+                                payload: types::MessagePayload::Resumed,
+                            },
+                            None,
+                        );
+                        std::mem::swap(self, &mut conn);
+                        return Ok(());
+                    }
+                }
+            }
+            return Err(Error::BadStatic("bad or expired reconnection info"));
+        }
+
+        if let ConnectionState::Authenticated { .. } = self.state {
+            return Err(SyncError::AlreadyAuthenticated.into());
+        }
+
+        let user = if let Some(user_id) = session.user_id() {
+            let srv = self.s.services();
+            let mut user = srv.users.get(user_id, Some(user_id)).await?;
+            if user.is_suspended() {
+                Some(user)
+            } else {
+                let user_with_new_status = srv
+                    .presence
+                    .set(user_id, presence.unwrap_or(Presence::online()))
+                    .await?;
+                user.presence = user_with_new_status.presence;
+                Some(user)
+            }
+        } else {
+            None
+        };
+
+        let msg = MessageEnvelope {
+            payload: types::MessagePayload::Ready {
+                user: Box::new(user),
+                session: session.clone(),
+                conn: self.get_id().to_owned(),
+                seq: 0,
+            },
+        };
+
+        ws.send(self.serialize_and_compress(&msg)?).await?;
+
+        self.seq_server += 1;
+
+        if let Some(user_id) = session.user_id() {
+            // send typing states
+            let typing_states = srv.channels.typing_list();
+            for (channel_id, typing_user_id, until) in typing_states {
+                if let Ok(perms) = srv.perms.for_channel(user_id, channel_id).await {
+                    if perms.has(Permission::ViewChannel) {
+                        self.push_sync(
+                            MessageSync::ChannelTyping {
+                                channel_id,
+                                user_id: typing_user_id,
+                                until: until.into(),
+                            },
+                            None,
+                        );
+                    }
+                }
+            }
+
+            // send voice states
+            let voice_states = srv.voice.state_list();
+            for voice_state in voice_states {
+                if let Ok(perms) = srv.perms.for_channel(user_id, voice_state.channel_id).await {
+                    let is_ours =
+                        self.state.session().and_then(|s| s.user_id()) == Some(voice_state.user_id);
+                    if perms.has(Permission::ViewChannel) || is_ours {
+                        let mut voice_state = voice_state.clone();
+                        if !is_ours {
+                            voice_state.session_id = None;
+                        }
+                        self.push_sync(
+                            MessageSync::VoiceState {
+                                user_id: voice_state.user_id,
+                                state: Some(voice_state),
+                                old_state: None,
+                            },
+                            None,
+                        );
+                    }
+                }
+            }
+        }
+
+        self.member_list.set_user_id(session.user_id()).await;
+        self.state = ConnectionState::Authenticated { session };
+        Ok(())
+    }
+
+    async fn handle_voice_dispatch(
+        &mut self,
+        _user_id: UserId,
+        payload: SignallingMessage,
+    ) -> Result<()> {
+        let Some(session) = self.state.session() else {
+            return Err(Error::BadStatic("no session"));
+        };
+        let Some(user_id) = session.user_id() else {
+            return Err(Error::BadStatic("no user"));
+        };
+
+        let srv = self.s.services();
+        let user = srv.users.get(user_id, Some(user_id)).await?;
+        user.ensure_unsuspended()?;
+
+        match &payload {
+            SignallingMessage::VoiceState { state: Some(state) } => {
+                let perms = srv.perms.for_channel(user_id, state.channel_id).await?;
+                perms.ensure(Permission::ViewChannel)?;
+                perms.ensure(Permission::VoiceConnect)?;
+                let thread = srv.channels.get(state.channel_id, Some(user_id)).await?;
+                if thread.archived_at.is_some() {
+                    return Err(Error::BadStatic("thread is archived"));
+                }
+                if thread.deleted_at.is_some() {
+                    return Err(Error::BadStatic("thread is removed"));
+                }
+                if thread.locked && !perms.can_use_locked_threads() {
+                    return Err(Error::MissingPermissions);
+                }
+                let old_state = srv.voice.state_get(user_id);
+                let mut state = VoiceState {
+                    user_id,
+                    channel_id: state.channel_id,
+                    session_id: Some(session.id),
+                    joined_at: Time::now_utc(),
+                    mute: false,
+                    deaf: false,
+                    self_deaf: state.self_deaf,
+                    self_mute: state.self_mute,
+                    self_video: state.self_video,
+                    screenshare: match (old_state, state.screenshare.as_ref()) {
+                        (Some(old), Some(new)) => Some(VoiceStateScreenshare {
+                            started_at: old
+                                .screenshare
+                                .map(|s| s.started_at)
+                                .unwrap_or_else(|| Time::now_utc()),
+                            thumbnail: new.thumbnail,
+                        }),
+                        (None, Some(new)) => Some(VoiceStateScreenshare {
+                            started_at: Time::now_utc(),
+                            thumbnail: new.thumbnail,
+                        }),
+                        (_, None) => None,
+                    },
+                    // TODO: suppress by default in broadcast room
+                    suppress: false,
+                    requested_to_speak_at: None,
+                };
+                if let Some(room_id) = thread.room_id {
+                    let rm = self.s.data().room_member_get(room_id, user_id).await?;
+                    state.mute = rm.mute;
+                    state.deaf = rm.deaf;
+                }
+                srv.voice.alloc_sfu(state.channel_id).await?;
+                if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
+                    user_id,
+                    state: Some(state),
+                    permissions: SfuPermissions {
+                        speak: perms.has(Permission::VoiceSpeak),
+                        video: perms.has(Permission::VoiceVideo),
+                        priority: perms.has(Permission::VoicePriority),
+                    },
+                }) {
+                    error!("failed to send to sushi_sfu: {err}");
+                }
+                return Ok(());
+            }
+            SignallingMessage::VoiceState { state: None } => {
+                if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
+                    user_id,
+                    state: None,
+                    permissions: SfuPermissions {
+                        speak: false,
+                        video: false,
+                        priority: false,
+                    },
+                }) {
+                    error!("failed to send to sushi_sfu: {err}");
+                }
+                return Ok(());
+            }
+            SignallingMessage::Offer { .. } => {
+                // TODO: also verify sdp and/or send permissions to sfu instead of only parsing tracks
+                // let perms = srv.perms.for_thread(user_id, voice_state.thread_id).await?;
+                // if tracks.iter().any(|t| t.kind == MediaKindSerde::Audio) {
+                //     perms.ensure(Permission::VoiceSpeak)?;
+                // }
+                // if tracks.iter().any(|t| t.kind == MediaKindSerde::Video) {
+                //     perms.ensure(Permission::VoiceVideo)?;
+                // }
+            }
+            _ => {}
+        }
+
+        if let Err(err) = self.s.sushi_sfu.send(SfuCommand::Signalling {
+            user_id,
+            inner: payload,
+        }) {
+            error!("failed to send to sushi_sfu: {err}");
+        }
+        Ok(())
+    }
+
+    async fn handle_document_subscribe(
+        &mut self,
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+        state_vector: Option<String>,
+    ) -> Result<()> {
+        let session = self
+            .state
+            .session()
+            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+        let srv = self.s.services();
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
+        perms.ensure(Permission::ViewChannel)?;
+
+        let sv = if let Some(sv_str) = state_vector {
+            Some(
+                base64::prelude::BASE64_URL_SAFE_NO_PAD
+                    .decode(sv_str)
+                    .map_err(|_| Error::BadStatic("bad base64"))?,
+            )
+        } else {
+            None
+        };
+
+        self.document
+            .set_context_id((channel_id, branch_id), sv)
+            .await?;
+        Ok(())
+    }
+
+    async fn handle_document_edit(
+        &mut self,
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+        update: String,
+    ) -> Result<()> {
+        let session = self
+            .state
+            .session()
+            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+        let srv = self.s.services();
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
+        // FIXME: proper permissions
+        perms.ensure(Permission::ViewChannel)?;
+
+        let update_bytes = base64::prelude::BASE64_URL_SAFE_NO_PAD
+            .decode(update)
+            .map_err(|_| Error::BadStatic("bad base64"))?;
+
+        srv.documents
+            .apply_update((channel_id, branch_id), user_id, &update_bytes)
+            .await?;
         Ok(())
     }
 
