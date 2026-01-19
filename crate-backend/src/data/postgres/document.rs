@@ -11,7 +11,7 @@ use common::v1::types::document::{
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelId, DocumentBranchId, DocumentTagId, UserId};
-use sqlx::{query, query_as, query_scalar};
+use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
 
 #[derive(sqlx::FromRow)]
@@ -552,35 +552,36 @@ impl DataDocument for Postgres {
         summary: Option<String>,
         description: Option<Option<String>>,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
 
-        if let Some(summary_val) = summary {
-            query!(
-                r#"
-                UPDATE document_tag
-                SET summary = $2, updated_at = NOW()
-                WHERE id = $1
-                "#,
-                tag_id.into_inner(),
-                summary_val
-            )
-            .execute(&mut *tx)
-            .await?;
-        }
+        let tag = query!(
+            r#"
+            SELECT summary, description
+            FROM document_tag
+            WHERE id = $1
+            FOR UPDATE
+            "#,
+            tag_id.into_inner()
+        )
+        .fetch_one(&mut *tx)
+        .await?;
 
-        if let Some(description_val) = description {
-            query!(
-                r#"
-                UPDATE document_tag
-                SET description = $2, updated_at = NOW()
-                WHERE id = $1
-                "#,
-                tag_id.into_inner(),
-                description_val
-            )
-            .execute(&mut *tx)
-            .await?;
-        }
+        let new_summary = summary.unwrap_or(tag.summary);
+        let new_description = description.unwrap_or(tag.description);
+
+        query!(
+            r#"
+            UPDATE document_tag
+            SET summary = $2, description = $3, updated_at = NOW()
+            WHERE id = $1
+            "#,
+            tag_id.into_inner(),
+            new_summary,
+            new_description
+        )
+        .execute(&mut *tx)
+        .await?;
 
         tx.commit().await?;
         Ok(())
