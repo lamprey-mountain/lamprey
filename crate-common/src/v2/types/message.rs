@@ -7,100 +7,14 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::{
-    misc::Time,
-    reaction::ReactionCounts,
-    util::{some_option, Diff},
-    Channel, ChannelId, Embed, EmbedCreate, Mentions, MessageDefaultMarkdown, MessageId,
-    MessageType, MessageVerId, ParseMentions, Pinned, RoomId, UserId,
+    ChannelId, Embed, EmbedCreate, Mentions, MessageId, MessageType, MessageVerId, ParseMentions,
+    RoomId,
 };
 use crate::v2::types::media::{Media, MediaReference};
 
-/// a message
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Message {
-    pub id: MessageId,
-    pub channel_id: ChannelId,
-
-    // TODO: rename to something better?
-    // this is a bit unwieldy, and incorrect if i fetched an old version
-    pub latest_version: MessageVersion,
-
-    /// exists if this message is pinned
-    pub pinned: Option<Pinned>,
-
-    #[serde(default)]
-    pub reactions: ReactionCounts,
-
-    /// when this message was deleted
-    ///
-    /// deleted messages can still be viewed by moderators for a period of time, but otherwise cannot be recovered
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub deleted_at: Option<Time>,
-
-    /// when this message was removed
-    ///
-    /// removed messages are hidden for non moderators. they are recoverable by moderators
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub removed_at: Option<Time>,
-
-    /// when this message was created
-    pub created_at: Time,
-
-    /// the id of who sent this message
-    pub author_id: UserId,
-
-    /// the associated thread for this message, if one exists.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thread: Option<Box<Channel>>,
-}
-
-/// a message at a point in time
-// TODO: add error "latest message version cannot be deleted"
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageVersion {
-    pub version_id: MessageVerId,
-
-    /// the id of who this edit. if None, this edit was made by the author
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_id: Option<UserId>,
-
-    /// the type and content of this message
-    #[serde(flatten)]
-    pub message_type: MessageType,
-
-    /// who this message mentioned
-    #[serde(skip_serializing_if = "Mentions::is_empty")]
-    pub mentions: Mentions,
-
-    /// when this message version was created, use this as edited_at
-    pub created_at: Time,
-
-    /// when this message version was deleted
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub deleted_at: Option<Time>,
-}
-
-impl MessageVersion {
-    pub fn strip(mut self) -> Self {
-        self.message_type = match self.message_type {
-            MessageType::DefaultMarkdown(m) => {
-                MessageType::DefaultMarkdown(MessageDefaultMarkdown {
-                    content: None,
-                    attachments: vec![],
-                    metadata: None,
-                    reply_id: m.reply_id,
-                    embeds: vec![],
-                    override_name: None,
-                })
-            }
-            m => m,
-        };
-        self
-    }
-}
+pub use crate::v1::types::{Message, MessageVersion};
 
 /// a basic message
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -290,20 +204,6 @@ impl Diff<Message> for MessagePatch {
                 // })
             }
             // this edit is invalid!
-            _ => false,
-        }
-    }
-}
-
-impl Diff<Message> for crate::v1::types::MessagePatch {
-    fn changes(&self, other: &Message) -> bool {
-        match &other.latest_version.message_type {
-            MessageType::DefaultMarkdown(m) => {
-                self.content.changes(&m.content)
-                    || self.reply_id.changes(&m.reply_id)
-                    || self.embeds.is_some()
-                    || self.attachments.is_some()
-            }
             _ => false,
         }
     }

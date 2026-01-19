@@ -27,27 +27,16 @@ use super::{
 
 pub mod components;
 
-// TODO: merge v2 api back into v1
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// a message
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Message {
-    #[serde(flatten)]
-    pub message_type: MessageType,
     pub id: MessageId,
     pub channel_id: ChannelId,
-    pub version_id: MessageVerId,
 
-    /// unique string sent by the client via idempotency-key to identify this message
-    // TODO: move this to sync event
-    pub nonce: Option<String>,
-
-    /// the id of who sent this message
-    pub author_id: UserId,
-
-    pub mentions: Mentions,
+    // TODO: rename to something better?
+    // this is a bit unwieldy, and incorrect if i fetched an old version
+    pub latest_version: MessageVersion,
 
     /// exists if this message is pinned
     pub pinned: Option<Pinned>,
@@ -55,19 +44,73 @@ pub struct Message {
     #[serde(default)]
     pub reactions: ReactionCounts,
 
-    pub created_at: Option<Time>,
-
+    /// when this message was deleted
+    ///
     /// deleted messages can still be viewed by moderators for a period of time, but otherwise cannot be recovered
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<Time>,
 
+    /// when this message was removed
+    ///
     /// removed messages are hidden for non moderators. they are recoverable by moderators
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub removed_at: Option<Time>,
 
-    pub edited_at: Option<Time>,
+    /// when this message was created
+    pub created_at: Time,
+
+    /// the id of who sent this message
+    pub author_id: UserId,
 
     /// the associated thread for this message, if one exists.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thread: Option<Box<Channel>>,
+}
+
+/// a message's content at a point in time
+// TODO: add error "latest message version cannot be deleted"
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageVersion {
+    pub version_id: MessageVerId,
+
+    /// the id of who this edit. if None, this edit was made by the author
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_id: Option<UserId>,
+
+    /// the type and content of this message
+    #[serde(flatten)]
+    pub message_type: MessageType,
+
+    /// who this message mentioned
+    #[serde(skip_serializing_if = "Mentions::is_empty")]
+    pub mentions: Mentions,
+
+    /// when this message version was created, use this as edited_at
+    pub created_at: Time,
+
+    /// when this message version was deleted
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<Time>,
+}
+
+impl MessageVersion {
+    pub fn strip(mut self) -> Self {
+        self.message_type = match self.message_type {
+            MessageType::DefaultMarkdown(m) => {
+                MessageType::DefaultMarkdown(MessageDefaultMarkdown {
+                    content: None,
+                    attachments: vec![],
+                    metadata: None,
+                    reply_id: m.reply_id,
+                    embeds: vec![],
+                    override_name: None,
+                })
+            }
+            m => m,
+        };
+        self
+    }
 }
 
 /// information about a pinned message
@@ -666,19 +709,19 @@ pub struct ContextResponse {
 
 impl Diff<Message> for MessagePatch {
     fn changes(&self, other: &Message) -> bool {
-        match &other.message_type {
+        match &other.latest_version.message_type {
             MessageType::DefaultMarkdown(m) => {
                 self.content.changes(&m.content)
-                    || self.metadata.changes(&m.metadata)
+                    || self.reply_id.changes(&m.reply_id)
+                    || self.embeds.is_some()
+                    || self.attachments.is_some()
                     || self.reply_id.changes(&m.reply_id)
                     || self.override_name.changes(&m.override_name)
-                    || self.embeds.is_some()
                     || self.attachments.as_ref().is_some_and(|a| {
                         a.len() != m.attachments.len()
                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
                     })
             }
-            // this edit is invalid!
             _ => false,
         }
     }
