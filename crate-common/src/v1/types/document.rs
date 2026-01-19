@@ -26,7 +26,7 @@ pub struct DocumentUpdate(pub Vec<u8>);
 
 #[cfg(feature = "serde")]
 mod serde_impl {
-    use super::{DocumentStateVector, DocumentUpdate, BASE64_URL_SAFE_NO_PAD, Engine};
+    use super::{DocumentStateVector, DocumentUpdate, Engine, BASE64_URL_SAFE_NO_PAD};
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
     impl Serialize for DocumentStateVector {

@@ -107,6 +107,10 @@ pub mod next {
         /// unacknowledged warnings
         #[serde(skip_serializing_if = "Vec::is_empty")]
         pub warnings: Vec<Warning>,
+
+        /// moderator-set message for automod
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub automod_message: Option<String>,
     }
 
     /// a field that has an error
@@ -236,6 +240,8 @@ pub mod next {
         // invalid or expired session (same as AuthFailure?)
 
         // warning
+
+        // you didn't create this media
     }
 
     /// warnings that require ?force=true
@@ -264,6 +270,7 @@ pub mod next {
                 required_permissions_server: vec![],
                 required_scopes: vec![],
                 warnings: vec![],
+                automod_message: None,
             }
         }
 
@@ -276,6 +283,7 @@ pub mod next {
                 required_permissions_server: vec![],
                 required_scopes: vec![],
                 warnings: vec![],
+                automod_message: None,
             }
         }
     }

@@ -2,7 +2,10 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use common::{
     v1::types::{
-        automod::{AutomodAction, AutomodMatches, AutomodRule, AutomodTarget, AutomodTrigger},
+        automod::{
+            AutomodAction, AutomodMatches, AutomodRule, AutomodTarget, AutomodTextLocation,
+            AutomodTrigger,
+        },
         util::Time,
         AutomodRuleId, Channel, ChannelCreate, ChannelPatch, MessageCreate, MessagePatch, RoomId,
         RoomMember, RoomMemberPatch, User, UserId,
@@ -17,46 +20,89 @@ use url::Url;
 use crate::{Error, Result, ServerStateInner};
 
 pub struct ServiceAutomod {
-    #[allow(unused)] // TEMP
     state: Arc<ServerStateInner>,
-    #[allow(unused)] // TEMP
     rulesets: DashMap<RoomId, Arc<AutomodRuleset>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AutomodRuleset {
     rules: Vec<AutomodRule>,
+    compiled: CompiledRuleset,
 }
 
-// TODO: move to common?
+#[derive(Debug, Clone, Default)]
+struct CompiledRuleset {
+    regex_deny_set: Option<regex::RegexSet>,
+    regex_deny_map: Vec<usize>, // pattern index -> rule index
+    regex_deny_patterns: Vec<String>,
+    regex_allow_sets: Vec<Option<regex::RegexSet>>, // rule index -> allow set
+
+    keyword_deny_set: Option<regex::RegexSet>,
+    keyword_deny_map: Vec<usize>, // pattern index -> rule index
+    keyword_deny_patterns: Vec<String>,
+    keyword_allow_sets: Vec<Option<regex::RegexSet>>, // rule index -> allow set
+}
+
 /// the result of scanning
 #[derive(Default)]
 pub struct AutomodResult {
     /// the rules that were triggered
-    rules: Vec<AutomodRuleId>,
+    rule_ids: Vec<AutomodRuleId>,
 
     /// the resulting actions that should be done
     actions: AutomodResultActions,
 
     /// what was matched
-    matched_text: Option<AutomodMatches>,
+    matches: Option<AutomodMatches>,
 }
 
 impl AutomodResult {
     pub fn is_triggered(&self) -> bool {
-        !self.rules.is_empty()
+        !self.rule_ids.is_empty()
     }
 
-    pub fn rules(&self) -> &[AutomodRuleId] {
-        &self.rules
+    pub fn rule_ids(&self) -> &[AutomodRuleId] {
+        &self.rule_ids
     }
 
     pub fn actions(&self) -> &[AutomodAction] {
         &self.actions.inner
     }
 
-    pub fn matched(&self) -> Option<&AutomodMatches> {
-        self.matched_text.as_ref()
+    pub fn matches(&self) -> Option<&AutomodMatches> {
+        self.matches.as_ref()
+    }
+
+    pub fn merge(&mut self, other: Self) {
+        for id in other.rule_ids {
+            if !self.rule_ids.contains(&id) {
+                self.rule_ids.push(id);
+            }
+        }
+
+        self.actions.merge(other.actions);
+
+        if let Some(other_matches) = other.matches {
+            if let Some(self_matches) = &mut self.matches {
+                for m in other_matches.matches {
+                    if !self_matches.matches.contains(&m) {
+                        self_matches.matches.push(m);
+                    }
+                }
+                for k in other_matches.keywords {
+                    if !self_matches.keywords.contains(&k) {
+                        self_matches.keywords.push(k);
+                    }
+                }
+                for r in other_matches.regexes {
+                    if !self_matches.regexes.contains(&r) {
+                        self_matches.regexes.push(r);
+                    }
+                }
+            } else {
+                self.matches = Some(other_matches);
+            }
+        }
     }
 }
 
@@ -114,134 +160,241 @@ impl AutomodResultActions {
             }
         }
     }
+
+    /// merge another automod action set into this one
+    pub fn merge(&mut self, other: Self) {
+        for action in &other.inner {
+            self.add(action);
+        }
+    }
 }
 
-// TODO: compile all regexes, decancers together for performance
 impl AutomodRuleset {
-    pub fn scan_message_create(&self, req: &MessageCreate) -> AutomodResult {
-        let mut result = AutomodResult::default();
-        let Some(input) = req.content.as_deref() else {
-            // TODO: scan media (in attachments, embeds)
-            // TODO: scan attachment fields (filename, alt, etc)
-            // TODO: scan embed fields (title, description, etc)
-            return result;
+    pub fn new(rules: Vec<AutomodRule>) -> Self {
+        let mut regex_deny_patterns = Vec::new();
+        let mut regex_deny_map = Vec::new();
+        let mut regex_allow_sets = Vec::with_capacity(rules.len());
+
+        let mut keyword_deny_patterns = Vec::new();
+        let mut keyword_deny_map = Vec::new();
+        let mut keyword_allow_sets = Vec::with_capacity(rules.len());
+
+        for (rule_idx, rule) in rules.iter().enumerate() {
+            let mut regex_allow = None;
+            let mut keyword_allow = None;
+
+            match &rule.trigger {
+                AutomodTrigger::TextRegex { deny, allow } => {
+                    for p in deny {
+                        regex_deny_patterns.push(p.clone());
+                        regex_deny_map.push(rule_idx);
+                    }
+                    if !allow.is_empty() {
+                        regex_allow = Some(
+                            regex::RegexSetBuilder::new(allow)
+                                .case_insensitive(true)
+                                .build()
+                                .expect("valid regexes"),
+                        );
+                    }
+                }
+                AutomodTrigger::TextKeywords { keywords, allow } => {
+                    for p in keywords {
+                        keyword_deny_patterns.push(regex::escape(p));
+                        keyword_deny_map.push(rule_idx);
+                    }
+                    if !allow.is_empty() {
+                        keyword_allow = Some(
+                            regex::RegexSetBuilder::new(allow.iter().map(|s| regex::escape(s)))
+                                .case_insensitive(true)
+                                .build()
+                                .expect("valid regexes"),
+                        );
+                    }
+                }
+                _ => {}
+            }
+            regex_allow_sets.push(regex_allow);
+            keyword_allow_sets.push(keyword_allow);
+        }
+
+        let regex_deny_set = if !regex_deny_patterns.is_empty() {
+            Some(
+                regex::RegexSetBuilder::new(&regex_deny_patterns)
+                    .case_insensitive(true)
+                    .build()
+                    .expect("valid regexes"),
+            )
+        } else {
+            None
         };
 
-        let cured_str = match decancer::cure(&input, decancer::Options::default()) {
+        let keyword_deny_set = if !keyword_deny_patterns.is_empty() {
+            Some(
+                regex::RegexSetBuilder::new(&keyword_deny_patterns)
+                    .case_insensitive(true)
+                    .build()
+                    .expect("valid regexes"),
+            )
+        } else {
+            None
+        };
+
+        Self {
+            rules,
+            compiled: CompiledRuleset {
+                regex_deny_set,
+                regex_deny_map,
+                regex_deny_patterns,
+                regex_allow_sets,
+                keyword_deny_set,
+                keyword_deny_map,
+                keyword_deny_patterns,
+                keyword_allow_sets,
+            },
+        }
+    }
+
+    /// scans a piece of text and returns the result
+    fn scan_text(
+        &self,
+        text: &str,
+        target: AutomodTarget,
+        location: AutomodTextLocation,
+    ) -> AutomodResult {
+        let mut result = AutomodResult::default();
+
+        let cured_str = match decancer::cure(&text, decancer::Options::default()) {
             Ok(s) => s,
             Err(err) => {
-                // TODO: better error handling
                 warn!("failed to cure string {:?}", err);
                 return result;
             }
         };
+        let cured_text = cured_str.to_string();
 
+        // 1. Regex scanning (raw text)
+        if let Some(deny_set) = &self.compiled.regex_deny_set {
+            let matches = deny_set.matches(text);
+            if matches.matched_any() {
+                for idx in matches {
+                    let rule_idx = self.compiled.regex_deny_map[idx];
+                    let rule = &self.rules[rule_idx];
+
+                    if rule.target != target {
+                        continue;
+                    }
+
+                    if let Some(allow_set) = &self.compiled.regex_allow_sets[rule_idx] {
+                        if allow_set.matches(text).matched_any() {
+                            continue;
+                        }
+                    }
+
+                    if !result.rule_ids.contains(&rule.id) {
+                        result.rule_ids.push(rule.id);
+                        for action in &rule.actions {
+                            result.actions.add(action);
+                        }
+                    }
+
+                    let m = result.matches.get_or_insert_with(|| AutomodMatches {
+                        text: text.to_owned(),
+                        sanitized_text: cured_text.clone(),
+                        matches: vec![],
+                        keywords: vec![],
+                        regexes: vec![],
+                        location: location.clone(),
+                    });
+
+                    let pattern = &self.compiled.regex_deny_patterns[idx];
+                    if !m.regexes.contains(pattern) {
+                        m.regexes.push(pattern.clone());
+                    }
+
+                    if let Ok(re) = regex::RegexBuilder::new(pattern)
+                        .case_insensitive(true)
+                        .build()
+                    {
+                        for mat in re.find_iter(text) {
+                            let matched = mat.as_str().to_string();
+                            if !m.matches.contains(&matched) {
+                                m.matches.push(matched);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Keyword scanning (cured text)
+        if let Some(deny_set) = &self.compiled.keyword_deny_set {
+            let matches = deny_set.matches(&cured_text);
+            if matches.matched_any() {
+                for idx in matches {
+                    let rule_idx = self.compiled.keyword_deny_map[idx];
+                    let rule = &self.rules[rule_idx];
+
+                    if rule.target != target {
+                        continue;
+                    }
+
+                    if let Some(allow_set) = &self.compiled.keyword_allow_sets[rule_idx] {
+                        if allow_set.matches(&cured_text).matched_any() {
+                            continue;
+                        }
+                    }
+
+                    if !result.rule_ids.contains(&rule.id) {
+                        result.rule_ids.push(rule.id);
+                        for action in &rule.actions {
+                            result.actions.add(action);
+                        }
+                    }
+
+                    let m = result.matches.get_or_insert_with(|| AutomodMatches {
+                        text: text.to_owned(),
+                        sanitized_text: cured_text.clone(),
+                        matches: vec![],
+                        keywords: vec![],
+                        regexes: vec![],
+                        location: location.clone(),
+                    });
+
+                    // We store keyword patterns escaped in the set, but we want the original matched text from cured_text.
+                    let escaped_pattern = &self.compiled.keyword_deny_patterns[idx];
+                    if let Ok(re) = regex::RegexBuilder::new(escaped_pattern)
+                        .case_insensitive(true)
+                        .build()
+                    {
+                        for mat in re.find_iter(&cured_text) {
+                            let matched = mat.as_str().to_string();
+                            if !m.keywords.contains(&matched) {
+                                m.keywords.push(matched.clone());
+                            }
+                            if !m.matches.contains(&matched) {
+                                m.matches.push(matched);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Other rules (links)
         for rule in &self.rules {
-            if rule.target != AutomodTarget::Content {
+            if rule.target != target {
                 continue;
             }
 
             match &rule.trigger {
-                AutomodTrigger::TextKeywords { keywords, allow } => {
-                    if !cured_str.find_multiple(allow.iter()).is_empty() {
-                        // this is explicitly allowed, so its fine
-                        continue;
-                    }
-
-                    let found = cured_str.find_multiple(keywords.iter());
-                    if found.is_empty() {
-                        // no bad words found
-                        continue;
-                    }
-
-                    let m = result.matched_text.get_or_insert_with(|| AutomodMatches {
-                        text: input.to_owned(),
-                        sanitized_text: cured_str.to_string(),
-                        matches: vec![],
-                        keywords: vec![],
-                        regexes: vec![],
-                    });
-
-                    for mat in found {
-                        let matched_cured = cured_str[mat.start..mat.end].to_string();
-
-                        if !m.keywords.contains(&matched_cured) {
-                            m.keywords.push(matched_cured.clone());
-                        }
-
-                        if !m.matches.contains(&matched_cured) {
-                            m.matches.push(matched_cured);
-                        }
-                    }
-
-                    result.rules.push(rule.id);
-                    for action in &rule.actions {
-                        result.actions.add(action);
-                    }
-                }
-                AutomodTrigger::TextBuiltin { list: _ } => todo!("server builtin lists"),
-                AutomodTrigger::TextRegex { deny, allow } => {
-                    let deny_set = regex::RegexSetBuilder::new(deny.iter())
-                        .case_insensitive(true)
-                        .build()
-                        .expect("already validated to be valid regexes");
-                    let allow_set = regex::RegexSetBuilder::new(allow.iter())
-                        .case_insensitive(true)
-                        .build()
-                        .expect("already validated to be valid regexes");
-
-                    if allow_set.matches(input).matched_any() {
-                        // this is explicitly allowed, so its fine
-                        continue;
-                    }
-
-                    let matches = deny_set.matches(input);
-                    if !matches.matched_any() {
-                        // no bad regexes matched
-                        continue;
-                    }
-
-                    let m = result.matched_text.get_or_insert_with(|| AutomodMatches {
-                        text: input.to_owned(),
-                        sanitized_text: cured_str.to_string(),
-                        matches: vec![],
-                        keywords: vec![],
-                        regexes: vec![],
-                    });
-
-                    for index in matches {
-                        let pattern = &deny[index];
-                        if !m.regexes.contains(pattern) {
-                            m.regexes.push(pattern.clone());
-                        }
-
-                        let re = regex::RegexBuilder::new(pattern)
-                            .case_insensitive(true)
-                            .build()
-                            .expect("already validated to be valid regexes");
-
-                        for mat in re.find_iter(input) {
-                            let matched_text = mat.as_str().to_string();
-                            if !m.matches.contains(&matched_text) {
-                                m.matches.push(matched_text);
-                            }
-                        }
-                    }
-
-                    result.rules.push(rule.id);
-                    for action in &rule.actions {
-                        result.actions.add(action);
-                    }
-                }
                 AutomodTrigger::TextLinks {
                     hostnames,
                     whitelist,
                 } => {
                     let mut triggered = false;
-                    // PERF: use a trie or something here instead
-                    for link in LinkFinder::new().links(input) {
+                    for link in LinkFinder::new().links(text) {
                         if !matches!(link.kind(), LinkKind::Url) {
-                            // LinkFinder will find email addresses too
                             continue;
                         }
 
@@ -249,7 +402,6 @@ impl AutomodRuleset {
                             continue;
                         };
                         let Some(host) = url.host_str() else {
-                            // no hostname, ie. data: uri
                             continue;
                         };
 
@@ -261,15 +413,14 @@ impl AutomodRuleset {
                             }
                         }
 
-                        // if whitelist is true: we want matches_target to be true. if false, violation.
-                        // if whitelist is false: we want matches_target to be false. if true, violation.
                         if *whitelist != matches_target {
-                            let m = result.matched_text.get_or_insert_with(|| AutomodMatches {
-                                text: input.to_owned(),
-                                sanitized_text: cured_str.to_string(),
+                            let m = result.matches.get_or_insert_with(|| AutomodMatches {
+                                text: text.to_owned(),
+                                sanitized_text: cured_text.clone(),
                                 matches: vec![],
                                 keywords: vec![],
                                 regexes: vec![],
+                                location: location.clone(),
                             });
 
                             let link_str = link.as_str().to_string();
@@ -280,35 +431,223 @@ impl AutomodRuleset {
                         }
                     }
 
-                    if triggered {
-                        result.rules.push(rule.id);
+                    if triggered && !result.rule_ids.contains(&rule.id) {
+                        result.rule_ids.push(rule.id);
                         for action in &rule.actions {
                             result.actions.add(action);
                         }
                     }
                 }
-                AutomodTrigger::MediaScan { scanner: _ } => todo!("media scanning"),
+                _ => {}
             }
         }
 
         result
     }
 
-    // TODO: other scanners
-    pub fn scan_message_update(&self, _message: &Message, _req: &MessagePatch) -> AutomodResult {
-        todo!()
+    pub fn scan_message_create(&self, req: &MessageCreate) -> AutomodResult {
+        let mut result = AutomodResult::default();
+
+        if let Some(t) = req.content.as_deref() {
+            result.merge(self.scan_text(
+                t,
+                AutomodTarget::Content,
+                AutomodTextLocation::MessageContent,
+            ));
+        }
+
+        if let Some(t) = &req.override_name {
+            result.merge(self.scan_text(
+                t,
+                AutomodTarget::Member,
+                AutomodTextLocation::MemberNickname,
+            ));
+        }
+
+        for emb in &req.embeds {
+            if let Some(t) = &emb.title {
+                result.merge(self.scan_text(
+                    t,
+                    AutomodTarget::Content,
+                    AutomodTextLocation::EmbedTitle,
+                ));
+            }
+
+            if let Some(t) = &emb.description {
+                result.merge(self.scan_text(
+                    t,
+                    AutomodTarget::Content,
+                    AutomodTextLocation::EmbedDescription,
+                ));
+            }
+
+            if let Some(t) = &emb.author_name {
+                result.merge(self.scan_text(
+                    t,
+                    AutomodTarget::Content,
+                    AutomodTextLocation::EmbedAuthorName,
+                ));
+            }
+
+            if let Some(t) = &emb.author_url {
+                result.merge(self.scan_text(
+                    t.as_str(),
+                    AutomodTarget::Content,
+                    AutomodTextLocation::EmbedAuthorUrl,
+                ));
+            }
+
+            if let Some(t) = &emb.url {
+                result.merge(self.scan_text(
+                    t.as_str(),
+                    AutomodTarget::Content,
+                    AutomodTextLocation::EmbedUrl,
+                ));
+            }
+        }
+
+        result
     }
 
-    pub fn scan_thread_create(&self, _req: &ChannelCreate) -> AutomodResult {
-        todo!()
+    pub fn scan_message_update(&self, _message: &Message, req: &MessagePatch) -> AutomodResult {
+        let mut result = AutomodResult::default();
+
+        if let Some(content) = &req.content {
+            if let Some(t) = content.as_deref() {
+                result.merge(self.scan_text(
+                    t,
+                    AutomodTarget::Content,
+                    AutomodTextLocation::MessageContent,
+                ));
+            }
+        }
+
+        if let Some(override_name) = &req.override_name {
+            if let Some(t) = override_name.as_deref() {
+                result.merge(self.scan_text(
+                    t,
+                    AutomodTarget::Member,
+                    AutomodTextLocation::MemberNickname,
+                ));
+            }
+        }
+
+        if let Some(embeds) = &req.embeds {
+            for emb in embeds {
+                if let Some(t) = &emb.title {
+                    result.merge(self.scan_text(
+                        t,
+                        AutomodTarget::Content,
+                        AutomodTextLocation::EmbedTitle,
+                    ));
+                }
+
+                if let Some(t) = &emb.description {
+                    result.merge(self.scan_text(
+                        t,
+                        AutomodTarget::Content,
+                        AutomodTextLocation::EmbedDescription,
+                    ));
+                }
+
+                if let Some(t) = &emb.author_name {
+                    result.merge(self.scan_text(
+                        t,
+                        AutomodTarget::Content,
+                        AutomodTextLocation::EmbedAuthorName,
+                    ));
+                }
+
+                if let Some(t) = &emb.author_url {
+                    result.merge(self.scan_text(
+                        t.as_str(),
+                        AutomodTarget::Content,
+                        AutomodTextLocation::EmbedAuthorUrl,
+                    ));
+                }
+
+                if let Some(t) = &emb.url {
+                    result.merge(self.scan_text(
+                        t.as_str(),
+                        AutomodTarget::Content,
+                        AutomodTextLocation::EmbedUrl,
+                    ));
+                }
+            }
+        }
+
+        result
     }
 
-    pub fn scan_thread_update(&self, _thread: &Channel, _req: &ChannelPatch) -> AutomodResult {
-        todo!()
+    pub fn scan_thread_create(&self, req: &ChannelCreate) -> AutomodResult {
+        let mut result = AutomodResult::default();
+        result.merge(self.scan_text(
+            &req.name,
+            AutomodTarget::Content,
+            AutomodTextLocation::ThreadTitle,
+        ));
+
+        if let Some(t) = &req.description {
+            result.merge(self.scan_text(
+                t,
+                AutomodTarget::Content,
+                AutomodTextLocation::ThreadTopic,
+            ));
+        }
+
+        result
     }
 
-    pub fn scan_member(&self, _member: &RoomMember, _user: &User) -> AutomodResult {
-        todo!()
+    pub fn scan_thread_update(&self, _channel: &Channel, req: &ChannelPatch) -> AutomodResult {
+        let mut result = AutomodResult::default();
+
+        if let Some(name) = &req.name {
+            result.merge(self.scan_text(
+                name,
+                AutomodTarget::Content,
+                AutomodTextLocation::ThreadTitle,
+            ));
+        }
+
+        if let Some(description) = &req.description {
+            if let Some(t) = description.as_deref() {
+                result.merge(self.scan_text(
+                    t,
+                    AutomodTarget::Content,
+                    AutomodTextLocation::ThreadTopic,
+                ));
+            }
+        }
+
+        result
+    }
+
+    pub fn scan_member(&self, member: &RoomMember, user: &User) -> AutomodResult {
+        let mut result = AutomodResult::default();
+        result.merge(self.scan_text(
+            &user.name,
+            AutomodTarget::Member,
+            AutomodTextLocation::UserName,
+        ));
+
+        if let Some(t) = &member.override_name {
+            result.merge(self.scan_text(
+                t,
+                AutomodTarget::Member,
+                AutomodTextLocation::MemberNickname,
+            ));
+        }
+
+        // NOTE: this may be removed later
+        if let Some(t) = &member.override_description {
+            result.merge(self.scan_text(
+                t,
+                AutomodTarget::Member,
+                AutomodTextLocation::MemberDescription,
+            ));
+        }
+
+        result
     }
 }
 
@@ -327,7 +666,7 @@ impl ServiceAutomod {
         }
 
         let rules = self.state.data().automod_rule_list(room_id).await?;
-        let ruleset = Arc::new(AutomodRuleset { rules });
+        let ruleset = Arc::new(AutomodRuleset::new(rules));
         self.rulesets.insert(room_id, ruleset.clone());
         Ok(ruleset)
     }

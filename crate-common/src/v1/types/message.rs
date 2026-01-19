@@ -432,7 +432,7 @@ pub struct MessageAutomodExecution {
     pub actions: Vec<AutomodAction>,
 
     /// the content that was matched
-    pub matches: Option<AutomodMatches>,
+    pub matches: Vec<AutomodMatches>,
 
     /// the id of the channel where this happened
     // NOTE: maybe include channel type/name for messages in threads

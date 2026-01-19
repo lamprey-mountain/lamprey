@@ -107,10 +107,14 @@ pub enum AutomodTarget {
     Member,
 }
 
+// NOTE: may be fired multiple times for a piece of content, if there are multiple rules which target it
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AutomodRuleExecution {
+    /// the id of the room that this execution happened in
+    pub room_id: RoomId,
+
     /// the rule that was executed
     pub rule: AutomodRule,
 
@@ -123,14 +127,14 @@ pub struct AutomodRuleExecution {
     /// the message this matched (excluded for Block)
     pub message_id: Option<MessageId>,
 
-    /// the text that was matched against (eg. message content)
-    pub text: Option<String>,
+    /// the id of any automod execution message that was sent due to a SendAlert action
+    pub alert_message_id: Vec<MessageId>,
 
-    /// the keyword or regex that was matched in the content
-    pub text_matched: Option<AutomodMatches>,
+    /// the content that was matched
+    pub matches: Vec<AutomodMatches>,
 
-    /// where this piece of text was found
-    pub text_location: Option<AutomodTextLocation>,
+    /// deduplicated list of all of the actions that were taken
+    pub actions: Vec<AutomodAction>,
 }
 
 /// request body for an automod test request
@@ -152,7 +156,7 @@ pub struct AutomodRuleTest {
     pub rules: Vec<AutomodRule>,
 
     /// the content that was matched
-    pub matches: Option<AutomodMatches>,
+    pub matches: Vec<AutomodMatches>,
 
     /// deduplicated list of all of the actions that would be taken
     ///
@@ -160,6 +164,7 @@ pub struct AutomodRuleTest {
     pub actions: Vec<AutomodAction>,
 }
 
+/// matches found in a piece of text
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -168,6 +173,7 @@ pub struct AutomodMatches {
     pub text: String,
 
     /// the sanitized text that was matched against
+    // NOTE: lamprey uses the decancer crate internally
     pub sanitized_text: String,
 
     /// the substrings in the input text that matched
@@ -178,8 +184,9 @@ pub struct AutomodMatches {
 
     /// the regexes in the automod rule that matched
     pub regexes: Vec<String>,
-    // /// where this piece of text was found
-    // pub location: AutomodTextLocation,
+
+    /// where this piece of text was found
+    pub location: AutomodTextLocation,
 }
 
 /// where a piece of text was found
@@ -196,11 +203,32 @@ pub enum AutomodTextLocation {
     /// a room member's nickname
     MemberNickname,
 
-    /// the content of a message that tried to be sent
+    /// a room member's description/bio/note
+    MemberDescription,
+
+    /// the content of a message
     MessageContent,
 
-    /// the title of a thread that tried to be created
+    /// the title of a thread
     ThreadTitle,
+
+    /// the topic of a thread
+    ThreadTopic,
+
+    /// the title of an embed
+    EmbedTitle,
+
+    /// the description of an embed
+    EmbedDescription,
+
+    /// the name of an embed author
+    EmbedAuthorName,
+
+    /// the url of an embed author
+    EmbedAuthorUrl,
+
+    /// the url of an embed
+    EmbedUrl,
 }
 
 #[derive(Debug, Clone)]
@@ -216,14 +244,21 @@ pub enum AutomodTrigger {
         /// allow content that matches any of these regexes. overrides deny.
         // max length 32
         allow: Vec<String>,
+        // maybe merge TextKeywords and TextRegex into TextMatch?
+        // regex_deny: Vec<String>,
+        // regex_allow: Vec<String>,
+        // keywords_deny: Vec<String>,
+        // keywords_allow: Vec<String>,
     },
 
     /// scan text based on its keywords. automatically adds word boundaries and decancers the string (ie. properly handles unicode lookalikes).
     TextKeywords {
         // max length 32
+        // TODO: rename to deny
         keywords: Vec<String>,
 
         // max length 32
+        // probably not useful?
         allow: Vec<String>,
     },
 

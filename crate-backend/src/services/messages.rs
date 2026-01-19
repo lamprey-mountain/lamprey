@@ -588,6 +588,7 @@ impl ServiceMessages {
         let data = s.data();
         let srv = s.services();
         let user = srv.users.get(user_id, None).await?;
+        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         let is_webhook = user.webhook.is_some();
 
         let perms = if is_webhook {
@@ -662,6 +663,7 @@ impl ServiceMessages {
         }
         let attachment_ids: Vec<_> = json
             .attachments
+            .clone()
             .map(|ats| ats.into_iter().map(|r| r.id).collect())
             .unwrap_or_else(|| match &message.latest_version.message_type {
                 MessageType::DefaultMarkdown(msg) => {
@@ -686,6 +688,22 @@ impl ServiceMessages {
                 embed_futs.push(embed_from_create(s.clone(), embed_create, user_id));
             }
             embeds = futures_util::future::try_join_all(embed_futs).await?;
+        }
+
+        let mut removed_at = None;
+
+        if let Some(room_id) = thread.room_id {
+            let automod = srv.automod.load(room_id).await?;
+            let scan = automod.scan_message_update(&message, &json);
+            if scan.is_triggered() {
+                let removed = srv
+                    .automod
+                    .enforce_message_create(room_id, user_id, &scan)
+                    .await?;
+                if removed {
+                    removed_at = Some(Time::now_utc());
+                }
+            }
         }
 
         let (content, payload) = match message.latest_version.message_type.clone() {
@@ -718,7 +736,7 @@ impl ServiceMessages {
                     edited_at: json.edited_at.map(|t| t.into()),
                     // NOTE: this field is ignored
                     created_at: None,
-                    removed_at: None,
+                    removed_at: removed_at.map(|t| t.into()),
                     mentions: message.latest_version.mentions,
                 },
             )
