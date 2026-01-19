@@ -3437,4 +3437,82 @@ input[type="color"] {
 .document {
 	grid-area: main;
 	background-color: $bg-200;
+
+	& > header {
+		margin: 4px;
+	}
+
+	.merge-menu,
+	.branch-menu {
+		display: flex;
+		flex-direction: column;
+		background-color: $bg-150;
+		border: solid $sep-300 1px;
+		border-radius: 4px;
+		padding: 4px 0;
+	}
+
+	.merge-menu > ul,
+	.branch-menu > ul {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.merge-menu > ul > li,
+	.branch-menu > ul > li {
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+
+		&.separator {
+			border-bottom: solid $sep-300 1px;
+			margin: 4px 0;
+		}
+
+		& > button {
+			display: flex;
+			background: none;
+			border: none;
+			gap: 4px;
+			margin: 0 4px;
+			border-radius: 4px;
+
+			& > .icon {
+				/* HACK: visually center temp icons */
+				margin-top: 2px;
+			}
+
+			& > .info {
+				display: flex;
+				flex-direction: column;
+			}
+		}
+
+		&:hover > button {
+			background: #fff1;
+		}
+	}
+
+	& .fake-dropdowns {
+		display: inline-block;
+		border: solid $sep-500 1px;
+		border-radius: 4px;
+		overflow: hidden;
+
+		& button {
+			border: none;
+
+			&.selected {
+				background: $bg-150;
+			}
+
+			&:hover {
+				background: $bg-200;
+			}
+
+			&.selected:hover {
+				background: $bg-100;
+			}
+		}
+	}
 }
