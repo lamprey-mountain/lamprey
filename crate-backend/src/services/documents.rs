@@ -32,9 +32,6 @@ pub struct EditContext {
     /// the live crdt document
     doc: Doc,
 
-    #[allow(dead_code)] // TODO: use this
-    status: EditContextStatus,
-
     /// the number of changes since the last snapshot
     changes_since_last_snapshot: u64,
 
@@ -96,7 +93,6 @@ impl ServiceDocuments {
 
                 Arc::new(RwLock::new(EditContext {
                     doc,
-                    status: EditContextStatus::Open {},
                     changes_since_last_snapshot: dehydrated.changes.len() as u64,
                     pending_changes: vec![],
                     last_seq: dehydrated.snapshot_seq,
@@ -119,7 +115,6 @@ impl ServiceDocuments {
 
                     Arc::new(RwLock::new(EditContext {
                         doc,
-                        status: EditContextStatus::Open {},
                         changes_since_last_snapshot: 0,
                         pending_changes: vec![],
                         last_seq: 0,
@@ -245,13 +240,6 @@ pub struct DocumentSyncer {
     current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
 }
 
-// enum ActorMessage {
-//     GetInitialDocument {
-//         user_id: UserId,
-//         callback: oneshot::Sender<MessageSync>,
-//     },
-// }
-
 impl DocumentSyncer {
     /// set the edit context id for this syncer
     pub async fn set_context_id(
@@ -339,36 +327,6 @@ impl DocumentSyncer {
             }
         }
     }
-}
-
-enum EditContextStatus {
-    /// at least one person is connected to this document
-    Open {
-        // last_snapshot_at: Time,
-    },
-
-    /// at least one person is connected to this document
-    #[allow(dead_code)] // TODO: use this
-    Closing {
-        // closing_since: Time,
-    },
-
-    /// this document is dead and should be cleaned up
-    #[allow(dead_code)] // TODO: use this
-    Dead {
-        // dead_since: Time
-    },
-}
-
-impl EditContextStatus {
-    pub fn should_commit(&self) -> bool {
-        // - if commit while Closing, set state to Dead?
-        todo!()
-    }
-
-    // pub fn set_open(&mut self);
-    // pub fn set_closing(&mut self);
-    // pub fn set_dead(&mut self);
 }
 
 // TODO: fine tune these numbers
