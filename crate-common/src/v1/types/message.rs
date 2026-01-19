@@ -404,7 +404,8 @@ pub enum MessageType {
 
     // /// (TODO) interact with a bot, uncertain if i'll go this route
     // BotCommand(MessageBotCommand),
-
+    /// (TODO) the result of an automod execution
+    AutomodExecution(MessageAutomodExecution),
     // /// (TODO) implement a reporting system? uncertain (reports are certain, but reports-as-messages vs as-threads idk)
     // // #[deprecated = "reports will be impl'd as threads"]
     // ModerationReport(MessageModerationReport),
@@ -420,10 +421,10 @@ pub struct MessagePin {
     pub pinned_message_id: MessageId,
 }
 
-/// Information about an auto moderation action
+/// Information about an auto moderation execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageAutomod {
+pub struct MessageAutomodExecution {
     /// the rules that were triggered
     pub rules: Vec<AutomodRule>,
 
@@ -728,6 +729,7 @@ impl Diff<Message> for MessagePatch {
 }
 
 impl MessageType {
+    // TODO: return if this is deletable by sender, not deletable by sender, or not deletable at all (even by mods)
     pub fn is_deletable(&self) -> bool {
         match self {
             MessageType::DefaultMarkdown(_) => true,
@@ -744,6 +746,9 @@ impl MessageType {
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
             MessageType::ThreadCreated(_) => false,
+
+            // NOTE: this should require the MessageDelete permission
+            MessageType::AutomodExecution(_) => true,
         }
     }
 
@@ -777,6 +782,7 @@ impl MessageType {
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
             MessageType::ThreadCreated(_) => false,
+            MessageType::AutomodExecution(_) => false,
         }
     }
 }
