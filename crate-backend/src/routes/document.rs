@@ -2,15 +2,16 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use common::v1::types::{
     document::{
-        DocumentBranchCreate, DocumentBranchMerge, DocumentBranchPatch, DocumentTagCreate,
-        DocumentTagPatch,
+        DocumentBranchCreate, DocumentBranchMerge, DocumentBranchPatch, DocumentRevisionId,
+        DocumentTagCreate, DocumentTagPatch,
     },
-    ChannelId,
+    ChannelId, Permission,
 };
 use common::v1::types::{
     document::{HistoryPagination, HistoryParams},
@@ -198,16 +199,47 @@ async fn document_branch_merge(
     )
 )]
 async fn document_tag_create(
-    Path(_channel_id): Path<ChannelId>,
+    Path(channel_id): Path<ChannelId>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _json: Json<DocumentTagCreate>,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<DocumentTagCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let user_id = auth.user.id;
+    let data = s.data();
+    let srv = s.services();
+
+    let perms = srv.perms.for_channel(user_id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let DocumentTagCreate {
+        summary,
+        description,
+        revision,
+    } = json;
+
+    let (branch_id, revision_seq) = match revision {
+        DocumentRevisionId::Branch { branch_id: _ } => {
+            // TODO: implement tagging branch heads
+            return Err(Error::Unimplemented);
+        }
+        DocumentRevisionId::Revision { branch_id, seq } => (branch_id, seq),
+        DocumentRevisionId::Tag { .. } => {
+            return Err(Error::BadRequest("Cannot tag another tag".to_string()));
+        }
+    };
+
+    let tag_id = data
+        .document_tag_create(branch_id, user_id, summary, description, revision_seq)
+        .await?;
+
+    let tag = data.document_tag_get(tag_id).await?;
+    // TODO: emit MessageSync
+    Ok(Json(tag))
 }
 
-/// Document tag list (TODO)
+/// Document tag list
 #[utoipa::path(
     get,
     path = "/document/{channel_id}/tag",
@@ -218,15 +250,24 @@ async fn document_tag_create(
     )
 )]
 async fn document_tag_list(
-    Path(_channel_id): Path<ChannelId>,
+    Path(channel_id): Path<ChannelId>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let user_id = auth.user.id;
+    let data = s.data();
+    let srv = s.services();
+
+    let perms = srv.perms.for_channel(user_id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let tags = data.document_tag_list_by_document(channel_id).await?;
+    Ok(Json(tags))
 }
 
-/// Document tag get (TODO)
+/// Document tag get
 #[utoipa::path(
     get,
     path = "/document/{channel_id}/tag/{tag_id}",
@@ -240,12 +281,21 @@ async fn document_tag_list(
     )
 )]
 async fn document_tag_get(
-    Path((_channel_id, _tag_id)): Path<(ChannelId, DocumentTagId)>,
+    Path((channel_id, tag_id)): Path<(ChannelId, DocumentTagId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let user_id = auth.user.id;
+    let srv = s.services();
+
+    let perms = srv.perms.for_channel(user_id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let data = s.data();
+    let tag = data.document_tag_get(tag_id).await?;
+    Ok(Json(tag))
 }
 
 /// Document tag update (TODO)
@@ -262,13 +312,39 @@ async fn document_tag_get(
     )
 )]
 async fn document_tag_update(
-    Path((_channel_id, _tag_id)): Path<(ChannelId, DocumentTagId)>,
+    Path((channel_id, tag_id)): Path<(ChannelId, DocumentTagId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _json: Json<DocumentTagPatch>,
+    State(s): State<Arc<ServerState>>,
+    json: Json<DocumentTagPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let user_id = auth.user.id;
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(user_id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let tag = data.document_tag_get(tag_id).await?;
+
+    if tag.creator_id != Some(user_id) {
+        perms.ensure(Permission::ThreadManage)?;
+    }
+
+    let DocumentTagPatch {
+        summary,
+        description,
+    } = json.0;
+
+    data.document_tag_update(tag_id, summary, description)
+        .await?;
+
+    let updated_tag = data.document_tag_get(tag_id).await?;
+
+    // TODO: emit MessageSync
+
+    Ok(Json(updated_tag))
 }
 
 /// Document tag delete (TODO)
@@ -285,12 +361,30 @@ async fn document_tag_update(
     )
 )]
 async fn document_tag_delete(
-    Path((_channel_id, _tag_id)): Path<(ChannelId, DocumentTagId)>,
+    Path((channel_id, tag_id)): Path<(ChannelId, DocumentTagId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let user_id = auth.user.id;
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(user_id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let tag = data.document_tag_get(tag_id).await?;
+
+    if tag.creator_id != Some(user_id) {
+        perms.ensure(Permission::ThreadManage)?;
+    }
+
+    data.document_tag_delete(tag_id).await?;
+
+    // TODO: emit MessageSync
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Document history (TODO)

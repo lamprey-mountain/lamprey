@@ -5,11 +5,11 @@ use crate::services::documents::EditContextId;
 use crate::types::{DehydratedDocument, PaginationDirection};
 use async_trait::async_trait;
 use common::v1::types::document::{
-    DocumentBranch, DocumentBranchCreate, DocumentBranchPatch, DocumentBranchState,
+    DocumentBranch, DocumentBranchCreate, DocumentBranchPatch, DocumentBranchState, DocumentTag,
 };
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, DocumentBranchId, UserId};
+use common::v1::types::{ChannelId, DocumentBranchId, DocumentTagId, UserId};
 use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
@@ -66,6 +66,33 @@ impl From<DbBranchState> for DocumentBranchState {
             DbBranchState::Active => DocumentBranchState::Active,
             DbBranchState::Closed => DocumentBranchState::Closed,
             DbBranchState::Merged => DocumentBranchState::Merged,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct DbDocumentTag {
+    id: DocumentTagId,
+    branch_id: DocumentBranchId,
+    revision_seq: i64,
+    creator_id: Option<Uuid>,
+    created_at: time::PrimitiveDateTime,
+    updated_at: time::PrimitiveDateTime,
+    summary: String,
+    description: Option<String>,
+}
+
+impl From<DbDocumentTag> for DocumentTag {
+    fn from(row: DbDocumentTag) -> Self {
+        Self {
+            id: row.id,
+            branch_id: row.branch_id,
+            revision_seq: row.revision_seq as u64,
+            creator_id: row.creator_id.map(|i| i.into()),
+            created_at: Time::from(row.created_at),
+            updated_at: Time::from(row.updated_at),
+            summary: row.summary,
+            description: row.description,
         }
     }
 }
@@ -513,5 +540,139 @@ impl DataDocument for Postgres {
             has_more,
             cursor,
         })
+    }
+
+    async fn document_tag_create(
+        &self,
+        branch_id: DocumentBranchId,
+        creator_id: UserId,
+        summary: String,
+        description: Option<String>,
+        revision_seq: u64,
+    ) -> Result<DocumentTagId> {
+        let tag_id = query!(
+            r#"
+            INSERT INTO document_tag (branch_id, revision_seq, creator_id, summary, description)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+            "#,
+            branch_id.into_inner(),
+            revision_seq as i64,
+            creator_id.into_inner(),
+            summary,
+            description
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(tag_id.id.into())
+    }
+
+    async fn document_tag_get(&self, tag_id: DocumentTagId) -> Result<DocumentTag> {
+        let tag = query_as!(
+            DbDocumentTag,
+            r#"
+            SELECT id, branch_id, revision_seq, creator_id, created_at, updated_at, summary, description
+            FROM document_tag
+            WHERE id = $1
+            "#,
+            tag_id.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(tag.into())
+    }
+
+    async fn document_tag_update(
+        &self,
+        tag_id: DocumentTagId,
+        summary: Option<String>,
+        description: Option<Option<String>>,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        if let Some(summary_val) = summary {
+            query!(
+                r#"
+                UPDATE document_tag
+                SET summary = $2, updated_at = NOW()
+                WHERE id = $1
+                "#,
+                tag_id.into_inner(),
+                summary_val
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        if let Some(description_val) = description {
+            query!(
+                r#"
+                UPDATE document_tag
+                SET description = $2, updated_at = NOW()
+                WHERE id = $1
+                "#,
+                tag_id.into_inner(),
+                description_val
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn document_tag_delete(&self, tag_id: DocumentTagId) -> Result<()> {
+        query!(
+            r#"
+            DELETE FROM document_tag
+            WHERE id = $1
+            "#,
+            tag_id.into_inner()
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn document_tag_list(&self, branch_id: DocumentBranchId) -> Result<Vec<DocumentTag>> {
+        let tags = query_as!(
+            DbDocumentTag,
+            r#"
+            SELECT id, branch_id, revision_seq, creator_id, created_at, updated_at, summary, description
+            FROM document_tag
+            WHERE branch_id = $1
+            ORDER BY created_at DESC
+            "#,
+            branch_id.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(tags.into_iter().map(Into::into).collect())
+    }
+
+    async fn document_tag_list_by_document(
+        &self,
+        document_id: ChannelId,
+    ) -> Result<Vec<DocumentTag>> {
+        let tags = query_as!(
+            DbDocumentTag,
+            r#"
+            SELECT dt.id, dt.branch_id, dt.revision_seq, dt.creator_id, dt.created_at, dt.updated_at, dt.summary, dt.description
+            FROM document_tag dt
+            JOIN document_branch db ON dt.branch_id = db.id
+            WHERE db.document_id = $1
+            ORDER BY dt.created_at DESC
+            "#,
+            document_id.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(tags.into_iter().map(Into::into).collect())
     }
 }

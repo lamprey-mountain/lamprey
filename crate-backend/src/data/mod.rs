@@ -32,11 +32,11 @@ use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
 
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, AutomodRuleId, CalendarEventId,
-    Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId, DocumentBranchId, Embed,
-    EmojiId, InvitePatch, InviteWithMetadata, MediaPatch, NotificationId, PaginationQuery,
-    PaginationResponse, Permission, PermissionOverwriteType, PinsReorder, Relationship,
-    RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
-    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
+    Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId, DocumentBranchId,
+    DocumentTagId, Embed, EmojiId, InvitePatch, InviteWithMetadata, MediaPatch, NotificationId,
+    PaginationQuery, PaginationResponse, Permission, PermissionOverwriteType, PinsReorder,
+    Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan,
+    RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
     RoomMemberSearchResponse, RoomMembership, SessionPatch, SessionStatus, SessionToken, Suspended,
     TagId, ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
 };
@@ -1417,4 +1417,43 @@ pub trait DataDocument {
         document_id: ChannelId,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>>;
+
+    /// create a document tag
+    async fn document_tag_create(
+        &self,
+        branch_id: DocumentBranchId,
+        creator_id: UserId,
+        summary: String,
+        description: Option<String>,
+        revision_seq: u64,
+    ) -> Result<DocumentTagId>;
+
+    /// get a document tag
+    async fn document_tag_get(
+        &self,
+        tag_id: DocumentTagId,
+    ) -> Result<common::v1::types::document::DocumentTag>;
+
+    /// update a document tag
+    async fn document_tag_update(
+        &self,
+        tag_id: DocumentTagId,
+        summary: Option<String>,
+        description: Option<Option<String>>,
+    ) -> Result<()>;
+
+    /// delete a document tag
+    async fn document_tag_delete(&self, tag_id: DocumentTagId) -> Result<()>;
+
+    /// list document tags for a branch
+    async fn document_tag_list(
+        &self,
+        branch_id: DocumentBranchId,
+    ) -> Result<Vec<common::v1::types::document::DocumentTag>>;
+
+    /// list document tags for a document (all branches)
+    async fn document_tag_list_by_document(
+        &self,
+        document_id: ChannelId,
+    ) -> Result<Vec<common::v1::types::document::DocumentTag>>;
 }

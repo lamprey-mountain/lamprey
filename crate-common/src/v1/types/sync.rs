@@ -7,12 +7,13 @@ use utoipa::{IntoParams, ToSchema};
 use crate::v1::types::{
     application::Connection,
     automod::{AutomodRule, AutomodRuleExecution},
+    document::DocumentTag,
     presence::Presence,
     util::Time,
     voice::Call,
     webhook::Webhook,
-    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, DocumentBranchId, InviteTargetId,
-    InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, DocumentBranchId, DocumentTagId,
+    InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
 };
 
 use crate::v2::types::message::Message as MessageV2;
@@ -690,6 +691,22 @@ pub enum MessageSync {
         user_id: UserId,
         cursor_head: String,
         cursor_tail: Option<String>,
+    },
+
+    DocumentTagCreate {
+        channel_id: ChannelId,
+        tag: DocumentTag,
+    },
+
+    DocumentTagUpdate {
+        channel_id: ChannelId,
+        tag: DocumentTag,
+    },
+
+    DocumentTagDelete {
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+        tag_id: DocumentTagId,
     },
     // TODO(#915): media v2
     // /// A piece of media has processed and is now in the `Uploaded` state.

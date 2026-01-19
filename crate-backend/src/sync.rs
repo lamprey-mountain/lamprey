@@ -820,6 +820,9 @@ impl Connection {
             MessageSync::HarvestUpdate { harvest, .. } => AuthCheck::User(harvest.user_id),
             MessageSync::DocumentEdit { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::DocumentPresence { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::DocumentTagCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::DocumentTagUpdate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::DocumentTagDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
         };
         let should_send = auth_check.should_send(&session, &self.s).await?;
         if should_send {

@@ -231,8 +231,13 @@ pub struct DocumentTag {
     /// when this tag was created
     pub created_at: Time,
 
+    /// when this tag was last updated
+    pub updated_at: Time,
+
     /// who created this tag
-    pub creator_id: UserId,
+    ///
+    /// may be None if the creator doesnt exist
+    pub creator_id: Option<UserId>,
 
     pub branch_id: DocumentBranchId,
     pub revision_seq: u64,
