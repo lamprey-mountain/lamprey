@@ -81,7 +81,7 @@ async fn document_branch_list(
     perms.ensure(Permission::ViewChannel)?;
 
     let branches = data
-        .document_branch_paginate(channel_id, query, pagination)
+        .document_branch_paginate(channel_id, auth.user.id, query, pagination)
         .await?;
 
     Ok(Json(branches))

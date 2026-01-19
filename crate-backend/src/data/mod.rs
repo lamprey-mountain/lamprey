@@ -1409,6 +1409,7 @@ pub trait DataDocument {
     async fn document_branch_paginate(
         &self,
         document_id: ChannelId,
+        user_id: UserId,
         filter: DocumentBranchListParams,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>>;

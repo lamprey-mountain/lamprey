@@ -5,7 +5,9 @@ use common::v1::types::{ChannelId, DocumentBranchId, MessageSync, UserId};
 use dashmap::DashMap;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
-use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
+use yrs::{
+    updates::decoder::Decode, DeepObservable, Doc, ReadTxn, StateVector, Text, Transact, Update,
+};
 
 use crate::{Error, Result, ServerStateInner};
 
@@ -161,6 +163,36 @@ impl ServiceDocuments {
         let ctx = self.load(context_id, Some(author_id)).await?;
         let mut ctx = ctx.write().await;
         ctx.doc.transact_mut().apply_update(update).unwrap();
+
+        // // TODO: calculate diff stats
+        // let xml = ctx.doc.get_or_insert_xml_fragment("doc");
+        // let mut stat_inserted = 0;
+        // let mut stat_deleted = 0;
+        // xml.observe_deep(|txn, events| {
+        //     for e in events.iter() {
+        //         match e {
+        //             yrs::types::Event::Text(text_event) => {
+        //                 for change in text_event.delta(txn) {
+        //                     match change {
+        //                         yrs::types::Delta::Inserted(t, hash_map) => {
+        //                             if let yrs::Out::Any(yrs::Any::String(s)) = t {
+        //                                 stat_inserted += s.chars().count();
+        //                             }
+        //                         }
+        //                         yrs::types::Delta::Deleted(len) => stat_deleted += len,
+        //                         yrs::types::Delta::Retain(_, _) => {}
+        //                     }
+        //                 }
+        //             }
+        //             yrs::types::Event::XmlFragment(xml_event) => todo!("calculate recursively"),
+        //             yrs::types::Event::XmlText(xml_text_event) => {
+        //                 todo!("calculate deltas for text")
+        //             }
+        //             _ => {} // array and map ignored
+        //         }
+        //     }
+        // });
+
         ctx.changes_since_last_snapshot += 1;
         ctx.pending_changes.push(PendingChange {
             author_id,

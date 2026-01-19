@@ -434,6 +434,7 @@ impl DataDocument for Postgres {
     async fn document_branch_paginate(
         &self,
         document_id: ChannelId,
+        user_id: UserId,
         filter: DocumentBranchListParams,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>> {
@@ -453,6 +454,7 @@ impl DataDocument for Postgres {
             SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id
             FROM document_branch
             WHERE document_id = $1 AND state = ANY($2::branch_state[])
+            AND (private = false OR creator_id = $5)
             AND ($3::uuid IS NULL OR created_at < (SELECT created_at FROM document_branch WHERE id = $3))
             ORDER BY created_at DESC
             LIMIT $4
@@ -460,7 +462,8 @@ impl DataDocument for Postgres {
             document_id.into_inner(),
             &states as &[DbBranchState],
             p.after.into_inner(),
-            (p.limit + 1) as i64
+            (p.limit + 1) as i64,
+            user_id.into_inner()
         )
         .fetch_all(&self.pool)
         .await?;
@@ -470,9 +473,11 @@ impl DataDocument for Postgres {
             SELECT count(*)
             FROM document_branch
             WHERE document_id = $1 AND state = ANY($2::branch_state[])
+            AND (private = false OR creator_id = $3)
             "#,
             document_id.into_inner(),
             &states as &[DbBranchState],
+            user_id.into_inner()
         )
         .fetch_one(&self.pool)
         .await?
