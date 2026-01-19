@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -10,7 +10,8 @@ use validator::Validate;
 use crate::v1::types::{
     ids::{DocumentBranchId, DocumentTagId},
     misc::Time,
-    ChannelId, UserId,
+    util::some_option,
+    ChannelId, RoomMember, ThreadMember, User, UserId,
 };
 
 /// info about a document
@@ -278,9 +279,65 @@ pub struct DocumentTagPatch {
     /// optional more detailed description
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
     #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, deserialize_with = "crate::v1::types::util::some_option")
-    )]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
+pub struct HistoryParams {
+    /// split group whenever author changes
+    pub by_author: Option<bool>,
+
+    /// split group whenever a tag is created
+    pub by_tag: Option<bool>,
+
+    /// every n seconds
+    pub by_time: Option<u32>,
+
+    /// every n changes
+    pub by_changes: Option<u32>,
+
+    /// continue listing history from here
+    pub cursor: Option<String>,
+
+    /// the maximum number of items to return.
+    // FIXME: default 10, max 1024
+    pub limit: Option<u16>,
+}
+
+/// a set of changes made to a document
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Changeset {
+    /// the created_at time of the first change
+    pub start_time: Time,
+
+    /// the created_at time of the last change
+    pub end_time: Time,
+
+    /// every author that contributed to this change group
+    pub authors: Vec<UserId>,
+
+    /// number of graphemes added
+    pub stat_added: u64,
+
+    /// number of graphemes removed
+    pub stat_removed: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct HistoryPagination {
+    /// the resulting changesets, ordered oldest to newest
+    pub changesets: Vec<Changeset>,
+
+    /// a user object for every referenced user_id
+    pub users: Vec<User>,
+
+    /// a room member object for every referenced user_id
+    pub room_members: Vec<RoomMember>,
+
+    /// a thread member object for every referenced user_id
+    pub thread_members: Vec<ThreadMember>,
 }

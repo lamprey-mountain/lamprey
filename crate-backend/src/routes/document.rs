@@ -5,14 +5,16 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::ids::{DocumentBranchId, DocumentTagId};
-use common::v1::types::pagination::{HistoryPagination, HistoryParams};
 use common::v1::types::{
     document::{
         DocumentBranchCreate, DocumentBranchMerge, DocumentBranchPatch, DocumentTagCreate,
         DocumentTagPatch,
     },
     ChannelId,
+};
+use common::v1::types::{
+    document::{HistoryPagination, HistoryParams},
+    ids::{DocumentBranchId, DocumentTagId},
 };
 
 use serde::Deserialize;
