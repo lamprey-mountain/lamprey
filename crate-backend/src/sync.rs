@@ -11,6 +11,7 @@ use flate2::{
 use std::io::Write;
 use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
+use uuid::Uuid;
 
 use axum::extract::ws::{Message, WebSocket};
 use common::v1::types::emoji::EmojiOwner;
@@ -52,7 +53,7 @@ pub struct Connection {
     queue: VecDeque<(Option<u64>, MessageEnvelope)>,
     seq_server: u64,
     seq_client: u64,
-    id: String,
+    id: Uuid,
     compression: Option<Compression>,
 
     pub member_list: Box<MemberListSyncer>,
@@ -83,15 +84,14 @@ impl Connection {
             None => None,
         };
 
-        // TODO: just use a uuid instead of a string? why is this a string?
-        let id = format!("{}", uuid::Uuid::new_v4().hyphenated());
+        let id = Uuid::new_v4();
 
         Self {
             state: ConnectionState::Unauthed,
             queue: VecDeque::new(),
             seq_server: 0,
             seq_client: 0,
-            id: id.clone(),
+            id,
             member_list: Box::new(s.services().members.create_syncer()),
             document: Box::new(s.services().documents.create_syncer(id)),
             compression,
@@ -156,7 +156,7 @@ impl Connection {
         self.handle_message_client(msg, ws, timeout).await
     }
 
-    #[tracing::instrument(level = "debug", skip(self, ws, timeout), fields(id = self.get_id()))]
+    #[tracing::instrument(level = "debug", skip(self, ws, timeout), fields(id = self.get_id().to_string()))]
     pub async fn handle_message_client(
         &mut self,
         msg: MessageClient,
@@ -281,7 +281,7 @@ impl Connection {
             .broadcast_presence(
                 (channel_id, branch_id),
                 user_id,
-                Some(self.id.clone()),
+                Some(self.id),
                 cursor_head,
                 cursor_tail,
             )
@@ -309,7 +309,7 @@ impl Connection {
         // TODO: more forgiving reconnections?
         if let Some(r) = reconnect {
             debug!("attempting to resume");
-            if let Some((_, mut conn)) = self.s.syncers.remove(&r.conn) {
+            if let Some((_, mut conn)) = self.s.syncers.remove(&Uuid::parse_str(&r.conn).unwrap()) {
                 debug!("resume conn exists");
                 if let Some(recon_session) = conn.state.session() {
                     debug!("resume session exists");
@@ -355,7 +355,7 @@ impl Connection {
             payload: types::MessagePayload::Ready {
                 user: Box::new(user),
                 session: session.clone(),
-                conn: self.get_id().to_owned(),
+                conn: self.get_id().to_string(),
                 seq: 0,
             },
         };
@@ -407,7 +407,6 @@ impl Connection {
         }
 
         self.member_list.set_user_id(session.user_id()).await;
-        self.document.set_user_id(session.user_id());
         self.state = ConnectionState::Authenticated { session };
         Ok(())
     }
@@ -582,14 +581,14 @@ impl Connection {
             .apply_update(
                 (channel_id, branch_id),
                 user_id,
-                Some(self.id.clone()),
+                Some(self.id),
                 &update_bytes,
             )
             .await?;
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug", skip(self), fields(id = self.get_id()))]
+    #[tracing::instrument(level = "debug", skip(self), fields(id = self.get_id().to_string()))]
     pub async fn queue_message(
         &mut self,
         msg: Box<MessageSync>,
@@ -914,7 +913,7 @@ impl Connection {
         self.queue.truncate(MAX_QUEUE_LEN);
     }
 
-    #[tracing::instrument(level = "debug", skip(self, ws), fields(id = self.get_id()))]
+    #[tracing::instrument(level = "debug", skip(self, ws), fields(id = self.get_id().to_string()))]
     pub async fn drain(&mut self, ws: &mut WebSocket) -> Result<()> {
         let last_seen = self.seq_client;
         let mut high_water_mark = last_seen;
@@ -936,8 +935,8 @@ impl Connection {
         Ok(())
     }
 
-    pub fn get_id(&self) -> &str {
-        &self.id
+    pub fn get_id(&self) -> Uuid {
+        self.id
     }
 
     fn compress_message(

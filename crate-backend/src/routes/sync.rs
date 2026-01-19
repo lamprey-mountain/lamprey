@@ -114,7 +114,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
 
     conn.disconnect();
     debug!("inserting syncer: {}", conn.get_id());
-    s.syncers.insert(conn.get_id().to_owned(), conn);
+    s.syncers.insert(conn.get_id(), conn);
 }
 
 async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket) -> bool {

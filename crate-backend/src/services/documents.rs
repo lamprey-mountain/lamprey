@@ -21,12 +21,12 @@ pub struct ServiceDocuments {
 #[derive(Clone, Debug)]
 pub enum DocumentEvent {
     Update {
-        origin_conn_id: Option<String>,
+        origin_conn_id: Option<Uuid>,
         update: Vec<u8>,
     },
     Presence {
         user_id: UserId,
-        origin_conn_id: Option<String>,
+        origin_conn_id: Option<Uuid>,
         cursor_head: String,
         cursor_tail: Option<String>,
     },
@@ -145,7 +145,7 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         author_id: UserId,
-        origin_conn_id: Option<String>,
+        origin_conn_id: Option<Uuid>,
         update_bytes: &[u8],
     ) -> Result<()> {
         let update = Update::decode_v1(update_bytes).unwrap();
@@ -196,7 +196,7 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         user_id: UserId,
-        origin_conn_id: Option<String>,
+        origin_conn_id: Option<Uuid>,
         cursor_head: String,
         cursor_tail: Option<String>,
     ) -> Result<()> {
@@ -230,7 +230,7 @@ impl ServiceDocuments {
     }
 
     /// create a new DocumentSyncer for a session
-    pub fn create_syncer(&self, conn_id: String) -> DocumentSyncer {
+    pub fn create_syncer(&self, conn_id: Uuid) -> DocumentSyncer {
         let (query_tx, query_rx) = tokio::sync::watch::channel(None);
         DocumentSyncer {
             s: self.state.clone(),
@@ -247,7 +247,7 @@ pub struct DocumentSyncer {
     query_tx: tokio::sync::watch::Sender<Option<(EditContextId, Option<Vec<u8>>)>>,
     query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
     current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
-    conn_id: String,
+    conn_id: Uuid,
 }
 
 impl DocumentSyncer {

@@ -42,7 +42,7 @@ pub struct ServerState {
     pub services: Arc<Services>,
 
     // TODO: limit number of connections per user, clean up old/unused entries
-    pub syncers: Arc<DashMap<String, Connection>>,
+    pub syncers: Arc<DashMap<uuid::Uuid, Connection>>,
 }
 
 impl ServerStateInner {
