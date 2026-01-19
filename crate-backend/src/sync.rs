@@ -83,14 +83,17 @@ impl Connection {
             None => None,
         };
 
+        // TODO: just use a uuid instead of a string? why is this a string?
+        let id = format!("{}", uuid::Uuid::new_v4().hyphenated());
+
         Self {
             state: ConnectionState::Unauthed,
             queue: VecDeque::new(),
             seq_server: 0,
             seq_client: 0,
-            id: format!("{}", uuid::Uuid::new_v4().hyphenated()),
+            id: id.clone(),
             member_list: Box::new(s.services().members.create_syncer()),
-            document: Box::new(s.services().documents.create_syncer()),
+            document: Box::new(s.services().documents.create_syncer(id)),
             compression,
             s,
         }
@@ -275,7 +278,13 @@ impl Connection {
         perms.ensure(Permission::ViewChannel)?;
 
         srv.documents
-            .broadcast_presence((channel_id, branch_id), user_id, cursor_head, cursor_tail)
+            .broadcast_presence(
+                (channel_id, branch_id),
+                user_id,
+                Some(self.id.clone()),
+                cursor_head,
+                cursor_tail,
+            )
             .await?;
         Ok(())
     }
@@ -398,6 +407,7 @@ impl Connection {
         }
 
         self.member_list.set_user_id(session.user_id()).await;
+        self.document.set_user_id(session.user_id());
         self.state = ConnectionState::Authenticated { session };
         Ok(())
     }
@@ -569,7 +579,12 @@ impl Connection {
             .map_err(|_| Error::BadStatic("bad base64"))?;
 
         srv.documents
-            .apply_update((channel_id, branch_id), user_id, &update_bytes)
+            .apply_update(
+                (channel_id, branch_id),
+                user_id,
+                Some(self.id.clone()),
+                &update_bytes,
+            )
             .await?;
         Ok(())
     }

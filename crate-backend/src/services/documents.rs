@@ -20,9 +20,13 @@ pub struct ServiceDocuments {
 
 #[derive(Clone, Debug)]
 pub enum DocumentEvent {
-    Update(Vec<u8>),
+    Update {
+        origin_conn_id: Option<String>,
+        update: Vec<u8>,
+    },
     Presence {
         user_id: UserId,
+        origin_conn_id: Option<String>,
         cursor_head: String,
         cursor_tail: Option<String>,
     },
@@ -141,6 +145,7 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         author_id: UserId,
+        origin_conn_id: Option<String>,
         update_bytes: &[u8],
     ) -> Result<()> {
         let update = Update::decode_v1(update_bytes).unwrap();
@@ -178,9 +183,10 @@ impl ServiceDocuments {
             ctx.changes_since_last_snapshot = 0;
         }
 
-        let _ = ctx
-            .update_tx
-            .send(DocumentEvent::Update(update_bytes.to_vec()));
+        let _ = ctx.update_tx.send(DocumentEvent::Update {
+            origin_conn_id,
+            update: update_bytes.to_vec(),
+        });
 
         drop(ctx);
         Ok(())
@@ -190,6 +196,7 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         user_id: UserId,
+        origin_conn_id: Option<String>,
         cursor_head: String,
         cursor_tail: Option<String>,
     ) -> Result<()> {
@@ -197,6 +204,7 @@ impl ServiceDocuments {
             let ctx = ctx.read().await;
             let _ = ctx.update_tx.send(DocumentEvent::Presence {
                 user_id,
+                origin_conn_id,
                 cursor_head,
                 cursor_tail,
             });
@@ -222,13 +230,14 @@ impl ServiceDocuments {
     }
 
     /// create a new DocumentSyncer for a session
-    pub fn create_syncer(&self) -> DocumentSyncer {
+    pub fn create_syncer(&self, conn_id: String) -> DocumentSyncer {
         let (query_tx, query_rx) = tokio::sync::watch::channel(None);
         DocumentSyncer {
             s: self.state.clone(),
             query_tx,
             query_rx,
             current_rx: None,
+            conn_id,
         }
     }
 }
@@ -238,6 +247,7 @@ pub struct DocumentSyncer {
     query_tx: tokio::sync::watch::Sender<Option<(EditContextId, Option<Vec<u8>>)>>,
     query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
     current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
+    conn_id: String,
 }
 
 impl DocumentSyncer {
@@ -295,7 +305,10 @@ impl DocumentSyncer {
                     res = rx.recv() => {
                         match res {
                             Ok(event) => match event {
-                                DocumentEvent::Update(update) => {
+                                DocumentEvent::Update { origin_conn_id, update } => {
+                                    if origin_conn_id.as_ref() == Some(&self.conn_id) {
+                                        continue;
+                                    }
                                     return Ok(MessageSync::DocumentEdit {
                                         channel_id: context_id.0,
                                         branch_id: context_id.1,
@@ -304,9 +317,13 @@ impl DocumentSyncer {
                                 }
                                 DocumentEvent::Presence {
                                     user_id,
+                                    origin_conn_id,
                                     cursor_head,
                                     cursor_tail,
                                 } => {
+                                    if origin_conn_id.as_ref() == Some(&self.conn_id) {
+                                        continue;
+                                    }
                                     return Ok(MessageSync::DocumentPresence {
                                         channel_id: context_id.0,
                                         branch_id: context_id.1,
