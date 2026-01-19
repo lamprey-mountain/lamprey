@@ -1,8 +1,10 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
-use common::v1::types::{ChannelId, DocumentBranchId, MessageSync, UserId};
+use common::v1::types::{
+    document::{DocumentStateVector, DocumentUpdate},
+    ChannelId, DocumentBranchId, MessageSync, UserId,
+};
 use dashmap::DashMap;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
@@ -361,10 +363,10 @@ impl DocumentSyncer {
     pub async fn set_context_id(
         &self,
         context_id: EditContextId,
-        state_vector: Option<Vec<u8>>,
+        state_vector: Option<DocumentStateVector>,
     ) -> Result<()> {
         self.query_tx
-            .send(Some((context_id, state_vector)))
+            .send(Some((context_id, state_vector.map(|sv| sv.0))))
             .unwrap();
         Ok(())
     }
@@ -433,7 +435,7 @@ impl DocumentSyncer {
                         return Ok(MessageSync::DocumentEdit {
                             channel_id: context_id.0,
                             branch_id: context_id.1,
-                            update: BASE64_URL_SAFE_NO_PAD.encode(&update),
+                            update: DocumentUpdate(update),
                         });
                     }
                     None => {
@@ -455,7 +457,7 @@ impl DocumentSyncer {
                                     return Ok(MessageSync::DocumentEdit {
                                         channel_id: context_id.0,
                                         branch_id: context_id.1,
-                                        update: BASE64_URL_SAFE_NO_PAD.encode(&update),
+                                        update: DocumentUpdate(update),
                                     });
                                 }
                                 DocumentEvent::Presence {

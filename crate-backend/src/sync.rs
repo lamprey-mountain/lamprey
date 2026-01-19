@@ -1,8 +1,8 @@
-use base64::Engine;
 use common::v1::types::{
+    document::{DocumentStateVector, DocumentUpdate},
     sync::{SyncCompression, SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
-    ChannelId, DocumentBranchId, SessionToken, UserId,
+    ChannelId, SessionToken, UserId,
 };
 use flate2::{
     write::{ZlibDecoder, ZlibEncoder},
@@ -21,7 +21,8 @@ use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
-    InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, Session,
+    DocumentBranchId, InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync,
+    Permission, Session,
 };
 use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
@@ -542,7 +543,7 @@ impl Connection {
         &mut self,
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
-        state_vector: Option<String>,
+        state_vector: Option<DocumentStateVector>,
     ) -> Result<()> {
         let session = self
             .state
@@ -553,18 +554,8 @@ impl Connection {
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ViewChannel)?;
 
-        let sv = if let Some(sv_str) = state_vector {
-            Some(
-                base64::prelude::BASE64_URL_SAFE_NO_PAD
-                    .decode(sv_str)
-                    .map_err(|_| Error::BadStatic("bad base64"))?,
-            )
-        } else {
-            None
-        };
-
         self.document
-            .set_context_id((channel_id, branch_id), sv)
+            .set_context_id((channel_id, branch_id), state_vector)
             .await?;
         Ok(())
     }
@@ -573,7 +564,7 @@ impl Connection {
         &mut self,
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
-        update: String,
+        update: DocumentUpdate,
     ) -> Result<()> {
         let session = self
             .state
@@ -589,17 +580,8 @@ impl Connection {
             return Err(Error::BadStatic("not subscribed to this document"));
         }
 
-        let update_bytes = base64::prelude::BASE64_URL_SAFE_NO_PAD
-            .decode(update)
-            .map_err(|_| Error::BadStatic("bad base64"))?;
-
         srv.documents
-            .apply_update(
-                (channel_id, branch_id),
-                user_id,
-                Some(self.id),
-                &update_bytes,
-            )
+            .apply_update((channel_id, branch_id), user_id, Some(self.id), &update.0)
             .await?;
         Ok(())
     }

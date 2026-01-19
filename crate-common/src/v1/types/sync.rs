@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::v1::types::{
     application::Connection,
     automod::{AutomodRule, AutomodRuleExecution},
-    document::{DocumentBranch, DocumentTag},
+    document::{DocumentBranch, DocumentStateVector, DocumentTag, DocumentUpdate},
     presence::Presence,
     util::Time,
     voice::Call,
@@ -75,7 +75,7 @@ pub enum MessageClient {
     DocumentSubscribe {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
-        state_vector: Option<String>,
+        state_vector: Option<DocumentStateVector>,
         // TODO: subscribing to multiple documents at once
         // channel_ids: Vec<ChannelId>,
     },
@@ -90,7 +90,7 @@ pub enum MessageClient {
         branch_id: DocumentBranchId,
 
         /// the encoded update to this document
-        update: String,
+        update: DocumentUpdate,
     },
 
     /// update your document presence
@@ -679,7 +679,7 @@ pub enum MessageSync {
         branch_id: DocumentBranchId,
 
         /// the encoded update to this document
-        update: String,
+        update: DocumentUpdate,
     },
 
     /// user presence in a document
