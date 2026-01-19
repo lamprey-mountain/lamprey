@@ -44,10 +44,9 @@ use crate::{Error, ServerState};
 async fn wiki_history(
     Path(_channel_id): Path<ChannelId>,
     Query(_query): Query<HistoryParams>,
-    auth: Auth,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
 }
 
@@ -72,8 +71,6 @@ async fn document_branch_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-
     let srv = s.services();
     let data = s.data();
 
@@ -105,8 +102,6 @@ async fn document_branch_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-
     let srv = s.services();
     let data = s.data();
 
@@ -330,8 +325,6 @@ async fn document_tag_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-
     let user_id = auth.user.id;
     let data = s.data();
     let srv = s.services();
@@ -361,8 +354,6 @@ async fn document_tag_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-
     let user_id = auth.user.id;
     let srv = s.services();
 
@@ -489,10 +480,9 @@ async fn document_tag_delete(
 async fn document_history(
     Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
     Query(_query): Query<HistoryParams>,
-    auth: Auth,
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
 }
 
