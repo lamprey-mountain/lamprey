@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::v1::types::{
     application::Connection,
     automod::{AutomodRule, AutomodRuleExecution},
-    document::DocumentTag,
+    document::{DocumentBranch, DocumentTag},
     presence::Presence,
     util::Time,
     voice::Call,
@@ -707,6 +707,19 @@ pub enum MessageSync {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
         tag_id: DocumentTagId,
+    },
+
+    DocumentBranchCreate {
+        branch: DocumentBranch,
+    },
+
+    DocumentBranchUpdate {
+        branch: DocumentBranch,
+    },
+
+    DocumentBranchDelete {
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
     },
     // TODO(#915): media v2
     // /// A piece of media has processed and is now in the `Uploaded` state.

@@ -8,7 +8,8 @@ use common::v1::types::calendar::{
     CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
 };
 use common::v1::types::document::{
-    DocumentBranch, DocumentBranchCreate, DocumentBranchPatch, DocumentBranchState,
+    DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
+    DocumentBranchState, DocumentTag,
 };
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
@@ -1404,17 +1405,11 @@ pub trait DataDocument {
     /// list all active branches
     async fn document_branch_list(&self, document_id: ChannelId) -> Result<Vec<DocumentBranch>>;
 
-    /// paginate through closed branches
-    async fn document_branch_list_closed(
+    /// paginate through branches
+    async fn document_branch_paginate(
         &self,
         document_id: ChannelId,
-        pagination: PaginationQuery<DocumentBranchId>,
-    ) -> Result<PaginationResponse<DocumentBranch>>;
-
-    /// paginate through merged branches
-    async fn document_branch_list_merged(
-        &self,
-        document_id: ChannelId,
+        filter: DocumentBranchListParams,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>>;
 
@@ -1429,10 +1424,7 @@ pub trait DataDocument {
     ) -> Result<DocumentTagId>;
 
     /// get a document tag
-    async fn document_tag_get(
-        &self,
-        tag_id: DocumentTagId,
-    ) -> Result<common::v1::types::document::DocumentTag>;
+    async fn document_tag_get(&self, tag_id: DocumentTagId) -> Result<DocumentTag>;
 
     /// update a document tag
     async fn document_tag_update(
@@ -1446,14 +1438,11 @@ pub trait DataDocument {
     async fn document_tag_delete(&self, tag_id: DocumentTagId) -> Result<()>;
 
     /// list document tags for a branch
-    async fn document_tag_list(
-        &self,
-        branch_id: DocumentBranchId,
-    ) -> Result<Vec<common::v1::types::document::DocumentTag>>;
+    async fn document_tag_list(&self, branch_id: DocumentBranchId) -> Result<Vec<DocumentTag>>;
 
     /// list document tags for a document (all branches)
     async fn document_tag_list_by_document(
         &self,
         document_id: ChannelId,
-    ) -> Result<Vec<common::v1::types::document::DocumentTag>>;
+    ) -> Result<Vec<DocumentTag>>;
 }

@@ -8,9 +8,10 @@ use axum::{
 };
 use common::v1::types::{
     document::{
-        DocumentBranchCreate, DocumentBranchMerge, DocumentBranchPatch, DocumentRevisionId,
-        DocumentTagCreate, DocumentTagPatch,
+        DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchMerge,
+        DocumentBranchPatch, DocumentRevisionId, DocumentTagCreate, DocumentTagPatch,
     },
+    pagination::{PaginationQuery, PaginationResponse},
     ChannelId, Permission,
 };
 use common::v1::types::{
@@ -58,23 +59,40 @@ async fn wiki_history(
     Ok(Error::Unimplemented)
 }
 
-/// Document branch list (TODO)
+/// Document branch list
 #[utoipa::path(
     get,
     path = "/document/{channel_id}/branch",
-    params(("channel_id", description = "Channel id")),
+    params(
+        ("channel_id", description = "Channel id"),
+        DocumentBranchListParams,
+        PaginationQuery<DocumentBranchId>
+    ),
     tags = ["document"],
     responses(
-        (status = OK, description = "ok"),
+        (status = OK, description = "ok", body = PaginationResponse<DocumentBranch>),
     )
 )]
 async fn document_branch_list(
-    Path(_channel_id): Path<ChannelId>,
+    Path(channel_id): Path<ChannelId>,
+    Query(query): Query<DocumentBranchListParams>,
+    Query(pagination): Query<PaginationQuery<DocumentBranchId>>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let branches = data
+        .document_branch_paginate(channel_id, query, pagination)
+        .await?;
+
+    Ok(Json(branches))
 }
 
 /// Document branch get (TODO)

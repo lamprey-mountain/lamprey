@@ -102,6 +102,16 @@ pub enum DocumentBranchState {
     Merged,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct DocumentBranchListParams {
+    /// only include branches with these states
+    ///
+    /// defaults to only Active
+    #[serde(default)]
+    pub state: Vec<DocumentBranchState>,
+}
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -138,12 +148,14 @@ pub struct DocumentBranchMerge {
     // pub target_branch_id: Option<DocumentBranchId>,
 }
 
+// NOTE: not useful; may be removed later?
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct DocumentBranchMergeResult {
     pub status: DocumentBranchMergeResultStatus,
 }
 
+// NOTE: not useful; may be removed later?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum DocumentBranchMergeResultStatus {

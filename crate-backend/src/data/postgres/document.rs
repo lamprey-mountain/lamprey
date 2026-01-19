@@ -5,7 +5,8 @@ use crate::services::documents::EditContextId;
 use crate::types::{DehydratedDocument, PaginationDirection};
 use async_trait::async_trait;
 use common::v1::types::document::{
-    DocumentBranch, DocumentBranchCreate, DocumentBranchPatch, DocumentBranchState, DocumentTag,
+    DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
+    DocumentBranchState, DocumentTag,
 };
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
@@ -430,23 +431,34 @@ impl DataDocument for Postgres {
         Ok(branches.into_iter().map(Into::into).collect())
     }
 
-    async fn document_branch_list_closed(
+    async fn document_branch_paginate(
         &self,
         document_id: ChannelId,
+        filter: DocumentBranchListParams,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>> {
         let p: Pagination<_> = pagination.try_into()?;
+        let states: Vec<DbBranchState> = filter.state.into_iter().map(Into::into).collect();
+
+        // if states is empty, default to Active
+        let states = if states.is_empty() {
+            vec![DbBranchState::Active]
+        } else {
+            states
+        };
+
         let branches = query_as!(
             DbDocumentBranch,
             r#"
             SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id
             FROM document_branch
-            WHERE document_id = $1 AND state = 'Closed'::branch_state
-            AND ($2::uuid IS NULL OR created_at < (SELECT created_at FROM document_branch WHERE id = $2))
+            WHERE document_id = $1 AND state = ANY($2::branch_state[])
+            AND ($3::uuid IS NULL OR created_at < (SELECT created_at FROM document_branch WHERE id = $3))
             ORDER BY created_at DESC
-            LIMIT $3
+            LIMIT $4
             "#,
             document_id.into_inner(),
+            &states as &[DbBranchState],
             p.after.into_inner(),
             (p.limit + 1) as i64
         )
@@ -457,65 +469,10 @@ impl DataDocument for Postgres {
             r#"
             SELECT count(*)
             FROM document_branch
-            WHERE document_id = $1 AND state = 'Closed'::branch_state
-            "#,
-            document_id.into_inner()
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .unwrap_or(0);
-
-        let has_more = branches.len() > p.limit as usize;
-        let mut items: Vec<DocumentBranch> = branches
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-
-        let cursor = items.last().map(|i| i.id.to_string());
-
-        Ok(PaginationResponse {
-            items,
-            total: total as u64,
-            has_more,
-            cursor,
-        })
-    }
-
-    async fn document_branch_list_merged(
-        &self,
-        document_id: ChannelId,
-        pagination: PaginationQuery<DocumentBranchId>,
-    ) -> Result<PaginationResponse<DocumentBranch>> {
-        let p: Pagination<_> = pagination.try_into()?;
-        let branches = query_as!(
-            DbDocumentBranch,
-            r#"
-            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id
-            FROM document_branch
-            WHERE document_id = $1 AND state = 'Merged'::branch_state
-            AND ($2::uuid IS NULL OR created_at < (SELECT created_at FROM document_branch WHERE id = $2))
-            ORDER BY created_at DESC
-            LIMIT $3
+            WHERE document_id = $1 AND state = ANY($2::branch_state[])
             "#,
             document_id.into_inner(),
-            p.after.into_inner(),
-            (p.limit + 1) as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let total = query_scalar!(
-            r#"
-            SELECT count(*)
-            FROM document_branch
-            WHERE document_id = $1 AND state = 'Merged'::branch_state
-            "#,
-            document_id.into_inner()
+            &states as &[DbBranchState],
         )
         .fetch_one(&self.pool)
         .await?
