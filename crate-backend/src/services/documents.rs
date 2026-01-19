@@ -251,7 +251,7 @@ pub struct DocumentSyncer {
 }
 
 impl DocumentSyncer {
-    /// set the edit context id for this syncer
+    /// set edit context id for this syncer
     pub async fn set_context_id(
         &self,
         context_id: EditContextId,
@@ -261,6 +261,15 @@ impl DocumentSyncer {
             .send(Some((context_id, state_vector)))
             .unwrap();
         Ok(())
+    }
+
+    /// check if client is subscribed to this document
+    pub fn is_subscribed(&self, context_id: &EditContextId) -> bool {
+        self.query_rx
+            .borrow()
+            .as_ref()
+            .map(|(current_id, _)| current_id == context_id)
+            .unwrap_or(false)
     }
 
     pub async fn poll(&mut self) -> Result<MessageSync> {

@@ -277,6 +277,10 @@ impl Connection {
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ViewChannel)?;
 
+        if !self.document.is_subscribed(&(channel_id, branch_id)) {
+            return Err(Error::BadStatic("not subscribed to this document"));
+        }
+
         srv.documents
             .broadcast_presence(
                 (channel_id, branch_id),
@@ -572,6 +576,10 @@ impl Connection {
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ViewChannel)?;
         perms.ensure(Permission::DocumentEdit)?;
+
+        if !self.document.is_subscribed(&(channel_id, branch_id)) {
+            return Err(Error::BadStatic("not subscribed to this document"));
+        }
 
         let update_bytes = base64::prelude::BASE64_URL_SAFE_NO_PAD
             .decode(update)
