@@ -6,8 +6,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
-use crate::v1::types::{util::Time, RoomMember, ThreadMember, User, UserId};
-
 pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
     fn min() -> Self;
     fn max() -> Self;

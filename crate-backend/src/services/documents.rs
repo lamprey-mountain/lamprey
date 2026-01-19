@@ -9,7 +9,7 @@ use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update}
 
 use crate::{Error, Result, ServerStateInner};
 
-mod validate;
+// mod validate;
 
 pub type EditContextId = (ChannelId, DocumentBranchId);
 
@@ -18,7 +18,17 @@ pub struct ServiceDocuments {
     edit_contexts: DashMap<EditContextId, Arc<RwLock<EditContext>>>,
 }
 
-struct EditContext {
+#[derive(Clone, Debug)]
+pub enum DocumentEvent {
+    Update(Vec<u8>),
+    Presence {
+        user_id: UserId,
+        cursor_head: String,
+        cursor_tail: Option<String>,
+    },
+}
+
+pub struct EditContext {
     /// the live crdt document
     doc: Doc,
 
@@ -34,7 +44,7 @@ struct EditContext {
     /// the sequence number of the last persisted update or snapshot
     last_seq: u32,
 
-    update_tx: broadcast::Sender<Vec<u8>>,
+    update_tx: broadcast::Sender<DocumentEvent>,
 }
 
 struct PendingChange {
@@ -173,20 +183,29 @@ impl ServiceDocuments {
             ctx.changes_since_last_snapshot = 0;
         }
 
-        let _ = ctx.update_tx.send(update_bytes.to_vec());
+        let _ = ctx
+            .update_tx
+            .send(DocumentEvent::Update(update_bytes.to_vec()));
 
         drop(ctx);
-        // self.state
-        //     .broadcast_channel(
-        //         context_id.0,
-        //         author_id,
-        //         MessageSync::DocumentEdit {
-        //             channel_id: context_id.0,
-        //             branch_id: context_id.1,
-        //             update: BASE64_URL_SAFE_NO_PAD.encode(&update_bytes),
-        //         },
-        //     )
-        //     .await?;
+        Ok(())
+    }
+
+    pub async fn broadcast_presence(
+        &self,
+        context_id: EditContextId,
+        user_id: UserId,
+        cursor_head: String,
+        cursor_tail: Option<String>,
+    ) -> Result<()> {
+        if let Some(ctx) = self.edit_contexts.get(&context_id) {
+            let ctx = ctx.read().await;
+            let _ = ctx.update_tx.send(DocumentEvent::Presence {
+                user_id,
+                cursor_head,
+                cursor_tail,
+            });
+        }
         Ok(())
     }
 
@@ -201,7 +220,7 @@ impl ServiceDocuments {
     pub async fn subscribe(
         &self,
         context_id: EditContextId,
-    ) -> Result<broadcast::Receiver<Vec<u8>>> {
+    ) -> Result<broadcast::Receiver<DocumentEvent>> {
         let ctx = self.load(context_id, None).await?;
         let ctx = ctx.read().await;
         Ok(ctx.update_tx.subscribe())
@@ -223,7 +242,7 @@ pub struct DocumentSyncer {
     s: Arc<ServerStateInner>,
     query_tx: tokio::sync::watch::Sender<Option<(EditContextId, Option<Vec<u8>>)>>,
     query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
-    current_rx: Option<(EditContextId, broadcast::Receiver<Vec<u8>>)>,
+    current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
 }
 
 // enum ActorMessage {
@@ -287,13 +306,28 @@ impl DocumentSyncer {
                 tokio::select! {
                     res = rx.recv() => {
                         match res {
-                            Ok(update) => {
-                                return Ok(MessageSync::DocumentEdit {
-                                    channel_id: context_id.0,
-                                    branch_id: context_id.1,
-                                    update: BASE64_URL_SAFE_NO_PAD.encode(&update),
-                                });
-                            }
+                            Ok(event) => match event {
+                                DocumentEvent::Update(update) => {
+                                    return Ok(MessageSync::DocumentEdit {
+                                        channel_id: context_id.0,
+                                        branch_id: context_id.1,
+                                        update: BASE64_URL_SAFE_NO_PAD.encode(&update),
+                                    });
+                                }
+                                DocumentEvent::Presence {
+                                    user_id,
+                                    cursor_head,
+                                    cursor_tail,
+                                } => {
+                                    return Ok(MessageSync::DocumentPresence {
+                                        channel_id: context_id.0,
+                                        branch_id: context_id.1,
+                                        user_id,
+                                        cursor_head,
+                                        cursor_tail,
+                                    });
+                                }
+                            },
                             Err(_) => continue,
                         }
                     }
@@ -327,7 +361,6 @@ enum EditContextStatus {
 }
 
 impl EditContextStatus {
-    #[allow(dead_code)] // TODO: use this
     pub fn should_commit(&self) -> bool {
         // - if commit while Closing, set state to Dead?
         todo!()

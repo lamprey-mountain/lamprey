@@ -240,9 +240,43 @@ impl Connection {
                 branch_id,
                 update,
             } => Box::pin(self.handle_document_edit(channel_id, branch_id, update)).await?,
-            // FIXME: document presence/awareness
-            MessageClient::DocumentPresence { .. } => todo!(),
+            MessageClient::DocumentPresence {
+                channel_id,
+                branch_id,
+                cursor_head,
+                cursor_tail,
+            } => {
+                Box::pin(self.handle_document_presence(
+                    channel_id,
+                    branch_id,
+                    cursor_head,
+                    cursor_tail,
+                ))
+                .await?
+            }
         }
+        Ok(())
+    }
+
+    async fn handle_document_presence(
+        &mut self,
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+        cursor_head: String,
+        cursor_tail: Option<String>,
+    ) -> Result<()> {
+        let session = self
+            .state
+            .session()
+            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+        let srv = self.s.services();
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
+        perms.ensure(Permission::ViewChannel)?;
+
+        srv.documents
+            .broadcast_presence((channel_id, branch_id), user_id, cursor_head, cursor_tail)
+            .await?;
         Ok(())
     }
 
