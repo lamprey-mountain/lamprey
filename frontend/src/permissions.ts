@@ -92,7 +92,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "MessageCreateThread",
 		name: "Send messages in threads",
-		description: "Can send messages in threads. MessageCreate has no effect in threads.",
+		description:
+			"Can send messages in threads. MessageCreate has no effect in threads.",
 		group: "messages",
 	},
 	{
@@ -334,7 +335,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "DocumentCreate",
 		name: "Create documents",
-		description: "Can create, edit, and remove their own documents in wiki channels.",
+		description:
+			"Can create, edit, and remove their own documents in wiki channels.",
 		group: "documents",
 	},
 	{
@@ -346,7 +348,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "DocumentComment",
 		name: "Comment on documents",
-		description: "Can comment on documents, including documents outside of wikis.",
+		description:
+			"Can comment on documents, including documents outside of wikis.",
 		group: "documents",
 	},
 ];
@@ -473,7 +476,8 @@ export const permissionsOverwrites: Array<Perm> = [
 	{
 		id: "MessageCreateThread",
 		name: "Send messages in threads",
-		description: "Can send messages in threads. MessageCreate has no effect in threads.",
+		description:
+			"Can send messages in threads. MessageCreate has no effect in threads.",
 		group: "messages",
 		types: ["Text", "Forum", "Voice", "Broadcast", "Category"],
 	},
@@ -672,7 +676,8 @@ export const permissionsOverwrites: Array<Perm> = [
 	{
 		id: "DocumentCreate",
 		name: "Create documents",
-		description: "Can create, edit, and remove their own documents in wiki channels.",
+		description:
+			"Can create, edit, and remove their own documents in wiki channels.",
 		group: "documents",
 		types: ["Wiki", "Category"],
 	},
@@ -686,7 +691,8 @@ export const permissionsOverwrites: Array<Perm> = [
 	{
 		id: "DocumentComment",
 		name: "Comment on documents",
-		description: "Can comment on documents, including documents outside of wikis.",
+		description:
+			"Can comment on documents, including documents outside of wikis.",
 		group: "documents",
 		types: ["Document", "Wiki", "Category"],
 	},

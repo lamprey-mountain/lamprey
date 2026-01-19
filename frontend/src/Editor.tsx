@@ -281,7 +281,13 @@ export const createEditor = (opts: EditorProps) => {
 						return true;
 					},
 					handleKeyDown(view, event) {
-						return handleAutocomplete(view, event, ctx, schema, props.channelId || "");
+						return handleAutocomplete(
+							view,
+							event,
+							ctx,
+							schema,
+							props.channelId || "",
+						);
 					},
 					transformPastedHTML(html) {
 						const markdown = turndown.turndown(html);

@@ -3,8 +3,8 @@ import { createSignal } from "solid-js";
 import { createEditor } from "./DocumentEditor.tsx";
 
 type DocumentProps = {
-	channel: Channel,
-}
+	channel: Channel;
+};
 
 export const Document = (props: DocumentProps) => {
 	const [branchId, setBranchId] = createSignal(props.channel.id);

@@ -69,7 +69,10 @@ function maybeConvertMessages(data: any[]): Message[] {
 }
 
 function maybeConvertPagination(data: any): PaginationResponseMessage {
-	if (Array.isArray(data.items) && data.items.length > 0 && "latest_version" in data.items[0]) {
+	if (
+		Array.isArray(data.items) && data.items.length > 0 &&
+		"latest_version" in data.items[0]
+	) {
 		return {
 			...data,
 			items: data.items.map((item: MessageV2) => convertV2MessageToV1(item)),
