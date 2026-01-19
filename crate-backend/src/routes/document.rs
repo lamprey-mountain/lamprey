@@ -16,6 +16,7 @@ use common::v1::types::{
 use common::v1::types::{
     document::{HistoryPagination, HistoryParams},
     ids::{DocumentBranchId, DocumentTagId},
+    MessageSync,
 };
 
 use serde::Deserialize;
@@ -188,7 +189,7 @@ async fn document_branch_merge(
     Ok(Error::Unimplemented)
 }
 
-/// Document tag create (TODO)
+/// Document tag create
 #[utoipa::path(
     post,
     path = "/document/{channel_id}/tag",
@@ -235,7 +236,12 @@ async fn document_tag_create(
         .await?;
 
     let tag = data.document_tag_get(tag_id).await?;
-    // TODO: emit MessageSync
+
+    s.broadcast(MessageSync::DocumentTagCreate {
+        channel_id,
+        tag: tag.clone(),
+    })?;
+
     Ok(Json(tag))
 }
 
@@ -298,7 +304,7 @@ async fn document_tag_get(
     Ok(Json(tag))
 }
 
-/// Document tag update (TODO)
+/// Document tag update
 #[utoipa::path(
     patch,
     path = "/document/{channel_id}/tag/{tag_id}",
@@ -342,12 +348,15 @@ async fn document_tag_update(
 
     let updated_tag = data.document_tag_get(tag_id).await?;
 
-    // TODO: emit MessageSync
+    s.broadcast(MessageSync::DocumentTagUpdate {
+        channel_id,
+        tag: updated_tag.clone(),
+    })?;
 
     Ok(Json(updated_tag))
 }
 
-/// Document tag delete (TODO)
+/// Document tag delete
 #[utoipa::path(
     delete,
     path = "/document/{channel_id}/tag/{tag_id}",
@@ -380,9 +389,15 @@ async fn document_tag_delete(
         perms.ensure(Permission::ThreadManage)?;
     }
 
+    let branch_id = tag.branch_id;
+
     data.document_tag_delete(tag_id).await?;
 
-    // TODO: emit MessageSync
+    s.broadcast(MessageSync::DocumentTagDelete {
+        channel_id,
+        branch_id,
+        tag_id,
+    })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
