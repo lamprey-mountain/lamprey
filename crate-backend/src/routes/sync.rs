@@ -112,7 +112,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
         let _ = conn.drain(&mut ws).await;
     }
 
-    conn.disconnect();
+    conn.disconnect().await;
     debug!("inserting syncer: {}", conn.get_id());
     s.syncers.insert(conn.get_id(), conn);
 }

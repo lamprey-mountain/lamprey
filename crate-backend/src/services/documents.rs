@@ -1,3 +1,4 @@
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
@@ -5,9 +6,7 @@ use common::v1::types::{ChannelId, DocumentBranchId, MessageSync, UserId};
 use dashmap::DashMap;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
-use yrs::{
-    updates::decoder::Decode, DeepObservable, Doc, ReadTxn, StateVector, Text, Transact, Update,
-};
+use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
 
 use crate::{Error, Result, ServerStateInner};
 
@@ -34,6 +33,13 @@ pub enum DocumentEvent {
     },
 }
 
+#[derive(Clone, Debug)]
+struct PresenceData {
+    conn_id: Uuid,
+    cursor_head: String,
+    cursor_tail: Option<String>,
+}
+
 pub struct EditContext {
     /// the live crdt document
     doc: Doc,
@@ -48,6 +54,8 @@ pub struct EditContext {
     last_seq: u32,
 
     update_tx: broadcast::Sender<DocumentEvent>,
+
+    presence: HashMap<UserId, PresenceData>,
 }
 
 struct PendingChange {
@@ -103,6 +111,7 @@ impl ServiceDocuments {
                     pending_changes: vec![],
                     last_seq: dehydrated.snapshot_seq,
                     update_tx,
+                    presence: HashMap::new(),
                 }))
             }
             Err(Error::NotFound) => {
@@ -125,6 +134,7 @@ impl ServiceDocuments {
                         pending_changes: vec![],
                         last_seq: 0,
                         update_tx,
+                        presence: HashMap::new(),
                     }))
                 } else {
                     return Err(Error::NotFound);
@@ -242,7 +252,17 @@ impl ServiceDocuments {
         cursor_tail: Option<String>,
     ) -> Result<()> {
         if let Some(ctx) = self.edit_contexts.get(&context_id) {
-            let ctx = ctx.read().await;
+            let mut ctx = ctx.write().await;
+            if let Some(conn_id) = origin_conn_id {
+                ctx.presence.insert(
+                    user_id,
+                    PresenceData {
+                        conn_id,
+                        cursor_head: cursor_head.clone(),
+                        cursor_tail: cursor_tail.clone(),
+                    },
+                );
+            }
             let _ = ctx.update_tx.send(DocumentEvent::Presence {
                 user_id,
                 origin_conn_id,
@@ -251,6 +271,49 @@ impl ServiceDocuments {
             });
         }
         Ok(())
+    }
+
+    pub async fn remove_presence(
+        &self,
+        context_id: EditContextId,
+        user_id: UserId,
+        conn_id: Uuid,
+    ) -> Result<()> {
+        if let Some(ctx) = self.edit_contexts.get(&context_id) {
+            let mut ctx = ctx.write().await;
+            if let Some(presence) = ctx.presence.get(&user_id) {
+                if presence.conn_id == conn_id {
+                    ctx.presence.remove(&user_id);
+                    let _ = ctx.update_tx.send(DocumentEvent::Presence {
+                        user_id,
+                        origin_conn_id: Some(conn_id),
+                        cursor_head: "".to_string(),
+                        cursor_tail: None,
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_presence(
+        &self,
+        context_id: EditContextId,
+    ) -> Result<Vec<(UserId, String, Option<String>, Uuid)>> {
+        let ctx = self.load(context_id, None).await?;
+        let ctx = ctx.read().await;
+        Ok(ctx
+            .presence
+            .iter()
+            .map(|(uid, data)| {
+                (
+                    *uid,
+                    data.cursor_head.clone(),
+                    data.cursor_tail.clone(),
+                    data.conn_id,
+                )
+            })
+            .collect())
     }
 
     pub async fn diff(&self, context_id: EditContextId, state_vector: &[u8]) -> Result<Vec<u8>> {
@@ -279,6 +342,7 @@ impl ServiceDocuments {
             query_rx,
             current_rx: None,
             conn_id,
+            pending_sync: VecDeque::new(),
         }
     }
 }
@@ -289,6 +353,7 @@ pub struct DocumentSyncer {
     query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
     current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
     conn_id: Uuid,
+    pending_sync: VecDeque<MessageSync>,
 }
 
 impl DocumentSyncer {
@@ -313,8 +378,23 @@ impl DocumentSyncer {
             .unwrap_or(false)
     }
 
+    pub async fn handle_disconnect(&self, user_id: UserId) -> Result<()> {
+        if let Some((context_id, _)) = &self.current_rx {
+            self.s
+                .services()
+                .documents
+                .remove_presence(*context_id, user_id, self.conn_id)
+                .await?;
+        }
+        Ok(())
+    }
+
     pub async fn poll(&mut self) -> Result<MessageSync> {
         loop {
+            if let Some(msg) = self.pending_sync.pop_front() {
+                return Ok(msg);
+            }
+
             if self.query_rx.has_changed().unwrap_or(false) {
                 let _ = self.query_rx.borrow_and_update();
                 let query = self.query_rx.borrow().clone();
@@ -336,6 +416,19 @@ impl DocumentSyncer {
                                 .encode_state_as_update_v1(&StateVector::default());
                             update
                         };
+
+                        let presences = srv.documents.get_presence(context_id).await?;
+                        for (user_id, cursor_head, cursor_tail, conn_id) in presences {
+                            if conn_id != self.conn_id {
+                                self.pending_sync.push_back(MessageSync::DocumentPresence {
+                                    channel_id: context_id.0,
+                                    branch_id: context_id.1,
+                                    user_id,
+                                    cursor_head,
+                                    cursor_tail,
+                                });
+                            }
+                        }
 
                         return Ok(MessageSync::DocumentEdit {
                             channel_id: context_id.0,

@@ -99,7 +99,15 @@ impl Connection {
         }
     }
 
-    pub fn disconnect(&mut self) {
+    pub async fn disconnect(&mut self) {
+        if let Some(session) = self.state.session() {
+            if let Some(user_id) = session.user_id() {
+                if let Err(err) = self.document.handle_disconnect(user_id).await {
+                    error!("failed to clear document presence: {}", err);
+                }
+            }
+        }
+
         // surely there's a way to do this with zero copies
         self.state = match &self.state {
             ConnectionState::Authenticated { session } => ConnectionState::Disconnected {
