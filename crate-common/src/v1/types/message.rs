@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRule};
+use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 #[cfg(feature = "feat_interaction_reaction")]
@@ -426,15 +426,31 @@ pub struct MessagePin {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageAutomodExecution {
     /// the rules that were triggered
-    pub rules: Vec<AutomodRule>,
+    pub rules: Vec<AutomodRuleStripped>,
 
     /// the actions that were executed
     pub actions: Vec<AutomodAction>,
 
+    /// the content that was matched
     pub matches: Option<AutomodMatches>,
+
+    /// the id of the channel where this happened
+    // NOTE: maybe include channel type/name for messages in threads
+    // NOTE: if this was triggered via thread title, should this be the thread or parent (text/forum) channel?
     pub channel_id: Option<ChannelId>,
+
+    /// if the message wasn't blocked, this is the id of it
     pub flagged_message_id: Option<MessageId>,
+    // pub completed: Option<AutomodAlertCompleted>,
 }
+
+// struct AutomodAlertCompleted {
+//     /// the user who completed this alert
+//     user_id: UserId,
+
+//     /// when this alert was completed at
+//     completed_at: Time,
+// }
 
 /// Information about a thread being renamed
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -86,6 +86,15 @@ pub struct AutomodRuleUpdate {
     pub target: Option<AutomodTarget>,
 }
 
+/// minimal version of AutomodRule to prevent leaking the rule trigger
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AutomodRuleStripped {
+    pub id: AutomodRuleId,
+    pub name: String,
+    pub target: AutomodTarget,
+}
+
 /// what this rule should be evaluated on
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -118,12 +127,13 @@ pub struct AutomodRuleExecution {
     pub text: Option<String>,
 
     /// the keyword or regex that was matched in the content
-    pub text_matched: Option<String>,
+    pub text_matched: Option<AutomodMatches>,
 
     /// where this piece of text was found
     pub text_location: Option<AutomodTextLocation>,
 }
 
+/// request body for an automod test request
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -133,15 +143,16 @@ pub struct AutomodRuleTestRequest {
     pub text: String,
 }
 
+/// response body for an automod test request
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AutomodRuleTest {
     /// the rules that matched the text
-    pub matched_rules: Vec<AutomodRule>,
+    pub rules: Vec<AutomodRule>,
 
-    /// the keyword or regex that was matched in the content
-    pub text_matches: Vec<String>,
+    /// the content that was matched
+    pub matches: Option<AutomodMatches>,
 
     /// deduplicated list of all of the actions that would be taken
     ///
@@ -192,7 +203,6 @@ pub enum AutomodTextLocation {
     ThreadTitle,
 }
 
-// TODO: configure exactly what AutomodTextLocation the trigger should match on
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -254,19 +264,20 @@ pub enum AutomodAction {
         message: Option<String>,
     },
 
-    /// timeout a user
+    /// timeout a user. not valid for `AutomodTarget::Member`.
     Timeout {
         /// in milliseconds
         duration: u64,
     },
 
-    /// remove a message. unlike Block, remove messages can be allowed/restored by a moderator.
+    /// remove a message. unlike Block, removed messages can be allowed/restored by a moderator. not valid for `AutomodTarget::Member`.
     Remove,
 
     /// send an alert to a channel
     SendAlert {
         /// where to send the alert to
         // TODO: enforce that this channel exists and is a text channel
+        // TODO: remove this action when channel is removed
         channel_id: ChannelId,
     },
 }
