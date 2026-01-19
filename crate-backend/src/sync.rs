@@ -561,8 +561,8 @@ impl Connection {
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
         let srv = self.s.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
-        // FIXME: proper permissions
         perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::DocumentEdit)?;
 
         let update_bytes = base64::prelude::BASE64_URL_SAFE_NO_PAD
             .decode(update)
