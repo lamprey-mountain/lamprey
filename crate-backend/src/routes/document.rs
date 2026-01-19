@@ -177,7 +177,7 @@ async fn document_branch_update(
     ),
     tags = ["document"],
     responses(
-        (status = NO_CONTENT, description = "ok"),
+        (status = OK, description = "ok", body = DocumentBranch),
     )
 )]
 async fn document_branch_close(
@@ -206,12 +206,14 @@ async fn document_branch_close(
     data.document_branch_set_state(channel_id, branch_id, DocumentBranchState::Closed)
         .await?;
 
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+
     s.broadcast(MessageSync::DocumentBranchDelete {
         channel_id,
         branch_id,
     })?;
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(Json(branch))
 }
 
 /// Document branch fork (TODO)
