@@ -9,7 +9,8 @@ use axum::{
 use common::v1::types::{
     document::{
         DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchMerge,
-        DocumentBranchPatch, DocumentRevisionId, DocumentTagCreate, DocumentTagPatch,
+        DocumentBranchPatch, DocumentBranchState, DocumentRevisionId, DocumentTagCreate,
+        DocumentTagPatch,
     },
     pagination::{PaginationQuery, PaginationResponse},
     ChannelId, Permission,
@@ -20,21 +21,12 @@ use common::v1::types::{
     MessageSync,
 };
 
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
 
 use crate::error::Result;
 use crate::{Error, ServerState};
-
-#[allow(unused)] // TEMP
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
-pub struct BranchDeleteQuery {
-    #[serde(default)]
-    pub force: bool,
-}
 
 /// Wiki history (TODO)
 #[utoipa::path(
@@ -95,7 +87,7 @@ async fn document_branch_list(
     Ok(Json(branches))
 }
 
-/// Document branch get (TODO)
+/// Document branch get
 #[utoipa::path(
     get,
     path = "/document/{channel_id}/branch/{branch_id}",
@@ -105,19 +97,32 @@ async fn document_branch_list(
     ),
     tags = ["document"],
     responses(
-        (status = OK, description = "ok"),
+        (status = OK, description = "ok", body = DocumentBranch),
     )
 )]
 async fn document_branch_get(
-    Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+
+    if branch.private && branch.creator_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    Ok(Json(branch))
 }
 
-/// Document branch update (TODO)
+/// Document branch update
 #[utoipa::path(
     patch,
     path = "/document/{channel_id}/branch/{branch_id}",
@@ -127,41 +132,86 @@ async fn document_branch_get(
     ),
     tags = ["document"],
     responses(
-        (status = OK, description = "ok"),
+        (status = OK, description = "ok", body = DocumentBranch),
     )
 )]
 async fn document_branch_update(
-    Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _json: Json<DocumentBranchPatch>,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<DocumentBranchPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let branch_before = data.document_branch_get(channel_id, branch_id).await?;
+
+    if branch_before.creator_id != auth.user.id {
+        perms.ensure(Permission::ThreadManage)?;
+    }
+
+    data.document_branch_update(channel_id, branch_id, json)
+        .await?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+
+    s.broadcast(MessageSync::DocumentBranchUpdate {
+        branch: branch.clone(),
+    })?;
+
+    Ok(Json(branch))
 }
 
-/// Document branch delete (TODO)
+/// Document branch close
 #[utoipa::path(
-    delete,
-    path = "/document/{channel_id}/branch/{branch_id}",
+    post,
+    path = "/document/{channel_id}/branch/{branch_id}/close",
     params(
         ("channel_id", description = "Channel id"),
         ("branch_id", description = "Branch id"),
-        BranchDeleteQuery,
     ),
     tags = ["document"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
 )]
-async fn document_branch_delete(
-    Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
-    Query(_query): Query<BranchDeleteQuery>,
+async fn document_branch_close(
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+
+    if branch.default {
+        return Err(Error::BadRequest("cannot close default branch".to_string()));
+    }
+
+    if branch.creator_id != auth.user.id {
+        perms.ensure(Permission::ThreadManage)?;
+    }
+
+    data.document_branch_set_state(channel_id, branch_id, DocumentBranchState::Closed)
+        .await?;
+
+    s.broadcast(MessageSync::DocumentBranchDelete {
+        channel_id,
+        branch_id,
+    })?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Document branch fork (TODO)
@@ -450,7 +500,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(document_branch_list))
         .routes(routes!(document_branch_get))
         .routes(routes!(document_branch_update))
-        .routes(routes!(document_branch_delete))
+        .routes(routes!(document_branch_close))
         .routes(routes!(document_branch_fork))
         .routes(routes!(document_branch_merge))
         .routes(routes!(document_tag_create))

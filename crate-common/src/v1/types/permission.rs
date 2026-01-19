@@ -139,7 +139,13 @@ pub enum Permission {
     /// can create public threads
     ThreadCreatePublic,
 
-    /// remove and archive threads, and move threads between channels. can also view all threads.
+    /// can do moderation actions on threads
+    ///
+    /// - remove and archive threads
+    /// - move threads between channels
+    /// - view all private threads
+    /// - manage document branches
+    // TODO: split apart permissions
     ThreadManage,
 
     /// change name and description of threads
@@ -147,6 +153,7 @@ pub enum Permission {
 
     /// lock and unlock threads
     // TODO: merge with ThreadManage?
+    // TODO: make this allow locking/unlocking entire channels?
     ThreadLock,
 
     /// Can view channels

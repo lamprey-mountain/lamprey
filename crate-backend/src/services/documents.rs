@@ -140,6 +140,15 @@ impl ServiceDocuments {
         }
     }
 
+    /// unload a document from memory
+    // TODO: automatically unload unused documents
+    pub async fn unload(&self, _context_id: EditContextId) -> Result<()> {
+        // flush changes
+        // snapshot if needed
+        // remove from self.edit_contexts
+        todo!()
+    }
+
     /// apply a change to a document
     pub async fn apply_update(
         &self,
@@ -369,5 +378,11 @@ impl EditContext {
     pub fn should_flush(&self) -> bool {
         // TODO: flush if time since last flush > 15s
         !self.pending_changes.is_empty()
+    }
+
+    /// whether we should unload this document
+    pub fn should_unload(&self) -> bool {
+        // TODO: return true if nobody is connected for 60 seconds
+        todo!()
     }
 }
