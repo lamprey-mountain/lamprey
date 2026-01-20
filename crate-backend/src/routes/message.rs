@@ -830,6 +830,7 @@ async fn message_pin_create(
 
     let notice_message_id = data
         .message_create(DbMessageCreate {
+            id: None,
             channel_id,
             attachment_ids: vec![],
             author_id: auth.user.id,

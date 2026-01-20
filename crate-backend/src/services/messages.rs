@@ -276,6 +276,7 @@ impl ServiceMessages {
         let content = json.content.clone();
 
         let mut removed_at = None;
+        let message_id = MessageId::new();
 
         // enforce automod just before message is sent
         if let Some(room_id) = thread.room_id {
@@ -284,7 +285,7 @@ impl ServiceMessages {
             if scan.is_triggered() {
                 let removed = srv
                     .automod
-                    .enforce_message_create(room_id, user_id, &scan)
+                    .enforce_message_create(room_id, thread_id, message_id, user_id, &scan)
                     .await?;
                 if removed {
                     removed_at = Some(Time::now_utc());
@@ -314,8 +315,9 @@ impl ServiceMessages {
             override_name: json.override_name,
         });
 
-        let message_id = data
+        let message_id_db = data
             .message_create(DbMessageCreate {
+                id: Some(message_id),
                 channel_id: thread_id,
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
@@ -327,7 +329,11 @@ impl ServiceMessages {
                 mentions: mentions.clone(),
             })
             .await?;
-        let message_uuid = message_id.into_inner();
+        let message_uuid = message_id_db.into_inner();
+        // sanity check
+        if message_id != message_id_db {
+            error!("Message id mismatch: {} != {}", message_id, message_id_db);
+        }
         for id in &all_media_ids {
             data.media_link_insert(*id, message_uuid, MediaLinkType::Message)
                 .await?;
@@ -698,7 +704,7 @@ impl ServiceMessages {
             if scan.is_triggered() {
                 let removed = srv
                     .automod
-                    .enforce_message_create(room_id, user_id, &scan)
+                    .enforce_message_create(room_id, thread_id, message_id, user_id, &scan)
                     .await?;
                 if removed {
                     removed_at = Some(Time::now_utc());
@@ -728,6 +734,7 @@ impl ServiceMessages {
                 thread_id,
                 message_id,
                 DbMessageCreate {
+                    id: None,
                     channel_id: thread_id,
                     attachment_ids: attachment_ids.clone(),
                     author_id: user_id,

@@ -168,6 +168,7 @@ async fn thread_member_add(
     if target_user_id != auth.user.id {
         let message_id = d
             .message_create(crate::types::DbMessageCreate {
+                id: None,
                 channel_id: thread_id,
                 attachment_ids: vec![],
                 author_id: auth.user.id,
@@ -291,6 +292,7 @@ async fn thread_member_delete(
     if target_user_id != auth.user.id {
         let message_id = d
             .message_create(crate::types::DbMessageCreate {
+                id: None,
                 channel_id: thread_id,
                 attachment_ids: vec![],
                 author_id: auth.user.id,
@@ -660,6 +662,7 @@ async fn thread_create_from_message(
     if source_message.created_at.into_inner() < four_hours_ago {
         let system_message_id = data
             .message_create(DbMessageCreate {
+                id: None,
                 channel_id: parent_channel_id,
                 attachment_ids: vec![],
                 author_id: auth.user.id,

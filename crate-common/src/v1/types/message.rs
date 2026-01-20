@@ -437,8 +437,8 @@ pub struct MessageAutomodExecution {
     /// the user who triggered this execution
     pub user_id: UserId,
 
-    /// the id of the channel where the message was sent, is None if the message was blocked
-    // NOTE: this is only populated if the target was a
+    /// the id of the channel where the message was sent, is None if this is not a message
+    // NOTE: this is only populated if the target is a mesage
     // TODO: design thread and other automod target types
     pub channel_id: Option<ChannelId>,
 

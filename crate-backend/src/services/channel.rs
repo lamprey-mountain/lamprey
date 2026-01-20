@@ -873,6 +873,7 @@ impl ServiceThreads {
             // send thread renamed message to thread
             let rename_message_id = data
                 .message_create(DbMessageCreate {
+                    id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
                     author_id: user_id,
@@ -904,6 +905,7 @@ impl ServiceThreads {
         if chan_old.icon != chan_new.icon {
             let icon_message_id = data
                 .message_create(DbMessageCreate {
+                    id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
                     author_id: user_id,

@@ -3,14 +3,14 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use common::{
     v1::types::{
         automod::{
-            AutomodAction, AutomodMatches, AutomodRule, AutomodRuleStripped, AutomodTarget,
-            AutomodTextLocation, AutomodTrigger,
+            AutomodAction, AutomodMatches, AutomodRule, AutomodRuleStripped, AutomodRuleTest,
+            AutomodTarget, AutomodTextLocation, AutomodTrigger,
         },
         ids::AUTOMOD_USER_ID,
         util::Time,
-        AutomodRuleId, Channel, ChannelCreate, ChannelPatch, Mentions, MentionsUser,
-        MessageAutomodExecution, MessageCreate, MessagePatch, MessageSync, MessageType, RoomId,
-        RoomMember, RoomMemberPatch, User, UserId,
+        AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
+        MessageAutomodExecution, MessageCreate, MessageId, MessagePatch, MessageSync, MessageType,
+        RoomId, RoomMember, RoomMemberPatch, User, UserId,
     },
     v2::types::message::Message,
 };
@@ -699,19 +699,28 @@ impl ServiceAutomod {
     pub async fn enforce_message_create(
         &self,
         room_id: RoomId,
+        channel_id: ChannelId,
+        // this message doesn't exist yet, but the message will have this id when its implemented
+        message_id: MessageId,
         user_id: UserId,
         scan: &AutomodResult,
     ) -> Result<bool> {
         let mut removed = false;
+        let mut block_message = None;
+
+        let is_blocked = scan
+            .actions()
+            .iter()
+            .any(|a| matches!(a, AutomodAction::Block { .. }));
 
         for action in scan.actions() {
             match action {
                 AutomodAction::Block { message } => {
-                    return Err(Error::BadRequest(
+                    block_message = Some(
                         message
                             .clone()
                             .unwrap_or_else(|| "message blocked by automod".to_string()),
-                    ));
+                    );
                 }
                 AutomodAction::Timeout { duration } => {
                     let timeout_until = Time::now_utc() + Duration::from_millis(*duration);
@@ -735,7 +744,9 @@ impl ServiceAutomod {
                     // handled by upstream
                     removed = true;
                 }
-                AutomodAction::SendAlert { channel_id } => {
+                AutomodAction::SendAlert {
+                    channel_id: alert_channel_id,
+                } => {
                     let srv = self.state.services();
                     let data = self.state.data();
 
@@ -760,8 +771,8 @@ impl ServiceAutomod {
                         actions: scan.actions.inner.clone(),
                         matches,
                         user_id,
-                        channel_id: None,
-                        flagged_message_id: None,
+                        channel_id: Some(channel_id),
+                        flagged_message_id: if is_blocked { None } else { Some(message_id) },
                     };
 
                     let mut mentions = Mentions::default();
@@ -779,7 +790,8 @@ impl ServiceAutomod {
                     }
 
                     let message_create = DbMessageCreate {
-                        channel_id: *channel_id,
+                        id: None,
+                        channel_id: *alert_channel_id,
                         attachment_ids: vec![],
                         author_id: AUTOMOD_USER_ID,
                         embeds: vec![],
@@ -792,8 +804,9 @@ impl ServiceAutomod {
 
                     match data.message_create(message_create).await {
                         Ok(msg_id) => {
-                            if let Ok(mut message) =
-                                data.message_get(*channel_id, msg_id, AUTOMOD_USER_ID).await
+                            if let Ok(mut message) = data
+                                .message_get(*alert_channel_id, msg_id, AUTOMOD_USER_ID)
+                                .await
                             {
                                 if let Err(e) = self.state.presign_message(&mut message).await {
                                     warn!("Failed to presign automod alert: {}", e);
@@ -803,7 +816,7 @@ impl ServiceAutomod {
                                 };
                                 if let Err(e) = self
                                     .state
-                                    .broadcast_channel(*channel_id, AUTOMOD_USER_ID, msg)
+                                    .broadcast_channel(*alert_channel_id, AUTOMOD_USER_ID, msg)
                                     .await
                                 {
                                     error!("Failed to broadcast automod alert: {}", e);
@@ -813,7 +826,7 @@ impl ServiceAutomod {
                         Err(e) => {
                             error!(
                                 "Failed to send automod alert to channel {}: {}",
-                                channel_id, e
+                                alert_channel_id, e
                             );
                         }
                     }
@@ -821,6 +834,32 @@ impl ServiceAutomod {
             }
         }
 
+        if let Some(msg) = block_message {
+            return Err(Error::BadRequest(msg));
+        }
+
         Ok(removed)
+    }
+
+    pub async fn test_rules(
+        &self,
+        room_id: RoomId,
+        text: &str,
+        target: AutomodTarget,
+    ) -> Result<AutomodRuleTest> {
+        let automod = self.load(room_id).await?;
+        let scan = automod.scan_text(text, target, AutomodTextLocation::Test);
+
+        Ok(AutomodRuleTest {
+            rules: scan
+                .rule_ids
+                .iter()
+                // NOTE: maybe i *want* to use .expect here, to loudly fail if a rule mysteriously goes missing
+                .filter_map(|id| automod.rules.iter().find(|r| r.id == *id))
+                .cloned()
+                .collect(),
+            matches: scan.matches,
+            actions: scan.actions.inner,
+        })
     }
 }

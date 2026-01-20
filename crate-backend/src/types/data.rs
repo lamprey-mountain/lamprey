@@ -388,6 +388,7 @@ pub struct DbRoleCreate {
 }
 
 pub struct DbMessageCreate {
+    pub id: Option<MessageId>,
     pub channel_id: ChannelId,
     pub attachment_ids: Vec<MediaId>,
     pub author_id: UserId,

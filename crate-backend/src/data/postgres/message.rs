@@ -194,7 +194,10 @@ impl From<DbMessageVersion> for MessageVersionV2 {
 #[async_trait]
 impl DataMessage for Postgres {
     async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId> {
-        let message_id = Uuid::now_v7();
+        let message_id = create
+            .id
+            .map(|i| i.into_inner())
+            .unwrap_or_else(Uuid::now_v7);
         // the version_id of the first version of a message is the same as the message id itself
         let version_id = message_id;
         let message_type: DbMessageType = create.message_type.clone().into();

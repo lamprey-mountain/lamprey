@@ -304,6 +304,7 @@ impl ServiceRooms {
             let data = self.state.data();
             let welcome_message_id = data
                 .message_create(DbMessageCreate {
+                    id: None,
                     channel_id: wti,
                     attachment_ids: vec![],
                     author_id: user_id,

@@ -155,6 +155,9 @@ pub struct AutomodRuleExecution {
 pub struct AutomodRuleTestRequest {
     /// the text to attempt to scan
     pub text: String,
+
+    /// the target to test this as
+    pub target: AutomodTarget,
 }
 
 /// response body for an automod test request
@@ -239,6 +242,9 @@ pub enum AutomodTextLocation {
 
     /// the url of an embed
     EmbedUrl,
+
+    /// a test scan
+    Test,
 }
 
 #[derive(Debug, Clone)]

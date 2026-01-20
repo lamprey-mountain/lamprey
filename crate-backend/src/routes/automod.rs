@@ -5,7 +5,9 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate};
+use common::v1::types::automod::{
+    AutomodRule, AutomodRuleCreate, AutomodRuleTest, AutomodRuleTestRequest, AutomodRuleUpdate,
+};
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -264,7 +266,7 @@ async fn automod_rule_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Automod rule test (TODO)
+/// Automod rule test
 #[utoipa::path(
     post,
     path = "/room/{room_id}/automod/rule/test",
@@ -272,16 +274,27 @@ async fn automod_rule_delete(
         ("room_id", description = "Room id"),
     ),
     tags = ["automod"],
+    request_body = AutomodRuleTestRequest,
     responses(
-        (status = OK, description = "Text was scanned"),
+        (status = OK, body = AutomodRuleTest, description = "Test automod rules success"),
     )
 )]
 async fn automod_rule_test(
-    Path((_room_id,)): Path<(RoomId,)>,
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<AutomodRuleTestRequest>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    perms.ensure(Permission::RoomManage)?;
+
+    let result = srv
+        .automod
+        .test_rules(room_id, &json.text, json.target)
+        .await?;
+
+    Ok(Json(result))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
