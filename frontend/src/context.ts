@@ -15,8 +15,6 @@ import type {
 	UserConfig,
 } from "sdk";
 import type { Action } from "./dispatch/types";
-import type { EditorState } from "prosemirror-state";
-import type { MessageListAnchor } from "./api/messages.ts";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";

@@ -221,13 +221,7 @@ export const createEditor = (
 		if (msg.type === "DocumentEdit") {
 			if (msg.channel_id === channelId && msg.branch_id === branchId) {
 				const update = base64UrlDecode(msg.update);
-				Y.applyUpdate(ydoc, update);
-			}
-		} else if (msg.type === "DocumentPresence") {
-			if (msg.channel_id === channelId && msg.branch_id === branchId) {
-				msg.cursor_head;
-				msg.cursor_tail;
-				msg.user_id;
+				Y.applyUpdate(ydoc, update, { key: "y-sync$" });
 			}
 		}
 	};
@@ -248,9 +242,8 @@ export const createEditor = (
 	subscribe();
 
 	ydoc.on("update", (update, origin) => {
-		console.log("recv ydoc update", update, origin);
+		if (origin && origin.key === "y-sync$") return;
 
-		// if (origin === provider) return;
 		const ws = api.client.getWebsocket();
 		if (ws.readyState !== WebSocket.OPEN) return;
 
@@ -260,15 +253,6 @@ export const createEditor = (
 			branch_id: branchId,
 			update: base64UrlEncode(update),
 		}));
-
-		// ws.send(JSON.stringify({
-		// 	type: "DocumentPresence",
-		// 	channel_id: channelId,
-		// 	branch_id: branchId,
-		// 	// TODO: presence
-		// 	// cursor_head: "",
-		// 	// cursor_tail: "",
-		// }));
 	});
 
 	let editorRef!: HTMLDivElement;

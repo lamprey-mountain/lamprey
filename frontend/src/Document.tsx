@@ -27,8 +27,6 @@ export const Document = (props: DocumentProps) => {
 };
 
 const DocumentHeader = (props: DocumentProps) => {
-	console.log(useDocument);
-	console.log(useDocument());
 	const [doc, update] = useDocument();
 
 	// top: title, topic(?), notifications, members, search
