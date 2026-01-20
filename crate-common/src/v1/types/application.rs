@@ -13,7 +13,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    error::{ApiError, Error, ErrorCode},
+    error::{ApiError, ErrorCode},
     util::Time,
     RoomMember, User,
 };
@@ -231,11 +231,13 @@ impl Scopes {
     }
 
     /// check that this set of scopes contains a required scope, returning an error if it is missing
-    pub fn ensure(&self, scope: &Scope) -> Result<(), Error> {
+    pub fn ensure(&self, scope: &Scope) -> Result<(), ApiError> {
         if self.has(scope) {
             Ok(())
         } else {
-            Err(Error::MissingScopes(Scopes(vec![scope.clone()])))
+            Err(ApiError::from_code(ErrorCode::MissingScopes {
+                scopes: Scopes(vec![scope.clone()]),
+            }))
         }
     }
 

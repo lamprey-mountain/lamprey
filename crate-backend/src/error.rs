@@ -172,8 +172,6 @@ impl Error {
                 SyncError::AlreadyAuthenticated => StatusCode::BAD_REQUEST,
                 SyncError::AuthFailure => StatusCode::UNAUTHORIZED,
                 SyncError::InvalidData => StatusCode::BAD_REQUEST,
-                // HACK: too lazy to duplicate code. cloning err is kinda h
-                SyncError::Api(err) => Error::SyncError(err.to_owned()).get_status(),
             },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             Error::MissingScopes(_) => StatusCode::FORBIDDEN,

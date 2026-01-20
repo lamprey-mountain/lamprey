@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 
 use crate::v1::types::{
     application::{Scope, Scopes},
-    Permission,
+    ChannelId, Permission, RoomId,
 };
 
 // TODO: cfg_attr serde
@@ -68,19 +68,6 @@ pub enum Warning {
     // this will remove all permission overwrites and sync access with parent channel
 }
 
-/// an error that may be returned from the api
-// TODO: remove
-#[derive(Debug, Error, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum Error {
-    #[error("user is suspended")]
-    UserSuspended,
-
-    #[error("missing scopes {0:?}")]
-    MissingScopes(Scopes),
-}
-
 /// an error that may be returned from the sync websocket
 #[derive(Debug, Error, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -115,11 +102,10 @@ pub enum SyncError {
         "you sent data that i couldn't decode. make sure you're encoding payloads as utf-8 json as text."
     )]
     InvalidData,
-
-    /// an api error
-    // NOTE: may be removed later
-    #[error("{0}")]
-    Api(#[from] Error),
+    // /// an api error
+    // // NOTE: may be removed later
+    // #[error("{0}")]
+    // Api(#[from] ApiError),
 }
 
 /// a field that has an error
@@ -227,15 +213,15 @@ pub enum ErrorCode {
 
     // duplicate media id
     // media already used
+    /// unknown room
+    // FIXME: the method `as_display` exists for reference `&std::option::Option<Id<MarkerRoom>>`, but its trait bounds were not satisfied
+    #[error("unknown room (tried to fetch room with id {bad_room_id:?})")]
+    UnknownRoom { bad_room_id: Option<RoomId> },
 
-    // room not found
-    // channel not found
-    // thread not found
-    // message not found
-    // message version not found
-    // user not found
-    // media not found
-    // ...etc
+    /// unknown channel
+    #[error("unknown channel (tried to fetch channel with id {bad_channel_id:?})")]
+    UnknownChannel { bad_channel_id: Option<ChannelId> },
+    // impl unknown thread, message, message version, user, media, invite, application, automod rule, webhook, room member, thread member, ban, email
 
     // calls can only be created in Broadcast channels
     // calls can only be deleted in Broadcast channels
@@ -288,6 +274,7 @@ impl std::fmt::Display for ApiError {
 
 impl std::error::Error for ApiError {}
 
+// TODO: use StatusCode enum from http crate
 impl ErrorCode {
     pub fn status(&self) -> u16 {
         match self {
@@ -295,6 +282,8 @@ impl ErrorCode {
             ErrorCode::UserSuspended => 403,
             ErrorCode::MissingScopes { .. } => 403,
             ErrorCode::SudoRequired => 401,
+            ErrorCode::UnknownRoom { .. } => 404,
+            ErrorCode::UnknownChannel { .. } => 404,
         }
     }
 }

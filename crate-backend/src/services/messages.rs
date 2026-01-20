@@ -276,7 +276,7 @@ impl ServiceMessages {
         let content = json.content.clone();
 
         let mut removed_at = None;
-        let message_id = MessageId::new();
+        let message_id = dbg!(MessageId::new());
 
         // enforce automod just before message is sent
         if let Some(room_id) = thread.room_id {
