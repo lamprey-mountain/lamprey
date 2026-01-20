@@ -62,6 +62,11 @@ function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
 	const ctx = useCtx();
 	const user = api.users.fetch(() => props.id);
+	// FIXME: handle mentions outside of rooms (eg. in dms)
+	const room_member = api.room_members.fetch(
+		() => props.channel.room_id!,
+		() => props.id,
+	);
 	return (
 		<span
 			class="mention-user"
@@ -81,7 +86,7 @@ function UserMention(props: { id: string; channel: Channel }) {
 				}
 			}}
 		>
-			@{user()?.name ?? "..."}
+			@{room_member()?.override_name ?? user()?.name ?? "unknown user"}
 		</span>
 	);
 }
@@ -108,7 +113,7 @@ function ChannelMention(props: { id: string }) {
 				navigate(`/channel/${props.id}`);
 			}}
 		>
-			#{channel()?.name ?? "..."}
+			#{channel()?.name ?? "unknown channel"}
 		</span>
 	);
 }
@@ -129,6 +134,8 @@ function Emoji(props: { id: string; name: string; animated: boolean }) {
 	);
 }
 
+// HACK: this is terrible and extremely cursed and ugly and horrible code and i hate it
+// i should NOT need to break out of solidjs/tsx reactivity then manually recreate it with another render
 function hydrateMentions(el: HTMLElement, thread: Channel) {
 	el.querySelectorAll<HTMLSpanElement>("span.mention[data-mention-type]")
 		.forEach((mentionEl) => {

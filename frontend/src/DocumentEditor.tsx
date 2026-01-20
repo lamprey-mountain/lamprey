@@ -1,6 +1,11 @@
 import * as Y from "yjs";
-import { type Command, EditorState, TextSelection } from "prosemirror-state";
-import { EditorView } from "prosemirror-view";
+import {
+	type Command,
+	EditorState,
+	Plugin,
+	TextSelection,
+} from "prosemirror-state";
+import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
 import { DOMParser, Schema } from "prosemirror-model";
 import {
 	initProseMirrorDoc,
@@ -12,15 +17,59 @@ import {
 } from "y-prosemirror";
 // import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { createEffect, onCleanup, onMount } from "solid-js";
+import { createEffect, createMemo, onCleanup, onMount } from "solid-js";
+import { render } from "solid-js/web";
+import { getEmojiUrl } from "./media/util.tsx";
 import { initTurndownService } from "./turndown.ts";
 import { decorate, md } from "./markdown.tsx";
 import { useCtx } from "./context";
 import { createWrapCommand, handleAutocomplete } from "./editor-utils.ts";
 import { Observable } from "lib0/observable";
-import { useApi } from "./api.tsx";
+import { type Api, useApi } from "./api.tsx";
+import { MessageSync } from "sdk";
 
 const turndown = initTurndownService();
+
+const UserMention = (
+	props: { api: Api; userId: string; channelId: string },
+) => {
+	const channel = props.api.channels.fetch(() => props.channelId);
+	const user = props.api.users.fetch(() => props.userId);
+	const roomMember = props.api.room_members.fetch(
+		() => channel()?.room_id!,
+		() => props.userId,
+	);
+
+	const name = () => {
+		return roomMember()?.override_name ?? user()?.name ?? props.userId;
+	};
+
+	return <span class="mention-user">@{name()}</span>;
+};
+
+const ChannelMention = (props: { api: Api; channelId: string }) => {
+	const channel = props.api.channels.fetch(() => props.channelId);
+	return (
+		<span class="mention-channel">#{channel()?.name ?? props.channelId}</span>
+	);
+};
+
+const RoleMention = (props: { api: Api; roleId: string }) => {
+	const role = () => props.api.roles.cache.get(props.roleId);
+	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
+};
+
+const Emoji = (props: { id: string; name: string }) => {
+	const url = getEmojiUrl(props.id);
+	return (
+		<img
+			class="emoji"
+			src={url}
+			alt={`:${props.name}:`}
+			title={`:${props.name}:`}
+		/>
+	);
+};
 
 const schema = new Schema({
 	nodes: {
@@ -79,6 +128,25 @@ const schema = new Schema({
 			parseDOM: [{
 				tag: "span.mention[data-channel-id]",
 				getAttrs: (el) => ({ channel: (el as HTMLElement).dataset.channelId }),
+			}],
+		},
+		mentionRole: {
+			group: "inline",
+			atom: true,
+			inline: true,
+			selectable: false,
+			attrs: {
+				role: {},
+			},
+			leafText(node) {
+				return `<@&${node.attrs.role}>`;
+			},
+			toDOM: (
+				n,
+			) => ["span", { "data-role-id": n.attrs.role, "class": "mention" }],
+			parseDOM: [{
+				tag: "span.mention[data-role-id]",
+				getAttrs: (el) => ({ role: (el as HTMLElement).dataset.roleId }),
 			}],
 		},
 		emoji: {
@@ -195,11 +263,17 @@ export const createEditor = (
 	const type = ydoc.get("prosemirror", Y.XmlFragment);
 	const { doc, mapping } = initProseMirrorDoc(type, schema);
 
-	const onSync = (msg: any) => {
+	const onSync = (msg: MessageSync) => {
 		if (msg.type === "DocumentEdit") {
 			if (msg.channel_id === channelId && msg.branch_id === branchId) {
 				const update = base64UrlDecode(msg.update);
 				Y.applyUpdate(ydoc, update);
+			}
+		} else if (msg.type === "DocumentPresence") {
+			if (msg.channel_id === channelId && msg.branch_id === branchId) {
+				msg.cursor_head;
+				msg.cursor_tail;
+				msg.user_id;
 			}
 		}
 	};
@@ -220,6 +294,8 @@ export const createEditor = (
 	subscribe();
 
 	ydoc.on("update", (update, origin) => {
+		console.log("recv ydoc update", update, origin);
+
 		if (origin === provider) return;
 		const ws = api.client.getWebsocket();
 		if (ws.readyState !== WebSocket.OPEN) return;
@@ -230,6 +306,15 @@ export const createEditor = (
 			branch_id: branchId,
 			update: base64UrlEncode(update),
 		}));
+
+		// ws.send(JSON.stringify({
+		// 	type: "DocumentPresence",
+		// 	channel_id: channelId,
+		// 	branch_id: branchId,
+		// 	// TODO: presence
+		// 	// cursor_head: "",
+		// 	// cursor_tail: "",
+		// }));
 	});
 
 	const provider = new LampreyProvider(ydoc);
@@ -337,22 +422,89 @@ export const createEditor = (
 						mention: (node) => {
 							const dom = document.createElement("span");
 							dom.classList.add("mention");
+							let dispose: () => void;
 							if (opts.mentionRenderer) {
 								opts.mentionRenderer(dom, node.attrs.user);
 							} else {
-								dom.textContent = `@${node.attrs.user}`;
+								dispose = render(
+									() => (
+										<UserMention
+											api={api}
+											userId={node.attrs.user}
+											channelId={channelId}
+										/>
+									),
+									dom,
+								);
 							}
-							return { dom };
+							return {
+								dom,
+								destroy: () => {
+									dispose?.();
+								},
+							};
 						},
 						mentionChannel: (node) => {
 							const dom = document.createElement("span");
 							dom.classList.add("mention");
+							let dispose: () => void;
 							if (opts.mentionChannelRenderer) {
 								opts.mentionChannelRenderer(dom, node.attrs.channel);
 							} else {
-								dom.textContent = `#${node.attrs.channel}`;
+								dispose = render(
+									() => (
+										<ChannelMention
+											api={api}
+											channelId={node.attrs.channel}
+										/>
+									),
+									dom,
+								);
 							}
-							return { dom };
+							return {
+								dom,
+								destroy: () => {
+									dispose?.();
+								},
+							};
+						},
+						mentionRole: (node) => {
+							const dom = document.createElement("span");
+							dom.classList.add("mention");
+							const dispose = render(
+								() => (
+									<RoleMention
+										api={api}
+										roleId={node.attrs.role}
+									/>
+								),
+								dom,
+							);
+							return {
+								dom,
+								destroy: () => {
+									dispose?.();
+								},
+							};
+						},
+						emoji: (node) => {
+							const dom = document.createElement("span");
+							dom.classList.add("mention");
+							const dispose = render(
+								() => (
+									<Emoji
+										id={node.attrs.id}
+										name={node.attrs.name}
+									/>
+								),
+								dom,
+							);
+							return {
+								dom,
+								destroy: () => {
+									dispose?.();
+								},
+							};
 						},
 					},
 					handlePaste(view, event, slice) {

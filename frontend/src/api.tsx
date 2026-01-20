@@ -1,6 +1,9 @@
 // TODO: this file is getting big and should probably be split and refactored
 // i'm copypasting stuff for now, but will refactor out abstractions later
 
+// TODO: also, the architecture with solidjs resources feels very... bad? to work with?
+// but refactoring everything would be a pain and im not sure how i could improve this code
+
 import {
 	type Accessor,
 	batch,
