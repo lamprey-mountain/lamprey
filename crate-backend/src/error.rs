@@ -3,7 +3,7 @@ use std::num::{ParseFloatError, ParseIntError};
 use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scopes;
-use common::v1::types::error::{Error as ApiError, SyncError};
+use common::v1::types::error::{ApiError, SyncError};
 use common::v1::types::{MessageEnvelope, MessagePayload};
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
@@ -163,10 +163,7 @@ impl Error {
             Error::Unimplemented => StatusCode::NOT_IMPLEMENTED,
             Error::NotModified => StatusCode::NOT_MODIFIED,
             Error::Validation(_) => StatusCode::BAD_REQUEST,
-            Error::ApiError(err) => match err {
-                ApiError::UserSuspended => StatusCode::FORBIDDEN,
-                ApiError::MissingScopes(_) => StatusCode::FORBIDDEN,
-            },
+            Error::ApiError(err) => StatusCode::from_u16(err.code.status()).unwrap(),
             Error::SyncError(err) => match err {
                 SyncError::InvalidSeq => StatusCode::BAD_REQUEST,
                 SyncError::Timeout => StatusCode::BAD_REQUEST,
@@ -176,7 +173,7 @@ impl Error {
                 SyncError::AuthFailure => StatusCode::UNAUTHORIZED,
                 SyncError::InvalidData => StatusCode::BAD_REQUEST,
                 // HACK: too lazy to duplicate code. cloning err is kinda h
-                SyncError::Api(err) => Error::ApiError(err.clone()).get_status(),
+                SyncError::Api(err) => Error::SyncError(err.to_owned()).get_status(),
             },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             Error::MissingScopes(_) => StatusCode::FORBIDDEN,

@@ -12,7 +12,11 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{error::Error, util::Time, RoomMember, User};
+use crate::v1::types::{
+    error::{ApiError, Error, ErrorCode},
+    util::Time,
+    RoomMember, User,
+};
 
 use super::{util::Diff, ApplicationId, UserId};
 
@@ -236,7 +240,7 @@ impl Scopes {
     }
 
     /// check that this set of scopes contains all required scopes, returning an error if any are missing
-    pub fn ensure_all(&self, scopes: &[Scope]) -> Result<(), Error> {
+    pub fn ensure_all(&self, scopes: &[Scope]) -> Result<(), ApiError> {
         let mut missing = vec![];
 
         for required_scope in scopes {
@@ -248,7 +252,9 @@ impl Scopes {
         if missing.is_empty() {
             Ok(())
         } else {
-            Err(Error::MissingScopes(Scopes(missing)))
+            Err(ApiError::from_code(ErrorCode::MissingScopes {
+                scopes: Scopes(missing),
+            }))
         }
     }
 }

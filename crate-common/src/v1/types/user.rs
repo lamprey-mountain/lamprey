@@ -8,7 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::error::Error;
+use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::presence::Presence;
 use crate::v1::types::user_config::UserConfigUser;
 use crate::v1::types::util::{some_option, Diff, Time};
@@ -280,9 +280,9 @@ impl User {
         }
     }
 
-    pub fn ensure_unsuspended(&self) -> Result<(), Error> {
+    pub fn ensure_unsuspended(&self) -> Result<(), ApiError> {
         if self.is_suspended() {
-            Err(Error::UserSuspended)
+            Err(ApiError::from_code(ErrorCode::UserSuspended))
         } else {
             Ok(())
         }

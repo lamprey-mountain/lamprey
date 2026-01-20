@@ -7,9 +7,69 @@ use thiserror::Error;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::application::Scopes;
+use crate::v1::types::{
+    application::{Scope, Scopes},
+    Permission,
+};
+
+// TODO: cfg_attr serde
+/// an error that may be returned from the api
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ApiError {
+    /// human readable error message
+    pub message: String,
+
+    /// error code
+    pub code: ErrorCode,
+
+    /// errors in the request body
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fields: Vec<ErrorField>,
+
+    /// required room permissions
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub required_permissions: Vec<Permission>,
+
+    /// required server permissions
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub required_permissions_server: Vec<Permission>,
+
+    /// required oauth scopes
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub required_scopes: Vec<Scope>,
+
+    /// unacknowledged warnings
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<Warning>,
+
+    /// moderator-set message for automod
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub automod_message: Option<String>,
+}
+
+/// warnings that require forcing
+///
+/// generally, this means you must pass ?force=true in the url. if you like to
+/// live life on the edge, you can always pass ?force.
+// maybe require header instead? `X-Force: Warning1, Warning2`
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum Warning {
+    /// this role is applied to one or more room member
+    RoleNotEmpty,
+
+    /// this tag is applied to one or more post
+    TagNotEmpty,
+    // this will revoke view access to existing thread members
+    // this will revoke view access to existing rsvpers
+    // this will remove all permission overwrites and sync access with parent channel
+}
 
 /// an error that may be returned from the api
+// TODO: remove
 #[derive(Debug, Error, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -62,229 +122,179 @@ pub enum SyncError {
     Api(#[from] Error),
 }
 
-pub mod next {
-    #[cfg(feature = "serde")]
-    use serde::{Deserialize, Serialize};
-    use thiserror::Error;
+/// a field that has an error
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ErrorField {
+    /// path to this field inside the request object
+    pub key: Vec<String>,
 
-    #[cfg(feature = "utoipa")]
-    use utoipa::ToSchema;
+    /// human readable error message
+    pub message: String,
 
-    use crate::v1::types::{
-        application::{Scope, Scopes},
-        Permission,
-    };
+    #[serde(flatten)]
+    pub ty: ErrorFieldType,
+}
 
-    // FIXME: cfg_attr serde
-    // TODO: impl Error
-    /// an error that may be returned from the api
-    #[derive(Debug, Clone)]
-    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct Error {
-        /// human readable error message
-        pub message: String,
+/// the type of error in the field
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename = "type")
+)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ErrorFieldType {
+    /// this field was required but not specified
+    Required,
 
-        /// error code
-        pub code: ErrorCode,
+    /// the specified number is out of range
+    Range { min: Option<u64>, max: Option<u64> },
 
-        /// errors in the request body
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub fields: Vec<ErrorField>,
+    /// the specified string or array length is out of range
+    Length { min: Option<u64>, max: Option<u64> },
 
-        /// required room permissions
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub required_permissions: Vec<Permission>,
+    /// the incorrect type was passed
+    Type { got: String, expected: String },
 
-        /// required server permissions
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub required_permissions_server: Vec<Permission>,
+    /// some other validation error
+    Other { message: String },
+}
 
-        /// required oauth scopes
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub required_scopes: Vec<Scope>,
+#[derive(Debug, Error, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ErrorCode {
+    /// invalid data was provided
+    ///
+    /// aka malformed request body, http 400, bad request
+    #[error("invalid data was provided")]
+    InvalidData,
 
-        /// unacknowledged warnings
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub warnings: Vec<Warning>,
+    /// user is suspended
+    #[error("user is suspended")]
+    UserSuspended,
 
-        /// moderator-set message for automod
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub automod_message: Option<String>,
-    }
+    /// missing scopes
+    #[error("missing scopes {scopes:?}")]
+    MissingScopes { scopes: Scopes },
 
-    /// a field that has an error
-    #[derive(Debug, Clone)]
-    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct ErrorField {
-        /// path to this field inside the request object
-        pub key: Vec<String>,
+    /// sudo mode required for this endpoint
+    #[error("sudo mode required for this endpoint")]
+    SudoRequired,
 
-        /// human readable error message
-        pub message: String,
+    // not bot owner
+    // user is not a bot
+    // bot is not a bridge
+    // you can only puppet users of type Puppet
+    // you can only puppet your own puppets
+    // user is not a puppet
 
-        #[serde(flatten)]
-        pub ty: ErrorFieldType,
-    }
+    // missing permissions (Forbidden)
+    // slowmode in effect
+    // invalid data (populate fields)
 
-    /// the type of error in the field
-    #[derive(Debug, Clone)]
-    #[cfg_attr(
-        feature = "serde",
-        derive(Serialize, Deserialize),
-        serde(rename = "type")
-    )]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub enum ErrorFieldType {
-        /// this field was required but not specified
-        Required,
+    // channel is archived
+    // channel is removed
+    // you are not the gdm owner
+    // only gdms can be upgraded
+    // dm/gdm channel missing recipients
+    // dms can only be with a single person
+    // gdm has too many members
+    // can only create dms/gdms outside of rooms
+    // channel doesnt have text
+    // channel doesnt have voice
 
-        /// the specified number is out of range
-        Range { min: Option<u64>, max: Option<u64> },
+    // bitrate is too high
+    // cannot set bitrate for non voice thread
+    // cannot set user_limit for non voice thread
+    // only gdms can have icons
+    // icon is not an image
 
-        /// the specified string or array length is out of range
-        Length { min: Option<u64>, max: Option<u64> },
+    // /// unknown builtin automod list
+    // UnknownAutomodList,
 
-        /// the incorrect type was passed
-        Type { got: String, expected: String },
+    // /// unknown builtin media scanner
+    // UnknownMediaScanner,
 
-        /// some other validation error
-        Other { message: String },
-    }
+    // latest message version cannot be deleted
+    // cannot delete that message type
+    // cannot edit that message type
+    // cannot edit other user's messages
+    // maximum number of pinned messages reached
+    // invalid message content (must contain content, attachments, or embeds)
 
-    #[derive(Debug, Error, Clone)]
-    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub enum ErrorCode {
-        /// invalid data was provided
-        ///
-        /// aka malformed request body, http 400, bad request
-        #[error("invalid data was provided")]
-        InvalidData,
+    // duplicate media id
+    // media already used
 
-        /// user is suspended
-        #[error("user is suspended")]
-        UserSuspended,
+    // room not found
+    // channel not found
+    // thread not found
+    // message not found
+    // message version not found
+    // user not found
+    // media not found
+    // ...etc
 
-        /// missing scopes
-        #[error("missing scopes {scopes:?}")]
-        MissingScopes { scopes: Scopes },
+    // calls can only be created in Broadcast channels
+    // calls can only be deleted in Broadcast channels
 
-        /// sudo mode required for this endpoint
-        #[error("sudo mode required for this endpoint")]
-        SudoRequired,
-        // BadUserType,
+    // your account must have mfa enabled to use this operation
 
-        // not bot owner
-        // user is not a bot
-        // bot is not a bridge
-        // you can only puppet users of type Puppet
-        // you can only puppet your own puppets
-        // user is not a puppet
+    // message create blocked by automod
+    // message edit blocked by automod
 
-        // missing permissions (Forbidden)
-        // slowmode in effect
-        // invalid data (populate fields)
+    // invalid or expired session (same as AuthFailure?)
 
-        // channel is archived
-        // channel is removed
-        // you are not the gdm owner
-        // only gdms can be upgraded
-        // dm/gdm channel missing recipients
-        // dms can only be with a single person
-        // gdm has too many members
-        // can only create dms/gdms outside of rooms
-        // channel doesnt have text
-        // channel doesnt have voice
+    // warning
 
-        // bitrate is too high
-        // cannot set bitrate for non voice thread
-        // cannot set user_limit for non voice thread
-        // only gdms can have icons
-        // icon is not an image
+    // you didn't create this media
+}
 
-        // /// unknown builtin automod list
-        // UnknownAutomodList,
-
-        // /// unknown builtin media scanner
-        // UnknownMediaScanner,
-
-        // latest message version cannot be deleted
-        // cannot delete that message type
-        // cannot edit that message type
-        // cannot edit other user's messages
-        // maximum number of pinned messages reached
-        // invalid message content (must contain content, attachments, or embeds)
-
-        // duplicate media id
-        // media already used
-
-        // room not found
-        // channel not found
-        // thread not found
-        // message not found
-        // message version not found
-        // user not found
-        // media not found
-        // ...etc
-
-        // calls can only be created in Broadcast channels
-        // calls can only be deleted in Broadcast channels
-
-        // your account must have mfa enabled to use this operation
-
-        // message create blocked by automod
-        // message edit blocked by automod
-
-        // invalid or expired session (same as AuthFailure?)
-
-        // warning
-
-        // you didn't create this media
-    }
-
-    /// warnings that require ?force=true
-    // maybe require header instead? `X-Force: Warning1, Warning2`
-    #[derive(Debug, Clone)]
-    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub enum Warning {
-        /// this role is applied to one or more room member
-        RoleNotEmpty,
-
-        /// this tag is applied to one or more post
-        TagNotEmpty,
-        // this will revoke view access to existing thread members
-        // this will revoke view access to existing rsvpers
-        // this will remove all permission overwrites and sync access with parent channel
-    }
-
-    impl Error {
-        pub fn with_message(code: ErrorCode, message: String) -> Self {
-            Self {
-                message,
-                code,
-                fields: vec![],
-                required_permissions: vec![],
-                required_permissions_server: vec![],
-                required_scopes: vec![],
-                warnings: vec![],
-                automod_message: None,
-            }
+impl ApiError {
+    pub fn with_message(code: ErrorCode, message: String) -> Self {
+        Self {
+            message,
+            code,
+            fields: vec![],
+            required_permissions: vec![],
+            required_permissions_server: vec![],
+            required_scopes: vec![],
+            warnings: vec![],
+            automod_message: None,
         }
+    }
 
-        pub fn from_code(code: ErrorCode) -> Self {
-            Self {
-                message: code.to_string(),
-                code,
-                fields: vec![],
-                required_permissions: vec![],
-                required_permissions_server: vec![],
-                required_scopes: vec![],
-                warnings: vec![],
-                automod_message: None,
-            }
+    pub fn from_code(code: ErrorCode) -> Self {
+        Self {
+            message: code.to_string(),
+            code,
+            fields: vec![],
+            required_permissions: vec![],
+            required_permissions_server: vec![],
+            required_scopes: vec![],
+            warnings: vec![],
+            automod_message: None,
+        }
+    }
+}
+
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for ApiError {}
+
+impl ErrorCode {
+    pub fn status(&self) -> u16 {
+        match self {
+            ErrorCode::InvalidData => 400,
+            ErrorCode::UserSuspended => 403,
+            ErrorCode::MissingScopes { .. } => 403,
+            ErrorCode::SudoRequired => 401,
         }
     }
 }
