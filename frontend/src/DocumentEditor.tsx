@@ -29,7 +29,6 @@ import {
 	createWrapCommand,
 	handleAutocomplete,
 } from "./editor-utils.ts";
-import { Observable } from "lib0/observable";
 import { type Api, useApi } from "./api.tsx";
 import { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
@@ -206,26 +205,6 @@ type EditorViewProps = {
 	submitOnEnter?: boolean;
 };
 
-// TODO: move lamprey provider code here
-class LampreyProvider extends Observable {
-	constructor(ydoc: Y.Doc) {
-		super();
-
-		ydoc.on("update", (update, origin) => {
-			// ignore updates applied by this provider
-			if (origin !== this) {
-				// this update was produced either locally or by another provider.
-				this.emit("update", [update]);
-			}
-		});
-
-		// listen to an event that fires when a remote update is received
-		this.on("update", (update) => {
-			Y.applyUpdate(ydoc, update, this); // the third parameter sets the transaction-origin
-		});
-	}
-}
-
 export const createEditor = (
 	opts: EditorProps,
 	channelId: string,
@@ -271,7 +250,7 @@ export const createEditor = (
 	ydoc.on("update", (update, origin) => {
 		console.log("recv ydoc update", update, origin);
 
-		if (origin === provider) return;
+		// if (origin === provider) return;
 		const ws = api.client.getWebsocket();
 		if (ws.readyState !== WebSocket.OPEN) return;
 
@@ -291,8 +270,6 @@ export const createEditor = (
 		// 	// cursor_tail: "",
 		// }));
 	});
-
-	const provider = new LampreyProvider(ydoc);
 
 	let editorRef!: HTMLDivElement;
 	let view: EditorView | undefined;

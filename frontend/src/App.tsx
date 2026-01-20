@@ -308,6 +308,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		},
 		slashCommands,
 		channel_contexts: new ReactiveMap(),
+		document_contexts: new ReactiveMap(),
 	};
 
 	createEffect(() => {

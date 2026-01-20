@@ -8,6 +8,7 @@ import icBranchFork from "./assets/edit.png";
 import icBranch from "./assets/edit.png";
 import icMergeFull from "./assets/edit.png";
 import icMergeCherrypick from "./assets/edit.png";
+import { useDocument } from "./contexts/document.tsx";
 
 type DocumentProps = {
 	channel: Channel;
@@ -26,6 +27,10 @@ export const Document = (props: DocumentProps) => {
 };
 
 const DocumentHeader = (props: DocumentProps) => {
+	console.log(useDocument);
+	console.log(useDocument());
+	const [doc, update] = useDocument();
+
 	// top: title, topic(?), notifications, members, search
 	// bottom: branches (merge, diff), edit, format, insert, view, tools
 	return (
@@ -45,7 +50,11 @@ const DocumentHeader = (props: DocumentProps) => {
 						autofocus
 					/>
 					<ul>
-						<li class="default">
+						<li
+							class="default"
+							classList={{ selected: doc.branchId === props.channel.id }}
+							onClick={() => update("branchId", props.channel.id)}
+						>
 							<button>
 								<img class="icon" src={icBranchDefault} />
 								<div class="info">

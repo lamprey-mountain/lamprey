@@ -1034,7 +1034,7 @@ export function createApi(
 				}
 			}
 		} else {
-			console.warn(`unknown event ${msg.type}`, msg);
+			// console.warn(`unknown event ${msg.type}`, msg);
 		}
 	});
 

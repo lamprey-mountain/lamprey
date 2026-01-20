@@ -2,10 +2,9 @@
 export * from "./memberlist.tsx";
 export * from "./modal.tsx";
 export * from "./uploads.tsx";
-
-// // TODO: move channelctx, voice here
-// export * from "./channel.tsx";
-// export * from "./voice.tsx";
+export * from "./document.tsx";
+export * from "./channel.tsx";
+export * from "./voice.tsx";
 
 // // TODO: more contexts
 // export * from "./room.tsx";

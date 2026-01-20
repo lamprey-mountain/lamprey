@@ -29,6 +29,10 @@ import { RoomT } from "./types.ts";
 import { Friends } from "./Friends.tsx";
 import { Calendar } from "./Calendar.tsx";
 import { Document, Wiki } from "./Document.tsx";
+import {
+	createInitialDocumentState,
+	DocumentContext,
+} from "./contexts/document.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -231,6 +235,20 @@ export const RouteChannel = (p: RouteSectionProps) => {
 		return ctx.channel_contexts.get(channelId)!;
 	};
 
+	// TODO: don't create document context if the channel isnt a document
+	const getOrCreateDocumentContext = () => {
+		const channelId = p.params.channel_id;
+		if (!channelId) return null;
+
+		if (!ctx.document_contexts.has(channelId)) {
+			const store = createStore(createInitialDocumentState(channelId));
+			ctx.document_contexts.set(channelId, store);
+		}
+
+		return ctx.document_contexts.get(channelId)!;
+	};
+
+	const documentCtx = getOrCreateDocumentContext();
 	const channelCtx = getOrCreateChannelContext();
 
 	// Handle message anchor logic
@@ -272,50 +290,52 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	return (
 		<Show when={channelCtx} fallback={<div>Loading channel...</div>}>
 			<ChannelContext.Provider value={channelCtx}>
-				<LayoutDefault
-					title={title()}
-					showChannelNav={true}
-					channelNavRoomId={channel()?.room_id ?? undefined}
-					showVoiceTray={true}
-				>
-					<Show when={channel()}>
-						<Show when={channel()!.type !== "Voice"}>
-							<ChatHeader channel={channel()!} />
+				<DocumentContext.Provider value={documentCtx}>
+					<LayoutDefault
+						title={title()}
+						showChannelNav={true}
+						channelNavRoomId={channel()?.room_id ?? undefined}
+						showVoiceTray={true}
+					>
+						<Show when={channel()}>
+							<Show when={channel()!.type !== "Voice"}>
+								<ChatHeader channel={channel()!} />
+							</Show>
+							<Show
+								when={channel()!.type === "Text" ||
+									channel()!.type === "Dm" ||
+									channel()!.type === "Gdm" ||
+									channel()!.type === "Announcement" ||
+									channel()!.type === "ThreadPublic" ||
+									channel()!.type === "ThreadPrivate"}
+							>
+								<ChatMain channel={channel()!} />
+							</Show>
+							<Show when={channel()!.type === "Voice"}>
+								<Voice channel={channel()!} />
+							</Show>
+							<Show when={channel()!.type === "Document"}>
+								<Document channel={channel()!} />
+							</Show>
+							<Show when={channel()!.type === "Wiki"}>
+								<Wiki channel={channel()!} />
+							</Show>
+							<Show when={channel()!.type === "Forum"}>
+								<Forum channel={channel()!} />
+							</Show>
+							<Show when={channel()!.type === "Forum2"}>
+								<Forum2 channel={channel()!} />
+							</Show>
+							<Show when={channel()!.type === "Calendar"}>
+								<Calendar channel={channel()!} />
+							</Show>
+							<Show when={channel()!.type === "Category"}>
+								<Category channel={channel()!} />
+							</Show>
+							<ChannelSidebar channel={channel()!} />
 						</Show>
-						<Show
-							when={channel()!.type === "Text" ||
-								channel()!.type === "Dm" ||
-								channel()!.type === "Gdm" ||
-								channel()!.type === "Announcement" ||
-								channel()!.type === "ThreadPublic" ||
-								channel()!.type === "ThreadPrivate"}
-						>
-							<ChatMain channel={channel()!} />
-						</Show>
-						<Show when={channel()!.type === "Voice"}>
-							<Voice channel={channel()!} />
-						</Show>
-						<Show when={channel()!.type === "Document"}>
-							<Document channel={channel()!} />
-						</Show>
-						<Show when={channel()!.type === "Wiki"}>
-							<Wiki channel={channel()!} />
-						</Show>
-						<Show when={channel()!.type === "Forum"}>
-							<Forum channel={channel()!} />
-						</Show>
-						<Show when={channel()!.type === "Forum2"}>
-							<Forum2 channel={channel()!} />
-						</Show>
-						<Show when={channel()!.type === "Calendar"}>
-							<Calendar channel={channel()!} />
-						</Show>
-						<Show when={channel()!.type === "Category"}>
-							<Category channel={channel()!} />
-						</Show>
-						<ChannelSidebar channel={channel()!} />
-					</Show>
-				</LayoutDefault>
+					</LayoutDefault>
+				</DocumentContext.Provider>
 			</ChannelContext.Provider>
 		</Show>
 	);

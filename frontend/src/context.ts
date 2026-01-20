@@ -195,6 +195,7 @@ export type AutocompleteState =
 	| null;
 
 import type { ChannelContextT } from "./channelctx";
+import { DocumentContextT } from "./contexts/document.tsx";
 
 // TODO: split apart this massive context into more granular contexts
 export type ChatCtx = {
@@ -223,6 +224,7 @@ export type ChatCtx = {
 	scrollToChatList: (pos: number) => void;
 	slashCommands: SlashCommands;
 	channel_contexts: ReactiveMap<string, ChannelContextT>;
+	document_contexts: ReactiveMap<string, DocumentContextT>;
 };
 
 export type MediaCtx = {
