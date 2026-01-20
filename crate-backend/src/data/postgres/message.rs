@@ -72,6 +72,7 @@ pub enum DbMessageType {
     MessagePinned,
     ThreadCreated,
     ChannelIcon,
+    AutomodExecution,
 }
 
 impl From<MessageType> for DbMessageType {
@@ -85,6 +86,7 @@ impl From<MessageType> for DbMessageType {
             MessageType::MessagePinned(_) => DbMessageType::MessagePinned,
             MessageType::ThreadCreated(_) => DbMessageType::ThreadCreated,
             MessageType::ChannelIcon(_) => DbMessageType::ChannelIcon,
+            MessageType::AutomodExecution(_) => DbMessageType::AutomodExecution,
             _ => todo!(),
         }
     }
@@ -169,6 +171,11 @@ impl From<DbMessageVersion> for MessageVersionV2 {
                         .expect("invalid data in db"),
                 ),
                 DbMessageType::ChannelIcon => MessageType::ChannelIcon(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::AutomodExecution => MessageType::AutomodExecution(
                     row.metadata
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),

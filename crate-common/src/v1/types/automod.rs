@@ -95,6 +95,16 @@ pub struct AutomodRuleStripped {
     pub target: AutomodTarget,
 }
 
+impl From<AutomodRule> for AutomodRuleStripped {
+    fn from(rule: AutomodRule) -> Self {
+        Self {
+            id: rule.id,
+            name: rule.name,
+            target: rule.target,
+        }
+    }
+}
+
 /// what this rule should be evaluated on
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -118,7 +128,7 @@ pub struct AutomodRuleExecution {
     /// the rule that was executed
     pub rule: AutomodRule,
 
-    /// the user who triggered this rule
+    /// the user who triggered this execution
     pub user_id: UserId,
 
     /// the channel this happened in (for messages)
@@ -190,7 +200,7 @@ pub struct AutomodMatches {
 }
 
 /// where a piece of text was found
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AutomodTextLocation {

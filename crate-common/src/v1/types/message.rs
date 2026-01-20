@@ -404,7 +404,7 @@ pub enum MessageType {
 
     // /// (TODO) interact with a bot, uncertain if i'll go this route
     // BotCommand(MessageBotCommand),
-    /// (TODO) the result of an automod execution
+    /// the result of an automod execution
     AutomodExecution(MessageAutomodExecution),
     // /// (TODO) implement a reporting system? uncertain (reports are certain, but reports-as-messages vs as-threads idk)
     // // #[deprecated = "reports will be impl'd as threads"]
@@ -434,9 +434,12 @@ pub struct MessageAutomodExecution {
     /// the content that was matched
     pub matches: Vec<AutomodMatches>,
 
-    /// the id of the channel where this happened
-    // NOTE: maybe include channel type/name for messages in threads
-    // NOTE: if this was triggered via thread title, should this be the thread or parent (text/forum) channel?
+    /// the user who triggered this execution
+    pub user_id: UserId,
+
+    /// the id of the channel where the message was sent, is None if the message was blocked
+    // NOTE: this is only populated if the target was a
+    // TODO: design thread and other automod target types
     pub channel_id: Option<ChannelId>,
 
     /// if the message wasn't blocked, this is the id of it

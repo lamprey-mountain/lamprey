@@ -3,21 +3,23 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use common::{
     v1::types::{
         automod::{
-            AutomodAction, AutomodMatches, AutomodRule, AutomodTarget, AutomodTextLocation,
-            AutomodTrigger,
+            AutomodAction, AutomodMatches, AutomodRule, AutomodRuleStripped, AutomodTarget,
+            AutomodTextLocation, AutomodTrigger,
         },
+        ids::AUTOMOD_USER_ID,
         util::Time,
-        AutomodRuleId, Channel, ChannelCreate, ChannelPatch, MessageCreate, MessagePatch, RoomId,
+        AutomodRuleId, Channel, ChannelCreate, ChannelPatch, Mentions, MentionsUser,
+        MessageAutomodExecution, MessageCreate, MessagePatch, MessageSync, MessageType, RoomId,
         RoomMember, RoomMemberPatch, User, UserId,
     },
     v2::types::message::Message,
 };
 use dashmap::DashMap;
 use linkify::{LinkFinder, LinkKind};
-use tracing::warn;
+use tracing::{error, warn};
 use url::Url;
 
-use crate::{Error, Result, ServerStateInner};
+use crate::{types::DbMessageCreate, Error, Result, ServerStateInner};
 
 pub struct ServiceAutomod {
     state: Arc<ServerStateInner>,
@@ -53,7 +55,7 @@ pub struct AutomodResult {
     actions: AutomodResultActions,
 
     /// what was matched
-    matches: Option<AutomodMatches>,
+    matches: Vec<AutomodMatches>,
 }
 
 impl AutomodResult {
@@ -69,8 +71,8 @@ impl AutomodResult {
         &self.actions.inner
     }
 
-    pub fn matches(&self) -> Option<&AutomodMatches> {
-        self.matches.as_ref()
+    pub fn matches(&self) -> &[AutomodMatches] {
+        &self.matches
     }
 
     pub fn merge(&mut self, other: Self) {
@@ -82,25 +84,31 @@ impl AutomodResult {
 
         self.actions.merge(other.actions);
 
-        if let Some(other_matches) = other.matches {
-            if let Some(self_matches) = &mut self.matches {
-                for m in other_matches.matches {
-                    if !self_matches.matches.contains(&m) {
-                        self_matches.matches.push(m);
+        // merge matches: if we have a match object for the same location/text, merge into it
+        // otherwise push
+        for other_match in other.matches {
+            if let Some(existing) = self
+                .matches
+                .iter_mut()
+                .find(|m| m.location == other_match.location && m.text == other_match.text)
+            {
+                for m in other_match.matches {
+                    if !existing.matches.contains(&m) {
+                        existing.matches.push(m);
                     }
                 }
-                for k in other_matches.keywords {
-                    if !self_matches.keywords.contains(&k) {
-                        self_matches.keywords.push(k);
+                for k in other_match.keywords {
+                    if !existing.keywords.contains(&k) {
+                        existing.keywords.push(k);
                     }
                 }
-                for r in other_matches.regexes {
-                    if !self_matches.regexes.contains(&r) {
-                        self_matches.regexes.push(r);
+                for r in other_match.regexes {
+                    if !existing.regexes.contains(&r) {
+                        existing.regexes.push(r);
                     }
                 }
             } else {
-                self.matches = Some(other_matches);
+                self.matches.push(other_match);
             }
         }
     }
@@ -298,14 +306,17 @@ impl AutomodRuleset {
                         }
                     }
 
-                    let m = result.matches.get_or_insert_with(|| AutomodMatches {
-                        text: text.to_owned(),
-                        sanitized_text: cured_text.clone(),
-                        matches: vec![],
-                        keywords: vec![],
-                        regexes: vec![],
-                        location: location.clone(),
-                    });
+                    if result.matches.is_empty() {
+                        result.matches.push(AutomodMatches {
+                            text: text.to_owned(),
+                            sanitized_text: cured_text.clone(),
+                            matches: vec![],
+                            keywords: vec![],
+                            regexes: vec![],
+                            location: location.clone(),
+                        });
+                    }
+                    let m = &mut result.matches[0];
 
                     let pattern = &self.compiled.regex_deny_patterns[idx];
                     if !m.regexes.contains(pattern) {
@@ -352,14 +363,17 @@ impl AutomodRuleset {
                         }
                     }
 
-                    let m = result.matches.get_or_insert_with(|| AutomodMatches {
-                        text: text.to_owned(),
-                        sanitized_text: cured_text.clone(),
-                        matches: vec![],
-                        keywords: vec![],
-                        regexes: vec![],
-                        location: location.clone(),
-                    });
+                    if result.matches.is_empty() {
+                        result.matches.push(AutomodMatches {
+                            text: text.to_owned(),
+                            sanitized_text: cured_text.clone(),
+                            matches: vec![],
+                            keywords: vec![],
+                            regexes: vec![],
+                            location: location.clone(),
+                        });
+                    }
+                    let m = &mut result.matches[0];
 
                     // We store keyword patterns escaped in the set, but we want the original matched text from cured_text.
                     let escaped_pattern = &self.compiled.keyword_deny_patterns[idx];
@@ -414,14 +428,17 @@ impl AutomodRuleset {
                         }
 
                         if *whitelist != matches_target {
-                            let m = result.matches.get_or_insert_with(|| AutomodMatches {
-                                text: text.to_owned(),
-                                sanitized_text: cured_text.clone(),
-                                matches: vec![],
-                                keywords: vec![],
-                                regexes: vec![],
-                                location: location.clone(),
-                            });
+                            if result.matches.is_empty() {
+                                result.matches.push(AutomodMatches {
+                                    text: text.to_owned(),
+                                    sanitized_text: cured_text.clone(),
+                                    matches: vec![],
+                                    keywords: vec![],
+                                    regexes: vec![],
+                                    location: location.clone(),
+                                });
+                            }
+                            let m = &mut result.matches[0];
 
                             let link_str = link.as_str().to_string();
                             if !m.matches.contains(&link_str) {
@@ -718,8 +735,88 @@ impl ServiceAutomod {
                     // handled by upstream
                     removed = true;
                 }
-                AutomodAction::SendAlert { channel_id: _ } => {
-                    todo!("SendAlert action not yet implemented (or designed)")
+                AutomodAction::SendAlert { channel_id } => {
+                    let srv = self.state.services();
+                    let data = self.state.data();
+
+                    let mut matches = vec![];
+                    matches.extend(scan.matches.clone());
+
+                    let rules: Vec<AutomodRuleStripped> = scan
+                        .rule_ids
+                        .iter()
+                        .filter_map(|id| {
+                            if let Some(ruleset) = self.rulesets.get(&room_id) {
+                                if let Some(rule) = ruleset.rules.iter().find(|r| r.id == *id) {
+                                    return Some(rule.clone().into());
+                                }
+                            }
+                            None
+                        })
+                        .collect();
+
+                    let execution = MessageAutomodExecution {
+                        rules,
+                        actions: scan.actions.inner.clone(),
+                        matches,
+                        user_id,
+                        channel_id: None,
+                        flagged_message_id: None,
+                    };
+
+                    let mut mentions = Mentions::default();
+
+                    if let Ok(user) = srv.users.get(user_id, None).await {
+                        mentions.users.push(MentionsUser {
+                            id: user_id,
+                            resolved_name: user.name,
+                        });
+                    } else {
+                        mentions.users.push(MentionsUser {
+                            id: user_id,
+                            resolved_name: "Unknown".to_string(),
+                        });
+                    }
+
+                    let message_create = DbMessageCreate {
+                        channel_id: *channel_id,
+                        attachment_ids: vec![],
+                        author_id: AUTOMOD_USER_ID,
+                        embeds: vec![],
+                        message_type: MessageType::AutomodExecution(execution),
+                        edited_at: None,
+                        created_at: None,
+                        removed_at: None,
+                        mentions,
+                    };
+
+                    match data.message_create(message_create).await {
+                        Ok(msg_id) => {
+                            if let Ok(mut message) =
+                                data.message_get(*channel_id, msg_id, AUTOMOD_USER_ID).await
+                            {
+                                if let Err(e) = self.state.presign_message(&mut message).await {
+                                    warn!("Failed to presign automod alert: {}", e);
+                                }
+                                let msg = MessageSync::MessageCreate {
+                                    message: message.clone(),
+                                };
+                                if let Err(e) = self
+                                    .state
+                                    .broadcast_channel(*channel_id, AUTOMOD_USER_ID, msg)
+                                    .await
+                                {
+                                    error!("Failed to broadcast automod alert: {}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            error!(
+                                "Failed to send automod alert to channel {}: {}",
+                                channel_id, e
+                            );
+                        }
+                    }
                 }
             }
         }

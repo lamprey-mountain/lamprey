@@ -418,6 +418,7 @@ impl DbMessageCreate {
             MessageType::MessagePinned(pinned) => Some(serde_json::to_value(pinned).ok()?),
             MessageType::ThreadCreated(created) => Some(serde_json::to_value(created).ok()?),
             MessageType::ChannelIcon(icon) => Some(serde_json::to_value(icon).ok()?),
+            MessageType::AutomodExecution(exec) => Some(serde_json::to_value(exec).ok()?),
             _ => None,
         }
     }

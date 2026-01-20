@@ -226,3 +226,8 @@ pub const SERVER_ROOM_ID: RoomId = Id {
     inner: uuid!("00000000-0000-7000-0000-736572766572"),
     phantom: std::marker::PhantomData,
 };
+
+pub const AUTOMOD_USER_ID: UserId = Id {
+    inner: uuid!("00000000-0000-7000-0061-75746f6d6f64"),
+    phantom: std::marker::PhantomData,
+};
