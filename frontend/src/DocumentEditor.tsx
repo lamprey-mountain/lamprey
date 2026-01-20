@@ -23,10 +23,16 @@ import { getEmojiUrl } from "./media/util.tsx";
 import { initTurndownService } from "./turndown.ts";
 import { decorate, md } from "./markdown.tsx";
 import { useCtx } from "./context";
-import { createWrapCommand, handleAutocomplete } from "./editor-utils.ts";
+import {
+	base64UrlDecode,
+	base64UrlEncode,
+	createWrapCommand,
+	handleAutocomplete,
+} from "./editor-utils.ts";
 import { Observable } from "lib0/observable";
 import { type Api, useApi } from "./api.tsx";
 import { MessageSync } from "sdk";
+import { cursorPlugin } from "./editor-cursors.ts";
 
 const turndown = initTurndownService();
 
@@ -220,37 +226,6 @@ class LampreyProvider extends Observable {
 	}
 }
 
-/** decode unpadded url safe base64 */
-function base64UrlDecode(str: string): Uint8Array {
-	str = str.replace(/-/g, "+").replace(/_/g, "/");
-
-	const pad = str.length % 4;
-	if (pad) {
-		str += "=".repeat(4 - pad);
-	}
-
-	const binary = atob(str);
-	const bytes = new Uint8Array(binary.length);
-
-	for (let i = 0; i < binary.length; i++) {
-		bytes[i] = binary.charCodeAt(i);
-	}
-
-	return bytes;
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-	let binary = "";
-	const len = bytes.byteLength;
-	for (let i = 0; i < len; i++) {
-		binary += String.fromCharCode(bytes[i]);
-	}
-	return btoa(binary)
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=+$/, "");
-}
-
 export const createEditor = (
 	opts: EditorProps,
 	channelId: string,
@@ -355,6 +330,7 @@ export const createEditor = (
 			schema,
 			plugins: [
 				ySyncPlugin(type, { mapping }),
+				cursorPlugin(api, channelId, branchId),
 				yUndoPlugin(),
 				keymap({
 					"Ctrl-z": undo,
