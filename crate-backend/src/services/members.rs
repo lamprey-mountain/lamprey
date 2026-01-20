@@ -122,48 +122,63 @@ impl ServiceMembers {
 
             loop {
                 let msg = tokio::select! {
-                    msg = events.recv() => {
-                        dbg!(msg).expect("error while receiving event").0
-                    }
-                    msg = actor_rx.recv() => {
-                        let msg = msg.expect("error while receiving event");
-                        match msg {
-                            ActorMessage::GetInitialRanges { user_id, ranges, callback } => {
-                                let ops = list.get_initial_ranges(&ranges);
-                                let msg = MessageSync::MemberListSync {
-                                    user_id,
-                                    room_id: key.room_id,
-                                    channel_id: key.channel_id,
-                                    ops,
-                                    groups: list.groups(),
-                                };
-                                callback.send(msg).unwrap()
+                    res = events.recv() => {
+                        match res {
+                            Ok((msg, _)) => msg,
+                            Err(broadcast::error::RecvError::Lagged(n)) => {
+                                warn!("member list skipped {} events", n);
+                                continue;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => {
+                                warn!("event bus closed");
+                                break;
                             }
                         }
-                        continue;
+                    }
+                    res = actor_rx.recv() => {
+                        match res {
+                            Some(msg) => {
+                                match msg {
+                                    ActorMessage::GetInitialRanges { user_id, ranges, callback } => {
+                                        let ops = list.get_initial_ranges(&ranges);
+                                        let msg = MessageSync::MemberListSync {
+                                            user_id,
+                                            room_id: key.room_id,
+                                            channel_id: key.channel_id,
+                                            ops,
+                                            groups: list.groups(),
+                                        };
+                                        let _ = callback.send(msg);
+                                    }
+                                }
+                                continue;
+                            }
+                            None => break,
+                        }
                     }
                 };
                 let ops = match msg {
                     MessageSync::ChannelUpdate { channel } => {
                         let srv = s.services();
-                        let overwrites = srv
-                            .channels
-                            .fetch_overwrite_ancestors(channel.id)
-                            .await
-                            .unwrap();
-                        let v = MemberListVisibility { overwrites };
-                        list.set_visibility(v)
+                        match srv.channels.fetch_overwrite_ancestors(channel.id).await {
+                            Ok(overwrites) => {
+                                let v = MemberListVisibility { overwrites };
+                                list.set_visibility(v)
+                            }
+                            Err(e) => {
+                                warn!("failed to fetch overwrites: {e}");
+                                vec![]
+                            }
+                        }
                     }
                     msg => list.process(&msg),
                 };
                 if !ops.is_empty() {
-                    sync_tx
-                        .send(MemberListSync {
-                            key: key.clone(),
-                            ops,
-                            groups: list.groups(),
-                        })
-                        .unwrap();
+                    let _ = sync_tx.send(MemberListSync {
+                        key: key.clone(),
+                        ops,
+                        groups: list.groups(),
+                    });
                 }
             }
         });
@@ -171,16 +186,16 @@ impl ServiceMembers {
         sync_rx
     }
 
-    // TODO: better error handling
     async fn get_initial_ranges(
         &self,
         user_id: UserId,
         key: MemberListKey,
         ranges: Vec<(u64, u64)>,
-    ) -> MessageSync {
-        let Some(list) = self.lists.get(&key) else {
-            todo!("handle error here")
-        };
+    ) -> Result<MessageSync> {
+        let list = self
+            .lists
+            .get(&key)
+            .ok_or(Error::BadStatic("member list not found"))?;
 
         let (range_tx, range_rx) = oneshot::channel();
         list.0
@@ -190,8 +205,10 @@ impl ServiceMembers {
                 callback: range_tx,
             })
             .await
-            .unwrap();
-        range_rx.await.unwrap()
+            .map_err(|_| Error::Internal("member list actor closed".to_owned()))?;
+        range_rx
+            .await
+            .map_err(|_| Error::Internal("member list actor closed (callback)".to_owned()))
     }
 }
 
@@ -242,26 +259,34 @@ impl MemberListSyncer {
             tokio::select! {
                 op = ops_rx.recv() => {
                     debug!("recv member list message");
-                    let msg = op.map_err(|_| Error::BadStatic("member list handler closed"))?.into_sync_message(self.user_id().await);
+                    let msg = op.map_err(|_| Error::Internal("member list handler closed".to_owned()))?.into_sync_message(self.user_id().await);
                     Ok(msg)
                 }
                 changed = qrx.changed() => {
-                    changed.unwrap();
+                    if changed.is_err() {
+                        return Err(Error::Internal("query channel closed".to_owned()));
+                    }
                     debug!("query changed, getting initial ranges");
-                    Ok(self.get_initial_ranges().await)
+                    self.get_initial_ranges().await
                 }
             }
         } else {
-            qrx.changed().await.unwrap();
+            if qrx.changed().await.is_err() {
+                return Err(Error::Internal("query channel closed".to_owned()));
+            }
             debug!("query changed, getting initial ranges");
-            Ok(self.get_initial_ranges().await)
+            self.get_initial_ranges().await
         }
     }
 
-    async fn get_initial_ranges(&self) -> MessageSync {
+    async fn get_initial_ranges(&self) -> Result<MessageSync> {
         let user_id = self.user_id().await;
         debug!("get initial ranges for {user_id:?}");
-        let q = self.query_rx.borrow().clone().unwrap();
+        let q = self
+            .query_rx
+            .borrow()
+            .clone()
+            .ok_or(Error::Internal("query missing".to_owned()))?;
         let srv = self.s.services();
         srv.members
             .get_initial_ranges(user_id, q.key, q.ranges)
