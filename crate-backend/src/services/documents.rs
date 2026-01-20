@@ -94,14 +94,12 @@ impl ServiceDocuments {
                 doc.get_or_insert_xml_fragment("doc");
                 let mut tx = doc.transact_mut();
 
-                let snapshot = Update::decode_v1(&dehydrated.last_snapshot)
-                    .map_err(|_| Error::Internal("failed to decode snapshot".to_owned()))?;
-                tx.apply_update(snapshot).unwrap(); // TODO: better error handling
+                let snapshot = Update::decode_v1(&dehydrated.last_snapshot)?;
+                tx.apply_update(snapshot)?;
 
                 for change in &dehydrated.changes {
-                    let update = Update::decode_v1(change)
-                        .map_err(|_| Error::Internal("failed to decode change".to_owned()))?;
-                    tx.apply_update(update).unwrap();
+                    let update = Update::decode_v1(change)?;
+                    tx.apply_update(update)?;
                 }
                 drop(tx);
 
@@ -171,10 +169,10 @@ impl ServiceDocuments {
         origin_conn_id: Option<Uuid>,
         update_bytes: &[u8],
     ) -> Result<()> {
-        let update = Update::decode_v1(update_bytes).unwrap();
+        let update = Update::decode_v1(update_bytes)?;
         let ctx = self.load(context_id, Some(author_id)).await?;
         let mut ctx = ctx.write().await;
-        ctx.doc.transact_mut().apply_update(update).unwrap();
+        ctx.doc.transact_mut().apply_update(update)?;
 
         // // TODO: calculate diff stats
         // let xml = ctx.doc.get_or_insert_xml_fragment("doc");
@@ -319,7 +317,7 @@ impl ServiceDocuments {
     }
 
     pub async fn diff(&self, context_id: EditContextId, state_vector: &[u8]) -> Result<Vec<u8>> {
-        let s = StateVector::decode_v1(state_vector).unwrap();
+        let s = StateVector::decode_v1(state_vector)?;
         let ctx = self.load(context_id, None).await?;
         let ctx = ctx.read().await;
         let serialized = ctx.doc.transact().encode_diff_v1(&s);
@@ -367,7 +365,7 @@ impl DocumentSyncer {
     ) -> Result<()> {
         self.query_tx
             .send(Some((context_id, state_vector.map(|sv| sv.0))))
-            .unwrap();
+            .map_err(|_| Error::Internal("query channel closed".to_string()))?;
         Ok(())
     }
 
@@ -484,7 +482,10 @@ impl DocumentSyncer {
                     _ = self.query_rx.changed() => continue,
                 }
             } else {
-                self.query_rx.changed().await.unwrap();
+                self.query_rx
+                    .changed()
+                    .await
+                    .map_err(|_| Error::Internal("query channel closed".to_string()))?;
                 continue;
             }
         }

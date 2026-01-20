@@ -126,6 +126,15 @@ pub enum Error {
 
     #[error("missing scopes {0:?}")]
     MissingScopes(Scopes),
+
+    #[error("yrs error: {0}")]
+    Yrs(#[from] yrs::error::Error),
+
+    #[error("yrs update error: {0}")]
+    YrsUpdate(#[from] yrs::error::UpdateError),
+
+    #[error("yrs read error: {0}")]
+    YrsRead(#[from] yrs::encoding::read::Error),
 }
 
 impl From<sqlx::Error> for Error {
