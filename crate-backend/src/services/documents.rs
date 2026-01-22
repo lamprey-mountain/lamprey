@@ -9,6 +9,7 @@ use common::v1::types::{
 };
 use dashmap::DashMap;
 use tokio::sync::{broadcast, RwLock};
+use tracing::error;
 use uuid::Uuid;
 use yrs::updates::encoder::Encode;
 use yrs::DeepObservable;
@@ -102,6 +103,32 @@ impl ServiceDocuments {
             state,
             edit_contexts: DashMap::new(),
         }
+    }
+
+    pub fn start_background_tasks(&self) {
+        let state = self.state.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                let services = state.services();
+                let documents = &services.documents;
+
+                let mut to_unload = Vec::new();
+                for entry in documents.edit_contexts.iter() {
+                    let (id, ctx) = entry.pair();
+                    if ctx.read().await.should_unload() {
+                        to_unload.push(*id);
+                    }
+                }
+
+                for id in to_unload {
+                    if let Err(e) = documents.unload(id).await {
+                        error!("failed to unload document {:?}: {}", id, e);
+                    }
+                }
+            }
+        });
     }
 
     /// load a document. reads from postgres if its not already in memory
