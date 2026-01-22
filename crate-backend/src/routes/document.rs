@@ -20,6 +20,7 @@ use common::v1::types::{
     ids::{DocumentBranchId, DocumentTagId},
     MessageSync,
 };
+use uuid::Uuid;
 
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -217,7 +218,7 @@ async fn document_branch_close(
     Ok(Json(branch))
 }
 
-/// Document branch fork (TODO)
+/// Document branch fork
 #[utoipa::path(
     post,
     path = "/document/{channel_id}/branch/{parent_id}/fork",
@@ -228,13 +229,47 @@ async fn document_branch_close(
     )
 )]
 async fn document_branch_fork(
-    Path(_channel_id): Path<ChannelId>,
+    Path((channel_id, parent_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _json: Json<DocumentBranchCreate>,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<DocumentBranchCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    let data = s.data();
+    let user_id = auth.user.id;
+
+    let perms = srv.perms.for_channel(user_id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let parent_branch = data.document_branch_get(channel_id, parent_id).await?;
+    if parent_branch.private && parent_branch.creator_id != user_id {
+        return Err(Error::NotFound);
+    }
+
+    let branch_id = data
+        .document_fork((channel_id, parent_id), user_id, json)
+        .await?;
+
+    let snapshot = srv
+        .documents
+        .get_snapshot((channel_id, parent_id))
+        .await?;
+
+    // use seq 0 for the initial snapshot of the new branch
+    let snapshot_id = Uuid::now_v7();
+    data.document_compact((channel_id, branch_id), snapshot_id, 0, snapshot)
+        .await?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+
+    s.broadcast(MessageSync::DocumentBranchCreate {
+        branch: branch.clone(),
+    })?;
+
+    Ok(Json(branch))
 }
 
 /// Document branch merge (TODO)
@@ -296,7 +331,7 @@ async fn document_tag_create(
             // TODO: implement tagging branch heads
             return Err(Error::Unimplemented);
         }
-        DocumentRevisionId::Revision { branch_id, seq } => (branch_id, seq),
+        DocumentRevisionId::Revision { version_id } => (version_id.branch_id, version_id.seq),
         DocumentRevisionId::Tag { .. } => {
             return Err(Error::BadRequest("Cannot tag another tag".to_string()));
         }

@@ -6,7 +6,7 @@ use crate::types::{DehydratedDocument, PaginationDirection};
 use async_trait::async_trait;
 use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
-    DocumentBranchState, DocumentTag,
+    DocumentBranchState, DocumentTag, DocumentVersionId,
 };
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
@@ -25,6 +25,7 @@ struct DbDocumentBranch {
     private: bool,
     state: DocumentBranchState,
     parent_branch_id: Option<Uuid>,
+    parent_seq: Option<i64>,
 }
 
 impl From<DbDocumentBranch> for DocumentBranch {
@@ -38,7 +39,13 @@ impl From<DbDocumentBranch> for DocumentBranch {
             default: row.is_default,
             private: row.private,
             state: row.state,
-            parent_branch_id: row.parent_branch_id.map(Into::into),
+            parent_id: match (row.parent_branch_id, row.parent_seq) {
+                (Some(branch_id), Some(seq)) => Some(DocumentVersionId {
+                    branch_id: branch_id.into(),
+                    seq: seq as u64,
+                }),
+                _ => None,
+            },
         }
     }
 }
@@ -295,19 +302,34 @@ impl DataDocument for Postgres {
             )));
         }
 
+        let parent_seq: i64 = query_scalar!(
+            r#"
+            SELECT COALESCE(
+                (SELECT MAX(seq) FROM document_update WHERE branch_id = $1),
+                (SELECT MAX(seq) FROM document_snapshot WHERE branch_id = $1),
+                0
+            )
+            "#,
+            parent_branch_id.into_inner()
+        )
+        .fetch_one(&mut *tx)
+        .await?
+        .unwrap_or(0) as i64;
+
         let branch_id = DocumentBranchId::new();
 
         query!(
             r#"
-            INSERT INTO document_branch (id, document_id, creator_id, name, private, parent_branch_id, state)
-            VALUES ($1, $2, $3, $4, $5, $6, 'Active'::branch_state)
+            INSERT INTO document_branch (id, document_id, creator_id, name, private, parent_branch_id, parent_seq, state)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active'::branch_state)
             "#,
             branch_id.into_inner(),
             document_id.into_inner(),
             creator_id.into_inner(),
             create.name,
             create.private,
-            parent_branch_id.into_inner()
+            parent_branch_id.into_inner(),
+            parent_seq
         )
         .execute(&mut *tx)
         .await?;
@@ -325,7 +347,7 @@ impl DataDocument for Postgres {
         let branch = query_as!(
             DbDocumentBranch,
             r#"
-            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id
+            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id, parent_seq
             FROM document_branch
             WHERE id = $1
             "#,
@@ -418,7 +440,7 @@ impl DataDocument for Postgres {
         let branches = query_as!(
             DbDocumentBranch,
             r#"
-            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id
+            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id, parent_seq
             FROM document_branch
             WHERE document_id = $1 AND state = 'Active'::branch_state
             ORDER BY created_at DESC
@@ -451,7 +473,7 @@ impl DataDocument for Postgres {
         let branches = query_as!(
             DbDocumentBranch,
             r#"
-            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id
+            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id, parent_seq
             FROM document_branch
             WHERE document_id = $1 AND state = ANY($2::branch_state[])
             AND (private = false OR creator_id = $5)

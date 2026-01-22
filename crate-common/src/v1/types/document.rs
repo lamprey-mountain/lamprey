@@ -182,11 +182,11 @@ pub struct DocumentBranch {
     /// the current state of this branch
     pub state: DocumentBranchState,
 
-    /// the parent branch that this branch was forked from
+    /// the parent version that this branch was forked from
     ///
     /// is None if this is the default branch
-    pub parent_branch_id: Option<DocumentBranchId>,
-    // pub parent_commit_id: Option<DocumentCommitId>,
+    pub parent_id: Option<DocumentVersionId>,
+
     // pub merged_at: Option<Time>,
     // pub merged_into: Option<DocumentBranchId>,
 }
@@ -275,9 +275,60 @@ pub enum DocumentBranchMergeResultStatus {
     Conflicted,
 }
 
+/// a version of a document at a point in time
+///
+/// serialized as `branch-uuid@seq`
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "String", into = "String"))]
+pub struct DocumentVersionId {
+    pub branch_id: DocumentBranchId,
+    pub seq: u64,
+}
+
+impl std::fmt::Display for DocumentVersionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}@{}", self.branch_id, self.seq)
+    }
+}
+
+impl std::str::FromStr for DocumentVersionId {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (branch_str, seq_str) = s
+            .split_once('@')
+            .ok_or_else(|| "invalid format".to_string())?;
+        let branch_id = branch_str
+            .parse()
+            .map_err(|e: uuid::Error| e.to_string())?;
+        let seq = seq_str
+            .parse()
+            .map_err(|e: std::num::ParseIntError| e.to_string())?;
+        Ok(Self { branch_id, seq })
+    }
+}
+
+impl From<DocumentVersionId> for String {
+    fn from(id: DocumentVersionId) -> Self {
+        id.to_string()
+    }
+}
+
+impl TryFrom<String> for DocumentVersionId {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+
 /// a revision of a document at a point in time
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "String", into = "String"))]
 pub enum DocumentRevisionId {
     /// the current head of this branch
     ///
@@ -287,10 +338,7 @@ pub enum DocumentRevisionId {
     /// this one specific revision
     ///
     /// serialized as `branch-uuid@seq`
-    Revision {
-        branch_id: DocumentBranchId,
-        seq: u64,
-    },
+    Revision { version_id: DocumentVersionId },
 
     /// this one specific revision
     ///
@@ -298,42 +346,47 @@ pub enum DocumentRevisionId {
     Tag { tag_id: DocumentTagId },
 }
 
-#[cfg(feature = "serde")]
-impl Serialize for DocumentRevisionId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
+impl std::fmt::Display for DocumentRevisionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DocumentRevisionId::Branch { branch_id } => {
-                serializer.serialize_str(&branch_id.to_string())
-            }
-            DocumentRevisionId::Revision { branch_id, seq } => {
-                serializer.serialize_str(&format!("{}@{}", branch_id, seq))
-            }
-            DocumentRevisionId::Tag { tag_id } => serializer.serialize_str(&format!("~{}", tag_id)),
+            Self::Branch { branch_id } => write!(f, "{}", branch_id),
+            Self::Revision { version_id } => write!(f, "{}", version_id),
+            Self::Tag { tag_id } => write!(f, "~{}", tag_id),
         }
     }
 }
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for DocumentRevisionId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
+impl std::str::FromStr for DocumentRevisionId {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some(tag_str) = s.strip_prefix('~') {
-            let tag_id = tag_str.parse().map_err(serde::de::Error::custom)?;
-            Ok(DocumentRevisionId::Tag { tag_id })
-        } else if let Some((branch_str, seq_str)) = s.split_once('@') {
-            let branch_id = branch_str.parse().map_err(serde::de::Error::custom)?;
-            let seq = seq_str.parse().map_err(serde::de::Error::custom)?;
-            Ok(DocumentRevisionId::Revision { branch_id, seq })
+            let tag_id = tag_str
+                .parse()
+                .map_err(|e: uuid::Error| e.to_string())?;
+            Ok(Self::Tag { tag_id })
+        } else if s.contains('@') {
+            let version_id = s.parse()?;
+            Ok(Self::Revision { version_id })
         } else {
-            let branch_id = s.parse().map_err(serde::de::Error::custom)?;
-            Ok(DocumentRevisionId::Branch { branch_id })
+            let branch_id = s
+                .parse()
+                .map_err(|e: uuid::Error| e.to_string())?;
+            Ok(Self::Branch { branch_id })
         }
+    }
+}
+
+impl From<DocumentRevisionId> for String {
+    fn from(id: DocumentRevisionId) -> Self {
+        id.to_string()
+    }
+}
+
+impl TryFrom<String> for DocumentRevisionId {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        s.parse()
     }
 }
 

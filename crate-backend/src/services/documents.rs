@@ -374,6 +374,16 @@ impl ServiceDocuments {
         Ok(serialized)
     }
 
+    pub async fn get_snapshot(&self, context_id: EditContextId) -> Result<Vec<u8>> {
+        let ctx = self.load(context_id, None).await?;
+        let ctx = ctx.read().await;
+        let snapshot = ctx
+            .doc
+            .transact()
+            .encode_state_as_update_v1(&StateVector::default());
+        Ok(snapshot)
+    }
+
     pub async fn subscribe(
         &self,
         context_id: EditContextId,
