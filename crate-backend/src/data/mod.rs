@@ -1445,5 +1445,6 @@ pub trait DataDocument {
     async fn document_tag_list_by_document(
         &self,
         document_id: ChannelId,
+        user_id: UserId,
     ) -> Result<Vec<DocumentTag>>;
 }

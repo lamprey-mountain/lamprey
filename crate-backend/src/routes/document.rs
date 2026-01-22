@@ -147,6 +147,9 @@ async fn document_branch_update(
     let branch_before = data.document_branch_get(channel_id, branch_id).await?;
 
     if branch_before.creator_id != auth.user.id {
+        if branch_before.private {
+            return Err(Error::NotFound);
+        }
         perms.ensure(Permission::ThreadManage)?;
     }
 
@@ -195,6 +198,9 @@ async fn document_branch_close(
     }
 
     if branch.creator_id != auth.user.id {
+        if branch.private {
+            return Err(Error::NotFound);
+        }
         perms.ensure(Permission::ThreadManage)?;
     }
 
@@ -296,6 +302,11 @@ async fn document_tag_create(
         }
     };
 
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+    if branch.private && branch.creator_id != user_id {
+        return Err(Error::NotFound);
+    }
+
     let tag_id = data
         .document_tag_create(branch_id, user_id, summary, description, revision_seq)
         .await?;
@@ -332,7 +343,9 @@ async fn document_tag_list(
     let perms = srv.perms.for_channel(user_id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let tags = data.document_tag_list_by_document(channel_id).await?;
+    let tags = data
+        .document_tag_list_by_document(channel_id, user_id)
+        .await?;
     Ok(Json(tags))
 }
 
@@ -362,6 +375,14 @@ async fn document_tag_get(
 
     let data = s.data();
     let tag = data.document_tag_get(tag_id).await?;
+
+    let branch = data
+        .document_branch_get(channel_id, tag.branch_id)
+        .await?;
+    if branch.private && branch.creator_id != user_id {
+        return Err(Error::NotFound);
+    }
+
     Ok(Json(tag))
 }
 
@@ -394,6 +415,13 @@ async fn document_tag_update(
     perms.ensure(Permission::DocumentEdit)?;
 
     let tag = data.document_tag_get(tag_id).await?;
+
+    let branch = data
+        .document_branch_get(channel_id, tag.branch_id)
+        .await?;
+    if branch.private && branch.creator_id != user_id {
+        return Err(Error::NotFound);
+    }
 
     if tag.creator_id != Some(user_id) {
         perms.ensure(Permission::ThreadManage)?;
@@ -445,6 +473,13 @@ async fn document_tag_delete(
     perms.ensure(Permission::DocumentEdit)?;
 
     let tag = data.document_tag_get(tag_id).await?;
+
+    let branch = data
+        .document_branch_get(channel_id, tag.branch_id)
+        .await?;
+    if branch.private && branch.creator_id != user_id {
+        return Err(Error::NotFound);
+    }
 
     if tag.creator_id != Some(user_id) {
         perms.ensure(Permission::ThreadManage)?;

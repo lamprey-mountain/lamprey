@@ -221,7 +221,7 @@ pub enum ErrorCode {
     /// unknown channel
     #[error("unknown channel (tried to fetch channel with id {bad_channel_id:?})")]
     UnknownChannel { bad_channel_id: Option<ChannelId> },
-    // impl unknown thread, message, message version, user, media, invite, application, automod rule, webhook, room member, thread member, ban, email
+    // impl unknown thread, message, message version, user, media, invite, application, automod rule, webhook, room member, thread member, ban, email, document branch, document revision
 
     // calls can only be created in Broadcast channels
     // calls can only be deleted in Broadcast channels

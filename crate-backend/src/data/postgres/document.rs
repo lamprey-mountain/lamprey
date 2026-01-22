@@ -621,6 +621,7 @@ impl DataDocument for Postgres {
     async fn document_tag_list_by_document(
         &self,
         document_id: ChannelId,
+        user_id: UserId,
     ) -> Result<Vec<DocumentTag>> {
         let tags = query_as!(
             DbDocumentTag,
@@ -629,9 +630,11 @@ impl DataDocument for Postgres {
             FROM document_tag dt
             JOIN document_branch db ON dt.branch_id = db.id
             WHERE db.document_id = $1
+            AND (db.private = false OR db.creator_id = $2)
             ORDER BY dt.created_at DESC
             "#,
-            document_id.into_inner()
+            document_id.into_inner(),
+            user_id.into_inner()
         )
         .fetch_all(&self.pool)
         .await?;

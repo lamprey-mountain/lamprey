@@ -185,6 +185,14 @@ impl ServiceDocuments {
         let mut ctx = ctx.write().await;
         ctx.doc.transact_mut().apply_update(update)?;
 
+        // let txn = ctx.doc.transact_mut();
+        // let sv = txn.state_vector();
+        // txn.apply_update(update)?;
+        // let minimal_update = txn.encode_diff_v1(&sv);
+        // if minimal_update.is_empty() {
+        //     // TODO: skip update
+        // }
+
         // // TODO: calculate diff stats
         // let xml = ctx.doc.get_or_insert_xml_fragment("doc");
         // let mut stat_inserted = 0;
