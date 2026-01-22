@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use cache::ServiceCache;
 use channel::ServiceThreads;
 use email::ServiceEmail;
 use embed::ServiceEmbed;
@@ -24,6 +25,7 @@ use crate::{
 
 pub mod admin;
 pub mod automod;
+pub mod cache;
 pub mod channel;
 pub mod documents;
 pub mod email;
@@ -48,6 +50,7 @@ pub mod voice;
 pub struct Services {
     pub admin: ServiceAdmin,
     pub automod: ServiceAutomod,
+    pub cache: ServiceCache,
     pub channels: ServiceThreads,
     pub documents: ServiceDocuments,
     pub email: ServiceEmail,
@@ -75,6 +78,7 @@ impl Services {
         Self {
             admin: ServiceAdmin::new(state.clone()),
             automod: ServiceAutomod::new(state.clone()),
+            cache: ServiceCache::new(state.clone()),
             channels: ServiceThreads::new(state.clone()),
             documents: ServiceDocuments::new(state.clone()),
             email: ServiceEmail::new(state.clone()),
