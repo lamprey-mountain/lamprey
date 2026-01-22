@@ -146,6 +146,8 @@ impl ServiceMessages {
 
         let can_use_external_emoji = if !is_webhook {
             let perms = srv.perms.for_channel(user_id, thread_id).await?;
+            perms.ensure_unlocked()?;
+
             let mut required_perms = vec![Permission::ViewChannel];
             if thread.ty.is_thread() {
                 required_perms.push(Permission::MessageCreateThread);

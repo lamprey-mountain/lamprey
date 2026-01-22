@@ -63,9 +63,7 @@ async fn permission_overwrite(
     if channel.deleted_at.is_some() {
         return Err(Error::BadStatic("channel is removed"));
     }
-    if channel.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
 
     if let Some(room_id) = channel.room_id {
         let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
@@ -209,9 +207,7 @@ async fn permission_delete(
     if channel.deleted_at.is_some() {
         return Err(Error::BadStatic("channel is removed"));
     }
-    if channel.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
 
     if let Some(existing) = channel
         .permission_overwrites

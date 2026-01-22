@@ -138,9 +138,7 @@ async fn thread_member_add(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
 
     if thread.ty == ChannelType::Gdm {
         let is_joining = d
@@ -270,9 +268,7 @@ async fn thread_member_delete(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
 
     let start = d.thread_member_get(thread_id, target_user_id).await?;
     if !matches!(start.membership, ThreadMembership::Join { .. }) {

@@ -190,9 +190,7 @@ async fn message_edit(
         return Err(Error::BadStatic("thread is removed"));
     }
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    if thread.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
 
     let (_status, message) = srv
         .messages
@@ -267,9 +265,7 @@ async fn message_delete(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
 
     data.message_delete(channel_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
@@ -417,9 +413,7 @@ async fn message_version_delete(
     }
 
     let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    if thread.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
     perms.ensure(Permission::ViewChannel)?;
 
     let message = data
@@ -551,9 +545,7 @@ async fn message_moderate(
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread.locked && !perms.can_use_locked_threads() {
-        return Err(Error::MissingPermissions);
-    }
+    perms.ensure_unlocked()?;
 
     if !json.delete.is_empty() {
         perms.ensure(Permission::MessageDelete)?;

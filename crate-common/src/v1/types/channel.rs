@@ -75,11 +75,14 @@ pub struct Channel {
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
 
-    /// a locked channel can only be interacted with (sending messages,
-    /// (un)archiving, etc) by people with the `ThreadLock` permission
-    pub locked: bool,
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub locked: Option<Locked>,
+    // NOTE: this is the old property, this will be removed
+    // /// a locked channel can only be interacted with (sending messages,
+    // /// (un)archiving, etc) by people with the `ThreadLock` permission
+    // pub locked: bool,
+    /// whether this channel is locked and has restricted permissions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locked: Option<Locked>,
+
     /// the channel this channel is in, if any
     pub parent_id: Option<ChannelId>,
 
@@ -450,9 +453,10 @@ pub struct ChannelPatch {
     pub parent_id: Option<Option<ChannelId>>,
 
     pub archived: Option<bool>,
-    pub locked: Option<bool>,
-    // #[serde(default, deserialize_with = "some_option")]
-    // pub locked: Option<Option<Locked>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub locked: Option<Option<Locked>>,
+
     pub invitable: Option<bool>,
 
     #[serde(default, deserialize_with = "some_option")]
@@ -549,6 +553,19 @@ impl Channel {
             user_config: None,
             ..self
         }
+    }
+
+    #[deprecated]
+    pub fn is_locked(&self) -> bool {
+        if let Some(locked) = &self.locked {
+            if let Some(until) = locked.until {
+                if until <= Time::now_utc() {
+                    return false;
+                }
+            }
+            return true;
+        }
+        false
     }
 }
 

@@ -452,9 +452,7 @@ impl Connection {
                 if thread.deleted_at.is_some() {
                     return Err(Error::BadStatic("thread is removed"));
                 }
-                if thread.locked && !perms.can_use_locked_threads() {
-                    return Err(Error::MissingPermissions);
-                }
+                perms.ensure_unlocked()?;
                 let old_state = srv.voice.state_get(user_id);
                 let mut state = VoiceState {
                     user_id,

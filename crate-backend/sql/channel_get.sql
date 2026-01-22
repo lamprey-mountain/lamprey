@@ -11,6 +11,8 @@ SELECT
     t.type as "ty: _",
     t.nsfw,
     t.locked,
+    t.locked_until,
+    t.locked_roles,
     t.archived_at,
     t.deleted_at,
     t.parent_id,

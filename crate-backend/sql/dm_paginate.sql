@@ -33,6 +33,8 @@ select
     channel.url,
     channel.nsfw,
     channel.locked,
+    channel.locked_until,
+    channel.locked_roles,
     channel.archived_at,
     channel.deleted_at,
     channel.parent_id,

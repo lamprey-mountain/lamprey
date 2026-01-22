@@ -49,8 +49,8 @@ impl DataChannel for Postgres {
 
         query!(
             "
-			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url, locked_until, locked_roles)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $21, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, null, $22)
         ",
             channel_id.into_inner(),
             channel_id.into_inner(),
@@ -72,6 +72,8 @@ impl DataChannel for Postgres {
             create.slowmode_message.map(|s| s as i32),
             create.default_slowmode_message.map(|s| s as i32),
             create.url,
+            false,
+            &[],
         )
         .execute(&mut *tx)
         .await?;
@@ -294,6 +296,19 @@ impl DataChannel for Postgres {
             last_activity_at = Some(now);
         }
 
+        let locked_val = patch.locked.unwrap_or(thread.locked);
+        let locked_bool = locked_val.is_some();
+        let locked_until = locked_val.as_ref().and_then(|l| {
+            l.until.map(|t| {
+                let inner = t.into_inner();
+                time::PrimitiveDateTime::new(inner.date(), inner.time())
+            })
+        });
+        let locked_roles: Vec<uuid::Uuid> = locked_val
+            .as_ref()
+            .map(|l| l.allow_roles.iter().map(|r| r.into_inner()).collect())
+            .unwrap_or_default();
+
         query!(
             r#"
             UPDATE channel SET
@@ -316,7 +331,9 @@ impl DataChannel for Postgres {
                 slowmode_message = $18,
                 default_slowmode_message = $19,
                 last_activity_at = $20,
-                url = $21
+                url = $21,
+                locked_until = $22,
+                locked_roles = $23
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -334,7 +351,7 @@ impl DataChannel for Postgres {
                 .unwrap_or(thread.owner_id)
                 .map(|i| i.into_inner()),
             patch.icon.unwrap_or(thread.icon).map(|id| *id),
-            patch.locked.unwrap_or(thread.locked),
+            locked_bool,
             archived_at as _,
             patch.invitable.unwrap_or(thread.invitable),
             new_ty as _,
@@ -361,6 +378,8 @@ impl DataChannel for Postgres {
                 .map(|i| i as i32),
             last_activity_at as _,
             patch.url.unwrap_or(thread.url),
+            locked_until,
+            &locked_roles,
         )
         .execute(&mut *tx)
         .await?;

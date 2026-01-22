@@ -154,6 +154,7 @@ pub enum Permission {
     /// lock and unlock threads
     // TODO: merge with ThreadManage?
     // TODO: make this allow locking/unlocking entire channels?
+    // TODO: MemberTimeout is also somewhat relevant for this permission?
     ThreadLock,
 
     /// Can view channels

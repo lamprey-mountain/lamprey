@@ -637,9 +637,7 @@ impl ServiceThreads {
             return Err(Error::BadStatic("thread is removed"));
         }
 
-        if chan_old.locked && !perms.can_use_locked_threads() {
-            return Err(Error::MissingPermissions);
-        }
+        perms.ensure_unlocked()?;
 
         // if the patch contains more than just archive/lock changes, do a general permission check
         let mut other_changes = patch.clone();
@@ -726,7 +724,7 @@ impl ServiceThreads {
             data.thread_member_get(thread_id, user_id).await?;
         }
 
-        if patch.locked.is_some_and(|a| a != chan_old.locked) {
+        if patch.locked.as_ref().is_some_and(|a| a != &chan_old.locked) {
             if chan_old.ty.is_thread() {
                 perms.ensure(Permission::ThreadLock)?;
             } else {

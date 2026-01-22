@@ -138,6 +138,8 @@ pub struct DbChannel {
     pub permission_overwrites: serde_json::Value,
     pub nsfw: bool,
     pub locked: bool,
+    pub locked_until: Option<PrimitiveDateTime>,
+    pub locked_roles: Vec<Uuid>,
     pub archived_at: Option<PrimitiveDateTime>,
     pub deleted_at: Option<PrimitiveDateTime>,
     pub parent_id: Option<Uuid>,
@@ -270,7 +272,14 @@ impl From<DbChannel> for Channel {
             description: row.description,
             icon: row.icon.map(|i| i.into()),
             nsfw: row.nsfw,
-            locked: row.locked,
+            locked: if row.locked {
+                Some(common::v1::types::channel::Locked {
+                    until: row.locked_until.map(Into::into),
+                    allow_roles: row.locked_roles.into_iter().map(Into::into).collect(),
+                })
+            } else {
+                None
+            },
             member_count: row.member_count.try_into().expect("count is negative?"),
             permission_overwrites: serde_json::from_value(row.permission_overwrites).unwrap(),
             archived_at: row.archived_at.map(|t| t.into()),

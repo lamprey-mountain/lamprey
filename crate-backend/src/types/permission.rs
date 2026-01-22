@@ -5,10 +5,20 @@ use common::v1::types::{defaults::ADMIN_ROOM, Permission};
 
 use crate::error::{Error, Result};
 
+/// permission calculator
 #[derive(Debug, Clone)]
 pub struct Permissions {
+    /// the set of permissions this user has
     p: HashSet<Permission>,
+
+    /// whether this user is timed out
     timed_out: bool,
+
+    /// whether this user can bypass channel/thread locks
+    locked_bypass: bool,
+
+    /// whether this user is trying to access a locked channel/thread
+    channel_locked: bool,
 }
 
 impl Permissions {
@@ -16,11 +26,25 @@ impl Permissions {
         Permissions {
             p: HashSet::new(),
             timed_out: false,
+            locked_bypass: false,
+            channel_locked: false,
         }
     }
 
     pub fn set_timed_out(&mut self, timed_out: bool) {
         self.timed_out = timed_out;
+    }
+
+    pub fn set_locked_bypass(&mut self, locked_bypass: bool) {
+        self.locked_bypass = locked_bypass;
+    }
+
+    pub fn set_channel_locked(&mut self, channel_locked: bool) {
+        self.channel_locked = channel_locked;
+    }
+
+    pub fn is_channel_locked(&self) -> bool {
+        self.channel_locked
     }
 
     #[inline]
@@ -78,6 +102,7 @@ impl Permissions {
         self.p = new;
     }
 
+    /// whether this user has permissions to bypass slowmode in this channel
     pub fn can_bypass_slowmode(&self) -> bool {
         self.has(Permission::ChannelManage)
             || self.has(Permission::ThreadManage)
@@ -85,10 +110,25 @@ impl Permissions {
             || self.has(Permission::BypassSlowmode)
     }
 
+    /// whether this user has permissions to bypass this channel's lock (if it exists)
     pub fn can_use_locked_threads(&self) -> bool {
-        self.has(Permission::ThreadManage)
+        self.locked_bypass
+            || self.has(Permission::ThreadManage)
             || self.has(Permission::ChannelManage)
             || self.has(Permission::ThreadLock)
+    }
+
+    /// ensure a channel is either unlocked or that the user has permission to interact with it
+    pub fn ensure_unlocked(&self) -> Result<()> {
+        if !self.is_channel_locked() {
+            return Ok(());
+        }
+
+        if !self.can_use_locked_threads() {
+            return Err(Error::BadStatic("thread is locked"));
+        }
+
+        Ok(())
     }
 }
 
@@ -104,6 +144,8 @@ impl FromIterator<Permission> for Permissions {
         Permissions {
             p,
             timed_out: false,
+            locked_bypass: false,
+            channel_locked: false,
         }
     }
 }

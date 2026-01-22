@@ -84,11 +84,14 @@ async fn admin_whisper(
     .await?;
 
     let (thread, _) = srv.users.init_dm(auth.user.id, json.user_id).await?;
-    if !thread.locked {
+    if thread.locked.is_none() {
         d.channel_update(
             thread.id,
             ChannelPatch {
-                locked: Some(true),
+                locked: Some(Some(common::v1::types::channel::Locked {
+                    until: None,
+                    allow_roles: vec![],
+                })),
                 ..Default::default()
             },
         )
@@ -171,12 +174,15 @@ async fn admin_broadcast(
             tokio::spawn(async move {
                 let srv = ss.services();
                 let (thread, _) = srv.users.init_dm(SERVER_USER_ID, user.id).await?;
-                if !thread.locked {
+                if thread.locked.is_none() {
                     ss.data()
                         .channel_update(
                             thread.id,
                             ChannelPatch {
-                                locked: Some(true),
+                                locked: Some(Some(common::v1::types::channel::Locked {
+                                    until: None,
+                                    allow_roles: vec![],
+                                })),
                                 ..Default::default()
                             },
                         )

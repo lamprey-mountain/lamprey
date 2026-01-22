@@ -140,7 +140,7 @@ impl DataThread for Postgres {
             DbChannel,
             r#"
             SELECT
-                c.id, c.room_id, c.creator_id, c.owner_id, c.version_id, c.name, c.description, c.icon, c.url, c.type as "ty: _", c.nsfw, c.locked, c.archived_at, c.deleted_at, c.parent_id, c.position, c.bitrate, c.user_limit, c.invitable, c.auto_archive_duration,
+                c.id, c.room_id, c.creator_id, c.owner_id, c.version_id, c.name, c.description, c.icon, c.url, c.type as "ty: _", c.nsfw, c.locked, c.locked_until, c.locked_roles, c.archived_at, c.deleted_at, c.parent_id, c.position, c.bitrate, c.user_limit, c.invitable, c.auto_archive_duration,
                 c.default_auto_archive_duration, c.slowmode_thread, c.slowmode_message,
                 c.default_slowmode_message, c.last_activity_at,
                 (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE channel_id = c.id AND membership = 'Join') AS "member_count!",

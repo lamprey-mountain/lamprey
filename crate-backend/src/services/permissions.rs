@@ -165,6 +165,19 @@ impl ServicePermissions {
         let member = data.room_member_get(room_id, user_id).await?;
         let roles = member.roles;
 
+        if let Some(locked) = &chan.locked {
+            let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
+            if !is_expired {
+                perms.set_channel_locked(true);
+                for role_id in &locked.allow_roles {
+                    if roles.contains(&(*role_id).into()) {
+                        perms.set_locked_bypass(true);
+                        break;
+                    }
+                }
+            }
+        }
+
         // 3. add all allow permissions for everyone
         for ow in &chan.permission_overwrites {
             if ow.id != *room_id {
