@@ -165,11 +165,35 @@ impl ServiceDocuments {
 
     /// unload a document from memory
     // TODO: automatically unload unused documents
-    pub async fn unload(&self, _context_id: EditContextId) -> Result<()> {
-        // flush changes
-        // snapshot if needed
-        // remove from self.edit_contexts
-        todo!()
+    pub async fn unload(&self, context_id: EditContextId) -> Result<()> {
+        if let Some((_, ctx)) = self.edit_contexts.remove(&context_id) {
+            let mut ctx = ctx.write().await;
+            let data = self.state.data();
+
+            // flush changes
+            let changes: Vec<_> = ctx.pending_changes.drain(..).collect();
+            for change in changes {
+                let new_seq = data
+                    .document_update(context_id, change.author_id, change.change)
+                    .await?;
+                ctx.last_seq = new_seq;
+            }
+
+            // snapshot if needed
+            if ctx.changes_since_last_snapshot > 0 {
+                let snapshot = ctx
+                    .doc
+                    .transact()
+                    .encode_state_as_update_v1(&StateVector::default());
+                let snapshot_id = Uuid::now_v7();
+                let seq = ctx.last_seq;
+
+                data.document_compact(context_id, snapshot_id, seq, snapshot)
+                    .await?;
+            }
+        }
+
+        Ok(())
     }
 
     /// apply a change to a document
