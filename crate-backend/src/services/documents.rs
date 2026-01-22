@@ -1,7 +1,8 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
     ChannelId, DocumentBranchId, MessageSync, UserId,
@@ -72,6 +73,26 @@ pub struct EditContext {
 struct PendingChange {
     author_id: UserId,
     change: Vec<u8>,
+    stat_added: u32,
+    stat_removed: u32,
+}
+
+pub struct HistoryPaginationSummary {
+    pub changesets: Vec<Changeset>,
+    pub tags: Vec<DocumentTag>,
+}
+
+impl HistoryPaginationSummary {
+    /// get a list of all referenced users
+    pub fn user_ids(&self) -> Vec<UserId> {
+        let mut ids = std::collections::HashSet::new();
+        for cs in &self.changesets {
+            for author in &cs.authors {
+                ids.insert(*author);
+            }
+        }
+        ids.into_iter().collect()
+    }
 }
 
 // TODO: better error handling (add yrs errors to to crate::Error)
@@ -178,7 +199,13 @@ impl ServiceDocuments {
             let changes: Vec<_> = ctx.pending_changes.drain(..).collect();
             for change in changes {
                 let new_seq = data
-                    .document_update(context_id, change.author_id, change.change)
+                    .document_update(
+                        context_id,
+                        change.author_id,
+                        change.change,
+                        change.stat_added,
+                        change.stat_removed,
+                    )
                     .await?;
                 ctx.last_seq = new_seq;
             }
@@ -212,66 +239,63 @@ impl ServiceDocuments {
         let ctx = self.load(context_id, Some(author_id)).await?;
         let mut ctx = ctx.write().await;
 
-        let mut txn = ctx.doc.transact_mut();
-        // let sv = txn.state_vector();
+        // use a std mutex since i'm not using any async stuff here?
+        let stats = Arc::new(std::sync::Mutex::new((0, 0)));
+        let stats_inner = stats.clone();
 
-        // TODO: calculate diff stats
         let xml = ctx.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
-        // let mut stat_inserted = 0;
-        // let mut stat_deleted = 0;
-        let stat = Arc::new(std::sync::Mutex::new((0, 0)));
-        // observe_deep seems a bit tricky to work with, due to the send/sync/static requirement
-        // pub fn observe_deep<F>(&self, f: F) -> Subscription
-        //     where
-        //         F: Fn(&TransactionMut, &Events) + Send + Sync + 'static,
-        //         // Bounds from trait:
-        //         Self: AsRef<Branch>,
-        // maybe use channels instead?
-        let stat2 = stat.clone();
-        xml.observe_deep(move |txn, events| {
-            let mut ss = stat2.lock().unwrap();
+        let _sub = xml.observe_deep(move |txn, events| {
+            let mut stats = stats_inner.lock().unwrap();
             for e in events.iter() {
                 match e {
                     yrs::types::Event::Text(text_event) => {
                         for change in text_event.delta(txn) {
                             match change {
-                                yrs::types::Delta::Inserted(t, hash_map) => {
+                                yrs::types::Delta::Inserted(t, _) => {
                                     if let yrs::Out::Any(yrs::Any::String(s)) = t {
-                                        ss.0 += s.chars().count();
-                                        // stat_inserted += s.chars().count();
+                                        stats.0 += s.chars().count();
                                     }
                                 }
-                                yrs::types::Delta::Deleted(len) => ss.1 += len,
+                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
                                 yrs::types::Delta::Retain(_, _) => {}
                             }
                         }
                     }
-                    yrs::types::Event::XmlFragment(xml_event) => todo!("calculate recursively"),
-                    yrs::types::Event::XmlText(xml_text_event) => {
-                        todo!("calculate deltas for text")
+                    yrs::types::Event::XmlText(text_event) => {
+                        for change in text_event.delta(txn) {
+                            match change {
+                                yrs::types::Delta::Inserted(t, _) => {
+                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
+                                        stats.0 += s.chars().count();
+                                    }
+                                }
+                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
+                                yrs::types::Delta::Retain(_, _) => {}
+                            }
+                        }
                     }
-                    _ => {
-                        // array and map ignored
-                    }
+                    _ => {}
                 }
             }
         });
-        let (_stat_inserted, _stat_deleted) = stat.lock().unwrap().to_owned();
-        // TODO: save history entries
 
+        let mut txn = ctx.doc.transact_mut();
         txn.apply_update(update)?;
-        // TODO: emit and persist minimal updates instead of whatever the client sends
-        // let minimal_update = txn.encode_diff_v1(&sv);
-        // if minimal_update.is_empty() {
-        //     // TODO: skip update
-        // }
         drop(txn);
+        drop(_sub);
+
+        let (stat_inserted, stat_deleted) = {
+            let s = stats.lock().unwrap();
+            (s.0 as u32, s.1 as u32)
+        };
 
         ctx.last_active = Instant::now();
         ctx.changes_since_last_snapshot += 1;
         ctx.pending_changes.push(PendingChange {
             author_id,
             change: update_bytes.to_vec(),
+            stat_added: stat_inserted,
+            stat_removed: stat_deleted,
         });
 
         let data = self.state.data();
@@ -280,7 +304,13 @@ impl ServiceDocuments {
             let changes: Vec<_> = ctx.pending_changes.drain(..).collect();
             for change in changes {
                 let new_seq = data
-                    .document_update(context_id, change.author_id, change.change)
+                    .document_update(
+                        context_id,
+                        change.author_id,
+                        change.change,
+                        change.stat_added,
+                        change.stat_removed,
+                    )
                     .await?;
                 ctx.last_seq = new_seq;
             }
@@ -431,6 +461,109 @@ impl ServiceDocuments {
             conn_id,
             pending_sync: VecDeque::new(),
         }
+    }
+
+    pub async fn query_history(
+        &self,
+        context_id: EditContextId,
+        query: HistoryParams,
+    ) -> Result<HistoryPaginationSummary> {
+        let data = self.state.data();
+        let (updates, tags) = data.document_history(context_id).await?;
+
+        let by_author = query.by_author.unwrap_or(true);
+        let by_tag = query.by_tag.unwrap_or(true);
+        let by_time = query.by_time.unwrap_or(3600) as i64;
+        let by_changes = query.by_changes.unwrap_or(100) as usize;
+
+        let mut changesets = Vec::new();
+        if updates.is_empty() {
+            return Ok(HistoryPaginationSummary {
+                changesets,
+                tags: vec![],
+            });
+        }
+
+        let mut current_authors = HashSet::new();
+        let mut current_added = 0;
+        let mut current_removed = 0;
+        let mut current_start = updates[0].created_at;
+        let mut current_end = updates[0].created_at;
+        let mut current_count = 0;
+
+        let mut tag_iter = tags.iter().peekable();
+
+        for (i, update) in updates.iter().enumerate() {
+            let mut split = false;
+
+            if i > 0 {
+                let prev = &updates[i - 1];
+
+                if by_author && update.user_id != prev.user_id {
+                    split = true;
+                }
+
+                let diff = (*update.created_at - *prev.created_at).whole_seconds();
+                if diff > by_time {
+                    split = true;
+                }
+
+                if current_count >= by_changes {
+                    split = true;
+                }
+
+                if by_tag {
+                    while let Some(tag) = tag_iter.peek() {
+                        if tag.revision_seq < prev.seq as u64 {
+                            tag_iter.next();
+                            continue;
+                        }
+                        if tag.revision_seq == prev.seq as u64 {
+                            split = true;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if split {
+                changesets.push(Changeset {
+                    start_time: current_start,
+                    end_time: current_end,
+                    authors: current_authors.drain().collect(),
+                    stat_added: current_added,
+                    stat_removed: current_removed,
+                });
+                current_added = 0;
+                current_removed = 0;
+                current_count = 0;
+                current_start = update.created_at;
+            }
+
+            current_authors.insert(UserId::from(update.user_id));
+            current_added += update.stat_added as u64;
+            current_removed += update.stat_removed as u64;
+            current_end = update.created_at;
+            current_count += 1;
+        }
+
+        changesets.push(Changeset {
+            start_time: current_start,
+            end_time: current_end,
+            authors: current_authors.drain().collect(),
+            stat_added: current_added,
+            stat_removed: current_removed,
+        });
+
+        changesets.reverse();
+
+        if let Some(limit) = query.limit {
+            changesets.truncate(limit as usize);
+        } else {
+            changesets.truncate(20);
+        }
+
+        Ok(HistoryPaginationSummary { changesets, tags })
     }
 }
 

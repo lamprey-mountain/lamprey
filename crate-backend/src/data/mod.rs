@@ -51,10 +51,10 @@ use crate::services::admin::AdminCollectGarbageMode;
 use crate::services::documents::EditContextId;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
-    DbSessionCreate, DbUserCreate, DehydratedDocument, EmailPurpose, InviteCode, Media, MediaId,
-    MediaLink, MediaLinkType, MentionsIds, MessageId, MessageRef, MessageVerId, Permissions,
-    RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session,
-    SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    DbSessionCreate, DbUserCreate, DehydratedDocument, DocumentUpdateSummary, EmailPurpose,
+    InviteCode, Media, MediaId, MediaLink, MediaLinkType, MentionsIds, MessageId, MessageRef,
+    MessageVerId, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch,
+    RoomVerId, Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -208,6 +208,11 @@ pub trait DataRoomMember {
     ) -> Result<()>;
     async fn room_member_delete(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
     async fn room_member_get(&self, room_id: RoomId, user_id: UserId) -> Result<RoomMember>;
+    async fn room_member_get_many(
+        &self,
+        room_id: RoomId,
+        user_ids: &[UserId],
+    ) -> Result<Vec<RoomMember>>;
     async fn room_member_list(
         &self,
         room_id: RoomId,
@@ -813,6 +818,11 @@ pub trait DataThreadMember {
         thread_id: ChannelId,
         user_id: UserId,
     ) -> Result<ThreadMember>;
+    async fn thread_member_get_many(
+        &self,
+        thread_id: ChannelId,
+        user_ids: &[UserId],
+    ) -> Result<Vec<ThreadMember>>;
     async fn thread_member_list(
         &self,
         thread_id: ChannelId,
@@ -1369,6 +1379,8 @@ pub trait DataDocument {
         context_id: EditContextId,
         author_id: UserId,
         update: Vec<u8>,
+        stat_added: u32,
+        stat_removed: u32,
     ) -> Result<u32>;
 
     /// create a new branch
@@ -1447,4 +1459,11 @@ pub trait DataDocument {
         document_id: ChannelId,
         user_id: UserId,
     ) -> Result<Vec<DocumentTag>>;
+
+    /// fetch history for a document
+    // TEMP: fetch ALL changes and tags for a document; this will be optimized later
+    async fn document_history(
+        &self,
+        context_id: EditContextId,
+    ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
 }

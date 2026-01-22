@@ -30,6 +30,8 @@ use crate::error::Result;
 use crate::{Error, ServerState};
 
 /// Wiki history (TODO)
+///
+/// query edit history for all documents in this wiki
 #[utoipa::path(
     get,
     path = "/wiki/{channel_id}/history",
@@ -269,7 +271,7 @@ async fn document_branch_fork(
     Ok(Json(branch))
 }
 
-/// Document branch merge (TODO)
+/// Document branch merge
 #[utoipa::path(
     post,
     path = "/document/{channel_id}/branch/{branch_id}/merge",
@@ -579,7 +581,9 @@ async fn document_tag_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Document history (TODO)
+/// Document history
+///
+/// query edit history for a document
 #[utoipa::path(
     get,
     path = "/document/{channel_id}/branch/{branch_id}/history",
@@ -594,12 +598,46 @@ async fn document_tag_delete(
     )
 )]
 async fn document_history(
-    Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
-    Query(_query): Query<HistoryParams>,
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
+    Query(query): Query<HistoryParams>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+    if branch.private && branch.creator_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    let summary = srv
+        .documents
+        .query_history((channel_id, branch_id), query)
+        .await?;
+
+    let user_ids = summary.user_ids();
+    let users = srv.users.get_many(&user_ids).await?;
+
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let room_members = if let Some(room_id) = channel.room_id {
+        data.room_member_get_many(room_id, &user_ids).await?
+    } else {
+        vec![]
+    };
+
+    let thread_members = data.thread_member_get_many(channel_id, &user_ids).await?;
+
+    Ok(Json(HistoryPagination {
+        changesets: summary.changesets,
+        users,
+        room_members,
+        thread_members,
+        document_tags: summary.tags,
+    }))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

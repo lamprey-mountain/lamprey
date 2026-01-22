@@ -467,11 +467,17 @@ pub struct HistoryParams {
     pub by_changes: Option<u32>,
 
     /// continue listing history from here
+    // use a string for opaqueness, but maybe make this a DocumentVersionId internally
     pub cursor: Option<String>,
 
     /// the maximum number of items to return.
     // FIXME: default 10, max 1024
     pub limit: Option<u16>,
+    // TODO: filtering
+    // pub before_time: Option<Time>,
+    // pub before_revision: Option<DocumentRevisionId>,
+    // pub after_time: Option<Time>,
+    // pub after_revision: Option<DocumentRevisionId>,
 }
 
 /// a set of changes made to a document
@@ -508,4 +514,7 @@ pub struct HistoryPagination {
 
     /// a thread member object for every referenced user_id
     pub thread_members: Vec<ThreadMember>,
+
+    /// document tags that are part of the range
+    pub document_tags: Vec<DocumentTag>,
 }

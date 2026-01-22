@@ -2,7 +2,7 @@ use crate::data::postgres::{Pagination, Postgres};
 use crate::data::DataDocument;
 use crate::error::{Error, Result};
 use crate::services::documents::EditContextId;
-use crate::types::{DehydratedDocument, PaginationDirection};
+use crate::types::{DehydratedDocument, DocumentUpdateSummary, PaginationDirection};
 use async_trait::async_trait;
 use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
@@ -216,6 +216,8 @@ impl DataDocument for Postgres {
         context_id: EditContextId,
         author_id: UserId,
         update: Vec<u8>,
+        stat_added: u32,
+        stat_removed: u32,
     ) -> Result<u32> {
         let (document_id, branch_id) = context_id;
         let mut tx = self.pool.begin().await?;
@@ -256,15 +258,17 @@ impl DataDocument for Postgres {
 
         query!(
             r#"
-            INSERT INTO document_update (document_id, branch_id, snapshot_id, seq, data, author_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO document_update (document_id, branch_id, snapshot_id, seq, data, author_id, stat_added, stat_removed)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
             document_id.into_inner(),
             branch_id.into_inner(),
             snapshot_id,
             new_seq,
             update,
-            author_id.into_inner()
+            author_id.into_inner(),
+            stat_added as i32,
+            stat_removed as i32,
         )
         .execute(&mut *tx)
         .await?;
@@ -659,5 +663,60 @@ impl DataDocument for Postgres {
         .await?;
 
         Ok(tags.into_iter().map(Into::into).collect())
+    }
+
+    async fn document_history(
+        &self,
+        context_id: EditContextId,
+    ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)> {
+        let (_, branch_id) = context_id;
+
+        struct DbUpdateSummary {
+            user_id: Uuid,
+            created_at: time::PrimitiveDateTime,
+            stat_added: Option<i32>,
+            stat_removed: Option<i32>,
+            seq: i32,
+        }
+
+        let updates = query_as!(
+            DbUpdateSummary,
+            r#"
+            SELECT author_id as user_id, created_at, stat_added, stat_removed, seq
+            FROM document_update
+            WHERE branch_id = $1
+            ORDER BY seq ASC
+            "#,
+            branch_id.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let tags = query_as!(
+            DbDocumentTag,
+            r#"
+            SELECT id, branch_id, revision_seq, creator_id, created_at, updated_at, summary, description
+            FROM document_tag
+            WHERE branch_id = $1
+            ORDER BY revision_seq ASC
+            "#,
+            branch_id.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok((
+            updates
+                .into_iter()
+                .map(|u| DocumentUpdateSummary {
+                    user_id: u.user_id,
+                    created_at: u.created_at.into(),
+                    stat_added: u.stat_added.unwrap_or(0) as u32,
+                    stat_removed: u.stat_removed.unwrap_or(0) as u32,
+                    seq: u.seq as u32,
+                })
+                .collect(),
+            tags.into_iter().map(Into::into).collect(),
+        ))
     }
 }

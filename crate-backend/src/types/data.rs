@@ -699,3 +699,11 @@ pub struct DehydratedDocument {
     pub snapshot_seq: u32,
     pub changes: Vec<Vec<u8>>,
 }
+
+pub struct DocumentUpdateSummary {
+    pub user_id: Uuid,
+    pub created_at: Time,
+    pub stat_added: u32,
+    pub stat_removed: u32,
+    pub seq: u32,
+}

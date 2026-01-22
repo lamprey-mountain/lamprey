@@ -309,6 +309,44 @@ impl DataRoomMember for Postgres {
         Ok(item.into())
     }
 
+    async fn room_member_get_many(
+        &self,
+        room_id: RoomId,
+        user_ids: &[UserId],
+    ) -> Result<Vec<RoomMember>> {
+        let user_ids: Vec<Uuid> = user_ids.iter().map(|id| id.into_inner()).collect();
+        let items = query_as!(
+            DbRoomMember,
+            r#"
+            with r as (
+                select user_id, array_agg(role_id) as roles from role_member
+                join role on role.room_id = $1 and role_member.role_id = role.id
+                group by user_id
+            )
+        	SELECT
+            	room_id,
+            	m.user_id,
+            	membership as "membership: _",
+            	override_name,
+            	override_description,
+            	joined_at,
+            	origin,
+                mute,
+                deaf,
+                timeout_until,
+            	coalesce(r.roles, '{}') as "roles!"
+            FROM room_member m
+            left join r on r.user_id = m.user_id
+            WHERE room_id = $1 AND m.user_id = ANY($2::uuid[])
+        "#,
+            *room_id,
+            &user_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(items.into_iter().map(Into::into).collect())
+    }
+
     async fn room_member_patch(
         &self,
         room_id: RoomId,
