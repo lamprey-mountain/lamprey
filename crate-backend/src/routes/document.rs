@@ -253,10 +253,7 @@ async fn document_branch_fork(
         .document_fork((channel_id, parent_id), user_id, json)
         .await?;
 
-    let snapshot = srv
-        .documents
-        .get_snapshot((channel_id, parent_id))
-        .await?;
+    let snapshot = srv.documents.get_snapshot((channel_id, parent_id)).await?;
 
     // use seq 0 for the initial snapshot of the new branch
     let snapshot_id = Uuid::now_v7();
@@ -286,13 +283,68 @@ async fn document_branch_fork(
     )
 )]
 async fn document_branch_merge(
-    Path((_channel_id, _branch_id)): Path<(ChannelId, DocumentBranchId)>,
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
     _json: Json<DocumentBranchMerge>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    let data = s.data();
+    let user_id = auth.user.id;
+
+    let perms = srv.perms.for_channel(user_id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+
+    if branch.private && branch.creator_id != user_id {
+        return Err(Error::NotFound);
+    }
+
+    if branch.creator_id != user_id {
+        perms.ensure(Permission::ThreadManage)?;
+    }
+
+    if branch.default {
+        return Err(Error::BadRequest("Cannot merge default branch".to_string()));
+    }
+
+    let parent_id = branch
+        .parent_id
+        .ok_or_else(|| Error::BadRequest("Branch has no parent".to_string()))?;
+    let target_branch_id = parent_id.branch_id;
+
+    let target_branch = data
+        .document_branch_get(channel_id, target_branch_id)
+        .await?;
+    if target_branch.private && target_branch.creator_id != user_id {
+        return Err(Error::NotFound);
+    }
+
+    let target_context = (channel_id, target_branch_id);
+    let source_context = (channel_id, branch_id);
+
+    let target_sv = srv.documents.get_state_vector(target_context).await?;
+    let update = srv.documents.diff(source_context, &target_sv).await?;
+
+    if !update.is_empty() {
+        srv.documents
+            .apply_update(target_context, user_id, None, &update)
+            .await?;
+    }
+
+    data.document_branch_set_state(channel_id, branch_id, DocumentBranchState::Merged)
+        .await?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+
+    s.broadcast(MessageSync::DocumentBranchUpdate {
+        branch: branch.clone(),
+    })?;
+
+    Ok(Json(branch))
 }
 
 /// Document tag create
@@ -411,9 +463,7 @@ async fn document_tag_get(
     let data = s.data();
     let tag = data.document_tag_get(tag_id).await?;
 
-    let branch = data
-        .document_branch_get(channel_id, tag.branch_id)
-        .await?;
+    let branch = data.document_branch_get(channel_id, tag.branch_id).await?;
     if branch.private && branch.creator_id != user_id {
         return Err(Error::NotFound);
     }
@@ -451,9 +501,7 @@ async fn document_tag_update(
 
     let tag = data.document_tag_get(tag_id).await?;
 
-    let branch = data
-        .document_branch_get(channel_id, tag.branch_id)
-        .await?;
+    let branch = data.document_branch_get(channel_id, tag.branch_id).await?;
     if branch.private && branch.creator_id != user_id {
         return Err(Error::NotFound);
     }
@@ -509,9 +557,7 @@ async fn document_tag_delete(
 
     let tag = data.document_tag_get(tag_id).await?;
 
-    let branch = data
-        .document_branch_get(channel_id, tag.branch_id)
-        .await?;
+    let branch = data.document_branch_get(channel_id, tag.branch_id).await?;
     if branch.private && branch.creator_id != user_id {
         return Err(Error::NotFound);
     }

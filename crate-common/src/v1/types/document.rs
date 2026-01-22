@@ -186,7 +186,6 @@ pub struct DocumentBranch {
     ///
     /// is None if this is the default branch
     pub parent_id: Option<DocumentVersionId>,
-
     // pub merged_at: Option<Time>,
     // pub merged_into: Option<DocumentBranchId>,
 }
@@ -300,9 +299,7 @@ impl std::str::FromStr for DocumentVersionId {
         let (branch_str, seq_str) = s
             .split_once('@')
             .ok_or_else(|| "invalid format".to_string())?;
-        let branch_id = branch_str
-            .parse()
-            .map_err(|e: uuid::Error| e.to_string())?;
+        let branch_id = branch_str.parse().map_err(|e: uuid::Error| e.to_string())?;
         let seq = seq_str
             .parse()
             .map_err(|e: std::num::ParseIntError| e.to_string())?;
@@ -322,7 +319,6 @@ impl TryFrom<String> for DocumentVersionId {
         s.parse()
     }
 }
-
 
 /// a revision of a document at a point in time
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -361,17 +357,13 @@ impl std::str::FromStr for DocumentRevisionId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some(tag_str) = s.strip_prefix('~') {
-            let tag_id = tag_str
-                .parse()
-                .map_err(|e: uuid::Error| e.to_string())?;
+            let tag_id = tag_str.parse().map_err(|e: uuid::Error| e.to_string())?;
             Ok(Self::Tag { tag_id })
         } else if s.contains('@') {
             let version_id = s.parse()?;
             Ok(Self::Revision { version_id })
         } else {
-            let branch_id = s
-                .parse()
-                .map_err(|e: uuid::Error| e.to_string())?;
+            let branch_id = s.parse().map_err(|e: uuid::Error| e.to_string())?;
             Ok(Self::Branch { branch_id })
         }
     }

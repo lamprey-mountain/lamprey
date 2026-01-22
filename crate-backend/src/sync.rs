@@ -554,7 +554,11 @@ impl Connection {
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ViewChannel)?;
 
-        let branch = self.s.data().document_branch_get(channel_id, branch_id).await?;
+        let branch = self
+            .s
+            .data()
+            .document_branch_get(channel_id, branch_id)
+            .await?;
         if branch.private && branch.creator_id != user_id {
             return Err(Error::NotFound);
         }

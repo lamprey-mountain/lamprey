@@ -9,11 +9,15 @@ use common::v1::types::{
 use dashmap::DashMap;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
+use yrs::updates::encoder::Encode;
+use yrs::DeepObservable;
 use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
 
 use crate::{Error, Result, ServerStateInner};
 
 // mod validate;
+
+const DOCUMENT_ROOT_NAME: &'static str = "doc";
 
 pub type EditContextId = (ChannelId, DocumentBranchId);
 
@@ -96,7 +100,7 @@ impl ServiceDocuments {
             Ok(dehydrated) => {
                 // load an existing document
                 let doc = Doc::new();
-                doc.get_or_insert_xml_fragment("doc");
+                doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
                 let mut tx = doc.transact_mut();
 
                 let snapshot = Update::decode_v1(&dehydrated.last_snapshot)?;
@@ -125,7 +129,7 @@ impl ServiceDocuments {
             Err(Error::NotFound) => {
                 if let Some(author_id) = maybe_author {
                     let doc = Doc::new();
-                    doc.get_or_insert_xml_fragment("doc");
+                    doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
 
                     let snapshot = doc
                         .transact()
@@ -207,44 +211,61 @@ impl ServiceDocuments {
         let update = Update::decode_v1(update_bytes)?;
         let ctx = self.load(context_id, Some(author_id)).await?;
         let mut ctx = ctx.write().await;
-        ctx.doc.transact_mut().apply_update(update)?;
 
-        // let txn = ctx.doc.transact_mut();
+        let mut txn = ctx.doc.transact_mut();
         // let sv = txn.state_vector();
-        // txn.apply_update(update)?;
+
+        // TODO: calculate diff stats
+        let xml = ctx.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+        // let mut stat_inserted = 0;
+        // let mut stat_deleted = 0;
+        let stat = Arc::new(std::sync::Mutex::new((0, 0)));
+        // observe_deep seems a bit tricky to work with, due to the send/sync/static requirement
+        // pub fn observe_deep<F>(&self, f: F) -> Subscription
+        //     where
+        //         F: Fn(&TransactionMut, &Events) + Send + Sync + 'static,
+        //         // Bounds from trait:
+        //         Self: AsRef<Branch>,
+        // maybe use channels instead?
+        let stat2 = stat.clone();
+        xml.observe_deep(move |txn, events| {
+            let mut ss = stat2.lock().unwrap();
+            for e in events.iter() {
+                match e {
+                    yrs::types::Event::Text(text_event) => {
+                        for change in text_event.delta(txn) {
+                            match change {
+                                yrs::types::Delta::Inserted(t, hash_map) => {
+                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
+                                        ss.0 += s.chars().count();
+                                        // stat_inserted += s.chars().count();
+                                    }
+                                }
+                                yrs::types::Delta::Deleted(len) => ss.1 += len,
+                                yrs::types::Delta::Retain(_, _) => {}
+                            }
+                        }
+                    }
+                    yrs::types::Event::XmlFragment(xml_event) => todo!("calculate recursively"),
+                    yrs::types::Event::XmlText(xml_text_event) => {
+                        todo!("calculate deltas for text")
+                    }
+                    _ => {
+                        // array and map ignored
+                    }
+                }
+            }
+        });
+        let (_stat_inserted, _stat_deleted) = stat.lock().unwrap().to_owned();
+        // TODO: save history entries
+
+        txn.apply_update(update)?;
+        // TODO: emit and persist minimal updates instead of whatever the client sends
         // let minimal_update = txn.encode_diff_v1(&sv);
         // if minimal_update.is_empty() {
         //     // TODO: skip update
         // }
-
-        // // TODO: calculate diff stats
-        // let xml = ctx.doc.get_or_insert_xml_fragment("doc");
-        // let mut stat_inserted = 0;
-        // let mut stat_deleted = 0;
-        // xml.observe_deep(|txn, events| {
-        //     for e in events.iter() {
-        //         match e {
-        //             yrs::types::Event::Text(text_event) => {
-        //                 for change in text_event.delta(txn) {
-        //                     match change {
-        //                         yrs::types::Delta::Inserted(t, hash_map) => {
-        //                             if let yrs::Out::Any(yrs::Any::String(s)) = t {
-        //                                 stat_inserted += s.chars().count();
-        //                             }
-        //                         }
-        //                         yrs::types::Delta::Deleted(len) => stat_deleted += len,
-        //                         yrs::types::Delta::Retain(_, _) => {}
-        //                     }
-        //                 }
-        //             }
-        //             yrs::types::Event::XmlFragment(xml_event) => todo!("calculate recursively"),
-        //             yrs::types::Event::XmlText(xml_text_event) => {
-        //                 todo!("calculate deltas for text")
-        //             }
-        //             _ => {} // array and map ignored
-        //         }
-        //     }
-        // });
+        drop(txn);
 
         ctx.last_active = Instant::now();
         ctx.changes_since_last_snapshot += 1;
@@ -285,7 +306,6 @@ impl ServiceDocuments {
             update: update_bytes.to_vec(),
         });
 
-        drop(ctx);
         Ok(())
     }
 
@@ -382,6 +402,13 @@ impl ServiceDocuments {
             .transact()
             .encode_state_as_update_v1(&StateVector::default());
         Ok(snapshot)
+    }
+
+    pub async fn get_state_vector(&self, context_id: EditContextId) -> Result<Vec<u8>> {
+        let ctx = self.load(context_id, None).await?;
+        let ctx = ctx.read().await;
+        let sv = ctx.doc.transact().state_vector().encode_v1();
+        Ok(sv)
     }
 
     pub async fn subscribe(

@@ -39,13 +39,10 @@ impl From<DbDocumentBranch> for DocumentBranch {
             default: row.is_default,
             private: row.private,
             state: row.state,
-            parent_id: match (row.parent_branch_id, row.parent_seq) {
-                (Some(branch_id), Some(seq)) => Some(DocumentVersionId {
-                    branch_id: branch_id.into(),
-                    seq: seq as u64,
-                }),
-                _ => None,
-            },
+            parent_id: row.parent_branch_id.map(|branch_id| DocumentVersionId {
+                branch_id: branch_id.into(),
+                seq: row.parent_seq.unwrap_or(0) as u64,
+            }),
         }
     }
 }

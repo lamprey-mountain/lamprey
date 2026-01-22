@@ -717,6 +717,8 @@ pub enum MessageSync {
         branch: DocumentBranch,
     },
 
+    // NOTE: currently unused, as branches are marked as closed/merged rather than deleted
+    // how do i want to handle branch deletions? i want to clean up old editing contexts. maybe once closed/merged, make branches readonly and delete the associated editing context
     DocumentBranchDelete {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
