@@ -1,5 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
@@ -58,6 +59,10 @@ pub struct EditContext {
     update_tx: broadcast::Sender<DocumentEvent>,
 
     presence: HashMap<UserId, PresenceData>,
+
+    last_snapshot: Instant,
+    last_flush: Instant,
+    last_active: Instant,
 }
 
 struct PendingChange {
@@ -112,6 +117,9 @@ impl ServiceDocuments {
                     last_seq: dehydrated.snapshot_seq,
                     update_tx,
                     presence: HashMap::new(),
+                    last_snapshot: Instant::now(),
+                    last_flush: Instant::now(),
+                    last_active: Instant::now(),
                 }))
             }
             Err(Error::NotFound) => {
@@ -135,6 +143,9 @@ impl ServiceDocuments {
                         last_seq: 0,
                         update_tx,
                         presence: HashMap::new(),
+                        last_snapshot: Instant::now(),
+                        last_flush: Instant::now(),
+                        last_active: Instant::now(),
                     }))
                 } else {
                     return Err(Error::NotFound);
@@ -203,6 +214,7 @@ impl ServiceDocuments {
         //     }
         // });
 
+        ctx.last_active = Instant::now();
         ctx.changes_since_last_snapshot += 1;
         ctx.pending_changes.push(PendingChange {
             author_id,
@@ -219,6 +231,7 @@ impl ServiceDocuments {
                     .await?;
                 ctx.last_seq = new_seq;
             }
+            ctx.last_flush = Instant::now();
         }
 
         if ctx.should_snapshot() {
@@ -232,6 +245,7 @@ impl ServiceDocuments {
             data.document_compact(context_id, snapshot_id, seq, snapshot)
                 .await?;
             ctx.changes_since_last_snapshot = 0;
+            ctx.last_snapshot = Instant::now();
         }
 
         let _ = ctx.update_tx.send(DocumentEvent::Update {
@@ -262,6 +276,7 @@ impl ServiceDocuments {
                         cursor_tail: cursor_tail.clone(),
                     },
                 );
+                ctx.last_active = Instant::now();
             }
             let _ = ctx.update_tx.send(DocumentEvent::Presence {
                 user_id,
@@ -284,6 +299,9 @@ impl ServiceDocuments {
             if let Some(presence) = ctx.presence.get(&user_id) {
                 if presence.conn_id == conn_id {
                     ctx.presence.remove(&user_id);
+                    if ctx.presence.is_empty() {
+                        ctx.last_active = Instant::now();
+                    }
                     let _ = ctx.update_tx.send(DocumentEvent::Presence {
                         user_id,
                         origin_conn_id: Some(conn_id),
@@ -496,21 +514,34 @@ impl DocumentSyncer {
 impl EditContext {
     /// whether we should create a new snapshot
     pub fn should_snapshot(&self) -> bool {
-        // - every N updates (eg. 256)
-        // - every N seconds (eg. 30s)
-        // - when all clients disconnect (after some debounce time, eg. 5s)
-        self.changes_since_last_snapshot > 100
+        if self.changes_since_last_snapshot > 256 {
+            return true;
+        } else if self.changes_since_last_snapshot == 0 {
+            return false;
+        }
+
+        if self.last_snapshot.elapsed() > Duration::from_secs(30) {
+            return true;
+        }
+
+        if self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(15) {
+            return true;
+        }
+
+        false
     }
 
     /// whether we should flush pending_changes to db
     pub fn should_flush(&self) -> bool {
-        // TODO: flush if time since last flush > 15s
-        !self.pending_changes.is_empty()
+        if self.pending_changes.is_empty() {
+            return false;
+        }
+
+        self.last_flush.elapsed() > Duration::from_secs(10)
     }
 
     /// whether we should unload this document
     pub fn should_unload(&self) -> bool {
-        // TODO: return true if nobody is connected for 60 seconds
-        todo!()
+        self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(60)
     }
 }
