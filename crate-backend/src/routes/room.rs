@@ -161,7 +161,6 @@ async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -185,7 +184,7 @@ async fn room_edit(
     let room = s
         .services()
         .rooms
-        .update(room_id, auth, json.clone(), reason.clone())
+        .update(room_id, auth, json.clone())
         .await?;
 
     if let Some(maybe_media_id) = json.icon {

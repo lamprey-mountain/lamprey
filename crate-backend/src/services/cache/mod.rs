@@ -102,7 +102,6 @@ impl ServiceCache {
             let page = data
                 .channel_list(
                     room_id,
-                    user_id,
                     PaginationQuery {
                         from: cursor,
                         limit: Some(1024),
@@ -278,17 +277,7 @@ impl ServiceCache {
 
     /// get the permission calculator for this room, loading the room if it doesn't exist
     pub async fn permissions(&self, room_id: RoomId) -> Result<PermissionsCalculator> {
-        let room = self.load_room(room_id).await?;
-        let inner = room.inner.read().await;
-        let owner_id = inner.owner_id;
-        let public = inner.public;
-        drop(inner);
-        Ok(PermissionsCalculator {
-            room_id,
-            owner_id,
-            public,
-            room,
-        })
+        Ok(self.load_room(room_id).await?.permissions().await)
     }
 
     /// update caches from a sync event

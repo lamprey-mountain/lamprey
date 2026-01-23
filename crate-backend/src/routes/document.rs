@@ -7,10 +7,12 @@ use axum::{
     Json,
 };
 use common::v1::types::{
+    document::serialized::Serdoc,
     document::{
         DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchMerge,
-        DocumentBranchPatch, DocumentBranchState, DocumentRevisionId, DocumentTagCreate,
-        DocumentTagPatch,
+        DocumentBranchPatch, DocumentBranchState, DocumentCrdtApply, DocumentCrdtDiffParams,
+        DocumentRevisionId, DocumentStateVector, DocumentTagCreate, DocumentTagPatch,
+        DocumentUpdate, SerdocPut,
     },
     pagination::{PaginationQuery, PaginationResponse},
     ChannelId, Permission,
@@ -640,6 +642,168 @@ async fn document_history(
     }))
 }
 
+// TODO: make this accept and return binary
+/// Document crdt diff
+///
+/// get a crdt (yjs/yrs) snapshot since a state vector
+#[utoipa::path(
+    get,
+    path = "/document/{channel_id}/branch/{branch_id}/crdt",
+    params(
+        ("channel_id", description = "Channel id"),
+        ("branch_id", description = "Branch id"),
+        DocumentCrdtDiffParams,
+    ),
+    tags = ["document"],
+    responses(
+        (status = OK, description = "ok", body = DocumentUpdate),
+    )
+)]
+async fn document_crdt_diff(
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
+    Query(query): Query<DocumentCrdtDiffParams>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let data = s.data();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+    if branch.private && branch.creator_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    let sv = query.sv.unwrap_or(DocumentStateVector(vec![])).0;
+    let update = srv.documents.diff((channel_id, branch_id), &sv).await?;
+
+    Ok(Json(DocumentUpdate(update)))
+}
+
+// TODO: make this accept and return binary
+// TODO: make this return the new document
+/// Document crdt apply
+///
+/// apply a crdt (yjs/yrs) update
+#[utoipa::path(
+    patch,
+    path = "/document/{channel_id}/branch/{branch_id}/crdt",
+    params(
+        ("channel_id", description = "Channel id"),
+        ("branch_id", description = "Branch id"),
+    ),
+    tags = ["document"],
+    responses(
+        (status = OK, description = "ok"),
+    )
+)]
+async fn document_crdt_apply(
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<DocumentCrdtApply>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let srv = s.services();
+    let data = s.data();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+    if branch.private && branch.creator_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    srv.documents
+        .apply_update((channel_id, branch_id), auth.user.id, None, &json.update.0)
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Document content get
+///
+/// get document content for a specific revision as a serialized json document
+#[utoipa::path(
+    get,
+    path = "/document/{channel_id}/revision/{revision_id}/content",
+    params(
+        ("channel_id", description = "Channel id"),
+        ("revision_id", description = "Revision id"),
+    ),
+    tags = ["document"],
+    responses(
+        (status = OK, description = "ok", body = Serdoc),
+    )
+)]
+async fn document_content_get(
+    Path((channel_id, revision_id)): Path<(ChannelId, DocumentRevisionId)>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let data = s.data();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let branch_id = match revision_id {
+        DocumentRevisionId::Branch { branch_id } => branch_id,
+        _ => return Err(Error::Unimplemented),
+    };
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+    if branch.private && branch.creator_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    let serdoc = srv.documents.get_content((channel_id, branch_id)).await?;
+    Ok(Json(serdoc))
+}
+
+/// Document content put
+///
+/// replace the content of a document with a serialized json document. creates a new revision without overwriting existing history.
+#[utoipa::path(
+    put,
+    path = "/document/{channel_id}/branch/{branch_id}/content",
+    params(
+        ("channel_id", description = "Channel id"),
+        ("branch_id", description = "Branch id"),
+    ),
+    tags = ["document"],
+    responses(
+        (status = OK, description = "ok"),
+    )
+)]
+async fn document_content_put(
+    Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<SerdocPut>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    let srv = s.services();
+    let data = s.data();
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::DocumentEdit)?;
+
+    let branch = data.document_branch_get(channel_id, branch_id).await?;
+    if branch.private && branch.creator_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    srv.documents
+        .set_content(
+            (channel_id, branch_id),
+            auth.user.id,
+            Serdoc { root: json.root },
+        )
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(wiki_history))
@@ -655,4 +819,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(document_tag_update))
         .routes(routes!(document_tag_delete))
         .routes(routes!(document_history))
+        .routes(routes!(document_crdt_diff))
+        .routes(routes!(document_crdt_apply))
+        .routes(routes!(document_content_get))
+        .routes(routes!(document_content_put))
 }

@@ -269,11 +269,25 @@ async fn channel_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    let mut res = data
-        .channel_list(room_id, auth.user.id, pagination, q.parent_id)
-        .await?;
     let srv = s.services();
+    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let mut res = data
+        .channel_list(room_id, pagination, q.parent_id)
+        .await?;
+
+    let mut items = Vec::new();
+    for item in res.items {
+        if srv
+            .perms
+            .for_channel(auth.user.id, item.id)
+            .await?
+            .has(Permission::ViewChannel)
+        {
+            items.push(item);
+        }
+    }
+    res.items = items;
+
     let ids: Vec<_> = res.items.iter().map(|t| t.id).collect();
     let channels = srv.channels.get_many(&ids, Some(auth.user.id)).await?;
     let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
@@ -308,12 +322,26 @@ async fn channel_list_removed(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ChannelManage)?;
     let mut res = data
-        .channel_list_removed(room_id, auth.user.id, pagination, q.parent_id)
+        .channel_list_removed(room_id, pagination, q.parent_id)
         .await?;
-    let srv = s.services();
+
+    let mut items = Vec::new();
+    for item in res.items {
+        if srv
+            .perms
+            .for_channel(auth.user.id, item.id)
+            .await?
+            .has(Permission::ViewChannel)
+        {
+            items.push(item);
+        }
+    }
+    res.items = items;
+
     let ids: Vec<_> = res.items.iter().map(|t| t.id).collect();
     let channels = srv.channels.get_many(&ids, Some(auth.user.id)).await?;
     let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();

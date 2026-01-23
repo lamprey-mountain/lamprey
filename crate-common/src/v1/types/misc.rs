@@ -41,6 +41,24 @@ pub enum SessionIdReq {
     SessionId(SessionId),
 }
 
+// TODO: deserialize as @host and @client
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(untagged)]
+pub enum ServerReq {
+    /// the target server
+    #[serde(deserialize_with = "const_host")]
+    ServerHost,
+
+    /// the requesting server
+    ///
+    /// intended to be used with federation. non-server clients cannot use this.
+    #[serde(deserialize_with = "const_client")]
+    ServerClient,
+
+    /// references a server by domain name
+    ServerDomain(String),
+}
+
 fn const_self<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -48,6 +66,32 @@ where
     #[derive(Deserialize)]
     enum Helper {
         #[serde(rename = "@self")]
+        Variant,
+    }
+
+    Helper::deserialize(deserializer).map(|_| ())
+}
+
+fn const_host<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    enum Helper {
+        #[serde(rename = "@host")]
+        Variant,
+    }
+
+    Helper::deserialize(deserializer).map(|_| ())
+}
+
+fn const_client<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    enum Helper {
+        #[serde(rename = "@client")]
         Variant,
     }
 
@@ -93,6 +137,16 @@ impl Display for ApplicationIdReq {
         match self {
             ApplicationIdReq::AppSelf => write!(f, "@self"),
             ApplicationIdReq::ApplicationId(app_id) => write!(f, "{app_id}"),
+        }
+    }
+}
+
+impl Display for ServerReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ServerReq::ServerHost => write!(f, "@host"),
+            ServerReq::ServerClient => write!(f, "@client"),
+            ServerReq::ServerDomain(domain) => write!(f, "{domain}"),
         }
     }
 }

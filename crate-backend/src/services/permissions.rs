@@ -12,6 +12,11 @@ use crate::error::Result;
 use crate::types::Permissions;
 use crate::ServerStateInner;
 
+// TODO: remove much of this code?
+// the permission cache can take up a lot of memory and is unnecessary since i can recalculate when needed, thanks to the new cache system
+// cache_perm_room, cache_perm_channel, cache_user_rank, and timeout_tasks can probably be removed entirely
+// cache_is_mutual *might* be better in ServiceUsers, and mutual could have more data
+
 pub struct ServicePermissions {
     state: Arc<ServerStateInner>,
     cache_perm_room: Cache<(UserId, RoomId), Permissions>,

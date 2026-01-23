@@ -52,6 +52,9 @@ pub struct Session {
     /// the last time this session was used
     pub last_seen_at: Time,
 
+    // ip_addr: String,
+    // user_agent: String,
+
     // /// when this session was logged in
     // pub authorized_at: Time,
 

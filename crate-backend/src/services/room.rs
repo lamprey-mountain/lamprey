@@ -71,7 +71,6 @@ impl ServiceRooms {
         room_id: RoomId,
         auth: Auth,
         patch: RoomPatch,
-        reason: Option<String>,
     ) -> Result<Room> {
         let al = auth.audit_log(room_id);
         let data = self.state.data();

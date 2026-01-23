@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
+use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
     ChannelId, DocumentBranchId, MessageSync, UserId,
@@ -18,6 +19,7 @@ use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update}
 use crate::{Error, Result, ServerStateInner};
 
 // mod validate;
+mod serdoc;
 
 const DOCUMENT_ROOT_NAME: &'static str = "doc";
 
@@ -361,6 +363,138 @@ impl ServiceDocuments {
         let _ = ctx.update_tx.send(DocumentEvent::Update {
             origin_conn_id,
             update: update_bytes.to_vec(),
+        });
+
+        Ok(())
+    }
+
+    pub async fn get_content(&self, context_id: EditContextId) -> Result<Serdoc> {
+        let ctx = self.load(context_id, None).await?;
+        let ctx = ctx.read().await;
+        Ok(serdoc::doc_to_serdoc(&ctx.doc))
+    }
+
+    pub async fn set_content(
+        &self,
+        context_id: EditContextId,
+        author_id: UserId,
+        content: Serdoc,
+    ) -> Result<()> {
+        let ctx = self.load(context_id, Some(author_id)).await?;
+        let mut ctx = ctx.write().await;
+
+        let stats = Arc::new(std::sync::Mutex::new((0, 0)));
+        let stats_inner = stats.clone();
+
+        let update_out = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let update_out_inner = update_out.clone();
+
+        let xml = ctx.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+
+        let _sub_stats = xml.observe_deep(move |txn, events| {
+            let mut stats = stats_inner.lock().unwrap();
+            for e in events.iter() {
+                match e {
+                    yrs::types::Event::Text(text_event) => {
+                        for change in text_event.delta(txn) {
+                            match change {
+                                yrs::types::Delta::Inserted(t, _) => {
+                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
+                                        stats.0 += s.chars().count();
+                                    }
+                                }
+                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
+                                yrs::types::Delta::Retain(_, _) => {}
+                            }
+                        }
+                    }
+                    yrs::types::Event::XmlText(text_event) => {
+                        for change in text_event.delta(txn) {
+                            match change {
+                                yrs::types::Delta::Inserted(t, _) => {
+                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
+                                        stats.0 += s.chars().count();
+                                    }
+                                }
+                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
+                                yrs::types::Delta::Retain(_, _) => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let _sub_update = ctx.doc.observe_update_v1(move |_, event| {
+            let mut u = update_out_inner.lock().unwrap();
+            *u = event.update.to_vec();
+        });
+
+        serdoc::serdoc_apply_to_doc(&ctx.doc, &content);
+
+        drop(_sub_stats);
+        drop(_sub_update);
+
+        let (stat_inserted, stat_deleted) = {
+            let s = stats.lock().unwrap();
+            (s.0 as u32, s.1 as u32)
+        };
+
+        let update_bytes = {
+            let u = update_out.lock().unwrap();
+            u.clone()
+        };
+
+        if update_bytes.is_empty() {
+            return Ok(());
+        }
+
+        ctx.last_active = Instant::now();
+        ctx.changes_since_last_snapshot += 1;
+        ctx.pending_changes.push(PendingChange {
+            author_id,
+            change: update_bytes.clone(),
+            stat_added: stat_inserted,
+            stat_removed: stat_deleted,
+        });
+
+        let data = self.state.data();
+
+        if ctx.should_flush() {
+            let changes: Vec<_> = ctx.pending_changes.drain(..).collect();
+            for change in changes {
+                let new_seq = data
+                    .document_update(
+                        context_id,
+                        change.author_id,
+                        change.change,
+                        change.stat_added,
+                        change.stat_removed,
+                    )
+                    .await?;
+                ctx.last_seq = new_seq;
+            }
+            ctx.last_flush = Instant::now();
+        }
+
+        if ctx.should_snapshot() {
+            let snapshot = ctx
+                .doc
+                .transact()
+                .encode_state_as_update_v1(&StateVector::default());
+            let snapshot_id = Uuid::now_v7();
+            let seq = ctx.last_seq;
+
+            data.document_compact(context_id, snapshot_id, seq, snapshot)
+                .await?;
+            ctx.changes_since_last_snapshot = 0;
+            ctx.last_snapshot = Instant::now();
+        }
+
+        let _ = ctx.update_tx.send(DocumentEvent::Update {
+            origin_conn_id: None,
+            update: update_bytes,
         });
 
         Ok(())

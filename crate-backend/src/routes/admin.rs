@@ -22,7 +22,7 @@ use crate::{
     ServerState,
 };
 
-// NOTE: do i want to standardize admin apis?
+// NOTE: do i want to standardize admin apis, ie. move them to common types, or keep this internal?
 
 #[derive(Deserialize, ToSchema)]
 struct AdminWhisper {

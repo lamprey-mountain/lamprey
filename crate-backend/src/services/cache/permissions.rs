@@ -235,4 +235,28 @@ impl PermissionsCalculator {
             }
         }
     }
+
+    /// get the rank of this user, the position of the highest role this user has
+    pub fn rank(&self, user_id: UserId) -> u64 {
+        if self.owner_id == Some(user_id) {
+            return u64::MAX;
+        }
+
+        let member_guard = self.room.members.get(&user_id);
+        let Some(member) = member_guard.as_deref() else {
+            // user is not a member, return 0
+            return 0;
+        };
+
+        let mut rank = 0u64;
+        for role_id in &member.roles {
+            if let Some(role) = self.room.roles.get(role_id) {
+                rank = rank.max(role.position as u64);
+            } else {
+                warn!(user_id = ?user_id, role_id = ?role_id, "user has role that doesnt exist");
+            }
+        }
+
+        rank
+    }
 }

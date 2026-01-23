@@ -114,7 +114,6 @@ impl DataChannel for Postgres {
     async fn channel_list(
         &self,
         room_id: RoomId,
-        user_id: UserId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: Option<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
@@ -131,7 +130,6 @@ impl DataChannel for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
                 parent_id.map(|id| *id),
-                *user_id
             ),
             query_scalar!(
                 r#"SELECT count(*) FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
@@ -142,41 +140,9 @@ impl DataChannel for Postgres {
         )
     }
 
-    async fn channel_list_archived(
-        &self,
-        room_id: RoomId,
-        user_id: UserId,
-        pagination: PaginationQuery<ChannelId>,
-        parent_id: Option<ChannelId>,
-    ) -> Result<PaginationResponse<Channel>> {
-        let p: Pagination<_> = pagination.try_into()?;
-        gen_paginate!(
-            p,
-            self.pool,
-            query_file_as!(
-                DbChannel,
-                "sql/channel_paginate_archived.sql",
-                *room_id,
-                p.after.into_inner(),
-                p.before.into_inner(),
-                p.dir.to_string(),
-                (p.limit + 1) as i32,
-                parent_id.map(|id| *id),
-                *user_id
-            ),
-            query_scalar!(
-                r#"SELECT count(*) FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
-                room_id.into_inner(),
-                parent_id.map(|id| *id)
-            ),
-            |i: &Channel| i.id.to_string()
-        )
-    }
-
     async fn channel_list_removed(
         &self,
         room_id: RoomId,
-        user_id: UserId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: Option<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
@@ -193,7 +159,6 @@ impl DataChannel for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
                 parent_id.map(|id| *id),
-                *user_id,
             ),
             query_scalar!(
                 r#"SELECT count(*) FROM channel WHERE room_id = $1 AND deleted_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,

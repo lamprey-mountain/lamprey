@@ -715,6 +715,7 @@ async fn role_reorder(
     let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
 
+    // FIXME: prevent moving @everyone role from position 0
     for r in &body.roles {
         let role = d.role_select(room_id, r.role_id).await?;
         if rank <= role.position && room.owner_id != Some(auth.user.id) {

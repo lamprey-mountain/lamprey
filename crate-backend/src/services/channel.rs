@@ -994,7 +994,6 @@ impl ServiceThreads {
             .data()
             .channel_list(
                 room_id,
-                user_id,
                 PaginationQuery {
                     from: None,
                     to: None,

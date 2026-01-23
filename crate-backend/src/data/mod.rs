@@ -593,27 +593,32 @@ pub trait DataChannel {
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<DbChannelPrivate>;
+
+    // TODO: remove these
     async fn channel_list(
         &self,
         room_id: RoomId,
-        user_id: UserId,
-        pagination: PaginationQuery<ChannelId>,
-        parent_id: Option<ChannelId>,
-    ) -> Result<PaginationResponse<Channel>>;
-    async fn channel_list_archived(
-        &self,
-        room_id: RoomId,
-        user_id: UserId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: Option<ChannelId>,
     ) -> Result<PaginationResponse<Channel>>;
     async fn channel_list_removed(
         &self,
         room_id: RoomId,
-        user_id: UserId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: Option<ChannelId>,
     ) -> Result<PaginationResponse<Channel>>;
+
+    // TODO: implement these
+    // /// list all (non-thread) channels in this room that have been removed
+    // async fn channel_list(&self, room_id: RoomId) -> Result<Vec<Channel>>;
+
+    // /// paginate through (non-thread) channels in this room that have been removed
+    // async fn channel_list_removed(
+    //     &self,
+    //     room_id: RoomId,
+    //     pagination: PaginationQuery<ChannelId>,
+    // ) -> Result<PaginationResponse<Channel>>;
+
     async fn channel_update(
         &self,
         channel_id: ChannelId,

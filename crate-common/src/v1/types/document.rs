@@ -16,6 +16,8 @@ use crate::v1::types::{
 
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 
+pub mod serialized;
+
 /// a pointer to a client's state at a point in time
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DocumentStateVector(pub Vec<u8>);
@@ -452,7 +454,7 @@ pub struct DocumentTagPatch {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(IntoParams))]
+#[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
 pub struct HistoryParams {
     /// split group whenever author changes
     pub by_author: Option<bool>,
@@ -517,4 +519,25 @@ pub struct HistoryPagination {
 
     /// document tags that are part of the range
     pub document_tags: Vec<DocumentTag>,
+}
+
+/// parameters for getting a crdt
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
+pub struct DocumentCrdtDiffParams {
+    pub sv: Option<DocumentStateVector>,
+}
+
+/// parameters for updating a crdt
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct DocumentCrdtApply {
+    pub update: DocumentUpdate,
+}
+
+/// update a serdoc
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SerdocPut {
+    pub root: serialized::SerdocRoot,
 }

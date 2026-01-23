@@ -590,6 +590,7 @@ async fn voice_call_get(
 }
 
 /// Voice call update
+// TODO: return the updated call object
 #[utoipa::path(
     patch,
     path = "/voice/{channel_id}",

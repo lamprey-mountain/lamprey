@@ -10,6 +10,8 @@ use tracing::debug;
 use crate::types::{DbChannelCreate, DbChannelType};
 use crate::{Error, Result, ServerStateInner};
 
+mod affinity;
+
 pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
     cache_users: Cache<UserId, User>,
