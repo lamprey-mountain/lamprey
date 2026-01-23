@@ -253,7 +253,6 @@ struct ChannelListQuery {
     path = "/room/{room_id}/channel",
     params(
         ("room_id", description = "Room id"),
-        ChannelListQuery,
         PaginationQuery<channelId>
     ),
     tags = ["channel"],
@@ -263,39 +262,22 @@ struct ChannelListQuery {
 )]
 async fn channel_list(
     Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<ChannelListQuery>,
-    Query(pagination): Query<PaginationQuery<ChannelId>>,
+    Query(_pagination): Query<PaginationQuery<ChannelId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    let mut res = data
-        .channel_list(room_id, pagination, q.parent_id)
-        .await?;
-
-    let mut items = Vec::new();
-    for item in res.items {
-        if srv
-            .perms
-            .for_channel(auth.user.id, item.id)
-            .await?
-            .has(Permission::ViewChannel)
-        {
-            items.push(item);
-        }
-    }
-    res.items = items;
-
-    let ids: Vec<_> = res.items.iter().map(|t| t.id).collect();
+    let channels = data.channel_list(room_id).await?;
+    let ids: Vec<_> = channels.iter().map(|t| t.id).collect();
     let channels = srv.channels.get_many(&ids, Some(auth.user.id)).await?;
     let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
-    res.items = ids
+    let channels: Vec<_> = ids
         .into_iter()
         .filter_map(|id| channels_map.remove(&id))
         .collect();
-    Ok(Json(res))
+    Ok(Json(channels))
 }
 
 /// Room channel list removed

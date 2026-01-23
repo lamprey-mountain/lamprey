@@ -18,12 +18,8 @@ LEFT JOIN (
     GROUP BY channel_id
 ) tags_available ON tags_available.channel_id = t.id
 WHERE t.room_id = $1
-  AND t.id > $2
-  AND t.id < $3
   AND t.deleted_at IS NULL
   AND t.archived_at IS NULL
-  AND ($6::uuid IS NULL OR t.parent_id = $6)
 ORDER BY
-    (CASE WHEN $4 = 'f' THEN t.id END),
+    t.position ASC,
     t.id DESC
-LIMIT $5

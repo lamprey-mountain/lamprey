@@ -18,6 +18,20 @@ pub struct ServiceUsers {
     dm_lock: DashMap<(UserId, UserId), ()>,
 }
 
+/// an identifier for a dm channel
+
+pub struct DmKey(UserId, UserId);
+impl DmKey {
+    /// create a new dm key, automatically sorting user ids
+    pub fn new(a: UserId, b: UserId) -> Self {
+        todo!()
+    }
+
+    pub fn get_users(&self) -> (UserId, UserId) {
+        todo!()
+    }
+}
+
 impl ServiceUsers {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
@@ -127,6 +141,11 @@ impl ServiceUsers {
             .await?;
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         Ok((thread, true))
+    }
+
+    /// add private user data to each user
+    pub async fn merge(&self, users: &mut [User], user_id: UserId) -> Result<()> {
+        Ok(())
     }
 }
 

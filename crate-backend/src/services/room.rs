@@ -336,4 +336,10 @@ impl ServiceRooms {
 
         Ok(())
     }
+
+    /// add private user data to each room
+    pub async fn merge(&self, rooms: &mut [Room], user_id: UserId) -> Result<()> {
+        Ok(())
+    }
+
 }

@@ -111,6 +111,9 @@ pub struct Channel {
     #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
     pub user_limit: Option<u64>,
 
+    // NOTE: consider removing this, its not really being used?
+    // the idea was that ignored/muted users could skip incrementing is_unread, but that would require each event to be separately filtered per user
+    // individual filtering has some performance implications that i dont know if i want to take on
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,

@@ -2,9 +2,7 @@
 
 use std::sync::Arc;
 
-use common::v1::types::{
-    ids::SERVER_USER_ID, ChannelId, MessageSync, RoleId, Room, RoomId, UserId,
-};
+use common::v1::types::{ChannelId, MessageSync, RoleId, Room, RoomId, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::sync::RwLock;
@@ -93,40 +91,10 @@ impl ServiceCache {
         }
 
         // 4. load channels
-        let user_id = room.owner_id.unwrap_or(SERVER_USER_ID);
+        let channels_data = data.channel_list(room_id).await?;
         let channels = DashMap::new();
-        let mut cursor = None;
-        loop {
-            // TODO: fetch all channels in one query
-            // theres a hard limit of 1024 channels per room, but channel_list is kinda broken
-            let page = data
-                .channel_list(
-                    room_id,
-                    PaginationQuery {
-                        from: cursor,
-                        limit: Some(1024),
-                        ..Default::default()
-                    },
-                    None,
-                )
-                .await?;
-
-            let Some(last_id) = page.items.last().map(|c| c.id) else {
-                break;
-            };
-
-            for channel in page.items {
-                if !channel.ty.is_thread() {
-                    channels.insert(channel.id, channel);
-                }
-            }
-
-            // NOTE: may be redundant, considering that last_id would have been None if there are no more channels
-            if page.has_more {
-                cursor = Some(last_id);
-            } else {
-                break;
-            }
+        for channel in channels_data {
+            channels.insert(channel.id, channel);
         }
 
         // 5. load active threads and members

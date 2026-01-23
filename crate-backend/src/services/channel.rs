@@ -31,6 +31,16 @@ pub struct ServiceThreads {
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
 }
 
+// #[derive(Debug)]
+// pub struct ChannelPrivate {
+//     pub is_unread: Option<bool>,
+//     pub last_read_id: Option<MessageVerId>,
+//     pub mention_count: Option<u64>,
+//     pub user_config: Option<UserConfigChannel>,
+//     pub slowmode_thread_expire_at: Option<Time>,
+//     pub slowmode_message_expire_at: Option<Time>,
+// }
+
 impl ServiceThreads {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
@@ -52,6 +62,11 @@ impl ServiceThreads {
                 .time_to_live(Duration::from_secs(10))
                 .build(),
         }
+    }
+
+    /// add private user data to each channel
+    pub async fn merge(&self, channels: &mut [Channel], user_id: UserId) -> Result<()> {
+        Ok(())
     }
 
     pub async fn get(&self, channel_id: ChannelId, user_id: Option<UserId>) -> Result<Channel> {
@@ -959,6 +974,7 @@ impl ServiceThreads {
 
     /// get all channels a user can see that are in rooms, along with whether the user has the ThreadManage permission. does not include dm channels
     pub async fn list_user_room_channels(&self, user_id: UserId) -> Result<Vec<(ChannelId, bool)>> {
+        // TODO: batch these queries
         let rooms = self
             .state
             .data()
@@ -989,22 +1005,10 @@ impl ServiceThreads {
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<Vec<(ChannelId, bool)>> {
-        let channels = self
-            .state
-            .data()
-            .channel_list(
-                room_id,
-                PaginationQuery {
-                    from: None,
-                    to: None,
-                    dir: None,
-                    limit: Some(1024),
-                },
-                None,
-            )
-            .await?;
+        let channels = self.state.data().channel_list(room_id).await?;
         let mut out = vec![];
-        for ch in channels.items {
+
+        for ch in channels {
             let p = self
                 .state
                 .services()
@@ -1015,6 +1019,7 @@ impl ServiceThreads {
                 out.push((ch.id, p.has(Permission::ThreadManage)));
             }
         }
+
         Ok(out)
     }
 
