@@ -9,17 +9,13 @@ use axum::{
 use common::v1::types::{
     tag::{Tag, TagCreate, TagDeleteQuery, TagListQuery, TagPatch, TagSearchQuery},
     util::Changes,
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, TagId,
+    AuditLogEntryType, ChannelId, MessageSync, PaginationQuery, PaginationResponse, Permission,
+    TagId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::{
-    error::Result,
-    routes::util::{Auth, HeaderReason},
-    Error, ServerState,
-};
+use crate::{error::Result, routes::util::Auth, Error, ServerState};
 
 /// Tag create
 #[utoipa::path(
@@ -35,7 +31,6 @@ async fn tag_create(
     Path(channel_id): Path<ChannelId>,
     State(s): State<Arc<ServerState>>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     Json(create): Json<TagCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -56,23 +51,17 @@ async fn tag_create(
     let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = chan_new.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason: reason.clone(), // No reason header here
-            ty: AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type: chan_new.ty,
-                changes: Changes::new()
-                    .change(
-                        "tags_available",
-                        &chan_old.tags_available,
-                        &chan_new.tags_available,
-                    )
-                    .build(),
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::ChannelUpdate {
+            channel_id,
+            channel_type: chan_new.ty,
+            changes: Changes::new()
+                .change(
+                    "tags_available",
+                    &chan_old.tags_available,
+                    &chan_new.tags_available,
+                )
+                .build(),
         })
         .await?;
     }
@@ -106,7 +95,6 @@ async fn tag_update(
     Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
     State(s): State<Arc<ServerState>>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     Json(patch): Json<TagPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -127,23 +115,17 @@ async fn tag_update(
     let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = chan_new.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type: chan_new.ty,
-                changes: Changes::new()
-                    .change(
-                        "tags_available",
-                        &chan_old.tags_available,
-                        &chan_new.tags_available,
-                    )
-                    .build(),
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::ChannelUpdate {
+            channel_id,
+            channel_type: chan_new.ty,
+            changes: Changes::new()
+                .change(
+                    "tags_available",
+                    &chan_old.tags_available,
+                    &chan_new.tags_available,
+                )
+                .build(),
         })
         .await?;
     }
@@ -178,7 +160,6 @@ async fn tag_delete(
     Query(query): Query<TagDeleteQuery>,
     State(s): State<Arc<ServerState>>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
@@ -203,23 +184,17 @@ async fn tag_delete(
     let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = chan_new.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type: chan_new.ty,
-                changes: Changes::new()
-                    .change(
-                        "tags_available",
-                        &chan_old.tags_available,
-                        &chan_new.tags_available,
-                    )
-                    .build(),
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::ChannelUpdate {
+            channel_id,
+            channel_type: chan_new.ty,
+            changes: Changes::new()
+                .change(
+                    "tags_available",
+                    &chan_old.tags_available,
+                    &chan_new.tags_available,
+                )
+                .build(),
         })
         .await?;
     }

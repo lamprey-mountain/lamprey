@@ -3,8 +3,8 @@ use std::sync::Arc;
 use axum::{extract::State, response::IntoResponse, Json};
 use common::v1::types::{
     util::{Changes, Time},
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageCreate, MessageSync, Permission,
-    UserId, SERVER_ROOM_ID, SERVER_USER_ID,
+    AuditLogEntryType, MessageCreate, MessageSync, Permission, UserId, SERVER_ROOM_ID,
+    SERVER_USER_ID,
 };
 use common::v1::types::{ChannelPatch, PaginationQuery};
 use http::StatusCode;
@@ -12,7 +12,7 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 
 use crate::{
     error::Result,
@@ -52,7 +52,6 @@ struct AdminRegisterUser {
 async fn admin_whisper(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminWhisper>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -70,16 +69,10 @@ async fn admin_whisper(
         .add("embeds", &json.message.embeds)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason,
-        ty: AuditLogEntryType::AdminWhisper {
-            user_id: json.user_id,
-            changes,
-        },
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::AdminWhisper {
+        user_id: json.user_id,
+        changes,
     })
     .await?;
 
@@ -104,7 +97,7 @@ async fn admin_whisper(
     })?;
 
     srv.messages
-        .create(thread.id, SERVER_USER_ID, None, json.message)
+        .create_system(thread.id, SERVER_USER_ID, None, json.message)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -122,7 +115,6 @@ async fn admin_whisper(
 async fn admin_broadcast(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminBroadcast>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -140,15 +132,9 @@ async fn admin_broadcast(
         .add("embeds", &json.message.embeds)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason,
-        ty: AuditLogEntryType::AdminBroadcast { changes },
-    })
-    .await?;
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::AdminBroadcast { changes })
+        .await?;
 
     let mut from = None;
     loop {
@@ -195,7 +181,7 @@ async fn admin_broadcast(
                 })?;
 
                 srv.messages
-                    .create(thread.id, SERVER_USER_ID, None, msg)
+                    .create_system(thread.id, SERVER_USER_ID, None, msg)
                     .await?;
 
                 Result::Ok(())
@@ -223,7 +209,6 @@ async fn admin_broadcast(
 async fn admin_register_user(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminRegisterUser>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -241,15 +226,9 @@ async fn admin_register_user(
 
     srv.users.invalidate(target_user_id).await;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason,
-        ty: AuditLogEntryType::UserRegistered {
-            user_id: target_user_id,
-        },
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::UserRegistered {
+        user_id: target_user_id,
     })
     .await?;
 

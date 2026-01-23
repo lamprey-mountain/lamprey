@@ -1,14 +1,13 @@
 use std::{collections::HashSet, sync::Arc};
 
-use crate::routes::util::HeaderReason;
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
     Json,
 };
 use common::v1::types::{
-    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync,
-    Permission, PermissionOverwriteSet, PermissionOverwriteType,
+    util::Changes, AuditLogEntryType, ChannelId, MessageSync, Permission, PermissionOverwriteSet,
+    PermissionOverwriteType,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -33,7 +32,6 @@ async fn permission_overwrite(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -140,27 +138,21 @@ async fn permission_overwrite(
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = channel.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason: reason.clone(),
-            ty: AuditLogEntryType::PermissionOverwriteSet {
-                channel_id,
-                overwrite_id,
-                ty: json.ty,
-                changes: if let Some(existing) = &existing {
-                    Changes::new()
-                        .change("allow", &existing.allow, &json.allow)
-                        .change("deny", &existing.deny, &json.deny)
-                        .build()
-                } else {
-                    Changes::new()
-                        .add("allow", &json.allow)
-                        .add("deny", &json.deny)
-                        .build()
-                },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::PermissionOverwriteSet {
+            channel_id,
+            overwrite_id,
+            ty: json.ty,
+            changes: if let Some(existing) = &existing {
+                Changes::new()
+                    .change("allow", &existing.allow, &json.allow)
+                    .change("deny", &existing.deny, &json.deny)
+                    .build()
+            } else {
+                Changes::new()
+                    .add("allow", &json.allow)
+                    .add("deny", &json.deny)
+                    .build()
             },
         })
         .await?;
@@ -192,7 +184,6 @@ async fn permission_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
@@ -254,16 +245,10 @@ async fn permission_delete(
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = channel.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason: reason.clone(),
-            ty: AuditLogEntryType::PermissionOverwriteDelete {
-                channel_id,
-                overwrite_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::PermissionOverwriteDelete {
+            channel_id,
+            overwrite_id,
         })
         .await?;
     }

@@ -86,6 +86,7 @@ impl From<DbUser> for User {
             deleted_at: row.deleted_at.map(|i| i.into()),
             emails: None,
             user_config: None,
+            has_mfa: None,
         }
     }
 }
@@ -111,6 +112,7 @@ impl DataUser for Postgres {
             deleted_at: None,
             user_config: Default::default(),
             emails: None,
+            has_mfa: None,
         };
 
         let mut tx = self.pool.begin().await?;

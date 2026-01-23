@@ -155,7 +155,7 @@ pub async fn webhook_execute_discord(
     let srv = s.services();
     let _message = srv
         .messages
-        .create(webhook.channel_id, webhook_user_id, None, message_create)
+        .create_system(webhook.channel_id, webhook_user_id, None, message_create)
         .await?;
 
     // TODO: return message if ?wait=true

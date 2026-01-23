@@ -1,20 +1,19 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, Session, SessionCreate, SessionId, SessionPatch, SessionStatus,
-    SessionToken, SessionType, SessionWithToken,
+    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate,
+    SessionId, SessionPatch, SessionStatus, SessionToken, SessionType, SessionWithToken,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::{Auth, HeaderReason};
+use crate::routes::util::Auth;
 use crate::types::{DbSessionCreate, SessionIdReq};
 use crate::ServerState;
 
@@ -31,10 +30,15 @@ use crate::error::{Error, Result};
 )]
 pub async fn session_create(
     State(s): State<Arc<ServerState>>,
+    headers: HeaderMap,
     Json(json): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
     let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
     let session = data
         .session_create(DbSessionCreate {
@@ -43,6 +47,8 @@ pub async fn session_create(
             expires_at: None,
             ty: SessionType::User,
             application_id: None,
+            ip_addr: None,
+            user_agent,
         })
         .await?;
     let session_with_token = SessionWithToken { session, token };
@@ -86,7 +92,6 @@ pub async fn session_update(
     Path(target_session_id): Path<SessionIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -133,18 +138,12 @@ pub async fn session_update(
         session: target_session_new.clone(),
     })?;
     if let Some(uid) = target_session_new.user_id() {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: uid.into_inner().into(),
-            user_id: uid,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::SessionUpdate {
-                session_id: target_session_new.id,
-                changes: Changes::new()
-                    .change("name", &target_session.name, &target_session_new.name)
-                    .build(),
-            },
+        let al = auth.audit_log(uid.into_inner().into());
+        al.commit_success(AuditLogEntryType::SessionUpdate {
+            session_id: target_session_new.id,
+            changes: Changes::new()
+                .change("name", &target_session.name, &target_session_new.name)
+                .build(),
         })
         .await?;
     }
@@ -167,7 +166,6 @@ pub async fn session_delete(
     Path(target_session_id): Path<SessionIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_session_id = match target_session_id {
         SessionIdReq::SessionSelf => auth.session.id,
@@ -212,16 +210,10 @@ pub async fn session_delete(
         user_id: target_session.user_id(),
     })?;
     if let Some(uid) = auth.session.user_id() {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: uid.into_inner().into(),
-            user_id: uid,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::SessionDelete {
-                session_id: target_session_id,
-                changes: Changes::new().remove("name", &target_session.name).build(),
-            },
+        let al = auth.audit_log(uid.into_inner().into());
+        al.commit_success(AuditLogEntryType::SessionDelete {
+            session_id: target_session_id,
+            changes: Changes::new().remove("name", &target_session.name).build(),
         })
         .await?;
     }
@@ -240,7 +232,6 @@ pub async fn session_delete(
 pub async fn session_delete_all(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let Some(user_id) = auth.session.user_id() else {
         return Err(Error::UnauthSession);
@@ -253,15 +244,9 @@ pub async fn session_delete_all(
     data.session_delete_all(user_id).await?;
     srv.sessions.invalidate_all(user_id).await;
     s.broadcast(MessageSync::SessionDeleteAll { user_id })?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: user_id.into_inner().into(),
-        user_id: user_id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::SessionDeleteAll,
-    })
-    .await?;
+    let al = auth.audit_log(user_id.into_inner().into());
+    al.commit_success(AuditLogEntryType::SessionDeleteAll)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

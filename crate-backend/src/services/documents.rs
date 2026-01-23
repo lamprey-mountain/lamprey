@@ -9,6 +9,8 @@ use common::v1::types::{
     ChannelId, DocumentBranchId, MessageSync, UserId,
 };
 use dashmap::DashMap;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use tokio::sync::{broadcast, RwLock};
 use tracing::error;
 use uuid::Uuid;
@@ -254,6 +256,22 @@ impl ServiceDocuments {
         }
 
         Ok(())
+    }
+
+    /// unload all documents, for shutting down
+    pub async fn unload_all(&self) {
+        let mut futures = FuturesUnordered::new();
+
+        for ctx in &self.edit_contexts {
+            let context_id = ctx.key();
+            futures.push(self.unload(*context_id));
+        }
+
+        while let Some(r) = futures.next().await {
+            if let Err(err) = r {
+                error!("failed to unload document: {err:?}");
+            }
+        }
     }
 
     /// apply a change to a document

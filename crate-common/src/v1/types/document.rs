@@ -122,7 +122,7 @@ mod utoipa_impl {
     }
 }
 
-/// info about a document
+/// channel metadata for a document
 // NOTE: this will probably be included in Channel as `document: Option<Document>`
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -141,6 +141,14 @@ pub struct Document {
 
     /// whether this document is a reusable template
     pub template: bool,
+
+    /// custom url path to put this at
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(max = 64)))]
+    pub slug: Option<String>,
+
+    /// if this document has been published
+    pub published: Option<DocumentPublished>,
 }
 
 /// info about an archived document
@@ -533,6 +541,40 @@ pub struct DocumentCrdtDiffParams {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct DocumentCrdtApply {
     pub update: DocumentUpdate,
+}
+
+/// channel metadata for a wiki
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct Wiki {
+    /// whether to allow indexing by search engines
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub allow_indexing: bool,
+
+    /// the id of the document that should be used as the main/home/index page
+    pub page_index: Option<ChannelId>,
+
+    /// the id of the document that should be used as the 404/not found page
+    pub page_notfound: Option<ChannelId>,
+}
+
+/// info about when a document was published
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct DocumentPublished {
+    /// when this document was published
+    pub time: Time,
+
+    /// the revision of the document that was published
+    pub revision: DocumentRevisionId,
+
+    /// published but doesnt show up in any search results
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub unlisted: bool,
 }
 
 /// update a serdoc

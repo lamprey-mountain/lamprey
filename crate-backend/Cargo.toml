@@ -25,7 +25,7 @@ opendal = { version = "0.54.0", features = ["services-s3"] }
 reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
-sqlx = { version = "0.8.3", features = ["runtime-tokio", "postgres", "uuid", "time"] }
+sqlx = { version = "0.8.3", features = ["runtime-tokio", "postgres", "uuid", "time", "ipnetwork"] }
 thiserror = "2.0.11"
 time = { version = "0.3.37", features = ["serde"] }
 tokio = { version = "1.42.0", features = ["macros", "process", "rt-multi-thread"] }
@@ -72,6 +72,7 @@ base32 = "0.5.1"
 yrs = { version = "0.25.0", features = ["sync"] }
 decancer = "3.3.3"
 tokio-stream = { version = "0.1.18", features = ["sync"] }
+httpdate = "1.0.3"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }

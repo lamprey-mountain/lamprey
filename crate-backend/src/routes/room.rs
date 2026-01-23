@@ -2,22 +2,21 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use axum_extra::TypedHeader;
 use common::v1::types::{
     application::Integration, util::Changes, ApplicationId, AuditLogEntry, AuditLogEntryId,
     AuditLogEntryType, AuditLogFilter, RoomSecurityUpdate, RoomType, TransferOwnership,
     SERVER_ROOM_ID,
 };
-use headers::ETag;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
     error::Result,
+    routes::util::HeaderCache,
     types::{
         DbRoomCreate, MediaLinkType, MessageSync, PaginationQuery, PaginationResponse, Permission,
         Room, RoomCreate, RoomId, RoomPatch,
@@ -25,7 +24,7 @@ use crate::{
     Error, ServerState,
 };
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 
 /// Room create
 #[utoipa::path(
@@ -59,7 +58,7 @@ async fn room_create(
         ty: RoomType::Default,
         welcome_channel_id: None,
     };
-    let room = s.services().rooms.create(json, auth.user.id, extra).await?;
+    let room = s.services().rooms.create(json, &auth, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
         data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::RoomIcon)
@@ -83,25 +82,14 @@ async fn room_create(
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
     auth: Auth,
-    headers: HeaderMap,
+    cache: HeaderCache,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
-
-    // TODO: use typedheader once the empty if-none-match bug is fixed
-    // TODO: last-modified
-    let etag = format!(r#"W/"{}""#, room.version_id);
-
-    if let Some(if_none_match) = headers.get("if-none-match") {
-        if if_none_match == &etag {
-            return Ok(StatusCode::NOT_MODIFIED.into_response());
-        }
-    }
-
-    let etag: ETag = etag.parse().unwrap();
-    Ok((TypedHeader(etag), Json(room)).into_response())
+    let headers = cache.compare_uuid(&room.version_id)?;
+    Ok((headers, Json(room)))
 }
 
 /// Room list
@@ -220,7 +208,6 @@ async fn room_delete(
     Path((room_id,)): Path<(RoomId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -249,28 +236,16 @@ async fn room_delete(
         .remove("public", &room.public)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::RoomDelete {
         room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoomDelete {
-            room_id,
-            changes: changes.clone(),
-        },
+        changes: changes.clone(),
     })
     .await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoomDelete { room_id, changes },
-    })
-    .await?;
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::RoomDelete { room_id, changes })
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -289,7 +264,6 @@ async fn room_undelete(
     Path((room_id,)): Path<(RoomId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -307,25 +281,13 @@ async fn room_undelete(
     s.broadcast_room(room_id, auth.user.id, MessageSync::RoomCreate { room })
         .await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoomUndelete { room_id },
-    })
-    .await?;
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::RoomUndelete { room_id })
+        .await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoomUndelete { room_id },
-    })
-    .await?;
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::RoomUndelete { room_id })
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -489,7 +451,6 @@ async fn room_quarantine(
     Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -515,15 +476,9 @@ async fn room_quarantine(
     };
     s.broadcast_room(room_id, auth.user.id, msg).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoomQuarantine { room_id },
-    })
-    .await?;
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::RoomQuarantine { room_id })
+        .await?;
 
     Ok(Json(updated_room))
 }
@@ -540,7 +495,6 @@ async fn room_unquarantine(
     Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -567,15 +521,9 @@ async fn room_unquarantine(
     };
     s.broadcast_room(room_id, auth.user.id, msg).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoomUnquarantine { room_id },
-    })
-    .await?;
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::RoomUnquarantine { room_id })
+        .await?;
 
     Ok(Json(updated_room))
 }
@@ -595,7 +543,6 @@ async fn room_security_set(
     Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomSecurityUpdate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -644,15 +591,9 @@ async fn room_security_set(
         .build();
 
     if !changes.is_empty() {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::RoomUpdate { changes },
-        })
-        .await?;
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::RoomUpdate { changes })
+            .await?;
     }
 
     let msg = MessageSync::RoomUpdate { room: room.clone() };

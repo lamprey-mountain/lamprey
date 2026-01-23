@@ -13,7 +13,7 @@ use common::v1::types::{
         OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
     },
     util::Time,
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, SessionStatus, SessionToken, SessionType,
+    AuditLogEntryType, SessionStatus, SessionToken, SessionType,
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
@@ -21,11 +21,7 @@ use sha2::{Digest, Sha256};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use crate::{
-    routes::util::{Auth, HeaderReason},
-    types::DbSessionCreate,
-    ServerState,
-};
+use crate::{routes::util::Auth, types::DbSessionCreate, ServerState};
 
 use crate::error::{Error, Result};
 
@@ -91,7 +87,6 @@ async fn oauth_authorize(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let app = data.application_get(q.client_id).await?;
@@ -121,16 +116,10 @@ async fn oauth_authorize(
     let scopes = Scopes(scopes.into_iter().collect());
     data.connection_create(auth.user.id, app.id, scopes.clone())
         .await?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::ConnectionCreate {
-            application_id: q.client_id,
-            scopes: scopes.clone(),
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::ConnectionCreate {
+        application_id: q.client_id,
+        scopes: scopes.clone(),
     })
     .await?;
 
@@ -172,6 +161,10 @@ async fn oauth_token(
     headers: HeaderMap,
     Form(form): Form<OauthTokenRequest>,
 ) -> Result<impl IntoResponse> {
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(ToString::to_string);
     let credentials: Option<headers::Authorization<headers::authorization::Basic>> =
         headers.typed_get();
     let client_id = if let Some(client_id) = form.client_id {
@@ -244,6 +237,10 @@ async fn oauth_token(
             let token = SessionToken(Uuid::new_v4().to_string());
             let expires_in = 3600; // 1 hour
             let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
+            let user_agent = headers
+                .get("user-agent")
+                .and_then(|h| h.to_str().ok())
+                .map(ToString::to_string);
             let session = data
                 .session_create(DbSessionCreate {
                     token: token.clone(),
@@ -251,6 +248,8 @@ async fn oauth_token(
                     expires_at: Some(expires_at),
                     ty: SessionType::Access,
                     application_id: Some(app.id),
+                    ip_addr: None,
+                    user_agent: user_agent.clone(),
                 })
                 .await?;
             data.session_set_status(session.id, SessionStatus::Authorized { user_id })
@@ -305,6 +304,8 @@ async fn oauth_token(
                     expires_at: Some(expires_at),
                     ty: SessionType::Access,
                     application_id: Some(app.id),
+                    ip_addr: None,
+                    user_agent: user_agent.clone(),
                 })
                 .await?;
             data.session_set_status(new_session.id, SessionStatus::Authorized { user_id })

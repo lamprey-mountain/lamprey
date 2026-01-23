@@ -6,10 +6,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, PruneBegin, PruneResponse, RoomId, RoomMember, RoomMemberPatch,
-    RoomMemberPut, RoomMemberSearch, RoomMemberSearchAdvanced, RoomMemberSearchResponse,
-    RoomMembership, UserId,
+    util::Changes, AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
+    PruneBegin, PruneResponse, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
+    RoomMemberSearch, RoomMemberSearchAdvanced, RoomMemberSearchResponse, RoomMembership, UserId,
 };
 use common::v1::types::{
     RoleId, RoomBan, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
@@ -125,10 +124,10 @@ async fn room_member_add(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(mut json): Json<RoomMemberPut>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    let al = auth.audit_log(room_id);
     let srv = s.services();
     let data = s.data();
     let target_user_id = match target_user_id {
@@ -415,17 +414,10 @@ async fn room_member_add(
 
     let changes = changes.build();
     if !changes.is_empty() {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
+        al.commit_success(AuditLogEntryType::MemberUpdate {
             room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MemberUpdate {
-                room_id,
-                user_id: target_user_id,
-                changes,
-            },
+            user_id: target_user_id,
+            changes,
         })
         .await?;
 
@@ -487,10 +479,10 @@ async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(mut json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    let al = auth.audit_log(room_id);
     json.validate()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -603,17 +595,10 @@ async fn room_member_update(
         .build();
 
     if !changes.is_empty() {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
+        al.commit_success(AuditLogEntryType::MemberUpdate {
             room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MemberUpdate {
-                room_id,
-                user_id: target_user_id,
-                changes,
-            },
+            user_id: target_user_id,
+            changes,
         })
         .await?;
     }
@@ -664,7 +649,6 @@ struct LeaveQuery {
 async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     Query(_q): Query<LeaveQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -719,16 +703,10 @@ async fn room_member_delete(
     srv.perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::MemberKick {
         room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::MemberKick {
-            room_id,
-            user_id: target_user_id,
-        },
+        user_id: target_user_id,
     })
     .await?;
 
@@ -929,16 +907,10 @@ async fn room_ban_create(
         .await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::MemberBan {
         room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::MemberBan {
-            room_id,
-            user_id: target_user_id,
-        },
+        user_id: target_user_id,
     })
     .await?;
 
@@ -1031,16 +1003,10 @@ async fn room_ban_create_bulk(
             .await?;
         let member = d.room_member_get(room_id, target_user_id).await?;
 
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MemberBan {
             room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MemberBan {
-                room_id,
-                user_id: target_user_id,
-            },
+            user_id: target_user_id,
         })
         .await?;
 
@@ -1081,7 +1047,6 @@ async fn room_ban_create_bulk(
 async fn room_ban_remove(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -1108,16 +1073,10 @@ async fn room_ban_remove(
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.perms.invalidate_is_mutual(target_user_id);
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::MemberUnban {
         room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::MemberUnban {
-            room_id,
-            user_id: target_user_id,
-        },
+        user_id: target_user_id,
     })
     .await?;
 

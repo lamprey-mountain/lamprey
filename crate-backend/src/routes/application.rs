@@ -9,10 +9,9 @@ use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch},
     misc::ApplicationIdReq,
     util::{Changes, Diff, Time},
-    ApplicationId, AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, Puppet, PuppetCreate, RoomId,
-    RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionType,
-    SessionWithToken, User, UserId,
+    ApplicationId, AuditLogChange, AuditLogEntryType, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, Puppet, PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut,
+    SessionCreate, SessionStatus, SessionToken, SessionType, SessionWithToken, User, UserId,
 };
 use http::StatusCode;
 use serde::Deserialize;
@@ -23,7 +22,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    routes::util::{Auth, HeaderReason},
+    routes::util::Auth,
     types::{DbSessionCreate, DbUserCreate},
     ServerState,
 };
@@ -43,10 +42,10 @@ use crate::error::{Error, Result};
 async fn app_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<ApplicationCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    let al = auth.audit_log(auth.user.id.into_inner().into());
     if let Some(bridge) = &json.bridge {
         if bridge.platform_name.is_none() {
             return Err(Error::BadStatic("platform_name is required for bridge"));
@@ -77,21 +76,14 @@ async fn app_create(
         oauth_confidential: false,
     };
     data.application_insert(app.clone()).await?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::ApplicationCreate {
-            application_id: app.id,
-            changes: Changes::new()
-                .add("name", &app.name)
-                .add("description", &app.description)
-                .add("bridge", &app.bridge)
-                .add("public", &app.public)
-                .build(),
-        },
+    al.commit_success(AuditLogEntryType::ApplicationCreate {
+        application_id: app.id,
+        changes: Changes::new()
+            .add("name", &app.name)
+            .add("description", &app.description)
+            .add("bridge", &app.bridge)
+            .add("public", &app.public)
+            .build(),
     })
     .await?;
     Ok((StatusCode::CREATED, Json(app)))
@@ -162,7 +154,6 @@ async fn app_patch(
     Path((app_id,)): Path<(ApplicationIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(patch): Json<ApplicationPatch>,
 ) -> Result<impl IntoResponse> {
     let app_id = match app_id {
@@ -170,6 +161,7 @@ async fn app_patch(
         ApplicationIdReq::ApplicationId(id) => id,
     };
     auth.user.ensure_unsuspended()?;
+    let al = auth.audit_log(auth.user.id.into_inner().into());
     patch.validate()?;
     let data = s.data();
     let start = data.application_get(app_id).await?;
@@ -197,31 +189,24 @@ async fn app_patch(
 
     data.application_update(app.clone()).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::ApplicationUpdate {
-            application_id: app.id,
-            changes: Changes::new()
-                .change("name", &start.name, &app.name)
-                .change("description", &start.description, &app.description)
-                .change("bridge", &start.bridge, &app.bridge)
-                .change("public", &start.public, &app.public)
-                .change(
-                    "oauth_redirect_uris",
-                    &start.oauth_redirect_uris,
-                    &app.oauth_redirect_uris,
-                )
-                .change(
-                    "oauth_confidential",
-                    &start.oauth_confidential,
-                    &app.oauth_confidential,
-                )
-                .build(),
-        },
+    al.commit_success(AuditLogEntryType::ApplicationUpdate {
+        application_id: app.id,
+        changes: Changes::new()
+            .change("name", &start.name, &app.name)
+            .change("description", &start.description, &app.description)
+            .change("bridge", &start.bridge, &app.bridge)
+            .change("public", &start.public, &app.public)
+            .change(
+                "oauth_redirect_uris",
+                &start.oauth_redirect_uris,
+                &app.oauth_redirect_uris,
+            )
+            .change(
+                "oauth_confidential",
+                &start.oauth_confidential,
+                &app.oauth_confidential,
+            )
+            .build(),
     })
     .await?;
 
@@ -241,29 +226,22 @@ async fn app_delete(
     Path((app_id,)): Path<(ApplicationId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    let al = auth.audit_log(auth.user.id.into_inner().into());
     let data = s.data();
     let app = data.application_get(app_id).await?;
     if app.owner_id == auth.user.id {
         data.application_delete(app_id).await?;
         data.user_delete(app_id.into_inner().into()).await?;
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: auth.user.id.into_inner().into(),
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::ApplicationDelete {
-                application_id: app_id,
-                changes: Changes::new()
-                    .remove("name", &app.name)
-                    .remove("description", &app.description)
-                    .remove("bridge", &app.bridge)
-                    .remove("public", &app.public)
-                    .build(),
-            },
+        al.commit_success(AuditLogEntryType::ApplicationDelete {
+            application_id: app_id,
+            changes: Changes::new()
+                .remove("name", &app.name)
+                .remove("description", &app.description)
+                .remove("bridge", &app.bridge)
+                .remove("public", &app.public)
+                .build(),
         })
         .await?;
     }
@@ -284,7 +262,6 @@ async fn app_create_session(
     Path((app_id,)): Path<(ApplicationIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
     let app_id = match app_id {
@@ -292,6 +269,7 @@ async fn app_create_session(
         ApplicationIdReq::ApplicationId(id) => id,
     };
     auth.user.ensure_unsuspended()?;
+    let al = auth.audit_log(auth.user.id.into_inner().into());
     json.validate()?;
     let data = s.data();
     let app = data.application_get(app_id).await?;
@@ -304,6 +282,8 @@ async fn app_create_session(
                 expires_at: None,
                 ty: SessionType::User,
                 application_id: None,
+                ip_addr: auth.session.ip_addr.clone(),
+                user_agent: auth.session.user_agent.clone(),
             })
             .await?;
         data.session_set_status(
@@ -315,16 +295,9 @@ async fn app_create_session(
         .await?;
         let session = data.session_get(session.id).await?;
         let session_with_token = SessionWithToken { session, token };
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: auth.user.id.into_inner().into(),
-            user_id: auth.user.id,
-            session_id: Some(session_with_token.session.id),
-            reason,
-            ty: AuditLogEntryType::SessionLogin {
-                user_id: app.id.into_inner().into(),
-                session_id: session_with_token.session.id,
-            },
+        al.commit_success(AuditLogEntryType::SessionLogin {
+            user_id: app.id.into_inner().into(),
+            session_id: session_with_token.session.id,
         })
         .await?;
         Ok((StatusCode::CREATED, Json(session_with_token)))
@@ -354,7 +327,6 @@ async fn app_invite_bot(
     Path((app_id,)): Path<(ApplicationId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<AppInviteBot>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -397,15 +369,9 @@ async fn app_invite_bot(
     )
     .await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: json.room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::BotAdd {
-            bot_id: bot_user_id,
-        },
+    let al = auth.audit_log(json.room_id);
+    al.commit_success(AuditLogEntryType::BotAdd {
+        bot_id: bot_user_id,
     })
     .await?;
 
@@ -488,12 +454,12 @@ async fn app_rotate_secret(
     Path((app_id,)): Path<(ApplicationIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let app_id = match app_id {
         ApplicationIdReq::AppSelf => (*auth.user.id).into(),
         ApplicationIdReq::ApplicationId(id) => id,
     };
+    let al = auth.audit_log(auth.user.id.into_inner().into());
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
     if app.owner_id != auth.user.id && *app.id != *auth.user.id {
@@ -501,20 +467,13 @@ async fn app_rotate_secret(
     }
     app.oauth_secret = Some(Uuid::new_v4().to_string());
     data.application_update(app.clone()).await?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::ApplicationUpdate {
-            application_id: app.id,
-            changes: vec![AuditLogChange {
-                key: "oauth_secret".into(),
-                old: Value::Null,
-                new: Value::Null,
-            }],
-        },
+    al.commit_success(AuditLogEntryType::ApplicationUpdate {
+        application_id: app.id,
+        changes: vec![AuditLogChange {
+            key: "oauth_secret".into(),
+            old: Value::Null,
+            new: Value::Null,
+        }],
     })
     .await?;
     Ok(Json(app))

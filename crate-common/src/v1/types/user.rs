@@ -55,6 +55,10 @@ pub struct User {
     pub user_config: Option<UserConfigUser>,
     // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 16)))]
     // pub fields: Vec<UserField>,
+    /// whether this user is considered to have mutifactor authentication enabled on their account
+    ///
+    /// this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+    pub has_mfa: Option<bool>,
 }
 
 #[derive(Debug, Clone)]

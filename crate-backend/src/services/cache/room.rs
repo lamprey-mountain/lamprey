@@ -2,11 +2,15 @@
 
 use std::sync::Arc;
 
-use common::v1::types::{Channel, ChannelId, Role, RoleId, Room, RoomMember, ThreadMember, UserId};
+use common::v1::types::{
+    Channel, ChannelId, Role, RoleId, Room, RoomMember, RoomSecurity, ThreadMember, UserId,
+};
 use dashmap::DashMap;
 use tokio::sync::RwLock;
 
+use crate::routes::util::Auth;
 use crate::services::cache::permissions::PermissionsCalculator;
+use crate::{Error, Result};
 
 pub struct CachedRoom {
     /// the data of the room itself
@@ -34,6 +38,8 @@ pub struct CachedThread {
     // maybe include first, last message?
 }
 
+pub struct CachedRoomSecurity(RoomSecurity);
+
 impl CachedRoom {
     /// update this room's metadata
     pub async fn room_update(&self, room: Room) {
@@ -58,8 +64,33 @@ impl CachedRoom {
         }
     }
 
+    pub async fn security(&self) -> CachedRoomSecurity {
+        let inner = self.inner.read().await;
+        CachedRoomSecurity(inner.security.clone())
+    }
+
     // /// list all channels a user can see
     // pub async fn list_channels_for_user(&self, user_id: UserId) -> Vec<Channel> {
     //     todo!()
     // }
+}
+
+impl CachedRoomSecurity {
+    pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
+        if self.0.require_sudo {
+            auth.ensure_sudo()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
+        if self.0.require_mfa {
+            if !auth.user.has_mfa.unwrap_or_default() {
+                return Err(Error::BadStatic("mfa required for this action"));
+            }
+        }
+
+        Ok(())
+    }
 }

@@ -14,6 +14,7 @@ use common::v1::types::auth::{
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::util::{Changes, Time};
+use common::v1::types::AuditLogEntryStatus;
 use common::v1::types::{
     AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, RoomMemberPut,
     SessionStatus, UserId, SERVER_ROOM_ID,
@@ -30,7 +31,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use crate::routes::util::{Auth, HeaderReason};
+use crate::routes::util::Auth;
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
 use crate::ServerState;
@@ -91,8 +92,9 @@ async fn auth_oauth_redirect(
         .ok_or(Error::Unimplemented)?;
     match provider.as_str() {
         "discord" => {
-            let (auth, session_id) = srv.oauth.exchange_code_for_token(q.state, q.code).await?;
-            let u = srv.oauth.discord_get_user(auth.access_token).await?;
+            let (oauth_token, session_id) =
+                srv.oauth.exchange_code_for_token(q.state, q.code).await?;
+            let u = srv.oauth.discord_get_user(oauth_token.access_token).await?;
             debug!("new discord user {:?}", u);
             let user_id = match data
                 .auth_oauth_get_remote("discord".into(), u.user.id.clone())
@@ -112,14 +114,27 @@ async fn auth_oauth_redirect(
                         .await?;
                         srv.users.invalidate(user.id).await;
                         let updated_user = srv.users.get(user.id, None).await?;
-                        s.audit_log_append(AuditLogEntry {
+                        let session = srv.sessions.get(session_id).await?;
+                        let entry = AuditLogEntry {
                             id: AuditLogEntryId::new(),
                             room_id: SERVER_ROOM_ID,
                             user_id: user.id,
                             session_id: Some(session_id),
-                            reason: Some("oauth_autoregister".to_string()),
+                            reason: None,
                             ty: AuditLogEntryType::UserRegistered { user_id: user.id },
-                        })
+                            status: AuditLogEntryStatus::Success,
+                            started_at: Time::now_utc(),
+                            ended_at: Time::now_utc(),
+                            ip_addr: session.ip_addr,
+                            user_agent: session.user_agent,
+                            application_id: session.app_id,
+                        };
+                        data.audit_logs_room_append(entry.clone()).await?;
+                        s.broadcast_room(
+                            entry.room_id,
+                            entry.user_id,
+                            MessageSync::AuditLogEntryCreate { entry },
+                        )
                         .await?;
                         s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
                     }
@@ -150,17 +165,30 @@ async fn auth_oauth_redirect(
                             RoomMemberPut::default(),
                         )
                         .await?;
-                        s.audit_log_append(AuditLogEntry {
+                        let session = srv.sessions.get(session_id).await?;
+                        let entry = AuditLogEntry {
                             id: AuditLogEntryId::new(),
                             room_id: SERVER_ROOM_ID,
                             user_id: user.id,
                             session_id: Some(session_id),
-                            reason: Some("oauth_autoregister".to_string()),
+                            reason: None,
                             ty: AuditLogEntryType::UserRegistered { user_id: user.id },
-                        })
+                            status: AuditLogEntryStatus::Success,
+                            started_at: Time::now_utc(),
+                            ended_at: Time::now_utc(),
+                            ip_addr: session.ip_addr,
+                            user_agent: session.user_agent,
+                            application_id: session.app_id,
+                        };
+                        data.audit_logs_room_append(entry.clone()).await?;
+                        s.broadcast_room(
+                            entry.room_id,
+                            entry.user_id,
+                            MessageSync::AuditLogEntryCreate { entry },
+                        )
                         .await?;
                     }
-                    data.auth_oauth_put("discord".into(), user.id, u.user.id, true)
+                    data.auth_oauth_put("discord".into(), user.id, u.user.id.clone(), true)
                         .await?;
                     user.id
                 }
@@ -173,9 +201,9 @@ async fn auth_oauth_redirect(
             s.broadcast(MessageSync::SessionCreate {
                 session: session.clone(),
             })?;
-            s.audit_log_append(AuditLogEntry {
+            let entry = AuditLogEntry {
                 id: AuditLogEntryId::new(),
-                room_id: user_id.into_inner().into(),
+                room_id: (*user_id).into(),
                 user_id,
                 session_id: Some(session_id),
                 reason: None,
@@ -183,13 +211,26 @@ async fn auth_oauth_redirect(
                     user_id,
                     session_id,
                 },
-            })
+                status: AuditLogEntryStatus::Success,
+                started_at: session.authorized_at.unwrap_or_else(Time::now_utc),
+                ended_at: Time::now_utc(),
+                ip_addr: session.ip_addr.clone(),
+                user_agent: session.user_agent.clone(),
+                application_id: session.app_id,
+            };
+            data.audit_logs_room_append(entry.clone()).await?;
+            s.broadcast_room(
+                entry.room_id,
+                entry.user_id,
+                MessageSync::AuditLogEntryCreate { entry },
+            )
             .await?;
             Ok(Html(include_str!("../oauth.html")))
         }
         "github" => {
-            let (auth, session_id) = srv.oauth.exchange_code_for_token(q.state, q.code).await?;
-            let u = srv.oauth.github_get_user(auth.access_token).await?;
+            let (oauth_token, session_id) =
+                srv.oauth.exchange_code_for_token(q.state, q.code).await?;
+            let u = srv.oauth.github_get_user(oauth_token.access_token).await?;
             debug!("new github user {:?}", u);
             let user_id = match data
                 .auth_oauth_get_remote("github".into(), u.id.to_string())
@@ -209,14 +250,27 @@ async fn auth_oauth_redirect(
                         .await?;
                         srv.users.invalidate(user.id).await;
                         let updated_user = srv.users.get(user.id, None).await?;
-                        s.audit_log_append(AuditLogEntry {
+                        let session = srv.sessions.get(session_id).await?;
+                        let entry = AuditLogEntry {
                             id: AuditLogEntryId::new(),
                             room_id: SERVER_ROOM_ID,
                             user_id: user.id,
                             session_id: Some(session_id),
-                            reason: Some("oauth_autoregister".to_string()),
+                            reason: None,
                             ty: AuditLogEntryType::UserRegistered { user_id: user.id },
-                        })
+                            status: AuditLogEntryStatus::Success,
+                            started_at: Time::now_utc(),
+                            ended_at: Time::now_utc(),
+                            ip_addr: session.ip_addr,
+                            user_agent: session.user_agent,
+                            application_id: session.app_id,
+                        };
+                        data.audit_logs_room_append(entry.clone()).await?;
+                        s.broadcast_room(
+                            entry.room_id,
+                            entry.user_id,
+                            MessageSync::AuditLogEntryCreate { entry },
+                        )
                         .await?;
                         s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
                     }
@@ -247,14 +301,27 @@ async fn auth_oauth_redirect(
                             RoomMemberPut::default(),
                         )
                         .await?;
-                        s.audit_log_append(AuditLogEntry {
+                        let session = srv.sessions.get(session_id).await?;
+                        let entry = AuditLogEntry {
                             id: AuditLogEntryId::new(),
                             room_id: SERVER_ROOM_ID,
                             user_id: user.id,
                             session_id: Some(session_id),
-                            reason: Some("oauth_autoregister".to_string()),
+                            reason: None,
                             ty: AuditLogEntryType::UserRegistered { user_id: user.id },
-                        })
+                            status: AuditLogEntryStatus::Success,
+                            started_at: Time::now_utc(),
+                            ended_at: Time::now_utc(),
+                            ip_addr: session.ip_addr,
+                            user_agent: session.user_agent,
+                            application_id: session.app_id,
+                        };
+                        data.audit_logs_room_append(entry.clone()).await?;
+                        s.broadcast_room(
+                            entry.room_id,
+                            entry.user_id,
+                            MessageSync::AuditLogEntryCreate { entry },
+                        )
                         .await?;
                     }
                     data.auth_oauth_put("github".into(), user.id, u.id.to_string(), true)
@@ -270,9 +337,9 @@ async fn auth_oauth_redirect(
             s.broadcast(MessageSync::SessionCreate {
                 session: session.clone(),
             })?;
-            s.audit_log_append(AuditLogEntry {
+            let entry = AuditLogEntry {
                 id: AuditLogEntryId::new(),
-                room_id: user_id.into_inner().into(),
+                room_id: (*user_id).into(),
                 user_id,
                 session_id: Some(session_id),
                 reason: None,
@@ -280,7 +347,19 @@ async fn auth_oauth_redirect(
                     user_id,
                     session_id,
                 },
-            })
+                status: AuditLogEntryStatus::Success,
+                started_at: session.authorized_at.unwrap_or_else(Time::now_utc),
+                ended_at: Time::now_utc(),
+                ip_addr: session.ip_addr.clone(),
+                user_agent: session.user_agent.clone(),
+                application_id: session.app_id,
+            };
+            data.audit_logs_room_append(entry.clone()).await?;
+            s.broadcast_room(
+                entry.room_id,
+                entry.user_id,
+                MessageSync::AuditLogEntryCreate { entry },
+            )
             .await?;
             Ok(Html(include_str!("../oauth.html")))
         }
@@ -303,28 +382,21 @@ async fn auth_oauth_delete(
     Path(provider): Path<String>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
     let start_state = fetch_auth_state(&s, auth.user.id).await?;
     let data = s.data();
     data.auth_oauth_delete(provider, auth.user.id).await?;
     let end_state = fetch_auth_state(&s, auth.user.id).await?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthUpdate {
-            changes: Changes::new()
-                .change(
-                    "oauth_providers",
-                    &start_state.oauth_providers,
-                    &end_state.oauth_providers,
-                )
-                .build(),
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new()
+            .change(
+                "oauth_providers",
+                &start_state.oauth_providers,
+                &end_state.oauth_providers,
+            )
+            .build(),
     })
     .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -414,7 +486,6 @@ async fn auth_email_complete(
     Path(email): Path<EmailAddr>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<AuthEmailComplete>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -458,29 +529,17 @@ async fn auth_email_complete(
 
     match purpose {
         EmailPurpose::Authn => {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id: user_id.into_inner().into(),
+            let al = auth.audit_log(user_id.into_inner().into());
+            al.commit_success(AuditLogEntryType::SessionLogin {
                 user_id,
-                session_id: Some(session.id),
-                reason,
-                ty: AuditLogEntryType::SessionLogin {
-                    user_id,
-                    session_id: session.id,
-                },
+                session_id: session.id,
             })
             .await?;
         }
         EmailPurpose::Reset => {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id: user_id.into_inner().into(),
-                user_id,
-                session_id: Some(session.id),
-                reason,
-                ty: AuditLogEntryType::AuthSudo {
-                    session_id: session.id,
-                },
+            let al = auth.audit_log(user_id.into_inner().into());
+            al.commit_success(AuditLogEntryType::AuthSudo {
+                session_id: session.id,
             })
             .await?;
         }
@@ -533,7 +592,6 @@ async fn auth_totp_init(
 async fn auth_totp_complete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<TotpVerificationRequest>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
@@ -570,15 +628,9 @@ async fn auth_totp_complete(
         .auth_totp_set(auth.user.id, Some(secret), true)
         .await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthUpdate {
-            changes: Changes::new().change("has_totp", &false, &true).build(),
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new().change("has_totp", &false, &true).build(),
     })
     .await?;
 
@@ -598,7 +650,6 @@ async fn auth_totp_complete(
 async fn auth_totp_exec(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<TotpVerificationRequest>,
 ) -> Result<impl IntoResponse> {
     let (secret, enabled) = s
@@ -640,15 +691,9 @@ async fn auth_totp_exec(
         )
         .await?;
     s.services().sessions.invalidate(auth.session.id).await;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthSudo {
-            session_id: auth.session.id,
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthSudo {
+        session_id: auth.session.id,
     })
     .await?;
 
@@ -689,7 +734,6 @@ async fn auth_totp_recovery_get(
 async fn auth_totp_recovery_rotate(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<Json<TotpRecoveryCodes>> {
     auth.ensure_sudo()?;
     let mut codes = Vec::with_capacity(5);
@@ -701,19 +745,13 @@ async fn auth_totp_recovery_rotate(
         .auth_totp_recovery_generate(auth.user.id, &codes)
         .await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthUpdate {
-            changes: vec![AuditLogChange {
-                key: "totp_recovery_codes_rotated".into(),
-                old: Value::Null,
-                new: Value::Null,
-            }],
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: vec![AuditLogChange {
+            key: "totp_recovery_codes_rotated".into(),
+            old: Value::Null,
+            new: Value::Null,
+        }],
     })
     .await?;
 
@@ -739,7 +777,6 @@ async fn auth_totp_recovery_rotate(
 async fn auth_totp_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
     let had_totp = s
@@ -755,15 +792,9 @@ async fn auth_totp_delete(
 
     s.data().auth_totp_set(auth.user.id, None, false).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthUpdate {
-            changes: Changes::new().change("has_totp", &true, &false).build(),
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new().change("has_totp", &true, &false).build(),
     })
     .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -780,7 +811,6 @@ async fn auth_totp_delete(
 async fn auth_totp_recovery_exec(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<TotpVerificationRequest>,
 ) -> Result<impl IntoResponse> {
     let (_secret, enabled) = s
@@ -807,15 +837,9 @@ async fn auth_totp_recovery_exec(
         )
         .await?;
     s.services().sessions.invalidate(auth.session.id).await;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthSudo {
-            session_id: auth.session.id,
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthSudo {
+        session_id: auth.session.id,
     })
     .await?;
 
@@ -834,7 +858,6 @@ async fn auth_totp_recovery_exec(
 async fn auth_password_set(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordSet>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
@@ -859,15 +882,9 @@ async fn auth_password_set(
         new: serde_json::to_value(end_has_password).unwrap(),
     });
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthUpdate { changes },
-    })
-    .await?;
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate { changes })
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -881,7 +898,6 @@ async fn auth_password_set(
 async fn auth_password_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
     let data = s.data();
@@ -892,17 +908,11 @@ async fn auth_password_delete(
 
     data.auth_password_delete(auth.user.id).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthUpdate {
-            changes: Changes::new()
-                .change("has_password", &has_password, &false)
-                .build(),
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new()
+            .change("has_password", &has_password, &false)
+            .build(),
     })
     .await?;
 
@@ -919,7 +929,6 @@ async fn auth_password_delete(
 async fn auth_password_exec(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordExec>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -940,16 +949,10 @@ async fn auth_password_exec(
             .await?;
         let srv = s.services();
         srv.sessions.invalidate(auth.session.id).await;
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: user_id.into_inner().into(),
+        let al = auth.audit_log(user_id.into_inner().into());
+        al.commit_success(AuditLogEntryType::SessionLogin {
             user_id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::SessionLogin {
-                user_id,
-                session_id: auth.session.id,
-            },
+            session_id: auth.session.id,
         })
         .await?;
         Ok(StatusCode::NO_CONTENT)
@@ -1097,7 +1100,6 @@ async fn auth_webauthn_delete(
 async fn auth_sudo_upgrade(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     s.data()
         .session_set_status(
@@ -1109,15 +1111,9 @@ async fn auth_sudo_upgrade(
         )
         .await?;
     s.services().sessions.invalidate(auth.session.id).await;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::AuthSudo {
-            session_id: auth.session.id,
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthSudo {
+        session_id: auth.session.id,
     })
     .await?;
     Ok(StatusCode::NO_CONTENT)

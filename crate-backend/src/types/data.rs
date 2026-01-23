@@ -6,7 +6,7 @@ use common::v1::types::{
     MessageType, MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomMembership, RoomType,
     Session, SessionStatus, SessionToken, SessionType, ThreadMembership, UserId,
 };
-use common::v1::types::{Mentions, RoomSecurity};
+use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use time::PrimitiveDateTime;
@@ -333,6 +333,10 @@ pub struct DbSession {
     pub ty: String,
     pub application_id: Option<Uuid>,
     pub last_seen_at: PrimitiveDateTime,
+    pub ip_addr: Option<String>,
+    pub user_agent: Option<String>,
+    pub authorized_at: Option<PrimitiveDateTime>,
+    pub deauthorized_at: Option<PrimitiveDateTime>,
 }
 
 pub struct DbSessionCreate {
@@ -341,6 +345,8 @@ pub struct DbSessionCreate {
     pub expires_at: Option<Time>,
     pub ty: SessionType,
     pub application_id: Option<ApplicationId>,
+    pub ip_addr: Option<String>,
+    pub user_agent: Option<String>,
 }
 
 #[derive(sqlx::Type)]
@@ -370,6 +376,10 @@ impl From<DbSession> for Session {
             ty: SessionType::from_str(&row.ty).unwrap_or(SessionType::User),
             app_id: row.application_id.map(Into::into),
             last_seen_at: row.last_seen_at.into(),
+            ip_addr: row.ip_addr,
+            user_agent: row.user_agent,
+            authorized_at: row.authorized_at.map(|t| t.into()),
+            deauthorized_at: row.deauthorized_at.map(|t| t.into()),
         }
     }
 }
@@ -715,4 +725,32 @@ pub struct DocumentUpdateSummary {
     pub stat_added: u32,
     pub stat_removed: u32,
     pub seq: u32,
+}
+
+#[derive(sqlx::Type, Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[sqlx(type_name = "audit_log_entry_status")]
+pub enum DbAuditLogEntryStatus {
+    Success,
+    Unauthorized,
+    Failed,
+}
+
+impl From<DbAuditLogEntryStatus> for AuditLogEntryStatus {
+    fn from(value: DbAuditLogEntryStatus) -> Self {
+        match value {
+            DbAuditLogEntryStatus::Success => AuditLogEntryStatus::Success,
+            DbAuditLogEntryStatus::Unauthorized => AuditLogEntryStatus::Unauthorized,
+            DbAuditLogEntryStatus::Failed => AuditLogEntryStatus::Failed,
+        }
+    }
+}
+
+impl From<AuditLogEntryStatus> for DbAuditLogEntryStatus {
+    fn from(value: AuditLogEntryStatus) -> Self {
+        match value {
+            AuditLogEntryStatus::Success => DbAuditLogEntryStatus::Success,
+            AuditLogEntryStatus::Unauthorized => DbAuditLogEntryStatus::Unauthorized,
+            AuditLogEntryStatus::Failed => DbAuditLogEntryStatus::Failed,
+        }
+    }
 }

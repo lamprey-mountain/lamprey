@@ -7,9 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ContextQuery, ContextResponse,
-    MessageMigrate, MessageModerate, MessagePin, MessageType, PinsReorder, RepliesQuery,
-    ThreadMemberPut, ThreadMembership,
+    AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate, MessageModerate, MessagePin,
+    MessageType, PinsReorder, RepliesQuery, ThreadMemberPut, ThreadMembership,
 };
 use common::v2::types::message::Message;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -24,7 +23,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::{Auth, HeaderIdempotencyKey, HeaderReason};
+use super::util::{Auth, HeaderIdempotencyKey};
 use crate::error::Result;
 
 /// Message create
@@ -60,10 +59,7 @@ async fn message_create(
         return Err(Error::BadStatic("channel doesnt have text"));
     }
 
-    let message = srv
-        .messages
-        .create(channel_id, auth.user.id, nonce, json)
-        .await?;
+    let message = srv.messages.create(channel_id, &auth, nonce, json).await?;
 
     Ok((StatusCode::CREATED, Json(message)))
 }
@@ -220,7 +216,6 @@ async fn message_edit(
 async fn message_delete(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -269,16 +264,10 @@ async fn message_delete(
     data.media_link_delete_all(message_id.into_inner()).await?;
 
     if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None,
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MessageDelete {
-                channel_id,
-                message_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MessageDelete {
+            channel_id,
+            message_id,
         })
         .await?;
     }
@@ -379,7 +368,6 @@ async fn message_version_get(
 async fn message_version_delete(
     Path((channel_id, message_id, version_id)): Path<(ChannelId, MessageId, MessageVerId)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -438,17 +426,11 @@ async fn message_version_delete(
     data.message_version_delete(channel_id, version_id).await?;
 
     if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None,
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MessageVersionDelete {
-                channel_id,
-                message_id,
-                version_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MessageVersionDelete {
+            channel_id,
+            message_id,
+            version_id,
         })
         .await?;
     }
@@ -502,7 +484,6 @@ async fn message_version_delete(
 async fn message_moderate(
     Path(channel_id): Path<ChannelId>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageModerate>,
 ) -> Result<impl IntoResponse> {
@@ -561,16 +542,10 @@ async fn message_moderate(
         }
 
         if let Some(room_id) = thread.room_id {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason.clone(),
-                ty: AuditLogEntryType::MessageDeleteBulk {
-                    channel_id,
-                    message_ids: json.delete.clone(),
-                },
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::MessageDeleteBulk {
+                channel_id,
+                message_ids: json.delete.clone(),
             })
             .await?;
         }
@@ -599,16 +574,10 @@ async fn message_moderate(
         data.message_remove_bulk(channel_id, &json.remove).await?;
 
         if let Some(room_id) = thread.room_id {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason.clone(),
-                ty: AuditLogEntryType::MessageRemove {
-                    channel_id,
-                    message_ids: json.remove.clone(),
-                },
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::MessageRemove {
+                channel_id,
+                message_ids: json.remove.clone(),
             })
             .await?;
         }
@@ -629,16 +598,10 @@ async fn message_moderate(
         data.message_restore_bulk(channel_id, &json.restore).await?;
 
         if let Some(room_id) = thread.room_id {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason.clone(),
-                ty: AuditLogEntryType::MessageRestore {
-                    channel_id,
-                    message_ids: json.restore.clone(),
-                },
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::MessageRestore {
+                channel_id,
+                message_ids: json.restore.clone(),
             })
             .await?;
         }
@@ -675,7 +638,6 @@ async fn message_moderate(
 async fn message_move(
     Path(_channel_id): Path<ChannelId>,
     _auth: Auth,
-    HeaderReason(_reason): HeaderReason,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<MessageMigrate>,
 ) -> Result<impl IntoResponse> {
@@ -772,7 +734,6 @@ async fn message_pin_create(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
@@ -862,16 +823,10 @@ async fn message_pin_create(
     .await?;
 
     if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MessagePin {
-                channel_id,
-                message_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MessagePin {
+            channel_id,
+            message_id,
         })
         .await?;
     }
@@ -899,7 +854,6 @@ async fn message_pin_delete(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
@@ -946,16 +900,10 @@ async fn message_pin_delete(
     .await?;
 
     if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MessageUnpin {
-                channel_id,
-                message_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MessageUnpin {
+            channel_id,
+            message_id,
         })
         .await?;
     }
@@ -983,7 +931,6 @@ async fn message_pin_reorder(
     Path((channel_id,)): Path<(ChannelId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<PinsReorder>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -1036,15 +983,9 @@ async fn message_pin_reorder(
     }
 
     if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MessagePinReorder { channel_id },
-        })
-        .await?;
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MessagePinReorder { channel_id })
+            .await?;
     }
 
     Ok(StatusCode::OK)

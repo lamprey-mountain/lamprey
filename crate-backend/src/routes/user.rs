@@ -13,8 +13,8 @@ use common::v1::types::{
     User, UserCreate, UserId, UserPatch, UserWithRelationship,
 };
 use common::v1::types::{
-    AuditLogFilter, HarvestId, Permission, SuspendRequest, Suspended, UserListParams,
-    SERVER_ROOM_ID,
+    AuditLogEntryStatus, AuditLogFilter, HarvestId, Permission, SuspendRequest, Suspended,
+    UserListParams, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use tracing::warn;
@@ -44,7 +44,6 @@ async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(patch): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -112,28 +111,16 @@ async fn user_update(
         .change("banner", &start.banner, &user.banner)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: target_user_id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason: reason.clone(),
-        ty: AuditLogEntryType::UserUpdate {
-            changes: changes.clone(),
-        },
+    let al = auth.audit_log(target_user_id.into_inner().into());
+    al.commit_success(AuditLogEntryType::UserUpdate {
+        changes: changes.clone(),
     })
     .await?;
 
     if auth.user.id != target_user_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: SERVER_ROOM_ID,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::UserUpdate { changes },
-        })
-        .await?;
+        let al = auth.audit_log(SERVER_ROOM_ID);
+        al.commit_success(AuditLogEntryType::UserUpdate { changes })
+            .await?;
     }
 
     s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
@@ -152,7 +139,6 @@ async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -173,21 +159,15 @@ async fn user_delete(
     let srv = s.services();
     srv.users.invalidate(target_user_id).await;
     s.broadcast(MessageSync::UserDelete { id: target_user_id })?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: target_user_id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::UserDelete {
-            user_id: target_user_id,
-            changes: Changes::new()
-                .remove("name", &user_to_delete.name)
-                .remove("description", &user_to_delete.description)
-                .remove("avatar", &user_to_delete.avatar)
-                .remove("banner", &user_to_delete.banner)
-                .build(),
-        },
+    let al = auth.audit_log(target_user_id.into_inner().into());
+    al.commit_success(AuditLogEntryType::UserDelete {
+        user_id: target_user_id,
+        changes: Changes::new()
+            .remove("name", &user_to_delete.name)
+            .remove("description", &user_to_delete.description)
+            .remove("avatar", &user_to_delete.avatar)
+            .remove("banner", &user_to_delete.banner)
+            .build(),
     })
     .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -207,7 +187,6 @@ async fn user_undelete(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -251,15 +230,9 @@ async fn user_undelete(
     let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     s.broadcast(MessageSync::UserCreate { user: user.clone() })?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None,
-        reason,
-        ty: AuditLogEntryType::UserUndelete {
-            user_id: target_user_id,
-        },
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::UserUndelete {
+        user_id: target_user_id,
     })
     .await?;
 
@@ -428,9 +401,9 @@ async fn guest_create(
         session: updated_session.clone(),
     })?;
 
-    s.audit_log_append(AuditLogEntry {
+    let entry = AuditLogEntry {
         id: AuditLogEntryId::new(),
-        room_id: user.id.into_inner().into(),
+        room_id: (*user.id).into(),
         user_id: user.id,
         session_id: Some(updated_session.id),
         reason: None,
@@ -438,7 +411,19 @@ async fn guest_create(
             user_id: user.id,
             session_id: updated_session.id,
         },
-    })
+        status: AuditLogEntryStatus::Success,
+        started_at: updated_session.authorized_at.unwrap_or_else(Time::now_utc),
+        ended_at: Time::now_utc(),
+        ip_addr: updated_session.ip_addr.clone(),
+        user_agent: updated_session.user_agent.clone(),
+        application_id: updated_session.app_id,
+    };
+    data.audit_logs_room_append(entry.clone()).await?;
+    s.broadcast_room(
+        entry.room_id,
+        entry.user_id,
+        MessageSync::AuditLogEntryCreate { entry },
+    )
     .await?;
 
     Ok((StatusCode::CREATED, Json(user)))
@@ -479,16 +464,10 @@ async fn user_suspend(
         }),
     )
     .await?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None,
-        reason,
-        ty: AuditLogEntryType::UserSuspend {
-            expires_at: json.expires_at,
-            user_id: target_user_id,
-        },
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::UserSuspend {
+        expires_at: json.expires_at,
+        user_id: target_user_id,
     })
     .await?;
     srv.users.invalidate(target_user_id).await;
@@ -509,7 +488,6 @@ async fn user_unsuspend(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let d = s.data();
@@ -521,15 +499,9 @@ async fn user_unsuspend(
     let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::MemberBan)?;
     d.user_suspended(target_user_id, None).await?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: auth.user.id,
-        session_id: None,
-        reason,
-        ty: AuditLogEntryType::UserUnsuspend {
-            user_id: target_user_id,
-        },
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::UserUnsuspend {
+        user_id: target_user_id,
     })
     .await?;
     srv.users.invalidate(target_user_id).await;
@@ -583,7 +555,6 @@ async fn connection_revoke(
     Path((target_user_id, app_id)): Path<(UserIdReq, ApplicationId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -600,15 +571,9 @@ async fn connection_revoke(
         user_id: target_user_id,
         app_id,
     })?;
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: target_user_id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::ConnectionDelete {
-            application_id: app_id,
-        },
+    let al = auth.audit_log(target_user_id.into_inner().into());
+    al.commit_success(AuditLogEntryType::ConnectionDelete {
+        application_id: app_id,
     })
     .await?;
 

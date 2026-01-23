@@ -4,9 +4,9 @@ use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, ChannelType,
-    MessageSync, MessageType, Permission, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin,
-    RoomMemberPut, RoomPatch, ThreadMemberPut, ThreadMembership, UserId,
+    AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Permission,
+    RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut,
+    ThreadMembership, UserId,
 };
 
 use crate::error::Result;
@@ -129,7 +129,27 @@ impl ServiceRooms {
     pub async fn create(
         &self,
         create: RoomCreate,
+        auth: &Auth,
+        extra: DbRoomCreate,
+    ) -> Result<Room> {
+        self.create_inner(create, auth.user.id, Some(auth), extra)
+            .await
+    }
+
+    pub async fn create_system(
+        &self,
+        create: RoomCreate,
+        user_id: UserId,
+        extra: DbRoomCreate,
+    ) -> Result<Room> {
+        self.create_inner(create, user_id, None, extra).await
+    }
+
+    async fn create_inner(
+        &self,
+        create: RoomCreate,
         creator_id: UserId,
+        auth: Option<&Auth>,
         extra: DbRoomCreate,
     ) -> Result<Room> {
         let data = self.state.data();
@@ -231,24 +251,19 @@ impl ServiceRooms {
         self.state
             .broadcast(MessageSync::RoomCreate { room: room.clone() })?;
 
-        self.state
-            .audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: creator_id,
-                session_id: None, // TODO: get session id
-                reason: None,     // TODO: get reason
-                ty: AuditLogEntryType::RoomCreate {
-                    changes: Changes::new()
-                        .add("name", &room.name)
-                        .add("description", &room.description)
-                        .add("icon", &room.icon)
-                        .add("public", &room.public)
-                        .add("welcome_channel_id", &room.welcome_channel_id)
-                        .build(),
-                },
+        if let Some(auth) = auth {
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::RoomCreate {
+                changes: Changes::new()
+                    .add("name", &room.name)
+                    .add("description", &room.description)
+                    .add("icon", &room.icon)
+                    .add("public", &room.public)
+                    .add("welcome_channel_id", &room.welcome_channel_id)
+                    .build(),
             })
             .await?;
+        }
 
         if let Some(welcome_thread) = welcome_channel {
             self.state
@@ -261,23 +276,18 @@ impl ServiceRooms {
                 )
                 .await?;
 
-            self.state
-                .audit_log_append(AuditLogEntry {
-                    id: AuditLogEntryId::new(),
-                    room_id,
-                    user_id: creator_id,
-                    session_id: None, // TODO: get session id
-                    reason: None,     // TODO: get reason
-                    ty: AuditLogEntryType::ChannelCreate {
-                        channel_id: welcome_channel_id,
-                        channel_type: ChannelType::Text,
-                        changes: Changes::new()
-                            .add("name", &"general")
-                            .add("nsfw", &false)
-                            .build(),
-                    },
+            if let Some(auth) = auth {
+                let al = auth.audit_log(room_id);
+                al.commit_success(AuditLogEntryType::ChannelCreate {
+                    channel_id: welcome_channel_id,
+                    channel_type: ChannelType::Text,
+                    changes: Changes::new()
+                        .add("name", &"general")
+                        .add("nsfw", &false)
+                        .build(),
                 })
                 .await?;
+            }
 
             self.send_welcome_message(room_id, creator_id).await?;
         }
@@ -333,7 +343,7 @@ impl ServiceRooms {
     }
 
     /// add private user data to each room
-    pub async fn merge(&self, rooms: &mut [Room], user_id: UserId) -> Result<()> {
+    pub async fn populate_private(&self, _rooms: &mut [Room], _user_id: UserId) -> Result<()> {
         Ok(())
     }
 }

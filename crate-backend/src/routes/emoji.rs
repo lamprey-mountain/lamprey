@@ -6,15 +6,15 @@ use axum::{extract::State, Json};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, RoomId,
+    util::Changes, AuditLogEntryType, EmojiId, MessageSync, PaginationQuery, PaginationResponse,
+    Permission, RoomId,
 };
 use http::StatusCode;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
@@ -39,7 +39,6 @@ async fn emoji_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<EmojiCustomCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -65,15 +64,9 @@ async fn emoji_create(
         .add("animated", &json.animated)
         .add("media_id", &json.media_id);
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason: reason.clone(),
-        ty: AuditLogEntryType::EmojiCreate {
-            changes: changes.build(),
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::EmojiCreate {
+        changes: changes.build(),
     })
     .await?;
 
@@ -135,7 +128,6 @@ async fn emoji_delete(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
@@ -145,20 +137,14 @@ async fn emoji_delete(
     perms.ensure(Permission::EmojiManage)?;
     data.emoji_delete(emoji_id).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason: reason.clone(),
-        ty: AuditLogEntryType::EmojiDelete {
-            emoji_id,
-            changes: Changes::new()
-                .remove("name", &emoji.name)
-                .remove("animated", &emoji.animated)
-                .remove("media_id", &emoji.media_id)
-                .build(),
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::EmojiDelete {
+        emoji_id,
+        changes: Changes::new()
+            .remove("name", &emoji.name)
+            .remove("animated", &emoji.animated)
+            .remove("media_id", &emoji.media_id)
+            .build(),
     })
     .await?;
 
@@ -196,7 +182,6 @@ async fn emoji_update(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(patch): Json<EmojiCustomPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -213,17 +198,11 @@ async fn emoji_update(
     data.emoji_update(emoji_id, patch).await?;
     let emoji = data.emoji_get(emoji_id).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason: reason.clone(),
-        ty: AuditLogEntryType::EmojiUpdate {
-            changes: Changes::new()
-                .change("name", &emoji_before.name, &emoji.name)
-                .build(),
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::EmojiUpdate {
+        changes: Changes::new()
+            .change("name", &emoji_before.name, &emoji.name)
+            .build(),
     })
     .await?;
 

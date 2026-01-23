@@ -6,9 +6,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Changes;
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
-    ChannelMemberSearch, ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message,
-    MessageId, MessageMember, MessageSync, MessageThreadCreated, MessageType, PaginationQuery,
+    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
+    ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message, MessageId,
+    MessageMember, MessageSync, MessageThreadCreated, MessageType, PaginationQuery,
     PaginationResponse, Permission, RoomId, ThreadMember, ThreadMemberPut, ThreadMembership,
     UserId, SERVER_ROOM_ID,
 };
@@ -21,7 +21,7 @@ use validator::Validate;
 use crate::types::{DbChannelCreate, DbChannelType, DbMessageCreate, UserIdReq};
 use crate::ServerState;
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 use crate::error::{Error, Result};
 
 /// Thread member list
@@ -110,7 +110,6 @@ async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -200,16 +199,10 @@ async fn thread_member_add(
         .await?;
 
         if let Some(room_id) = thread.room_id {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason,
-                ty: AuditLogEntryType::ThreadMemberAdd {
-                    thread_id,
-                    user_id: target_user_id,
-                },
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::ThreadMemberAdd {
+                thread_id,
+                user_id: target_user_id,
             })
             .await?;
         }
@@ -242,7 +235,6 @@ async fn thread_member_add(
 async fn thread_member_delete(
     Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -316,16 +308,10 @@ async fn thread_member_delete(
         .await?;
 
         if let Some(room_id) = thread.room_id {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason,
-                ty: AuditLogEntryType::ThreadMemberRemove {
-                    thread_id,
-                    user_id: target_user_id,
-                },
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::ThreadMemberRemove {
+                thread_id,
+                user_id: target_user_id,
             })
             .await?;
         }
@@ -496,7 +482,6 @@ async fn thread_create(
     Path(parent_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -525,7 +510,7 @@ async fn thread_create(
     let channel = s
         .services()
         .channels
-        .create_channel(auth.user.id, room_id, reason, json)
+        .create_channel(&auth, room_id, json)
         .await?;
 
     Ok((StatusCode::CREATED, Json(channel)))
@@ -557,7 +542,6 @@ async fn thread_create_from_message(
     Path((parent_channel_id, source_message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -689,25 +673,19 @@ async fn thread_create_from_message(
     }
 
     if let Some(room_id) = room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason,
-            ty: AuditLogEntryType::ChannelCreate {
-                channel_id: thread_id,
-                channel_type: channel.ty,
-                changes: Changes::new()
-                    .add("name", &channel.name)
-                    .add("description", &channel.description)
-                    .add("nsfw", &channel.nsfw)
-                    .add("user_limit", &channel.user_limit)
-                    .add("bitrate", &channel.bitrate)
-                    .add("type", &channel.ty)
-                    .add("parent_id", &channel.parent_id)
-                    .build(),
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::ChannelCreate {
+            channel_id: thread_id,
+            channel_type: channel.ty,
+            changes: Changes::new()
+                .add("name", &channel.name)
+                .add("description", &channel.description)
+                .add("nsfw", &channel.nsfw)
+                .add("user_limit", &channel.user_limit)
+                .add("bitrate", &channel.bitrate)
+                .add("type", &channel.ty)
+                .add("parent_id", &channel.parent_id)
+                .build(),
         })
         .await?;
     }

@@ -51,14 +51,14 @@ pub struct Session {
 
     /// the last time this session was used
     pub last_seen_at: Time,
-    // ip_addr: String,
-    // user_agent: String,
+    pub ip_addr: Option<String>,
+    pub user_agent: Option<String>,
 
-    // /// when this session was logged in
-    // pub authorized_at: Time,
+    /// when this session was logged in
+    pub authorized_at: Option<Time>,
 
-    // /// when this session was logged out
-    // pub deauthorized_at: Option<Time>,
+    /// when this session was logged out
+    pub deauthorized_at: Option<Time>,
 }
 
 /// minimal session persisted for audit log

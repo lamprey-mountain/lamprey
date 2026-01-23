@@ -5,10 +5,9 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelCreate, ChannelId,
-    ChannelPatch, ChannelType, MessageChannelIcon, MessageSync, MessageThreadRename, MessageType,
-    PaginationQuery, Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId,
-    SERVER_USER_ID,
+    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
+    MessageChannelIcon, MessageSync, MessageThreadRename, MessageType, PaginationQuery, Permission,
+    PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -17,6 +16,7 @@ use time::OffsetDateTime;
 use tracing::warn;
 
 use crate::error::{Error, Result};
+use crate::routes::util::Auth;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbMessageCreate};
 use crate::ServerStateInner;
 
@@ -65,7 +65,11 @@ impl ServiceThreads {
     }
 
     /// add private user data to each channel
-    pub async fn merge(&self, channels: &mut [Channel], user_id: UserId) -> Result<()> {
+    pub async fn populate_private(
+        &self,
+        _channels: &mut [Channel],
+        _user_id: UserId,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -271,17 +275,16 @@ impl ServiceThreads {
 
     pub async fn create_channel(
         &self,
-        user_id: UserId,
+        auth: &Auth,
         room_id: Option<RoomId>,
-        reason: Option<String>,
         json: ChannelCreate,
     ) -> Result<Channel> {
         let srv = self.state.services();
         let data = self.state.data();
         let perms = if let Some(parent_id) = json.parent_id {
-            srv.perms.for_channel(user_id, parent_id).await?
+            srv.perms.for_channel(auth.user.id, parent_id).await?
         } else if let Some(room_id) = room_id {
-            srv.perms.for_room(user_id, room_id).await?
+            srv.perms.for_room(auth.user.id, room_id).await?
         } else {
             return Err(Error::BadStatic(
                 "Channel must have a parent or be in a room",
@@ -309,7 +312,7 @@ impl ServiceThreads {
                 let parent_id = json
                     .parent_id
                     .ok_or(Error::BadStatic("threads must have a parent channel"))?;
-                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
                 if !parent.ty.has_public_threads() {
                     return Err(Error::BadStatic(
                         "public threads can only be created in specific channel types",
@@ -320,7 +323,7 @@ impl ServiceThreads {
                 if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, user_id)
+                            .channel_get_thread_slowmode_expire_at(parent_id, auth.user.id)
                             .await?
                         {
                             if thread_slowmode_expire_at > Time::now_utc() {
@@ -333,7 +336,7 @@ impl ServiceThreads {
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
                                 parent_id,
-                                user_id,
+                                auth.user.id,
                                 next_thread_time,
                             )
                             .await?;
@@ -345,7 +348,7 @@ impl ServiceThreads {
                 let parent_id = json
                     .parent_id
                     .ok_or(Error::BadStatic("threads must have a parent channel"))?;
-                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
                 if !parent.ty.has_forum2_threads() {
                     return Err(Error::BadStatic(
                         "forum2 threads can only be created in forum2 channels",
@@ -356,7 +359,7 @@ impl ServiceThreads {
                 if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, user_id)
+                            .channel_get_thread_slowmode_expire_at(parent_id, auth.user.id)
                             .await?
                         {
                             if thread_slowmode_expire_at > Time::now_utc() {
@@ -369,7 +372,7 @@ impl ServiceThreads {
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
                                 parent_id,
-                                user_id,
+                                auth.user.id,
                                 next_thread_time,
                             )
                             .await?;
@@ -381,7 +384,7 @@ impl ServiceThreads {
                 let parent_id = json
                     .parent_id
                     .ok_or(Error::BadStatic("threads must have a parent channel"))?;
-                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
                 if !parent.ty.has_private_threads() {
                     return Err(Error::BadStatic(
                         "threads can only be created in specific channel types",
@@ -392,7 +395,7 @@ impl ServiceThreads {
                 if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, user_id)
+                            .channel_get_thread_slowmode_expire_at(parent_id, auth.user.id)
                             .await?
                         {
                             if thread_slowmode_expire_at > Time::now_utc() {
@@ -405,7 +408,7 @@ impl ServiceThreads {
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
                                 parent_id,
-                                user_id,
+                                auth.user.id,
                                 next_thread_time,
                             )
                             .await?;
@@ -420,7 +423,7 @@ impl ServiceThreads {
             }
             ChannelType::Document => {
                 if let Some(parent_id) = json.parent_id {
-                    let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                    let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
                     if parent.ty == ChannelType::Wiki {
                         perms.ensure(Permission::DocumentCreate)?;
                     } else {
@@ -506,7 +509,7 @@ impl ServiceThreads {
         let channel_id = data
             .channel_create(DbChannelCreate {
                 room_id: room_id.map(|id| id.into_inner()),
-                creator_id: user_id,
+                creator_id: auth.user.id,
                 name: json.name.clone(),
                 description: json.description.clone(),
                 ty: match json.ty {
@@ -556,40 +559,33 @@ impl ServiceThreads {
             .await?;
         }
 
-        data.thread_member_put(channel_id, user_id, ThreadMemberPut {})
+        data.thread_member_put(channel_id, auth.user.id, ThreadMemberPut {})
             .await?;
-        let thread_member = data.thread_member_get(channel_id, user_id).await?;
+        let thread_member = data.thread_member_get(channel_id, auth.user.id).await?;
 
-        let channel = srv.channels.get(channel_id, Some(user_id)).await?;
+        let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
         if let Some(room_id) = room_id {
-            self.state
-                .audit_log_append(AuditLogEntry {
-                    id: AuditLogEntryId::new(),
-                    room_id,
-                    user_id,
-                    session_id: None,
-                    reason: reason.clone(),
-                    ty: AuditLogEntryType::ChannelCreate {
-                        channel_id,
-                        channel_type: channel.ty,
-                        changes: Changes::new()
-                            .add("name", &channel.name)
-                            .add("description", &channel.description)
-                            .add("nsfw", &channel.nsfw)
-                            .add("user_limit", &channel.user_limit)
-                            .add("bitrate", &channel.bitrate)
-                            .add("type", &channel.ty)
-                            .add("parent_id", &channel.parent_id)
-                            .add("url", &channel.url)
-                            .build(),
-                    },
-                })
-                .await?;
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::ChannelCreate {
+                channel_id,
+                channel_type: channel.ty,
+                changes: Changes::new()
+                    .add("name", &channel.name)
+                    .add("description", &channel.description)
+                    .add("nsfw", &channel.nsfw)
+                    .add("user_limit", &channel.user_limit)
+                    .add("bitrate", &channel.bitrate)
+                    .add("type", &channel.ty)
+                    .add("parent_id", &channel.parent_id)
+                    .add("url", &channel.url)
+                    .build(),
+            })
+            .await?;
 
             self.state
                 .broadcast_room(
                     room_id,
-                    user_id,
+                    auth.user.id,
                     MessageSync::ChannelCreate {
                         channel: Box::new(channel.clone()),
                     },
@@ -599,7 +595,7 @@ impl ServiceThreads {
             self.state
                 .broadcast_channel(
                     parent_id,
-                    user_id,
+                    auth.user.id,
                     MessageSync::ChannelCreate {
                         channel: Box::new(channel.clone()),
                     },
@@ -610,7 +606,7 @@ impl ServiceThreads {
         self.state
             .broadcast_channel(
                 channel.id,
-                user_id,
+                auth.user.id,
                 MessageSync::ThreadMemberUpsert {
                     member: thread_member,
                 },
@@ -622,17 +618,16 @@ impl ServiceThreads {
 
     pub async fn update(
         &self,
-        user_id: UserId,
+        auth: &Auth,
         thread_id: ChannelId,
         patch: ChannelPatch,
-        reason: Option<String>,
     ) -> Result<Channel> {
         // check update perms
         let perms = self
             .state
             .services()
             .perms
-            .for_channel(user_id, thread_id)
+            .for_channel(auth.user.id, thread_id)
             .await?;
         perms.ensure(Permission::ViewChannel)?;
         let data = self.state.data();
@@ -660,7 +655,7 @@ impl ServiceThreads {
         other_changes.locked = None;
         if other_changes.changes(&chan_old) {
             if chan_old.ty.is_thread() {
-                if chan_old.creator_id != user_id {
+                if chan_old.creator_id != auth.user.id {
                     perms.ensure(Permission::ThreadEdit)?;
                 }
             } else {
@@ -703,12 +698,14 @@ impl ServiceThreads {
         if let Some(new_parent_id_opt) = patch.parent_id {
             if new_parent_id_opt != chan_old.parent_id {
                 if let Some(old_parent_id) = chan_old.parent_id {
-                    let old_parent_perms = srv.perms.for_channel(user_id, old_parent_id).await?;
+                    let old_parent_perms =
+                        srv.perms.for_channel(auth.user.id, old_parent_id).await?;
                     old_parent_perms.ensure(Permission::ThreadManage)?;
                 }
 
                 if let Some(new_parent_id) = new_parent_id_opt {
-                    let new_parent_perms = srv.perms.for_channel(user_id, new_parent_id).await?;
+                    let new_parent_perms =
+                        srv.perms.for_channel(auth.user.id, new_parent_id).await?;
                     new_parent_perms.ensure(Permission::ThreadManage)?;
                 }
             }
@@ -736,7 +733,7 @@ impl ServiceThreads {
             if !chan_old.ty.is_thread() {
                 return Err(Error::BadStatic("not a thread"));
             }
-            data.thread_member_get(thread_id, user_id).await?;
+            data.thread_member_get(thread_id, auth.user.id).await?;
         }
 
         if patch.locked.as_ref().is_some_and(|a| a != &chan_old.locked) {
@@ -820,66 +817,59 @@ impl ServiceThreads {
         // update and refetch
         data.channel_update(thread_id, patch.clone()).await?;
         self.invalidate(thread_id).await;
-        self.invalidate_user(thread_id, user_id).await;
-        let chan_new = self.get(thread_id, Some(user_id)).await?;
+        self.invalidate_user(thread_id, auth.user.id).await;
+        let chan_new = self.get(thread_id, Some(auth.user.id)).await?;
         if let Some(room_id) = chan_new.room_id {
-            self.state
-                .audit_log_append(AuditLogEntry {
-                    id: AuditLogEntryId::new(),
-                    room_id,
-                    user_id,
-                    session_id: None,
-                    reason: reason.clone(),
-                    ty: AuditLogEntryType::ChannelUpdate {
-                        channel_id: thread_id,
-                        channel_type: chan_new.ty,
-                        changes: Changes::new()
-                            .change("type", &chan_old.ty, &chan_new.ty)
-                            .change("name", &chan_old.name, &chan_new.name)
-                            .change("description", &chan_old.description, &chan_new.description)
-                            .change("icon", &chan_old.icon, &chan_new.icon)
-                            .change("url", &chan_old.url, &chan_new.url)
-                            .change("nsfw", &chan_old.nsfw, &chan_new.nsfw)
-                            .change("bitrate", &chan_old.bitrate, &chan_new.bitrate)
-                            .change("user_limit", &chan_old.user_limit, &chan_new.user_limit)
-                            .change(
-                                "archived",
-                                &chan_old.archived_at.is_some(),
-                                &chan_new.archived_at.is_some(),
-                            )
-                            .change("locked", &chan_old.locked, &chan_new.locked)
-                            .change("tags", &chan_old.tags, &chan_new.tags)
-                            .change("parent_id", &chan_old.parent_id, &chan_new.parent_id)
-                            .change("invitable", &chan_old.invitable, &chan_new.invitable)
-                            .change(
-                                "auto_archive_duration",
-                                &chan_old.auto_archive_duration,
-                                &chan_new.auto_archive_duration,
-                            )
-                            .change(
-                                "default_auto_archive_duration",
-                                &chan_old.default_auto_archive_duration,
-                                &chan_new.default_auto_archive_duration,
-                            )
-                            .change(
-                                "slowmode_thread",
-                                &chan_old.slowmode_thread,
-                                &chan_new.slowmode_thread,
-                            )
-                            .change(
-                                "slowmode_message",
-                                &chan_old.slowmode_message,
-                                &chan_new.slowmode_message,
-                            )
-                            .change(
-                                "default_slowmode_message",
-                                &chan_old.default_slowmode_message,
-                                &chan_new.default_slowmode_message,
-                            )
-                            .build(),
-                    },
-                })
-                .await?;
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::ChannelUpdate {
+                channel_id: thread_id,
+                channel_type: chan_new.ty,
+                changes: Changes::new()
+                    .change("type", &chan_old.ty, &chan_new.ty)
+                    .change("name", &chan_old.name, &chan_new.name)
+                    .change("description", &chan_old.description, &chan_new.description)
+                    .change("icon", &chan_old.icon, &chan_new.icon)
+                    .change("url", &chan_old.url, &chan_new.url)
+                    .change("nsfw", &chan_old.nsfw, &chan_new.nsfw)
+                    .change("bitrate", &chan_old.bitrate, &chan_new.bitrate)
+                    .change("user_limit", &chan_old.user_limit, &chan_new.user_limit)
+                    .change(
+                        "archived",
+                        &chan_old.archived_at.is_some(),
+                        &chan_new.archived_at.is_some(),
+                    )
+                    .change("locked", &chan_old.locked, &chan_new.locked)
+                    .change("tags", &chan_old.tags, &chan_new.tags)
+                    .change("parent_id", &chan_old.parent_id, &chan_new.parent_id)
+                    .change("invitable", &chan_old.invitable, &chan_new.invitable)
+                    .change(
+                        "auto_archive_duration",
+                        &chan_old.auto_archive_duration,
+                        &chan_new.auto_archive_duration,
+                    )
+                    .change(
+                        "default_auto_archive_duration",
+                        &chan_old.default_auto_archive_duration,
+                        &chan_new.default_auto_archive_duration,
+                    )
+                    .change(
+                        "slowmode_thread",
+                        &chan_old.slowmode_thread,
+                        &chan_new.slowmode_thread,
+                    )
+                    .change(
+                        "slowmode_message",
+                        &chan_old.slowmode_message,
+                        &chan_new.slowmode_message,
+                    )
+                    .change(
+                        "default_slowmode_message",
+                        &chan_old.default_slowmode_message,
+                        &chan_new.default_slowmode_message,
+                    )
+                    .build(),
+            })
+            .await?;
         }
 
         if chan_old.name != chan_new.name {
@@ -889,7 +879,7 @@ impl ServiceThreads {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: user_id,
+                    author_id: auth.user.id,
                     embeds: vec![],
                     message_type: MessageType::ThreadRename(MessageThreadRename {
                         name_new: chan_new.name.clone(),
@@ -902,12 +892,12 @@ impl ServiceThreads {
                 })
                 .await?;
             let rename_message = data
-                .message_get(thread_id, rename_message_id, user_id)
+                .message_get(thread_id, rename_message_id, auth.user.id)
                 .await?;
             self.state
                 .broadcast_channel(
                     thread_id,
-                    user_id,
+                    auth.user.id,
                     MessageSync::MessageCreate {
                         message: rename_message,
                     },
@@ -921,7 +911,7 @@ impl ServiceThreads {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: user_id,
+                    author_id: auth.user.id,
                     embeds: vec![],
                     message_type: MessageType::ChannelIcon(MessageChannelIcon {
                         icon_id_old: chan_old.icon,
@@ -934,12 +924,12 @@ impl ServiceThreads {
                 })
                 .await?;
             let icon_message = data
-                .message_get(thread_id, icon_message_id, user_id)
+                .message_get(thread_id, icon_message_id, auth.user.id)
                 .await?;
             self.state
                 .broadcast_channel(
                     thread_id,
-                    user_id,
+                    auth.user.id,
                     MessageSync::MessageCreate {
                         message: icon_message,
                     },
@@ -951,7 +941,9 @@ impl ServiceThreads {
             channel: Box::new(chan_new.clone()),
         };
         if let Some(room_id) = chan_new.room_id {
-            self.state.broadcast_room(room_id, user_id, msg).await?;
+            self.state
+                .broadcast_room(room_id, auth.user.id, msg)
+                .await?;
         }
 
         Ok(chan_new)

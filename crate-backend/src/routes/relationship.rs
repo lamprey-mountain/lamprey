@@ -5,13 +5,13 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::user::Ignore;
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, RelationshipPatch, RelationshipType, RelationshipWithUserId, UserId,
+    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, RelationshipPatch,
+    RelationshipType, RelationshipWithUserId, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::{Auth, HeaderReason};
+use crate::routes::util::Auth;
 use crate::ServerState;
 
 use crate::error::{Error, Result};
@@ -80,7 +80,6 @@ async fn friend_add(
     Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -123,15 +122,9 @@ async fn friend_add(
                 },
             )
             .await?;
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id: auth.user.id.into_inner().into(),
-                user_id: auth.user.id,
-                session_id: Some(auth.session.id),
-                reason,
-                ty: AuditLogEntryType::FriendAccept {
-                    user_id: target_user_id,
-                },
+            let al = auth.audit_log(auth.user.id.into_inner().into());
+            al.commit_success(AuditLogEntryType::FriendAccept {
+                user_id: target_user_id,
             })
             .await?;
         }
@@ -156,15 +149,9 @@ async fn friend_add(
                 },
             )
             .await?;
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id: auth.user.id.into_inner().into(),
-                user_id: auth.user.id,
-                session_id: Some(auth.session.id),
-                reason,
-                ty: AuditLogEntryType::FriendRequest {
-                    user_id: target_user_id,
-                },
+            let al = auth.audit_log(auth.user.id.into_inner().into());
+            al.commit_success(AuditLogEntryType::FriendRequest {
+                user_id: target_user_id,
             })
             .await?;
         }
@@ -222,7 +209,6 @@ async fn friend_remove(
     Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -244,15 +230,9 @@ async fn friend_remove(
             })?;
 
             if r == Some(&RelationshipType::Friend) {
-                s.audit_log_append(AuditLogEntry {
-                    id: AuditLogEntryId::new(),
-                    room_id: auth.user.id.into_inner().into(),
-                    user_id: auth.user.id,
-                    session_id: Some(auth.session.id),
-                    reason,
-                    ty: AuditLogEntryType::FriendDelete {
-                        user_id: target_user_id,
-                    },
+                let al = auth.audit_log(auth.user.id.into_inner().into());
+                al.commit_success(AuditLogEntryType::FriendDelete {
+                    user_id: target_user_id,
                 })
                 .await?;
             }
@@ -322,7 +302,6 @@ async fn block_add(
     Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
 
@@ -364,15 +343,9 @@ async fn block_add(
         relationship: rel,
     })?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::BlockCreate {
-            user_id: target_user_id,
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::BlockCreate {
+        user_id: target_user_id,
     })
     .await?;
 
@@ -393,7 +366,6 @@ async fn block_remove(
     Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
 
@@ -413,15 +385,9 @@ async fn block_remove(
             target_user_id,
         })?;
 
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: auth.user.id.into_inner().into(),
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::BlockDelete {
-                user_id: target_user_id,
-            },
+        let al = auth.audit_log(auth.user.id.into_inner().into());
+        al.commit_success(AuditLogEntryType::BlockDelete {
+            user_id: target_user_id,
         })
         .await?;
     }
@@ -468,7 +434,6 @@ async fn ignore_add(
     Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(ignore): Json<Ignore>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -494,15 +459,9 @@ async fn ignore_add(
         relationship: rel,
     })?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::IgnoreAdd {
-            user_id: target_user_id,
-        },
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::IgnoreAdd {
+        user_id: target_user_id,
     })
     .await?;
 
@@ -523,7 +482,6 @@ async fn ignore_remove(
     Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
 
@@ -551,15 +509,9 @@ async fn ignore_remove(
             relationship: updated_rel,
         })?;
 
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: auth.user.id.into_inner().into(),
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::IgnoreRemove {
-                user_id: target_user_id,
-            },
+        let al = auth.audit_log(auth.user.id.into_inner().into());
+        al.commit_success(AuditLogEntryType::IgnoreRemove {
+            user_id: target_user_id,
         })
         .await?;
     }

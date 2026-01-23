@@ -6,10 +6,10 @@ use axum::{extract::State, Json};
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, Invite, InviteCode,
-    InviteCreate, InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId,
-    RoomMemberOrigin, RoomMemberPut, RoomMembership, SERVER_ROOM_ID,
+    AuditLogEntryType, ChannelId, ChannelType, Invite, InviteCode, InviteCreate, InvitePatch,
+    InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId, RoomMemberOrigin,
+    RoomMemberPut, RoomMembership, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -20,7 +20,7 @@ use crate::error::Result;
 use crate::routes::auth::fetch_auth_state;
 use crate::{Error, ServerState};
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 
 /// Invite delete
 #[utoipa::path(
@@ -37,7 +37,6 @@ use super::util::{Auth, HeaderReason};
 async fn invite_delete(
     Path(code): Path<InviteCode>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -85,18 +84,12 @@ async fn invite_delete(
             InviteTargetId::User { user_id } => Some((*user_id).into()),
         };
         if let Some(room_id) = room_id {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason.clone(),
-                ty: AuditLogEntryType::InviteDelete {
-                    code: code.clone(),
-                    changes: Changes::new()
-                        .remove("description", &invite.invite.description)
-                        .build(),
-                },
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::InviteDelete {
+                code: code.clone(),
+                changes: Changes::new()
+                    .remove("description", &invite.invite.description)
+                    .build(),
             })
             .await?;
         }
@@ -217,7 +210,6 @@ async fn invite_use(
     Path(code): Path<InviteCode>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let srv = s.services();
@@ -299,15 +291,9 @@ async fn invite_use(
                 .await?;
             srv.users.invalidate(user.id).await;
             let updated_user = srv.users.get(user.id, None).await?;
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id: SERVER_ROOM_ID,
-                user_id: user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason,
-                ty: AuditLogEntryType::UserRegistered { user_id: user.id },
-            })
-            .await?;
+            let al = auth.audit_log(SERVER_ROOM_ID);
+            al.commit_success(AuditLogEntryType::UserRegistered { user_id: user.id })
+                .await?;
             s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
         }
         InviteTarget::User { user } => {
@@ -382,7 +368,6 @@ async fn invite_use(
 async fn invite_room_create(
     Path(room_id): Path<RoomId>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
@@ -417,15 +402,9 @@ async fn invite_room_create(
         .add("max_uses", &invite.max_uses)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::InviteCreate { changes },
-    })
-    .await?;
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::InviteCreate { changes })
+        .await?;
 
     s.broadcast_room(
         room_id,
@@ -513,7 +492,6 @@ async fn invite_room_list(
 async fn invite_channel_create(
     Path(channel_id): Path<ChannelId>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
@@ -555,15 +533,9 @@ async fn invite_channel_create(
         .build();
 
     if let Some(room_id) = room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::InviteCreate { changes },
-        })
-        .await?;
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::InviteCreate { changes })
+            .await?;
     }
 
     s.broadcast_channel(
@@ -658,7 +630,6 @@ async fn invite_channel_list(
 async fn invite_patch(
     Path(code): Path<InviteCode>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<InvitePatch>,
 ) -> Result<impl IntoResponse> {
@@ -731,15 +702,9 @@ async fn invite_patch(
         InviteTarget::User { user } => Some((*user.id).into()),
     };
     if let Some(room_id) = room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason,
-            ty: AuditLogEntryType::InviteUpdate { changes },
-        })
-        .await?;
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::InviteUpdate { changes })
+            .await?;
     }
 
     s.broadcast(MessageSync::InviteUpdate {
@@ -761,7 +726,6 @@ async fn invite_patch(
 async fn invite_server_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -791,15 +755,9 @@ async fn invite_server_create(
         .add("max_uses", &invite.max_uses)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: SERVER_ROOM_ID,
-        user_id: user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::InviteCreate { changes },
-    })
-    .await?;
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::InviteCreate { changes })
+        .await?;
 
     s.broadcast_room(
         SERVER_ROOM_ID,
@@ -862,7 +820,6 @@ async fn invite_user_create(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -899,15 +856,9 @@ async fn invite_user_create(
         .add("max_uses", &invite.max_uses)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id: auth.user.id.into_inner().into(),
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::InviteCreate { changes },
-    })
-    .await?;
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::InviteCreate { changes })
+        .await?;
 
     s.broadcast(MessageSync::InviteCreate {
         invite: Box::new(invite.clone()),

@@ -23,6 +23,7 @@ use permissions::PermissionsCalculator;
 
 /// service for loading and storing data used by the server
 // NOTE: do i really want to be using dashmap everywhere?
+#[derive(Clone)]
 pub struct ServiceCache {
     state: Arc<ServerStateInner>,
     rooms: Cache<RoomId, Arc<CachedRoom>>,
@@ -41,6 +42,16 @@ impl ServiceCache {
             state,
             rooms: Cache::builder().max_capacity(100).build(),
         }
+    }
+
+    pub fn start_background_tasks(&self) {
+        let this = self.clone();
+        tokio::spawn(async move {
+            let mut rx = this.state.sushi.subscribe();
+            while let Ok((msg, _)) = rx.recv().await {
+                this.handle_sync(&msg).await;
+            }
+        });
     }
 
     /// load ALL users

@@ -6,9 +6,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, Role, RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch,
-    RoleReorder, RoomId, RoomMember, RoomMembership, UserId,
+    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission, Role,
+    RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, RoomId, RoomMember,
+    RoomMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -17,7 +17,7 @@ use validator::Validate;
 use crate::types::{DbRoleCreate, RoleDeleteQuery};
 use crate::ServerState;
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 use crate::error::{Error, Result};
 
 /// Role create
@@ -36,7 +36,6 @@ async fn role_create(
     Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<RoleCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -108,15 +107,9 @@ async fn role_create(
         .add("hoist", &role.hoist)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoleCreate { changes },
-    })
-    .await?;
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::RoleCreate { changes })
+        .await?;
 
     let msg = MessageSync::RoleCreate { role: role.clone() };
     s.broadcast_room(room_id, auth.user.id, msg).await?;
@@ -142,7 +135,6 @@ async fn role_update(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<RolePatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -229,15 +221,9 @@ async fn role_update(
         .change("hoist", &start_role.hoist, &end_role.hoist)
         .build();
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoleUpdate { changes },
-    })
-    .await?;
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::RoleUpdate { changes })
+        .await?;
 
     let msg = MessageSync::RoleUpdate {
         role: end_role.clone(),
@@ -266,7 +252,6 @@ async fn role_delete(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(query): Query<RoleDeleteQuery>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -300,25 +285,19 @@ async fn role_delete(
     if role.member_count == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
 
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-            reason: reason.clone(),
-            ty: AuditLogEntryType::RoleDelete {
-                role_id,
-                changes: Changes::new()
-                    .remove("name", &role.name)
-                    .remove("description", &role.description)
-                    .remove("allow", &role.allow)
-                    .remove("deny", &role.deny)
-                    .remove("is_self_applicable", &role.is_self_applicable)
-                    .remove("is_mentionable", &role.is_mentionable)
-                    .remove("hoist", &role.hoist)
-                    .remove("member_count", &role.member_count)
-                    .build(),
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::RoleDelete {
+            role_id,
+            changes: Changes::new()
+                .remove("name", &role.name)
+                .remove("description", &role.description)
+                .remove("allow", &role.allow)
+                .remove("deny", &role.deny)
+                .remove("is_self_applicable", &role.is_self_applicable)
+                .remove("is_mentionable", &role.is_mentionable)
+                .remove("hoist", &role.hoist)
+                .remove("member_count", &role.member_count)
+                .build(),
         })
         .await?;
 
@@ -422,7 +401,6 @@ async fn role_member_list(
 async fn role_member_add(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -461,16 +439,10 @@ async fn role_member_add(
     let msg = MessageSync::RoomMemberUpsert {
         member: member.clone(),
     };
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoleApply {
-            user_id: target_user_id,
-            role_id,
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::RoleApply {
+        user_id: target_user_id,
+        role_id,
     })
     .await?;
     srv.perms.invalidate_room(target_user_id, room_id).await;
@@ -495,7 +467,6 @@ async fn role_member_add(
 async fn role_member_remove(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -537,16 +508,10 @@ async fn role_member_remove(
         member: member.clone(),
     };
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason: reason.clone(),
-        ty: AuditLogEntryType::RoleUnapply {
-            user_id: target_user_id,
-            role_id,
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::RoleUnapply {
+        user_id: target_user_id,
+        role_id,
     })
     .await?;
 
@@ -571,7 +536,6 @@ async fn role_member_remove(
 async fn role_member_bulk_edit(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleMemberBulkPatch>,
 ) -> Result<impl IntoResponse> {
@@ -643,27 +607,15 @@ async fn role_member_bulk_edit(
         };
 
         if body.apply.contains(&user_id) {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason.clone(),
-                ty: AuditLogEntryType::RoleApply { user_id, role_id },
-            })
-            .await?;
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::RoleApply { user_id, role_id })
+                .await?;
         }
 
         if body.remove.contains(&user_id) {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-                reason: reason.clone(),
-                ty: AuditLogEntryType::RoleUnapply { user_id, role_id },
-            })
-            .await?;
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::RoleUnapply { user_id, role_id })
+                .await?;
         }
 
         srv.perms.invalidate_room(user_id, room_id).await;
@@ -686,7 +638,6 @@ async fn role_member_bulk_edit(
 async fn role_reorder(
     Path(room_id): Path<RoomId>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleReorder>,
 ) -> Result<impl IntoResponse> {
@@ -732,15 +683,9 @@ async fn role_reorder(
 
     d.role_reorder(room_id, body.clone()).await?;
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: None, // Note: Auth2 has session but this specific audit log doesn't use it
-        reason,
-        ty: AuditLogEntryType::RoleReorder {
-            roles: body.roles.clone(),
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::RoleReorder {
+        roles: body.roles.clone(),
     })
     .await?;
 

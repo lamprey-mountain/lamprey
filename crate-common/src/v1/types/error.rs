@@ -47,6 +47,10 @@ pub struct ApiError {
     /// moderator-set message for automod
     #[serde(skip_serializing_if = "Option::is_none")]
     pub automod_message: Option<String>,
+
+    /// ratelimit that you ran into
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ratelimit: Option<Ratelimit>,
 }
 
 /// warnings that require forcing
@@ -148,6 +152,19 @@ pub enum ErrorFieldType {
     Other { message: String },
 }
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Ratelimit {
+    /// how many seconds to wait until retrying
+    pub retry_after: f64,
+
+    /// if this is a global ratelimit
+    ///
+    /// if false, this only affects this bucket
+    pub global: bool,
+}
+
 #[derive(Debug, Error, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -236,6 +253,8 @@ pub enum ErrorCode {
     // warning
 
     // you didn't create this media
+
+    // ratelimited
 }
 
 impl ApiError {
@@ -249,6 +268,7 @@ impl ApiError {
             required_scopes: vec![],
             warnings: vec![],
             automod_message: None,
+            ratelimit: None,
         }
     }
 
@@ -262,6 +282,7 @@ impl ApiError {
             required_scopes: vec![],
             warnings: vec![],
             automod_message: None,
+            ratelimit: None,
         }
     }
 }

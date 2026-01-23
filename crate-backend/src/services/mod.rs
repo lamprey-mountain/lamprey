@@ -107,13 +107,12 @@ impl Services {
         self.documents.start_background_tasks();
         self.embed.start_workers().await;
         self.room_analytics.spawn_snapshot_task();
+        self.cache.start_background_tasks();
+    }
 
-        let state = self.state.clone();
-        tokio::spawn(async move {
-            let mut rx = state.sushi.subscribe();
-            while let Ok((msg, _)) = rx.recv().await {
-                state.services().cache.handle_sync(&msg).await;
-            }
-        });
+    // TODO: cleanly shutdown
+    pub async fn shutdown(&self) {
+        // only shut own the services that need to be shut down
+        self.documents.unload_all().await;
     }
 }

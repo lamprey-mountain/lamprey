@@ -25,6 +25,7 @@ use linkify::LinkFinder;
 use url::Url;
 use validator::Validate;
 
+use crate::routes::util::Auth;
 use crate::types::{DbMessageCreate, MediaLinkType, MentionsIds, MessageVerId};
 use crate::{Error, Result, ServerStateInner};
 
@@ -108,6 +109,27 @@ impl ServiceMessages {
     pub async fn create(
         &self,
         thread_id: ChannelId,
+        auth: &Auth,
+        nonce: Option<String>,
+        json: MessageCreate,
+    ) -> Result<Message> {
+        if let Some(n) = &nonce {
+            self.idempotency_keys
+                .try_get_with(
+                    n.clone(),
+                    self.create_inner(thread_id, auth.user.id, Some(auth), nonce, json),
+                )
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            self.create_inner(thread_id, auth.user.id, Some(auth), nonce, json)
+                .await
+        }
+    }
+
+    pub async fn create_system(
+        &self,
+        thread_id: ChannelId,
         user_id: UserId,
         nonce: Option<String>,
         json: MessageCreate,
@@ -116,12 +138,13 @@ impl ServiceMessages {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create_inner(thread_id, user_id, nonce, json),
+                    self.create_inner(thread_id, user_id, None, nonce, json),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(thread_id, user_id, nonce, json).await
+            self.create_inner(thread_id, user_id, None, nonce, json)
+                .await
         }
     }
 
@@ -129,6 +152,7 @@ impl ServiceMessages {
         &self,
         thread_id: ChannelId,
         user_id: UserId,
+        auth: Option<&Auth>,
         nonce: Option<String>,
         mut json: MessageCreate,
     ) -> Result<Message> {
@@ -143,74 +167,91 @@ impl ServiceMessages {
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
 
         let can_use_external_emoji = if !is_webhook {
-            let perms = srv.perms.for_channel(user_id, thread_id).await?;
-            perms.ensure_unlocked()?;
+            if let Some(auth) = auth {
+                let perms = srv.perms.for_channel(user_id, thread_id).await?;
+                perms.ensure_unlocked()?;
 
-            let mut required_perms = vec![Permission::ViewChannel];
-            if thread.ty.is_thread() {
-                required_perms.push(Permission::MessageCreateThread);
-            } else {
-                required_perms.push(Permission::MessageCreate);
-            }
+                let mut required_perms = vec![Permission::ViewChannel];
+                if thread.ty.is_thread() {
+                    required_perms.push(Permission::MessageCreateThread);
+                } else {
+                    required_perms.push(Permission::MessageCreate);
+                }
 
-            if !json.attachments.is_empty() {
-                required_perms.push(Permission::MessageAttachments);
-            }
-            if !json.embeds.is_empty() {
-                required_perms.push(Permission::MessageEmbeds);
-            }
+                if !json.attachments.is_empty() {
+                    required_perms.push(Permission::MessageAttachments);
+                }
+                if !json.embeds.is_empty() {
+                    required_perms.push(Permission::MessageEmbeds);
+                }
 
-            perms.ensure_all(&required_perms)?;
+                perms.ensure_all(&required_perms)?;
 
-            if !perms.can_bypass_slowmode() {
-                if let Some(message_slowmode_expire_at) = data
-                    .channel_get_message_slowmode_expire_at(thread_id, user_id)
-                    .await?
-                {
-                    if message_slowmode_expire_at > Time::now_utc() {
-                        return Err(Error::BadStatic("slowmode in effect"));
+                if !perms.can_bypass_slowmode() {
+                    if let Some(message_slowmode_expire_at) = data
+                        .channel_get_message_slowmode_expire_at(thread_id, user_id)
+                        .await?
+                    {
+                        if message_slowmode_expire_at > Time::now_utc() {
+                            return Err(Error::BadStatic("slowmode in effect"));
+                        }
+                    }
+
+                    if let Some(slowmode_delay) = thread.slowmode_message {
+                        let next_message_time =
+                            Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                        data.channel_set_message_slowmode_expire_at(
+                            thread_id,
+                            user_id,
+                            next_message_time,
+                        )
+                        .await?;
                     }
                 }
 
-                if let Some(slowmode_delay) = thread.slowmode_message {
-                    let next_message_time =
-                        Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
-                    data.channel_set_message_slowmode_expire_at(
-                        thread_id,
-                        user_id,
-                        next_message_time,
-                    )
-                    .await?;
+                if thread.archived_at.is_some() {
+                    srv.channels
+                        .update(
+                            auth,
+                            thread_id,
+                            ChannelPatch {
+                                archived: Some(false),
+                                ..Default::default()
+                            },
+                        )
+                        .await?;
                 }
-            }
+                if json.created_at.is_some() {
+                    if let Some(puppet) = user.puppet {
+                        let owner_perms = srv
+                            .perms
+                            .for_channel(puppet.owner_id.into_inner().into(), thread_id)
+                            .await?;
+                        let required_perms =
+                            vec![Permission::ViewChannel, Permission::MemberBridge];
+                        owner_perms.ensure_all(&required_perms)?;
+                    } else {
+                        return Err(Error::BadStatic("not a puppet"));
+                    }
+                }
 
-            if thread.archived_at.is_some() {
-                srv.channels
-                    .update(
-                        user_id,
+                perms.has(Permission::EmojiUseExternal)
+            } else {
+                // system messages bypass permissions
+                if thread.archived_at.is_some() {
+                    data.channel_update(
                         thread_id,
                         ChannelPatch {
                             archived: Some(false),
                             ..Default::default()
                         },
-                        None,
                     )
                     .await?;
-            }
-            if json.created_at.is_some() {
-                if let Some(puppet) = user.puppet {
-                    let owner_perms = srv
-                        .perms
-                        .for_channel(puppet.owner_id.into_inner().into(), thread_id)
-                        .await?;
-                    let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
-                    owner_perms.ensure_all(&required_perms)?;
-                } else {
-                    return Err(Error::BadStatic("not a puppet"));
+                    srv.channels.invalidate(thread_id).await;
+                    // FIXME: broadcast channel update
                 }
+                true
             }
-
-            perms.has(Permission::EmojiUseExternal)
         } else {
             true
         };

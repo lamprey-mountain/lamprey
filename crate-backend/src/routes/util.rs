@@ -1,13 +1,18 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 use common::v1::types::{
     application::{Scope, Scopes},
     util::Time,
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, MessageSync, RoomId,
-    SessionToken, User, UserId,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType,
+    MessageSync, RoomId, SessionToken, User, UserId,
 };
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
+use http::{HeaderMap, HeaderName, HeaderValue};
+use uuid::Uuid;
 
 use crate::{
     error::Error,
@@ -65,6 +70,7 @@ impl Auth {
 pub struct AuthRelaxed(pub Session);
 
 /// extract the X-Reason header
+// TODO: remove?
 pub struct HeaderReason(pub Option<String>);
 
 /// extract the Idempotency-Key header
@@ -72,6 +78,12 @@ pub struct HeaderIdempotencyKey(pub Option<String>);
 
 /// extract the X-Puppet-Id header
 pub struct HeaderPuppetId(pub Option<UserId>);
+
+/// extract caching http headers
+pub struct HeaderCache {
+    if_none_match: Option<HeaderValue>,
+    if_modified_since: Option<HeaderValue>,
+}
 
 impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
     type Rejection = Error;
@@ -300,11 +312,87 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
     }
 }
 
+impl HeaderCache {
+    /// compare the etag of the request with the current etag
+    fn compare_etag(&self, etag: &str) -> Result<(), Error> {
+        if let Some(val) = &self.if_none_match {
+            if val == etag {
+                return Err(Error::NotModified);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// compare the last-modified-time of the request with the current mtime
+    fn compare_mtime(&self, last_modified: &Time) -> Result<(), Error> {
+        if let Some(val) = &self.if_modified_since {
+            if let Ok(s) = val.to_str() {
+                if let Ok(parsed_time) = httpdate::parse_http_date(s) {
+                    let last_modified_st = SystemTime::UNIX_EPOCH
+                        + Duration::from_secs(last_modified.unix_timestamp() as u64);
+
+                    if last_modified_st <= parsed_time {
+                        return Err(Error::NotModified);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// compare version ids. returns the new caching headers
+    pub fn compare_uuid(&self, uuid: &Uuid) -> Result<HeaderMap, Error> {
+        let ts: Time = uuid
+            .get_timestamp()
+            .expect("this is a uuid v7")
+            .try_into()
+            .expect("uuids are always valid timestamps");
+        let etag = format!(r#"W/"{}""#, uuid);
+        self.compare_etag(&etag)?;
+        self.compare_mtime(&ts)?;
+        let headers = HeaderMap::from_iter([
+            (
+                HeaderName::from_static("last-modified"),
+                HeaderValue::from_str(&httpdate::fmt_http_date(
+                    (SystemTime::UNIX_EPOCH
+                        + Duration::from_nanos(ts.unix_timestamp_nanos().try_into().unwrap_or(0)))
+                    .into(),
+                ))
+                .unwrap(),
+            ),
+            (
+                HeaderName::from_static("etag"),
+                HeaderValue::from_str(&etag).unwrap(),
+            ),
+        ]);
+        Ok(headers)
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for HeaderCache {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        let if_none_match = parts.headers.get("if-none-match").cloned();
+        let if_modified_since = parts.headers.get("if-modified-since").cloned();
+        Ok(Self {
+            if_none_match,
+            if_modified_since,
+        })
+    }
+}
+
 /// an in-progress audit log
 pub struct AuditLoggerTransaction<'a> {
     context_id: RoomId,
     auth: &'a Auth,
     reason: Option<&'a str>,
+    started_at: Time,
+    application_id: Option<ApplicationId>,
 }
 
 impl Auth {
@@ -316,14 +404,22 @@ impl Auth {
             context_id,
             auth: self,
             reason: self.reason.as_deref(),
+            started_at: Time::now_utc(),
+            application_id: self.session.app_id,
         }
     }
 }
 
 impl AuditLoggerTransaction<'_> {
+    /// save an audit log entry with the success status
+    pub async fn commit_success(self, ty: AuditLogEntryType) -> Result<(), Error> {
+        self.commit(AuditLogEntryStatus::Success, ty).await
+    }
+
+    /// save an audit log entry
     pub async fn commit(
         self,
-        _status: AuditLogEntryStatus,
+        status: AuditLogEntryStatus,
         ty: AuditLogEntryType,
     ) -> Result<(), Error> {
         let entry = AuditLogEntry {
@@ -333,6 +429,12 @@ impl AuditLoggerTransaction<'_> {
             user_id: self.auth.user.id,
             session_id: Some(self.auth.session.id),
             reason: self.reason.map(|s| s.to_string()),
+            status,
+            started_at: self.started_at,
+            ended_at: Time::now_utc(),
+            ip_addr: self.auth.session.ip_addr.clone(),
+            user_agent: self.auth.session.user_agent.clone(),
+            application_id: self.application_id,
         };
         self.auth
             .s

@@ -7,18 +7,17 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    audit_logs::{AuditLogChange, AuditLogEntry, AuditLogEntryType},
+    audit_logs::{AuditLogChange, AuditLogEntryType},
     pagination::{PaginationQuery, PaginationResponse},
     sync::MessageSync,
     util::Changes,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    AuditLogEntryId, Message, MessageCreate, MessageId, MessagePatch, Permission, UserId,
-    WebhookId,
+    Message, MessageCreate, MessageId, MessagePatch, Permission, UserId, WebhookId,
 };
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 use crate::{
     error::{Error, Result},
     types::{ChannelId, RoomId},
@@ -43,7 +42,6 @@ async fn webhook_create(
     Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -65,21 +63,15 @@ async fn webhook_create(
         .webhook_create(channel_id, auth.user.id, json.clone())
         .await?;
 
-    let audit_entry = AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::WebhookCreate {
-            webhook_id: webhook.id,
-            changes: Changes::new()
-                .add("name", &webhook.name)
-                .add("channel_id", &webhook.channel_id)
-                .build(),
-        },
-    };
-    s.audit_log_append(audit_entry).await?;
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::WebhookCreate {
+        webhook_id: webhook.id,
+        changes: Changes::new()
+            .add("name", &webhook.name)
+            .add("channel_id", &webhook.channel_id)
+            .build(),
+    })
+    .await?;
 
     let sync_msg = MessageSync::WebhookCreate {
         webhook: webhook.clone(),
@@ -227,7 +219,6 @@ async fn webhook_delete(
     Path(webhook_id): Path<WebhookId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -247,22 +238,16 @@ async fn webhook_delete(
 
     s.data().webhook_delete(webhook_id).await?;
 
-    let audit_entry = AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason,
-        ty: AuditLogEntryType::WebhookDelete {
-            webhook_id,
-            changes: Changes::new()
-                .remove("name", &webhook.name)
-                .remove("avatar", &webhook.avatar)
-                .remove("channel_id", &webhook.channel_id)
-                .build(),
-        },
-    };
-    s.audit_log_append(audit_entry).await?;
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::WebhookDelete {
+        webhook_id,
+        changes: Changes::new()
+            .remove("name", &webhook.name)
+            .remove("avatar", &webhook.avatar)
+            .remove("channel_id", &webhook.channel_id)
+            .build(),
+    })
+    .await?;
 
     let sync_msg = MessageSync::WebhookDelete {
         webhook_id,
@@ -311,7 +296,6 @@ async fn webhook_update(
     Path(webhook_id): Path<WebhookId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<WebhookUpdate>,
 ) -> Result<impl IntoResponse> {
     let before_webhook = s.data().webhook_get(webhook_id).await?;
@@ -342,18 +326,12 @@ async fn webhook_update(
     }
 
     if !changes.is_empty() {
-        let audit_entry = AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::WebhookUpdate {
-                webhook_id,
-                changes,
-            },
-        };
-        s.audit_log_append(audit_entry).await?;
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::WebhookUpdate {
+            webhook_id,
+            changes,
+        })
+        .await?;
     }
 
     let sync_msg = MessageSync::WebhookUpdate {
@@ -452,7 +430,7 @@ async fn webhook_execute(
 
     let message = srv
         .messages
-        .create(channel_id, author_id, None, json)
+        .create_system(channel_id, author_id, None, json)
         .await?;
 
     Ok((StatusCode::CREATED, Json(message)))

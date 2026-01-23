@@ -343,7 +343,9 @@ pub trait DataRoleMember {
 
 #[async_trait]
 pub trait DataPermission {
+    // TODO: remove permission_room_get
     async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions>;
+
     async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool>;
     async fn permission_overwrite_upsert(
         &self,
@@ -579,7 +581,10 @@ pub trait DataSession {
     async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
     async fn session_delete(&self, session_id: SessionId) -> Result<()>;
     async fn session_delete_all(&self, user_id: UserId) -> Result<()>;
+    // TODO: replace session_set_last_seen_at with session_heartbeat
     async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()>;
+    // /// update last seen at and other metadata
+    // async fn session_heartbeat(&self, session_id: SessionId, ip_addr: IpAddr, user_agent: String) -> Result<()>;
 }
 
 #[async_trait]

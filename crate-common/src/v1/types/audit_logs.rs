@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
@@ -14,9 +16,6 @@ use crate::v1::types::{
     PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, User, UserId, WebhookId,
 };
 
-// TODO: coalesce multiple events into one event, if possible
-// eg. multiple FooUpdates from the same user
-// or add bulk kick/ban audit log events and merge everything there
 // FIXME: bridge events should be logged as the bridge, not puppet
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -33,37 +32,36 @@ pub struct AuditLogEntry {
     pub user_id: UserId,
 
     /// Session of the user who caused this, for user audit logs
-    // TODO: set and save this field
     pub session_id: Option<SessionId>,
 
     /// User supplied reason why this happened
     pub reason: Option<String>,
 
+    /// type and metadata for this audit log entry
     #[serde(flatten)]
     pub ty: AuditLogEntryType,
-    // TODO: add more fields
-    // /// the status of the request
-    // pub status: AuditLogStatus,
 
-    // /// when the request started
-    // pub started_at: Time,
+    /// the status of the request
+    pub status: AuditLogEntryStatus,
 
-    // /// when the request ended
-    // pub ended_at: Time,
+    /// when the request started
+    pub started_at: Time,
 
-    // // TODO: use actual ip addr type here
-    // /// the ip address that this request came from
-    // ///
-    // /// will be None if you do not have permission to see sensitive request metadata or if it is not known
-    // pub ip_addr: Option<String>,
+    /// when the request ended
+    pub ended_at: Time,
 
-    // /// the user agent that this request came from
-    // ///
-    // /// will be None if you do not have permission to see sensitive request metadata or if it is not known
-    // pub user_agent: Option<String>,
+    /// the ip address that this request came from
+    ///
+    /// will be None if you do not have permission to see sensitive request metadata or if it is not known
+    pub ip_addr: Option<String>,
 
-    // /// if this was done via an oauth app
-    // pub application_id: Option<UserId>,
+    /// the user agent that this request came from
+    ///
+    /// will be None if you do not have permission to see sensitive request metadata or if it is not known
+    pub user_agent: Option<String>,
+
+    /// if this was done via an oauth app, this is the application id responsible for the request
+    pub application_id: Option<ApplicationId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +72,8 @@ pub struct AuditLogChange {
     pub key: String,
 }
 
+// NOTE: maybe i want to also have Channel{Remove,Restore}?
+// NOTE: maybe i want to also have Thread{Create,Update,Etc}?
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type", content = "metadata")]
@@ -573,11 +573,9 @@ pub struct AuditLogFilter {
     /// defaults to only `Success`
     #[serde(default)]
     pub status: Vec<AuditLogEntryStatus>,
-    // TODO: filter by audit log channel_id
 }
 
 /// the status of an audit log event
-// TODO: create db type, index on this
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AuditLogEntryStatus {
@@ -620,18 +618,25 @@ pub struct AuditLogPaginationResponse {
     pub cursor: Option<String>,
 }
 
-// impl AuditLogEntry {
-//     #[inline]
-//     pub fn strip_request_metadata(&mut self) {
-//         self.ip_addr = None;
-//         self.user_agent = None;
-//     }
+impl AuditLogEntry {
+    #[inline]
+    pub fn strip_request_metadata(&mut self) {
+        self.ip_addr = None;
+        self.user_agent = None;
+    }
 
-//     #[inline]
-//     pub fn strip_session(&mut self) {
-//         self.session = None;
-//     }
-// }
+    #[inline]
+    pub fn strip_session(&mut self) {
+        self.session_id = None;
+    }
+
+    /// get the duration of this request
+    ///
+    /// this is the time elapsed between `started_at` and `ended_at`
+    pub fn duration(&self) -> Duration {
+        todo!()
+    }
+}
 
 impl AuditLogEntryType {
     /// if this is a room event

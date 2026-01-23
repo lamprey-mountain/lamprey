@@ -10,11 +10,24 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    pagination::PaginationDirection, util::some_option, CalendarEventId, ChannelId, RoomMember,
-    User, UserId,
+    misc::Color, pagination::PaginationDirection, util::some_option, CalendarEventId, ChannelId,
+    RoomMember, User, UserId,
 };
 
 use super::util::Time;
+
+/// channel metadata for a calendar
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct Calendar {
+    /// the color of this calendar
+    pub color: Option<Color>,
+
+    /// the default timezone events in this calendar should be created in
+    pub default_timezone: Timezone,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

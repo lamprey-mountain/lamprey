@@ -55,8 +55,9 @@ pub enum ServerReq {
     #[serde(deserialize_with = "const_client")]
     ServerClient,
 
-    /// references a server by domain name
-    ServerDomain(String),
+    /// references a server by its fully qualified domain name
+    // rename to ServerHostname?
+    ServerFqdn(String),
 }
 
 fn const_self<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
@@ -146,7 +147,7 @@ impl Display for ServerReq {
         match self {
             ServerReq::ServerHost => write!(f, "@host"),
             ServerReq::ServerClient => write!(f, "@client"),
-            ServerReq::ServerDomain(domain) => write!(f, "{domain}"),
+            ServerReq::ServerFqdn(fqdn) => write!(f, "{fqdn}"),
         }
     }
 }

@@ -20,9 +20,7 @@ use crate::{
 };
 
 use common::v1::types::util::Changes;
-use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, Permission,
-};
+use common::v1::types::{AuditLogEntryType, MessageSync, Permission};
 
 /// Automod rule list
 #[utoipa::path(
@@ -73,24 +71,18 @@ async fn automod_rule_create(
     let rule = s.data().automod_rule_create(room_id, json.clone()).await?;
     srv.automod.invalidate(room_id);
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason: None,
-        ty: AuditLogEntryType::AutomodRuleCreate {
-            rule_id: rule.id,
-            changes: Changes::new()
-                .add("name", &rule.name)
-                .add("enabled", &rule.enabled)
-                // TODO: log trigger and actions
-                // .add("trigger", &rule.trigger)
-                // .add("actions", &rule.actions)
-                .add("except_roles", &rule.except_roles)
-                .add("except_channels", &rule.except_channels)
-                .build(),
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::AutomodRuleCreate {
+        rule_id: rule.id,
+        changes: Changes::new()
+            .add("name", &rule.name)
+            .add("enabled", &rule.enabled)
+            // TODO: log trigger and actions
+            // .add("trigger", &rule.trigger)
+            // .add("actions", &rule.actions)
+            .add("except_roles", &rule.except_roles)
+            .add("except_channels", &rule.except_channels)
+            .build(),
     })
     .await?;
 
@@ -168,28 +160,22 @@ async fn automod_rule_update(
     let rule = s.data().automod_rule_update(rule_id, json.clone()).await?;
     srv.automod.invalidate(room_id);
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason: None,
-        ty: AuditLogEntryType::AutomodRuleUpdate {
-            rule_id,
-            changes: Changes::new()
-                .change("name", &old.name, &rule.name)
-                .change("enabled", &old.enabled, &rule.enabled)
-                // TODO: log trigger and actions
-                // .change("trigger", &old.trigger, &rule.trigger)
-                // .change("actions", &old.actions, &rule.actions)
-                .change("except_roles", &old.except_roles, &rule.except_roles)
-                .change(
-                    "except_channels",
-                    &old.except_channels,
-                    &rule.except_channels,
-                )
-                .build(),
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::AutomodRuleUpdate {
+        rule_id,
+        changes: Changes::new()
+            .change("name", &old.name, &rule.name)
+            .change("enabled", &old.enabled, &rule.enabled)
+            // TODO: log trigger and actions
+            // .change("trigger", &old.trigger, &rule.trigger)
+            // .change("actions", &old.actions, &rule.actions)
+            .change("except_roles", &old.except_roles, &rule.except_roles)
+            .change(
+                "except_channels",
+                &old.except_channels,
+                &rule.except_channels,
+            )
+            .build(),
     })
     .await?;
 
@@ -235,24 +221,18 @@ async fn automod_rule_delete(
     s.data().automod_rule_delete(rule_id).await?;
     srv.automod.invalidate(room_id);
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth.user.id,
-        session_id: Some(auth.session.id),
-        reason: None,
-        ty: AuditLogEntryType::AutomodRuleDelete {
-            rule_id,
-            changes: Changes::new()
-                .remove("name", &rule.name)
-                .remove("enabled", &rule.enabled)
-                // TODO: log trigger and actions
-                // .remove("trigger", &rule.trigger)
-                // .remove("actions", &rule.actions)
-                .remove("except_roles", &rule.except_roles)
-                .remove("except_channels", &rule.except_channels)
-                .build(),
-        },
+    let al = auth.audit_log(room_id);
+    al.commit_success(AuditLogEntryType::AutomodRuleDelete {
+        rule_id,
+        changes: Changes::new()
+            .remove("name", &rule.name)
+            .remove("enabled", &rule.enabled)
+            // TODO: log trigger and actions
+            // .remove("trigger", &rule.trigger)
+            // .remove("actions", &rule.actions)
+            .remove("except_roles", &rule.except_roles)
+            .remove("except_channels", &rule.except_channels)
+            .build(),
     })
     .await?;
 

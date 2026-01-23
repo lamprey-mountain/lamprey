@@ -12,13 +12,12 @@ use common::v1::types::{
         CallCreate, CallDeleteParams, CallPatch, RingEligibility, RingStart, RingStop, SfuCommand,
         SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
     },
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, MessageSync,
-    PaginationResponse, Permission,
+    AuditLogEntryType, ChannelId, ChannelType, MessageSync, PaginationResponse, Permission,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 
 use crate::error::Result;
 use crate::{Error, ServerState};
@@ -73,7 +72,6 @@ async fn voice_state_patch(
     Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<VoiceStatePatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -118,18 +116,12 @@ async fn voice_state_patch(
         srv.voice.state_put(old_state.clone()).await;
 
         if let Some(room_id) = chan.room_id {
-            s.audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth.user.id,
-                session_id: Some(auth.session.id),
-                reason: reason.clone(),
-                ty: AuditLogEntryType::MemberMove {
-                    user_id: target_user_id,
-                    changes: Changes::new()
-                        .change("thread_id", &old_channel_id, &channel_id)
-                        .build(),
-                },
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::MemberMove {
+                user_id: target_user_id,
+                changes: Changes::new()
+                    .change("thread_id", &old_channel_id, &channel_id)
+                    .build(),
             })
             .await?;
         }
@@ -180,17 +172,11 @@ async fn voice_state_patch(
                     .change("deaf", &json.deaf.unwrap_or(old_state.deaf), &deaf)
                     .build();
                 if !changes.is_empty() {
-                    s.audit_log_append(AuditLogEntry {
-                        id: AuditLogEntryId::new(),
+                    let al = auth.audit_log(room_id);
+                    al.commit_success(AuditLogEntryType::MemberUpdate {
                         room_id,
-                        user_id: auth.user.id,
-                        session_id: Some(auth.session.id),
-                        reason: reason.clone(),
-                        ty: AuditLogEntryType::MemberUpdate {
-                            room_id,
-                            user_id: target_user_id,
-                            changes,
-                        },
+                        user_id: target_user_id,
+                        changes,
                     })
                     .await?;
                 }
@@ -265,7 +251,6 @@ async fn voice_state_disconnect(
     Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -292,16 +277,10 @@ async fn voice_state_disconnect(
     });
     let chan = srv.channels.get(channel_id, None).await?;
     if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::MemberDisconnect {
-                channel_id,
-                user_id: target_user_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MemberDisconnect {
+            channel_id,
+            user_id: target_user_id,
         })
         .await?;
     }
@@ -325,7 +304,6 @@ async fn voice_state_disconnect_all(
     Path((channel_id,)): Path<(ChannelId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -336,15 +314,9 @@ async fn voice_state_disconnect_all(
     srv.voice.disconnect_everyone(channel_id).await?;
     let thread = srv.channels.get(channel_id, None).await?;
     if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::MemberDisconnectAll { channel_id },
-        })
-        .await?;
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MemberDisconnectAll { channel_id })
+            .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -366,7 +338,6 @@ async fn voice_state_move(
     Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<VoiceStateMove>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -410,18 +381,12 @@ async fn voice_state_move(
 
     let chan = srv.channels.get(channel_id, None).await?;
     if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::MemberMove {
-                user_id: target_user_id,
-                changes: Changes::new()
-                    .change("thread_id", &old.channel_id, &state.channel_id)
-                    .build(),
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::MemberMove {
+            user_id: target_user_id,
+            changes: Changes::new()
+                .change("thread_id", &old.channel_id, &state.channel_id)
+                .build(),
         })
         .await?;
     }
@@ -444,7 +409,6 @@ async fn voice_state_move_bulk(
     Path((channel_id,)): Path<(ChannelId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
     Json(_json): Json<VoiceStateMoveBulk>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;

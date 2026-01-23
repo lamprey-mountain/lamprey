@@ -6,13 +6,13 @@ use axum::{extract::State, Json};
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::reaction::{ReactionKey, ReactionKeyParam, ReactionListItem};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageId, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, UserId,
+    AuditLogEntryType, ChannelId, MessageId, MessageSync, PaginationQuery, PaginationResponse,
+    Permission, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 use crate::error::Result;
 use crate::{Error, ServerState};
 
@@ -75,7 +75,6 @@ async fn reaction_add(
         UserIdReq,
     )>,
     auth: Auth,
-    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id {
@@ -159,7 +158,6 @@ async fn reaction_remove(
         UserIdReq,
     )>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id {
@@ -202,18 +200,12 @@ async fn reaction_remove(
     };
 
     if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::ReactionDeleteUser {
-                channel_id,
-                message_id,
-                key: reaction_key,
-                user_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::ReactionDeleteUser {
+            channel_id,
+            message_id,
+            key: reaction_key,
+            user_id,
         })
         .await?;
     }
@@ -252,7 +244,6 @@ async fn reaction_remove(
 async fn reaction_remove_key(
     Path((channel_id, message_id, reaction_key)): Path<(ChannelId, MessageId, ReactionKeyParam)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -283,17 +274,11 @@ async fn reaction_remove_key(
     };
 
     if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason,
-            ty: AuditLogEntryType::ReactionDeleteKey {
-                channel_id,
-                message_id,
-                key: reaction_key,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::ReactionDeleteKey {
+            channel_id,
+            message_id,
+            key: reaction_key,
         })
         .await?;
     }
@@ -330,7 +315,6 @@ async fn reaction_remove_key(
 async fn reaction_remove_all(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -352,16 +336,10 @@ async fn reaction_remove_all(
     data.reaction_delete_all(channel_id, message_id).await?;
 
     if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth.user.id,
-            session_id: Some(auth.session.id),
-            reason: reason.clone(),
-            ty: AuditLogEntryType::ReactionDeleteAll {
-                channel_id,
-                message_id,
-            },
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::ReactionDeleteAll {
+            channel_id,
+            message_id,
         })
         .await?;
     }

@@ -145,7 +145,7 @@ async fn main() -> Result<()> {
     }
     if data.room_get(SERVER_ROOM_ID).await.is_err() {
         srv.rooms
-            .create(
+            .create_system(
                 RoomCreate {
                     name: "server".to_string(),
                     description: None,
@@ -184,6 +184,12 @@ async fn main() -> Result<()> {
                     session_id: None,
                     reason: reason.to_owned(),
                     ty: AuditLogEntryType::UserRegistered { user_id: *user_id },
+                    status: common::v1::types::AuditLogEntryStatus::Success,
+                    started_at: Time::now_utc(),
+                    ended_at: Time::now_utc(),
+                    ip_addr: None,
+                    user_agent: None,
+                    application_id: None,
                 })
                 .await?;
             // TODO: invalidate cache

@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP: suppress warnings here for now
+
 use std::cmp::Ordering;
 use std::sync::Arc;
 
@@ -19,11 +21,10 @@ pub struct ServiceUsers {
 }
 
 /// an identifier for a dm channel
-
 pub struct DmKey(UserId, UserId);
 impl DmKey {
     /// create a new dm key, automatically sorting user ids
-    pub fn new(a: UserId, b: UserId) -> Self {
+    pub fn new(_a: UserId, _b: UserId) -> Self {
         todo!()
     }
 
@@ -71,6 +72,8 @@ impl ServiceUsers {
                 usr.emails = Some(self.state.data().user_email_list(user_id).await?);
             }
         }
+
+        // FIXME: populate has_mfa
 
         let status = self.state.services().presence.get(user_id);
         usr.presence = status;
@@ -144,7 +147,7 @@ impl ServiceUsers {
     }
 
     /// add private user data to each user
-    pub async fn merge(&self, users: &mut [User], user_id: UserId) -> Result<()> {
+    pub async fn populate_private(&self, _users: &mut [User], _user_id: UserId) -> Result<()> {
         Ok(())
     }
 }
