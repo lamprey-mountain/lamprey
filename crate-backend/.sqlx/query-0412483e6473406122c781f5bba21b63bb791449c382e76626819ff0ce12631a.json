@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT e.id, e.name, e.creator_id, e.animated, e.media_id, e.room_id\n                FROM custom_emoji e\n                JOIN room_member rm ON e.room_id = rm.room_id\n                WHERE rm.user_id = $1 AND rm.membership = 'Join' AND e.name ILIKE $2\n                AND e.id > $3 AND e.id < $4 AND e.deleted_at IS NULL\n            \tORDER BY (CASE WHEN $5 = 'f' THEN e.id END), e.id DESC LIMIT $6\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "animated",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "media_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "room_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "0412483e6473406122c781f5bba21b63bb791449c382e76626819ff0ce12631a"
+}

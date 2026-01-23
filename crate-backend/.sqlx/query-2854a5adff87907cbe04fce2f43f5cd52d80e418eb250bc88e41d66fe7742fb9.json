@@ -14,12 +14,13 @@
               "Enum": [
                 "Message",
                 "MessageVersion",
-                "AvatarUser",
+                "UserAvatar",
                 "Embed",
                 "CustomEmoji",
-                "AvatarRoom",
-                "BannerUser",
-                "IconThread"
+                "RoomIcon",
+                "UserBanner",
+                "ChannelIcon",
+                "RoomBanner"
               ]
             }
           }

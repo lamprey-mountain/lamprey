@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'UserAvatar'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ec2f61666641e8c0241eec230334c4c988dbb72b00ed68295acee2ca12ab62de"
+}

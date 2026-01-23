@@ -1,0 +1,109 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, document_id, creator_id, name, created_at, is_default, private, state as \"state: DbBranchState\", parent_branch_id, parent_seq\n            FROM document_branch\n            WHERE document_id = $1 AND state = ANY($2::branch_state[])\n            AND (private = false OR creator_id = $5)\n            AND ($3::uuid IS NULL OR created_at < (SELECT created_at FROM document_branch WHERE id = $3))\n            ORDER BY created_at DESC\n            LIMIT $4\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "document_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_default",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "private",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "state: DbBranchState",
+        "type_info": {
+          "Custom": {
+            "name": "branch_state",
+            "kind": {
+              "Enum": [
+                "Active",
+                "Closed",
+                "Merged"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "parent_branch_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "parent_seq",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "branch_state[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "branch_state",
+                  "kind": {
+                    "Enum": [
+                      "Active",
+                      "Closed",
+                      "Merged"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Uuid",
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "2b3b279d5fc1959f32d8ea613b6a3947c71db266948a19b4e3b05fb5c14d65dd"
+}

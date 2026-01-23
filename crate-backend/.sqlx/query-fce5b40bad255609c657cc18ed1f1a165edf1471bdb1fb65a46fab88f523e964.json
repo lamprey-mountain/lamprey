@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE automod_rule SET name = $2, enabled = $3, data = $4, except_nsfw = $5, include_everyone = $6, target = $7 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Jsonb",
+        "Bool",
+        "Bool",
+        {
+          "Custom": {
+            "name": "automod_target",
+            "kind": {
+              "Enum": [
+                "Content",
+                "Member"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fce5b40bad255609c657cc18ed1f1a165edf1471bdb1fb65a46fab88f523e964"
+}

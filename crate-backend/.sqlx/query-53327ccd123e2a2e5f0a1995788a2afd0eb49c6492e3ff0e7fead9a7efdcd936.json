@@ -1,0 +1,133 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id,\n                    r.welcome_channel_id,\n                    r.quarantined,\n                    r.security_require_mfa,\n                    r.security_require_sudo,\n                    r.afk_channel_id,\n                    r.afk_channel_timeout,\n                    (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS \"member_count!\",\n                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS \"channel_count!\"\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                  AND r.type != 'Server'\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "ty: _",
+        "type_info": {
+          "Custom": {
+            "name": "room_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "Server"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "icon",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "archived_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "welcome_channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "quarantined",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "security_require_mfa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "security_require_sudo",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "afk_channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "afk_channel_timeout",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "member_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "channel_count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "53327ccd123e2a2e5f0a1995788a2afd0eb49c6492e3ff0e7fead9a7efdcd936"
+}

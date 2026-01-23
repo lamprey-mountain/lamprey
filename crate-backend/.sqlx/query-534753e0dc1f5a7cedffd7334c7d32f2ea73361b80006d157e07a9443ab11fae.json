@@ -25,7 +25,11 @@
                 "Announcement",
                 "Forum2",
                 "Info",
-                "ThreadForum2"
+                "ThreadForum2",
+                "Ticket",
+                "Document",
+                "DocumentComment",
+                "Wiki"
               ]
             }
           }

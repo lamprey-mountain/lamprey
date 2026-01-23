@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        SELECT\n                            t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,\n                            (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as \"active_thread_count!\",\n                            (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as \"total_thread_count!\"\n                        FROM tag t\n                        WHERE t.channel_id = $1 AND t.name ILIKE $2 AND t.is_archived = true\n                        AND t.id > $3 AND t.id < $4\n                        ORDER BY (CASE WHEN $5 = 'f' THEN t.id END), t.id DESC LIMIT $6\n                        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "is_archived",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_restricted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "active_thread_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "total_thread_count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "6643a721a05555d6b5fe92d41b69f0866a3694b52ad466083184585bf1f729bc"
+}

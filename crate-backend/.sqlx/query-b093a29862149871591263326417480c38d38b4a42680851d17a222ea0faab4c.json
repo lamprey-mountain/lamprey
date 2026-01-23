@@ -1,0 +1,163 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n    channel_viewer as (\n        select channel.id, channel.room_id from channel\n        where channel.id = any($21)\n        union\n        select channel.id, channel.room_id from channel\n        where channel.parent_id = any($22)\n        union\n        select channel.id, channel.room_id from channel\n        join thread_member on channel.id = thread_member.channel_id\n        where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'\n    )\nselect\n    mv.type as \"message_type: DbMessageType\",\n    m.id,\n    m.channel_id,\n    mv.version_id,\n    mv.content,\n    mv.metadata,\n    mv.reply_id,\n    mv.override_name,\n    m.author_id,\n    m.created_at,\n    m.deleted_at,\n    m.removed_at,\n    m.pinned,\n    coalesce(att_json.attachments, '[]'::json) as \"attachments!\",\n    mv.embeds as \"embeds\",\n    mv.author_id as version_author_id,\n    mv.created_at as version_created_at,\n    mv.deleted_at as version_deleted_at\nfrom message as m\njoin message_version mv on m.latest_version_id = mv.version_id\njoin channel_viewer on m.channel_id = channel_viewer.id\nleft join att_json on att_json.version_id = mv.version_id\nwhere m.deleted_at is null\n  and m.id > $2 AND m.id < $3\n  and ($6::text is null or $6 = '' or mv.content @@ websearch_to_tsquery('english', $6))\n  and (cardinality($7::uuid[]) = 0 or channel_viewer.room_id = any($7))\n  and (cardinality($8::uuid[]) = 0 or m.channel_id = any($8))\n  and (cardinality($9::uuid[]) = 0 or m.author_id = any($9))\n  -- has_attachment: $10\n  and ($10::boolean is null or (exists (select 1 from message_attachment where version_id = mv.version_id)) = $10)\n  -- has_image: $11\n  and ($11::boolean is null or (exists (select 1 from message_attachment ma join media m2 on ma.media_id = m2.id, jsonb_array_elements(m2.data->'tracks') as track where ma.version_id = mv.version_id and track->>'mime' like 'image/%')) = $11)\n  -- has_audio: $12\n  and ($12::boolean is null or (exists (select 1 from message_attachment ma join media m2 on ma.media_id = m2.id, jsonb_array_elements(m2.data->'tracks') as track where ma.version_id = mv.version_id and track->>'mime' like 'audio/%')) = $12)\n  -- has_video: $13\n  and ($13::boolean is null or (exists (select 1 from message_attachment ma join media m2 on ma.media_id = m2.id, jsonb_array_elements(m2.data->'tracks') as track where ma.version_id = mv.version_id and track->>'mime' like 'video/%')) = $13)\n  -- has_link: $14\n  and ($14::boolean is null or ((mv.content ~ 'https?://[^\\s<>\"]+|www\\.[^\\s<>\"]+') = $14))\n  -- has_embed: $15\n  and ($15::boolean is null or ((jsonb_array_length(coalesce(mv.embeds, '[]'::jsonb)) > 0) = $15))\n  -- pinned: $16\n  and ($16::boolean is null or ((m.pinned is not null) = $16))\n  -- link_hostnames: $17\n  and (cardinality($17::text[]) = 0 or embed_hosts(mv.embeds) && $17 or content_hosts(mv.content) && $17)\n  -- mentions_users: $18\n  and (cardinality($18::uuid[]) = 0 or (mv.mentions->'users')::jsonb ?| array(select jsonb_array_elements_text(to_jsonb($18::uuid[]))))\n  -- mentions_roles: $19\n  and (cardinality($19::uuid[]) = 0 or (mv.mentions->'roles')::jsonb ?| array(select jsonb_array_elements_text(to_jsonb($19::uuid[]))))\n  -- mentions_everyone_room: $20\n  and ($20::boolean is null or (mv.mentions->>'everyone')::boolean = $20)\norder by (CASE WHEN $4 = 'f' THEN m.id END), m.id DESC LIMIT $5\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_type: DbMessageType",
+        "type_info": {
+          "Custom": {
+            "name": "message_type",
+            "kind": {
+              "Enum": [
+                "DefaultMarkdown",
+                "ThreadUpdate",
+                "DefaultTagged",
+                "ThreadRename",
+                "MemberAdd",
+                "MemberRemove",
+                "MemberJoin",
+                "MessagePinned",
+                "ChannelIcon",
+                "AutomodExecution"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "reply_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 11,
+        "name": "removed_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 12,
+        "name": "pinned",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 13,
+        "name": "attachments!",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 14,
+        "name": "embeds",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 15,
+        "name": "version_author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 16,
+        "name": "version_created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 17,
+        "name": "version_deleted_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8",
+        "Text",
+        "UuidArray",
+        "UuidArray",
+        "UuidArray",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "TextArray",
+        "UuidArray",
+        "UuidArray",
+        "Bool",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      null,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "b093a29862149871591263326417480c38d38b4a42680851d17a222ea0faab4c"
+}

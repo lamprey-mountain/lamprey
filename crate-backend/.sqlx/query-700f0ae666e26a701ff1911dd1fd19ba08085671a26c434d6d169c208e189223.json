@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT author_id as user_id, created_at, stat_added, stat_removed, seq\n            FROM document_update\n            WHERE branch_id = $1\n            ORDER BY seq ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 2,
+        "name": "stat_added",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "stat_removed",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "seq",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "700f0ae666e26a701ff1911dd1fd19ba08085671a26c434d6d169c208e189223"
+}

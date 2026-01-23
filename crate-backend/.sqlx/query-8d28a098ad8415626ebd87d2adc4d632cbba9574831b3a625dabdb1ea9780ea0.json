@@ -1,0 +1,146 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n    mv.type as \"message_type: DbMessageType\",\n    m.id,\n    m.channel_id,\n    m.author_id,\n    m.created_at,\n    m.deleted_at,\n    m.removed_at,\n    m.pinned,\n    mv.version_id,\n    mv.author_id as version_author_id,\n    mv.content,\n    mv.metadata,\n    mv.reply_id,\n    mv.override_name,\n    mv.embeds as \"embeds\",\n    mv.created_at as version_created_at,\n    mv.deleted_at as version_deleted_at,\n    coalesce(att_json.attachments, '{}') as \"attachments!\"\nFROM message AS m\nJOIN message_version AS mv ON m.latest_version_id = mv.version_id\nLEFT JOIN att_json ON att_json.version_id = mv.version_id\nWHERE m.channel_id = $1 AND m.deleted_at IS NULL\n  AND mv.type IN ('MessagePinned', 'MemberAdd', 'MemberRemove', 'ThreadRename', 'ChannelIcon')\n  AND m.id > $2 AND m.id < $3\nORDER BY (CASE WHEN $4 = 'f' THEN m.id END), m.id DESC LIMIT $5\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_type: DbMessageType",
+        "type_info": {
+          "Custom": {
+            "name": "message_type",
+            "kind": {
+              "Enum": [
+                "DefaultMarkdown",
+                "ThreadUpdate",
+                "DefaultTagged",
+                "ThreadRename",
+                "MemberAdd",
+                "MemberRemove",
+                "MemberJoin",
+                "MessagePinned",
+                "ChannelIcon",
+                "AutomodExecution"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "removed_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "pinned",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "version_author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "reply_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 13,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "embeds",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 15,
+        "name": "version_created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 16,
+        "name": "version_deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 17,
+        "name": "attachments!",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "8d28a098ad8415626ebd87d2adc4d632cbba9574831b3a625dabdb1ea9780ea0"
+}

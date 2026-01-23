@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select count(*) from message m\njoin message_version mv on m.latest_version_id = mv.version_id\nwhere m.channel_id = $1 and m.deleted_at is null and mv.type IN ('MessagePinned', 'MemberAdd', 'MemberRemove', 'ThreadRename', 'ChannelIcon')\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "019e180e2fb1306f9ff77b84c971bf4828bc2a3c9e9d29a3b73961f699d5febe"
+}

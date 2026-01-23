@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                insert into application_bridge (application_id, platform_name, platform_url, platform_description)\n                values ($1, $2, $3, $4)\n                on conflict (application_id) do update set\n                    platform_name = $2,\n                    platform_url = $3,\n                    platform_description = $4\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "65149d5d4ab183a7e62e7fb395f4dc36af7a39b1c5a2669d27f6d9493461c403"
+}

@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with last_id as (\n    select m.channel_id, max(mv.version_id) as last_version_id\n    from message m\n    join message_version mv on m.latest_version_id = mv.version_id\n    where m.deleted_at is null\n    group by m.channel_id\n)\nselect\n    channel.id,\n    channel.type as \"ty: DbChannelType\",\n    u.message_id as \"last_read_id?\",\n    coalesce(u.version_id < last_version_id, true) as \"is_unread!\",\n    coalesce(u.mention_count, 0) as \"mention_count!\"\nfrom channel\nleft join last_id on last_id.channel_id = channel.id\nleft join unread u on u.channel_id = channel.id and u.user_id = $2\nwhere channel.id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "ty: DbChannelType",
+        "type_info": {
+          "Custom": {
+            "name": "channel_type",
+            "kind": {
+              "Enum": [
+                "Text",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm",
+                "Gdm",
+                "Category",
+                "ThreadPublic",
+                "ThreadPrivate",
+                "Calendar",
+                "Broadcast",
+                "Announcement",
+                "Forum2",
+                "Info",
+                "ThreadForum2",
+                "Ticket",
+                "Document",
+                "DocumentComment",
+                "Wiki"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "last_read_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_unread!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "mention_count!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "1c196fe965272d141fe421567eff07abc0b5916b2c16750110cbad0abed8c33e"
+}

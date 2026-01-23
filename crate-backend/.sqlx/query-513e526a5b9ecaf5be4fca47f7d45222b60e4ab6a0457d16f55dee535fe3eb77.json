@@ -89,7 +89,16 @@
                       "VoiceVideo",
                       "CalendarEventManage",
                       "ViewAnalytics",
-                      "CalendarEventCreate"
+                      "CalendarEventCreate",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "MessageCreateThread",
+                      "VoiceBroadcast",
+                      "BypassSlowmode",
+                      "CalendarEventRsvp",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment"
                     ]
                   }
                 }
@@ -159,7 +168,16 @@
                       "VoiceVideo",
                       "CalendarEventManage",
                       "ViewAnalytics",
-                      "CalendarEventCreate"
+                      "CalendarEventCreate",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "MessageCreateThread",
+                      "VoiceBroadcast",
+                      "BypassSlowmode",
+                      "CalendarEventRsvp",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment"
                     ]
                   }
                 }

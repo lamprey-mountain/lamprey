@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6, welcome_channel_id = $7, afk_channel_id = $8, afk_channel_timeout = $9 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Bool",
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d32e73cb431fdc34f9821b45556f3fe30e3808136f61805e55aac6fff782c0a3"
+}
