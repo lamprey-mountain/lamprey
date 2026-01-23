@@ -208,16 +208,19 @@ impl MemberList {
     // fn remove_group(&mut self, group_id: MemberListGroupId) -> Vec<MemberListOp> {
 }
 
-// NOTE: user_id is remove, auth checks should be done in syncer
+// NOTE: user_id is removed, auth checks should be done in syncer
 impl MemberListSyncer {
+    /// subscribe to a new member list
     pub fn subscribe(&self, key1: MemberListKey1, ranges: Vec<(u64, u64)>) -> Result<()> {
         todo!()
     }
 
+    /// unsubscribe from a member list
     pub fn unsubscribe(&self, key1: MemberListKey1) -> Result<()> {
         todo!()
     }
 
+    /// poll for new events
     pub async fn poll(&mut self) -> Result<MessageSync> {
         todo!()
     }

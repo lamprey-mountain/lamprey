@@ -21,14 +21,14 @@ pub struct ServiceRooms {
 
 impl ServiceRooms {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self {
-            state,
-        }
+        Self { state }
     }
 
+    // TODO: make this not require writing room
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
-        let cached = self.state.services().cache.load_room(room_id).await?;
-        let mut room = cached.room.clone();
+        let srv = self.state.services();
+        let cached = srv.cache.load_room(room_id).await?;
+        let mut room = cached.inner.write().await;
 
         if let Some(user_id) = user_id {
             let user_config = self
@@ -41,14 +41,14 @@ impl ServiceRooms {
 
         let mut online_count = 0;
         for member in &cached.members {
-            if self.state.services().presence.get(*member.key()).status != Status::Offline {
+            if srv.presence.get(*member.key()).status != Status::Offline {
                 online_count += 1;
             }
         }
         room.online_count = online_count;
         room.member_count = cached.members.len() as u64;
 
-        Ok(room)
+        Ok(room.to_owned())
     }
 
     pub async fn invalidate(&self, room_id: RoomId) {

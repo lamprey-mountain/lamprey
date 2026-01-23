@@ -1,15 +1,29 @@
-//! permission calculations for cached rooms
+//! permission calculator
+
+use std::sync::Arc;
 
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, Permission, PermissionOverwriteType, RoomMember, UserId};
+use common::v1::types::{
+    Channel, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
+};
 use tracing::warn;
 
 use crate::{services::cache::CachedRoom, types::Permissions};
 
-impl CachedRoom {
+/// a permission calculator for a room
+// NOTE: the only reason why this exists is because accessing a RwLock requires async or blocking_read, which i don't want
+// i'd rather be able to implement this directly on CachedRoom, but this works well enough i guess
+pub struct PermissionsCalculator {
+    pub room_id: RoomId,
+    pub owner_id: Option<UserId>,
+    pub public: bool,
+    pub room: Arc<CachedRoom>,
+}
+
+impl PermissionsCalculator {
     /// query permissions for a room member, optionally in a specific channel
-    pub fn query_permissions(&self, user_id: UserId, channel: Option<&Channel>) -> Permissions {
-        let member_guard = self.members.get(&user_id);
+    pub fn query(&self, user_id: UserId, channel: Option<&Channel>) -> Permissions {
+        let member_guard = self.room.members.get(&user_id);
         let member = member_guard.as_deref();
 
         // calculate base perms
@@ -32,7 +46,7 @@ impl CachedRoom {
         member: Option<&RoomMember>,
     ) -> Permissions {
         // owners have full permissions
-        if self.room.owner_id == Some(user_id) {
+        if self.owner_id == Some(user_id) {
             let mut p = Permissions::empty();
             p.add(Permission::ViewChannel);
             p.add(Permission::Admin);
@@ -40,12 +54,12 @@ impl CachedRoom {
         }
 
         let Some(member) = member else {
-            if self.room.public {
+            if self.public {
                 // use public/default perms
-                let everyone_role_id = self.room.id.into_inner().into();
+                let everyone_role_id: RoleId = self.room_id.into_inner().into();
                 let mut perms = Permissions::empty();
 
-                if let Some(role) = self.roles.iter().find(|r| r.id == everyone_role_id) {
+                if let Some(role) = self.room.roles.iter().find(|r| r.id == everyone_role_id) {
                     for p in &role.allow {
                         perms.add(*p);
                     }
@@ -66,9 +80,9 @@ impl CachedRoom {
         let mut allowed = Vec::new();
         let mut denied = Vec::new();
 
-        let everyone_role_id = self.room.id.into_inner().into();
+        let everyone_role_id = self.room_id.into_inner().into();
 
-        for role in &self.roles {
+        for role in &self.room.roles {
             if role.id == everyone_role_id || member.roles.contains(&role.id) {
                 allowed.extend_from_slice(&role.allow);
                 denied.extend_from_slice(&role.deny);
@@ -106,7 +120,7 @@ impl CachedRoom {
         member: Option<&RoomMember>,
     ) {
         if let Some(parent_id) = channel.parent_id {
-            if let Some(parent) = self.channels.get(&parent_id) {
+            if let Some(parent) = self.room.channels.get(&parent_id) {
                 self.calculate_channel_permissions(perms, &parent, member);
             } else {
                 warn!(
@@ -149,7 +163,7 @@ impl CachedRoom {
 
         // 1. apply everyone allows
         for ow in &channel.permission_overwrites {
-            if ow.id != *self.room.id {
+            if ow.id != *self.room_id {
                 continue;
             }
             for p in &ow.allow {
@@ -159,7 +173,7 @@ impl CachedRoom {
 
         // 2. apply everyone denies
         for ow in &channel.permission_overwrites {
-            if ow.id != *self.room.id {
+            if ow.id != *self.room_id {
                 continue;
             }
             for p in &ow.deny {

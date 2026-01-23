@@ -2,17 +2,24 @@
 
 use std::sync::Arc;
 
-use common::v1::types::{
-    ids::SERVER_USER_ID, Channel, ChannelId, MessageSync, Role, RoleId, Room, RoomId, RoomMember,
-    ThreadMember, UserId,
-};
+use common::v1::types::{ids::SERVER_USER_ID, MessageSync, RoomId};
 use dashmap::DashMap;
 use moka::future::Cache;
+use tokio::sync::RwLock;
 use tracing::warn;
 
-use crate::{error::Result, types::PaginationQuery, ServerStateInner};
+use crate::{
+    error::Result,
+    services::cache::room::{CachedRoom, CachedThread},
+    types::PaginationQuery,
+    ServerStateInner,
+};
 
 mod permissions;
+mod room;
+mod user;
+
+use permissions::PermissionsCalculator;
 
 /// service for loading and storing data used by the server
 // NOTE: do i really want to be using dashmap everywhere?
@@ -26,46 +33,6 @@ pub struct ServiceCache {
     // - voice states?
     // - voice calls?
     // - session data?
-}
-
-pub struct CachedRoom {
-    /// the data of the room itself
-    pub room: Room,
-
-    /// every member in this room
-    pub members: DashMap<UserId, RoomMember>,
-
-    /// every non-thread channel in this room
-    pub channels: DashMap<ChannelId, Channel>,
-
-    /// all roles in the room
-    pub roles: Vec<Role>,
-
-    /// all active threads in the room
-    pub threads: DashMap<ChannelId, CachedThread>,
-}
-
-impl CachedRoom {
-    pub fn role_create(&mut self, role: Role) {
-        todo!()
-    }
-
-    pub fn role_update(&mut self, role: Role) {
-        todo!()
-    }
-
-    pub fn role_delete(&mut self, role_id: RoleId) {
-        todo!()
-    }
-}
-
-pub struct CachedThread {
-    /// the thread itself
-    pub thread: Channel,
-
-    /// thread members
-    pub members: DashMap<UserId, ThreadMember>,
-    // maybe include first, last message?
 }
 
 impl ServiceCache {
@@ -107,7 +74,7 @@ impl ServiceCache {
         }
 
         // 3. load roles
-        let roles = data
+        let roles_data = data
             .role_list(
                 room_id,
                 PaginationQuery {
@@ -117,6 +84,11 @@ impl ServiceCache {
             )
             .await?
             .items;
+
+        let roles = DashMap::new();
+        for role in roles_data {
+            roles.insert(role.id, role);
+        }
 
         // 4. load channels
         let user_id = room.owner_id.unwrap_or(SERVER_USER_ID);
@@ -175,7 +147,7 @@ impl ServiceCache {
         }
 
         let cached_room = CachedRoom {
-            room,
+            inner: RwLock::new(room),
             members,
             channels,
             roles,
@@ -195,11 +167,33 @@ impl ServiceCache {
         self.rooms.invalidate_all();
     }
 
-    pub fn handle_sync(&self, event: &MessageSync) {
+    /// get the permission calculator for this room, loading the room if it doesn't exist
+    pub async fn permissions(&self, room_id: RoomId) -> Result<PermissionsCalculator> {
+        let room = self.load_room(room_id).await?;
+        let inner = room.inner.read().await;
+        let owner_id = inner.owner_id;
+        let public = inner.public;
+        drop(inner);
+        Ok(PermissionsCalculator {
+            room_id,
+            owner_id,
+            public,
+            room,
+        })
+    }
+
+    /// update caches from a sync event
+    pub async fn handle_sync(&self, event: &MessageSync) {
         match event {
+            // TODO: handle other sync events
             MessageSync::RoleUpdate { role } => {
-                // somehow mutate CachedRoom to update this role if it exists?
-                warn!(room_id = ?role.room_id, role_id = ?role.id, "got RoleUpdate for role that does not exist");
+                let Some(room) = self.rooms.get(&role.room_id).await else {
+                    return;
+                };
+
+                if room.roles.insert(role.id, role.clone()).is_none() {
+                    warn!(room_id = ?role.room_id, role_id = ?role.id, "got RoleUpdate for role that does not exist");
+                }
             }
             _ => todo!(),
         }

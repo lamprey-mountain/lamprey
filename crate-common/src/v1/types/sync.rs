@@ -342,6 +342,7 @@ pub enum MessageSync {
 
     // TODO: allow batch upserting/removing
     ThreadMemberUpsert {
+        // TODO: add room_id: Option<RoomId>,
         member: ThreadMember,
         // thread_id: ChannelId,
         // added: Vec<ThreadMember>,
@@ -445,6 +446,7 @@ pub enum MessageSync {
     },
 
     CallDelete {
+        // TODO: add room_id: Option<RoomId>,
         channel_id: ChannelId,
     },
 
@@ -844,4 +846,16 @@ pub enum SyncCompression {
     /// Deflate compression
     #[serde(rename = "deflate")]
     Deflate,
+}
+
+impl MessageSync {
+    /// the id of the room this message was emitted in, if it is known
+    pub fn room_id(&self) -> Option<RoomId> {
+        todo!()
+    }
+
+    /// the id of the channel this message was emitted in, if it is known
+    pub fn channel_id(&self) -> Option<RoomId> {
+        todo!()
+    }
 }
