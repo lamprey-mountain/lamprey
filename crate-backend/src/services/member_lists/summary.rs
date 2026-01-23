@@ -1,7 +1,9 @@
+// TODO: remove
+// TODO: use these for permissions?
+
 //! minimal "summary" types
 //!
 //! these types contain the minimum amount of information required for the server to work, since lots of these will be retained in memory
-// TODO: also use these for permissions too?
 
 use std::sync::Arc;
 

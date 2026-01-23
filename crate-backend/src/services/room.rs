@@ -8,7 +8,6 @@ use common::v1::types::{
     Permission, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch,
     ThreadMemberPut, ThreadMembership, UserId,
 };
-use moka::future::Cache;
 
 use crate::error::Result;
 use crate::types::{
@@ -18,26 +17,18 @@ use crate::{Error, ServerStateInner};
 
 pub struct ServiceRooms {
     state: Arc<ServerStateInner>,
-    cache_room: Cache<RoomId, Room>,
 }
 
 impl ServiceRooms {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            cache_room: Cache::builder()
-                .max_capacity(100_000)
-                .support_invalidation_closures()
-                .build(),
         }
     }
 
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
-        let mut room = self
-            .cache_room
-            .try_get_with(room_id, self.state.data().room_get(room_id))
-            .await
-            .map_err(|err| err.fake_clone())?;
+        let cached = self.state.services().cache.load_room(room_id).await?;
+        let mut room = cached.room.clone();
 
         if let Some(user_id) = user_id {
             let user_config = self
@@ -48,25 +39,24 @@ impl ServiceRooms {
             room.user_config = Some(user_config);
         }
 
-        let members = self.state.data().room_member_list_all(room_id).await?;
-
         let mut online_count = 0;
-        for member in members {
-            if self.state.services().presence.get(member.user_id).status != Status::Offline {
+        for member in &cached.members {
+            if self.state.services().presence.get(*member.key()).status != Status::Offline {
                 online_count += 1;
             }
         }
         room.online_count = online_count;
+        room.member_count = cached.members.len() as u64;
 
         Ok(room)
     }
 
     pub async fn invalidate(&self, room_id: RoomId) {
-        self.cache_room.invalidate(&room_id).await;
+        self.state.services().cache.unload_room(room_id).await;
     }
 
     pub fn purge_cache(&self) {
-        self.cache_room.invalidate_all();
+        self.state.services().cache.unload_all();
     }
 
     pub async fn update(
@@ -102,7 +92,7 @@ impl ServiceRooms {
 
         data.room_update(room_id, patch).await?;
 
-        self.cache_room.invalidate(&room_id).await;
+        self.state.services().cache.unload_room(room_id).await;
         let end = self.get(room_id, Some(user_id)).await?;
 
         let changes = Changes::new()

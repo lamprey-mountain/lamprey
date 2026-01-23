@@ -33,7 +33,7 @@ pub mod embed;
 pub mod http;
 pub mod media;
 pub mod members;
-pub mod members2;
+pub mod member_lists;
 pub mod messages;
 pub mod notifications;
 pub mod oauth2;

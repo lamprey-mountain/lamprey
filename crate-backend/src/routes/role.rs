@@ -243,7 +243,7 @@ async fn role_update(
         role: end_role.clone(),
     };
     if end_role.allow != start_role.allow || end_role.deny != start_role.deny {
-        s.services().perms.invalidate_room_all(room_id);
+        s.services().perms.invalidate_room_all(room_id).await;
     }
     s.broadcast_room(room_id, auth.user.id, msg).await?;
     Ok(Json(end_role).into_response())
@@ -323,7 +323,7 @@ async fn role_delete(
         .await?;
 
         let msg = MessageSync::RoleDelete { room_id, role_id };
-        srv.perms.invalidate_room_all(room_id);
+        srv.perms.invalidate_room_all(room_id).await;
         s.broadcast_room(room_id, auth.user.id, msg).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
@@ -743,7 +743,7 @@ async fn role_reorder(
     })
     .await?;
 
-    s.services().perms.invalidate_room_all(room_id);
+    s.services().perms.invalidate_room_all(room_id).await;
     s.broadcast_room(
         room_id,
         auth.user.id,

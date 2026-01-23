@@ -239,7 +239,7 @@ async fn room_delete(
 
     data.room_delete(room_id).await?;
     srv.rooms.invalidate(room_id).await;
-    srv.perms.invalidate_room_all(room_id);
+    srv.perms.invalidate_room_all(room_id).await;
 
     let changes = Changes::new()
         .remove("name", &room.name)
@@ -300,7 +300,7 @@ async fn room_undelete(
 
     data.room_undelete(room_id).await?;
     srv.rooms.invalidate(room_id).await;
-    srv.perms.invalidate_room_all(room_id);
+    srv.perms.invalidate_room_all(room_id).await;
 
     let room = srv.rooms.get(room_id, None).await?;
     s.broadcast_room(room_id, auth.user.id, MessageSync::RoomCreate { room })
@@ -505,7 +505,7 @@ async fn room_quarantine(
     }
 
     data.room_quarantine(room_id).await?;
-    srv.perms.invalidate_room_all(room_id);
+    srv.perms.invalidate_room_all(room_id).await;
     srv.rooms.invalidate(room_id).await;
 
     let updated_room = srv.rooms.get(room_id, None).await?;
@@ -557,7 +557,7 @@ async fn room_unquarantine(
     }
 
     data.room_unquarantine(room_id).await?;
-    srv.perms.invalidate_room_all(room_id);
+    srv.perms.invalidate_room_all(room_id).await;
     srv.rooms.invalidate(room_id).await;
 
     let updated_room = srv.rooms.get(room_id, None).await?;

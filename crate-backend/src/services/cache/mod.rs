@@ -1,12 +1,14 @@
-//! Experimental unified cache
+//! Unified cache for data
 
 use std::sync::Arc;
 
 use common::v1::types::{
-    ids::SERVER_USER_ID, Channel, ChannelId, Role, Room, RoomId, RoomMember, ThreadMember, UserId,
+    ids::SERVER_USER_ID, Channel, ChannelId, MessageSync, Role, RoleId, Room, RoomId, RoomMember,
+    ThreadMember, UserId,
 };
 use dashmap::DashMap;
 use moka::future::Cache;
+use tracing::warn;
 
 use crate::{error::Result, types::PaginationQuery, ServerStateInner};
 
@@ -28,27 +30,41 @@ pub struct ServiceCache {
 
 pub struct CachedRoom {
     /// the data of the room itself
-    room: Room,
+    pub room: Room,
 
     /// every member in this room
-    members: DashMap<UserId, RoomMember>,
+    pub members: DashMap<UserId, RoomMember>,
 
     /// every non-thread channel in this room
-    channels: DashMap<ChannelId, Channel>,
+    pub channels: DashMap<ChannelId, Channel>,
 
     /// all roles in the room
-    roles: Vec<Role>,
+    pub roles: Vec<Role>,
 
     /// all active threads in the room
-    threads: DashMap<ChannelId, CachedThread>,
+    pub threads: DashMap<ChannelId, CachedThread>,
 }
 
-struct CachedThread {
+impl CachedRoom {
+    pub fn role_create(&mut self, role: Role) {
+        todo!()
+    }
+
+    pub fn role_update(&mut self, role: Role) {
+        todo!()
+    }
+
+    pub fn role_delete(&mut self, role_id: RoleId) {
+        todo!()
+    }
+}
+
+pub struct CachedThread {
     /// the thread itself
-    thread: Channel,
+    pub thread: Channel,
 
     /// thread members
-    members: DashMap<UserId, ThreadMember>,
+    pub members: DashMap<UserId, ThreadMember>,
     // maybe include first, last message?
 }
 
@@ -77,7 +93,7 @@ impl ServiceCache {
             .map_err(|e| e.fake_clone())
     }
 
-    pub async fn load_room_inner(&self, room_id: RoomId) -> Result<CachedRoom> {
+    async fn load_room_inner(&self, room_id: RoomId) -> Result<CachedRoom> {
         let data = self.state.data();
 
         // 1. load room
@@ -169,15 +185,23 @@ impl ServiceCache {
         Ok(cached_room)
     }
 
+    /// unload a single room
     pub async fn unload_room(&self, room_id: RoomId) {
         self.rooms.invalidate(&room_id).await;
     }
-}
 
-impl CachedRoom {
-    /// get the member list for a channel (or the room)
-    // move this to services/member_lists.rs?
-    pub fn member_list(&self, _channel_id: Option<ChannelId>) -> () {
-        todo!()
+    /// unload all rooms
+    pub fn unload_all(&self) {
+        self.rooms.invalidate_all();
+    }
+
+    pub fn handle_sync(&self, event: &MessageSync) {
+        match event {
+            MessageSync::RoleUpdate { role } => {
+                // somehow mutate CachedRoom to update this role if it exists?
+                warn!(room_id = ?role.room_id, role_id = ?role.id, "got RoleUpdate for role that does not exist");
+            }
+            _ => todo!(),
+        }
     }
 }

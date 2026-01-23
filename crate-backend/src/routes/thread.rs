@@ -283,7 +283,8 @@ async fn thread_member_delete(
 
     s.services()
         .perms
-        .invalidate_thread(target_user_id, thread_id);
+        .invalidate_thread(target_user_id, thread_id)
+        .await;
 
     if target_user_id != auth.user.id {
         let message_id = d
