@@ -49,7 +49,6 @@ async fn message_create(
     Path((channel_id,)): Path<(ChannelId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
@@ -63,7 +62,7 @@ async fn message_create(
 
     let message = srv
         .messages
-        .create(channel_id, auth.user.id, reason, nonce, json)
+        .create(channel_id, auth.user.id, nonce, json)
         .await?;
 
     Ok((StatusCode::CREATED, Json(message)))
@@ -174,7 +173,6 @@ async fn message_edit(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -194,7 +192,7 @@ async fn message_edit(
 
     let (_status, message) = srv
         .messages
-        .edit(channel_id, message_id, auth.user.id, reason, json)
+        .edit(channel_id, message_id, auth.user.id, json)
         .await?;
     Ok((StatusCode::OK, Json(message)))
 }

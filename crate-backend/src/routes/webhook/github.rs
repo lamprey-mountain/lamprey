@@ -224,7 +224,7 @@ pub async fn webhook_execute_github(
 
     let srv = s.services();
     srv.messages
-        .create(channel_id, author_id, None, None, message_create)
+        .create(channel_id, author_id, None, message_create)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)

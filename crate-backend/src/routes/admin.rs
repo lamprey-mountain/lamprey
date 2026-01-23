@@ -104,7 +104,7 @@ async fn admin_whisper(
     })?;
 
     srv.messages
-        .create(thread.id, SERVER_USER_ID, None, None, json.message)
+        .create(thread.id, SERVER_USER_ID, None, json.message)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -195,7 +195,7 @@ async fn admin_broadcast(
                 })?;
 
                 srv.messages
-                    .create(thread.id, SERVER_USER_ID, None, None, msg)
+                    .create(thread.id, SERVER_USER_ID, None, msg)
                     .await?;
 
                 Result::Ok(())

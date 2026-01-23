@@ -109,7 +109,6 @@ impl ServiceMessages {
         &self,
         thread_id: ChannelId,
         user_id: UserId,
-        _reason: Option<String>,
         nonce: Option<String>,
         json: MessageCreate,
     ) -> Result<Message> {
@@ -117,20 +116,19 @@ impl ServiceMessages {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create2(thread_id, user_id, _reason, nonce, json),
+                    self.create_inner(thread_id, user_id, nonce, json),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create2(thread_id, user_id, _reason, nonce, json).await
+            self.create_inner(thread_id, user_id, nonce, json).await
         }
     }
 
-    async fn create2(
+    async fn create_inner(
         &self,
         thread_id: ChannelId,
         user_id: UserId,
-        _reason: Option<String>,
         nonce: Option<String>,
         mut json: MessageCreate,
     ) -> Result<Message> {
@@ -588,7 +586,6 @@ impl ServiceMessages {
         thread_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
-        _reason: Option<String>,
         json: MessagePatch,
     ) -> Result<(StatusCode, Message)> {
         let s = &self.state;

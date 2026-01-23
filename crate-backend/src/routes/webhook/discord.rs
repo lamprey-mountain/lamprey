@@ -159,7 +159,6 @@ pub async fn webhook_execute_discord(
             webhook.channel_id,
             webhook_user_id,
             None,
-            None,
             message_create,
         )
         .await?;

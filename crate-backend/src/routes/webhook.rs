@@ -452,7 +452,7 @@ async fn webhook_execute(
 
     let message = srv
         .messages
-        .create(channel_id, author_id, None, None, json)
+        .create(channel_id, author_id, None, json)
         .await?;
 
     Ok((StatusCode::CREATED, Json(message)))
@@ -532,7 +532,7 @@ async fn webhook_message_edit(
     let (status, message) = s
         .services()
         .messages
-        .edit(channel_id, message_id, webhook_user_id, None, json)
+        .edit(channel_id, message_id, webhook_user_id, json)
         .await?;
 
     Ok((status, Json(message)))
