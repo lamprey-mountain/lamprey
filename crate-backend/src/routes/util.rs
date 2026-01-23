@@ -2,7 +2,10 @@ use std::{sync::Arc, time::Duration};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, AuditLogEntryStatus, MessageSync, RoomId, SessionToken, User, UserId, application::{Scope, Scopes}, util::Time
+    application::{Scope, Scopes},
+    util::Time,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, MessageSync, RoomId,
+    SessionToken, User, UserId,
 };
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 
@@ -318,7 +321,11 @@ impl Auth {
 }
 
 impl AuditLoggerTransaction<'_> {
-    pub async fn commit(self, _status: AuditLogEntryStatus, ty: AuditLogEntryType) -> Result<(), Error> {
+    pub async fn commit(
+        self,
+        _status: AuditLogEntryStatus,
+        ty: AuditLogEntryType,
+    ) -> Result<(), Error> {
         let entry = AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id: self.context_id,

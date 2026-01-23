@@ -148,7 +148,12 @@ impl ServicePermissions {
     }
 
     pub async fn invalidate_room(&self, user_id: UserId, room_id: RoomId) {
-        let _ = self.state.services().cache.reload_member(room_id, user_id).await;
+        let _ = self
+            .state
+            .services()
+            .cache
+            .reload_member(room_id, user_id)
+            .await;
         self.cache_perm_room.invalidate(&(user_id, room_id)).await;
         self.cache_perm_channel
             .invalidate_entries_if(move |(uid, rid, _), _| room_id == *rid && user_id == *uid)
@@ -172,7 +177,12 @@ impl ServicePermissions {
     pub async fn invalidate_thread(&self, user_id: UserId, thread_id: ChannelId) {
         if let Ok(c) = self.state.services().channels.get(thread_id, None).await {
             if let Some(rid) = c.room_id {
-                let _ = self.state.services().cache.reload_channel(rid, thread_id).await;
+                let _ = self
+                    .state
+                    .services()
+                    .cache
+                    .reload_channel(rid, thread_id)
+                    .await;
             }
         }
         self.cache_perm_channel
@@ -243,7 +253,12 @@ impl ServicePermissions {
 
         if let Ok(t) = self.state.services().channels.get(thread_id, None).await {
             if let Some(room_id) = t.room_id {
-                let _ = self.state.services().cache.reload_channel(room_id, thread_id).await;
+                let _ = self
+                    .state
+                    .services()
+                    .cache
+                    .reload_channel(room_id, thread_id)
+                    .await;
                 self.invalidate_room_all(room_id).await;
             }
         }

@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::document::serialized::Serdoc;
+use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
     ChannelId, DocumentBranchId, MessageSync, UserId,

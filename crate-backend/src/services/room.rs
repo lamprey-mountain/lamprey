@@ -66,12 +66,7 @@ impl ServiceRooms {
         self.state.services().cache.unload_all();
     }
 
-    pub async fn update(
-        &self,
-        room_id: RoomId,
-        auth: Auth,
-        patch: RoomPatch,
-    ) -> Result<Room> {
+    pub async fn update(&self, room_id: RoomId, auth: Auth, patch: RoomPatch) -> Result<Room> {
         let al = auth.audit_log(room_id);
         let data = self.state.data();
         let srv = self.state.services();
@@ -341,5 +336,4 @@ impl ServiceRooms {
     pub async fn merge(&self, rooms: &mut [Room], user_id: UserId) -> Result<()> {
         Ok(())
     }
-
 }
