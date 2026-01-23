@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
-use common::v1::types::{ids::SERVER_USER_ID, MessageSync, RoomId};
+use common::v1::types::{
+    ids::SERVER_USER_ID, ChannelId, MessageSync, RoleId, Room, RoomId, UserId,
+};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::sync::RwLock;
@@ -162,6 +164,113 @@ impl ServiceCache {
         self.rooms.invalidate(&room_id).await;
     }
 
+    /// update a room's metadata in the cache
+    pub async fn update_room(&self, room: Room) {
+        if let Some(cached) = self.rooms.get(&room.id).await {
+            let mut inner = cached.inner.write().await;
+            *inner = room;
+        }
+    }
+
+    /// reload a member from the database and update the cache
+    pub async fn reload_member(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            let member = self.state.data().room_member_get(room_id, user_id).await?;
+            cached.members.insert(user_id, member);
+        }
+        Ok(())
+    }
+
+    /// remove a member from the cache
+    pub async fn remove_member(&self, room_id: RoomId, user_id: UserId) {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            cached.members.remove(&user_id);
+        }
+    }
+
+    /// reload a role from the database and update the cache
+    pub async fn reload_role(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            let role = self.state.data().role_select(room_id, role_id).await?;
+            cached.roles.insert(role_id, role);
+        }
+        Ok(())
+    }
+
+    /// remove a role from the cache
+    pub async fn remove_role(&self, room_id: RoomId, role_id: RoleId) {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            cached.roles.remove(&role_id);
+        }
+    }
+
+    /// reload a channel from the database and update the cache
+    pub async fn reload_channel(&self, room_id: RoomId, channel_id: ChannelId) -> Result<()> {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            let channel = self.state.data().channel_get(channel_id).await?;
+            if channel.ty.is_thread() {
+                let thread_members_vec =
+                    self.state.data().thread_member_list_all(channel_id).await?;
+                let members_map = DashMap::new();
+                for member in thread_members_vec {
+                    members_map.insert(member.user_id, member);
+                }
+                cached.threads.insert(
+                    channel_id,
+                    CachedThread {
+                        thread: channel,
+                        members: members_map,
+                    },
+                );
+            } else {
+                cached.channels.insert(channel_id, channel);
+            }
+        }
+        Ok(())
+    }
+
+    /// remove a channel from the cache
+    pub async fn remove_channel(&self, room_id: RoomId, channel_id: ChannelId) {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            cached.channels.remove(&channel_id);
+            cached.threads.remove(&channel_id);
+        }
+    }
+
+    /// reload a thread member from the database and update the cache
+    pub async fn reload_thread_member(
+        &self,
+        room_id: RoomId,
+        thread_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<()> {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            if let Some(thread) = cached.threads.get(&thread_id) {
+                let member = self
+                    .state
+                    .data()
+                    .thread_member_get(thread_id, user_id)
+                    .await?;
+                thread.members.insert(user_id, member);
+            }
+        }
+        Ok(())
+    }
+
+    /// remove a thread member from the cache
+    pub async fn remove_thread_member(
+        &self,
+        room_id: RoomId,
+        thread_id: ChannelId,
+        user_id: UserId,
+    ) {
+        if let Some(cached) = self.rooms.get(&room_id).await {
+            if let Some(thread) = cached.threads.get(&thread_id) {
+                thread.members.remove(&user_id);
+            }
+        }
+    }
+
     /// unload all rooms
     pub fn unload_all(&self) {
         self.rooms.invalidate_all();
@@ -185,17 +294,95 @@ impl ServiceCache {
     /// update caches from a sync event
     pub async fn handle_sync(&self, event: &MessageSync) {
         match event {
-            // TODO: handle other sync events
-            MessageSync::RoleUpdate { role } => {
-                let Some(room) = self.rooms.get(&role.room_id).await else {
+            MessageSync::RoomUpdate { room } => {
+                self.update_room(room.clone()).await;
+            }
+            MessageSync::RoomDelete { room_id } => {
+                self.unload_room(*room_id).await;
+            }
+            MessageSync::ChannelCreate { channel } => {
+                let Some(room_id) = channel.room_id else {
                     return;
                 };
-
-                if room.roles.insert(role.id, role.clone()).is_none() {
-                    warn!(room_id = ?role.room_id, role_id = ?role.id, "got RoleUpdate for role that does not exist");
+                if let Some(cached) = self.rooms.get(&room_id).await {
+                    if channel.ty.is_thread() {
+                        cached.threads.insert(
+                            channel.id,
+                            CachedThread {
+                                thread: *channel.clone(),
+                                members: DashMap::new(),
+                            },
+                        );
+                    } else {
+                        cached.channels.insert(channel.id, *channel.clone());
+                    }
                 }
             }
-            _ => todo!(),
+            MessageSync::ChannelUpdate { channel } => {
+                let Some(room_id) = channel.room_id else {
+                    return;
+                };
+                if let Some(cached) = self.rooms.get(&room_id).await {
+                    if channel.ty.is_thread() {
+                        if channel.deleted_at.is_some() {
+                            cached.threads.remove(&channel.id);
+                        } else if let Some(mut thread) = cached.threads.get_mut(&channel.id) {
+                            thread.thread = *channel.clone();
+                        }
+                    } else if channel.deleted_at.is_some() {
+                        cached.channels.remove(&channel.id);
+                    } else {
+                        cached.channels.insert(channel.id, *channel.clone());
+                    }
+                }
+            }
+            MessageSync::RoleCreate { role } => {
+                if let Some(room) = self.rooms.get(&role.room_id).await {
+                    room.roles.insert(role.id, role.clone());
+                }
+            }
+            MessageSync::RoleUpdate { role } => {
+                if let Some(room) = self.rooms.get(&role.room_id).await {
+                    if room.roles.insert(role.id, role.clone()).is_none() {
+                        warn!(room_id = ?role.room_id, role_id = ?role.id, "got RoleUpdate for role that does not exist");
+                    }
+                }
+            }
+            MessageSync::RoleDelete { room_id, role_id } => {
+                self.remove_role(*room_id, *role_id).await;
+            }
+            MessageSync::RoleReorder { room_id, roles } => {
+                if let Some(room) = self.rooms.get(room_id).await {
+                    for item in roles {
+                        if let Some(mut role) = room.roles.get_mut(&item.role_id) {
+                            role.position = item.position;
+                        }
+                    }
+                }
+            }
+            MessageSync::RoomMemberCreate { member }
+            | MessageSync::RoomMemberUpdate { member }
+            | MessageSync::RoomMemberUpsert { member } => {
+                if let Some(room) = self.rooms.get(&member.room_id).await {
+                    room.members.insert(member.user_id, member.clone());
+                }
+            }
+            MessageSync::RoomMemberDelete { room_id, user_id } => {
+                self.remove_member(*room_id, *user_id).await;
+            }
+            MessageSync::ThreadMemberUpsert { member } => {
+                let srv = self.state.services();
+                if let Ok(chan) = srv.channels.get(member.thread_id, None).await {
+                    if let Some(room_id) = chan.room_id {
+                        if let Some(room) = self.rooms.get(&room_id).await {
+                            if let Some(thread) = room.threads.get(&member.thread_id) {
+                                thread.members.insert(member.user_id, member.clone());
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
     }
 }

@@ -55,6 +55,12 @@ impl ServiceRooms {
         self.state.services().cache.unload_room(room_id).await;
     }
 
+    pub async fn reload(&self, room_id: RoomId) -> Result<()> {
+        let room = self.state.data().room_get(room_id).await?;
+        self.state.services().cache.update_room(room).await;
+        Ok(())
+    }
+
     pub fn purge_cache(&self) {
         self.state.services().cache.unload_all();
     }
@@ -92,7 +98,8 @@ impl ServiceRooms {
 
         data.room_update(room_id, patch).await?;
 
-        self.state.services().cache.unload_room(room_id).await;
+        let updated_room = data.room_get(room_id).await?;
+        self.state.services().cache.update_room(updated_room).await;
         let end = self.get(room_id, Some(user_id)).await?;
 
         let changes = Changes::new()

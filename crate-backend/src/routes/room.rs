@@ -299,7 +299,7 @@ async fn room_undelete(
     perms.ensure(Permission::Admin)?;
 
     data.room_undelete(room_id).await?;
-    srv.rooms.invalidate(room_id).await;
+    srv.rooms.reload(room_id).await?;
     srv.perms.invalidate_room_all(room_id).await;
 
     let room = srv.rooms.get(room_id, None).await?;
@@ -428,7 +428,7 @@ async fn room_transfer_ownership(
     data.room_set_owner(room_id, target_user_id).await?;
     srv.perms.invalidate_room(auth.user.id, room_id).await;
     srv.perms.invalidate_room(target_user_id, room_id).await;
-    srv.rooms.invalidate(room_id).await;
+    srv.rooms.reload(room_id).await?;
     let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
     let msg = MessageSync::RoomUpdate { room: room.clone() };
     s.broadcast_room(room_id, auth.user.id, msg).await?;
@@ -506,7 +506,7 @@ async fn room_quarantine(
 
     data.room_quarantine(room_id).await?;
     srv.perms.invalidate_room_all(room_id).await;
-    srv.rooms.invalidate(room_id).await;
+    srv.rooms.reload(room_id).await?;
 
     let updated_room = srv.rooms.get(room_id, None).await?;
     let msg = MessageSync::RoomUpdate {
@@ -558,7 +558,7 @@ async fn room_unquarantine(
 
     data.room_unquarantine(room_id).await?;
     srv.perms.invalidate_room_all(room_id).await;
-    srv.rooms.invalidate(room_id).await;
+    srv.rooms.reload(room_id).await?;
 
     let updated_room = srv.rooms.get(room_id, None).await?;
     let msg = MessageSync::RoomUpdate {
@@ -626,7 +626,7 @@ async fn room_security_set(
     data.room_security_update(room_id, json.require_mfa, json.require_sudo)
         .await?;
 
-    srv.rooms.invalidate(room_id).await;
+    srv.rooms.reload(room_id).await?;
     let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
 
     let changes = Changes::new()
