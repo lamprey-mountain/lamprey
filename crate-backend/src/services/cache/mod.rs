@@ -142,7 +142,7 @@ impl ServiceCache {
             threads.insert(
                 thread.id,
                 CachedThread {
-                    thread,
+                    thread: RwLock::new(thread),
                     members: members_map,
                 },
             );
@@ -218,7 +218,7 @@ impl ServiceCache {
                 cached.threads.insert(
                     channel_id,
                     CachedThread {
-                        thread: channel,
+                        thread: RwLock::new(channel),
                         members: members_map,
                     },
                 );
@@ -309,7 +309,7 @@ impl ServiceCache {
                         cached.threads.insert(
                             channel.id,
                             CachedThread {
-                                thread: *channel.clone(),
+                                thread: RwLock::new(*channel.to_owned()),
                                 members: DashMap::new(),
                             },
                         );
@@ -326,8 +326,9 @@ impl ServiceCache {
                     if channel.ty.is_thread() {
                         if channel.deleted_at.is_some() {
                             cached.threads.remove(&channel.id);
-                        } else if let Some(mut thread) = cached.threads.get_mut(&channel.id) {
-                            thread.thread = *channel.clone();
+                        } else if let Some(thread) = cached.threads.get(&channel.id) {
+                            let mut t = thread.thread.write().await;
+                            *t = *channel.to_owned();
                         }
                     } else if channel.deleted_at.is_some() {
                         cached.channels.remove(&channel.id);

@@ -180,10 +180,12 @@ async fn room_edit(
         }
     }
 
+    let user_id = auth.user.id;
+
     let room = s
         .services()
         .rooms
-        .update(room_id, auth.user.id, json.clone(), reason.clone())
+        .update(room_id, auth, json.clone(), reason.clone())
         .await?;
 
     if let Some(maybe_media_id) = json.icon {
@@ -201,7 +203,7 @@ async fn room_edit(
     }
 
     let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(room_id, auth.user.id, msg).await?;
+    s.broadcast_room(room_id, user_id, msg).await?;
     Ok(Json(room))
 }
 

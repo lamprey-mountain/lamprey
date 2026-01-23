@@ -174,6 +174,7 @@ pub enum Permission {
     VoiceDeafen,
 
     /// disconnect members from voice threads
+    // TODO: maybe merge with VoiceMove?
     VoiceDisconnect,
 
     /// move members between voice threads

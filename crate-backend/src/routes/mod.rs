@@ -40,11 +40,11 @@ mod thread;
 mod user;
 mod user_config;
 mod user_email;
-mod util;
 mod voice;
 mod webhook;
 
 pub mod metrics;
+pub mod util;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()

@@ -9,14 +9,15 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
-    util::Time, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, ChannelId,
+    util::Time, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, Channel, ChannelId,
     ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId, MessageVerId,
-    PermissionOverwriteType, RoleId, RoomId, SessionId, UserId, WebhookId,
+    PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, User, UserId, WebhookId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
 // eg. multiple FooUpdates from the same user
 // or add bulk kick/ban audit log events and merge everything there
+// FIXME: bridge events should be logged as the bridge, not puppet
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -25,6 +26,7 @@ pub struct AuditLogEntry {
     pub id: AuditLogEntryId,
 
     /// Room this happened in. Is user_id for user audit logs.
+    // TODO: rename to context_id?
     pub room_id: RoomId,
 
     /// User who caused this entry to be created
@@ -39,6 +41,29 @@ pub struct AuditLogEntry {
 
     #[serde(flatten)]
     pub ty: AuditLogEntryType,
+    // TODO: add more fields
+    // /// the status of the request
+    // pub status: AuditLogStatus,
+
+    // /// when the request started
+    // pub started_at: Time,
+
+    // /// when the request ended
+    // pub ended_at: Time,
+
+    // // TODO: use actual ip addr type here
+    // /// the ip address that this request came from
+    // ///
+    // /// will be None if you do not have permission to see sensitive request metadata or if it is not known
+    // pub ip_addr: Option<String>,
+
+    // /// the user agent that this request came from
+    // ///
+    // /// will be None if you do not have permission to see sensitive request metadata or if it is not known
+    // pub user_agent: Option<String>,
+
+    // /// if this was done via an oauth app
+    // pub application_id: Option<UserId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -541,4 +566,101 @@ pub struct AuditLogFilter {
     /// only return audit log entries with these types
     #[serde(default, rename = "type")]
     pub ty: Vec<String>,
+
+    // TODO: implement
+    /// only return audit log entries with these statuses
+    ///
+    /// defaults to only `Success`
+    #[serde(default)]
+    pub status: Vec<AuditLogEntryStatus>,
+    // TODO: filter by audit log channel_id
+}
+
+/// the status of an audit log event
+// TODO: create db type, index on this
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum AuditLogEntryStatus {
+    /// the operation was successful
+    Success,
+
+    /// the operation was blocked at the user did not have permission
+    Unauthorized,
+
+    /// the operation failed to succeed
+    Failed,
+}
+
+// TODO: use this instead of PaginationResponse<AuditLogEntry>
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AuditLogPaginationResponse {
+    /// the audit log entries themselves
+    pub audit_log_entries: Vec<AuditLogEntry>,
+
+    /// threads referenced in the audit log entries
+    pub threads: Vec<Channel>,
+
+    /// users referenced in the audit log entries
+    ///
+    /// this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
+    pub users: Vec<User>,
+
+    /// room members referenced in the audit log entries
+    ///
+    /// this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
+    pub room_members: Vec<RoomMember>,
+
+    // TODO: include webhooks, calendar events, calendar overwrites, automod rules, integrations
+    /// whether there are more audit log events that can be fetched
+    pub has_more: bool,
+
+    /// pagination cursor
+    pub cursor: Option<String>,
+}
+
+// impl AuditLogEntry {
+//     #[inline]
+//     pub fn strip_request_metadata(&mut self) {
+//         self.ip_addr = None;
+//         self.user_agent = None;
+//     }
+
+//     #[inline]
+//     pub fn strip_session(&mut self) {
+//         self.session = None;
+//     }
+// }
+
+impl AuditLogEntryType {
+    /// if this is a room event
+    ///
+    /// for example: RoomUpdate, Role events, Channel events, etc
+    pub fn is_room(&self) -> bool {
+        todo!()
+    }
+
+    /// if this is a server event
+    ///
+    /// for example: Admin events, etc
+    ///
+    /// does not include room events for the server room
+    pub fn is_server(&self) -> bool {
+        todo!()
+    }
+
+    /// if this is a user event
+    ///
+    /// for example: UserUpdate, Session events, etc
+    pub fn is_user(&self) -> bool {
+        todo!()
+    }
+
+    /// if this is a application event
+    ///
+    /// for example: ApplicationUpdate, Emoji events, etc
+    pub fn is_application(&self) -> bool {
+        todo!()
+    }
 }

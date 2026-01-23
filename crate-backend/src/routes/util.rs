@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 use common::v1::types::{
-    application::Scope, application::Scopes, util::Time, SessionToken, User, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, AuditLogEntryStatus, MessageSync, RoomId, SessionToken, User, UserId, application::{Scope, Scopes}, util::Time
 };
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 
@@ -25,6 +25,14 @@ pub struct Auth {
 
     /// the oauth scopes this session has
     pub scopes: Scopes,
+
+    /// the audit log reason for this request
+    ///
+    /// extracted from HeaderReason
+    reason: Option<String>,
+
+    /// a reference to the server state
+    s: Arc<ServerState>,
 }
 
 impl Auth {
@@ -162,6 +170,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
             .headers
             .typed_get()
             .ok_or_else(|| Error::MissingAuth)?;
+        let reason = HeaderReason::from_request_parts(parts, s).await?;
         let srv = s.services();
         let session = srv
             .sessions
@@ -282,6 +291,55 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
             },
             session,
             scopes,
+            reason: reason.0,
+            s: s.clone(),
         })
+    }
+}
+
+/// an in-progress audit log
+pub struct AuditLoggerTransaction<'a> {
+    context_id: RoomId,
+    auth: &'a Auth,
+    reason: Option<&'a str>,
+}
+
+impl Auth {
+    /// begin an audit log transaction
+    // TODO: automatically save failed audit logs
+    #[must_use = "must call commit() to save a successful audit log entry"]
+    pub fn audit_log(&self, context_id: RoomId) -> AuditLoggerTransaction<'_> {
+        AuditLoggerTransaction {
+            context_id,
+            auth: self,
+            reason: self.reason.as_deref(),
+        }
+    }
+}
+
+impl AuditLoggerTransaction<'_> {
+    pub async fn commit(self, _status: AuditLogEntryStatus, ty: AuditLogEntryType) -> Result<(), Error> {
+        let entry = AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: self.context_id,
+            ty,
+            user_id: self.auth.user.id,
+            session_id: Some(self.auth.session.id),
+            reason: self.reason.map(|s| s.to_string()),
+        };
+        self.auth
+            .s
+            .data()
+            .audit_logs_room_append(entry.clone())
+            .await?;
+        self.auth
+            .s
+            .broadcast_room(
+                entry.room_id,
+                entry.user_id,
+                MessageSync::AuditLogEntryCreate { entry },
+            )
+            .await?;
+        Ok(())
     }
 }

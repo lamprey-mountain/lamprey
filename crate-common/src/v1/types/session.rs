@@ -51,6 +51,24 @@ pub struct Session {
 
     /// the last time this session was used
     pub last_seen_at: Time,
+
+    // /// when this session was logged in
+    // pub authorized_at: Time,
+
+    // /// when this session was logged out
+    // pub deauthorized_at: Option<Time>,
+}
+
+/// minimal session persisted for audit log
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SessionSummary {
+    pub id: SessionId,
+    pub name: Option<String>,
+    pub app_id: Option<ApplicationId>,
+    pub last_seen_at: Option<Time>,
+    pub authorized_at: Time,
+    pub deauthorized_at: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

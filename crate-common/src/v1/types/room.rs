@@ -78,9 +78,13 @@ pub struct Room {
     /// whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user.
     pub quarantined: bool,
     pub user_config: Option<UserConfigRoom>,
+
+    /// security configuration for this room
     pub security: RoomSecurity,
+
     /// automatically move afk people to this channel
     pub afk_channel_id: Option<ChannelId>,
+
     /// how long to wait before moving idle people to the afk channel, in milliseconds
     pub afk_channel_timeout: u64,
 }

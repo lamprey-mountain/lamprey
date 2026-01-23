@@ -23,9 +23,19 @@ pub struct CachedRoom {
 
 pub struct CachedThread {
     /// the thread itself
-    pub thread: Channel,
+    pub thread: RwLock<Channel>,
 
     /// thread members
     pub members: DashMap<UserId, ThreadMember>,
     // maybe include first, last message?
+}
+
+impl CachedRoom {
+    /// update this room's metadata
+    pub async fn room_update(&self, room: Room) {
+        let mut inner = self.inner.write().await;
+        *inner = room;
+    }
+
+    // TODO: move more cache updating stuff here (eg. channel_create, channel_update, channel_delete, role_create, role_update, role_delete)
 }

@@ -4,12 +4,13 @@ use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelType, MessageSync, MessageType,
-    Permission, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch,
-    ThreadMemberPut, ThreadMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, ChannelType,
+    MessageSync, MessageType, Permission, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin,
+    RoomMemberPut, RoomPatch, ThreadMemberPut, ThreadMembership, UserId,
 };
 
 use crate::error::Result;
+use crate::routes::util::Auth;
 use crate::types::{
     DbChannelCreate, DbChannelType, DbMessageCreate, DbRoleCreate, DbRoomCreate, MediaLinkType,
 };
@@ -68,12 +69,14 @@ impl ServiceRooms {
     pub async fn update(
         &self,
         room_id: RoomId,
-        user_id: UserId,
+        auth: Auth,
         patch: RoomPatch,
         reason: Option<String>,
     ) -> Result<Room> {
+        let al = auth.audit_log(room_id);
         let data = self.state.data();
         let srv = self.state.services();
+        let user_id = auth.user.id;
         let start = data.room_get(room_id).await?;
         if !patch.changes(&start) {
             return Ok(start);
@@ -120,16 +123,11 @@ impl ServiceRooms {
             )
             .build();
 
-        self.state
-            .audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id,
-                session_id: None, // TODO: get session id
-                reason,
-                ty: AuditLogEntryType::RoomUpdate { changes },
-            })
-            .await?;
+        al.commit(
+            AuditLogEntryStatus::Success,
+            AuditLogEntryType::RoomUpdate { changes },
+        )
+        .await?;
 
         Ok(end)
     }
