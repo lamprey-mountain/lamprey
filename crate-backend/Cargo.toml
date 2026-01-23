@@ -71,6 +71,7 @@ totp-rs = "5.7.0"
 base32 = "0.5.1"
 yrs = { version = "0.25.0", features = ["sync"] }
 decancer = "3.3.3"
+tokio-stream = { version = "0.1.18", features = ["sync"] }
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }

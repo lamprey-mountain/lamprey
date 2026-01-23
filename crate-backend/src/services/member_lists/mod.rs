@@ -1,3 +1,7 @@
+// NOTE: this is a rewrite of the original members service
+// this implementation will make use of ServiceCache, the new data caching service
+// the intention is to eventually migrate list management here
+
 //! Experimental rewrite for member management
 //!
 //! Service for managing member lists
@@ -30,68 +34,43 @@
 
 #![allow(unused)] // TEMP: suppress warnings here for now
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, VecDeque},
+    sync::Arc,
+};
 
 use common::v1::types::{ChannelId, MemberListOp, MessageSync, RoleId, RoomId, UserId};
 use dashmap::DashMap;
 use tokio::{
-    sync::{mpsc::Receiver, oneshot},
+    sync::{
+        broadcast,
+        mpsc::{self, Receiver},
+        oneshot,
+    },
     task::JoinHandle,
 };
+use tokio_stream::StreamMap;
 use uuid::Uuid;
 
 use crate::{
-    services::member_lists::util::{MemberKey, MemberListGroupData, MemberListKey, MemberListKey1},
+    services::member_lists::{
+        actor::{MemberList, MemberListHandle},
+        syncer::MemberListSyncer,
+        util::{MemberKey, MemberListGroupData, MemberListKey, MemberListKey1},
+    },
     Result, ServerStateInner,
 };
 
+mod actor;
+mod syncer;
 mod util;
 mod visibility;
-// mod syncer; // TODO: move MemberListSyncer here
-// mod actor; // TODO: move MemberList here
 
 use visibility::MemberListVisibility;
 
 pub struct ServiceMemberLists {
     s: Arc<ServerStateInner>,
     lists: DashMap<MemberListKey, Arc<MemberListHandle>>,
-}
-
-/// member list actor
-struct MemberList {
-    s: Arc<ServerStateInner>,
-    groups: Vec<MemberListGroupData>,
-
-    key: MemberListKey,
-
-    // NOTE: do i need a reverse index? keeping this up to date seems like it could be a pain
-    user_index: DashMap<UserId, (usize, usize)>,
-
-    // still unsure about this
-    ordered: BTreeMap<MemberKey, UserId>,
-}
-
-/// a handle to a member list actor
-struct MemberListHandle {
-    commands: tokio::sync::mpsc::Sender<MemberListCommand>,
-    // events: tokio::sync::mpsc::Receiver<ActorEvent>,
-    join_handle: JoinHandle<Result<()>>,
-}
-
-enum MemberListCommand {
-    GetInitialRanges {
-        ranges: Vec<(u64, u64)>,
-        callback: oneshot::Sender<MessageSync>,
-    },
-}
-
-pub struct MemberListSyncer {
-    s: Arc<ServerStateInner>,
-    // query_tx: tokio::sync::watch::Sender<Option<MemberListQuery>>,
-    // query_rx: tokio::sync::watch::Receiver<Option<MemberListQuery>>,
-    // // current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
-    // conn_id: Uuid,
-    // outbox: VecDeque<MessageSync>,
 }
 
 impl ServiceMemberLists {
@@ -107,7 +86,7 @@ impl ServiceMemberLists {
         todo!()
     }
 
-    // remove?
+    // TODO: remove? unsure what i'd use this for
     pub fn handle_event(&self, msg: &MessageSync) {
         todo!()
         // match msg {
@@ -145,13 +124,15 @@ impl ServiceMemberLists {
             // query_tx,
             // query_rx,
             // current_rx: None,
-            // conn_id,
-            // outbox: VecDeque::new(),
+            conn_id,
+            outbox: VecDeque::new(),
+            streams: StreamMap::new(),
         }
     }
 
-    async fn ensure(&self, key1: MemberListKey1) -> Result<Arc<MemberListHandle>> {
-        let key = self.lookup_member_key(key1).await?;
+    async fn ensure(&self, key: MemberListKey) -> Result<Arc<MemberListHandle>> {
+        let (commands_send, commands_recv) = mpsc::channel(100);
+        let (events_send, events_recv) = broadcast::channel(100);
         let list = MemberList {
             s: self.s.clone(),
             groups: vec![],
@@ -159,69 +140,13 @@ impl ServiceMemberLists {
             user_index: todo!(),
             ordered: todo!(),
         };
-        let (commands_send, commands_recv) = tokio::sync::mpsc::channel(100);
         let join_handle = tokio::spawn(list.spawn(commands_recv));
         let handle = Arc::new(MemberListHandle {
             commands: commands_send,
+            events: events_recv,
             join_handle,
         });
         self.lists.insert(key, Arc::clone(&handle));
         Ok(handle)
-    }
-}
-
-impl MemberList {
-    /// whether this list should be restricted to thread members instead of using room member permission logic
-    pub fn use_thread_members(&self) -> bool {
-        match self.key {
-            MemberListKey::Room(..) => false,
-            MemberListKey::RoomChannel(..) => false,
-            MemberListKey::RoomThread(..) => true,
-            MemberListKey::Dm(..) => true,
-        }
-    }
-}
-
-impl MemberList {
-    async fn spawn(self, commands_recv: Receiver<MemberListCommand>) -> Result<()> {
-        todo!();
-        Ok(())
-    }
-
-    fn process_event(&mut self, event: &MessageSync) -> Vec<MemberListOp> {
-        todo!()
-    }
-
-    /// recalculate groups from scratch
-    fn rebuild_groups(&mut self) -> Vec<MemberListOp> {
-        todo!()
-    }
-
-    // pub fn get_initial_ranges(&self, ranges: &[(u64, u64)]) -> Vec<MemberListOp> {
-    // pub fn groups(&self) -> Vec<MemberListGroup> {
-    // fn remove_user(&mut self, user_id: UserId) -> Vec<MemberListOp> {
-    // fn find_user(&self, user_id: UserId) -> Option<(usize, usize)> {
-    // fn find_group(&self, group_id: MemberListGroupId) -> Option<usize> {
-    // fn get_member_group_id(&self, user_id: UserId, is_online: bool) -> MemberListGroupId {
-    // fn recalculate_user(&mut self, user_id: UserId) -> Vec<MemberListOp> {
-    // fn insert_group(&mut self, group_id: MemberListGroupId) -> usize {
-    // fn remove_group(&mut self, group_id: MemberListGroupId) -> Vec<MemberListOp> {
-}
-
-// NOTE: user_id is removed, auth checks should be done in syncer
-impl MemberListSyncer {
-    /// subscribe to a new member list
-    pub fn subscribe(&self, key1: MemberListKey1, ranges: Vec<(u64, u64)>) -> Result<()> {
-        todo!()
-    }
-
-    /// unsubscribe from a member list
-    pub fn unsubscribe(&self, key1: MemberListKey1) -> Result<()> {
-        todo!()
-    }
-
-    /// poll for new events
-    pub async fn poll(&mut self) -> Result<MessageSync> {
-        todo!()
     }
 }
