@@ -15,10 +15,10 @@ use users::ServiceUsers;
 
 use crate::{
     services::{
-        admin::ServiceAdmin, automod::ServiceAutomod, documents::ServiceDocuments,
-        http::ServiceHttp, members::ServiceMembers, notifications::ServiceNotifications,
-        presence::ServicePresence, search::ServiceSearch, unread::ServiceUnread,
-        voice::ServiceVoice,
+        admin::ServiceAdmin, automod::ServiceAutomod, calendar::ServiceCalendar,
+        documents::ServiceDocuments, http::ServiceHttp, members::ServiceMembers,
+        notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
+        unread::ServiceUnread, voice::ServiceVoice,
     },
     ServerStateInner,
 };
@@ -26,6 +26,7 @@ use crate::{
 pub mod admin;
 pub mod automod;
 pub mod cache;
+pub mod calendar;
 pub mod channel;
 pub mod documents;
 pub mod email;
@@ -51,6 +52,7 @@ pub struct Services {
     pub admin: ServiceAdmin,
     pub automod: ServiceAutomod,
     pub cache: ServiceCache,
+    pub calendar: ServiceCalendar,
     pub channels: ServiceThreads,
     pub documents: ServiceDocuments,
     pub email: ServiceEmail,
@@ -79,6 +81,7 @@ impl Services {
             admin: ServiceAdmin::new(state.clone()),
             automod: ServiceAutomod::new(state.clone()),
             cache: ServiceCache::new(state.clone()),
+            calendar: ServiceCalendar::new(state.clone()),
             channels: ServiceThreads::new(state.clone()),
             documents: ServiceDocuments::new(state.clone()),
             email: ServiceEmail::new(state.clone()),

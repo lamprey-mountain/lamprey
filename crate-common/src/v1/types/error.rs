@@ -121,6 +121,8 @@ pub struct ErrorField {
     pub key: Vec<String>,
 
     /// human readable error message
+    // TODO: remove this, generate from `ty`.
+    // re-add { message: String } to ErrorFieldType::Other
     pub message: String,
 
     #[serde(flatten)]
@@ -149,7 +151,7 @@ pub enum ErrorFieldType {
     Type { got: String, expected: String },
 
     /// some other validation error
-    Other { message: String },
+    Other,
 }
 
 #[derive(Debug, Clone)]

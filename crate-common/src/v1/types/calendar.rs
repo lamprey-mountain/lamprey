@@ -10,8 +10,11 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    misc::Color, pagination::PaginationDirection, util::some_option, CalendarEventId, ChannelId,
-    RoomMember, User, UserId,
+    error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
+    misc::Color,
+    pagination::PaginationDirection,
+    util::some_option,
+    CalendarEventId, ChannelId, RoomMember, User, UserId,
 };
 
 use super::util::{Diff, Time};
@@ -83,6 +86,52 @@ pub struct CalendarEventCreate {
     pub ends_at: Option<Time>,
 }
 
+impl CalendarEventCreate {
+    pub fn validate(&self) -> Result<(), ApiError> {
+        let mut fields = vec![];
+
+        if let Some(ends_at) = self.ends_at {
+            if ends_at <= self.starts_at {
+                fields.push(ErrorField {
+                    key: vec!["ends_at".to_owned()],
+                    message: "ends_at must be after starts_at".to_owned(),
+                    ty: ErrorFieldType::Other,
+                });
+            }
+        }
+
+        if let Some(recurrence) = &self.recurrence {
+            if let Err(rec_errors) = recurrence.validate() {
+                fields.extend(rec_errors);
+            }
+
+            if let RecurrenceRange::Until { time } = recurrence.range {
+                let end_time = self.ends_at.unwrap_or(self.starts_at);
+                if time <= end_time {
+                    fields.push(ErrorField {
+                        key: vec![
+                            "recurrence".to_owned(),
+                            "range".to_owned(),
+                            "until".to_owned(),
+                        ],
+                        message: "Recurrence until time must be after the event end time"
+                            .to_owned(),
+                        ty: ErrorFieldType::Other,
+                    });
+                }
+            }
+        }
+
+        if fields.is_empty() {
+            Ok(())
+        } else {
+            let mut err = ApiError::from_code(ErrorCode::InvalidData);
+            err.fields = fields;
+            Err(err)
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -114,6 +163,32 @@ pub struct CalendarEventPatch {
     //
     // how will ceruccence work with event overwrites?
     // pub recurrence: Option<Option<Recurrence>>,
+}
+
+impl CalendarEventPatch {
+    pub fn validate(&self) -> Result<(), ApiError> {
+        let mut fields = vec![];
+
+        if let Some(starts_at) = self.starts_at {
+            if let Some(ends_at) = self.ends_at.flatten() {
+                if ends_at <= starts_at {
+                    fields.push(ErrorField {
+                        key: vec!["ends_at".to_owned()],
+                        message: "ends_at must be after starts_at".to_string(),
+                        ty: ErrorFieldType::Other,
+                    });
+                }
+            }
+        }
+
+        if fields.is_empty() {
+            Ok(())
+        } else {
+            let mut err = ApiError::from_code(ErrorCode::InvalidData);
+            err.fields = fields;
+            Err(err)
+        }
+    }
 }
 
 /// an overwrite to a calendar event instance
@@ -261,10 +336,17 @@ impl Recurrence {
     /// validate this rule (eg. if the constraints are valid)
     ///
     /// on error, returns a list of error messages
-    pub fn validate(&self) -> Result<(), Vec<String>> {
+    pub fn validate(&self) -> Result<(), Vec<ErrorField>> {
         let mut errors = vec![];
         if self.interval == 0 {
-            errors.push("Interval must be at least 1".to_string());
+            errors.push(ErrorField {
+                key: vec!["interval".to_owned()],
+                message: "Interval must be at least 1".to_owned(),
+                ty: ErrorFieldType::Range {
+                    min: Some(1),
+                    max: None,
+                },
+            });
         }
 
         // by_weekday only valid for Weekly and Monthly
@@ -273,8 +355,11 @@ impl Recurrence {
                 self.frequency,
                 RecurrenceFrequency::Weekly | RecurrenceFrequency::Monthly
             ) {
-                errors
-                    .push("by_weekday is only valid for Weekly and Monthly frequency".to_string());
+                errors.push(ErrorField {
+                    key: vec!["by_weekday".to_owned()],
+                    message: "by_weekday is only valid for Weekly and Monthly frequency".to_owned(),
+                    ty: ErrorFieldType::Other,
+                });
             }
         }
 
@@ -284,18 +369,28 @@ impl Recurrence {
                 self.frequency,
                 RecurrenceFrequency::Monthly | RecurrenceFrequency::Yearly
             ) {
-                errors.push(
-                    "by_month_day is only valid for Monthly and Yearly frequency".to_string(),
-                );
+                errors.push(ErrorField {
+                    key: vec!["by_month_day".to_owned()],
+                    message: "by_month_day is only valid for Monthly and Yearly frequency"
+                        .to_owned(),
+                    ty: ErrorFieldType::Other,
+                });
             }
 
             // range 1..=31
             for day in &self.by_month_day {
                 if *day < 1 || *day > 31 {
-                    errors.push(format!(
-                        "by_month_day values must be between 1 and 31, found {}",
-                        day
-                    ));
+                    errors.push(ErrorField {
+                        key: vec!["by_month_day".to_owned()],
+                        message: format!(
+                            "by_month_day values must be between 1 and 31, found {}",
+                            day
+                        ),
+                        ty: ErrorFieldType::Range {
+                            min: Some(1),
+                            max: Some(31),
+                        },
+                    });
                 }
             }
         }
@@ -303,13 +398,24 @@ impl Recurrence {
         // by_weekday no duplicates
         let unique_weekdays: HashSet<_> = self.by_weekday.iter().collect();
         if unique_weekdays.len() != self.by_weekday.len() {
-            errors.push("by_weekday must not contain duplicates".to_string());
+            errors.push(ErrorField {
+                key: vec!["by_weekday".to_owned()],
+                message: "by_weekday must not contain duplicates".to_owned(),
+                ty: ErrorFieldType::Other,
+            });
         }
 
         // Count >= 1
         if let RecurrenceRange::Count { count } = self.range {
             if count < 1 {
-                errors.push("Recurrence count must be at least 1".to_string());
+                errors.push(ErrorField {
+                    key: vec!["range".to_owned(), "count".to_owned()],
+                    message: "Recurrence count must be at least 1".to_owned(),
+                    ty: ErrorFieldType::Range {
+                        min: Some(1),
+                        max: None,
+                    },
+                });
             }
         }
 
@@ -372,35 +478,19 @@ impl Recurrence {
 
         rrule.join(";")
     }
-
-    /// if this event ends, gets the last day this series ends on
-    pub fn series_ends_at(&self) -> Option<Time> {
-        todo!()
-    }
-
-    /// if this event ends, gets the number of events in this series
-    pub fn series_count(&self) -> Option<u64> {
-        todo!()
-    }
-
-    /// calculate the default start date/time of the nth event
-    pub fn nth_event_starts_at(&self, _seq: u64) -> Option<Time> {
-        todo!()
-    }
-
-    /// calculate the default end date/time of the nth event
-    pub fn nth_event_ends_at(&self, _seq: u64) -> Option<Time> {
-        todo!()
-    }
 }
 
 impl CalendarEvent {
-    pub fn validate(&self) -> Result<(), Vec<String>> {
+    pub fn validate(&self) -> Result<(), Vec<ErrorField>> {
         let mut errors = vec![];
 
         if let Some(ends_at) = self.ends_at {
             if ends_at <= self.starts_at {
-                errors.push("ends_at must be after starts_at".to_string());
+                errors.push(ErrorField {
+                    key: vec!["ends_at".to_owned()],
+                    message: "ends_at must be after starts_at".to_owned(),
+                    ty: ErrorFieldType::Other,
+                });
             }
         }
 
@@ -412,8 +502,16 @@ impl CalendarEvent {
             if let RecurrenceRange::Until { time } = recurrence.range {
                 let end_time = self.ends_at.unwrap_or(self.starts_at);
                 if time <= end_time {
-                    errors
-                        .push("Recurrence until time must be after the event end time".to_string());
+                    errors.push(ErrorField {
+                        key: vec![
+                            "recurrence".to_owned(),
+                            "range".to_owned(),
+                            "until".to_owned(),
+                        ],
+                        message: "Recurrence until time must be after the event end time"
+                            .to_owned(),
+                        ty: ErrorFieldType::Other,
+                    });
                 }
             }
         }
@@ -423,11 +521,6 @@ impl CalendarEvent {
         } else {
             Err(errors)
         }
-    }
-
-    /// calculate the duration of this event in milliseconds
-    pub fn duration(&self) -> Option<u64> {
-        todo!()
     }
 }
 
