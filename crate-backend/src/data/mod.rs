@@ -53,8 +53,8 @@ use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
     DbSessionCreate, DbUserCreate, DehydratedDocument, DocumentUpdateSummary, EmailPurpose,
     InviteCode, Media, MediaId, MediaLink, MediaLinkType, MentionsIds, MessageId, MessageRef,
-    MessageVerId, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch,
-    RoomVerId, Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    MessageVerId, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId,
+    Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -343,9 +343,6 @@ pub trait DataRoleMember {
 
 #[async_trait]
 pub trait DataPermission {
-    // TODO: remove permission_room_get
-    async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions>;
-
     async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool>;
     async fn permission_overwrite_upsert(
         &self,

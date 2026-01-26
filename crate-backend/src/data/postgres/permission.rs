@@ -1,85 +1,15 @@
 use async_trait::async_trait;
-use common::v1::types::{ChannelId, Permission, PermissionOverwriteType, RoomId, UserId};
+use common::v1::types::{ChannelId, Permission, PermissionOverwriteType, UserId};
 use sqlx::query_scalar;
 use uuid::Uuid;
 
-use crate::{
-    data::DataPermission,
-    types::{DbPermission, Permissions},
-    Result,
-};
+use crate::{data::DataPermission, Result};
 
 use super::Postgres;
 
 // TODO: remove this trait and move all permission calculations into permissions.rs
 #[async_trait]
 impl DataPermission for Postgres {
-    async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
-        // Get allowed permissions from roles
-        let allowed_perms: Vec<DbPermission> = query_scalar!(
-            r#"
-            WITH allow_perms AS (
-                SELECT m.room_id, m.user_id, unnest(role.allow) AS permission
-                FROM room_member AS m
-                JOIN role_member AS r ON r.user_id = m.user_id
-                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id
-                UNION
-                SELECT m.room_id, m.user_id, unnest(role.allow) as permission
-                FROM room_member AS m
-                JOIN role ON role.id = m.room_id
-            )
-            SELECT permission as "permission!: DbPermission"
-            FROM allow_perms
-            WHERE user_id = $1 AND room_id = $2
-        "#,
-            *user_id,
-            *room_id,
-        )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(Into::into)
-        .collect();
-
-        // Get denied permissions from roles
-        let denied_perms: Vec<DbPermission> = query_scalar!(
-            r#"
-            WITH deny_perms AS (
-                SELECT m.room_id, m.user_id, unnest(role.deny) AS permission
-                FROM room_member AS m
-                JOIN role_member AS r ON r.user_id = m.user_id
-                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id
-                UNION
-                SELECT m.room_id, m.user_id, unnest(role.deny) as permission
-                FROM room_member AS m
-                JOIN role ON role.id = m.room_id
-            )
-            SELECT permission as "permission!: DbPermission"
-            FROM deny_perms
-            WHERE user_id = $1 AND room_id = $2
-        "#,
-            *user_id,
-            *room_id,
-        )
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(Into::into)
-        .collect();
-
-        let mut perms: Permissions = allowed_perms.into_iter().map(Into::into).collect();
-
-        if perms.has(Permission::Admin) {
-            return Ok(perms);
-        }
-
-        for perm in denied_perms {
-            perms.remove(perm.into());
-        }
-
-        Ok(perms)
-    }
-
     async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool> {
         let exists = query_scalar!(
             r#"
