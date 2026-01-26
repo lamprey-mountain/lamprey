@@ -55,7 +55,10 @@ select
     last_id.last_version_id as "last_version_id",
     coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!",
     (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = channel.id) as tags,
-    (SELECT json_agg(tag.*) FROM tag WHERE channel_id = channel.id) as tags_available
+    (SELECT json_agg(tag.*) FROM tag WHERE channel_id = channel.id) as tags_available,
+    (SELECT row_to_json(cd.*) FROM channel_document cd WHERE cd.channel_id = channel.id) as document,
+    (SELECT row_to_json(cw.*) FROM channel_wiki cw WHERE cw.channel_id = channel.id) as wiki,
+    (SELECT row_to_json(cc.*) FROM channel_calendar cc WHERE cc.channel_id = channel.id) as calendar
 from channel
 left join dm on dm.channel_id = channel.id
 left join message_count on message_count.channel_id = channel.id

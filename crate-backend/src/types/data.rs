@@ -158,7 +158,6 @@ pub struct DbChannel {
     pub document: Option<serde_json::Value>,
     pub wiki: Option<serde_json::Value>,
     pub calendar: Option<serde_json::Value>,
-    pub slowmode_message_expire_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -313,6 +312,9 @@ impl From<DbChannel> for Channel {
             slowmode_message: row.slowmode_message.map(|v| v as u64),
             default_slowmode_message: row.default_slowmode_message.map(|v| v as u64),
             url: row.url,
+            document: row.document.and_then(|v| serde_json::from_value(v).ok()),
+            wiki: row.wiki.and_then(|v| serde_json::from_value(v).ok()),
+            calendar: row.calendar.and_then(|v| serde_json::from_value(v).ok()),
 
             // these fields get filled in later
             is_unread: None,
@@ -322,10 +324,7 @@ impl From<DbChannel> for Channel {
             user_config: None,
             online_count: 0,
             slowmode_thread_expire_at: None,
-            slowmode_message_expire_at: row.slowmode_message_expire_at.map(|t| t.into()),
-            document: row.document.and_then(|v| serde_json::from_value(v).ok()),
-            wiki: row.wiki.and_then(|v| serde_json::from_value(v).ok()),
-            calendar: row.calendar.and_then(|v| serde_json::from_value(v).ok()),
+            slowmode_message_expire_at: None,
         }
     }
 }

@@ -1,5 +1,5 @@
 use serde::{de::DeserializeOwned, Serialize};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 
 use crate::v1::types::{Channel, ChannelCreate};
 
@@ -123,9 +123,9 @@ mod channel_create_room {
 
 #[cfg(feature = "utoipa")]
 mod utoipa_impl {
-    use utoipa::openapi::path::{HttpMethod, Operation};
+    use utoipa::openapi::path::HttpMethod;
 
-    use crate::v1::routes::{Endpoint, Method};
+    use crate::v1::routes::Method;
 
     impl Into<HttpMethod> for Method {
         fn into(self) -> HttpMethod {

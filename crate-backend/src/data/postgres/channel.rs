@@ -847,7 +847,6 @@ impl Postgres {
         .await?;
 
         if let Some(current) = current_doc {
-            // Handle archived_at logic - set to now_utc when archived is set to Some
             let archived_at = match document_patch.archived {
                 Some(Some(_)) => {
                     let t = Time::now_utc();
@@ -855,12 +854,11 @@ impl Postgres {
                         t.into_inner().date(),
                         t.into_inner().time(),
                     ))
-                },
-                Some(None) => None, // Unarchive - set to None
-                None => current.archived_at, // No change - keep current value
+                }
+                Some(None) => None,
+                None => current.archived_at,
             };
 
-            // Handle published_at logic - set to now_utc when published is set to Some
             let published_at = match document_patch.published {
                 Some(Some(_)) => {
                     let t = Time::now_utc();
@@ -868,9 +866,27 @@ impl Postgres {
                         t.into_inner().date(),
                         t.into_inner().time(),
                     ))
-                },
-                Some(None) => None, // Unpublish - set to None
-                None => current.published_at, // No change - keep current value
+                }
+                Some(None) => None,
+                None => current.published_at,
+            };
+
+            let archived_reason: Option<String> = match &document_patch.archived {
+                Some(Some(patch)) => patch.reason.clone().unwrap_or(None),
+                Some(None) => None,
+                None => current.archived_reason.clone(),
+            };
+
+            let published_revision: Option<String> = match &document_patch.published {
+                Some(Some(patch)) => patch.revision.as_ref().map(|r| r.to_string()),
+                Some(None) => None,
+                None => current.published_revision.clone(),
+            };
+
+            let published_unlisted: Option<bool> = match &document_patch.published {
+                Some(Some(patch)) => patch.unlisted,
+                Some(None) => None,
+                None => current.published_unlisted,
             };
 
             query!(
@@ -890,21 +906,12 @@ impl Postgres {
                 *channel_id,
                 document_patch.draft.unwrap_or(current.draft),
                 archived_at as Option<PrimitiveDateTime>,
-                document_patch.archived
-                    .as_ref()
-                    .and_then(|a| a.as_ref().and_then(|arch| arch.reason.clone()))
-                    .or(current.archived_reason),
+                archived_reason,
                 document_patch.template.unwrap_or(current.template),
-                document_patch.slug.as_deref().unwrap_or(current.slug.as_deref()),
+                document_patch.slug.clone().unwrap_or(current.slug),
                 published_at as Option<PrimitiveDateTime>,
-                document_patch.published
-                    .as_ref()
-                    .and_then(|p| p.as_ref().map(|publ| publ.revision.to_string()))
-                    .or(current.published_revision),
-                document_patch.published
-                    .as_ref()
-                    .and_then(|p| p.as_ref().map(|publ| publ.unlisted))
-                    .or(current.published_unlisted)
+                published_revision,
+                published_unlisted,
             )
             .execute(&mut **tx)
             .await?;
@@ -968,8 +975,14 @@ impl Postgres {
                 "#,
                 channel_id.into_inner(),
                 wiki_patch.allow_indexing.unwrap_or(current.allow_indexing),
-                wiki_patch.page_index.as_ref().and_then(|p| p.as_ref().map(|id| id.into_inner())).or(current.page_index.map(|id| *id)),
-                wiki_patch.page_notfound.as_ref().and_then(|p| p.as_ref().map(|id| id.into_inner())).or(current.page_notfound.map(|id| *id))
+                wiki_patch
+                    .page_index
+                    .map(|p| p.map(|p| *p))
+                    .unwrap_or(current.page_index),
+                wiki_patch
+                    .page_notfound
+                    .map(|p| p.map(|p| *p))
+                    .unwrap_or(current.page_notfound),
             )
             .execute(&mut **tx)
             .await?;
@@ -1013,12 +1026,24 @@ impl Postgres {
             FROM channel_calendar
             WHERE channel_id = $1
             "#,
-            channel_id.into_inner()
+            *channel_id,
         )
         .fetch_optional(&mut **tx)
         .await?;
 
         if let Some(current) = current_cal {
+            let new_color: Option<&str> = match &calendar_patch.color {
+                Some(Some(c)) => Some(c.as_ref()),
+                Some(None) => None,
+                None => current.color.as_deref(),
+            };
+
+            let new_default_timezone = calendar_patch
+                .default_timezone
+                .as_ref()
+                .map(|tz| tz.0.clone())
+                .unwrap_or(current.default_timezone.clone());
+
             query!(
                 r#"
                 UPDATE channel_calendar
@@ -1027,9 +1052,9 @@ impl Postgres {
                     default_timezone = $3
                 WHERE channel_id = $1
                 "#,
-                channel_id.into_inner(),
-                calendar_patch.color.as_ref().and_then(|c| c.as_ref().map(|color| color.as_ref())).unwrap_or(current.color.as_deref()),
-                calendar_patch.default_timezone.as_ref().map(|tz| tz.0.clone()).unwrap_or(current.default_timezone)
+                *channel_id,
+                new_color,
+                new_default_timezone
             )
             .execute(&mut **tx)
             .await?;

@@ -74,6 +74,7 @@ decancer = "3.3.3"
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 httpdate = "1.0.3"
 rrule = "0.14.0"
+tantivy = "0.25.0"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
