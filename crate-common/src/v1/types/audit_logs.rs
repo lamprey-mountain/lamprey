@@ -669,3 +669,50 @@ impl AuditLogEntryType {
         todo!()
     }
 }
+
+/// the set of extra data that should be resolved
+pub struct AuditLogResolve {
+    pub threads: std::collections::HashSet<ChannelId>,
+    pub users: std::collections::HashSet<UserId>, // fetch users and room_members for these ids
+    pub applications: std::collections::HashSet<ApplicationId>,
+    // TODO: copy stuff from AuditLogPaginationResponse
+}
+
+impl AuditLogResolve {
+    /// add everything that needs to be resolved from this entry
+    pub fn add(&mut self, entry: &AuditLogEntry) {
+        self.users.insert(entry.user_id);
+
+        if let Some(app_id) = entry.application_id {
+            self.applications.insert(app_id);
+        }
+
+        match &entry.ty {
+            AuditLogEntryType::ChannelCreate {
+                channel_id,
+                channel_type,
+                ..
+            } if channel_type.is_thread() => {
+                self.threads.insert(*channel_id);
+            }
+            AuditLogEntryType::ChannelUpdate {
+                channel_id,
+                channel_type,
+                ..
+            } if channel_type.is_thread() => {
+                self.threads.insert(*channel_id);
+            }
+            AuditLogEntryType::MemberKick { user_id, .. } => {
+                self.users.insert(*user_id);
+            }
+            AuditLogEntryType::MemberBan { user_id, .. } => {
+                self.users.insert(*user_id);
+            }
+            AuditLogEntryType::MemberUnban { user_id, .. } => {
+                self.users.insert(*user_id);
+            }
+            // TODO: handle more entries
+            _ => {}
+        }
+    }
+}

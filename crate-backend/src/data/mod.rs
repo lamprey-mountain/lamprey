@@ -18,7 +18,6 @@ use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
-use common::v1::types::push::PushInfo;
 use common::v1::types::reaction::{ReactionKeyParam, ReactionListItem};
 use common::v1::types::room_analytics::{
     RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
@@ -99,8 +98,7 @@ pub trait Data:
     + DataAdmin
     + DataAutomod
     + DataDocument
-    // TODO
-    // + DataPush
+    + DataPush
     + Send
     + Sync
 {
@@ -1495,7 +1493,6 @@ pub trait DataDocument {
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
 }
 
-// TODO: implement
 #[async_trait]
 pub trait DataPush {
     /// insert a web push api subscription

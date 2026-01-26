@@ -33,6 +33,15 @@ struct AdminWhisper {
 #[derive(Deserialize, ToSchema)]
 struct AdminBroadcast {
     message: MessageCreate,
+    // TODO: add these
+    // /// only broadcast to users in these rooms
+    // room_id: Vec<RoomId>,
+
+    // /// only broadcast to these users
+    // user_id: Vec<UserId>,
+
+    // /// only broadcast to these users with these server roles
+    // server_roles: Vec<RoleId>,
 }
 
 #[derive(Deserialize, ToSchema)]

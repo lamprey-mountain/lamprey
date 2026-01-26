@@ -28,6 +28,7 @@ mod message;
 mod metrics;
 mod notification;
 mod permission;
+mod push;
 mod reaction;
 mod role;
 mod role_member;
