@@ -107,6 +107,7 @@ impl Into<Media> for V1Media {
             },
             user_id: None,
             deleted_at: None,
+            quarantine: None,
             scans: vec![],
             has_thumbnail: false,
             has_gifv: false,

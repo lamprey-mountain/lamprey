@@ -220,6 +220,26 @@ pub struct TransferOwnership {
     pub owner_id: UserId,
 }
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomAdminSearch {
+    /// what order to return results in
+    pub order: RoomAdminSearchOrder,
+    // TODO: search room name, description
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RoomAdminSearchOrder {
+    Newest,
+    Oldest,
+    Members,
+    Name,
+    NameReverse,
+}
+
 impl Diff<Room> for RoomPatch {
     fn changes(&self, other: &Room) -> bool {
         self.name.changes(&other.name)

@@ -222,6 +222,31 @@ pub struct MediaDerived {
     pub date: Option<Time>,
 }
 
+/// query for searching through media
+// TODO: use tantivy for this? then i can fancier search filters, eg. size>100, date<=yesterday
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MediaAdminSearch {
+    /// what order to return results in
+    pub order: MediaAdminSearchOrder,
+
+    /// include media uploaded by these users
+    pub user_id: Vec<UserId>,
+    // TODO: filter by content type
+    // TODO: filter by room id
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MediaAdminSearchOrder {
+    Newest,
+    Oldest,
+    Biggest,
+    Smallest,
+}
+
 impl Diff<Media> for MediaPatch {
     fn changes(&self, other: &Media) -> bool {
         self.alt.changes(&other.alt)

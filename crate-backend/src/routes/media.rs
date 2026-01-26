@@ -8,7 +8,10 @@ use axum::{
     routing, Json,
 };
 use common::{
-    v1::types::{media::MediaClone, MediaCreateSource, MediaPatch},
+    v1::types::{
+        media::{MediaAdminSearch, MediaClone},
+        MediaCreateSource, MediaPatch, Permission, SERVER_ROOM_ID,
+    },
     v2::types::media::MediaDoneParams,
 };
 use futures_util::StreamExt;
@@ -448,6 +451,25 @@ async fn media_clone(
     Ok(Error::Unimplemented)
 }
 
+/// Media search (TODO)
+#[utoipa::path(
+    post,
+    path = "/media/search",
+    tags = ["media", "badge.admin_only"],
+    responses((status = OK, description = "success")),
+)]
+async fn media_search(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(_json): Json<MediaAdminSearch>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Error::Unimplemented)
+}
+
 /// Media upload direct
 ///
 /// Directly upload a piece of media without doing the whole create/patch/done dance. Only use this for small media.
@@ -541,6 +563,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(media_done))
         .routes(routes!(media_clone))
         .routes(routes!(media_upload_direct))
+        .routes(routes!(media_search))
         // TODO: move these to cdn?
         .route(
             "/internal/media-upload/{media_id}",

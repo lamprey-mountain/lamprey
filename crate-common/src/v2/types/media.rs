@@ -86,16 +86,23 @@ pub struct Media {
     pub content_type: Mime,
 
     /// Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_url: Option<Url>,
 
     /// Additional filetype-specific metadata for the file
     pub metadata: MediaMetadata,
 
     /// The user who uploaded this media. Only exists for admins or if you uploaded this media
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<UserId>,
 
     /// If this media was deleted, when it was deleted. Only exists for admins.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<Time>,
+
+    /// If this media is quarantined, this contains information about the quarantine. Only exists for admins.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quarantine: Option<MediaQuarantine>,
 
     /// The results of automated scans.
     pub scans: Vec<MediaScan>,
@@ -105,6 +112,17 @@ pub struct Media {
 
     /// Whether this media can be fetched through the `/gifv/{media_id}` cdn route.
     pub has_gifv: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaQuarantine {
+    /// when this media was quarantined
+    pub time: Time,
+
+    /// why this media was quarantined
+    pub reason: Option<String>,
 }
 
 /// An automated scan result

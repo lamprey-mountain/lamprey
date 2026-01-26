@@ -662,8 +662,10 @@ impl Diff<Wiki> for WikiPatch {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct WikiPatch {
     pub allow_indexing: Option<bool>,
+
     #[serde(default, deserialize_with = "some_option")]
     pub page_index: Option<Option<ChannelId>>,
+
     #[serde(default, deserialize_with = "some_option")]
     pub page_notfound: Option<Option<ChannelId>>,
 }

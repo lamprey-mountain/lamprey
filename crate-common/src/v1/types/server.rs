@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::v1::types::{misc::Time, SfuId};
+
 /// public moderation capabilities for a server
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -160,4 +162,38 @@ pub struct ServerVersion {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ServerLimits {
     // TODO: move crate-backend/src/consts.rs here?
+}
+
+/// sfu metadata for admins
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ServerVoiceSfu {
+    /// a (temporary?) unique identifier for this sfu
+    pub id: SfuId,
+
+    /// when this sfu connected to the server
+    pub connected_at: Time,
+
+    /// the hostname of this sfu
+    pub hostname: String,
+
+    /// the ip address of this sfu
+    pub address: String,
+
+    /// the zone of this sfu (aka region, datacenter, etc)
+    pub zone: String,
+
+    /// total available bandwidth in bits per second
+    pub bandwidth_total: u64,
+
+    /// bandwidth that is being used in bits per second
+    pub bandwidth_used: u64,
+
+    /// number of users who are connected
+    pub stat_users: u64,
+
+    /// number of tracks this sfu is selectively forwarding
+    pub stat_tracks: u64,
+    // TODO: add version
 }

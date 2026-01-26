@@ -5,8 +5,9 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
-    ServerRegistration, ServerVersion, ServerVoice,
+    ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu,
 };
+use common::v1::types::{Permission, SERVER_ROOM_ID};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
@@ -69,7 +70,7 @@ async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespo
     )
 )]
 async fn server_moderation(
-    _auth: Auth, // requires auth
+    _auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     // TODO: let server admins configure this
@@ -80,8 +81,26 @@ async fn server_moderation(
     Ok(Json(moderation))
 }
 
+/// Server voice sfus
+#[utoipa::path(
+    get,
+    path = "/server/@self/voice",
+    tags = ["server", "badge.admin_only"],
+    responses(
+        (status = OK, body = Vec<ServerVoiceSfu>, description = "Get server voice sfus success"),
+    )
+)]
+async fn server_voice(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Json(vec![] as Vec<ServerVoiceSfu>))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(server_info))
         .routes(routes!(server_moderation))
+        .routes(routes!(server_voice))
 }

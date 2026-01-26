@@ -8,8 +8,8 @@ use axum::{
 };
 use common::v1::types::{
     application::Integration, util::Changes, ApplicationId, AuditLogEntry, AuditLogEntryId,
-    AuditLogEntryType, AuditLogFilter, RoomSecurityUpdate, RoomType, TransferOwnership,
-    SERVER_ROOM_ID,
+    AuditLogEntryType, AuditLogFilter, RoomAdminSearch, RoomSecurityUpdate, RoomType,
+    TransferOwnership, SERVER_ROOM_ID,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -130,6 +130,25 @@ async fn room_list(
     } else {
         Err(Error::MissingPermissions)
     }
+}
+
+/// Room search (TODO)
+#[utoipa::path(
+    post,
+    path = "/room/search",
+    tags = ["room", "badge.admin_only"],
+    responses((status = OK, description = "success")),
+)]
+async fn room_search(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(_json): Json<RoomAdminSearch>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Error::Unimplemented)
 }
 
 /// Room edit
@@ -607,6 +626,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_create))
         .routes(routes!(room_get))
         .routes(routes!(room_list))
+        .routes(routes!(room_search))
         .routes(routes!(room_edit))
         .routes(routes!(room_delete))
         .routes(routes!(room_undelete))
