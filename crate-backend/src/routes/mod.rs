@@ -39,6 +39,7 @@ mod tag;
 mod thread;
 mod user;
 mod user_config;
+mod user_connection;
 mod user_email;
 mod voice;
 mod webhook;
@@ -53,6 +54,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(auth::routes())
         .merge(automod::routes())
         .merge(calendar::routes())
+        .merge(user_connection::routes())
         .merge(channel::routes())
         .merge(debug::routes())
         .merge(dm::routes())

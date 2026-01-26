@@ -8,9 +8,9 @@ use common::v1::types::application::Scope;
 use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus,
-    User, UserCreate, UserId, UserPatch, UserWithRelationship,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MediaTrackInfo, MessageSync,
+    PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus, User, UserCreate, UserId,
+    UserPatch, UserWithRelationship,
 };
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogFilter, HarvestId, Permission, SuspendRequest, Suspended,
@@ -510,76 +510,6 @@ async fn user_unsuspend(
     Ok(Json(user))
 }
 
-/// Connection list
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/connection",
-    params(
-        ("user_id", description = "User id"),
-        PaginationQuery<ApplicationId>
-    ),
-    tags = ["user"],
-    responses((status = OK, body = PaginationResponse<Connection>, description = "success")),
-)]
-async fn connection_list(
-    Path(target_user_id): Path<UserIdReq>,
-    Query(paginate): Query<PaginationQuery<ApplicationId>>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
-
-    if auth.user.id != target_user_id {
-        return Err(Error::MissingPermissions);
-    }
-
-    let connections = s.data().connection_list(target_user_id, paginate).await?;
-    Ok(Json(connections))
-}
-
-/// Connection revoke
-#[utoipa::path(
-    delete,
-    path = "/user/{user_id}/connection/{app_id}",
-    params(
-        ("user_id", description = "User id"),
-        ("app_id", description = "Application id")
-    ),
-    tags = ["user"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
-async fn connection_revoke(
-    Path((target_user_id, app_id)): Path<(UserIdReq, ApplicationId)>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
-
-    if auth.user.id != target_user_id {
-        return Err(Error::MissingPermissions);
-    }
-
-    s.data().connection_delete(target_user_id, app_id).await?;
-
-    s.broadcast(MessageSync::ConnectionDelete {
-        user_id: target_user_id,
-        app_id,
-    })?;
-    let al = auth.audit_log(target_user_id.into_inner().into());
-    al.commit_success(AuditLogEntryType::ConnectionDelete {
-        application_id: app_id,
-    })
-    .await?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
 /// User presence set
 ///
 /// for puppets
@@ -720,8 +650,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(user_room_list))
         .routes(routes!(user_suspend))
         .routes(routes!(user_unsuspend))
-        .routes(routes!(connection_list))
-        .routes(routes!(connection_revoke))
         .routes(routes!(guest_create))
         .routes(routes!(user_presence_set))
         .routes(routes!(user_list))

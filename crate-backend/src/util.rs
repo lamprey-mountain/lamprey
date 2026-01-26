@@ -148,7 +148,7 @@ impl Modify for NestedTags {
             {
                 "name": "integrations",
                 "description": "working with third party services",
-                "tags": ["application", "oauth", "webhook"],
+                "tags": ["application", "oauth", "webhook", "user_connection"],
             },
             {
                 "name": "other",
