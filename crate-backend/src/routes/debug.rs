@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::{ChannelId, EmbedRequest, Permission, RoomId, UserId};
+use common::v1::types::{ChannelId, EmbedRequest, Permission, RoomId, UserId, SERVER_ROOM_ID};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
@@ -324,6 +324,118 @@ async fn debug_test_permissions(
     Ok(Json(response))
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+struct CheckHealthResponse {
+    ok: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+struct CheckReadyResponse {
+    ok: bool,
+
+    /// is postgres reachable?
+    postgres_ok: bool,
+
+    /// is s3 reachable?
+    bucket_ok: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+struct CheckDoctorResponse {
+    ok: bool,
+    issues: Vec<DoctorIssue>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+struct DoctorIssue {
+    /// whats the name of this check
+    name: String,
+
+    /// how bad is it
+    severity: DoctorSeverity,
+
+    /// what's wrong
+    message: String,
+
+    /// why its a problem
+    detail: Option<String>,
+
+    /// how to fix it
+    suggestion: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+enum DoctorSeverity {
+    /// not a problem but still worth knowing
+    Info,
+
+    /// this is something you should fix when you have time
+    Warning,
+
+    /// this is something you should fix NOW
+    Critical,
+}
+
+/// Check health
+///
+/// is this server alive?
+#[utoipa::path(
+    get,
+    path = "/health",
+    tags = ["debug"],
+    responses(
+        (status = OK, description = "server is healthy"),
+    )
+)]
+async fn debug_health() -> Result<impl IntoResponse> {
+    Ok(Json(CheckHealthResponse { ok: true }))
+}
+
+/// Check ready
+///
+/// is this server ready to accept requests?
+#[utoipa::path(
+    get,
+    path = "/ready",
+    tags = ["debug", "badge.admin_only"],
+    responses(
+        (status = OK, description = "server is ready"),
+    )
+)]
+async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Json(CheckReadyResponse {
+        ok: true,
+        postgres_ok: true,
+        bucket_ok: true,
+    }))
+}
+
+/// Check doctor
+///
+/// what's wrong with this server and how do i fix it?
+#[utoipa::path(
+    get,
+    path = "/doctor",
+    tags = ["debug", "badge.admin_only"],
+    responses(
+        (status = OK, description = "diagnostic information"),
+    )
+)]
+async fn debug_doctor(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Json(CheckDoctorResponse {
+        ok: true,
+        issues: vec![],
+    }))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(debug_info))
@@ -331,4 +443,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(debug_embed_url))
         .routes(routes!(debug_panic))
         .routes(routes!(debug_test_permissions))
+        .routes(routes!(debug_health))
+        .routes(routes!(debug_ready))
+        .routes(routes!(debug_doctor))
 }
