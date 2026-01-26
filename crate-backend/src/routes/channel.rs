@@ -98,6 +98,10 @@ async fn channel_create_dm(
     json.validate()?;
     let srv = s.services();
     let data = s.data();
+    srv.perms
+        .for_server(auth.user.id)
+        .await?
+        .ensure(Permission::DmCreate)?;
     match json.ty {
         ChannelType::Dm => {
             let Some(recipients) = &json.recipients else {

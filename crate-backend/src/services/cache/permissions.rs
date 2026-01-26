@@ -68,7 +68,7 @@ impl PermissionsCalculator {
                     }
                 }
 
-                perms.mask(&[Permission::ViewChannel, Permission::ViewAuditLog]);
+                perms.set_lurker(true);
                 return perms;
             } else {
                 // the member doesnt exist here; no perms
@@ -107,6 +107,11 @@ impl PermissionsCalculator {
             if timeout_until > Time::now_utc() {
                 perms.set_timed_out(true);
             }
+        }
+
+        // quarantined by automod
+        if member.quarantined {
+            perms.set_quarantined(true);
         }
 
         perms

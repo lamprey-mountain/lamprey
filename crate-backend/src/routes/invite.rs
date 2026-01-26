@@ -67,7 +67,7 @@ async fn invite_delete(
         InviteTarget::Server => (
             s.services()
                 .perms
-                .for_room(auth.user.id, SERVER_ROOM_ID)
+                .for_server(auth.user.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
@@ -172,7 +172,7 @@ async fn invite_resolve(
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Server => {
-            let perms = s.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+            let perms = s.perms.for_server(auth.user.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::User { user: _ } => auth.user.id != invite.invite.creator_id,
@@ -217,6 +217,8 @@ async fn invite_use(
     if invite.is_dead() {
         return Err(Error::NotFound);
     }
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::RoomJoin)?;
     match &invite.invite.target {
         InviteTarget::Room { room, .. } => {
             if let Ok(ban) = d.room_ban_get(room.id, auth.user.id).await {
@@ -246,6 +248,15 @@ async fn invite_use(
             )
             .await?;
             let member = d.room_member_get(room.id, auth.user.id).await?;
+
+            // let automod = srv.automod.load(room.id).await?;
+            // let scan = automod.scan_member(&member, &auth.user);
+            // for action in scan.actions() {
+            //     match action {
+
+            //     }
+            // }
+
             srv.perms.invalidate_room(auth.user.id, room.id).await;
             srv.perms.invalidate_is_mutual(auth.user.id);
             let room_id = room.id;
@@ -661,7 +672,7 @@ async fn invite_patch(
         InviteTarget::Server => (
             s.services()
                 .perms
-                .for_room(auth.user.id, SERVER_ROOM_ID)
+                .for_server(auth.user.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
@@ -737,7 +748,7 @@ async fn invite_server_create(
         return Err(Error::BadStatic("Guest users cannot create server invites"));
     }
 
-    let perms = srv.perms.for_room(user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(user.id).await?;
     perms.ensure(Permission::InviteCreate)?;
 
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -797,7 +808,7 @@ async fn invite_server_list(
         return Err(Error::BadStatic("Guest users cannot list server invites"));
     }
 
-    let perms = srv.perms.for_room(user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(user.id).await?;
     let res = if perms.has(Permission::InviteManage) {
         d.invite_list_server(paginate).await?
     } else {

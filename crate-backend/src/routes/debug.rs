@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::{ChannelId, EmbedRequest, Permission, RoomId, UserId, SERVER_ROOM_ID};
+use common::v1::types::{ChannelId, EmbedRequest, Permission, RoomId, UserId};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
@@ -404,7 +404,7 @@ async fn debug_health() -> Result<impl IntoResponse> {
 )]
 async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
     Ok(Json(CheckReadyResponse {
@@ -427,7 +427,7 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
 )]
 async fn debug_doctor(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
     Ok(Json(CheckDoctorResponse {

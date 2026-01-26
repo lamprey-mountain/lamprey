@@ -71,6 +71,7 @@ impl From<DbRoomMember> for RoomMember {
             mute: row.mute,
             deaf: row.deaf,
             timeout_until: row.timeout_until.map(|t| t.assume_utc().into()),
+            quarantined: false,
 
             // FIXME: only return for moderators
             origin: row
@@ -134,6 +135,7 @@ impl From<DbRoomMemberWithUser> for (RoomMember, User) {
             mute: row.mute,
             deaf: row.deaf,
             timeout_until: row.timeout_until.map(|t| t.assume_utc().into()),
+            quarantined: false,
         };
 
         let user: User = DbUser {

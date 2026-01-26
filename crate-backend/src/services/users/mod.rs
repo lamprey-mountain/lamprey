@@ -60,12 +60,8 @@ impl ServiceUsers {
                     .await?,
             );
 
-            let perms = self
-                .state
-                .services()
-                .perms
-                .for_room(viewer_id, common::v1::types::SERVER_ROOM_ID)
-                .await;
+            let perms = self.state.services().perms.for_server(viewer_id).await;
+            // NOTE: do i want to reveal email addrs to people with UserManage?
             let is_admin = perms.is_ok_and(|p| p.has(Permission::Admin));
 
             if viewer_id == user_id || is_admin {

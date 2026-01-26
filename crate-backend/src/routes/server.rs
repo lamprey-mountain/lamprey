@@ -7,7 +7,7 @@ use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
     ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu,
 };
-use common::v1::types::{Permission, SERVER_ROOM_ID};
+use common::v1::types::Permission;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
@@ -92,7 +92,7 @@ async fn server_moderation(
 )]
 async fn server_voice(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
     Ok(Json(vec![] as Vec<ServerVoiceSfu>))

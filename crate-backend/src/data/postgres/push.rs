@@ -5,7 +5,6 @@ use uuid::Uuid;
 use crate::data::DataPush;
 use crate::error::Result;
 use crate::types::{PushData, SessionId, UserId};
-use crate::Error;
 
 use super::Postgres;
 

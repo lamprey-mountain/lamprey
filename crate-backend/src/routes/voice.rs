@@ -477,7 +477,7 @@ async fn voice_call_create(
         .perms
         .for_channel(auth.user.id, json.channel_id)
         .await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
     let channel = s.services().channels.get(json.channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
         return Err(Error::BadStatic(
@@ -510,7 +510,7 @@ async fn voice_call_delete(
         .perms
         .for_channel(auth.user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
     let channel = s.services().channels.get(channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
         return Err(Error::BadStatic(
@@ -576,7 +576,7 @@ async fn voice_call_update(
         .perms
         .for_channel(auth.user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
     s.services().voice.call_update(channel_id, json)?;
     Ok(StatusCode::NO_CONTENT)
 }

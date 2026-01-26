@@ -45,6 +45,13 @@ async fn app_create(
     Json(json): Json<ApplicationCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    srv.perms
+        .for_server(auth.user.id)
+        .await?
+        .ensure(Permission::ApplicationCreate)?;
+
     let al = auth.audit_log(auth.user.id.into_inner().into());
     if let Some(bridge) = &json.bridge {
         if bridge.platform_name.is_none() {

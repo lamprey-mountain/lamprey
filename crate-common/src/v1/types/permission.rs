@@ -103,6 +103,7 @@ pub enum Permission {
     RoleManage,
 
     /// edit name, description, really anything else
+    // TODO: maybe rename this to prevent conflict with RoomManageServer
     RoomManage,
 
     /// (server, unimplemented) can access metrics (prometheus)
@@ -113,6 +114,7 @@ pub enum Permission {
     ServerOversee,
 
     /// (server, unimplemented) access reports
+    // TODO: remove
     ServerReports,
 
     /// (unimplemented) apply tags to threads
@@ -221,6 +223,48 @@ pub enum Permission {
 
     /// can comment on documents, including documents outside of wikis.
     DocumentComment,
+
+    /// can create new rooms.
+    RoomCreate,
+
+    /// can delete and quarantine rooms, and view all rooms, room templates, dms, and gdms.
+    // TODO: maybe rename this to prevent conflict with RoomManage
+    RoomManageServer,
+
+    /// can create, edit, and delete users. can view all users.
+    // TODO: maybe deduplicate this with ServerOversee?
+    UserManage,
+
+    /// can disable or delete their own account
+    UserDeleteSelf,
+
+    /// can edit their own profile
+    UserProfile,
+
+    /// can create new applications
+    ApplicationCreate,
+
+    /// can edit and delete all applications. can list all applications on the server.
+    // TODO: implement
+    ApplicationManage,
+
+    /// can create new dms and gdms
+    DmCreate,
+
+    /// can send friend requests
+    FriendCreate,
+
+    /// can manually join and leave rooms and gdms (use invites)
+    RoomJoin,
+
+    /// set call metadata (ie. the topic)
+    ///
+    /// requires the ability to speak: not muted, not suppressed, has VoiceSpeak.
+    CallUpdate,
+
+    /// can forcibly make other users join and leave rooms and gdms. can join any room and gdm.
+    // TODO: implement
+    RoomForceJoin,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -286,5 +330,19 @@ impl Permission {
                 | Permission::MessageAttachments
                 | Permission::MessageEmbeds
         )
+    }
+
+    /// if this is a server permission
+    ///
+    /// these can only be set in the server room
+    pub fn is_server(&self) -> bool {
+        todo!()
+    }
+
+    /// if this is a room permission
+    ///
+    /// these can only be set at the top level (ie. not as channel overwrites)
+    pub fn is_room(&self) -> bool {
+        todo!()
     }
 }

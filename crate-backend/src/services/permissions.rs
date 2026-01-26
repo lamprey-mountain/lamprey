@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, Permission, PermissionOverwriteType, RoomId, UserId};
+use common::v1::types::{
+    ChannelId, Permission, PermissionOverwriteType, RoomId, UserId, SERVER_ROOM_ID,
+};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
@@ -99,6 +101,11 @@ impl ServicePermissions {
             })
             .await
             .map_err(|err| err.fake_clone())
+    }
+
+    /// calculate the permissions a user has on this server
+    pub async fn for_server(&self, user_id: UserId) -> Result<Permissions> {
+        self.for_room(user_id, SERVER_ROOM_ID).await
     }
 
     /// actually calculate the permissions a user has in a channel

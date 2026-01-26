@@ -1,0 +1,11 @@
+alter type permission add value 'RoomManageServer';
+alter type permission add value 'UserManage';
+alter type permission add value 'UserDeleteSelf';
+alter type permission add value 'UserProfile';
+alter type permission add value 'ApplicationCreate';
+alter type permission add value 'ApplicationManage';
+alter type permission add value 'DmCreate';
+alter type permission add value 'FriendCreate';
+alter type permission add value 'RoomJoin';
+alter type permission add value 'CallUpdate';
+alter type permission add value 'RoomForceJoin';

@@ -5,8 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::user::Ignore;
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, RelationshipPatch,
-    RelationshipType, RelationshipWithUserId, UserId,
+    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
+    RelationshipPatch, RelationshipType, RelationshipWithUserId, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -130,6 +130,12 @@ async fn friend_add(
         }
         (_, Some(RelationshipType::Block)) => return Err(Error::Blocked),
         (None, None) => {
+            let srv = s.services();
+            srv.perms
+                .for_server(auth.user.id)
+                .await?
+                .ensure(Permission::FriendCreate)?;
+
             // send friend request
             data.user_relationship_edit(
                 auth.user.id,

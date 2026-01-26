@@ -52,9 +52,11 @@ async fn user_update(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
+    let perms = srv.perms.for_server(auth.user.id).await?;
     if auth.user.id != target_user_id {
-        let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
-        perms.ensure(Permission::Admin)?;
+        perms.ensure(Permission::UserManage)?;
+    } else {
+        perms.ensure(Permission::UserProfile)?;
     }
     let data = s.data();
     let start = srv.users.get(target_user_id, Some(auth.user.id)).await?;
@@ -146,12 +148,13 @@ async fn user_delete(
     };
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
-    let is_admin = perms.has(Permission::Admin);
-
-    if auth.user.id != target_user_id && !is_admin {
-        return Err(Error::MissingPermissions);
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    if auth.user.id != target_user_id {
+        perms.ensure(Permission::UserManage)?;
+    } else {
+        perms.ensure(Permission::UserDeleteSelf)?;
     }
+
     let user_to_delete = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     data.user_delete(target_user_id).await?;
     data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserAvatar)
@@ -197,8 +200,8 @@ async fn user_undelete(
 
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
-    perms.ensure(Permission::Admin)?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::UserManage)?;
 
     data.user_undelete(target_user_id).await?;
 
@@ -452,7 +455,7 @@ async fn user_suspend(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     if target_user_id != auth.user.id {
-        let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+        let perms = srv.perms.for_server(auth.user.id).await?;
         perms.ensure(Permission::MemberBan)?;
     }
     d.user_suspended(
@@ -496,7 +499,7 @@ async fn user_unsuspend(
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::MemberBan)?;
     d.user_suspended(target_user_id, None).await?;
     let al = auth.audit_log(SERVER_ROOM_ID);
@@ -566,7 +569,7 @@ async fn user_list(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::MemberBan)?;
 
     let data = s.data();

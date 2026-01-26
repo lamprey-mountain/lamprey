@@ -3,14 +3,21 @@ use super::Permission;
 /// Which permissions are granted to someone with Admin in a room
 pub const ADMIN_ROOM: &[Permission] = &[
     Permission::Admin,
+    Permission::ApplicationCreate,
+    Permission::ApplicationManage,
     Permission::BypassSlowmode,
     Permission::CalendarEventCreate,
     Permission::CalendarEventManage,
     Permission::CalendarEventRsvp,
     Permission::ChannelEdit,
     Permission::ChannelManage,
+    Permission::DmCreate,
+    Permission::DocumentComment,
+    Permission::DocumentCreate,
+    Permission::DocumentEdit,
     Permission::EmojiManage,
     Permission::EmojiUseExternal,
+    Permission::FriendCreate,
     Permission::IntegrationsManage,
     Permission::InviteCreate,
     Permission::InviteManage,
@@ -33,7 +40,9 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::ReactionPurge,
     Permission::RoleApply,
     Permission::RoleManage,
+    Permission::RoomCreate,
     Permission::RoomManage,
+    Permission::RoomManageServer,
     Permission::ServerMetrics,
     Permission::ServerOversee,
     Permission::ServerReports,
@@ -45,6 +54,12 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::ThreadLock,
     Permission::ThreadManage,
     Permission::ThreadManage,
+    Permission::CallUpdate,
+    Permission::RoomForceJoin,
+    Permission::RoomJoin,
+    Permission::UserDeleteSelf,
+    Permission::UserManage,
+    Permission::UserProfile,
     Permission::ViewAnalytics,
     Permission::ViewAuditLog,
     Permission::ViewChannel,
@@ -59,9 +74,6 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::VoiceSpeak,
     Permission::VoiceVad,
     Permission::VoiceVideo,
-    Permission::DocumentCreate,
-    Permission::DocumentEdit,
-    Permission::DocumentComment,
 ];
 
 /// Which permissions are granted to someone with Admin in a thread
@@ -70,12 +82,19 @@ pub const ADMIN_ROOM: &[Permission] = &[
 /// thats what Admin is supposed to do
 pub const ADMIN_THREAD: &[Permission] = &[
     Permission::Admin,
+    Permission::ApplicationCreate,
+    Permission::ApplicationManage,
     Permission::BypassSlowmode,
     Permission::CalendarEventCreate,
     Permission::CalendarEventManage,
     Permission::CalendarEventRsvp,
     Permission::ChannelEdit,
+    Permission::DmCreate,
+    Permission::DocumentComment,
+    Permission::DocumentCreate,
+    Permission::DocumentEdit,
     Permission::EmojiUseExternal,
+    Permission::FriendCreate,
     Permission::IntegrationsManage,
     Permission::InviteCreate,
     Permission::InviteManage,
@@ -102,6 +121,12 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::ThreadLock,
     Permission::ThreadManage,
     Permission::ThreadManage,
+    Permission::CallUpdate,
+    Permission::RoomForceJoin,
+    Permission::RoomJoin,
+    Permission::UserDeleteSelf,
+    Permission::UserManage,
+    Permission::UserProfile,
     Permission::ViewChannel,
     Permission::VoiceBroadcast,
     Permission::VoiceConnect,
@@ -114,29 +139,42 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::VoiceSpeak,
     Permission::VoiceVad,
     Permission::VoiceVideo,
-    Permission::DocumentCreate,
-    Permission::DocumentEdit,
-    Permission::DocumentComment,
 ];
 
 /// Default permissions for everyone in a trusted room (eg. with friends)
 pub const EVERYONE_TRUSTED: &[Permission] = &[
-    Permission::IntegrationsManage,
+    Permission::ApplicationCreate,
+    Permission::BypassSlowmode,
+    Permission::CalendarEventCreate,
+    Permission::CalendarEventRsvp,
+    Permission::ChannelEdit,
+    Permission::DmCreate,
+    Permission::DocumentComment,
+    Permission::DocumentCreate,
+    Permission::DocumentEdit,
     Permission::EmojiUseExternal,
+    Permission::FriendCreate,
+    Permission::IntegrationsManage,
     Permission::InviteCreate,
+    Permission::MessageAttachments,
     Permission::MessageCreate,
+    Permission::MessageCreateThread,
     Permission::MessageEmbeds,
     Permission::MessageMassMention, // maybe?
-    Permission::MessageAttachments,
-    Permission::MessageMove, // maybe?
-    Permission::MessagePin,  // maybe?
+    Permission::MessageMove,        // maybe?
+    Permission::MessagePin,         // maybe?
     Permission::ReactionAdd,
     Permission::MemberNickname,
+    Permission::RoomCreate,
     Permission::TagApply,
     // Permission::TagManage, // maybe?
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
     Permission::ThreadEdit, // maybe?
+    Permission::UserDeleteSelf,
+    Permission::UserProfile,
+    Permission::CallUpdate,
+    Permission::RoomJoin,
     Permission::ViewChannel,
     // Permission::ThreadPin, // maybe?
     // Permission::ThreadPublish, // maybe?
@@ -146,29 +184,33 @@ pub const EVERYONE_TRUSTED: &[Permission] = &[
     Permission::VoiceVideo,
     Permission::VoiceVad,
     Permission::VoiceRequest,
-    Permission::MessageCreateThread,
-    Permission::BypassSlowmode,
-    Permission::CalendarEventCreate,
-    Permission::CalendarEventRsvp,
-    Permission::ChannelEdit,
-    Permission::DocumentCreate,
-    Permission::DocumentEdit,
-    Permission::DocumentComment,
 ];
 
 /// Default permissions for everyone in an untrusted room (eg. public)
 pub const EVERYONE_UNTRUSTED: &[Permission] = &[
+    Permission::ApplicationCreate,
+    Permission::CalendarEventCreate,
+    Permission::CalendarEventRsvp,
+    Permission::DmCreate,
+    Permission::DocumentComment,
     Permission::EmojiUseExternal,
+    Permission::FriendCreate,
     Permission::InviteCreate,
-    Permission::MessageCreate,
-    Permission::MessageEmbeds,
     Permission::MessageAttachments,
+    Permission::MessageCreate,
+    Permission::MessageCreateThread,
+    Permission::MessageEmbeds,
     Permission::ReactionAdd,
     Permission::MemberNickname,
+    Permission::RoomCreate,
     Permission::TagApply, // maybe?
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
     Permission::ThreadEdit, // maybe?
+    Permission::UserDeleteSelf,
+    Permission::CallUpdate,
+    Permission::RoomJoin,
+    Permission::UserProfile,
     Permission::ViewChannel,
     // Permission::ViewAuditLog, // maybe?
     Permission::VoiceConnect,
@@ -176,17 +218,13 @@ pub const EVERYONE_UNTRUSTED: &[Permission] = &[
     Permission::VoiceVideo,
     Permission::VoiceVad,
     Permission::VoiceRequest,
-    Permission::MessageCreateThread,
-    Permission::BypassSlowmode,
-    Permission::CalendarEventCreate,
-    Permission::CalendarEventRsvp,
     // Permission::DocumentCreate, // maybe
     // Permission::DocumentEdit,   // maybe
-    Permission::DocumentComment,
 ];
 
 /// extra permissions for someone who moderates stuff
 pub const MODERATOR: &[Permission] = &[
+    Permission::ApplicationManage,
     Permission::InviteManage,
     Permission::MemberBan,
     Permission::MemberKick,
@@ -204,6 +242,7 @@ pub const MODERATOR: &[Permission] = &[
     Permission::ThreadEdit,
     Permission::ThreadLock,
     Permission::ThreadManage, // maybe?
+    Permission::UserManage,
     Permission::ViewChannel,
     Permission::ViewAuditLog, // maybe?
     Permission::VoiceDeafen,
@@ -215,10 +254,13 @@ pub const MODERATOR: &[Permission] = &[
     Permission::VoiceBroadcast,
     Permission::MessageCreateThread,
     Permission::BypassSlowmode,
+    Permission::CallUpdate,
     Permission::CalendarEventCreate,
     Permission::CalendarEventManage,
     Permission::CalendarEventRsvp,
     Permission::DocumentCreate,
     Permission::DocumentEdit,
     Permission::DocumentComment,
+    Permission::RoomForceJoin,
+    Permission::RoomJoin,
 ];

@@ -40,6 +40,12 @@ async fn room_create(
     auth.user.ensure_unsuspended()?;
     json.validate()?;
 
+    let srv = s.services();
+    srv.perms
+        .for_server(auth.user.id)
+        .await?
+        .ensure(Permission::RoomCreate)?;
+
     // FIXME: run this in a transaction
     let icon = json.icon;
     if let Some(media_id) = icon {
@@ -58,7 +64,7 @@ async fn room_create(
         ty: RoomType::Default,
         welcome_channel_id: None,
     };
-    let room = s.services().rooms.create(json, &auth, extra).await?;
+    let room = srv.rooms.create(json, &auth, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
         data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::RoomIcon)
@@ -113,9 +119,9 @@ async fn room_list(
     let srv = s.services();
     let is_admin = srv
         .perms
-        .for_room(auth.user.id, SERVER_ROOM_ID)
+        .for_server(auth.user.id)
         .await?
-        .has(Permission::Admin);
+        .has(Permission::RoomManageServer);
 
     if is_admin {
         let mut rooms = data.room_list_all(q).await?;
@@ -145,8 +151,8 @@ async fn room_search(
     Json(_json): Json<RoomAdminSearch>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
-    perms.ensure(Permission::Admin)?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::RoomManageServer)?;
 
     Ok(Error::Unimplemented)
 }
@@ -233,8 +239,8 @@ async fn room_delete(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
-    let is_admin = perms.has(Permission::Admin);
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    let is_admin = perms.has(Permission::RoomManageServer);
 
     let room = srv.rooms.get(room_id, None).await?;
     if room.owner_id != Some(auth.user.id) && !is_admin {
@@ -289,8 +295,8 @@ async fn room_undelete(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
-    perms.ensure(Permission::Admin)?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::RoomManageServer)?;
 
     data.room_undelete(room_id).await?;
     srv.rooms.reload(room_id).await?;
@@ -476,8 +482,8 @@ async fn room_quarantine(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
-    perms.ensure(Permission::Admin)?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::RoomManageServer)?;
 
     let room = srv.rooms.get(room_id, None).await?;
 
@@ -520,9 +526,9 @@ async fn room_unquarantine(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
 
-    perms.ensure(Permission::Admin)?;
+    perms.ensure(Permission::RoomManageServer)?;
 
     let room = srv.rooms.get(room_id, None).await?;
 

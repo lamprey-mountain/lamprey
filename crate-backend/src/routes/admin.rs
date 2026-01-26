@@ -68,7 +68,7 @@ async fn admin_whisper(
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
 
     perms.ensure(Permission::Admin)?;
 
@@ -131,7 +131,7 @@ async fn admin_broadcast(
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
 
     perms.ensure(Permission::Admin)?;
 
@@ -225,7 +225,7 @@ async fn admin_register_user(
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
     let target_user_id = json.user_id;
@@ -263,7 +263,7 @@ async fn admin_purge_cache(
 
     let srv = s.services();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
     let res = srv.admin.purge_caches(json).await?;
@@ -290,7 +290,7 @@ async fn admin_collect_garbage(
 
     let srv = s.services();
 
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
     let res = srv.admin.collect_garbage(json).await?;

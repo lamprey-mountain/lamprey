@@ -4,7 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, UserId,
+    Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Permission, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -36,6 +36,10 @@ async fn dm_init(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
+    srv.perms
+        .for_server(auth.user.id)
+        .await?
+        .ensure(Permission::DmCreate)?;
     let target_user = s.data().user_get(target_user_id).await?;
     if !target_user.can_dm() {
         return Err(Error::BadStatic("cannot dm this user"));

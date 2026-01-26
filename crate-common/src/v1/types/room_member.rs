@@ -55,6 +55,9 @@ pub struct RoomMember {
 
     /// temporarily prevent a member from communicating
     pub timeout_until: Option<Time>,
+
+    /// whether this user is quarantined by automod
+    pub quarantined: bool,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

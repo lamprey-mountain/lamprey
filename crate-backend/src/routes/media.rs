@@ -10,7 +10,7 @@ use axum::{
 use common::{
     v1::types::{
         media::{MediaAdminSearch, MediaClone},
-        MediaCreateSource, MediaPatch, Permission, SERVER_ROOM_ID,
+        MediaCreateSource, MediaPatch, Permission,
     },
     v2::types::media::MediaDoneParams,
 };
@@ -464,7 +464,7 @@ async fn media_search(
     Json(_json): Json<MediaAdminSearch>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
     Ok(Error::Unimplemented)

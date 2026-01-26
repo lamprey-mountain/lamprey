@@ -14,11 +14,17 @@ pub struct Permissions {
     /// whether this user is timed out
     timed_out: bool,
 
+    /// whether this user is quarantined by automod
+    quarantined: bool,
+
     /// whether this user can bypass channel/thread locks
     locked_bypass: bool,
 
     /// whether this user is trying to access a locked channel/thread
     channel_locked: bool,
+
+    /// whether this user is a lurker (not part of the room yet)
+    lurker: bool,
 }
 
 impl Permissions {
@@ -26,13 +32,23 @@ impl Permissions {
         Permissions {
             p: HashSet::new(),
             timed_out: false,
+            quarantined: false,
             locked_bypass: false,
             channel_locked: false,
+            lurker: false,
         }
     }
 
     pub fn set_timed_out(&mut self, timed_out: bool) {
         self.timed_out = timed_out;
+    }
+
+    pub fn set_quarantined(&mut self, quarantined: bool) {
+        self.quarantined = quarantined;
+    }
+
+    pub fn set_lurker(&mut self, lurker: bool) {
+        self.lurker = lurker;
     }
 
     pub fn set_locked_bypass(&mut self, locked_bypass: bool) {
@@ -52,14 +68,18 @@ impl Permissions {
         if perm == Permission::Admin {
             self.p.extend(ADMIN_ROOM);
         }
+
         if perm == Permission::CalendarEventManage {
             self.p.insert(Permission::CalendarEventCreate);
         }
+
+        // TODO: more implied permissions?
         self.p.insert(perm);
     }
 
     #[inline]
     pub fn remove(&mut self, perm: Permission) {
+        // TODO: handle implied permissions?
         self.p.remove(&perm);
     }
 
@@ -68,6 +88,21 @@ impl Permissions {
         if self.timed_out {
             return perm == Permission::ViewChannel || perm == Permission::ViewAuditLog;
         }
+
+        if self.quarantined {
+            return perm == Permission::ViewChannel
+                || perm == Permission::ViewAuditLog
+                || perm == Permission::MemberNickname;
+        }
+
+        if self.lurker {
+            return perm == Permission::ViewChannel || perm == Permission::ViewAuditLog;
+            // FIXME: these three should be enabled in Broadcast channels
+            // || perm == Permission::VoiceConnect
+            // || perm == Permission::VoiceVad
+            // || perm == Permission::VoiceSpeak
+        }
+
         self.p.contains(&perm)
     }
 
@@ -144,8 +179,10 @@ impl FromIterator<Permission> for Permissions {
         Permissions {
             p,
             timed_out: false,
+            quarantined: false,
             locked_bypass: false,
             channel_locked: false,
+            lurker: false,
         }
     }
 }
