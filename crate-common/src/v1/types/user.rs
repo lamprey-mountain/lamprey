@@ -59,6 +59,10 @@ pub struct User {
     ///
     /// this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
     pub has_mfa: Option<bool>,
+
+    #[cfg(any())]
+    /// public connections on this user that you can view
+    pub connections: Vec<Connection>,
 }
 
 #[derive(Debug, Clone)]

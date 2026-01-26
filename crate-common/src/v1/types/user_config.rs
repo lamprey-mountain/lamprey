@@ -30,7 +30,8 @@ pub struct UserConfigGlobal {
 }
 
 /// configuration for a user in a room
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserConfigRoom {
     /// room notification config
@@ -41,7 +42,8 @@ pub struct UserConfigRoom {
 }
 
 /// configuration for a user in a thread
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserConfigChannel {
     /// thread notification config
@@ -52,7 +54,8 @@ pub struct UserConfigChannel {
 }
 
 /// configuration for a user for another user
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserConfigUser {
     /// config in voice threads
@@ -63,7 +66,8 @@ pub struct UserConfigUser {
 }
 
 /// voice config the local user can set on someone else
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceConfig {
     /// whether to mute voice

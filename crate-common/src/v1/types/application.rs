@@ -45,6 +45,7 @@ pub struct Application {
     /// if anyone can use this
     pub public: bool,
 
+    // TODO: move oauth_foo fields below to oauth_client: ApplicationOauthClient
     /// only returned on oauth token rotate endpoint
     pub oauth_secret: Option<String>,
 
@@ -60,6 +61,79 @@ pub struct Application {
     // url_help_docs: Vec<Url>,
     // url_main_site: Vec<Url>,
     // url_interactions: Vec<Url>, // webhook
+    #[cfg(any())]
+    /// if this is a connection that can be displayed on users' profiles
+    pub connection: Option<ApplicationConnectionProvider>,
+
+    #[cfg(any())]
+    /// if this can be used to log into lamprey
+    // can only be set by admins for now?
+    pub oauth_provider: Option<ApplicationOauthProvider>,
+
+    #[cfg(any())]
+    /// use lamprey as an oauth provider for your application
+    pub oauth_client: Option<ApplicationOauthClient>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ApplicationConnectionProvider {
+    // platform_name = application.name
+    // platform_description = application.description
+    // platform_url: Option<String>,
+    pub fields: Vec<ApplicationConnectionProviderField>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ApplicationConnectionProviderField {
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    pub ty: ApplicationConnectionProviderFieldType,
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ApplicationConnectionProviderFieldType {
+    Int,
+    // TODO: string, bool, time
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ApplicationOauthProvider {
+    pub client_id: String,
+    pub client_secret: String,
+    pub authorization_url: String,
+    pub token_url: String,
+    pub revocation_url: String,
+
+    /// automatically mark users as registered if they create an account or link their account with this provider
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub autoregister: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct ApplicationOauthClient {
+    /// the oauth client secret
+    ///
+    /// only returned on oauth token rotate endpoint
+    pub secret: Option<String>,
+
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    pub redirect_uris: Vec<String>,
+
+    /// whether this client can keep secrets confidential
+    pub confidential: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

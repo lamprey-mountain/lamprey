@@ -41,6 +41,7 @@ pub mod text;
 pub mod thread_member;
 pub mod user;
 pub mod user_config;
+pub mod user_connection;
 pub mod util;
 pub mod visibility;
 pub mod voice;
