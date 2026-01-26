@@ -7,7 +7,10 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{ChannelId, ChannelType, RoleId, RoomId, TagId, UserId};
+use crate::v1::types::{
+    Channel, ChannelId, ChannelType, Message, RoleId, RoomId, RoomMember, TagId, ThreadMember,
+    User, UserId,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -56,6 +59,9 @@ pub struct SearchMessageRequest {
     /// Only return messages that have an embed
     pub has_embed: Option<bool>,
 
+    // /// Only return messages that have an associated thread
+    // // maybe not as useful due to the upcoming thread search endpoint
+    // pub has_thread: Option<bool>,
     /// Only return pinned (or unpinned) messages
     pub pinned: Option<bool>,
 
@@ -86,13 +92,16 @@ pub struct SearchMessageRequest {
     pub to: Option<MessageId>,
 
     /// The order to return messages in
-    #[cfg(feature = "feat_search_ordering")]
     pub order: SearchMessageOrder,
 
     /// The maximum number of items to return.
     #[cfg(feature = "feat_search_ordering")]
     // TODO: min 0, max 1024, default 100
     pub limit: Option<u16>,
+
+    #[cfg(any())]
+    /// whether to include results from nsfw channels
+    pub include_nsfw: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -151,6 +160,10 @@ pub struct SearchChannelsRequest {
     #[cfg(feature = "feat_search_ordering")]
     // TODO: min 0, max 1024, default 100
     pub limit: Option<u16>,
+
+    #[cfg(any())]
+    /// whether to include results from nsfw channels
+    pub include_nsfw: bool,
 }
 
 // TODO(#77): room searching
@@ -168,7 +181,6 @@ pub struct SearchRoomsRequest {
     pub query: String,
 }
 
-#[cfg(feature = "feat_search_ordering")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -190,4 +202,17 @@ pub enum SearchChannelsOrder {
     ActivityOldest,
     ArchiveNewest,
     ArchiveOldest,
+}
+
+// TODO: return extra data with search response
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SearchMessageResponse {
+    pub messages: Vec<Message>,
+    pub users: Vec<User>,
+    pub threads: Vec<Channel>,
+    pub room_members: Vec<RoomMember>,
+    pub thread_members: Vec<ThreadMember>,
+    pub total: u64,
 }

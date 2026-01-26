@@ -7,15 +7,21 @@ use common::v1::types::{
 };
 use common::v2::types::message::Message;
 
-use crate::{error::Result, ServerStateInner};
+use crate::{error::Result, services::search::index::TantivyHandle, ServerStateInner};
+
+mod directory;
+mod index;
+mod schema;
 
 pub struct ServiceSearch {
     state: Arc<ServerStateInner>,
+    tantivy: TantivyHandle,
 }
 
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+        let tantivy = index::spawn_indexer(Arc::clone(&state));
+        Self { state, tantivy }
     }
 
     pub async fn search_messages(

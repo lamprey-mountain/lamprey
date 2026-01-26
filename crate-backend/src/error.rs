@@ -135,6 +135,9 @@ pub enum Error {
 
     #[error("yrs read error: {0}")]
     YrsRead(#[from] yrs::encoding::read::Error),
+
+    #[error("tantivy error: {0}")]
+    Tantivy(#[from] tantivy::TantivyError),
 }
 
 impl From<sqlx::Error> for Error {
@@ -216,6 +219,7 @@ impl Error {
             Error::UrlEmbedOther(s) => Error::UrlEmbedOther(s.to_string()),
             Error::Validation(validation_errors) => Error::Validation(validation_errors.clone()),
             Error::MissingScopes(s) => Error::MissingScopes(s.clone()),
+            Error::Tantivy(t) => Error::Tantivy(t.clone()),
             _ => Error::GenericError(self.to_string()),
         }
     }
@@ -226,16 +230,22 @@ impl IntoResponse for Error {
         if let Error::NotModified = self {
             return self.get_status().into_response();
         };
-        error!(
-            "Response error: status {}, message {:?}",
-            self.get_status(),
-            self
-        );
-        (
-            self.get_status(),
-            Json(json!({ "error": self.to_string() })),
-        )
-            .into_response()
+
+        if let Error::ApiError(e) = self {
+            error!("Response api error: {:?}", e);
+            (StatusCode::from_u16(e.code.status()).unwrap(), Json(e)).into_response()
+        } else {
+            error!(
+                "Response error: status {}, message {:?}",
+                self.get_status(),
+                self
+            );
+            (
+                self.get_status(),
+                Json(json!({ "error": self.to_string() })),
+            )
+                .into_response()
+        }
     }
 }
 
