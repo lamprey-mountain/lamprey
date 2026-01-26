@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
-use common::v1::types::server::{ServerInfo, ServerModeration};
+use common::v1::types::server::{ServerInfo, ServerModeration, ServerFeatures, ServerVersion, ServerRegistration, ServerAuth, ServerAuthOauth, ServerMedia, ServerVoice, ServerWebPush};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
@@ -26,6 +26,44 @@ async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespo
         sync_url: s.config.api_url.join("/api/v1/sync").unwrap(),
         html_url: s.config.html_url.clone(),
         cdn_url: s.config.cdn_url.clone(),
+        features: ServerFeatures {
+            registration: Some(ServerRegistration {
+                enabled: s.config.registration_enabled,
+            }),
+            auth: Some(ServerAuth {
+                supports_totp: true, // assuming TOTP is supported
+                supports_webauthn: s.config.webauthn_enabled, // use actual config value
+                oauth_providers: s
+                    .config
+                    .oauth_provider
+                    .iter()
+                    .map(|(id, _)| ServerAuthOauth {
+                        id: id.to_owned(),
+                        name: id.to_owned(),
+                    })
+                    .collect(),
+            }),
+            media: Some(ServerMedia {
+                max_file_size: s.config.media_max_size,
+            }),
+            voice: if s.config.voice_enabled {
+                Some(ServerVoice {})
+            } else {
+                None
+            },
+            web_push: if !s.config.vapid_public_key.is_empty() {
+                Some(ServerWebPush {
+                    vapid_pubkey: s.config.vapid_public_key.clone(),
+                })
+            } else {
+                None
+            },
+        },
+        version: ServerVersion {
+            implementation: "chat-server".to_string(), // or get from config/env
+            version: env!("CARGO_PKG_VERSION").to_string(), // get from cargo
+            extra: std::collections::HashMap::new(), // could add custom metadata
+        },
     };
     Ok(Json(info))
 }
