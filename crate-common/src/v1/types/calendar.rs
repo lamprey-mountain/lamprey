@@ -14,7 +14,7 @@ use crate::v1::types::{
     RoomMember, User, UserId,
 };
 
-use super::util::Time;
+use super::util::{Diff, Time};
 
 /// channel metadata for a calendar
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -466,4 +466,19 @@ pub enum CalendarRsvpStatus {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CalendarEventParticipantPut {
     pub status: CalendarRsvpStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct CalendarPatch {
+    #[serde(default, deserialize_with = "some_option")]
+    pub color: Option<Option<Color>>,
+    pub default_timezone: Option<Timezone>,
+}
+
+impl Diff<Calendar> for CalendarPatch {
+    fn changes(&self, other: &Calendar) -> bool {
+        self.default_timezone.changes(&other.default_timezone) || self.color.changes(&other.color)
+    }
 }

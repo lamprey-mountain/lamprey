@@ -1,13 +1,20 @@
 use async_trait::async_trait;
+use common::v1::types::calendar::{Calendar, CalendarPatch, Timezone};
+use common::v1::types::document::{
+    Document, DocumentArchived, DocumentPatch, DocumentPublished, Wiki, WikiPatch,
+};
+use common::v1::types::misc::Color;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{ChannelReorder, RoomVerId};
 use sqlx::{query, query_file_as, query_scalar, Acquire};
-use tracing::info;
+use time::PrimitiveDateTime;
+use tracing::{info, warn};
 
 use crate::error::Result;
 use crate::types::{
-    Channel, ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelCreate, DbChannelPrivate,
-    DbChannelType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
+    Channel, ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelCalendar, DbChannelCreate,
+    DbChannelDocument, DbChannelPrivate, DbChannelType, DbChannelWiki, PaginationDirection,
+    PaginationQuery, PaginationResponse, RoomId, UserId,
 };
 use crate::{gen_paginate, Error};
 
@@ -235,7 +242,7 @@ impl DataChannel for Postgres {
                 .changes(&thread.auto_archive_duration)
         {
             let now = time::OffsetDateTime::now_utc();
-            let now = time::PrimitiveDateTime::new(now.date(), now.time());
+            let now = PrimitiveDateTime::new(now.date(), now.time());
             last_activity_at = Some(now);
         }
 
@@ -244,7 +251,7 @@ impl DataChannel for Postgres {
         let locked_until = locked_val.as_ref().and_then(|l| {
             l.until.map(|t| {
                 let inner = t.into_inner();
-                time::PrimitiveDateTime::new(inner.date(), inner.time())
+                PrimitiveDateTime::new(inner.date(), inner.time())
             })
         });
         let locked_roles: Vec<uuid::Uuid> = locked_val
@@ -326,6 +333,73 @@ impl DataChannel for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+
+        if let Some(ref document_patch) = patch.document {
+            let doc_exists = query_scalar!(
+                "SELECT EXISTS(SELECT 1 FROM channel_document WHERE channel_id = $1)",
+                thread_id.into_inner()
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(false);
+
+            if !doc_exists {
+                query!(
+                    "INSERT INTO channel_document (channel_id) VALUES ($1)",
+                    *thread_id
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+
+            self.channel_document_update_impl(&mut tx, thread_id, document_patch)
+                .await?;
+        }
+
+        if let Some(ref wiki_patch) = patch.wiki {
+            let wiki_exists = query_scalar!(
+                "SELECT EXISTS(SELECT 1 FROM channel_wiki WHERE channel_id = $1)",
+                thread_id.into_inner()
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(false);
+
+            if !wiki_exists {
+                query!(
+                    "INSERT INTO channel_wiki (channel_id) VALUES ($1)",
+                    *thread_id
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+
+            self.channel_wiki_update_impl(&mut tx, thread_id, wiki_patch)
+                .await?;
+        }
+
+        if let Some(ref calendar_patch) = patch.calendar {
+            let calendar_exists = query_scalar!(
+                "SELECT EXISTS(SELECT 1 FROM channel_calendar WHERE channel_id = $1)",
+                *thread_id
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(false);
+
+            if !calendar_exists {
+                query!(
+                    "INSERT INTO channel_calendar (channel_id) VALUES ($1)",
+                    thread_id.into_inner()
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+
+            self.channel_calendar_update_impl(&mut tx, thread_id, calendar_patch)
+                .await?;
+        }
+
         tx.commit().await?;
         Ok(version_id)
     }
@@ -541,6 +615,426 @@ impl DataChannel for Postgres {
         )
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    async fn channel_document_insert(
+        &self,
+        channel_id: ChannelId,
+        document: &Document,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        self.channel_document_insert_impl(&mut tx, channel_id, document)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn channel_document_get(&self, channel_id: ChannelId) -> Result<Option<Document>> {
+        let row = query!(
+            r#"
+            SELECT draft, archived_at, archived_reason, template, slug,
+                   published_at, published_revision, published_unlisted
+            FROM channel_document
+            WHERE channel_id = $1
+            "#,
+            channel_id.into_inner()
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(doc) = row {
+            let archived = if doc.archived_at.is_some() {
+                Some(DocumentArchived {
+                    archived_at: Time::from(PrimitiveDateTime::new(
+                        doc.archived_at.unwrap().date(),
+                        doc.archived_at.unwrap().time(),
+                    )),
+                    reason: doc.archived_reason,
+                })
+            } else {
+                None
+            };
+
+            let published = if doc.published_at.is_some() {
+                Some(DocumentPublished {
+                    time: Time::from(PrimitiveDateTime::new(
+                        doc.published_at.unwrap().date(),
+                        doc.published_at.unwrap().time(),
+                    )),
+                    revision: doc.published_revision.unwrap().parse().map_err(|_| {
+                        Error::Internal("Invalid document revision format".to_string())
+                    })?,
+                    unlisted: doc.published_unlisted.unwrap_or(false),
+                })
+            } else {
+                None
+            };
+
+            Ok(Some(Document {
+                draft: doc.draft,
+                archived,
+                template: doc.template,
+                slug: doc.slug,
+                published,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn channel_document_update(
+        &self,
+        channel_id: ChannelId,
+        document_patch: &DocumentPatch,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        self.channel_document_update_impl(&mut tx, channel_id, document_patch)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn channel_wiki_insert(&self, channel_id: ChannelId, wiki: &Wiki) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        self.channel_wiki_insert_impl(&mut tx, channel_id, wiki)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn channel_wiki_get(&self, channel_id: ChannelId) -> Result<Option<Wiki>> {
+        let row = query!(
+            r#"
+            SELECT allow_indexing, page_index, page_notfound
+            FROM channel_wiki
+            WHERE channel_id = $1
+            "#,
+            channel_id.into_inner()
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(wiki) = row {
+            Ok(Some(Wiki {
+                allow_indexing: wiki.allow_indexing,
+                page_index: wiki.page_index.map(ChannelId::from),
+                page_notfound: wiki.page_notfound.map(ChannelId::from),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn channel_wiki_update(
+        &self,
+        channel_id: ChannelId,
+        wiki_patch: &WikiPatch,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        self.channel_wiki_update_impl(&mut tx, channel_id, wiki_patch)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn channel_calendar_insert(
+        &self,
+        channel_id: ChannelId,
+        calendar: &Calendar,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        self.channel_calendar_insert_impl(&mut tx, channel_id, calendar)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn channel_calendar_get(&self, channel_id: ChannelId) -> Result<Option<Calendar>> {
+        let row = query!(
+            r#"
+            SELECT color, default_timezone
+            FROM channel_calendar
+            WHERE channel_id = $1
+            "#,
+            *channel_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(cal) = row {
+            Ok(Some(Calendar {
+                color: cal.color.map(|c| Color::from_hex_string(c)),
+                default_timezone: Timezone(cal.default_timezone),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn channel_calendar_update(
+        &self,
+        channel_id: ChannelId,
+        calendar_patch: &CalendarPatch,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        self.channel_calendar_update_impl(&mut tx, channel_id, calendar_patch)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+}
+
+impl Postgres {
+    async fn channel_document_insert_impl(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        channel_id: ChannelId,
+        document: &Document,
+    ) -> Result<()> {
+        query!(
+            r#"
+            INSERT INTO channel_document (
+                channel_id, draft, archived_at, archived_reason, template, slug,
+                published_at, published_revision, published_unlisted
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "#,
+            *channel_id,
+            document.draft,
+            document
+                .archived
+                .as_ref()
+                .map(|a| time::PrimitiveDateTime::new(
+                    a.archived_at.into_inner().date(),
+                    a.archived_at.into_inner().time()
+                )),
+            document.archived.as_ref().and_then(|a| a.reason.as_deref()),
+            document.template,
+            document.slug.as_deref(),
+            document
+                .published
+                .as_ref()
+                .map(|p| time::PrimitiveDateTime::new(
+                    p.time.into_inner().date(),
+                    p.time.into_inner().time()
+                )),
+            document.published.as_ref().map(|p| p.revision.to_string()),
+            document.published.as_ref().map(|p| p.unlisted)
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn channel_document_update_impl(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        channel_id: ChannelId,
+        document_patch: &DocumentPatch,
+    ) -> Result<()> {
+        let current_doc = query!(
+            r#"
+            SELECT draft, archived_at, archived_reason, template, slug,
+                   published_at, published_revision, published_unlisted
+            FROM channel_document
+            WHERE channel_id = $1
+            "#,
+            channel_id.into_inner()
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if let Some(current) = current_doc {
+            // Handle archived_at logic - set to now_utc when archived is set to Some
+            let archived_at = match document_patch.archived {
+                Some(Some(_)) => {
+                    let t = Time::now_utc();
+                    Some(PrimitiveDateTime::new(
+                        t.into_inner().date(),
+                        t.into_inner().time(),
+                    ))
+                },
+                Some(None) => None, // Unarchive - set to None
+                None => current.archived_at, // No change - keep current value
+            };
+
+            // Handle published_at logic - set to now_utc when published is set to Some
+            let published_at = match document_patch.published {
+                Some(Some(_)) => {
+                    let t = Time::now_utc();
+                    Some(PrimitiveDateTime::new(
+                        t.into_inner().date(),
+                        t.into_inner().time(),
+                    ))
+                },
+                Some(None) => None, // Unpublish - set to None
+                None => current.published_at, // No change - keep current value
+            };
+
+            query!(
+                r#"
+                UPDATE channel_document
+                SET
+                    draft = $2,
+                    archived_at = $3,
+                    archived_reason = $4,
+                    template = $5,
+                    slug = $6,
+                    published_at = $7,
+                    published_revision = $8,
+                    published_unlisted = $9
+                WHERE channel_id = $1
+                "#,
+                *channel_id,
+                document_patch.draft.unwrap_or(current.draft),
+                archived_at as Option<PrimitiveDateTime>,
+                document_patch.archived
+                    .as_ref()
+                    .and_then(|a| a.as_ref().and_then(|arch| arch.reason.clone()))
+                    .or(current.archived_reason),
+                document_patch.template.unwrap_or(current.template),
+                document_patch.slug.as_deref().unwrap_or(current.slug.as_deref()),
+                published_at as Option<PrimitiveDateTime>,
+                document_patch.published
+                    .as_ref()
+                    .and_then(|p| p.as_ref().map(|publ| publ.revision.to_string()))
+                    .or(current.published_revision),
+                document_patch.published
+                    .as_ref()
+                    .and_then(|p| p.as_ref().map(|publ| publ.unlisted))
+                    .or(current.published_unlisted)
+            )
+            .execute(&mut **tx)
+            .await?;
+        } else {
+            warn!("channel_document not found");
+        }
+
+        Ok(())
+    }
+
+    async fn channel_wiki_insert_impl(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        channel_id: ChannelId,
+        wiki: &Wiki,
+    ) -> Result<()> {
+        query!(
+            r#"
+            INSERT INTO channel_wiki (
+                channel_id, allow_indexing, page_index, page_notfound
+            )
+            VALUES ($1, $2, $3, $4)
+            "#,
+            *channel_id,
+            wiki.allow_indexing,
+            wiki.page_index.map(|id| *id),
+            wiki.page_notfound.map(|id| *id)
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn channel_wiki_update_impl(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        channel_id: ChannelId,
+        wiki_patch: &WikiPatch,
+    ) -> Result<()> {
+        let current_wiki = query!(
+            r#"
+            SELECT allow_indexing, page_index, page_notfound
+            FROM channel_wiki
+            WHERE channel_id = $1
+            "#,
+            channel_id.into_inner()
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if let Some(current) = current_wiki {
+            query!(
+                r#"
+                UPDATE channel_wiki
+                SET
+                    allow_indexing = $2,
+                    page_index = $3,
+                    page_notfound = $4
+                WHERE channel_id = $1
+                "#,
+                channel_id.into_inner(),
+                wiki_patch.allow_indexing.unwrap_or(current.allow_indexing),
+                wiki_patch.page_index.as_ref().and_then(|p| p.as_ref().map(|id| id.into_inner())).or(current.page_index.map(|id| *id)),
+                wiki_patch.page_notfound.as_ref().and_then(|p| p.as_ref().map(|id| id.into_inner())).or(current.page_notfound.map(|id| *id))
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn channel_calendar_insert_impl(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        channel_id: ChannelId,
+        calendar: &Calendar,
+    ) -> Result<()> {
+        query!(
+            r#"
+            INSERT INTO channel_calendar (
+                channel_id, color, default_timezone
+            )
+            VALUES ($1, $2, $3)
+            "#,
+            channel_id.into_inner(),
+            calendar.color.as_ref().map(|c| c.as_ref()),
+            calendar.default_timezone.0
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn channel_calendar_update_impl(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        channel_id: ChannelId,
+        calendar_patch: &CalendarPatch,
+    ) -> Result<()> {
+        let current_cal = query!(
+            r#"
+            SELECT color, default_timezone
+            FROM channel_calendar
+            WHERE channel_id = $1
+            "#,
+            channel_id.into_inner()
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if let Some(current) = current_cal {
+            query!(
+                r#"
+                UPDATE channel_calendar
+                SET
+                    color = $2,
+                    default_timezone = $3
+                WHERE channel_id = $1
+                "#,
+                channel_id.into_inner(),
+                calendar_patch.color.as_ref().and_then(|c| c.as_ref().map(|color| color.as_ref())).unwrap_or(current.color.as_deref()),
+                calendar_patch.default_timezone.as_ref().map(|tz| tz.0.clone()).unwrap_or(current.default_timezone)
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
+
         Ok(())
     }
 }

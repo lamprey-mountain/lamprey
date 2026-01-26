@@ -5,7 +5,10 @@ SELECT
     (SELECT coalesce(COUNT(*), 0) FROM message WHERE channel_id = t.id AND deleted_at IS NULL) AS "message_count!",
     '[]'::json as "permission_overwrites!",
     (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = t.id) as tags,
-    NULL::json as tags_available
+    NULL::json as tags_available,
+    (SELECT row_to_json(cd.*) FROM channel_document cd WHERE cd.channel_id = t.id) as document,
+    (SELECT row_to_json(cw.*) FROM channel_wiki cw WHERE cw.channel_id = t.id) as wiki,
+    (SELECT row_to_json(cc.*) FROM channel_calendar cc WHERE cc.channel_id = t.id) as calendar
 FROM channel t
 LEFT JOIN thread_member tm ON t.id = tm.channel_id AND tm.user_id = $6
 WHERE t.parent_id = $5

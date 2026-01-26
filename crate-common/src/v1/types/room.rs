@@ -65,6 +65,12 @@ pub struct Room {
     /// number of active channels
     pub channel_count: u64,
 
+    /// number of emojis in room
+    // will be needed for virtual scrolling with unlimited emoji
+    // TODO(#956): implement
+    #[cfg(any())]
+    pub emoji_count: u64,
+
     // rooms can't be outright deleted, but some people might want to "clean up"
     // or "close" old rooms. archiving could be a good way to do that.
     pub archived_at: Option<Time>,

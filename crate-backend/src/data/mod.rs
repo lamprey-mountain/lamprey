@@ -4,12 +4,13 @@ use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scopes};
 use common::v1::types::automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate};
 use common::v1::types::calendar::{
-    CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
+    Calendar, CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
     CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
+    CalendarPatch,
 };
 use common::v1::types::document::{
-    DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
-    DocumentBranchState, DocumentTag,
+    Document, DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
+    DocumentBranchState, DocumentPatch, DocumentTag, Wiki, WikiPatch,
 };
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
@@ -17,6 +18,7 @@ use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
+use common::v1::types::push::PushInfo;
 use common::v1::types::reaction::{ReactionKeyParam, ReactionListItem};
 use common::v1::types::room_analytics::{
     RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
@@ -53,8 +55,8 @@ use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
     DbSessionCreate, DbUserCreate, DehydratedDocument, DocumentUpdateSummary, EmailPurpose,
     InviteCode, Media, MediaId, MediaLink, MediaLinkType, MentionsIds, MessageId, MessageRef,
-    MessageVerId, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId,
-    Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    MessageVerId, PushData, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch,
+    RoomVerId, Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -97,6 +99,8 @@ pub trait Data:
     + DataAdmin
     + DataAutomod
     + DataDocument
+    // TODO
+    // + DataPush
     + Send
     + Sync
 {
@@ -636,6 +640,38 @@ pub trait DataChannel {
         channel_id: ChannelId,
         user_id: UserId,
         expires_at: Time,
+    ) -> Result<()>;
+
+    async fn channel_document_insert(
+        &self,
+        channel_id: ChannelId,
+        document: &Document,
+    ) -> Result<()>;
+    async fn channel_document_get(&self, channel_id: ChannelId) -> Result<Option<Document>>;
+    async fn channel_document_update(
+        &self,
+        channel_id: ChannelId,
+        document_patch: &DocumentPatch,
+    ) -> Result<()>;
+
+    async fn channel_wiki_insert(&self, channel_id: ChannelId, wiki: &Wiki) -> Result<()>;
+    async fn channel_wiki_get(&self, channel_id: ChannelId) -> Result<Option<Wiki>>;
+    async fn channel_wiki_update(
+        &self,
+        channel_id: ChannelId,
+        wiki_patch: &WikiPatch,
+    ) -> Result<()>;
+
+    async fn channel_calendar_insert(
+        &self,
+        channel_id: ChannelId,
+        calendar: &Calendar,
+    ) -> Result<()>;
+    async fn channel_calendar_get(&self, channel_id: ChannelId) -> Result<Option<Calendar>>;
+    async fn channel_calendar_update(
+        &self,
+        channel_id: ChannelId,
+        calendar_patch: &CalendarPatch,
     ) -> Result<()>;
 }
 
@@ -1457,4 +1493,23 @@ pub trait DataDocument {
         &self,
         context_id: EditContextId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
+}
+
+// TODO: implement
+#[async_trait]
+pub trait DataPush {
+    /// insert a web push api subscription
+    async fn push_insert(&self, push: PushData) -> Result<()>;
+
+    /// get a web push api subscription for a session
+    async fn push_get(&self, session_id: SessionId) -> Result<PushData>;
+
+    /// delete a web push api subscription for a session
+    async fn push_delete(&self, session_id: SessionId) -> Result<()>;
+
+    /// list all web push subscriptions for a user
+    async fn push_list_for_user(&self, user_id: UserId) -> Result<Vec<PushData>>;
+
+    /// delete all web push subscriptions for a user
+    async fn push_delete_for_user(&self, user_id: UserId) -> Result<()>;
 }

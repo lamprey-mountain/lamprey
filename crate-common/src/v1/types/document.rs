@@ -10,7 +10,7 @@ use validator::Validate;
 use crate::v1::types::{
     ids::{DocumentBranchId, DocumentTagId},
     misc::Time,
-    util::some_option,
+    util::{some_option, Diff},
     ChannelId, RoomMember, ThreadMember, User, UserId,
 };
 
@@ -582,4 +582,88 @@ pub struct DocumentPublished {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SerdocPut {
     pub root: serialized::SerdocRoot,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct DocumentPatch {
+    pub draft: Option<bool>,
+    pub template: Option<bool>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub archived: Option<Option<DocumentArchivedPatch>>,
+    pub slug: Option<Option<String>>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub published: Option<Option<DocumentPublishedPatch>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct DocumentPublishedPatch {
+    pub revision: Option<DocumentRevisionId>,
+    #[serde(default)]
+    pub unlisted: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct DocumentArchivedPatch {
+    #[serde(default, deserialize_with = "some_option")]
+    pub reason: Option<Option<String>>,
+}
+
+impl Diff<DocumentArchived> for DocumentArchivedPatch {
+    fn changes(&self, other: &DocumentArchived) -> bool {
+        self.reason.changes(&other.reason)
+    }
+}
+
+impl Diff<DocumentPublished> for DocumentPublishedPatch {
+    fn changes(&self, other: &DocumentPublished) -> bool {
+        self.revision.changes(&other.revision) || self.unlisted.changes(&other.unlisted)
+    }
+}
+
+impl Diff<Document> for DocumentPatch {
+    fn changes(&self, other: &Document) -> bool {
+        self.draft.changes(&other.draft)
+            || self.template.changes(&other.template)
+            || self.slug.changes(&other.slug)
+            // TODO: figure out if i can simplify this
+            || (match (&self.archived, &other.archived) {
+                (None, _) => false,
+                (Some(None), None) => false,
+                (Some(None), Some(_)) => true,
+                (Some(Some(a)), Some(b)) => a.changes(b),
+                (Some(Some(_)), None) => true,
+            })
+            || (match (&self.published, &other.published) {
+                (None, _) => false,
+                (Some(None), None) => false,
+                (Some(None), Some(_)) => true,
+                (Some(Some(a)), Some(b)) => a.changes(b),
+                (Some(Some(_)), None) => true,
+            })
+    }
+}
+
+impl Diff<Wiki> for WikiPatch {
+    fn changes(&self, other: &Wiki) -> bool {
+        self.allow_indexing.changes(&other.allow_indexing)
+            || self.page_index.changes(&other.page_index)
+            || self.page_notfound.changes(&other.page_notfound)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct WikiPatch {
+    pub allow_indexing: Option<bool>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub page_index: Option<Option<ChannelId>>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub page_notfound: Option<Option<ChannelId>>,
 }

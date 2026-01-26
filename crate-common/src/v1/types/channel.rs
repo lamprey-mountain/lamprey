@@ -13,6 +13,8 @@ use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
 use crate::v1::types::{MediaId, MessageVerId, RoleId, TagId, ThreadMember, User};
 
+use super::calendar::{Calendar, CalendarPatch};
+use super::document::{Document, DocumentPatch, Wiki, WikiPatch};
 use super::{ChannelId, RoomId, UserId};
 
 /// A channel
@@ -63,11 +65,17 @@ pub struct Channel {
     /// number of people who are online in this room
     pub online_count: u64,
 
+    /// number of tags in this Forum, Forum2, or Ticket channel
+    // TODO(#955): implement
+    #[cfg(any())]
+    pub tag_count: u64,
+
     /// tags that are applied to this thread
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags: Option<Vec<TagId>>,
 
     /// the tags that are available in this forum. exists on Forum channels only.
+    // NOTE: if i want to have unlimited tags, i'd have to remove this
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags_available: Option<Vec<Tag>>,
 
@@ -118,6 +126,15 @@ pub struct Channel {
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,
     pub user_config: Option<UserConfigChannel>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub document: Option<Document>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wiki: Option<Wiki>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub calendar: Option<Calendar>,
 
     /// for dm and gdm channels, this is who the dm is with
     pub recipients: Vec<User>,
@@ -476,6 +493,10 @@ pub struct ChannelPatch {
 
     #[serde(default, deserialize_with = "some_option")]
     pub default_slowmode_message: Option<Option<u64>>,
+
+    pub document: Option<DocumentPatch>,
+    pub wiki: Option<WikiPatch>,
+    pub calendar: Option<CalendarPatch>,
 }
 
 /// indicates that a channel is locked
@@ -543,6 +564,30 @@ impl Diff<Channel> for ChannelPatch {
             || self
                 .default_slowmode_message
                 .changes(&other.default_slowmode_message)
+            || match (&self.document, &other.document) {
+                (None, _) => false,
+                (Some(_), None) => {
+                    // WARN: this should be invalid!
+                    false
+                }
+                (Some(a), Some(b)) => a.changes(b),
+            }
+            || match (&self.wiki, &other.wiki) {
+                (None, _) => false,
+                (Some(_), None) => {
+                    // WARN: this should be invalid!
+                    false
+                }
+                (Some(a), Some(b)) => a.changes(b),
+            }
+            || match (&self.calendar, &other.calendar) {
+                (None, _) => false,
+                (Some(_), None) => {
+                    // WARN: this should be invalid!
+                    false
+                }
+                (Some(a), Some(b)) => a.changes(b),
+            }
     }
 }
 

@@ -59,6 +59,10 @@ pub struct Session {
 
     /// when this session was logged out
     pub deauthorized_at: Option<Time>,
+
+    /// if web push is enabled for this session
+    #[cfg(any())]
+    pub push_enabled: bool,
 }
 
 /// minimal session persisted for audit log

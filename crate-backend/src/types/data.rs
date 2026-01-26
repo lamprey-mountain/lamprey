@@ -155,6 +155,10 @@ pub struct DbChannel {
     pub slowmode_message: Option<i32>,
     pub default_slowmode_message: Option<i32>,
     pub last_activity_at: Option<PrimitiveDateTime>,
+    pub document: Option<serde_json::Value>,
+    pub wiki: Option<serde_json::Value>,
+    pub calendar: Option<serde_json::Value>,
+    pub slowmode_message_expire_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -318,7 +322,10 @@ impl From<DbChannel> for Channel {
             user_config: None,
             online_count: 0,
             slowmode_thread_expire_at: None,
-            slowmode_message_expire_at: None,
+            slowmode_message_expire_at: row.slowmode_message_expire_at.map(|t| t.into()),
+            document: row.document.and_then(|v| serde_json::from_value(v).ok()),
+            wiki: row.wiki.and_then(|v| serde_json::from_value(v).ok()),
+            calendar: row.calendar.and_then(|v| serde_json::from_value(v).ok()),
         }
     }
 }
@@ -753,4 +760,40 @@ impl From<AuditLogEntryStatus> for DbAuditLogEntryStatus {
             AuditLogEntryStatus::Failed => DbAuditLogEntryStatus::Failed,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct DbChannelDocument {
+    pub channel_id: Uuid,
+    pub draft: bool,
+    pub archived_at: Option<PrimitiveDateTime>,
+    pub archived_reason: Option<String>,
+    pub template: bool,
+    pub slug: Option<String>,
+    pub published_at: Option<PrimitiveDateTime>,
+    pub published_revision: Option<String>,
+    pub published_unlisted: Option<bool>,
+}
+
+#[derive(Debug)]
+pub struct DbChannelWiki {
+    pub channel_id: Uuid,
+    pub allow_indexing: bool,
+    pub page_index: Option<Uuid>,
+    pub page_notfound: Option<Uuid>,
+}
+
+#[derive(Debug)]
+pub struct DbChannelCalendar {
+    pub channel_id: Uuid,
+    pub color: Option<String>,
+    pub default_timezone: String,
+}
+
+pub struct PushData {
+    pub session_id: SessionId,
+    pub user_id: UserId,
+    pub endpoint: String,
+    pub key_p256dh: String,
+    pub key_auth: String,
 }

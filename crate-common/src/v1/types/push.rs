@@ -17,3 +17,13 @@ pub struct PushCreateKeys {
     pub p256dh: String,
     pub auth: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PushInfo {
+    /// the endpoint that web push payloads are sent to
+    pub endpoint: String,
+
+    /// the server's vapid key
+    pub server_key: String,
+}

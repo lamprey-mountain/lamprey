@@ -867,6 +867,136 @@ impl ServiceThreads {
                         &chan_old.default_slowmode_message,
                         &chan_new.default_slowmode_message,
                     )
+                    // document fields
+                    .change(
+                        "document_draft",
+                        &chan_old.document.as_ref().map(|d| d.draft).unwrap_or(false),
+                        &chan_new.document.as_ref().map(|d| d.draft).unwrap_or(false),
+                    )
+                    .change(
+                        "document_template",
+                        &chan_old
+                            .document
+                            .as_ref()
+                            .map(|d| d.template)
+                            .unwrap_or(false),
+                        &chan_new
+                            .document
+                            .as_ref()
+                            .map(|d| d.template)
+                            .unwrap_or(false),
+                    )
+                    .change(
+                        "document_archived",
+                        &chan_old
+                            .document
+                            .as_ref()
+                            .map(|d| d.archived.is_some())
+                            .unwrap_or(false),
+                        &chan_new
+                            .document
+                            .as_ref()
+                            .map(|d| d.archived.is_some())
+                            .unwrap_or(false),
+                    )
+                    .change(
+                        "document_archived_reason",
+                        &chan_old
+                            .document
+                            .as_ref()
+                            .and_then(|d| d.archived.as_ref().and_then(|a| a.reason.clone())),
+                        &chan_new
+                            .document
+                            .as_ref()
+                            .and_then(|d| d.archived.as_ref().and_then(|a| a.reason.clone())),
+                    )
+                    .change(
+                        "document_slug",
+                        &chan_old.document.as_ref().and_then(|d| d.slug.clone()),
+                        &chan_new.document.as_ref().and_then(|d| d.slug.clone()),
+                    )
+                    .change(
+                        "document_published",
+                        &chan_old
+                            .document
+                            .as_ref()
+                            .map(|d| d.published.is_some())
+                            .unwrap_or(false),
+                        &chan_new
+                            .document
+                            .as_ref()
+                            .map(|d| d.published.is_some())
+                            .unwrap_or(false),
+                    )
+                    .change(
+                        "document_published_revision",
+                        &chan_old
+                            .document
+                            .as_ref()
+                            .and_then(|d| d.published.as_ref())
+                            .map(|p| p.revision.clone()),
+                        &chan_new
+                            .document
+                            .as_ref()
+                            .and_then(|d| d.published.as_ref())
+                            .map(|p| p.revision.clone()),
+                    )
+                    .change(
+                        "document_published_unlisted",
+                        &chan_old
+                            .document
+                            .as_ref()
+                            .and_then(|d| d.published.as_ref())
+                            .map(|p| p.unlisted),
+                        &chan_new
+                            .document
+                            .as_ref()
+                            .and_then(|d| d.published.as_ref())
+                            .map(|p| p.unlisted),
+                    )
+                    // wiki fields
+                    .change(
+                        "wiki_allow_indexing",
+                        &chan_old
+                            .wiki
+                            .as_ref()
+                            .map(|w| w.allow_indexing)
+                            .unwrap_or(false),
+                        &chan_new
+                            .wiki
+                            .as_ref()
+                            .map(|w| w.allow_indexing)
+                            .unwrap_or(false),
+                    )
+                    .change(
+                        "wiki_page_index",
+                        &chan_old.wiki.as_ref().and_then(|w| w.page_index),
+                        &chan_new.wiki.as_ref().and_then(|w| w.page_index),
+                    )
+                    .change(
+                        "wiki_page_notfound",
+                        &chan_old.wiki.as_ref().and_then(|w| w.page_notfound),
+                        &chan_new.wiki.as_ref().and_then(|w| w.page_notfound),
+                    )
+                    // calendar fields
+                    .change(
+                        "calendar_color",
+                        &chan_old.calendar.as_ref().and_then(|c| c.color.clone()),
+                        &chan_new.calendar.as_ref().and_then(|c| c.color.clone()),
+                    )
+                    .change(
+                        "calendar_default_timezone",
+                        &chan_old
+                            .calendar
+                            .as_ref()
+                            .map(|c| c.default_timezone.0.clone())
+                            .unwrap_or_default(),
+                        &chan_new
+                            .calendar
+                            .as_ref()
+                            .map(|c| c.default_timezone.0.clone())
+                            .unwrap_or_default(),
+                    )
                     .build(),
             })
             .await?;
