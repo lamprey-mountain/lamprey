@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::automod::AutomodAction;
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
@@ -194,7 +195,6 @@ async fn invite_resolve(
 ///
 /// - solve an antispam challenge, such as a captcha
 /// - add an authentication method, such as (email && password) || oauth
-
 #[utoipa::path(
     post,
     path = "/invite/{invite_code}",
@@ -247,15 +247,29 @@ async fn invite_use(
                 RoomMemberPut::default(),
             )
             .await?;
-            let member = d.room_member_get(room.id, auth.user.id).await?;
 
-            // let automod = srv.automod.load(room.id).await?;
-            // let scan = automod.scan_member(&member, &auth.user);
-            // for action in scan.actions() {
-            //     match action {
+            let mut member = d.room_member_get(room.id, auth.user.id).await?;
 
-            //     }
-            // }
+            // scan member with automod
+            let automod = srv.automod.load(room.id).await?;
+            let scan = automod.scan_member(&member, &auth.user);
+
+            let has_block_action = scan
+                .actions()
+                .iter()
+                .any(|action| matches!(action, AutomodAction::Block { .. }));
+
+            if has_block_action {
+                d.room_member_set_quarantined(room.id, auth.user.id, true)
+                    .await?;
+            } else if member.quarantined {
+                d.room_member_set_quarantined(room.id, auth.user.id, false)
+                    .await?;
+            }
+
+            if has_block_action || (!has_block_action && member.quarantined) {
+                member = d.room_member_get(room.id, auth.user.id).await?;
+            }
 
             srv.perms.invalidate_room(auth.user.id, room.id).await;
             srv.perms.invalidate_is_mutual(auth.user.id);

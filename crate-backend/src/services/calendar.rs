@@ -12,6 +12,7 @@ use time::OffsetDateTime;
 use crate::{Error, Result, ServerStateInner};
 
 pub struct ServiceCalendar {
+    #[allow(unused)] // TEMP
     state: Arc<ServerStateInner>,
 }
 

@@ -20,6 +20,7 @@ SELECT
     m.mute,
     m.deaf,
     m.timeout_until,
+    m.quarantined,
     coalesce(r.roles, '{}') AS "roles!",
     u.id as u_id,
     u.version_id as u_version_id,

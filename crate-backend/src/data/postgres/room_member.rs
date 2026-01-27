@@ -32,6 +32,7 @@ pub struct DbRoomMember {
     pub mute: bool,
     pub deaf: bool,
     pub timeout_until: Option<time::PrimitiveDateTime>,
+    pub quarantined: bool,
 }
 
 pub struct DbRoomBan {
@@ -71,7 +72,7 @@ impl From<DbRoomMember> for RoomMember {
             mute: row.mute,
             deaf: row.deaf,
             timeout_until: row.timeout_until.map(|t| t.assume_utc().into()),
-            quarantined: false,
+            quarantined: row.quarantined,
 
             // FIXME: only return for moderators
             origin: row
@@ -94,6 +95,7 @@ pub struct DbRoomMemberWithUser {
     pub mute: bool,
     pub deaf: bool,
     pub timeout_until: Option<time::PrimitiveDateTime>,
+    pub quarantined: bool,
     pub u_id: Uuid,
     pub u_version_id: Uuid,
     pub u_parent_id: Option<Uuid>,
@@ -135,7 +137,7 @@ impl From<DbRoomMemberWithUser> for (RoomMember, User) {
             mute: row.mute,
             deaf: row.deaf,
             timeout_until: row.timeout_until.map(|t| t.assume_utc().into()),
-            quarantined: false,
+            quarantined: row.quarantined,
         };
 
         let user: User = DbUser {
@@ -192,8 +194,8 @@ impl DataRoomMember for Postgres {
 
         query!(
             r#"
-            INSERT INTO room_member (user_id, room_id, membership, override_name, override_description, joined_at, origin, mute, deaf, timeout_until)
-            VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8, $9)
+            INSERT INTO room_member (user_id, room_id, membership, override_name, override_description, joined_at, origin, mute, deaf, timeout_until, quarantined)
+            VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8, $9, false)
 			ON CONFLICT ON CONSTRAINT room_member_pkey DO UPDATE SET
     			membership = excluded.membership,
                 joined_at = case
@@ -258,7 +260,8 @@ impl DataRoomMember for Postgres {
                     mute,
                     deaf,
                     timeout_until,
-                	coalesce(r.roles, '{}') as "roles!"
+                	coalesce(r.roles, '{}') as "roles!",
+                	quarantined
                 FROM room_member m
                 left join r on r.user_id = m.user_id
             	WHERE room_id = $1 AND m.user_id > $2 AND m.user_id < $3 AND membership = 'Join'
@@ -298,7 +301,8 @@ impl DataRoomMember for Postgres {
                 mute,
                 deaf,
                 timeout_until,
-            	coalesce(r.roles, '{}') as "roles!"
+            	coalesce(r.roles, '{}') as "roles!",
+            	quarantined
             FROM room_member m
             left join r on r.user_id = m.user_id
             WHERE room_id = $1 AND m.user_id = $2
@@ -336,7 +340,8 @@ impl DataRoomMember for Postgres {
                 mute,
                 deaf,
                 timeout_until,
-            	coalesce(r.roles, '{}') as "roles!"
+            	coalesce(r.roles, '{}') as "roles!",
+            	quarantined
             FROM room_member m
             left join r on r.user_id = m.user_id
             WHERE room_id = $1 AND m.user_id = ANY($2::uuid[])
@@ -376,7 +381,8 @@ impl DataRoomMember for Postgres {
                 mute,
                 deaf,
                 timeout_until,
-            	coalesce(r.roles, '{}') as "roles!"
+            	coalesce(r.roles, '{}') as "roles!",
+            	quarantined
             FROM room_member m
             left join r on r.user_id = m.user_id
             WHERE room_id = $1 AND m.user_id = $2
@@ -411,40 +417,39 @@ impl DataRoomMember for Postgres {
         Ok(())
     }
 
-    async fn room_member_set_membership(
+    async fn room_member_set_quarantined(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        membership: RoomMembership,
+        quarantined: bool,
     ) -> Result<()> {
-        let membership: DbMembership = membership.into();
-        if membership == DbMembership::Join {
-            query!(
-                r#"
+        query!(
+            r#"
             UPDATE room_member
-        	SET membership = $3, left_at = null, joined_at = now()
+        	SET quarantined = $3
             WHERE room_id = $1 AND user_id = $2
             "#,
-                *room_id,
-                *user_id,
-                membership as _,
-            )
-            .execute(&self.pool)
-            .await?;
-        } else {
-            query!(
-                r#"
+            *room_id,
+            *user_id,
+            quarantined
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn room_member_leave(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
+        query!(
+            r#"
             UPDATE room_member
-        	SET membership = $3, left_at = now()
+        	SET membership = 'Leave', left_at = now()
             WHERE room_id = $1 AND user_id = $2
             "#,
-                *room_id,
-                *user_id,
-                membership as _,
-            )
-            .execute(&self.pool)
-            .await?;
-        }
+            *room_id,
+            *user_id,
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -647,6 +652,7 @@ impl DataRoomMember for Postgres {
                 mute,
                 deaf,
                 timeout_until,
+                quarantined,
                 coalesce(r.roles, '{}') as "roles!"
             FROM room_member m
             left join r on r.user_id = m.user_id
@@ -685,6 +691,7 @@ impl DataRoomMember for Postgres {
                 mute,
                 deaf,
                 timeout_until,
+                quarantined,
                 coalesce(r.roles, '{}') as "roles!"
             FROM room_member m
             JOIN usr u ON m.user_id = u.id

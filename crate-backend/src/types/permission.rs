@@ -12,6 +12,8 @@ pub struct Permissions {
     p: HashSet<Permission>,
 
     /// whether this user is timed out
+    ///
+    /// used to determine if they can react with existing reactions or not
     timed_out: bool,
 
     /// whether this user is quarantined by automod
@@ -23,7 +25,9 @@ pub struct Permissions {
     /// whether this user is trying to access a locked channel/thread
     channel_locked: bool,
 
-    /// whether this user is a lurker (not part of the room yet)
+    /// whether the user is lurking a public channel/room (not yet a room member)
+    ///
+    /// used to determine if they can join voice channels
     lurker: bool,
 }
 
@@ -127,6 +131,7 @@ impl Permissions {
         Ok(())
     }
 
+    /// remove all permissions except those in the allowed set
     pub fn mask(&mut self, perms: &[Permission]) {
         let mut new = HashSet::new();
         for p in perms {

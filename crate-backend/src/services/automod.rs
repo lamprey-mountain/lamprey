@@ -6,6 +6,7 @@ use common::{
             AutomodAction, AutomodMatches, AutomodRule, AutomodRuleStripped, AutomodRuleTest,
             AutomodTarget, AutomodTextLocation, AutomodTrigger,
         },
+        error::{ApiError, ErrorCode},
         ids::AUTOMOD_USER_ID,
         util::Time,
         AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
@@ -19,7 +20,7 @@ use linkify::{LinkFinder, LinkKind};
 use tracing::{error, warn};
 use url::Url;
 
-use crate::{types::DbMessageCreate, Error, Result, ServerStateInner};
+use crate::{types::DbMessageCreate, Result, ServerStateInner};
 
 pub struct ServiceAutomod {
     state: Arc<ServerStateInner>,
@@ -715,13 +716,7 @@ impl ServiceAutomod {
 
         for action in scan.actions() {
             match action {
-                AutomodAction::Block { message } => {
-                    block_message = Some(
-                        message
-                            .clone()
-                            .unwrap_or_else(|| "message blocked by automod".to_string()),
-                    );
-                }
+                AutomodAction::Block { message } => block_message = Some(message.clone()),
                 AutomodAction::Timeout { duration } => {
                     let timeout_until = Time::now_utc() + Duration::from_millis(*duration);
                     let data = self.state.data();
@@ -834,8 +829,10 @@ impl ServiceAutomod {
             }
         }
 
-        if let Some(msg) = block_message {
-            return Err(Error::BadRequest(msg));
+        if let Some(message) = block_message {
+            let mut err = ApiError::from_code(ErrorCode::Automod);
+            err.automod_message = message;
+            return Err(err.into());
         }
 
         Ok(removed)

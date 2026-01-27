@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::automod::AutomodAction;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     util::Changes, AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
@@ -221,7 +222,7 @@ async fn room_member_add(
                 .invalidate_room(target_user_id, room_id)
                 .await;
             s.services().perms.invalidate_is_mutual(target_user_id);
-            let res = d.room_member_get(room_id, target_user_id).await?;
+            let mut res = d.room_member_get(room_id, target_user_id).await?;
 
             let is_new_join = existing.is_err();
 
@@ -245,6 +246,27 @@ async fn room_member_add(
                         d.role_member_put(room_id, target_user_id, role_id).await?;
                     }
                 }
+            }
+
+            // scan member with automod
+            let automod = srv.automod.load(room_id).await?;
+            let scan = automod.scan_member(&res, &auth.user);
+
+            let has_block_action = scan
+                .actions()
+                .iter()
+                .any(|action| matches!(action, AutomodAction::Block { .. }));
+
+            if has_block_action {
+                d.room_member_set_quarantined(room_id, target_user_id, true)
+                    .await?;
+            } else if res.quarantined {
+                d.room_member_set_quarantined(room_id, target_user_id, false)
+                    .await?;
+            }
+
+            if has_block_action || (!has_block_action && res.quarantined) {
+                res = d.room_member_get(room_id, target_user_id).await?;
             }
 
             if is_new_join {
@@ -390,7 +412,28 @@ async fn room_member_add(
         .invalidate_room(target_user_id, room_id)
         .await;
     s.services().perms.invalidate_is_mutual(target_user_id);
-    let res = d.room_member_get(room_id, target_user_id).await?;
+    let mut res = d.room_member_get(room_id, target_user_id).await?;
+
+    // scan member with automod
+    let automod = srv.automod.load(room_id).await?;
+    let scan = automod.scan_member(&res, &auth.user);
+
+    let has_block_action = scan
+        .actions()
+        .iter()
+        .any(|action| matches!(action, AutomodAction::Block { .. }));
+
+    if has_block_action {
+        d.room_member_set_quarantined(room_id, target_user_id, true)
+            .await?;
+    } else if res.quarantined {
+        d.room_member_set_quarantined(room_id, target_user_id, false)
+            .await?;
+    }
+
+    if has_block_action || (!has_block_action && res.quarantined) {
+        res = d.room_member_get(room_id, target_user_id).await?;
+    }
 
     let changes = if let Ok(existing) = &existing {
         Changes::new()
@@ -492,7 +535,7 @@ async fn room_member_update(
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let srv = s.services();
 
-    // FIXME: allow editing self
+    // FIXME: allow editing self nickname (override_name)
     let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
     if room.security.require_mfa {
         let user = srv.users.get(auth.user.id, None).await?;
@@ -579,7 +622,28 @@ async fn room_member_update(
             .await;
     }
 
-    let res = d.room_member_get(room_id, target_user_id).await?;
+    let mut res = d.room_member_get(room_id, target_user_id).await?;
+
+    // scan member with automod
+    let automod = srv.automod.load(room_id).await?;
+    let scan = automod.scan_member(&res, &auth.user);
+
+    let has_block_action = scan
+        .actions()
+        .iter()
+        .any(|action| matches!(action, AutomodAction::Block { .. }));
+
+    if has_block_action {
+        d.room_member_set_quarantined(room_id, target_user_id, true)
+            .await?;
+    } else if res.quarantined {
+        d.room_member_set_quarantined(room_id, target_user_id, false)
+            .await?;
+    }
+
+    if has_block_action || (!has_block_action && res.quarantined) {
+        res = d.room_member_get(room_id, target_user_id).await?;
+    }
 
     let changes = Changes::new()
         .change("override_name", &start.override_name, &res.override_name)
@@ -697,8 +761,7 @@ async fn room_member_delete(
     if room.owner_id == Some(target_user_id) {
         return Err(Error::BadStatic("cannot ban room owner"));
     }
-    d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
-        .await?;
+    d.room_member_leave(room_id, target_user_id).await?;
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
@@ -903,8 +966,7 @@ async fn room_ban_create(
     let ban = d.room_ban_get(room_id, target_user_id).await?;
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.perms.invalidate_is_mutual(target_user_id);
-    d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave)
-        .await?;
+    d.room_member_leave(room_id, target_user_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
 
     let al = auth.audit_log(room_id);
@@ -999,8 +1061,7 @@ async fn room_ban_create_bulk(
     for &target_user_id in &create.target_ids {
         srv.perms.invalidate_room(target_user_id, room_id).await;
         srv.perms.invalidate_is_mutual(target_user_id);
-        d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave)
-            .await?;
+        d.room_member_leave(room_id, target_user_id).await?;
         let member = d.room_member_get(room_id, target_user_id).await?;
 
         let al = auth.audit_log(room_id);

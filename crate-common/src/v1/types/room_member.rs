@@ -26,8 +26,7 @@ pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
 
-    // NOTE: this will always be Join
-    // TODO: dont return in api
+    // TODO: remove entirely
     pub membership: RoomMembership,
 
     /// When this member joined the room

@@ -246,10 +246,14 @@ pub enum ErrorCode {
     // calls can only be deleted in Broadcast channels
 
     // your account must have mfa enabled to use this operation
-
-    // message create blocked by automod
-    // message edit blocked by automod
-
+    /// you have angered automod
+    ///
+    /// - you sent a bad message
+    /// - you edited a message to say something bad
+    /// - you created a thread with bad words
+    /// - your username or profile has something bad
+    #[error("you have angered automod")]
+    Automod,
     // invalid or expired session (same as AuthFailure?)
 
     // warning
@@ -307,6 +311,7 @@ impl ErrorCode {
             ErrorCode::SudoRequired => 401,
             ErrorCode::UnknownRoom { .. } => 404,
             ErrorCode::UnknownChannel { .. } => 404,
+            ErrorCode::Automod => 403,
         }
     }
 }

@@ -21,7 +21,7 @@ pub struct ThreadMember {
     pub thread_id: ChannelId,
     pub user_id: UserId,
 
-    // TODO: dont return in api
+    // TODO: remove entirely
     pub membership: ThreadMembership,
 
     /// When this member joined the thread

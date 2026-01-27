@@ -39,8 +39,8 @@ use common::v1::types::{
     PaginationQuery, PaginationResponse, Permission, PermissionOverwriteType, PinsReorder,
     Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan,
     RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
-    RoomMemberSearchResponse, RoomMembership, SessionPatch, SessionStatus, SessionToken, Suspended,
-    TagId, ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
+    RoomMemberSearchResponse, SessionPatch, SessionStatus, SessionToken, Suspended, TagId,
+    ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
 };
 
 use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
@@ -202,13 +202,20 @@ pub trait DataRoomMember {
         user_id: UserId,
         patch: RoomMemberPatch,
     ) -> Result<()>;
-    async fn room_member_set_membership(
+    async fn room_member_set_quarantined(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        membership: RoomMembership,
+        quarantined: bool,
     ) -> Result<()>;
+
+    /// soft delete a room member
+    async fn room_member_leave(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
+
+    // NOTE: this is unused. consider removing it?
+    // i might want some kind of way to prune room members
     async fn room_member_delete(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
+
     async fn room_member_get(&self, room_id: RoomId, user_id: UserId) -> Result<RoomMember>;
     async fn room_member_get_many(
         &self,
