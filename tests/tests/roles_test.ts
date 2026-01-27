@@ -61,7 +61,7 @@ Deno.test("role permissions", async (t) => {
 			});
 
 			await syncClient.waitFor((msg) =>
-				msg.type === "RoomMemberUpsert" &&
+				(msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate") &&
 				msg.member.user_id === regularUser.id &&
 				msg.member.roles.includes(role.id)
 			);
@@ -85,7 +85,7 @@ Deno.test("role permissions", async (t) => {
 			});
 
 			await syncClient.waitFor((msg) =>
-				msg.type === "RoomMemberUpsert" &&
+				(msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate") &&
 				msg.member.user_id === regularUser.id &&
 				!msg.member.roles.includes(roleId)
 			);

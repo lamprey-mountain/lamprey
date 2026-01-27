@@ -3,8 +3,8 @@
 use common::v1::types::automod::{AutomodAction, AutomodTarget, AutomodTrigger};
 use common::v1::types::{
     util::Time, Channel, ChannelId, ChannelType, ChannelVerId, Embed, MediaId, MessageId,
-    MessageType, MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomMembership, RoomType,
-    Session, SessionStatus, SessionToken, SessionType, ThreadMembership, UserId,
+    MessageType, MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomType, Session,
+    SessionStatus, SessionToken, SessionType, UserId,
 };
 use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
 use serde::{Deserialize, Serialize};
@@ -564,24 +564,6 @@ impl_perms!(
     VoiceVad,
     VoiceVideo,
 );
-
-impl From<RoomMembership> for DbMembership {
-    fn from(value: RoomMembership) -> Self {
-        match value {
-            RoomMembership::Join => DbMembership::Join,
-            RoomMembership::Leave => DbMembership::Leave,
-        }
-    }
-}
-
-impl From<ThreadMembership> for DbMembership {
-    fn from(value: ThreadMembership) -> Self {
-        match value {
-            ThreadMembership::Join => DbMembership::Join,
-            ThreadMembership::Leave => DbMembership::Leave,
-        }
-    }
-}
 
 pub struct DbInvite {
     pub code: String,

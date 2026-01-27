@@ -3,7 +3,7 @@ use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
-    RoomMemberSearchResponse, RoomMembership, User,
+    RoomMemberSearchResponse, User,
 };
 use sqlx::{query, query_as, query_file_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
@@ -60,11 +60,6 @@ impl From<DbRoomMember> for RoomMember {
         RoomMember {
             user_id: row.user_id.into(),
             room_id: row.room_id.into(),
-            membership: match row.membership {
-                DbMembership::Join => RoomMembership::Join,
-                DbMembership::Leave => RoomMembership::Leave,
-                DbMembership::Ban => RoomMembership::Leave,
-            },
             joined_at: row.joined_at.assume_utc().into(),
             override_name: row.override_name,
             override_description: row.override_description,
@@ -122,11 +117,6 @@ impl From<DbRoomMemberWithUser> for (RoomMember, User) {
         let room_member = RoomMember {
             user_id: row.user_id.into(),
             room_id: row.room_id.into(),
-            membership: match row.membership {
-                DbMembership::Join => RoomMembership::Join,
-                DbMembership::Leave => RoomMembership::Leave,
-                DbMembership::Ban => RoomMembership::Leave,
-            },
             joined_at: row.joined_at.assume_utc().into(),
             override_name: row.override_name,
             override_description: row.override_description,
@@ -305,7 +295,7 @@ impl DataRoomMember for Postgres {
             	quarantined
             FROM room_member m
             left join r on r.user_id = m.user_id
-            WHERE room_id = $1 AND m.user_id = $2
+            WHERE room_id = $1 AND m.user_id = $2 AND membership = 'Join'
         "#,
             *room_id,
             *user_id,
@@ -344,7 +334,7 @@ impl DataRoomMember for Postgres {
             	quarantined
             FROM room_member m
             left join r on r.user_id = m.user_id
-            WHERE room_id = $1 AND m.user_id = ANY($2::uuid[])
+            WHERE room_id = $1 AND m.user_id = ANY($2::uuid[]) AND membership = 'Join'
         "#,
             *room_id,
             &user_ids
@@ -385,7 +375,7 @@ impl DataRoomMember for Postgres {
             	quarantined
             FROM room_member m
             left join r on r.user_id = m.user_id
-            WHERE room_id = $1 AND m.user_id = $2
+            WHERE room_id = $1 AND m.user_id = $2 AND membership = 'Join'
         "#,
             *room_id,
             *user_id,
@@ -617,7 +607,7 @@ impl DataRoomMember for Postgres {
             query_scalar!(
                 r#"
                 SELECT user_id FROM room_member
-                WHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)
+                WHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join' AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)
                 ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC
                 LIMIT $5
                 "#,
@@ -627,7 +617,7 @@ impl DataRoomMember for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_scalar!("SELECT count(*) FROM room_member WHERE room_id = $1 AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)", *room_id),
+            query_scalar!("SELECT count(*) FROM room_member WHERE room_id = $1 AND membership = 'Join' AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)", *room_id),
             |i: &ApplicationId| i.to_string()
         )
     }

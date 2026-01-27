@@ -40,7 +40,7 @@ use common::v1::types::{
     Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan,
     RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
     RoomMemberSearchResponse, SessionPatch, SessionStatus, SessionToken, Suspended, TagId,
-    ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
+    ThreadMember, ThreadMemberPut, UserListFilter, WebhookId,
 };
 
 use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
@@ -838,12 +838,7 @@ pub trait DataThreadMember {
         user_id: UserId,
         put: ThreadMemberPut,
     ) -> Result<()>;
-    async fn thread_member_set_membership(
-        &self,
-        thread_id: ChannelId,
-        user_id: UserId,
-        membership: ThreadMembership,
-    ) -> Result<()>;
+    async fn thread_member_leave(&self, thread_id: ChannelId, user_id: UserId) -> Result<()>;
     async fn thread_member_delete(&self, thread_id: ChannelId, user_id: UserId) -> Result<()>;
     async fn thread_member_get(
         &self,

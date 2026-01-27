@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
     ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, ThreadMember,
-    ThreadMemberPut, ThreadMembership, UserId,
+    ThreadMemberPut, UserId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
@@ -27,11 +27,6 @@ impl From<DbThreadMember> for ThreadMember {
         Self {
             user_id: row.user_id.into(),
             thread_id: row.channel_id.into(),
-            membership: match row.membership {
-                DbMembership::Join => ThreadMembership::Join,
-                DbMembership::Leave => ThreadMembership::Leave,
-                DbMembership::Ban => ThreadMembership::Leave,
-            },
             joined_at: row.joined_at.assume_utc().into(),
         }
     }
@@ -67,22 +62,19 @@ impl DataThreadMember for Postgres {
         Ok(())
     }
 
-    async fn thread_member_set_membership(
+    async fn thread_member_leave(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
-        membership: ThreadMembership,
     ) -> Result<()> {
-        let membership: DbMembership = membership.into();
         query!(
             r#"
             UPDATE thread_member
-        	SET membership = $3
+        	SET membership = 'Leave'
             WHERE channel_id = $1 AND user_id = $2
             "#,
             *channel_id,
             *user_id,
-            membership as _,
         )
         .execute(&self.pool)
         .await?;
@@ -115,7 +107,7 @@ impl DataThreadMember for Postgres {
             	membership as "membership: _",
             	joined_at
             FROM thread_member
-            WHERE channel_id = $1 AND user_id = $2
+            WHERE channel_id = $1 AND user_id = $2 AND membership = 'Join'
         "#,
             *channel_id,
             *user_id,
@@ -140,7 +132,7 @@ impl DataThreadMember for Postgres {
             	membership as "membership: _",
             	joined_at
             FROM thread_member
-            WHERE channel_id = $1 AND user_id = ANY($2::uuid[])
+            WHERE channel_id = $1 AND user_id = ANY($2::uuid[]) AND membership = 'Join'
         "#,
             *thread_id,
             &user_ids
@@ -222,7 +214,7 @@ impl DataThreadMember for Postgres {
                 membership as "membership: _",
                 joined_at
             FROM thread_member
-            WHERE user_id = $1 AND channel_id = ANY($2)
+            WHERE user_id = $1 AND channel_id = ANY($2) AND membership = 'Join'
             "#,
             user_id.into_inner(),
             &thread_uuids

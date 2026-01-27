@@ -8,7 +8,7 @@ use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission, Role,
     RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, RoomId, RoomMember,
-    RoomMembership, UserId,
+     UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -433,10 +433,7 @@ async fn role_member_add(
 
     d.role_member_put(room_id, target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
-    if !matches!(member.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound);
-    }
-    let msg = MessageSync::RoomMemberUpsert {
+    let msg = MessageSync::RoomMemberUpdate {
         member: member.clone(),
     };
     let al = auth.audit_log(room_id);
@@ -501,10 +498,7 @@ async fn role_member_remove(
     d.role_member_delete(room_id, target_user_id, role_id)
         .await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
-    if !matches!(member.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound);
-    }
-    let msg = MessageSync::RoomMemberUpsert {
+    let msg = MessageSync::RoomMemberUpdate {
         member: member.clone(),
     };
 
@@ -580,10 +574,6 @@ async fn role_member_bulk_edit(
         .collect();
 
     for target_user_id in &body.apply {
-        let member = d.room_member_get(room_id, *target_user_id).await?;
-        if !matches!(member.membership, RoomMembership::Join { .. }) {
-            return Err(Error::NotFound);
-        }
         let target_rank = srv.perms.get_user_rank(room_id, *target_user_id).await?;
         if auth_user_rank <= target_rank && room.owner_id != Some(auth.user.id) {
             return Err(Error::BadStatic("your rank is too low to manage this user"));
@@ -602,7 +592,7 @@ async fn role_member_bulk_edit(
 
     for user_id in all_user_ids {
         let member = d.room_member_get(room_id, user_id).await?;
-        let msg = MessageSync::RoomMemberUpsert {
+        let msg = MessageSync::RoomMemberUpdate {
             member: member.clone(),
         };
 

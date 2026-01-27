@@ -21,9 +21,6 @@ pub struct ThreadMember {
     pub thread_id: ChannelId,
     pub user_id: UserId,
 
-    // TODO: remove entirely
-    pub membership: ThreadMembership,
-
     /// When this member joined the thread
     pub joined_at: Time,
 }
@@ -40,17 +37,6 @@ pub struct ThreadMemberPut {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ThreadMemberPatch {
     // remove?
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ThreadMembership {
-    /// joined. a member of this thread.
-    Join,
-
-    /// kicked or left, can rejoin with an invite
-    /// todo: can still view messages up until then
-    Leave,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

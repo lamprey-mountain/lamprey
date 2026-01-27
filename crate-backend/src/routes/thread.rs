@@ -9,8 +9,7 @@ use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
     ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message, MessageId,
     MessageMember, MessageSync, MessageThreadCreated, MessageType, PaginationQuery,
-    PaginationResponse, Permission, RoomId, ThreadMember, ThreadMemberPut, ThreadMembership,
-    UserId, SERVER_ROOM_ID,
+    PaginationResponse, Permission, RoomId, ThreadMember, ThreadMemberPut, UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use serde::Serialize;
@@ -84,12 +83,7 @@ async fn thread_member_get(
         .await?;
     perms.ensure(Permission::ViewChannel)?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
-    // TODO: return `Ban`s
-    if !matches!(res.membership, ThreadMembership::Join { .. }) {
-        Err(Error::NotFound)
-    } else {
-        Ok(Json(res))
-    }
+    Ok(Json(res))
 }
 
 /// Thread member add
@@ -140,11 +134,12 @@ async fn thread_member_add(
     perms.ensure_unlocked()?;
 
     if thread.ty == ChannelType::Gdm {
+        // if the thread member is not found (errors) then that means they're joining the gdm
+        // there might be a cleaner way to do this but eh
         let is_joining = d
             .thread_member_get(thread_id, target_user_id)
             .await
-            .map(|m| m.membership != ThreadMembership::Join)
-            .unwrap_or(true);
+            .is_err();
 
         if is_joining {
             let count = d.thread_member_list_all(thread_id).await?.len() as u32;
@@ -212,7 +207,10 @@ async fn thread_member_add(
         thread_id,
         auth.user.id,
         MessageSync::ThreadMemberUpsert {
-            member: res.clone(),
+            room_id: thread.room_id,
+            thread_id,
+            added: vec![res.clone()],
+            removed: vec![],
         },
     )
     .await?;
@@ -263,11 +261,7 @@ async fn thread_member_delete(
     perms.ensure_unlocked()?;
 
     let start = d.thread_member_get(thread_id, target_user_id).await?;
-    if !matches!(start.membership, ThreadMembership::Join { .. }) {
-        return Err(Error::NotFound);
-    }
-    d.thread_member_set_membership(thread_id, target_user_id, ThreadMembership::Leave {})
-        .await?;
+    d.thread_member_leave(thread_id, target_user_id).await?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
     if start == res {
         return Ok(StatusCode::NOT_MODIFIED);
@@ -320,7 +314,12 @@ async fn thread_member_delete(
     s.broadcast_channel(
         thread_id,
         auth.user.id,
-        MessageSync::ThreadMemberUpsert { member: res },
+        MessageSync::ThreadMemberUpsert {
+            room_id: thread.room_id,
+            thread_id,
+            added: vec![],
+            removed: vec![res.user_id],
+        },
     )
     .await?;
 

@@ -9,7 +9,7 @@ use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     util::Changes, AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
     PruneBegin, PruneResponse, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
-    RoomMemberSearch, RoomMemberSearchAdvanced, RoomMemberSearchResponse, RoomMembership, UserId,
+    RoomMemberSearch, RoomMemberSearchAdvanced, RoomMemberSearchResponse, UserId,
 };
 use common::v1::types::{
     RoleId, RoomBan, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
@@ -87,11 +87,7 @@ async fn room_member_get(
     let d = s.data();
     let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
-    if res.membership == RoomMembership::Join {
-        Ok(Json(res))
-    } else {
-        Err(Error::NotFound)
-    }
+    Ok(Json(res))
 }
 
 // FIXME: only return 304 not modified if an etag is sent
@@ -274,14 +270,6 @@ async fn room_member_add(
                     room_id,
                     auth.user.id,
                     MessageSync::RoomMemberCreate {
-                        member: res.clone(),
-                    },
-                )
-                .await?;
-                s.broadcast_room(
-                    room_id,
-                    auth.user.id,
-                    MessageSync::RoomMemberUpsert {
                         member: res.clone(),
                     },
                 )
@@ -483,15 +471,6 @@ async fn room_member_add(
             )
             .await?;
         }
-
-        s.broadcast_room(
-            room_id,
-            auth.user.id,
-            MessageSync::RoomMemberUpsert {
-                member: res.clone(),
-            },
-        )
-        .await?;
     }
 
     Ok(Json(res))
@@ -546,9 +525,6 @@ async fn room_member_update(
     }
 
     let start = d.room_member_get(room_id, target_user_id).await?;
-    if !matches!(start.membership, RoomMembership::Join { .. }) {
-        return Ok(Json(start));
-    }
     if !json.changes(&start) {
         return Ok(Json(start));
     }
@@ -675,14 +651,6 @@ async fn room_member_update(
         },
     )
     .await?;
-    s.broadcast_room(
-        room_id,
-        auth.user.id,
-        MessageSync::RoomMemberUpsert {
-            member: res.clone(),
-        },
-    )
-    .await?;
     Ok(Json(res))
 }
 
@@ -741,10 +709,6 @@ async fn room_member_delete(
     if room_id == SERVER_ROOM_ID {
         return Err(Error::BadStatic("cannot kick people from the server room"));
     }
-    let start = d.room_member_get(room_id, target_user_id).await?;
-    if !matches!(start.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound);
-    }
     let room = srv.rooms.get(room_id, None).await?;
     if room.owner_id == Some(target_user_id) {
         return Err(Error::BadStatic("room owner cannot leave the room"));
@@ -764,7 +728,6 @@ async fn room_member_delete(
     d.room_member_leave(room_id, target_user_id).await?;
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.perms.invalidate_is_mutual(target_user_id);
-    let res = d.room_member_get(room_id, target_user_id).await?;
 
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::MemberKick {
@@ -783,12 +746,6 @@ async fn room_member_delete(
     )
     .await?;
 
-    s.broadcast_room(
-        room_id,
-        auth.user.id,
-        MessageSync::RoomMemberUpsert { member: res },
-    )
-    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -947,9 +904,9 @@ async fn room_ban_create(
     }
 
     // enforce ranking if you're banning a member
-    if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
+    if let Ok(_member) = d.room_member_get(room_id, target_user_id).await {
         let room = srv.rooms.get(room_id, None).await?;
-        if room.owner_id != Some(auth.user.id) && member.membership == RoomMembership::Join {
+        if room.owner_id != Some(auth.user.id) {
             let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
             if rank <= other_rank {
@@ -967,7 +924,6 @@ async fn room_ban_create(
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.perms.invalidate_is_mutual(target_user_id);
     d.room_member_leave(room_id, target_user_id).await?;
-    let member = d.room_member_get(room_id, target_user_id).await?;
 
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::MemberBan {
@@ -983,12 +939,6 @@ async fn room_ban_create(
             room_id,
             user_id: target_user_id,
         },
-    )
-    .await?;
-    s.broadcast_room(
-        room_id,
-        auth.user.id,
-        MessageSync::RoomMemberUpsert { member },
     )
     .await?;
     s.broadcast_room(
@@ -1038,8 +988,8 @@ async fn room_ban_create_bulk(
     let auth_user_rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
 
     for &target_user_id in &create.target_ids {
-        if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
-            if room.owner_id != Some(auth.user.id) && member.membership == RoomMembership::Join {
+        if let Ok(_member) = d.room_member_get(room_id, target_user_id).await {
+            if room.owner_id != Some(auth.user.id) {
                 let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
                 if auth_user_rank <= other_rank {
                     return Err(Error::BadStatic(
@@ -1062,7 +1012,6 @@ async fn room_ban_create_bulk(
         srv.perms.invalidate_room(target_user_id, room_id).await;
         srv.perms.invalidate_is_mutual(target_user_id);
         d.room_member_leave(room_id, target_user_id).await?;
-        let member = d.room_member_get(room_id, target_user_id).await?;
 
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MemberBan {
@@ -1078,13 +1027,6 @@ async fn room_ban_create_bulk(
                 room_id,
                 user_id: target_user_id,
             },
-        )
-        .await?;
-
-        s.broadcast_room(
-            room_id,
-            auth.user.id,
-            MessageSync::RoomMemberUpsert { member },
         )
         .await?;
     }

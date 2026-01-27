@@ -608,7 +608,10 @@ impl ServiceThreads {
                 channel.id,
                 auth.user.id,
                 MessageSync::ThreadMemberUpsert {
-                    member: thread_member,
+                    room_id: channel.room_id,
+                    thread_id: channel.id,
+                    added: vec![thread_member],
+                    removed: vec![],
                 },
             )
             .await?;

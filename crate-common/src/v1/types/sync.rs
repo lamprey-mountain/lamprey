@@ -335,18 +335,15 @@ pub enum MessageSync {
         user_id: UserId,
     },
 
-    // TODO: deprecate and remove
-    RoomMemberUpsert {
-        member: RoomMember,
-    },
-
-    // TODO: allow batch upserting/removing
     ThreadMemberUpsert {
-        // TODO: add room_id: Option<RoomId>,
-        member: ThreadMember,
-        // thread_id: ChannelId,
-        // added: Vec<ThreadMember>,
-        // removed: Vec<UserId>,
+        room_id: Option<RoomId>,
+        thread_id: ChannelId,
+
+        /// members that were added to the thread
+        added: Vec<ThreadMember>,
+
+        /// members that were removed from the thread
+        removed: Vec<UserId>,
     },
 
     RoleCreate {

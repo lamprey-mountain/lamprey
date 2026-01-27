@@ -329,9 +329,7 @@ impl ServiceCache {
                     }
                 }
             }
-            MessageSync::RoomMemberCreate { member }
-            | MessageSync::RoomMemberUpdate { member }
-            | MessageSync::RoomMemberUpsert { member } => {
+            MessageSync::RoomMemberCreate { member } | MessageSync::RoomMemberUpdate { member } => {
                 if let Some(room) = self.rooms.get(&member.room_id).await {
                     room.members.insert(member.user_id, member.clone());
                 }
@@ -339,13 +337,19 @@ impl ServiceCache {
             MessageSync::RoomMemberDelete { room_id, user_id } => {
                 self.remove_member(*room_id, *user_id).await;
             }
-            MessageSync::ThreadMemberUpsert { member } => {
+            MessageSync::ThreadMemberUpsert { thread_id, added, removed, .. } => {
                 let srv = self.state.services();
-                if let Ok(chan) = srv.channels.get(member.thread_id, None).await {
+                if let Ok(chan) = srv.channels.get(*thread_id, None).await {
                     if let Some(room_id) = chan.room_id {
                         if let Some(room) = self.rooms.get(&room_id).await {
-                            if let Some(thread) = room.threads.get(&member.thread_id) {
-                                thread.members.insert(member.user_id, member.clone());
+                            if let Some(thread) = room.threads.get(&thread_id) {
+                                for member in added {
+                                    thread.members.insert(member.user_id, member.clone());
+                                }
+
+                                for user_id in removed {
+                                    thread.members.remove(&user_id);
+                                }
                             }
                         }
                     }

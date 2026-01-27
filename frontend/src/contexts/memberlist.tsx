@@ -63,7 +63,9 @@ export const MemberListProvider = (props: ParentProps) => {
 			}
 			list.groups = groups;
 			memberLists.set(id, { ...list });
-		} else if (msg.type === "RoomMemberUpsert") {
+		} else if (
+			msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate"
+		) {
 			const m = msg.member;
 			const list = memberLists.get(m.room_id);
 			if (list) {
@@ -75,17 +77,52 @@ export const MemberListProvider = (props: ParentProps) => {
 				});
 				memberLists.set(m.room_id, { ...list, items: newItems });
 			}
-		} else if (msg.type === "ThreadMemberUpsert") {
-			const m = msg.member;
-			const list = memberLists.get(m.thread_id);
+		} else if (msg.type === "RoomMemberDelete") {
+			const { room_id, user_id } = msg;
+			const list = memberLists.get(room_id);
 			if (list) {
-				const newItems = list.items.map((item) => {
-					if (item.user.id === m.user_id) {
-						return { ...item, thread_member: m };
+				const newItems = list.items.filter((item) => item.user.id !== user_id);
+				memberLists.set(room_id, { ...list, items: newItems });
+			}
+		} else if (msg.type === "ThreadMemberUpsert") {
+			const { thread_id, added, removed } = msg;
+			const list = memberLists.get(thread_id);
+			if (list) {
+				let newItems = [...list.items];
+
+				// Handle added members
+				for (const member of added) {
+					const itemIndex = newItems.findIndex((item) =>
+						item.user.id === member.user_id
+					);
+					if (itemIndex !== -1) {
+						newItems[itemIndex] = {
+							...newItems[itemIndex],
+							thread_member: member,
+						};
+					} else {
+						const userItem = newItems.find((item) =>
+							item.user.id === member.user_id
+						);
+						if (userItem) {
+							newItems = newItems.map((item) =>
+								item.user.id === member.user_id
+									? { ...item, thread_member: member }
+									: item
+							);
+						} else {
+							// FIXME: no user!?
+						}
 					}
-					return item;
-				});
-				memberLists.set(m.thread_id, { ...list, items: newItems });
+				}
+
+				for (const userId of removed) {
+					newItems = newItems.map((item) =>
+						item.user.id === userId ? { ...item, thread_member: null } : item
+					);
+				}
+
+				memberLists.set(thread_id, { ...list, items: newItems });
 			}
 		} else if (msg.type === "UserUpdate") {
 			for (const [id, list] of memberLists.entries()) {

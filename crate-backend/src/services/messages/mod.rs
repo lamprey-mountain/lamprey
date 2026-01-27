@@ -16,7 +16,6 @@ use common::v1::types::{
     EmbedType, Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageCreate,
     MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync, MessageType, NotificationId,
     PaginationDirection, PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId,
-    ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use common::v2::types::message::{Message, MessageVersion};
@@ -398,12 +397,15 @@ impl ServiceMessages {
         s.presign_message(&mut message).await?;
 
         let tm = data.thread_member_get(thread_id, user_id).await;
-        if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
+        if tm.is_err() {
             data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
                 .await?;
             let thread_member = data.thread_member_get(thread_id, user_id).await?;
             let msg = MessageSync::ThreadMemberUpsert {
-                member: thread_member,
+                room_id: thread.room_id,
+                thread_id,
+                added: vec![thread_member],
+                removed: vec![],
             };
             s.broadcast_channel(thread_id, user_id, msg).await?;
         }
@@ -432,7 +434,7 @@ impl ServiceMessages {
                 if channel_is_thread {
                     // Add user to thread if not already a member
                     let member = s_clone.data().thread_member_get(thread_id, u.id).await;
-                    if member.is_err() || member.unwrap().membership == ThreadMembership::Leave {
+                    if member.is_err() {
                         if s_clone
                             .data()
                             .thread_member_put(thread_id, u.id, Default::default())
@@ -443,7 +445,10 @@ impl ServiceMessages {
                                 s_clone.data().thread_member_get(thread_id, u.id).await
                             {
                                 let msg = MessageSync::ThreadMemberUpsert {
-                                    member: thread_member,
+                                    room_id: thread.room_id,
+                                    thread_id,
+                                    added: vec![thread_member],
+                                    removed: vec![],
                                 };
                                 if let Err(e) =
                                     s_clone.broadcast_channel(thread_id, author_id, msg).await

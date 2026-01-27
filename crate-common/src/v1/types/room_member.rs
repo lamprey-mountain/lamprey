@@ -26,9 +26,6 @@ pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
 
-    // TODO: remove entirely
-    pub membership: RoomMembership,
-
     /// When this member joined the room
     pub joined_at: Time,
 
@@ -121,16 +118,6 @@ pub struct RoomMemberPatch {
     /// temporarily prevent a member from communicating
     #[serde(default, deserialize_with = "some_option")]
     pub timeout_until: Option<Option<Time>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum RoomMembership {
-    /// joined
-    Join,
-
-    /// left, can rejoin with an invite. todo: can still view messages up until then
-    Leave,
 }
 
 /// represents a restriction on who can join the room

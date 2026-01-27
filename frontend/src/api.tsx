@@ -515,7 +515,9 @@ export function createApi(
 			});
 		} else if (msg.type === "MessageVersionDelete") {
 			// TODO
-		} else if (msg.type === "RoomMemberUpsert") {
+		} else if (
+			msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate"
+		) {
 			const m = msg.member;
 			const c = room_members.cache.get(m.room_id);
 			if (c) {
@@ -541,30 +543,70 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "ThreadMemberUpsert") {
-			const m = msg.member;
-			const c = thread_members.cache.get(m.thread_id);
+		} else if (msg.type === "RoomMemberDelete") {
+			const { room_id, user_id } = msg;
+			const c = room_members.cache.get(room_id);
 			if (c) {
-				c.set(m.user_id, m);
-			} else {
-				thread_members.cache.set(m.thread_id, new ReactiveMap());
-				thread_members.cache.get(m.thread_id)!.set(m.user_id, m);
+				c.delete(user_id);
 			}
-			const l = thread_members._cachedListings.get(m.thread_id);
+			const l = room_members._cachedListings.get(room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
-				const idx = p.items.findIndex((i) => i.user_id === m.user_id);
+				const idx = p.items.findIndex((i) => i.user_id === user_id);
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1, m),
+						items: p.items.toSpliced(idx, 1),
+						total: p.total - 1,
 					});
+				}
+			}
+		} else if (msg.type === "ThreadMemberUpsert") {
+			const { thread_id, added, removed } = msg;
+
+			for (const member of added) {
+				const c = thread_members.cache.get(thread_id);
+				if (c) {
+					c.set(member.user_id, member);
 				} else {
-					l.mutate({
-						...p,
-						items: [...p.items, m],
-						total: p.total + 1,
-					});
+					thread_members.cache.set(thread_id, new ReactiveMap());
+					thread_members.cache.get(thread_id)!.set(member.user_id, member);
+				}
+				const l = thread_members._cachedListings.get(thread_id);
+				if (l?.resource.latest) {
+					const p = l.resource.latest;
+					const idx = p.items.findIndex((i) => i.user_id === member.user_id);
+					if (idx !== -1) {
+						l.mutate({
+							...p,
+							items: p.items.toSpliced(idx, 1, member),
+						});
+					} else {
+						l.mutate({
+							...p,
+							items: [...p.items, member],
+							total: p.total + 1,
+						});
+					}
+				}
+			}
+
+			for (const user_id of removed) {
+				const c = thread_members.cache.get(thread_id);
+				if (c) {
+					c.delete(user_id);
+				}
+				const l = thread_members._cachedListings.get(thread_id);
+				if (l?.resource.latest) {
+					const p = l.resource.latest;
+					const idx = p.items.findIndex((i) => i.user_id === user_id);
+					if (idx !== -1) {
+						l.mutate({
+							...p,
+							items: p.items.toSpliced(idx, 1),
+							total: p.total - 1,
+						});
+					}
 				}
 			}
 		} else if (msg.type === "RoleCreate") {

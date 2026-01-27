@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate, MessageModerate, MessagePin,
-    MessageType, PinsReorder, RepliesQuery, ThreadMemberPut, ThreadMembership,
+    MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
 };
 use common::v2::types::message::Message;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -801,12 +801,15 @@ async fn message_pin_create(
 
     let user_id = auth.user.id;
     let tm = data.thread_member_get(channel_id, user_id).await;
-    if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
+    if tm.is_err() {
         data.thread_member_put(channel_id, user_id, ThreadMemberPut::default())
             .await?;
         let thread_member = data.thread_member_get(channel_id, user_id).await?;
         let msg = MessageSync::ThreadMemberUpsert {
-            member: thread_member,
+            room_id: thread.room_id,
+            thread_id: channel_id,
+            added: vec![thread_member],
+            removed: vec![],
         };
         s.broadcast_channel(channel_id, user_id, msg).await?;
     }

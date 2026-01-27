@@ -209,8 +209,13 @@ async fn channel_create_dm(
     s.broadcast(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
     })?;
-    for member in members {
-        s.broadcast(MessageSync::ThreadMemberUpsert { member })?;
+    if !members.is_empty() {
+        s.broadcast(MessageSync::ThreadMemberUpsert {
+            room_id: thread.room_id,
+            thread_id: thread.id,
+            added: members,
+            removed: vec![],
+        })?;
     }
 
     Ok((StatusCode::CREATED, Json(thread)))
@@ -859,7 +864,7 @@ async fn channel_upgrade(
         s.broadcast_room(
             room.id,
             auth.user.id,
-            MessageSync::RoomMemberUpsert {
+            MessageSync::RoomMemberCreate {
                 member: room_member,
             },
         )

@@ -10,7 +10,7 @@ use common::v1::types::{
     AuditLogEntryType, ChannelId, ChannelType, Invite, InviteCode, InviteCreate, InvitePatch,
     InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId, RoomMemberOrigin,
-    RoomMemberPut, RoomMembership, SERVER_ROOM_ID,
+    RoomMemberPut, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -236,17 +236,15 @@ async fn invite_use(
                 inviter: invite.invite.creator_id,
             };
             let existing = d.room_member_get(room.id, auth.user.id).await;
-            if existing.is_ok_and(|e| e.membership == RoomMembership::Join) {
-                return Ok(StatusCode::NO_CONTENT);
+            if existing.is_err() {
+                d.room_member_put(
+                    room.id,
+                    auth.user.id,
+                    Some(origin),
+                    RoomMemberPut::default(),
+                )
+                .await?;
             }
-
-            d.room_member_put(
-                room.id,
-                auth.user.id,
-                Some(origin),
-                RoomMemberPut::default(),
-            )
-            .await?;
 
             let mut member = d.room_member_get(room.id, auth.user.id).await?;
 
@@ -284,7 +282,7 @@ async fn invite_use(
             s.broadcast_room(
                 room_id,
                 auth.user.id,
-                MessageSync::RoomMemberUpsert { member },
+                MessageSync::RoomMemberCreate { member },
             )
             .await?;
         }
@@ -295,7 +293,12 @@ async fn invite_use(
             s.broadcast_channel(
                 channel.id,
                 auth.user.id,
-                MessageSync::ThreadMemberUpsert { member },
+                MessageSync::ThreadMemberUpsert {
+                    room_id: channel.room_id,
+                    thread_id: channel.id,
+                    added: vec![member],
+                    removed: vec![],
+                },
             )
             .await?;
         }

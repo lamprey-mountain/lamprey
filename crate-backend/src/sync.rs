@@ -639,11 +639,9 @@ impl Connection {
             MessageSync::RoomMemberDelete { room_id, user_id } => {
                 AuthCheck::RoomOrUser(*room_id, *user_id)
             }
-            MessageSync::RoomMemberUpsert { member } => {
-                AuthCheck::RoomOrUser(member.room_id, member.user_id)
-            }
-            MessageSync::ThreadMemberUpsert { member } => {
-                AuthCheck::ChannelOrUser(member.thread_id, member.user_id)
+            MessageSync::ThreadMemberUpsert { thread_id, .. } => {
+                // TODO: more robust thread member checks?
+                AuthCheck::Channel(*thread_id)
             }
             MessageSync::SessionCreate {
                 session: upserted_session,

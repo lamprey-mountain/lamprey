@@ -370,7 +370,7 @@ async fn app_invite_bot(
     s.broadcast_room(
         json.room_id,
         auth.user.id,
-        MessageSync::RoomMemberUpsert {
+        MessageSync::RoomMemberCreate {
             member: member.clone(),
         },
     )

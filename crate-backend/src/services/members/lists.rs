@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use common::v1::types::{
     presence::Presence, MemberListGroup, MemberListGroupId, MemberListOp, MessageSync,
-    PaginationQuery, Permission, Role, RoomMember, RoomMembership, ThreadMember, ThreadMembership,
-    User, UserId,
+    PaginationQuery, Permission, Role, RoomMember, ThreadMember, User, UserId,
 };
 use tracing::{trace, warn};
 
@@ -171,49 +170,56 @@ impl MemberList {
     pub fn process(&mut self, event: &MessageSync) -> Vec<MemberListOp> {
         trace!("processing event");
         match event {
-            MessageSync::RoomMemberUpsert { member } => {
-                if self.key.room_id != Some(member.room_id) {
-                    return vec![];
-                }
-
-                if member.membership == RoomMembership::Leave {
-                    // member left the room
-                    self.remove_user(member.user_id)
+            MessageSync::RoomMemberCreate { member } | MessageSync::RoomMemberUpdate { member } => {
+                // member joined, changed roles, or changed override_name
+                self.room_members.insert(member.user_id, member.clone());
+                if self.users.contains_key(&member.user_id) {
+                    self.recalculate_user(member.user_id)
                 } else {
-                    // member joined, changed roles, or changed override_name
-                    self.room_members.insert(member.user_id, member.clone());
-                    if self.users.contains_key(&member.user_id) {
-                        self.recalculate_user(member.user_id)
-                    } else {
-                        warn!(
-                            "RoomMemberUpsert for user {} without User object, can't update list",
-                            member.user_id
-                        );
-                        vec![]
-                    }
+                    warn!(
+                        "RoomMemberCreate or Update for user {} without User object, can't update list",
+                        member.user_id
+                    );
+                    vec![]
                 }
             }
-            MessageSync::ThreadMemberUpsert { member } => {
-                if self.key.channel_id != Some(member.thread_id) {
+            MessageSync::RoomMemberDelete { room_id, user_id } => {
+                if self.key.room_id != Some(*room_id) {
                     return vec![];
                 }
 
-                if member.membership == ThreadMembership::Leave {
-                    // member left thread
-                    self.remove_user(member.user_id)
-                } else {
-                    // member joined thread
+                // member left the room
+                self.remove_user(*user_id)
+            }
+            MessageSync::ThreadMemberUpsert {
+                thread_id,
+                added,
+                removed,
+                ..
+            } => {
+                if self.key.channel_id != Some(*thread_id) || !self.use_thread_members {
+                    return vec![];
+                }
+
+                let mut ops = vec![];
+
+                for member in added {
                     self.thread_members.insert(member.user_id, member.clone());
                     if self.users.contains_key(&member.user_id) {
-                        self.recalculate_user(member.user_id)
+                        ops.extend(self.recalculate_user(member.user_id));
                     } else {
                         warn!(
                             "ThreadMemberUpsert for user {} without User object, can't update list",
                             member.user_id
                         );
-                        vec![]
                     }
                 }
+
+                for user_id in removed {
+                    ops.extend(self.remove_user(*user_id));
+                }
+
+                ops
             }
             MessageSync::RoleUpdate { role } => {
                 if self.key.room_id != Some(role.room_id) {

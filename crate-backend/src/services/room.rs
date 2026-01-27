@@ -6,7 +6,7 @@ use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Permission,
     RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut,
-    ThreadMembership, UserId,
+    UserId,
 };
 
 use crate::error::Result;
@@ -328,12 +328,15 @@ impl ServiceRooms {
                 .await?;
 
             let tm = data.thread_member_get(wti, user_id).await;
-            if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
+            if tm.is_err() {
                 data.thread_member_put(wti, user_id, ThreadMemberPut::default())
                     .await?;
                 let thread_member = data.thread_member_get(wti, user_id).await?;
                 let msg = MessageSync::ThreadMemberUpsert {
-                    member: thread_member,
+                    room_id: Some(room_id),
+                    thread_id: wti,
+                    added: vec![thread_member],
+                    removed: vec![],
                 };
                 self.state.broadcast_channel(wti, user_id, msg).await?;
             }

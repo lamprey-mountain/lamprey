@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP: suppress warnings here for now
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -15,13 +17,14 @@ mod schema;
 
 pub struct ServiceSearch {
     state: Arc<ServerStateInner>,
-    tantivy: TantivyHandle,
+    // tantivy: TantivyHandle,
 }
 
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        let tantivy = index::spawn_indexer(Arc::clone(&state));
-        Self { state, tantivy }
+        Self { state }
+        // let tantivy = index::spawn_indexer(Arc::clone(&state));
+        // Self { state, tantivy }
     }
 
     pub async fn search_messages(
