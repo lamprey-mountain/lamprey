@@ -402,7 +402,7 @@ impl DataUser for Postgres {
         let rows = query_as!(
             DbUser,
             r#"
-            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.bot, u.registered_at, u.deleted_at, u.suspended,
+            SELECT u.id as "id!", u.version_id as "version_id!", u.parent_id, u.name as "name!", u.description, u.avatar, u.banner, u.system as "system!", u.bot as "bot!", u.registered_at, u.deleted_at, u.suspended,
                    w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
                    p.application_id as "puppet_application_id?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
             FROM usr u
