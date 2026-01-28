@@ -285,7 +285,13 @@ async fn channel_list(
         .into_iter()
         .filter_map(|id| channels_map.remove(&id))
         .collect();
-    Ok(Json(channels))
+    let total = channels.len() as u64;
+    Ok(Json(PaginationResponse {
+        items: channels,
+        total,
+        has_more: false,
+        cursor: None,
+    }))
 }
 
 /// Room channel list removed
@@ -339,7 +345,12 @@ async fn channel_list_removed(
         .into_iter()
         .filter_map(|id| channels_map.remove(&id))
         .collect();
-    Ok(Json(res))
+    Ok(Json(PaginationResponse {
+        items: res.items,
+        total: res.total,
+        has_more: res.has_more,
+        cursor: res.cursor,
+    }))
 }
 
 /// Room channel reorder
