@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE room_member\n        \tSET membership = 'Leave', left_at = now()\n            WHERE room_id = $1 AND user_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "19907b703bab011d1fe391e45463fd51a40df739d5e886035a098317842e72ef"
+}

@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT draft, archived_at, archived_reason, template, slug,\n                   published_at, published_revision, published_unlisted\n            FROM channel_document\n            WHERE channel_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "draft",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "archived_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 2,
+        "name": "archived_reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "template",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "slug",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "published_revision",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "published_unlisted",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "6c07b6e0505e65a0586b2c3c345bec5c5adae77aa0d93ba477c28ed0535bfbf9"
+}

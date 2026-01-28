@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE session SET\n            status = $2,\n            user_id = $3,\n            authorized_at = (CASE WHEN $4 THEN COALESCE(authorized_at, now()) ELSE authorized_at END),\n            deauthorized_at = (CASE WHEN $4 THEN NULL ELSE COALESCE(deauthorized_at, now()) END)\n            WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "session_status",
+            "kind": {
+              "Enum": [
+                "Unauthorized",
+                "Authorized",
+                "Sudo"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bff8f5b1dadfac76090a2bd966ff20bace06258bcac29d5a519768b370c727a5"
+}

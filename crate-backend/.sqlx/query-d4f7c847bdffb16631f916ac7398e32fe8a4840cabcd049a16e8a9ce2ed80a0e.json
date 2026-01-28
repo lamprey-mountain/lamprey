@@ -88,7 +88,18 @@
                       "CalendarEventRsvp",
                       "DocumentCreate",
                       "DocumentEdit",
-                      "DocumentComment"
+                      "DocumentComment",
+                      "RoomManageServer",
+                      "UserManage",
+                      "UserDeleteSelf",
+                      "UserProfile",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomForceJoin"
                     ]
                   }
                 }
@@ -167,7 +178,18 @@
                       "CalendarEventRsvp",
                       "DocumentCreate",
                       "DocumentEdit",
-                      "DocumentComment"
+                      "DocumentComment",
+                      "RoomManageServer",
+                      "UserManage",
+                      "UserDeleteSelf",
+                      "UserProfile",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomForceJoin"
                     ]
                   }
                 }

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT color, default_timezone\n            FROM channel_calendar\n            WHERE channel_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "default_timezone",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "ea219f3ef11e2ff97edfb16b0b90873d595e4f8bb02506de76760bec4910294d"
+}
