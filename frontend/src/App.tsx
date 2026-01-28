@@ -218,9 +218,9 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	const client = createClient({
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
-		onSync(msg) {
-			console.log("recv", msg);
-			events.emit("sync", msg);
+		onSync(msg, raw) {
+			console.log("recv", msg, raw);
+			events.emit("sync", [msg, raw]);
 		},
 		onReady(msg) {
 			events.emit("ready", msg);

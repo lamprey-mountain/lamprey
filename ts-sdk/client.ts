@@ -11,7 +11,7 @@ export type ClientOptions = {
 	apiUrl: string;
 	token?: string;
 	onReady: (event: MessageReady) => void;
-	onSync: (event: MessageSync) => void;
+	onSync: (event: MessageSync, raw: MessageEnvelope) => void;
 };
 
 export type Http = oapi.Client<paths>;
@@ -70,7 +70,7 @@ export function createClient(opts: ClientOptions): Client {
 				ws.send(JSON.stringify({ type: "Pong" }));
 			} else if (msg.op === "Sync") {
 				if (resume) resume.seq = msg.seq;
-				opts.onSync(msg.data);
+				opts.onSync(msg.data, msg);
 			} else if (msg.op === "Error") {
 				console.error(msg.error);
 			} else if (msg.op === "Ready") {

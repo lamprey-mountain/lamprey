@@ -249,7 +249,7 @@ export const createVoiceClient = () => {
 		drainSendQueue();
 	});
 
-	api.events.on("sync", async (e) => {
+	api.events.on("sync", async ([e]) => {
 		if (e.type === "VoiceState") {
 			if (!e.state) {
 				console.log("[rtc:stream] clean up tracks from", e.user_id);

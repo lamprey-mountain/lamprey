@@ -87,7 +87,7 @@ export const VoiceProvider = (props: ParentProps) => {
 		});
 	});
 
-	api.events.on("sync", async (e) => {
+	api.events.on("sync", async ([e]) => {
 		const user_id = api.users.cache.get("@self")!.id;
 		if (e.type === "VoiceState" && e.user_id === user_id) {
 			if (e.state) {

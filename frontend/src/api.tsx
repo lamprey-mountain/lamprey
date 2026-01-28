@@ -22,6 +22,7 @@ import type {
 	MemberListGroup,
 	Message,
 	MessageCreate,
+	MessageEnvelope,
 	MessageReady,
 	MessageSync,
 	Pagination,
@@ -121,7 +122,7 @@ export type MemberList = {
 export function createApi(
 	client: Client,
 	events: Emitter<{
-		sync: MessageSync;
+		sync: [MessageSync, MessageEnvelope];
 		ready: MessageReady;
 	}>,
 	{ userConfig, setUserConfig }: {
@@ -158,7 +159,7 @@ export function createApi(
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
 
-	events.on("sync", (msg) => {
+	events.on("sync", ([msg, raw]) => {
 		if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
@@ -222,8 +223,8 @@ export function createApi(
 					const old_listing = (old_status === "active"
 						? threads._cachedListings
 						: old_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+							? (threads as any)._cachedArchivedListings
+							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (old_listing?.pagination) {
 						const p = old_listing.pagination;
@@ -242,8 +243,8 @@ export function createApi(
 					const new_listing = (new_status === "active"
 						? threads._cachedListings
 						: new_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+							? (threads as any)._cachedArchivedListings
+							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (new_listing?.pagination) {
 						const p = new_listing.pagination;
@@ -260,8 +261,8 @@ export function createApi(
 					const listing = (new_status === "active"
 						? threads._cachedListings
 						: new_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+							? (threads as any)._cachedArchivedListings
+							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (listing?.pagination) {
 						const p = listing.pagination;
@@ -304,6 +305,7 @@ export function createApi(
 			const m = "latest_version" in msg.message
 				? convertV2MessageToV1(msg.message)
 				: msg.message;
+			m.nonce = raw.nonce;
 
 			const me = users.cache.get("@self");
 			if (
@@ -342,9 +344,8 @@ export function createApi(
 				if (is_mentioned && userConfig().notifs.mentions === "Notify") {
 					const author = users.cache.get(m.author_id);
 					const channel = channels.cache.get(m.channel_id);
-					const title = `${author?.name ?? "Someone"} in #${
-						channel?.name ?? "channel"
-					}`;
+					const title = `${author?.name ?? "Someone"} in #${channel?.name ?? "channel"
+						}`;
 					const rawContent = m.content ?? "";
 					const processedContent = stripMarkdownAndResolveMentions(
 						rawContent,

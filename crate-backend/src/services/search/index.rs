@@ -171,14 +171,14 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
     }
 }
 
-struct SearchMessagesResponseRaw {
-    items: Vec<SearchMessagesResponseRawItem>,
-    total: u64,
+pub struct SearchMessagesResponseRaw {
+    pub items: Vec<SearchMessagesResponseRawItem>,
+    pub total: u64,
 }
 
-struct SearchMessagesResponseRawItem {
-    id: MessageId,
-    channel_id: ChannelId,
+pub struct SearchMessagesResponseRawItem {
+    pub id: MessageId,
+    pub channel_id: ChannelId,
 }
 
 impl TantivyHandle {

@@ -30,7 +30,7 @@ export const MemberListProvider = (props: ParentProps) => {
 		}
 	});
 
-	api.events.on("sync", (msg) => {
+	api.events.on("sync", ([msg]) => {
 		if (msg.type === "MemberListSync") {
 			const { room_id, channel_id: thread_id, ops, groups } = msg;
 			const id = thread_id ?? room_id;

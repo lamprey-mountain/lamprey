@@ -127,7 +127,7 @@ export const cursorPlugin = (api: Api, channelId: string, branchId: string) => {
 			},
 		},
 		view(view) {
-			const onSync = (msg: any) => {
+			const onSync = ([msg]: any) => {
 				if (
 					msg.type === "DocumentPresence" && msg.channel_id === channelId &&
 					msg.branch_id === branchId
