@@ -712,6 +712,7 @@ impl ServiceDocuments {
                     authors: current_authors.drain().collect(),
                     stat_added: current_added,
                     stat_removed: current_removed,
+                    document_id: Some(context_id.0),
                 });
                 current_added = 0;
                 current_removed = 0;
@@ -732,6 +733,7 @@ impl ServiceDocuments {
             authors: current_authors.drain().collect(),
             stat_added: current_added,
             stat_removed: current_removed,
+            document_id: Some(context_id.0),
         });
 
         changesets.reverse();

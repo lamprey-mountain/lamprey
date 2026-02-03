@@ -508,6 +508,10 @@ pub struct Changeset {
 
     /// number of graphemes removed
     pub stat_removed: u64,
+
+    /// the document this changeset applies to
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub document_id: Option<ChannelId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
