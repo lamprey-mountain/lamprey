@@ -12,7 +12,7 @@ use crate::v1::types::{
     util::Time,
     voice::Call,
     webhook::Webhook,
-    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, DocumentBranchId, DocumentTagId,
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, ConnectionId, DocumentBranchId, DocumentTagId,
     InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
 };
 
@@ -107,7 +107,7 @@ pub enum MessageClient {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SyncResume {
-    pub conn: String,
+    pub conn: ConnectionId,
     pub seq: u64,
 }
 
@@ -156,7 +156,7 @@ pub enum MessagePayload {
         session: Session,
 
         /// connection id
-        conn: String,
+        conn: ConnectionId,
 
         /// sequence id for reconnecting
         seq: u64,

@@ -6,7 +6,7 @@ use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
-    ChannelId, DocumentBranchId, MessageSync, UserId,
+    ConnectionId, ChannelId, DocumentBranchId, MessageSync, UserId,
 };
 use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
@@ -35,12 +35,12 @@ pub struct ServiceDocuments {
 #[derive(Clone, Debug)]
 pub enum DocumentEvent {
     Update {
-        origin_conn_id: Option<Uuid>,
+        origin_conn_id: Option<ConnectionId>,
         update: Vec<u8>,
     },
     Presence {
         user_id: UserId,
-        origin_conn_id: Option<Uuid>,
+        origin_conn_id: Option<ConnectionId>,
         cursor_head: String,
         cursor_tail: Option<String>,
     },
@@ -48,7 +48,7 @@ pub enum DocumentEvent {
 
 #[derive(Clone, Debug)]
 struct PresenceData {
-    conn_id: Uuid,
+    conn_id: ConnectionId,
     cursor_head: String,
     cursor_tail: Option<String>,
 }
@@ -279,7 +279,7 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         author_id: UserId,
-        origin_conn_id: Option<Uuid>,
+        origin_conn_id: Option<ConnectionId>,
         update_bytes: &[u8],
     ) -> Result<()> {
         let update = Update::decode_v1(update_bytes)?;
@@ -522,7 +522,7 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         user_id: UserId,
-        origin_conn_id: Option<Uuid>,
+        origin_conn_id: Option<ConnectionId>,
         cursor_head: String,
         cursor_tail: Option<String>,
     ) -> Result<()> {
@@ -553,7 +553,7 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         user_id: UserId,
-        conn_id: Uuid,
+        conn_id: ConnectionId,
     ) -> Result<()> {
         if let Some(ctx) = self.edit_contexts.get(&context_id) {
             let mut ctx = ctx.write().await;
@@ -578,7 +578,7 @@ impl ServiceDocuments {
     pub async fn get_presence(
         &self,
         context_id: EditContextId,
-    ) -> Result<Vec<(UserId, String, Option<String>, Uuid)>> {
+    ) -> Result<Vec<(UserId, String, Option<String>, ConnectionId)>> {
         let ctx = self.load(context_id, None).await?;
         let ctx = ctx.read().await;
         Ok(ctx
@@ -630,7 +630,7 @@ impl ServiceDocuments {
     }
 
     /// create a new DocumentSyncer for a session
-    pub fn create_syncer(&self, conn_id: Uuid) -> DocumentSyncer {
+    pub fn create_syncer(&self, conn_id: ConnectionId) -> DocumentSyncer {
         let (query_tx, query_rx) = tokio::sync::watch::channel(None);
         DocumentSyncer {
             s: self.state.clone(),
@@ -751,7 +751,7 @@ pub struct DocumentSyncer {
     query_tx: tokio::sync::watch::Sender<Option<(EditContextId, Option<Vec<u8>>)>>,
     query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
     current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
-    conn_id: Uuid,
+    conn_id: ConnectionId,
     pending_sync: VecDeque<MessageSync>,
 }
 
@@ -848,7 +848,7 @@ impl DocumentSyncer {
                         match res {
                             Ok(event) => match event {
                                 DocumentEvent::Update { origin_conn_id, update } => {
-                                    if origin_conn_id.as_ref() == Some(&self.conn_id) {
+                                    if origin_conn_id == Some(self.conn_id) {
                                         continue;
                                     }
                                     return Ok(MessageSync::DocumentEdit {
@@ -863,7 +863,7 @@ impl DocumentSyncer {
                                     cursor_head,
                                     cursor_tail,
                                 } => {
-                                    if origin_conn_id.as_ref() == Some(&self.conn_id) {
+                                    if origin_conn_id == Some(self.conn_id) {
                                         continue;
                                     }
                                     return Ok(MessageSync::DocumentPresence {

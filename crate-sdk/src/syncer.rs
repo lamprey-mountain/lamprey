@@ -81,7 +81,7 @@ impl Syncer {
                                     }
                                     MessagePayload::Ready { conn, seq, .. } => {
                                         resume = Some(SyncResume {
-                                            conn: conn.to_string(),
+                                            conn: *conn,
                                             seq: *seq,
                                         });
                                     }
@@ -128,7 +128,7 @@ impl Syncer {
                             }
                             MessagePayload::Ready { conn, seq, .. } => {
                                 resume = Some(SyncResume {
-                                    conn: conn.to_string(),
+                                    conn: *conn,
                                     seq: *seq,
                                 });
                             }

@@ -2,7 +2,7 @@ use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
     sync::{SyncCompression, SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
-    ChannelId, SessionToken, UserId,
+    ChannelId, ConnectionId, SessionToken, UserId,
 };
 use flate2::{
     write::{ZlibDecoder, ZlibEncoder},
@@ -11,7 +11,6 @@ use flate2::{
 use std::io::Write;
 use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
-use uuid::Uuid;
 
 use axum::extract::ws::{Message, WebSocket};
 use common::v1::types::emoji::EmojiOwner;
@@ -54,7 +53,7 @@ pub struct Connection {
     queue: VecDeque<(Option<u64>, MessageEnvelope)>,
     seq_server: u64,
     seq_client: u64,
-    id: Uuid,
+    id: ConnectionId,
     compression: Option<Compression>,
 
     pub member_list: Box<MemberListSyncer>,
@@ -85,7 +84,7 @@ impl Connection {
             None => None,
         };
 
-        let id = Uuid::new_v4();
+        let id = ConnectionId::new();
 
         Self {
             state: ConnectionState::Unauthed,
@@ -322,7 +321,7 @@ impl Connection {
         // TODO: more forgiving reconnections?
         if let Some(r) = reconnect {
             debug!("attempting to resume");
-            if let Some((_, mut conn)) = self.s.syncers.remove(&Uuid::parse_str(&r.conn).unwrap()) {
+            if let Some((_, mut conn)) = self.s.syncers.remove(&r.conn) {
                 debug!("resume conn exists");
                 if let Some(recon_session) = conn.state.session() {
                     debug!("resume session exists");
@@ -368,7 +367,7 @@ impl Connection {
             payload: types::MessagePayload::Ready {
                 user: Box::new(user),
                 session: session.clone(),
-                conn: self.get_id().to_string(),
+                conn: self.get_id(),
                 seq: 0,
             },
         };
@@ -458,6 +457,7 @@ impl Connection {
                     user_id,
                     channel_id: state.channel_id,
                     session_id: Some(session.id),
+                    connection_id: Some(self.id),
                     joined_at: Time::now_utc(),
                     mute: false,
                     deaf: false,
@@ -944,7 +944,7 @@ impl Connection {
         Ok(())
     }
 
-    pub fn get_id(&self) -> Uuid {
+    pub fn get_id(&self) -> ConnectionId {
         self.id
     }
 

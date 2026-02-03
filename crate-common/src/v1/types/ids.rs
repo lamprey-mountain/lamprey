@@ -213,6 +213,7 @@ genid!(CalendarEvent, "00000000-0000-0000-0000-calendarevent");
 genid!(Harvest);
 genid!(DocumentBranch);
 genid!(DocumentTag);
+genid!(Connection);
 
 #[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");

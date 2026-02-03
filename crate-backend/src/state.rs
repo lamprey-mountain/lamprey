@@ -6,7 +6,7 @@ use std::{
 use common::v1::types::{MessageSync, MessageType};
 use common::v2::types::message::Message;
 use common::{
-    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, Media, RoomId, UserId},
+    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, ConnectionId, Media, RoomId, UserId},
     v2::types::message::MessageVersion,
 };
 use dashmap::DashMap;
@@ -42,7 +42,7 @@ pub struct ServerState {
     pub services: Arc<Services>,
 
     // TODO: limit number of connections per user, clean up old/unused entries
-    pub syncers: Arc<DashMap<uuid::Uuid, Connection>>,
+    pub syncers: Arc<DashMap<ConnectionId, Connection>>,
 }
 
 impl ServerStateInner {

@@ -13,7 +13,7 @@ use validator::Validate;
 
 use crate::v1::types::{
     util::{some_option, Time},
-    MediaId, RoomId, SessionId, SfuId, UserId,
+    ConnectionId, MediaId, RoomId, SessionId, SfuId, UserId,
 };
 
 use super::ChannelId;
@@ -92,6 +92,9 @@ pub struct VoiceState {
     /// the session that's being used to connect to this voice channel
     /// this is only be returned for the user this state belongs to
     pub session_id: Option<SessionId>,
+
+    /// the connection id for this voice connection
+    pub connection_id: Option<ConnectionId>,
 
     /// when this user joined the call
     pub joined_at: Time,
