@@ -60,6 +60,7 @@ pub struct DbRoom {
     pub welcome_channel_id: Option<Uuid>,
     pub member_count: i64,
     pub channel_count: i64,
+    pub emoji_count: i64,
     pub quarantined: bool,
     pub security_require_mfa: bool,
     pub security_require_sudo: bool,
@@ -109,6 +110,7 @@ impl From<DbRoom> for Room {
             member_count: row.member_count as u64,
             online_count: Default::default(),
             channel_count: row.channel_count as u64,
+            emoji_count: row.emoji_count as u64,
             user_config: None,
             security: RoomSecurity {
                 require_mfa: row.security_require_mfa,

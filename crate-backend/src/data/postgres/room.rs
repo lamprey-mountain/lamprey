@@ -63,6 +63,7 @@ impl DataRoom for Postgres {
                 room.welcome_channel_id,
                 (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
                 (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
+                (SELECT COUNT(*) FROM custom_emoji WHERE room_id = room.id AND deleted_at IS NULL) AS "emoji_count!",
                 room.quarantined,
                 room.security_require_mfa,
                 room.security_require_sudo,
@@ -104,6 +105,7 @@ impl DataRoom for Postgres {
                     room.welcome_channel_id,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
                     (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
+                    (SELECT COUNT(*) FROM custom_emoji WHERE room_id = room.id AND deleted_at IS NULL) AS "emoji_count!",
                     room.quarantined,
                     room.security_require_mfa,
                     room.security_require_sudo,
@@ -161,6 +163,7 @@ impl DataRoom for Postgres {
                     room.welcome_channel_id,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
                     (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
+                    (SELECT COUNT(*) FROM custom_emoji WHERE room_id = room.id AND deleted_at IS NULL) AS "emoji_count!",
                     room.quarantined,
                     room.security_require_mfa,
                     room.security_require_sudo,
@@ -247,7 +250,8 @@ impl DataRoom for Postgres {
                     r.afk_channel_id,
                     r.afk_channel_timeout,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS "member_count!",
-                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!"
+                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
+                    (SELECT COUNT(*) FROM custom_emoji WHERE room_id = r.id AND deleted_at IS NULL) AS "emoji_count!"
                 FROM room_member rm1
                 JOIN room_member rm2 ON rm1.room_id = rm2.room_id
                 JOIN room r ON rm1.room_id = r.id
