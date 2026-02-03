@@ -66,8 +66,6 @@ pub struct Channel {
     pub online_count: u64,
 
     /// number of tags in this Forum, Forum2, or Ticket channel
-    // TODO(#955): implement
-    #[cfg(any())]
     pub tag_count: u64,
 
     /// tags that are applied to this thread

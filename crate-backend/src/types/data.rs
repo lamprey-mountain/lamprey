@@ -148,6 +148,7 @@ pub struct DbChannel {
     pub user_limit: Option<i32>,
     pub tags: Option<serde_json::Value>,
     pub tags_available: Option<serde_json::Value>,
+    pub tag_count: i64,
     pub invitable: bool,
     pub auto_archive_duration: Option<i64>,
     pub default_auto_archive_duration: Option<i64>,
@@ -306,6 +307,7 @@ impl From<DbChannel> for Channel {
             tags_available: row
                 .tags_available
                 .map(|v| serde_json::from_value(v).unwrap_or_default()),
+            tag_count: row.tag_count.try_into().expect("tag_count is negative?"),
             root_message_count: None,
             thread_member: None,
             slowmode_thread: row.slowmode_thread.map(|v| v as u64),
