@@ -6,7 +6,7 @@ use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
-    ConnectionId, ChannelId, DocumentBranchId, MessageSync, UserId,
+    ChannelId, ConnectionId, DocumentBranchId, MessageSync, UserId,
 };
 use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
@@ -18,6 +18,7 @@ use yrs::updates::encoder::Encode;
 use yrs::DeepObservable;
 use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
 
+use crate::types::DocumentUpdateSummary;
 use crate::{Error, Result, ServerStateInner};
 
 // mod validate;
@@ -649,7 +650,25 @@ impl ServiceDocuments {
     ) -> Result<HistoryPaginationSummary> {
         let data = self.state.data();
         let (updates, tags) = data.document_history(context_id).await?;
+        self.process_history(updates, tags, query)
+    }
 
+    pub async fn query_wiki_history(
+        &self,
+        wiki_id: ChannelId,
+        query: HistoryParams,
+    ) -> Result<HistoryPaginationSummary> {
+        let data = self.state.data();
+        let (updates, tags) = data.wiki_history(wiki_id).await?;
+        self.process_history(updates, tags, query)
+    }
+
+    fn process_history(
+        &self,
+        updates: Vec<DocumentUpdateSummary>,
+        tags: Vec<DocumentTag>,
+        query: HistoryParams,
+    ) -> Result<HistoryPaginationSummary> {
         let by_author = query.by_author.unwrap_or(true);
         let by_tag = query.by_tag.unwrap_or(true);
         let by_time = query.by_time.unwrap_or(3600) as i64;
@@ -669,6 +688,7 @@ impl ServiceDocuments {
         let mut current_start = updates[0].created_at;
         let mut current_end = updates[0].created_at;
         let mut current_count = 0;
+        let mut current_document_id = updates[0].document_id;
 
         let mut tag_iter = tags.iter().peekable();
 
@@ -677,6 +697,10 @@ impl ServiceDocuments {
 
             if i > 0 {
                 let prev = &updates[i - 1];
+
+                if update.document_id != prev.document_id {
+                    split = true;
+                }
 
                 if by_author && update.user_id != prev.user_id {
                     split = true;
@@ -712,12 +736,13 @@ impl ServiceDocuments {
                     authors: current_authors.drain().collect(),
                     stat_added: current_added,
                     stat_removed: current_removed,
-                    document_id: Some(context_id.0),
+                    document_id: Some(current_document_id),
                 });
                 current_added = 0;
                 current_removed = 0;
                 current_count = 0;
                 current_start = update.created_at;
+                current_document_id = update.document_id;
             }
 
             current_authors.insert(UserId::from(update.user_id));
@@ -733,7 +758,7 @@ impl ServiceDocuments {
             authors: current_authors.drain().collect(),
             stat_added: current_added,
             stat_removed: current_removed,
-            document_id: Some(context_id.0),
+            document_id: Some(current_document_id),
         });
 
         changesets.reverse();

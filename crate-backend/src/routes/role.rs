@@ -7,8 +7,7 @@ use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission, Role,
-    RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, RoomId, RoomMember,
-     UserId,
+    RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, RoomId, RoomMember, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};

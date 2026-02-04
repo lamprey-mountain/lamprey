@@ -337,7 +337,12 @@ impl ServiceCache {
             MessageSync::RoomMemberDelete { room_id, user_id } => {
                 self.remove_member(*room_id, *user_id).await;
             }
-            MessageSync::ThreadMemberUpsert { thread_id, added, removed, .. } => {
+            MessageSync::ThreadMemberUpsert {
+                thread_id,
+                added,
+                removed,
+                ..
+            } => {
                 let srv = self.state.services();
                 if let Ok(chan) = srv.channels.get(*thread_id, None).await {
                     if let Some(room_id) = chan.room_id {

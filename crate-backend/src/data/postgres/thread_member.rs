@@ -62,11 +62,7 @@ impl DataThreadMember for Postgres {
         Ok(())
     }
 
-    async fn thread_member_leave(
-        &self,
-        channel_id: ChannelId,
-        user_id: UserId,
-    ) -> Result<()> {
+    async fn thread_member_leave(&self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
         query!(
             r#"
             UPDATE thread_member

@@ -669,7 +669,7 @@ impl DataDocument for Postgres {
         &self,
         context_id: EditContextId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)> {
-        let (_, branch_id) = context_id;
+        let (document_id, branch_id) = context_id;
 
         struct DbUpdateSummary {
             user_id: Uuid,
@@ -714,6 +714,66 @@ impl DataDocument for Postgres {
                     stat_added: u.stat_added.unwrap_or(0) as u32,
                     stat_removed: u.stat_removed.unwrap_or(0) as u32,
                     seq: u.seq as u32,
+                    document_id,
+                })
+                .collect(),
+            tags.into_iter().map(Into::into).collect(),
+        ))
+    }
+
+    async fn wiki_history(
+        &self,
+        wiki_id: ChannelId,
+    ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)> {
+        struct DbUpdateSummary {
+            user_id: Uuid,
+            created_at: time::PrimitiveDateTime,
+            stat_added: Option<i32>,
+            stat_removed: Option<i32>,
+            seq: i32,
+            document_id: Uuid,
+        }
+
+        let updates = query_as!(
+            DbUpdateSummary,
+            r#"
+            SELECT 
+                u.author_id as user_id, u.created_at, u.stat_added, u.stat_removed, u.seq, u.document_id
+            FROM document_update u
+            JOIN channel c ON c.id = u.document_id
+            WHERE c.parent_id = $1
+            ORDER BY u.created_at ASC
+            "#,
+            wiki_id.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let tags = query_as!(
+            DbDocumentTag,
+            r#"
+            SELECT t.id, t.branch_id, t.revision_seq, t.creator_id, t.created_at, t.updated_at, t.summary, t.description
+            FROM document_tag t
+            JOIN document_branch b ON b.id = t.branch_id
+            JOIN channel c ON c.id = b.document_id
+            WHERE c.parent_id = $1
+            ORDER BY t.created_at ASC
+            "#,
+            wiki_id.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok((
+            updates
+                .into_iter()
+                .map(|u| DocumentUpdateSummary {
+                    user_id: u.user_id,
+                    created_at: u.created_at.into(),
+                    stat_added: u.stat_added.unwrap_or(0) as u32,
+                    stat_removed: u.stat_removed.unwrap_or(0) as u32,
+                    seq: u.seq as u32,
+                    document_id: u.document_id.into(),
                 })
                 .collect(),
             tags.into_iter().map(Into::into).collect(),

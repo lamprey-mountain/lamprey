@@ -12,8 +12,9 @@ use crate::v1::types::{
     util::Time,
     voice::Call,
     webhook::Webhook,
-    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, ConnectionId, DocumentBranchId, DocumentTagId,
-    InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember, WebhookId,
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, ConnectionId, DocumentBranchId,
+    DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
+    WebhookId,
 };
 
 use crate::v2::types::message::Message as MessageV2;

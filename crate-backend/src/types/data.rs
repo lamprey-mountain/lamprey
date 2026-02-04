@@ -729,6 +729,7 @@ pub struct DocumentUpdateSummary {
     pub stat_added: u32,
     pub stat_removed: u32,
     pub seq: u32,
+    pub document_id: ChannelId,
 }
 
 #[derive(sqlx::Type, Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

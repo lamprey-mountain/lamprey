@@ -1493,6 +1493,12 @@ pub trait DataDocument {
         &self,
         context_id: EditContextId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
+
+    /// fetch history for a wiki
+    async fn wiki_history(
+        &self,
+        wiki_id: ChannelId,
+    ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
 }
 
 #[async_trait]

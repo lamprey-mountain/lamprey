@@ -31,7 +31,9 @@ use super::util::Auth;
 use crate::error::Result;
 use crate::{Error, ServerState};
 
-/// Wiki history (TODO)
+// TODO: check if channels are actually wikis/documents
+
+/// Wiki history
 ///
 /// query edit history for all documents in this wiki
 #[utoipa::path(
@@ -47,12 +49,38 @@ use crate::{Error, ServerState};
     )
 )]
 async fn wiki_history(
-    Path(_channel_id): Path<ChannelId>,
-    Query(_query): Query<HistoryParams>,
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(channel_id): Path<ChannelId>,
+    Query(query): Query<HistoryParams>,
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let summary = srv.documents.query_wiki_history(channel_id, query).await?;
+
+    let user_ids = summary.user_ids();
+    let users = srv.users.get_many(&user_ids).await?;
+
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let room_members = if let Some(room_id) = channel.room_id {
+        data.room_member_get_many(room_id, &user_ids).await?
+    } else {
+        vec![]
+    };
+
+    let thread_members = data.thread_member_get_many(channel_id, &user_ids).await?;
+
+    Ok(Json(HistoryPagination {
+        changesets: summary.changesets,
+        users,
+        room_members,
+        thread_members,
+        document_tags: summary.tags,
+    }))
 }
 
 /// Document branch list
