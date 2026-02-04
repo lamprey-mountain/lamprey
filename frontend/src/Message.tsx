@@ -815,20 +815,21 @@ function ReplyView(props: ReplyProps) {
 		if (!r || !r.content) return <>{content()}</>;
 
 		let contentStr = r.content;
+		const m = r.mentions;
 
-		for (const user of r.mentions.users) {
+		for (const user of m?.users ?? []) {
 			contentStr = contentStr.replace(
 				new RegExp(`<@${user.id}>`, "g"),
 				`<span class="mention-user" data-user-id="${user.id}">@${user.resolved_name}</span>`,
 			);
 		}
-		for (const channel of r.mentions.channels) {
+		for (const channel of m?.channels ?? []) {
 			contentStr = contentStr.replace(
 				new RegExp(`<#${channel.id}>`, "g"),
 				`<span class="mention-channel" data-channel-id="${channel.id}">#${channel.name}</span>`,
 			);
 		}
-		for (const role of r.mentions.roles) {
+		for (const role of m?.roles ?? []) {
 			const roleData = thread()?.room_id
 				? api.roles.fetch(() => thread()!.room_id, () => role.id)()
 				: null;
@@ -839,7 +840,7 @@ function ReplyView(props: ReplyProps) {
 				}</span>`,
 			);
 		}
-		for (const emoji of r.mentions.emojis) {
+		for (const emoji of m?.emojis ?? []) {
 			contentStr = contentStr.replace(
 				new RegExp(`<a?:${emoji.name}:${emoji.id}>`, "g"),
 				`<span class="mention-emoji">:${emoji.name}:</span>`,
