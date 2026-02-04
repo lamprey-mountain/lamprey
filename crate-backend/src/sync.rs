@@ -419,6 +419,7 @@ impl Connection {
         }
 
         self.member_list.set_user_id(session.user_id()).await;
+        self.document.set_user_id(session.user_id()).await;
         self.state = ConnectionState::Authenticated { session };
         Ok(())
     }
@@ -556,14 +557,25 @@ impl Connection {
             .s
             .data()
             .document_branch_get(channel_id, branch_id)
-            .await?;
-        if branch.private && branch.creator_id != user_id {
-            return Err(Error::NotFound);
+            .await;
+        match branch {
+            Ok(branch) => {
+                if branch.private && branch.creator_id != user_id {
+                    return Err(Error::NotFound);
+                }
+            }
+            Err(_) if *branch_id == *channel_id => {
+                // this is the default branch
+            }
+            Err(_) => {
+                return Err(Error::NotFound);
+            }
         }
 
         self.document
             .set_context_id((channel_id, branch_id), state_vector)
             .await?;
+
         Ok(())
     }
 

@@ -359,7 +359,10 @@ async fn document_branch_merge(
     let source_context = (channel_id, branch_id);
 
     let target_sv = srv.documents.get_state_vector(target_context).await?;
-    let update = srv.documents.diff(source_context, &target_sv).await?;
+    let update = srv
+        .documents
+        .diff(source_context, Some(user_id), &target_sv)
+        .await?;
 
     if !update.is_empty() {
         srv.documents
@@ -704,7 +707,10 @@ async fn document_crdt_diff(
     }
 
     let sv = query.sv.unwrap_or(DocumentStateVector(vec![])).0;
-    let update = srv.documents.diff((channel_id, branch_id), &sv).await?;
+    let update = srv
+        .documents
+        .diff((channel_id, branch_id), Some(auth.user.id), &sv)
+        .await?;
 
     Ok(Json(DocumentUpdate(update)))
 }

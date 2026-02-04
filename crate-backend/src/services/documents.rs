@@ -12,7 +12,7 @@ use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use tokio::sync::{broadcast, RwLock};
-use tracing::error;
+use tracing::{debug, error};
 use uuid::Uuid;
 use yrs::updates::encoder::Encode;
 use yrs::DeepObservable;
@@ -146,6 +146,7 @@ impl ServiceDocuments {
             return Ok(Arc::clone(&ctx));
         }
 
+        debug!(context_id = ?context_id, maybe_author = ?maybe_author, "load document");
         let data = self.state.data();
         let loaded = data.document_load(context_id).await;
 
@@ -596,9 +597,14 @@ impl ServiceDocuments {
             .collect())
     }
 
-    pub async fn diff(&self, context_id: EditContextId, state_vector: &[u8]) -> Result<Vec<u8>> {
+    pub async fn diff(
+        &self,
+        context_id: EditContextId,
+        maybe_author: Option<UserId>,
+        state_vector: &[u8],
+    ) -> Result<Vec<u8>> {
         let s = StateVector::decode_v1(state_vector)?;
-        let ctx = self.load(context_id, None).await?;
+        let ctx = self.load(context_id, maybe_author).await?;
         let ctx = ctx.read().await;
         let serialized = ctx.doc.transact().encode_diff_v1(&s);
         Ok(serialized)
@@ -624,8 +630,9 @@ impl ServiceDocuments {
     pub async fn subscribe(
         &self,
         context_id: EditContextId,
+        maybe_author: Option<UserId>,
     ) -> Result<broadcast::Receiver<DocumentEvent>> {
-        let ctx = self.load(context_id, None).await?;
+        let ctx = self.load(context_id, maybe_author).await?;
         let ctx = ctx.read().await;
         Ok(ctx.update_tx.subscribe())
     }
@@ -640,6 +647,7 @@ impl ServiceDocuments {
             current_rx: None,
             conn_id,
             pending_sync: VecDeque::new(),
+            user_id: None,
         }
     }
 
@@ -780,9 +788,14 @@ pub struct DocumentSyncer {
     current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
     conn_id: ConnectionId,
     pending_sync: VecDeque<MessageSync>,
+    user_id: Option<UserId>,
 }
 
 impl DocumentSyncer {
+    pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
+        self.user_id = user_id;
+    }
+
     /// set edit context id for this syncer
     pub async fn set_context_id(
         &self,
@@ -827,14 +840,21 @@ impl DocumentSyncer {
 
                 match query {
                     Some((context_id, state_vector)) => {
-                        let rx = self.s.services().documents.subscribe(context_id).await?;
+                        // TODO: check that self.user_id is Some
+
+                        let rx = self
+                            .s
+                            .services()
+                            .documents
+                            .subscribe(context_id, self.user_id)
+                            .await?;
                         self.current_rx = Some((context_id, rx));
 
                         let srv = self.s.services();
                         let update = if let Some(sv) = state_vector {
-                            srv.documents.diff(context_id, &sv).await?
+                            srv.documents.diff(context_id, self.user_id, &sv).await?
                         } else {
-                            let ctx = srv.documents.load(context_id, None).await?;
+                            let ctx = srv.documents.load(context_id, self.user_id).await?;
                             let ctx = ctx.read().await;
                             let update = ctx
                                 .doc
