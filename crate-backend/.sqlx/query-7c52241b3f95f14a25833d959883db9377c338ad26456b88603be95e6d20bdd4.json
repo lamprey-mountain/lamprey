@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id,\n                    r.welcome_channel_id,\n                    r.quarantined,\n                    r.security_require_mfa,\n                    r.security_require_sudo,\n                    r.afk_channel_id,\n                    r.afk_channel_timeout,\n                    (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS \"member_count!\",\n                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS \"channel_count!\"\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                  AND r.type != 'Server'\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
+  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id,\n                    r.welcome_channel_id,\n                    r.quarantined,\n                    r.security_require_mfa,\n                    r.security_require_sudo,\n                    r.afk_channel_id,\n                    r.afk_channel_timeout,\n                    (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS \"member_count!\",\n                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS \"channel_count!\",\n                    (SELECT COUNT(*) FROM custom_emoji WHERE room_id = r.id AND deleted_at IS NULL) AS \"emoji_count!\"\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                  AND r.type != 'Server'\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
   "describe": {
     "columns": [
       {
@@ -97,6 +97,11 @@
         "ordinal": 16,
         "name": "channel_count!",
         "type_info": "Int8"
+      },
+      {
+        "ordinal": 17,
+        "name": "emoji_count!",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
@@ -126,8 +131,9 @@
       true,
       false,
       null,
+      null,
       null
     ]
   },
-  "hash": "53327ccd123e2a2e5f0a1995788a2afd0eb49c6492e3ff0e7fead9a7efdcd936"
+  "hash": "7c52241b3f95f14a25833d959883db9377c338ad26456b88603be95e6d20bdd4"
 }

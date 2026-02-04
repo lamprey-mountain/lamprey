@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with last_id as (\n    select m.channel_id, max(mv.version_id) as last_version_id\n    from message m\n    join message_version mv on m.latest_version_id = mv.version_id\n    where m.deleted_at is null\n    group by m.channel_id\n),\nmessage_count as (\n    select m.channel_id, count(*) as count\n    from message m\n    where m.deleted_at is null\n    group by m.channel_id\n),\nmember_count as (\n    select channel_id, count(*) as count\n    from thread_member\n    where membership = 'Join'\n    group by channel_id\n),\npermission_overwrites as (\n    select target_id, json_agg(jsonb_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) as overwrites\n    from permission_overwrite\n    group by target_id\n)\nselect\n    channel.id,\n    channel.type as \"ty: DbChannelType\",\n    channel.room_id,\n    channel.creator_id,\n    channel.name,\n    channel.version_id,\n    channel.description,\n    channel.url,\n    channel.nsfw,\n    channel.locked,\n    channel.locked_until,\n    channel.locked_roles,\n    channel.archived_at,\n    channel.deleted_at,\n    channel.parent_id,\n    channel.position,\n    channel.bitrate,\n    channel.user_limit,\n    channel.owner_id,\n    channel.icon,\n    channel.invitable,\n    channel.auto_archive_duration,\n    channel.default_auto_archive_duration,\n    channel.slowmode_thread,\n    channel.slowmode_message,\n    channel.default_slowmode_message,\n    channel.last_activity_at,\n    coalesce(message_count.count, 0) as \"message_count!\",\n    coalesce(member_count.count, 0) as \"member_count!\",\n    last_id.last_version_id as \"last_version_id\",\n    coalesce(permission_overwrites.overwrites, '[]') as \"permission_overwrites!\",\n    (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = channel.id) as tags,\n    (SELECT json_agg(tag.*) FROM tag WHERE channel_id = channel.id) as tags_available,\n    (SELECT row_to_json(cd.*) FROM channel_document cd WHERE cd.channel_id = channel.id) as document,\n    (SELECT row_to_json(cw.*) FROM channel_wiki cw WHERE cw.channel_id = channel.id) as wiki,\n    (SELECT row_to_json(cc.*) FROM channel_calendar cc WHERE cc.channel_id = channel.id) as calendar\nfrom channel\nleft join dm on dm.channel_id = channel.id\nleft join message_count on message_count.channel_id = channel.id\nleft join member_count on member_count.channel_id = channel.id\njoin last_id on last_id.channel_id = channel.id\nleft join permission_overwrites on permission_overwrites.target_id = channel.id\nwhere (dm.user_a_id = $1 or dm.user_b_id = $1 or dm.user_a_id is null)\n  and last_id.last_version_id > $2 and last_id.last_version_id < $3\n  and (channel.type = 'Dm' or channel.type = 'Gdm')\norder by (CASE WHEN $4 = 'f' THEN last_id.last_version_id END), last_id.last_version_id DESC\nLIMIT $5\n",
+  "query": "with last_id as (\n    select m.channel_id, max(mv.version_id) as last_version_id\n    from message m\n    join message_version mv on m.latest_version_id = mv.version_id\n    where m.deleted_at is null\n    group by m.channel_id\n),\nmessage_count as (\n    select m.channel_id, count(*) as count\n    from message m\n    where m.deleted_at is null\n    group by m.channel_id\n),\nmember_count as (\n    select channel_id, count(*) as count\n    from thread_member\n    where membership = 'Join'\n    group by channel_id\n),\npermission_overwrites as (\n    select target_id, json_agg(jsonb_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) as overwrites\n    from permission_overwrite\n    group by target_id\n)\nselect\n    channel.id,\n    channel.type as \"ty: DbChannelType\",\n    channel.room_id,\n    channel.creator_id,\n    channel.name,\n    channel.version_id,\n    channel.description,\n    channel.url,\n    channel.nsfw,\n    channel.locked,\n    channel.locked_until,\n    channel.locked_roles,\n    channel.archived_at,\n    channel.deleted_at,\n    channel.parent_id,\n    channel.position,\n    channel.bitrate,\n    channel.user_limit,\n    channel.owner_id,\n    channel.icon,\n    channel.invitable,\n    channel.auto_archive_duration,\n    channel.default_auto_archive_duration,\n    channel.slowmode_thread,\n    channel.slowmode_message,\n    channel.default_slowmode_message,\n    channel.last_activity_at,\n    coalesce(message_count.count, 0) as \"message_count!\",\n    coalesce(member_count.count, 0) as \"member_count!\",\n    last_id.last_version_id as \"last_version_id\",\n    coalesce(permission_overwrites.overwrites, '[]') as \"permission_overwrites!\",\n    (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = channel.id) as tags,\n    (SELECT json_agg(tag.*) FROM tag WHERE channel_id = channel.id) as tags_available,\n    (SELECT coalesce(COUNT(*), 0) FROM channel_tag WHERE channel_id = channel.id) AS \"tag_count!\",\n    (SELECT row_to_json(cd.*) FROM channel_document cd WHERE cd.channel_id = channel.id) as document,\n    (SELECT row_to_json(cw.*) FROM channel_wiki cw WHERE cw.channel_id = channel.id) as wiki,\n    (SELECT row_to_json(cc.*) FROM channel_calendar cc WHERE cc.channel_id = channel.id) as calendar\nfrom channel\nleft join dm on dm.channel_id = channel.id\nleft join message_count on message_count.channel_id = channel.id\nleft join member_count on member_count.channel_id = channel.id\njoin last_id on last_id.channel_id = channel.id\nleft join permission_overwrites on permission_overwrites.target_id = channel.id\nwhere (dm.user_a_id = $1 or dm.user_b_id = $1 or dm.user_a_id is null)\n  and last_id.last_version_id > $2 and last_id.last_version_id < $3\n  and (channel.type = 'Dm' or channel.type = 'Gdm')\norder by (CASE WHEN $4 = 'f' THEN last_id.last_version_id END), last_id.last_version_id DESC\nLIMIT $5\n",
   "describe": {
     "columns": [
       {
@@ -197,16 +197,21 @@
       },
       {
         "ordinal": 33,
+        "name": "tag_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 34,
         "name": "document",
         "type_info": "Json"
       },
       {
-        "ordinal": 34,
+        "ordinal": 35,
         "name": "wiki",
         "type_info": "Json"
       },
       {
-        "ordinal": 35,
+        "ordinal": 36,
         "name": "calendar",
         "type_info": "Json"
       }
@@ -256,8 +261,9 @@
       null,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "a3894485d6c58c848617fe7a4e5166bb29500948e8627df5e39013c1d8bce2d3"
+  "hash": "279488cdf2709fc26d4624867db8e991f37b016f7b7381d4aa7669731f843974"
 }
