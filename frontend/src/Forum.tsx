@@ -213,7 +213,15 @@ const QuickCreate = (
 		});
 
 		if (!t) return;
-		handleSubmit(ctx, [ch, chUpdate], t.id, text, null as any, api, props.channel.id);
+		handleSubmit(
+			ctx,
+			[ch, chUpdate],
+			t.id,
+			text,
+			null as any,
+			api,
+			props.channel.id,
+		);
 		n(`/channel/${t.id}`);
 	};
 
