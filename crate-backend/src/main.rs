@@ -150,6 +150,7 @@ async fn main() -> Result<()> {
                     name: "server".to_string(),
                     description: None,
                     icon: None,
+                    banner: None,
                     public: Some(false),
                 },
                 SERVER_USER_ID,

@@ -803,6 +803,7 @@ async fn channel_upgrade(
                 name: chan.name.clone(),
                 description: chan.description.clone(),
                 icon: chan.icon,
+                banner: None,
                 public: Some(false),
             },
             &auth,

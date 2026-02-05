@@ -86,6 +86,16 @@ impl ServiceRooms {
             }
         }
 
+        if let Some(banner) = &patch.banner {
+            if start.banner.is_some() {
+                data.media_link_delete_all(*room_id).await?;
+            }
+            if let Some(media_id) = banner {
+                data.media_link_insert(*media_id, *room_id, MediaLinkType::RoomBanner)
+                    .await?;
+            }
+        }
+
         if let Some(Some(chan_id)) = patch.welcome_channel_id {
             let chan = srv.channels.get(chan_id, None).await?;
             if chan.ty != ChannelType::Text {
@@ -103,6 +113,7 @@ impl ServiceRooms {
             .change("name", &start.name, &end.name)
             .change("description", &start.description, &end.description)
             .change("icon", &start.icon, &end.icon)
+            .change("banner", &start.banner, &end.banner)
             .change("public", &start.public, &end.public)
             .change(
                 "welcome_channel_id",
@@ -240,6 +251,7 @@ impl ServiceRooms {
                 name: None,
                 description: None,
                 icon: None,
+                banner: None,
                 public: None,
                 afk_channel_id: None,
                 afk_channel_timeout: None,
@@ -258,6 +270,7 @@ impl ServiceRooms {
                     .add("name", &room.name)
                     .add("description", &room.description)
                     .add("icon", &room.icon)
+                    .add("banner", &room.banner)
                     .add("public", &room.public)
                     .add("welcome_channel_id", &room.welcome_channel_id)
                     .build(),

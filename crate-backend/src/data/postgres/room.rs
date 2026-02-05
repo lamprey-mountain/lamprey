@@ -22,14 +22,15 @@ impl DataRoom for Postgres {
         let ty: DbRoomType = extra.ty.into();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         ",
             room_id,
             room_id,
             create.name,
             create.description,
             create.icon.map(|i| *i),
+            create.banner.map(|i| *i),
             create.public.unwrap_or(false),
             ty as _,
             false,
@@ -57,6 +58,7 @@ impl DataRoom for Postgres {
                 room.name,
                 room.description,
                 room.icon,
+                room.banner,
                 room.archived_at,
                 room.public,
                 room.owner_id,
@@ -99,6 +101,7 @@ impl DataRoom for Postgres {
                     room.name,
                     room.description,
                     room.icon,
+                    room.banner,
                     room.archived_at,
                     room.public,
                     room.owner_id,
@@ -157,6 +160,7 @@ impl DataRoom for Postgres {
                     room.name,
                     room.description,
                     room.icon,
+                    room.banner,
                     room.archived_at,
                     room.public,
                     room.owner_id,
@@ -192,7 +196,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT id, name, description, icon, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout
+            SELECT id, name, description, icon, banner, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -203,12 +207,13 @@ impl DataRoom for Postgres {
         .await?;
         let version_id = RoomVerId::new();
         query!(
-            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6, welcome_channel_id = $7, afk_channel_id = $8, afk_channel_timeout = $9 WHERE id = $1",
+            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, banner = $6, public = $7, welcome_channel_id = $8, afk_channel_id = $9, afk_channel_timeout = $10 WHERE id = $1",
             id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(room.name),
             patch.description.unwrap_or(room.description),
             patch.icon.map(|i| i.map(|i| *i)).unwrap_or(room.icon),
+            patch.banner.map(|i| i.map(|i| *i)).unwrap_or(room.banner),
             patch.public.unwrap_or(room.public),
             patch.welcome_channel_id.map(|i| i.map(|i| *i)).unwrap_or(room.welcome_channel_id),
             patch.afk_channel_id.map(|i| i.map(|i| *i)).unwrap_or(room.afk_channel_id),
@@ -240,6 +245,7 @@ impl DataRoom for Postgres {
                     r.name,
                     r.description,
                     r.icon,
+                    r.banner,
                     r.archived_at,
                     r.public,
                     r.owner_id,

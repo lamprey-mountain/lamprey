@@ -53,6 +53,9 @@ pub struct Room {
 
     pub icon: Option<MediaId>,
 
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    pub banner: Option<MediaId>,
+
     #[serde(rename = "type")]
     pub room_type: RoomType,
 
@@ -122,6 +125,9 @@ pub struct RoomPreview {
 
     pub icon: Option<MediaId>,
 
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    pub banner: Option<MediaId>,
+
     /// number of people in this room
     pub member_count: u64,
 
@@ -157,6 +163,10 @@ pub struct RoomCreate {
     pub description: Option<String>,
 
     pub icon: Option<MediaId>,
+
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    pub banner: Option<MediaId>,
+
     pub public: Option<bool>,
     // /// the template to create this room from
     // pub snapshot: Option<RoomTemplateSnapshot>,
@@ -180,7 +190,10 @@ pub struct RoomPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
+    #[serde(default, deserialize_with = "some_option")]
     pub icon: Option<Option<MediaId>>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub banner: Option<Option<MediaId>>,
     pub public: Option<bool>,
 
     /// where member join messages will be sent
@@ -244,6 +257,7 @@ impl Diff<Room> for RoomPatch {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
             || self.icon.changes(&other.icon)
+            || self.banner.changes(&other.banner)
             || self.public.changes(&other.public)
             || self.welcome_channel_id.changes(&other.welcome_channel_id)
             || self.afk_channel_id.changes(&other.afk_channel_id)

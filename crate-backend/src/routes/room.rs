@@ -258,6 +258,7 @@ async fn room_delete(
         .remove("name", &room.name)
         .remove("description", &room.description)
         .remove("icon", &room.icon)
+        .remove("banner", &room.banner)
         .remove("public", &room.public)
         .build();
 
