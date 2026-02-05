@@ -59,12 +59,16 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 	// update list when room changes
 	createEffect(() => {
-		const allChannels = [...api.channels.cache.values()].filter((c) =>
-			props.room_id ? c.room_id === props.room_id : c.room_id === null
+		const allChannels = [...api.channels.cache.values()].filter(
+			(c) =>
+				(props.room_id ? c.room_id === props.room_id : c.room_id === null) &&
+				!c.deleted_at,
 		);
 
 		const threads = allChannels.filter(
-			(c) => c.type === "ThreadPublic" || c.type === "ThreadPrivate",
+			(c) =>
+				(c.type === "ThreadPublic" || c.type === "ThreadPrivate") &&
+				!c.archived_at,
 		);
 		const channels = allChannels.filter(
 			(c) => c.type !== "ThreadPublic" && c.type !== "ThreadPrivate",
