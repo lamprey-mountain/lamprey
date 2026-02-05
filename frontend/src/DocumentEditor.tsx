@@ -1,23 +1,16 @@
 import * as Y from "yjs";
-import {
-	type Command,
-	EditorState,
-	Plugin,
-	TextSelection,
-} from "prosemirror-state";
+import { type Command, EditorState, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
 import { DOMParser, Schema } from "prosemirror-model";
 import {
 	initProseMirrorDoc,
 	redo,
 	undo,
-	yCursorPlugin,
 	ySyncPlugin,
 	yUndoPlugin,
 } from "y-prosemirror";
-// import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { createEffect, createMemo, onCleanup, onMount } from "solid-js";
+import { createEffect, onCleanup, onMount } from "solid-js";
 import { render } from "solid-js/web";
 import { getEmojiUrl } from "./media/util.tsx";
 import { initTurndownService } from "./turndown.ts";
@@ -221,7 +214,7 @@ export const createEditor = (
 		if (msg.type === "DocumentEdit") {
 			if (msg.channel_id === channelId && msg.branch_id === branchId) {
 				const update = base64UrlDecode(msg.update);
-				Y.applyUpdate(ydoc, update, { key: "y-sync$" });
+				Y.applyUpdate(ydoc, update, { key: "server" });
 			}
 		}
 	};
@@ -242,7 +235,7 @@ export const createEditor = (
 	subscribe();
 
 	ydoc.on("update", (update, origin) => {
-		if (origin && origin.key === "y-sync$") return;
+		if (origin && origin.key === "server") return;
 
 		const ws = api.client.getWebsocket();
 		if (ws.readyState !== WebSocket.OPEN) return;
