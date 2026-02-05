@@ -217,10 +217,11 @@ async fn invite_use(
     if invite.is_dead() {
         return Err(Error::NotFound);
     }
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::RoomJoin)?;
     match &invite.invite.target {
         InviteTarget::Room { room, .. } => {
+            let perms = srv.perms.for_server(auth.user.id).await?;
+            perms.ensure(Permission::RoomJoin)?;
+
             if let Ok(ban) = d.room_ban_get(room.id, auth.user.id).await {
                 if let Some(expires_at) = ban.expires_at {
                     if expires_at > Time::now_utc() {
@@ -287,6 +288,9 @@ async fn invite_use(
             .await?;
         }
         InviteTarget::Gdm { channel } => {
+            let perms = srv.perms.for_server(auth.user.id).await?;
+            perms.ensure(Permission::RoomJoin)?;
+
             d.thread_member_put(channel.id, auth.user.id, Default::default())
                 .await?;
             let member = d.thread_member_get(channel.id, auth.user.id).await?;
