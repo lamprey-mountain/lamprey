@@ -352,6 +352,108 @@ export const permissions: Array<Perm> = [
 			"Can comment on documents, including documents outside of wikis.",
 		group: "documents",
 	},
+	{
+		id: "ApplicationCreate",
+		name: "Create applications",
+		description: "Can create new applications",
+		group: "server",
+	},
+	{
+		id: "ApplicationManage",
+		name: "Manage applications",
+		description: "Can edit and delete all applications. Can list all applications on the server.",
+		group: "server",
+	},
+	{
+		id: "CallUpdate",
+		name: "Update call metadata",
+		description: "Can set call metadata (ie. the topic)",
+		group: "voice",
+	},
+	{
+		id: "DmCreate",
+		name: "Create DMs",
+		description: "Can create new direct messages and group direct messages",
+		group: "members",
+	},
+	{
+		id: "FriendCreate",
+		name: "Send friend requests",
+		description: "Can send friend requests",
+		group: "members",
+	},
+	{
+		id: "MessageMove",
+		name: "Move messages",
+		description: "(unimplemented) Move messages between channels",
+		group: "messages",
+	},
+	{
+		id: "MessageRemove",
+		name: "Remove messages",
+		description: "Remove and restore messages",
+		group: "messages",
+	},
+	{
+		id: "RoomCreate",
+		name: "Create rooms",
+		description: "Can create new rooms",
+		group: "server",
+	},
+	{
+		id: "RoomForceJoin",
+		name: "Force join rooms",
+		description: "Can forcibly make other users join and leave rooms and gdms. Can join any room and gdm.",
+		group: "server",
+	},
+	{
+		id: "RoomJoin",
+		name: "Join rooms",
+		description: "Can manually join and leave rooms and gdms",
+		group: "members",
+	},
+	{
+		id: "RoomManageServer",
+		name: "Manage server rooms",
+		description: "Can delete and quarantine rooms, and view all rooms, room templates, dms, and gdms.",
+		group: "server",
+	},
+	{
+		id: "UserDeleteSelf",
+		name: "Delete own account",
+		description: "Can disable or delete their own account",
+		group: "server",
+	},
+	{
+		id: "UserManage",
+		name: "Manage users",
+		description: "Can create, edit, and delete users. Can view all users.",
+		group: "server",
+	},
+	{
+		id: "UserProfile",
+		name: "Edit profile",
+		description: "Can edit their own profile",
+		group: "members",
+	},
+	{
+		id: "ViewAnalytics",
+		name: "View analytics",
+		description: "Can view room analytics",
+		group: "room",
+	},
+	{
+		id: "TagApply",
+		name: "Apply tags",
+		description: "(unimplemented) Apply tags to threads",
+		group: "channels",
+	},
+	{
+		id: "TagManage",
+		name: "Manage tags",
+		description: "(unimplemented) Create and delete tags",
+		group: "channels",
+	},
 ];
 
 export const permissionsOverwrites: Array<Perm> = [
