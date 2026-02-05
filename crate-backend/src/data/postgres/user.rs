@@ -119,8 +119,8 @@ impl DataUser for Postgres {
 
         query!(
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, suspended, can_fork, registered_at, system, bot)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9, false)
+            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, suspended, can_fork, registered_at, system, bot, totp_enabled)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9, false, false)
         "#,
             *user.id,
             *user.version_id,
