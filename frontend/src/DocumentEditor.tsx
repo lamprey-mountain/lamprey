@@ -210,7 +210,7 @@ export const createEditor = (
 	const type = ydoc.get("prosemirror", Y.XmlFragment);
 	const { doc, mapping } = initProseMirrorDoc(type, schema);
 
-	const onSync = (msg: MessageSync) => {
+	const onSync = ([msg]: [MessageSync, unknown]) => {
 		if (msg.type === "DocumentEdit") {
 			if (msg.channel_id === channelId && msg.branch_id === branchId) {
 				const update = base64UrlDecode(msg.update);

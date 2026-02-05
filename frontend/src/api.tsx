@@ -1281,7 +1281,7 @@ export type Api = {
 	Provider: Component<ParentProps>;
 
 	events: Emitter<{
-		sync: MessageSync;
+		sync: [MessageSync, MessageEnvelope];
 		ready: MessageReady;
 	}>;
 
