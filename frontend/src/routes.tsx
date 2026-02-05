@@ -24,6 +24,11 @@ import { Inbox } from "./Inbox.tsx";
 import { RoomNav } from "./RoomNav.tsx";
 import { ChannelContext, useChannel } from "./channelctx.tsx";
 import { createInitialChannelState } from "./channelctx.tsx";
+import {
+	createInitialRoomState,
+	RoomContext,
+	useRoom,
+} from "./contexts/room.tsx";
 import { createStore } from "solid-js/store";
 import { RoomT } from "./types.ts";
 import { Friends } from "./Friends.tsx";
@@ -89,9 +94,9 @@ export const LayoutDefault = (props: LayoutDefaultProps) => {
 
 const RoomSidebar = (props: { room: RoomT }) => {
 	const ctx = useCtx();
-	// FIXME: searching in rooms
-	// const search = () => ctx.channel_search.get(props.room.id);
-	const search = () => null;
+	const roomCtx = useRoom();
+	const search = () => roomCtx?.[0].search;
+
 	const showMembers = () =>
 		flags.has("room_member_list") &&
 		ctx.userConfig().frontend.showMembers !== false;
@@ -119,22 +124,41 @@ const RoomSidebar = (props: { room: RoomT }) => {
 
 export const RouteRoom = (p: RouteSectionProps) => {
 	const { t } = useCtx();
+	const ctx = useCtx();
 	const api = useApi();
 	const room = api.rooms.fetch(() => p.params.room_id);
 
+	const getOrCreateRoomContext = () => {
+		const roomId = p.params.room_id;
+		if (!roomId) return null;
+
+		if (!ctx.room_contexts.has(roomId)) {
+			const store = createStore(createInitialRoomState());
+			ctx.room_contexts.set(roomId, store);
+		}
+
+		return ctx.room_contexts.get(roomId)!;
+	};
+
+	const roomCtx = getOrCreateRoomContext();
+
 	return (
-		<LayoutDefault
-			title={room() ? room()!.name : t("loading")}
-			showChannelNav={true}
-			channelNavRoomId={p.params.room_id}
-			showVoiceTray={true}
-		>
-			<Show when={room()}>
-				<RoomHeader room={room()!} />
-				<RoomHome room={room()!} />
-				<RoomSidebar room={room()!} />
-			</Show>
-		</LayoutDefault>
+		<Show when={roomCtx} fallback={<div>Loading room...</div>}>
+			<RoomContext.Provider value={roomCtx!}>
+				<LayoutDefault
+					title={room() ? room()!.name : t("loading")}
+					showChannelNav={true}
+					channelNavRoomId={p.params.room_id}
+					showVoiceTray={true}
+				>
+					<Show when={room()}>
+						<RoomHeader room={room()!} />
+						<RoomHome room={room()!} />
+						<RoomSidebar room={room()!} />
+					</Show>
+				</LayoutDefault>
+			</RoomContext.Provider>
+		</Show>
 	);
 };
 

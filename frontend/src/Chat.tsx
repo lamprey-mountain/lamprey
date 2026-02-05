@@ -31,6 +31,7 @@ import icPin from "./assets/pin.png";
 import icMembers from "./assets/members.png";
 import icCall from "./assets/call.png";
 import { useChannel } from "./channelctx.tsx";
+import { useRoom } from "./contexts/room.tsx";
 
 type ChatProps = {
 	channel: Channel;
@@ -510,7 +511,7 @@ export const RoomHeader = (
 		>
 			<b>home</b>
 			<div style="flex:1"></div>
-			{/* <SearchInput room={props.room} /> */}
+			<SearchInput room={props.room} />
 			<button
 				onClick={toggleMembers}
 				title="Show members"
@@ -552,18 +553,25 @@ export const SearchResults = (props: {
 	search: ThreadSearch;
 }) => {
 	const ctx = useCtx();
-	const [channelCtx, setChannelState] = useChannel()!;
+	const channelCtx = useChannel();
+	const roomCtx = useRoom();
 	const navigate = useNavigate();
 
 	const searchId = () => props.channel?.id ?? props.room?.id;
+
+	const clearSearch = () => {
+		if (props.channel && channelCtx) {
+			channelCtx[1]("search", undefined);
+		} else if (props.room && roomCtx) {
+			roomCtx[1]("search", undefined);
+		}
+	};
 
 	const onResultClick = (message: Message) => {
 		navigate(`/channel/${message.channel_id}/message/${message.id}`);
 		const id = searchId();
 		if (id) {
-			if (props.channel) {
-				setChannelState("search", undefined);
-			}
+			clearSearch();
 		}
 	};
 
@@ -577,10 +585,7 @@ export const SearchResults = (props: {
 					onClick={() => {
 						const id = searchId();
 						if (id) {
-							if (props.channel && channelCtx) {
-								const [, setChannelState] = channelCtx;
-								setChannelState("search", undefined);
-							}
+							clearSearch();
 						}
 					}}
 				>

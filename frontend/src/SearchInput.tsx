@@ -22,6 +22,7 @@ import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import icSearch from "./assets/search.png";
 import { useChannel } from "./channelctx";
+import { RoomSearch, useRoom } from "./contexts/room";
 
 const schema = new Schema({
 	nodes: {
@@ -654,12 +655,27 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		},
 	);
 
-	const [ch, chUpdate] = useChannel()!;
+	const channelCtx = useChannel();
+	const roomCtx = useRoom();
+
+	const currentSearch = () => {
+		if (props.channel) return channelCtx?.[0].search;
+		if (props.room) return roomCtx?.[0].search;
+		return undefined;
+	};
+
+	const updateSearch = (val: ChannelSearch | RoomSearch | undefined) => {
+		if (props.channel && channelCtx) {
+			channelCtx[1]("search", val as any);
+		} else if (props.room && roomCtx) {
+			roomCtx[1]("search", val as any);
+		}
+	};
 
 	const handleSubmit = async () => {
 		const queryString = serializeToQuery(view.state);
 		if (!queryString) {
-			chUpdate("search", undefined);
+			updateSearch(undefined);
 			return;
 		}
 
@@ -684,7 +700,7 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		}
 		const textQuery = textQueryParts.join(" ");
 
-		const existing = ch.search;
+		const existing = currentSearch();
 		const searchState: ChannelSearch = {
 			query: queryString,
 			results: existing?.results ?? null,
@@ -694,12 +710,12 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			after: filters.after?.[0],
 			channel: filters.channel,
 		};
-		chUpdate("search", searchState);
+		updateSearch(searchState);
 
 		const body: {
 			query?: string;
 			user_id?: string[];
-			thread_id?: string[];
+			channel_id?: string[];
 			room_id?: string[];
 			has_attachment?: boolean;
 			has_image?: boolean;
@@ -712,7 +728,8 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			mentions_roles?: string[];
 			mentions_everyone_room?: boolean;
 			mentions_everyone_thread?: boolean;
-		} = { query: textQuery || undefined };
+			order: string;
+		} = { query: textQuery || undefined, order: "Newest" };
 		const params: { query: { limit: number; from?: string; to?: string } } = {
 			query: { limit: 100 },
 		};
@@ -721,14 +738,14 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 
 		if (props.channel) {
 			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
-				body.thread_id = [props.channel.id];
+				body.channel_id = [props.channel.id];
 			} else if (filters.thread) {
-				body.thread_id = filters.thread;
+				body.channel_id = filters.thread;
 				if (props.channel.room_id) body.room_id = [props.channel.room_id];
 			} else if (props.channel.room_id) {
 				body.room_id = [props.channel.room_id];
 			} else {
-				body.thread_id = [props.channel.id];
+				body.channel_id = [props.channel.id];
 			}
 		} else if (props.room) {
 			body.room_id = [props.room.id];
@@ -774,18 +791,15 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			if (mentions_roles.length > 0) body.mentions_roles = mentions_roles;
 		}
 
-		const res = await api.client.http.POST("/api/v1/search/message", {
-			body,
-			params,
-		});
-		if (res.data) {
-			chUpdate("search", {
+		const res = await api.messages.search(body, params);
+		if (res) {
+			updateSearch({
 				...searchState,
-				results: res.data,
+				results: res,
 				loading: false,
 			});
 		} else {
-			chUpdate("search", {
+			updateSearch({
 				...searchState,
 				results: null,
 				loading: false,
@@ -839,8 +853,8 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 							return true;
 						}
 
-						if (ch.search) {
-							chUpdate("search", undefined);
+						if (currentSearch()) {
+							updateSearch(undefined);
 						} else {
 							const chatInput = document.querySelector(
 								".chat .ProseMirror",

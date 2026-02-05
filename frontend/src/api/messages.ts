@@ -697,11 +697,12 @@ export class Messages {
 		});
 	}
 
-	async search(body: any): Promise<Pagination<Message>> {
+	async search(body: any, params: any): Promise<Pagination<Message>> {
 		const { data, error } = await this.api.client.http.POST(
 			"/api/v1/search/message",
 			{
 				body,
+				params,
 			},
 		);
 		if (error) throw error;

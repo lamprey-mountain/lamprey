@@ -3437,9 +3437,15 @@ input[type="color"] {
 .document {
 	grid-area: main;
 	background-color: $bg-200;
+	display: flex;
+	flex-direction: column;
 
 	& > header {
 		margin: 4px;
+	}
+
+	& > main {
+		flex: 1;
 	}
 
 	& .fake-dropdowns {
