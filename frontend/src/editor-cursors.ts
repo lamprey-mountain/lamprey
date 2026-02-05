@@ -199,16 +199,13 @@ export const cursorPlugin = (api: Api, channelId: string, branchId: string) => {
 						);
 						const headEnc = base64UrlEncode(Y.encodeRelativePosition(headRel));
 
-						const ws = api.client.getWebsocket();
-						if (ws.readyState === WebSocket.OPEN) {
-							ws.send(JSON.stringify({
-								type: "DocumentPresence",
-								channel_id: channelId,
-								branch_id: branchId,
-								cursor_head: headEnc,
-								cursor_tail: anchorEnc,
-							}));
-						}
+						api.client.send({
+							type: "DocumentPresence",
+							channel_id: channelId,
+							branch_id: branchId,
+							cursor_head: headEnc,
+							cursor_tail: anchorEnc,
+						});
 					}
 				},
 				destroy() {

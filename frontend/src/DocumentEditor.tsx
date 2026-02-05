@@ -222,14 +222,12 @@ export const createEditor = (
 	api.events.on("sync", onSync);
 
 	const subscribe = () => {
-		const ws = api.client.getWebsocket();
-		if (ws.readyState !== WebSocket.OPEN) return;
-		ws.send(JSON.stringify({
+		api.client.send({
 			type: "DocumentSubscribe",
 			channel_id: channelId,
 			branch_id: branchId,
 			state_vector: base64UrlEncode(Y.encodeStateVector(ydoc)),
-		}));
+		});
 	};
 
 	subscribe();
@@ -237,15 +235,12 @@ export const createEditor = (
 	ydoc.on("update", (update, origin) => {
 		if (origin && origin.key === "server") return;
 
-		const ws = api.client.getWebsocket();
-		if (ws.readyState !== WebSocket.OPEN) return;
-
-		ws.send(JSON.stringify({
+		api.client.send({
 			type: "DocumentEdit",
 			channel_id: channelId,
 			branch_id: branchId,
 			update: base64UrlEncode(update),
-		}));
+		});
 	});
 
 	let editorRef!: HTMLDivElement;

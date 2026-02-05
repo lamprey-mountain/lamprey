@@ -1088,8 +1088,6 @@ export function createApi(
 			users.cache.set(msg.user.id, msg.user);
 		}
 		setSession(msg.session);
-		room_members.processQueuedSubscriptions();
-		thread_members.processQueuedSubscriptions();
 	});
 
 	async function tempCreateSession() {

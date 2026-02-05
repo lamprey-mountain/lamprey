@@ -230,17 +230,16 @@ export const createVoiceClient = () => {
 	}
 
 	async function drainSendQueue() {
-		const ws = api.client.getWebsocket();
 		const user_id = api.users.cache.get("@self")?.id;
 		if (!user_id) return;
 		for (const payload of sendQueue) {
 			if (!ready && payload.type !== "VoiceState") return;
 			console.log("[rtc:signal] send", payload.type, payload);
-			ws.send(JSON.stringify({
+			api.client.send({
 				type: "VoiceDispatch",
 				user_id,
 				payload,
-			}));
+			});
 		}
 		sendQueue.splice(0, sendQueue.length);
 	}

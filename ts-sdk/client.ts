@@ -31,6 +31,9 @@ export type Client = {
 	state: Observer<ClientState>;
 
 	getWebsocket: () => WebSocket;
+
+	/** Send a message to the sync server, queueing if not connected */
+	send: (data: any) => void;
 };
 
 type Resume = {
@@ -42,6 +45,7 @@ export function createClient(opts: ClientOptions): Client {
 	let ws: WebSocket;
 	let resume: null | Resume = null;
 	const state = createObservable<ClientState>("stopped");
+	const queue: string[] = [];
 
 	const http = createFetch<paths>({
 		baseUrl: opts.apiUrl,
@@ -58,6 +62,12 @@ export function createClient(opts: ClientOptions): Client {
 
 	function setState(newState: ClientState) {
 		state.set(newState);
+	}
+
+	function flushQueue() {
+		while (queue.length > 0 && state.get() === "ready") {
+			ws.send(queue.shift()!);
+		}
 	}
 
 	function setupWebsocket() {
@@ -77,8 +87,10 @@ export function createClient(opts: ClientOptions): Client {
 				opts.onReady(msg);
 				resume = { conn: msg.conn, seq: msg.seq };
 				setState("ready");
+				flushQueue();
 			} else if (msg.op === "Resumed") {
 				setState("ready");
+				flushQueue();
 			} else if (msg.op === "Reconnect") {
 				if (!msg.can_resume) resume = null;
 				ws.close();
@@ -127,6 +139,14 @@ export function createClient(opts: ClientOptions): Client {
 		start,
 		stop,
 		getWebsocket: () => ws,
+		send(data) {
+			const msg = typeof data === "string" ? data : JSON.stringify(data);
+			if (state.get() === "ready") {
+				ws.send(msg);
+			} else {
+				queue.push(msg);
+			}
+		},
 	};
 }
 
