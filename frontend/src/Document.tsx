@@ -162,6 +162,17 @@ const DocumentHeader = (props: DocumentProps) => {
 									</div>
 								</button>
 							</li>
+							<li class="new">
+								<button>
+									<img class="icon" src={icBranchFork} />
+									<div class="info">
+										<div>new private</div>
+										<div class="dim">
+											create a new private branch only visible to you
+										</div>
+									</div>
+								</button>
+							</li>
 						</ul>
 					</menu>
 				</Portal>
