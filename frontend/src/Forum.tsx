@@ -212,9 +212,9 @@ const QuickCreate = (
 			type: "ThreadPublic",
 		});
 
-		if (!t.data) return;
-		handleSubmit(ctx, t.data.id, text, null as any, api, props.channel.id);
-		n(`/channel/${t.data.id}`);
+		if (!t) return;
+		handleSubmit(ctx, [ch, chUpdate], t.id, text, null as any, api, props.channel.id);
+		n(`/channel/${t.id}`);
 	};
 
 	const onChange = (state: EditorState) => {
