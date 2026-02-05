@@ -17,6 +17,7 @@ publish = false
 
 ### BEGIN HAKARI SECTION
 [dependencies]
+aho-corasick = { version = "1" }
 arrayvec = { version = "0.7", features = ["serde"] }
 axum = { version = "0.8", features = ["macros", "multipart", "ws"] }
 base64 = { version = "0.22" }
@@ -28,6 +29,7 @@ crypto-common = { version = "0.1", default-features = false, features = ["std"] 
 deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 either = { version = "1", features = ["serde", "use_std"] }
+fastrand = { version = "2", features = ["js"] }
 figment = { version = "0.10", default-features = false, features = ["env", "json", "toml"] }
 flate2 = { version = "1" }
 form_urlencoded = { version = "1" }
@@ -46,7 +48,7 @@ log = { version = "0.4", default-features = false, features = ["std"] }
 md-5 = { version = "0.10" }
 memchr = { version = "2" }
 miniz_oxide = { version = "0.8", features = ["simd"] }
-num-traits = { version = "0.2", features = ["i128"] }
+num-traits = { version = "0.2", features = ["i128", "libm"] }
 percent-encoding = { version = "2" }
 rand-274715c4dabd11b0 = { package = "rand", version = "0.9" }
 rand-c38e5c1d305a1b54 = { package = "rand", version = "0.8", features = ["small_rng"] }
@@ -62,15 +64,18 @@ serde_json = { version = "1", features = ["raw_value", "unbounded_depth"] }
 sha1 = { version = "0.10", features = ["compress"] }
 sha2 = { version = "0.10", features = ["oid"] }
 simd-adler32 = { version = "0.3" }
-smallvec = { version = "1", default-features = false, features = ["const_new", "serde", "write"] }
+smallvec = { version = "1", default-features = false, features = ["const_new", "serde", "union", "write"] }
 spin = { version = "0.9" }
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "sqlite", "time", "uuid"] }
-sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "json", "migrate", "offline", "time", "uuid"] }
-sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "json", "migrate", "offline", "time", "uuid"] }
+sqlx = { version = "0.8", features = ["ipnetwork", "postgres", "runtime-tokio", "sqlite", "time", "uuid"] }
+sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "ipnetwork", "json", "migrate", "offline", "time", "uuid"] }
+sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "ipnetwork", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-sqlite = { version = "0.8", default-features = false, features = ["any", "bundled", "json", "migrate", "offline", "uuid"] }
+stable_deref_trait = { version = "1" }
 time = { version = "0.3", features = ["local-offset", "macros", "serde-human-readable", "serde-well-known"] }
 tokio = { version = "1", features = ["full"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12"] }
+tokio-stream = { version = "0.1", features = ["fs", "sync"] }
+tokio-util = { version = "0.7", features = ["codec", "io"] }
 tower = { version = "0.5", default-features = false, features = ["balance", "buffer", "limit", "log"] }
 tower-http = { version = "0.6", features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
 tracing = { version = "0.1", features = ["log"] }
@@ -80,13 +85,16 @@ winnow = { version = "0.7", features = ["simd"] }
 zerocopy = { version = "0.8", default-features = false, features = ["derive", "simd"] }
 
 [build-dependencies]
+aho-corasick = { version = "1" }
 base64 = { version = "0.22" }
 byteorder = { version = "1" }
+cc = { version = "1", default-features = false, features = ["parallel"] }
 crossbeam-utils = { version = "0.8" }
 crypto-common = { version = "0.1", default-features = false, features = ["std"] }
 deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 either = { version = "1", features = ["serde", "use_std"] }
+fastrand = { version = "2", features = ["js"] }
 flate2 = { version = "1" }
 form_urlencoded = { version = "1" }
 futures-channel = { version = "0.3", features = ["sink"] }
@@ -101,7 +109,7 @@ log = { version = "0.4", default-features = false, features = ["std"] }
 md-5 = { version = "0.10" }
 memchr = { version = "2" }
 miniz_oxide = { version = "0.8", features = ["simd"] }
-num-traits = { version = "0.2", features = ["i128"] }
+num-traits = { version = "0.2", features = ["i128", "libm"] }
 percent-encoding = { version = "2" }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 rand-c38e5c1d305a1b54 = { package = "rand", version = "0.8", features = ["small_rng"] }
@@ -115,17 +123,20 @@ serde_json = { version = "1", features = ["raw_value", "unbounded_depth"] }
 sha1 = { version = "0.10", features = ["compress"] }
 sha2 = { version = "0.10", features = ["oid"] }
 simd-adler32 = { version = "0.3" }
-smallvec = { version = "1", default-features = false, features = ["const_new", "serde", "write"] }
+smallvec = { version = "1", default-features = false, features = ["const_new", "serde", "union", "write"] }
 spin = { version = "0.9" }
-sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "json", "migrate", "offline", "time", "uuid"] }
-sqlx-macros = { version = "0.8", features = ["_rt-tokio", "derive", "json", "macros", "migrate", "postgres", "sqlite", "time", "uuid"] }
-sqlx-macros-core = { version = "0.8", features = ["_rt-tokio", "derive", "json", "macros", "migrate", "postgres", "sqlite", "time", "uuid"] }
-sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "json", "migrate", "offline", "time", "uuid"] }
+sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "ipnetwork", "json", "migrate", "offline", "time", "uuid"] }
+sqlx-macros = { version = "0.8", features = ["_rt-tokio", "derive", "ipnetwork", "json", "macros", "migrate", "postgres", "sqlite", "time", "uuid"] }
+sqlx-macros-core = { version = "0.8", features = ["_rt-tokio", "derive", "ipnetwork", "json", "macros", "migrate", "postgres", "sqlite", "time", "uuid"] }
+sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "ipnetwork", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-sqlite = { version = "0.8", default-features = false, features = ["any", "bundled", "json", "migrate", "offline", "uuid"] }
+stable_deref_trait = { version = "1" }
 syn-dff4ba8e3ae991db = { package = "syn", version = "1", features = ["extra-traits", "full"] }
 syn-f595c2ba2a3f28df = { package = "syn", version = "2", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 time = { version = "0.3", features = ["local-offset", "macros", "serde-human-readable", "serde-well-known"] }
 tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["fs", "sync"] }
+tokio-util = { version = "0.7", features = ["codec", "io"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-core = { version = "0.1" }
 uuid = { version = "1", features = ["fast-rng", "macro-diagnostics", "serde", "v4", "v7"] }
