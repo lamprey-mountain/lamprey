@@ -184,10 +184,10 @@ export function createApi(
 			const { channel } = msg;
 			channels.cache.set(channel.id, channel);
 			if (channel.room_id) {
-				const l = threads._cachedListings.get(channel.room_id);
+				const l = channels._cachedListings.get(channel.room_id);
 				if (l?.pagination) {
 					const p = l.pagination;
-					for (const mut of threads._listingMutators) {
+					for (const mut of channels._listingMutators) {
 						if (mut.room_id === channel.room_id) {
 							mut.mutate({
 								...p,
@@ -221,10 +221,10 @@ export function createApi(
 				if (old_status !== new_status) {
 					// Thread moved between lists
 					const old_listing = (old_status === "active"
-						? threads._cachedListings
+						? channels._cachedListings
 						: old_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+						? channels._cachedListingsArchived
+						: channels._cachedListingsRemoved).get(thread.room_id);
 
 					if (old_listing?.pagination) {
 						const p = old_listing.pagination;
@@ -241,10 +241,10 @@ export function createApi(
 					}
 
 					const new_listing = (new_status === "active"
-						? threads._cachedListings
+						? channels._cachedListings
 						: new_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+						? channels._cachedListingsArchived
+						: channels._cachedListingsRemoved).get(thread.room_id);
 
 					if (new_listing?.pagination) {
 						const p = new_listing.pagination;
@@ -259,10 +259,10 @@ export function createApi(
 				} else {
 					// Thread was updated in place
 					const listing = (new_status === "active"
-						? threads._cachedListings
+						? channels._cachedListings
 						: new_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+						? channels._cachedListingsArchived
+						: channels._cachedListingsRemoved).get(thread.room_id);
 
 					if (listing?.pagination) {
 						const p = listing.pagination;
