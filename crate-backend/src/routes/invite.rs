@@ -436,8 +436,11 @@ async fn invite_room_create(
             perms.ensure(Permission::RoleApply)?;
             let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
             let room = s.services().rooms.get(room_id, None).await?;
-            for role_id in role_ids {
-                let role = d.role_select(room_id, *role_id).await?;
+            let roles = d.role_get_many(room_id, role_ids).await?;
+            if roles.len() != role_ids.len() {
+                return Err(Error::NotFound);
+            }
+            for role in roles {
                 if rank <= role.position && room.owner_id != Some(auth.user.id) {
                     return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
                 }
@@ -588,8 +591,11 @@ async fn invite_channel_create(
                 perms.ensure(Permission::RoleApply)?;
                 let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
                 let room = s.services().rooms.get(room_id, None).await?;
-                for role_id in role_ids {
-                    let role = d.role_select(room_id, *role_id).await?;
+                let roles = d.role_get_many(room_id, role_ids).await?;
+                if roles.len() != role_ids.len() {
+                    return Err(Error::NotFound);
+                }
+                for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
                         return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
                     }
@@ -781,8 +787,11 @@ async fn invite_patch(
                 perms.ensure(Permission::RoleApply)?;
                 let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
                 let room = s.services().rooms.get(room_id, None).await?;
-                for role_id in role_ids {
-                    let role = d.role_select(room_id, *role_id).await?;
+                let roles = d.role_get_many(room_id, role_ids).await?;
+                if roles.len() != role_ids.len() {
+                    return Err(Error::NotFound);
+                }
+                for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
                         return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
                     }
