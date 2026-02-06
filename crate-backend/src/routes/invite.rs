@@ -90,11 +90,17 @@ async fn invite_delete(
             InviteTargetId::User { user_id } => Some((*user_id).into()),
         };
         if let Some(room_id) = room_id {
+            let role_ids = match &invite.invite.target {
+                InviteTarget::Room { roles, .. } => Some(roles.iter().map(|r| r.id).collect()),
+                _ => None,
+            };
+
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::InviteDelete {
                 code: code.clone(),
                 changes: Changes::new()
                     .remove("description", &invite.invite.description)
+                    .remove("role_ids", &role_ids)
                     .build(),
             })
             .await?;
@@ -468,6 +474,7 @@ async fn invite_room_create(
         .add("description", &invite.invite.description)
         .add("expires_at", &invite.invite.expires_at)
         .add("max_uses", &invite.max_uses)
+        .add("role_ids", &json.role_ids)
         .build();
 
     let al = auth.audit_log(room_id);
@@ -622,6 +629,7 @@ async fn invite_channel_create(
         .add("description", &invite.invite.description)
         .add("expires_at", &invite.invite.expires_at)
         .add("max_uses", &invite.max_uses)
+        .add("role_ids", &json.role_ids)
         .build();
 
     if let Some(room_id) = room_id {
@@ -804,6 +812,16 @@ async fn invite_patch(
 
     let updated_invite = d.invite_update(code.clone(), patch).await?;
 
+    let start_role_ids = match &start_invite.invite.target {
+        InviteTarget::Room { roles, .. } => Some(roles.iter().map(|r| r.id).collect()),
+        _ => None,
+    };
+
+    let updated_role_ids = match &updated_invite.invite.target {
+        InviteTarget::Room { roles, .. } => Some(roles.iter().map(|r| r.id).collect()),
+        _ => None,
+    };
+
     let changes = Changes::new()
         .change(
             "description",
@@ -816,6 +834,7 @@ async fn invite_patch(
             &updated_invite.invite.expires_at,
         )
         .change("max_uses", &start_invite.max_uses, &updated_invite.max_uses)
+        .change("role_ids", &start_role_ids, &updated_role_ids)
         .build();
 
     let room_id = match &updated_invite.invite.target {

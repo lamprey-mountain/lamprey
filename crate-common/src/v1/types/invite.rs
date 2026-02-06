@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::util::Time;
+use crate::v1::types::util::{Time, deserialize_sorted};
 use crate::v1::types::{ChannelId, PaginationKey, Role, RoleId, RoomId, UserId};
 
 use super::{Channel, Room, User};
@@ -101,7 +101,7 @@ pub enum InviteTargetId {
         room_id: RoomId,
         channel_id: Option<ChannelId>,
 
-        #[serde(default)]
+        #[serde(default, deserialize_with = "deserialize_sorted")]
         role_ids: Vec<RoleId>,
     },
 
