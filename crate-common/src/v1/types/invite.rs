@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::util::Time;
-use crate::v1::types::{ChannelId, PaginationKey, RoomId, UserId};
+use crate::v1::types::{ChannelId, PaginationKey, Role, RoleId, RoomId, UserId};
 
 use super::{Channel, Room, User};
 
@@ -72,8 +72,14 @@ pub struct InviteWithMetadata {
 pub enum InviteTarget {
     /// join a room
     Room {
+        /// the room itself
         room: Room,
+
+        /// which channel in the room to open
         channel: Option<Box<Channel>>,
+
+        /// which roles to apply when accepting the invite
+        roles: Vec<Role>,
     },
 
     /// join a group dm
@@ -94,6 +100,9 @@ pub enum InviteTargetId {
     Room {
         room_id: RoomId,
         channel_id: Option<ChannelId>,
+
+        #[serde(default)]
+        role_ids: Vec<RoleId>,
     },
 
     Gdm {
@@ -119,6 +128,9 @@ pub struct InvitePatch {
     /// the maximum number of times this invite can be used
     /// be sure to account for existing `uses` and `max_uses` when patching
     pub max_uses: Option<Option<u16>>,
+
+    // can only be used with room invites
+    pub role_ids: Option<Vec<RoleId>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -137,6 +149,10 @@ pub struct InviteCreate {
     /// be sure to account for existing `uses` and `max_uses` when patching
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub max_uses: Option<u16>,
+
+    /// which roles to apply when accepting the invite
+    #[serde(default)]
+    pub role_ids: Option<Vec<RoleId>>,
 }
 
 impl fmt::Display for InviteCode {

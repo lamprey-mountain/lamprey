@@ -311,6 +311,7 @@ pub trait DataRole {
     ) -> Result<PaginationResponse<Role>>;
     async fn role_delete(&self, room_id: RoomId, role_id: RoleId) -> Result<()>;
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
+    async fn role_get_many(&self, room_id: RoomId, role_ids: &[RoleId]) -> Result<Vec<Role>>;
     async fn role_update(
         &self,
         room_id: RoomId,
@@ -380,6 +381,7 @@ pub trait DataInvite {
         code: InviteCode,
         expires_at: Option<Time>,
         max_uses: Option<u16>,
+        role_ids: &[RoleId],
     ) -> Result<()>;
     async fn invite_list_room(
         &self,
@@ -426,6 +428,7 @@ pub trait DataInvite {
         code: InviteCode,
         expires_at: Option<Time>,
         max_uses: Option<u16>,
+        role_ids: &[RoleId],
     ) -> Result<()>;
     async fn invite_list_channel(
         &self,

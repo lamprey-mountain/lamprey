@@ -681,7 +681,11 @@ impl Connection {
             MessageSync::RoleUpdate { role } => AuthCheck::Room(role.room_id),
             // FIXME(#612): only return invite events to creator and members with InviteManage
             MessageSync::InviteCreate { invite } => match &invite.invite.target {
-                InviteTarget::Room { room, channel: _ } => AuthCheck::Room(room.id),
+                InviteTarget::Room {
+                    room,
+                    channel: _,
+                    roles: _,
+                } => AuthCheck::Room(room.id),
                 InviteTarget::Gdm { channel, .. } => AuthCheck::Channel(channel.id),
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)

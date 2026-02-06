@@ -222,6 +222,33 @@ impl DataRole for Postgres {
         Ok(role.into())
     }
 
+    async fn role_get_many(&self, room_id: RoomId, role_ids: &[RoleId]) -> Result<Vec<Role>> {
+        let ids: Vec<uuid::Uuid> = role_ids.iter().map(|id| id.into_inner()).collect();
+        let roles = query_as!(
+            DbRole,
+            r#"
+            SELECT
+                r.id, r.version_id, r.room_id, r.name, r.description, r.allow as "allow: _",
+                r.deny as "deny: _", r.is_mentionable, r.is_self_applicable,
+                coalesce(rm.count, 0) as "member_count!",
+                r.position,
+                r.hoist
+            FROM role r
+            LEFT JOIN (
+                SELECT role_id, count(*) as count
+                FROM role_member
+                GROUP BY role_id
+            ) rm ON rm.role_id = r.id
+            WHERE r.room_id = $1 AND r.id = ANY($2)
+        "#,
+            *room_id,
+            &ids,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(roles.into_iter().map(Into::into).collect())
+    }
+
     async fn role_update(
         &self,
         room_id: RoomId,

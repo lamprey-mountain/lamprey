@@ -2,11 +2,11 @@ use async_trait::async_trait;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ChannelId, InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery,
-    PaginationResponse,
+    PaginationResponse, RoleId,
 };
 use sqlx::{query, query_scalar, Acquire};
 
-use crate::data::{DataChannel, DataInvite, DataRoom, DataUser};
+use crate::data::{DataChannel, DataInvite, DataRole, DataRoom, DataUser};
 use crate::error::{Error, Result};
 use crate::types::{Invite, InviteCode, RoomId, UserId};
 use common::v1::types::InvitePatch;
@@ -23,17 +23,20 @@ impl DataInvite for Postgres {
         code: InviteCode,
         expires_at: Option<Time>,
         max_uses: Option<u16>,
+        role_ids: &[RoleId],
     ) -> Result<()> {
+        let role_ids: Vec<uuid::Uuid> = role_ids.iter().map(|id| id.into_inner()).collect();
         query!(
             r#"
-            insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses)
-            values ('room', $1, $2, $3, $4, $5)
+            insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses, role_ids)
+            values ('room', $1, $2, $3, $4, $5, $6)
         "#,
             *room_id,
             code.0,
             *creator_id,
             expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
             max_uses.map(|n| n as i32),
+            &role_ids,
         )
         .execute(&self.pool)
         .await?;
@@ -47,30 +50,33 @@ impl DataInvite for Postgres {
         code: InviteCode,
         expires_at: Option<Time>,
         max_uses: Option<u16>,
+        role_ids: &[RoleId],
     ) -> Result<()> {
         let channel = self.channel_get(channel_id).await?;
         let expires_at = expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time()));
         let max_uses = max_uses.map(|n| n as i32);
+        let role_ids: Vec<uuid::Uuid> = role_ids.iter().map(|id| id.into_inner()).collect();
 
         if channel.ty == common::v1::types::ChannelType::Gdm {
             query!(
                 r#"
-                insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses)
-                values ('gdm', $1, $2, $3, $4, $5)
+                insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses, role_ids)
+                values ('gdm', $1, $2, $3, $4, $5, $6)
                 "#,
                 *channel_id,
                 code.0,
                 *creator_id,
                 expires_at,
                 max_uses,
+                &role_ids,
             )
             .execute(&self.pool)
             .await?;
         } else if let Some(room_id) = channel.room_id {
             query!(
                 r#"
-                insert into invite (target_type, target_id, target_channel_id, code, creator_id, expires_at, max_uses)
-                values ('room', $1, $2, $3, $4, $5, $6)
+                insert into invite (target_type, target_id, target_channel_id, code, creator_id, expires_at, max_uses, role_ids)
+                values ('room', $1, $2, $3, $4, $5, $6, $7)
                 "#,
                 *room_id,
                 *channel_id,
@@ -78,6 +84,7 @@ impl DataInvite for Postgres {
                 *creator_id,
                 expires_at,
                 max_uses,
+                &role_ids,
             )
             .execute(&self.pool)
             .await?;
@@ -115,7 +122,7 @@ impl DataInvite for Postgres {
         let mut tx = conn.begin().await?;
         let row = query!(
             r#"
-            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
             from invite
             where code = $1 and deleted_at is null
         "#,
@@ -125,13 +132,20 @@ impl DataInvite for Postgres {
         .await?;
         let target = match row.target_type.as_str() {
             "room" => {
-                let room = self.room_get(RoomId::from(row.target_id.unwrap())).await?;
+                let room_id = RoomId::from(row.target_id.unwrap());
+                let room = self.room_get(room_id).await?;
                 let channel = if let Some(channel_id) = row.target_channel_id {
                     Some(Box::new(self.channel_get(channel_id.into()).await?))
                 } else {
                     None
                 };
-                InviteTarget::Room { room, channel }
+                let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
+                let roles = self.role_get_many(room_id, &role_ids).await?;
+                InviteTarget::Room {
+                    room,
+                    channel,
+                    roles,
+                }
             }
             "gdm" => {
                 let channel = self
@@ -148,9 +162,12 @@ impl DataInvite for Postgres {
                     .await?;
                 let room_id = channel.room_id.ok_or_else(|| Error::NotFound)?;
                 let room = self.room_get(room_id).await?;
+                let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
+                let roles = self.role_get_many(room_id, &role_ids).await?;
                 InviteTarget::Room {
                     room,
                     channel: Some(Box::new(channel)),
+                    roles,
                 }
             }
             "server" => InviteTarget::Server,
@@ -205,7 +222,7 @@ impl DataInvite for Postgres {
         let mut tx = conn.begin().await?;
         let raw = query!(
             "
-            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
             from invite
         	WHERE target_id = $1 AND target_type = 'room' AND code > $2 AND code < $3 and deleted_at is null
         	ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
@@ -236,9 +253,12 @@ impl DataInvite for Postgres {
             } else {
                 None
             };
+            let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
+            let roles = self.role_get_many(room_id, &role_ids).await?;
             let target = InviteTarget::Room {
                 room: room.clone(),
                 channel,
+                roles,
             };
             let creator = self.user_get(UserId::from(row.creator_id)).await?;
             let creator_id = creator.id;
@@ -288,7 +308,7 @@ impl DataInvite for Postgres {
         if channel.ty == common::v1::types::ChannelType::Gdm {
             let raw = query!(
                 r#"
-                select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+                select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
                 from invite
                 WHERE target_type = 'gdm' AND target_id = $1 AND code > $2 AND code < $3 and deleted_at is null
                 ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
@@ -316,13 +336,20 @@ impl DataInvite for Postgres {
             for row in raw.into_iter().take(p.limit as usize) {
                 let target = match row.target_type.as_str() {
                     "room" => {
-                        let room = self.room_get(RoomId::from(row.target_id.unwrap())).await?;
+                        let room_id = RoomId::from(row.target_id.unwrap());
+                        let room = self.room_get(room_id).await?;
                         let channel = if let Some(channel_id) = row.target_channel_id {
                             Some(Box::new(self.channel_get(channel_id.into()).await?))
                         } else {
                             None
                         };
-                        InviteTarget::Room { room, channel }
+                        let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
+                        let roles = self.role_get_many(room_id, &role_ids).await?;
+                        InviteTarget::Room {
+                            room,
+                            channel,
+                            roles,
+                        }
                     }
                     "gdm" => {
                         let channel = self
@@ -371,7 +398,7 @@ impl DataInvite for Postgres {
         } else if channel.room_id.is_some() {
             let raw = query!(
                 r#"
-                select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+                select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
                 from invite
                 WHERE target_channel_id = $1 AND code > $2 AND code < $3 and deleted_at is null
                 ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
@@ -398,13 +425,20 @@ impl DataInvite for Postgres {
             for row in raw.into_iter().take(p.limit as usize) {
                 let target = match row.target_type.as_str() {
                     "room" => {
-                        let room = self.room_get(RoomId::from(row.target_id.unwrap())).await?;
+                        let room_id = RoomId::from(row.target_id.unwrap());
+                        let room = self.room_get(room_id).await?;
                         let channel = if let Some(channel_id) = row.target_channel_id {
                             Some(Box::new(self.channel_get(channel_id.into()).await?))
                         } else {
                             None
                         };
-                        InviteTarget::Room { room, channel }
+                        let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
+                        let roles = self.role_get_many(room_id, &role_ids).await?;
+                        InviteTarget::Room {
+                            room,
+                            channel,
+                            roles,
+                        }
                     }
                     "gdm" => {
                         let channel = self
@@ -464,7 +498,7 @@ impl DataInvite for Postgres {
         let mut tx = conn.begin().await?;
         let raw = query!(
             r#"
-            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
             from invite
         	WHERE target_type = 'server' AND code > $1 AND code < $2 and deleted_at is null
         	ORDER BY (CASE WHEN $3 = 'f' THEN code END), code DESC LIMIT $4
@@ -531,7 +565,7 @@ impl DataInvite for Postgres {
         let mut tx = conn.begin().await?;
         let raw = query!(
             r#"
-            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
             from invite
         	WHERE target_type = 'server' AND creator_id = $1 AND code > $2 AND code < $3 and deleted_at is null
         	ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
@@ -624,7 +658,7 @@ impl DataInvite for Postgres {
         let mut tx = conn.begin().await?;
         let raw = query!(
             r#"
-            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
             from invite
         	WHERE target_type = 'user' AND target_id = $1 AND code > $2 AND code < $3 and deleted_at is null
         	ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
@@ -702,7 +736,7 @@ impl DataInvite for Postgres {
 
         let invite = query!(
             r#"
-            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
             from invite
             where code = $1 and deleted_at is null
             FOR UPDATE
@@ -722,16 +756,25 @@ impl DataInvite for Postgres {
             .max_uses
             .map_or(invite.max_uses, |mu| mu.map(|u| u as i32));
         let description = patch.description.map_or(invite.description, |d| d);
+        let role_ids = patch.role_ids.unwrap_or_else(|| {
+            invite
+                .role_ids
+                .iter()
+                .map(|id| RoleId::from(*id))
+                .collect::<Vec<_>>()
+        });
+        let role_ids_inner: Vec<uuid::Uuid> = role_ids.iter().map(|id| id.into_inner()).collect();
 
         query!(
             r#"
             UPDATE invite
-            SET expires_at = $1, max_uses = $2, description = $3
-            WHERE code = $4
+            SET expires_at = $1, max_uses = $2, description = $3, role_ids = $4
+            WHERE code = $5
             "#,
             expires_at,
             max_uses,
             description,
+            &role_ids_inner,
             code.0
         )
         .execute(&mut *tx)

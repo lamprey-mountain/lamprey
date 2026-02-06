@@ -43,8 +43,12 @@ async fn invite_delete(
     auth.user.ensure_unsuspended()?;
     let d = s.data();
     let invite = d.invite_select(code.clone()).await?;
-    let (has_perm, id_target) = match invite.invite.target {
-        InviteTarget::Room { room, channel } => (
+    let (has_perm, id_target) = match &invite.invite.target {
+        InviteTarget::Room {
+            room,
+            channel,
+            roles,
+        } => (
             s.services()
                 .perms
                 .for_room(auth.user.id, room.id)
@@ -52,7 +56,8 @@ async fn invite_delete(
                 .has(Permission::InviteManage),
             InviteTargetId::Room {
                 room_id: room.id,
-                channel_id: channel.map(|t| t.id),
+                channel_id: channel.as_ref().map(|t| t.id),
+                role_ids: roles.iter().map(|r| r.id).collect(),
             },
         ),
         InviteTarget::Gdm { channel } => (
@@ -218,7 +223,7 @@ async fn invite_use(
         return Err(Error::NotFound);
     }
     match &invite.invite.target {
-        InviteTarget::Room { room, .. } => {
+        InviteTarget::Room { room, roles, .. } => {
             let perms = srv.perms.for_server(auth.user.id).await?;
             perms.ensure(Permission::RoomJoin)?;
 
@@ -247,6 +252,10 @@ async fn invite_use(
                 .await?;
             }
 
+            for role in roles {
+                d.role_member_put(room.id, auth.user.id, role.id).await?;
+            }
+
             let mut member = d.room_member_get(room.id, auth.user.id).await?;
 
             // scan member with automod
@@ -273,19 +282,28 @@ async fn invite_use(
             srv.perms.invalidate_room(auth.user.id, room.id).await;
             srv.perms.invalidate_is_mutual(auth.user.id);
             let room_id = room.id;
-            // FIXME: don't send RoomCreate to *everyone* when someone joins, just the joining user
-            s.broadcast_room(
-                room_id,
-                auth.user.id,
-                MessageSync::RoomCreate { room: room.clone() },
-            )
-            .await?;
-            s.broadcast_room(
-                room_id,
-                auth.user.id,
-                MessageSync::RoomMemberCreate { member },
-            )
-            .await?;
+            if existing.is_err() {
+                // FIXME: don't send RoomCreate to *everyone* when someone joins, just the joining user
+                s.broadcast_room(
+                    room_id,
+                    auth.user.id,
+                    MessageSync::RoomCreate { room: room.clone() },
+                )
+                .await?;
+                s.broadcast_room(
+                    room_id,
+                    auth.user.id,
+                    MessageSync::RoomMemberCreate { member },
+                )
+                .await?;
+            } else {
+                s.broadcast_room(
+                    room_id,
+                    auth.user.id,
+                    MessageSync::RoomMemberUpdate { member },
+                )
+                .await?;
+            }
         }
         InviteTarget::Gdm { channel } => {
             let perms = srv.perms.for_server(auth.user.id).await?;
@@ -413,6 +431,20 @@ async fn invite_room_create(
         return Err(Error::BadStatic("You can't create an invite for the server room. Use the make-admin subcommand in the cli instead."));
     }
 
+    if let Some(role_ids) = &json.role_ids {
+        if !role_ids.is_empty() {
+            perms.ensure(Permission::RoleApply)?;
+            let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
+            let room = s.services().rooms.get(room_id, None).await?;
+            for role_id in role_ids {
+                let role = d.role_select(room_id, *role_id).await?;
+                if rank <= role.position && room.owner_id != Some(auth.user.id) {
+                    return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
+                }
+            }
+        }
+    }
+
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         .chars()
         .collect();
@@ -423,6 +455,7 @@ async fn invite_room_create(
         code.clone(),
         json.expires_at,
         json.max_uses,
+        json.role_ids.as_deref().unwrap_or_default(),
     )
     .await?;
     let invite = d.invite_select(code).await?;
@@ -547,12 +580,33 @@ async fn invite_channel_create(
         .chars()
         .collect();
     let code = InviteCode(nanoid!(8, &alphabet));
+
+    if let Some(role_ids) = &json.role_ids {
+        if !role_ids.is_empty() {
+            if let Some(room_id) = room_id {
+                let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
+                perms.ensure(Permission::RoleApply)?;
+                let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
+                let room = s.services().rooms.get(room_id, None).await?;
+                for role_id in role_ids {
+                    let role = d.role_select(room_id, *role_id).await?;
+                    if rank <= role.position && room.owner_id != Some(auth.user.id) {
+                        return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
+                    }
+                }
+            } else {
+                return Err(Error::BadStatic("cannot add roles to a GDM invite"));
+            }
+        }
+    }
+
     d.invite_insert_channel(
         channel_id,
         auth.user.id,
         code.clone(),
         json.expires_at,
         json.max_uses,
+        json.role_ids.as_deref().unwrap_or_default(),
     )
     .await?;
     let invite = d.invite_select(code).await?;
@@ -668,8 +722,12 @@ async fn invite_patch(
     let d = s.data();
     let start_invite = d.invite_select(code.clone()).await?;
 
-    let (has_perm, _id_target) = match start_invite.invite.target {
-        InviteTarget::Room { room, channel } => (
+    let (has_perm, _id_target) = match &start_invite.invite.target {
+        InviteTarget::Room {
+            room,
+            channel,
+            roles,
+        } => (
             s.services()
                 .perms
                 .for_room(auth.user.id, room.id)
@@ -677,7 +735,8 @@ async fn invite_patch(
                 .has(Permission::InviteManage),
             InviteTargetId::Room {
                 room_id: room.id,
-                channel_id: channel.map(|t| t.id),
+                channel_id: channel.as_ref().map(|t| t.id),
+                role_ids: roles.iter().map(|r| r.id).collect(),
             },
         ),
         InviteTarget::Gdm { channel } => (
@@ -698,10 +757,10 @@ async fn invite_patch(
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
-        InviteTarget::User { user: _ } => (
+        InviteTarget::User { user } => (
             auth.user.id == start_invite.invite.creator_id,
             InviteTargetId::User {
-                user_id: auth.user.id,
+                user_id: user.id,
             },
         ),
     };
@@ -709,6 +768,29 @@ async fn invite_patch(
     let can_patch = auth.user.id == start_invite.invite.creator_id || has_perm;
     if !can_patch {
         return Err(Error::MissingPermissions);
+    }
+
+    if let Some(role_ids) = &patch.role_ids {
+        if !role_ids.is_empty() {
+            let room_id = match &start_invite.invite.target {
+                InviteTarget::Room { room, .. } => Some(room.id),
+                _ => None,
+            };
+            if let Some(room_id) = room_id {
+                let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
+                perms.ensure(Permission::RoleApply)?;
+                let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
+                let room = s.services().rooms.get(room_id, None).await?;
+                for role_id in role_ids {
+                    let role = d.role_select(room_id, *role_id).await?;
+                    if rank <= role.position && room.owner_id != Some(auth.user.id) {
+                        return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
+                    }
+                }
+            } else {
+                return Err(Error::BadStatic("cannot add roles to this type of invite"));
+            }
+        }
     }
 
     let updated_invite = d.invite_update(code.clone(), patch).await?;
