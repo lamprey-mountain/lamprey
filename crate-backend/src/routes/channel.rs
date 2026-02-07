@@ -113,7 +113,10 @@ async fn channel_create_dm(
                 ));
             }
             let target_user_id = recipients.first().unwrap();
-            let (thread, is_new) = srv.users.init_dm(auth.user.id, *target_user_id, false).await?;
+            let (thread, is_new) = srv
+                .users
+                .init_dm(auth.user.id, *target_user_id, false)
+                .await?;
             s.broadcast(MessageSync::ChannelCreate {
                 channel: Box::new(thread.clone()),
             })?;

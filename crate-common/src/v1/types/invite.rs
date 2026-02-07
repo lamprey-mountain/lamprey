@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::util::{Time, deserialize_sorted};
+use crate::v1::types::util::{deserialize_sorted, Time};
 use crate::v1::types::{ChannelId, PaginationKey, Role, RoleId, RoomId, UserId};
 
 use super::{Channel, Room, User};

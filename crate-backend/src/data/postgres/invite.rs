@@ -343,7 +343,8 @@ impl DataInvite for Postgres {
                         } else {
                             None
                         };
-                        let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
+                        let role_ids: Vec<RoleId> =
+                            row.role_ids.into_iter().map(Into::into).collect();
                         let roles = self.role_get_many(room_id, &role_ids).await?;
                         InviteTarget::Room {
                             room,
@@ -432,7 +433,8 @@ impl DataInvite for Postgres {
                         } else {
                             None
                         };
-                        let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
+                        let role_ids: Vec<RoleId> =
+                            row.role_ids.into_iter().map(Into::into).collect();
                         let roles = self.role_get_many(room_id, &role_ids).await?;
                         InviteTarget::Room {
                             room,
