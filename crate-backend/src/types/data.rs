@@ -193,6 +193,7 @@ pub struct DbChannelCreate {
     pub slowmode_thread: Option<i64>,
     pub slowmode_message: Option<i64>,
     pub default_slowmode_message: Option<i64>,
+    pub locked: bool,
     pub tags: Option<Vec<TagId>>,
 }
 

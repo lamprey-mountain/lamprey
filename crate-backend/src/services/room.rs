@@ -237,6 +237,7 @@ impl ServiceRooms {
                     slowmode_thread: None,
                     slowmode_message: None,
                     default_slowmode_message: None,
+                    locked: false,
                     tags: None,
                 })
                 .await?;

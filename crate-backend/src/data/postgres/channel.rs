@@ -78,7 +78,7 @@ impl DataChannel for Postgres {
             create.slowmode_message.map(|s| s as i32),
             create.default_slowmode_message.map(|s| s as i32),
             create.url,
-            false,
+            create.locked,
             &[],
         )
         .execute(&mut *tx)

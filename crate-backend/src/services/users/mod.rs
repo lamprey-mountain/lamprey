@@ -96,7 +96,7 @@ impl ServiceUsers {
         self.cache_users.invalidate_all();
     }
 
-    pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Channel, bool)> {
+    pub async fn init_dm(&self, user_id: UserId, other_id: UserId, locked: bool) -> Result<(Channel, bool)> {
         let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
         let data = self.state.data();
         let srv = self.state.services();
@@ -130,6 +130,7 @@ impl ServiceUsers {
                 slowmode_thread: None,
                 slowmode_message: None,
                 default_slowmode_message: None,
+                locked,
                 tags: None,
             })
             .await?;

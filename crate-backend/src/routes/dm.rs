@@ -44,7 +44,7 @@ async fn dm_init(
     if !target_user.can_dm() {
         return Err(Error::BadStatic("cannot dm this user"));
     }
-    let (thread, is_new) = srv.users.init_dm(auth.user.id, target_user_id).await?;
+    let (thread, is_new) = srv.users.init_dm(auth.user.id, target_user_id, false).await?;
     s.broadcast(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
     })?;

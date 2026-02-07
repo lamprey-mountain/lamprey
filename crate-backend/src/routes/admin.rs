@@ -85,21 +85,7 @@ async fn admin_whisper(
     })
     .await?;
 
-    let (thread, _) = srv.users.init_dm(auth.user.id, json.user_id).await?;
-    if thread.locked.is_none() {
-        d.channel_update(
-            thread.id,
-            ChannelPatch {
-                locked: Some(Some(common::v1::types::channel::Locked {
-                    until: None,
-                    allow_roles: vec![],
-                })),
-                ..Default::default()
-            },
-        )
-        .await?;
-        srv.channels.invalidate(thread.id).await;
-    }
+    let (thread, _) = srv.users.init_dm(auth.user.id, json.user_id, true).await?;
 
     s.broadcast(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
@@ -168,22 +154,7 @@ async fn admin_broadcast(
             let ss = s.clone();
             tokio::spawn(async move {
                 let srv = ss.services();
-                let (thread, _) = srv.users.init_dm(SERVER_USER_ID, user.id).await?;
-                if thread.locked.is_none() {
-                    ss.data()
-                        .channel_update(
-                            thread.id,
-                            ChannelPatch {
-                                locked: Some(Some(common::v1::types::channel::Locked {
-                                    until: None,
-                                    allow_roles: vec![],
-                                })),
-                                ..Default::default()
-                            },
-                        )
-                        .await?;
-                    srv.channels.invalidate(thread.id).await;
-                }
+                let (thread, _) = srv.users.init_dm(SERVER_USER_ID, user.id, true).await?;
 
                 ss.broadcast(MessageSync::ChannelCreate {
                     channel: Box::new(thread.clone()),

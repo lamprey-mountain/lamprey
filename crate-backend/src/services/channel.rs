@@ -536,6 +536,7 @@ impl ServiceThreads {
                 default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
                 tags: json.tags,
                 url: json.url,
+                locked: false,
             })
             .await?;
 

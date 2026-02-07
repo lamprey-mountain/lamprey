@@ -91,7 +91,9 @@ async fn invite_delete(
         };
         if let Some(room_id) = room_id {
             let role_ids = match &invite.invite.target {
-                InviteTarget::Room { roles, .. } => Some(roles.iter().map(|r| r.id).collect()),
+                InviteTarget::Room { roles, .. } => {
+                    Some(roles.iter().map(|r| r.id).collect::<Vec<_>>())
+                }
                 _ => None,
             };
 
@@ -440,7 +442,11 @@ async fn invite_room_create(
     if let Some(role_ids) = &json.role_ids {
         if !role_ids.is_empty() {
             perms.ensure(Permission::RoleApply)?;
-            let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
+            let rank = s
+                .services()
+                .perms
+                .get_user_rank(room_id, auth.user.id)
+                .await?;
             let room = s.services().rooms.get(room_id, None).await?;
             let roles = d.role_get_many(room_id, role_ids).await?;
             if roles.len() != role_ids.len() {
@@ -448,7 +454,9 @@ async fn invite_room_create(
             }
             for role in roles {
                 if rank <= role.position && room.owner_id != Some(auth.user.id) {
-                    return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
+                    return Err(Error::BadStatic(
+                        "your rank is too low to add one of the roles to this invite",
+                    ));
                 }
             }
         }
@@ -596,7 +604,11 @@ async fn invite_channel_create(
             if let Some(room_id) = room_id {
                 let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
                 perms.ensure(Permission::RoleApply)?;
-                let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
+                let rank = s
+                    .services()
+                    .perms
+                    .get_user_rank(room_id, auth.user.id)
+                    .await?;
                 let room = s.services().rooms.get(room_id, None).await?;
                 let roles = d.role_get_many(room_id, role_ids).await?;
                 if roles.len() != role_ids.len() {
@@ -604,7 +616,9 @@ async fn invite_channel_create(
                 }
                 for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
-                        return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
+                        return Err(Error::BadStatic(
+                            "your rank is too low to add one of the roles to this invite",
+                        ));
                     }
                 }
             } else {
@@ -773,9 +787,7 @@ async fn invite_patch(
         ),
         InviteTarget::User { user } => (
             auth.user.id == start_invite.invite.creator_id,
-            InviteTargetId::User {
-                user_id: user.id,
-            },
+            InviteTargetId::User { user_id: user.id },
         ),
     };
 
@@ -793,7 +805,11 @@ async fn invite_patch(
             if let Some(room_id) = room_id {
                 let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
                 perms.ensure(Permission::RoleApply)?;
-                let rank = s.services().perms.get_user_rank(room_id, auth.user.id).await?;
+                let rank = s
+                    .services()
+                    .perms
+                    .get_user_rank(room_id, auth.user.id)
+                    .await?;
                 let room = s.services().rooms.get(room_id, None).await?;
                 let roles = d.role_get_many(room_id, role_ids).await?;
                 if roles.len() != role_ids.len() {
@@ -801,7 +817,9 @@ async fn invite_patch(
                 }
                 for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
-                        return Err(Error::BadStatic("your rank is too low to add one of the roles to this invite"));
+                        return Err(Error::BadStatic(
+                            "your rank is too low to add one of the roles to this invite",
+                        ));
                     }
                 }
             } else {
@@ -812,7 +830,7 @@ async fn invite_patch(
 
     let updated_invite = d.invite_update(code.clone(), patch).await?;
 
-    let start_role_ids = match &start_invite.invite.target {
+    let start_role_ids: Option<Vec<_>> = match &start_invite.invite.target {
         InviteTarget::Room { roles, .. } => Some(roles.iter().map(|r| r.id).collect()),
         _ => None,
     };
