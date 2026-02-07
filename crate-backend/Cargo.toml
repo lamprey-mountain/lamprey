@@ -78,6 +78,9 @@ tantivy = "0.25.0"
 chrono = "0.4.43"
 chrono-tz = "0.10.4"
 ece = "2.3.1"
+rsa = "0.9.10"
+jsonwebkey = { version = "0.4.0", features = ["generate"] }
+jsonwebtoken = "10.3.0"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
