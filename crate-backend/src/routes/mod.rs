@@ -4,6 +4,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
 
+mod ack;
 mod admin;
 mod application;
 mod auth;
@@ -49,6 +50,7 @@ pub mod util;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
+        .merge(ack::routes())
         .merge(admin::routes())
         .merge(application::routes())
         .merge(auth::routes())

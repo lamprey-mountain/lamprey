@@ -6,7 +6,7 @@ use common::v1::types::{
     AuditLogEntryType, MessageCreate, MessageSync, Permission, UserId, SERVER_ROOM_ID,
     SERVER_USER_ID,
 };
-use common::v1::types::{ChannelPatch, PaginationQuery};
+use common::v1::types::PaginationQuery;
 use http::StatusCode;
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -66,7 +66,6 @@ async fn admin_whisper(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let d = s.data();
 
     let perms = srv.perms.for_server(auth.user.id).await?;
 

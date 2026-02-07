@@ -1,6 +1,7 @@
 // TEMP: suppress warnings before i remove everything
 // #![allow(deprecated)]
 
+pub mod ack;
 pub mod admin;
 pub mod application;
 pub mod audit_logs;

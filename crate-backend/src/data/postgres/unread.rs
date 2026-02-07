@@ -1,6 +1,8 @@
 use async_trait::async_trait;
+use common::v1::types::ack::AckBulkItem;
 use common::v1::types::MessageId;
 use sqlx::{query, query_file};
+use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{ChannelId, MessageVerId, RoomId, UserId};
@@ -37,6 +39,36 @@ impl DataUnread for Postgres {
         )
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    async fn unread_ack_bulk(&self, user_id: UserId, acks: Vec<AckBulkItem>) -> Result<()> {
+        let channel_ids: Vec<Uuid> = acks.iter().map(|a| *a.channel_id).collect();
+        let message_ids: Vec<Uuid> = acks
+            .iter()
+            .map(|a| a.message_id.map(|m| *m).unwrap_or_default())
+            .collect();
+        let version_ids: Vec<Uuid> = acks.iter().map(|a| *a.version_id).collect();
+        let mention_counts: Vec<i32> = acks.iter().map(|a| a.mention_count as i32).collect();
+
+        query!(
+            r#"
+            INSERT INTO unread (channel_id, user_id, message_id, version_id, mention_count)
+            SELECT unnest($1::uuid[]), $2, unnest($3::uuid[]), unnest($4::uuid[]), unnest($5::int4[])
+            ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET
+                message_id = excluded.message_id,
+                version_id = excluded.version_id,
+                mention_count = excluded.mention_count;
+            "#,
+            &channel_ids,
+            *user_id,
+            &message_ids,
+            &version_ids,
+            &mention_counts
+        )
+        .execute(&self.pool)
+        .await?;
+
         Ok(())
     }
 

@@ -7,8 +7,10 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Changes, AuditLogEntryType, ChannelReorder, ChannelType, MessageId, RatelimitPut, Room,
-    RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
+    ack::{AckReq, AckRes},
+    util::Changes,
+    AuditLogEntryType, ChannelReorder, ChannelType, RatelimitPut, Room, RoomCreate,
+    RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -19,7 +21,7 @@ use validator::Validate;
 use crate::{
     types::{
         Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelCreate, DbChannelType,
-        DbRoomCreate, MediaLinkType, MessageSync, MessageVerId, Permission, RoomId,
+        DbRoomCreate, MediaLinkType, MessageSync, Permission, RoomId,
     },
     Error, ServerState,
 };
@@ -481,28 +483,6 @@ async fn channel_update(
     Ok(Json(chan))
 }
 
-// TODO: move to types/channel.rs?
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct AckReq {
-    /// The last read message id. Will be resolved from version_id if empty. (maybe remove later?)
-    message_id: Option<MessageId>,
-
-    /// The last read id in this channel.
-    version_id: MessageVerId,
-
-    /// The new mention count. Defaults to 0.
-    mention_count: Option<u64>,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct AckRes {
-    /// The last read message id
-    message_id: MessageId,
-
-    /// The last read id in this channel. Currently unused, may be deprecated later?.
-    version_id: MessageVerId,
-}
-
 /// Channel ack
 ///
 /// Mark a channel as read (or unread).
@@ -522,7 +502,7 @@ async fn channel_ack(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
-) -> Result<Json<AckRes>> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -544,7 +524,7 @@ async fn channel_ack(
         channel_id,
         message_id,
         version_id,
-        json.mention_count,
+        Some(json.mention_count),
     )
     .await?;
     srv.channels.invalidate_user(channel_id, auth.user.id).await;

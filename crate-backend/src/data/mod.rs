@@ -1,6 +1,7 @@
 // TODO: rename foo_select to foo_get
 
 use async_trait::async_trait;
+use common::v1::types::ack::AckBulkItem;
 use common::v1::types::application::{Application, Connection, Scopes};
 use common::v1::types::automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate};
 use common::v1::types::calendar::{
@@ -692,6 +693,11 @@ pub trait DataUnread {
         message_id: MessageId,
         version_id: MessageVerId,
         mention_count: Option<u64>,
+    ) -> Result<()>;
+    async fn unread_ack_bulk(
+        &self,
+        user_id: UserId,
+        acks: Vec<AckBulkItem>,
     ) -> Result<()>;
     async fn unread_put_all_in_room(
         &self,
