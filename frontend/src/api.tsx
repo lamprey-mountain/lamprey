@@ -57,6 +57,7 @@ import { Sessions } from "./api/sessions.ts";
 import { notificationPermission } from "./notification.ts";
 import { deepEqual } from "./utils/deepEqual.ts";
 import { Inbox } from "./api/inbox.ts";
+import { Push } from "./api/push.ts";
 import { generateNotificationIcon } from "./drawing.ts";
 
 export type Json =
@@ -155,6 +156,7 @@ export function createApi(
 	const dms = new Dms();
 	const auth = new Auth();
 	const sessions = new Sessions();
+	const push = new Push();
 	const inbox = new Inbox();
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
@@ -1205,6 +1207,7 @@ export function createApi(
 		dms,
 		auth,
 		sessions,
+		push,
 		inbox,
 		voiceStates,
 		voiceState,
@@ -1238,6 +1241,7 @@ export function createApi(
 	dms.api = api;
 	auth.api = api;
 	sessions.api = api;
+	push.api = api;
 	inbox.api = api;
 
 	console.log("provider created", api);
@@ -1255,6 +1259,7 @@ export type Api = {
 	dms: Dms;
 	auth: Auth;
 	sessions: Sessions;
+	push: Push;
 	inbox: Inbox;
 	invites: Invites;
 	channel_invites: ChannelInvites;

@@ -8264,6 +8264,20 @@ export interface components {
 			/** Format: int32 */
 			position?: number | null;
 		};
+		PushCreate: {
+			endpoint: string;
+			keys: components["schemas"]["PushCreateKeys"];
+		};
+		PushCreateKeys: {
+			auth: string;
+			p256dh: string;
+		};
+		PushInfo: {
+			/** @description the endpoint that web push payloads are sent to */
+			endpoint: string;
+			/** @description the server's vapid key */
+			server_key: string;
+		};
 		/** @description the current presence of the user */
 		Presence: {
 			activities: components["schemas"]["Activity"][];

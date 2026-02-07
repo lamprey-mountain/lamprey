@@ -47,6 +47,7 @@ self.addEventListener("activate", (e) => {
 	]));
 });
 
-// self.addEventListener("push", e => {
-// 	console.log("[sw] pushed", e.data);
-// });
+self.addEventListener("push", e => {
+	console.log("[sw] pushed", e.data);
+	// TODO: fetch full message, display notif similarly to api.tsx
+});
