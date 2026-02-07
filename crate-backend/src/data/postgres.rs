@@ -16,6 +16,7 @@ mod auth;
 mod automod;
 mod calendar;
 mod channel;
+mod config_internal;
 mod connection;
 mod dm;
 mod document;

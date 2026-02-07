@@ -5,7 +5,7 @@ use common::v1::types::{
     },
     NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
-use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
+use sqlx::{query, query_file, query_file_as, query_file_scalar, query_scalar, Acquire};
 use uuid::Uuid;
 
 use crate::{
@@ -249,6 +249,42 @@ impl DataNotification for Postgres {
         .execute(&mut *conn)
         .await?;
 
+        Ok(())
+    }
+
+    async fn notification_get_unpushed(&self, limit: u32) -> Result<Vec<(UserId, Notification)>> {
+        let rows = query_file!(
+            "sql/notification_get_unpushed.sql",
+            limit as i32
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let user_id = UserId::from(r.user_id);
+                let notif = Notification {
+                    id: r.id.into(),
+                    channel_id: r.channel_id.into(),
+                    message_id: r.message_id.into(),
+                    reason: notif_reason_parse(&r.reason),
+                    added_at: r.added_at.into(),
+                    read_at: r.read_at.map(|t| t.into()),
+                };
+                (user_id, notif)
+            })
+            .collect())
+    }
+
+    async fn notification_set_pushed(&self, ids: &[NotificationId]) -> Result<()> {
+        let ids: Vec<Uuid> = ids.iter().map(|id| id.into_inner()).collect();
+        query!(
+            "UPDATE inbox SET pushed_at = now() WHERE id = ANY($1)",
+            &ids
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

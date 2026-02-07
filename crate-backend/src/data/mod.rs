@@ -48,6 +48,7 @@ use common::v2::types::message::{Message as MessageV2, MessageVersion as Message
 
 use uuid::Uuid;
 
+use crate::config::ConfigInternal;
 use crate::error::Result;
 use crate::services::admin::AdminCollectGarbageMode;
 use crate::services::documents::EditContextId;
@@ -100,6 +101,7 @@ pub trait Data:
     + DataAutomod
     + DataDocument
     + DataPush
+    + DataConfigInternal
     + Send
     + Sync
 {
@@ -694,11 +696,7 @@ pub trait DataUnread {
         version_id: MessageVerId,
         mention_count: Option<u64>,
     ) -> Result<()>;
-    async fn unread_ack_bulk(
-        &self,
-        user_id: UserId,
-        acks: Vec<AckBulkItem>,
-    ) -> Result<()>;
+    async fn unread_ack_bulk(&self, user_id: UserId, acks: Vec<AckBulkItem>) -> Result<()>;
     async fn unread_put_all_in_room(
         &self,
         user_id: UserId,
@@ -1193,6 +1191,14 @@ pub trait DataNotification {
         params: NotificationMarkRead,
     ) -> Result<()>;
     async fn notification_flush(&self, user_id: UserId, params: NotificationFlush) -> Result<()>;
+    async fn notification_get_unpushed(&self, limit: u32) -> Result<Vec<(UserId, Notification)>>;
+    async fn notification_set_pushed(&self, ids: &[NotificationId]) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataConfigInternal {
+    async fn config_put(&self, config: ConfigInternal) -> Result<()>;
+    async fn config_get(&self) -> Result<Option<ConfigInternal>>;
 }
 
 #[async_trait]

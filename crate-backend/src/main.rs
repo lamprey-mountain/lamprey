@@ -131,6 +131,17 @@ async fn main() -> Result<()> {
 
     let srv = state.services();
     let data = state.data();
+
+    if data.config_get().await?.is_none() {
+        info!("initializing internal config");
+        data.config_put(config::ConfigInternal {
+            // TODO: generate actual VAPID keys
+            vapid_key: nanoid::nanoid!(),
+            oidc_jwk_key: nanoid::nanoid!(),
+        })
+        .await?;
+    }
+
     if data.user_get(SERVER_USER_ID).await.is_err() {
         data.user_create(DbUserCreate {
             id: Some(SERVER_USER_ID),
