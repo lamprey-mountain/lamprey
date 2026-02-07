@@ -195,7 +195,8 @@ pub struct ConfigMediaScanner {
 /// internal config that is saved in the database
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigInternal {
-    pub vapid_key: String,
+    pub vapid_private_key: String,
+    pub vapid_public_key: String,
     pub oidc_jwk_key: String,
 }
 

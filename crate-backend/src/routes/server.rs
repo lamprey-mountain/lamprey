@@ -5,7 +5,7 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
-    ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu,
+    ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu, ServerWebPush,
 };
 use common::v1::types::Permission;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -25,6 +25,9 @@ use super::util::Auth;
     )
 )]
 async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let config_internal = data.config_get().await?;
+
     let info = ServerInfo {
         api_url: s.config.api_url.clone(),
         sync_url: s.config.api_url.join("/api/v1/sync").unwrap(),
@@ -49,7 +52,9 @@ async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespo
                 max_file_size: s.config.media_max_size,
             }),
             voice: Some(ServerVoice {}),
-            web_push: None,
+            web_push: config_internal.map(|c| ServerWebPush {
+                vapid_public_key: c.vapid_public_key,
+            }),
         },
         version: ServerVersion {
             implementation: "chat-server".to_string(), // or get from config/env

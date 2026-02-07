@@ -138,7 +138,7 @@ pub struct ServerVoice {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ServerWebPush {
-    pub vapid_pubkey: String,
+    pub vapid_public_key: String,
 }
 
 #[derive(Debug, Clone)]

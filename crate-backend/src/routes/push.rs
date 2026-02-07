@@ -47,7 +47,7 @@ async fn push_register(
 
     Ok(Json(PushInfo {
         endpoint: json.endpoint,
-        server_key: config_internal.vapid_key,
+        server_key: config_internal.vapid_public_key,
     }))
 }
 
@@ -89,7 +89,7 @@ async fn push_get(
 
     Ok(Json(PushInfo {
         endpoint: push.endpoint,
-        server_key: config_internal.vapid_key,
+        server_key: config_internal.vapid_public_key,
     }))
 }
 

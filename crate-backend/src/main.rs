@@ -1,6 +1,7 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
 use common::v1::types::{misc::ApplicationIdReq, util::Time, AuditLogEntry, AuditLogEntryType};
 use figment::providers::{Env, Format, Toml};
@@ -134,10 +135,29 @@ async fn main() -> Result<()> {
 
     if data.config_get().await?.is_none() {
         info!("initializing internal config");
+        let (keypair, _) = ece::generate_keypair_and_auth_secret()
+            .map_err(|e| Error::Internal(format!("VAPID key generation failed: {}", e)))?;
+        let vapid_public_key = URL_SAFE_NO_PAD.encode(
+            keypair
+                .pub_as_raw()
+                .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?,
+        );
+        let vapid_private_key = URL_SAFE_NO_PAD.encode(
+            keypair
+                .raw_components()
+                .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?
+                .private_key(),
+        );
+
+        let mut jwk = jsonwebkey::JsonWebKey::new(jsonwebkey::Key::generate_p256());
+        jwk.set_algorithm(jsonwebkey::Algorithm::ES256).unwrap();
+        jwk.key_id = Some(nanoid::nanoid!());
+        jwk.key_use = Some(jsonwebkey::KeyUse::Signing);
+
         data.config_put(config::ConfigInternal {
-            // TODO: generate actual VAPID keys
-            vapid_key: nanoid::nanoid!(),
-            oidc_jwk_key: nanoid::nanoid!(),
+            vapid_private_key,
+            vapid_public_key,
+            oidc_jwk_key: serde_json::to_string(&jwk)?,
         })
         .await?;
     }
