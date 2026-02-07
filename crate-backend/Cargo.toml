@@ -77,6 +77,7 @@ rrule = "0.14.0"
 tantivy = "0.25.0"
 chrono = "0.4.43"
 chrono-tz = "0.10.4"
+ece = "2.3.1"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
