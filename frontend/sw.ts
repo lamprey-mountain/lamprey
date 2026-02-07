@@ -47,7 +47,94 @@ self.addEventListener("activate", (e) => {
 	]));
 });
 
-self.addEventListener("push", e => {
-	console.log("[sw] pushed", e.data);
-	// TODO: fetch full message, display notif similarly to api.tsx
+async function getState(): Promise<
+	{ api_url: string | null; token: string | null }
+> {
+	return new Promise((resolve) => {
+		const request = indexedDB.open("sw-state", 1);
+		request.onsuccess = () => {
+			const db = request.result;
+			const tx = db.transaction("state", "readonly");
+			const store = tx.objectStore("state");
+			const apiUrlReq = store.get("api_url");
+			const tokenReq = store.get("token");
+			tx.oncomplete = () => {
+				resolve({
+					api_url: apiUrlReq.result,
+					token: tokenReq.result,
+				});
+			};
+		};
+		request.onerror = () => resolve({ api_url: null, token: null });
+	});
+}
+
+self.addEventListener("push", (e) => {
+	console.log("[sw] pushed", e.data?.json());
+	const data = e.data?.json();
+	if (!data) return;
+
+	e.waitUntil((async () => {
+		const { api_url, token } = await getState();
+		if (!api_url || !token) return;
+
+		const headers = {
+			"Authorization": `Bearer ${token}`,
+		};
+
+		const [notif, channel] = await Promise.all([
+			fetch(
+				`${api_url}/api/v1/channel/${data.channel_id}/message/${data.message_id}`,
+				{ headers },
+			).then((res) => res.json()),
+			fetch(`${api_url}/api/v1/channel/${data.channel_id}`, { headers }).then(
+				(res) => res.json(),
+			),
+		]);
+
+		const message = "latest_version" in notif ? notif.latest_version : notif;
+		const author = await fetch(`${api_url}/api/v1/user/${message.author_id}`, {
+			headers,
+		}).then((res) => res.json());
+
+		const title = `${author.name} in #${channel.name}`;
+		const body = message.content?.substring(0, 200) || "";
+
+		let icon: string | undefined;
+		if (author.avatar) {
+			icon = `${api_url}/api/v1/media/${author.avatar}/blob`;
+		}
+
+		await self.registration.showNotification(title, {
+			body,
+			icon,
+			data: {
+				channel_id: data.channel_id,
+				message_id: data.message_id,
+			},
+		});
+	})());
+});
+
+self.addEventListener("notificationclick", (event) => {
+	event.notification.close();
+	const { channel_id, message_id } = event.notification.data;
+	const url = `/channel/${channel_id}/message/${message_id}`;
+
+	event.waitUntil(
+		self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(
+			(clientList) => {
+				for (const client of clientList) {
+					if (client.url.includes(self.location.origin) && "focus" in client) {
+						return (client as WindowClient).navigate(url).then((c) =>
+							c.focus()
+						);
+					}
+				}
+				if (self.clients.openWindow) {
+					return self.clients.openWindow(url);
+				}
+			},
+		),
+	);
 });

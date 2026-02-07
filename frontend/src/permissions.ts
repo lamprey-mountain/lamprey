@@ -361,7 +361,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "ApplicationManage",
 		name: "Manage applications",
-		description: "Can edit and delete all applications. Can list all applications on the server.",
+		description:
+			"Can edit and delete all applications. Can list all applications on the server.",
 		group: "server",
 	},
 	{
@@ -403,7 +404,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "RoomForceJoin",
 		name: "Force join rooms",
-		description: "Can forcibly make other users join and leave rooms and gdms. Can join any room and gdm.",
+		description:
+			"Can forcibly make other users join and leave rooms and gdms. Can join any room and gdm.",
 		group: "server",
 	},
 	{
@@ -415,7 +417,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "RoomManageServer",
 		name: "Manage server rooms",
-		description: "Can delete and quarantine rooms, and view all rooms, room templates, dms, and gdms.",
+		description:
+			"Can delete and quarantine rooms, and view all rooms, room templates, dms, and gdms.",
 		group: "server",
 	},
 	{

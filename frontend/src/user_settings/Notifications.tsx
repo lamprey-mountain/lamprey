@@ -1,14 +1,27 @@
-import { Show, type VoidProps } from "solid-js";
+import { createEffect, Show, type VoidProps } from "solid-js";
 import { type User, type UserConfig } from "sdk";
 import { Checkbox } from "../icons";
 import { notificationPermission } from "../notification";
 import { useCtx } from "../context";
 import { Dropdown } from "../Dropdown";
+import { useApi } from "../api";
 
 type NotifAction = "Notify" | "Watching" | "Ignore";
 
+function urlBase64ToUint8Array(base64String: string) {
+	const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+	const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+	const rawData = window.atob(base64);
+	const outputArray = new Uint8Array(rawData.length);
+	for (let i = 0; i < rawData.length; ++i) {
+		outputArray[i] = rawData.charCodeAt(i);
+	}
+	return outputArray;
+}
+
 export function Notifications(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
+	const api = useApi();
 	const { t } = useCtx();
 
 	// TODO: option to disable mention sound
@@ -27,8 +40,59 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 		});
 	};
 
-	const setFrontendConfig = (setting: string, value: string) => {
+	const setFrontendConfig = async (setting: string, value: string) => {
 		const c = ctx.userConfig();
+
+		if (setting === "push_notifs") {
+			if (value === "yes") {
+				try {
+					const permission = await Notification.requestPermission();
+					if (permission !== "granted") {
+						throw new Error("Permission not granted");
+					}
+
+					const registration = await navigator.serviceWorker.ready;
+					const serverInfo = await api.client.http.GET("/api/v1/server/@self")
+						.then((res) => res.data);
+
+					if (!serverInfo?.features.web_push?.vapid_public_key) {
+						console.error("No push info from backend");
+						return;
+					}
+
+					const subscription = await registration.pushManager.subscribe({
+						userVisibleOnly: true,
+						applicationServerKey: urlBase64ToUint8Array(
+							serverInfo.features.web_push.vapid_public_key,
+						),
+					});
+
+					const subJson = subscription.toJSON();
+					await api.push.register({
+						endpoint: subJson.endpoint!,
+						keys: {
+							p256dh: subJson.keys!.p256dh!,
+							auth: subJson.keys!.auth!,
+						},
+					});
+				} catch (e) {
+					console.error("Failed to subscribe to push notifications", e);
+					return;
+				}
+			} else {
+				try {
+					const registration = await navigator.serviceWorker.ready;
+					const subscription = await registration.pushManager.getSubscription();
+					if (subscription) {
+						await subscription.unsubscribe();
+					}
+					await api.push.delete();
+				} catch (e) {
+					console.error("Failed to unsubscribe from push notifications", e);
+				}
+			}
+		}
+
 		ctx.setUserConfig({
 			...c,
 			frontend: {
@@ -41,6 +105,19 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 	const isFrontendConfigEnabled = (setting: string) => {
 		return ctx.userConfig().frontend[setting] === "yes";
 	};
+
+	createEffect(async () => {
+		if ("serviceWorker" in navigator && "PushManager" in window) {
+			const registration = await navigator.serviceWorker.ready;
+			const subscription = await registration.pushManager.getSubscription();
+			const isEnabled = !!subscription;
+			const currentConfig = ctx.userConfig().frontend["push_notifs"] === "yes";
+
+			if (isEnabled !== currentConfig) {
+				// TODO: sync config
+			}
+		}
+	});
 
 	return (
 		<div class="user-settings-notifications">

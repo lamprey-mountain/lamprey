@@ -120,6 +120,21 @@ export type MemberList = {
 	}[];
 };
 
+function updateSWState(apiUrl: string, token: string | null) {
+	const request = indexedDB.open("sw-state", 1);
+	request.onupgradeneeded = () => {
+		const db = request.result;
+		db.createObjectStore("state");
+	};
+	request.onsuccess = () => {
+		const db = request.result;
+		const tx = db.transaction("state", "readwrite");
+		const store = tx.objectStore("state");
+		store.put(apiUrl, "api_url");
+		store.put(token, "token");
+	};
+}
+
 export function createApi(
 	client: Client,
 	events: Emitter<{
@@ -134,6 +149,8 @@ export function createApi(
 	const [session, setSession] = createSignal<Session | null>(null);
 	const [clientState, setClientState] = createSignal<ClientState>("stopped");
 	client.state.subscribe(setClientState);
+
+	updateSWState(client.opts.apiUrl, client.opts.token ?? null);
 
 	const rooms = new Rooms();
 	const channels = new Channels();
@@ -1090,6 +1107,7 @@ export function createApi(
 			users.cache.set(msg.user.id, msg.user);
 		}
 		setSession(msg.session);
+		updateSWState(client.opts.apiUrl, client.opts.token ?? null);
 	});
 
 	async function tempCreateSession() {
