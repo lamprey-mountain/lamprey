@@ -8,6 +8,7 @@ import {
 	untrack,
 } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { fetchWithRetry } from "./util.ts";
 
 export class ThreadMembers {
 	api: Api = null as unknown as Api;
@@ -41,24 +42,29 @@ export class ThreadMembers {
 				if (existing) return existing;
 
 				const req = (async () => {
-					const { data, error } = await this.api.client.http.GET(
-						"/api/v1/thread/{thread_id}/member/{user_id}",
-						{
-							params: { path: { thread_id, user_id } },
-						},
-					);
-					// HACK: handle 404s
-					type ErrorResp = { error: string } | undefined;
-					if ((error as ErrorResp)?.error === "not found") {
-						const placeholder: ThreadMember = {
-							membership: "Leave",
-							thread_id,
-							user_id,
-							membership_updated_at: new Date().toISOString(),
-						};
-						return placeholder;
+					let data;
+					try {
+						data = await fetchWithRetry(() =>
+							this.api.client.http.GET(
+								"/api/v1/thread/{thread_id}/member/{user_id}",
+								{
+									params: { path: { thread_id, user_id } },
+								},
+							)
+						);
+					} catch (error: any) {
+						// HACK: handle 404s
+						if (error?.error === "not found") {
+							const placeholder: ThreadMember = {
+								membership: "Leave",
+								thread_id,
+								user_id,
+								membership_updated_at: new Date().toISOString(),
+							};
+							return placeholder;
+						}
+						throw error;
 					}
-					if (error) throw error;
 					this._requests.get(thread_id)?.delete(user_id);
 					if (!this.cache.has(thread_id)) {
 						this.cache.set(thread_id, new ReactiveMap());
@@ -89,25 +95,21 @@ export class ThreadMembers {
 		const paginate = async (pagination?: Pagination<ThreadMember>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/thread/{thread_id}/member",
-				{
-					params: {
-						path: { thread_id: thread_id_sig() },
-						query: {
-							dir: "f",
-							limit: 100,
-							from: pagination?.items.at(-1)?.user_id,
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/thread/{thread_id}/member",
+					{
+						params: {
+							path: { thread_id: thread_id_sig() },
+							query: {
+								dir: "f",
+								limit: 100,
+								from: pagination?.items.at(-1)?.user_id,
+							},
 						},
 					},
-				},
+				)
 			);
-
-			if (error) {
-				// TODO: handle unauthenticated
-				console.error(error);
-				throw error;
-			}
 
 			const thread_id = thread_id_sig();
 			let cache = this.cache.get(thread_id);

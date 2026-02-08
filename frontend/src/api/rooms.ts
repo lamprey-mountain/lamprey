@@ -2,6 +2,7 @@ import type { Pagination, Room } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { fetchWithRetry } from "./util.ts";
 
 export class Rooms {
 	api: Api = null as unknown as Api;
@@ -18,13 +19,14 @@ export class Rooms {
 			if (existing) return existing;
 
 			const req = (async () => {
-				const { data, error } = await this.api.client.http.GET(
-					"/api/v1/room/{room_id}",
-					{
-						params: { path: { room_id } },
-					},
+				const data = await fetchWithRetry(() =>
+					this.api.client.http.GET(
+						"/api/v1/room/{room_id}",
+						{
+							params: { path: { room_id } },
+						},
+					)
 				);
-				if (error) throw error;
 				this._requests.delete(room_id);
 				this.cache.set(room_id, data);
 				return data;
@@ -45,35 +47,36 @@ export class Rooms {
 		const paginate = async (pagination?: Pagination<Room>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/user/@self/room",
-				{
-					params: {
-						query: {
-							dir: "f",
-							limit: 100,
-							from: pagination?.items.at(-1)?.id,
+			try {
+				const data = await fetchWithRetry(() =>
+					this.api.client.http.GET(
+						"/api/v1/user/@self/room",
+						{
+							params: {
+								query: {
+									dir: "f",
+									limit: 100,
+									from: pagination?.items.at(-1)?.id,
+								},
+							},
 						},
-					},
-				},
-			);
+					)
+				);
 
-			if (error) {
-				// TODO: handle unauthenticated
+				batch(() => {
+					for (const item of data.items) {
+						this.cache.set(item.id, item);
+					}
+				});
+
+				return {
+					...data,
+					items: [...(pagination?.items ?? []), ...data.items],
+				};
+			} catch (error) {
 				console.error(error);
 				throw error;
 			}
-
-			batch(() => {
-				for (const item of data.items) {
-					this.cache.set(item.id, item);
-				}
-			});
-
-			return {
-				...data,
-				items: [...(pagination?.items ?? []), ...data.items],
-			};
 		};
 
 		const l = this._cachedListing;
@@ -124,32 +127,33 @@ export class Rooms {
 		const paginate = async (pagination?: Pagination<Room>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET("/api/v1/room", {
-				params: {
-					query: {
-						dir: "f",
-						limit: 100,
-						from: pagination?.items.at(-1)?.id,
-					},
-				},
-			});
+			try {
+				const data = await fetchWithRetry(() =>
+					this.api.client.http.GET("/api/v1/room", {
+						params: {
+							query: {
+								dir: "f",
+								limit: 100,
+								from: pagination?.items.at(-1)?.id,
+							},
+						},
+					})
+				);
 
-			if (error) {
-				// TODO: handle unauthenticated
+				batch(() => {
+					for (const item of data.items) {
+						this.cache.set(item.id, item);
+					}
+				});
+
+				return {
+					...data,
+					items: [...(pagination?.items ?? []), ...data.items],
+				};
+			} catch (error) {
 				console.error(error);
 				throw error;
 			}
-
-			batch(() => {
-				for (const item of data.items) {
-					this.cache.set(item.id, item);
-				}
-			});
-
-			return {
-				...data,
-				items: [...(pagination?.items ?? []), ...data.items],
-			};
 		};
 
 		const l = this._cachedListingAll;
@@ -192,23 +196,28 @@ export class Rooms {
 		let has_more = true;
 		let from: string | undefined = undefined;
 		while (has_more) {
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/room/{room_id}/channel",
-				{
-					params: {
-						path: { room_id },
-						query: {
-							dir: "f",
-							limit: 100,
-							from,
+			let data;
+			try {
+				data = await fetchWithRetry(() =>
+					this.api.client.http.GET(
+						"/api/v1/room/{room_id}/channel",
+						{
+							params: {
+								path: { room_id },
+								query: {
+									dir: "f",
+									limit: 100,
+									from,
+								},
+							},
 						},
-					},
-				},
-			);
-			if (error) {
+					)
+				);
+			} catch (error) {
 				console.error("Failed to fetch threads for room", error);
 				break;
 			}
+
 			for (const thread of data.items) {
 				if (thread.last_version_id) {
 					await this.api.channels.ack(

@@ -8,6 +8,7 @@ import {
 	untrack,
 } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { fetchWithRetry } from "./util.ts";
 
 export class RoomMembers {
 	api: Api = null as unknown as Api;
@@ -38,27 +39,32 @@ export class RoomMembers {
 				if (existing) return existing;
 
 				const req = (async () => {
-					const { data, error } = await this.api.client.http.GET(
-						"/api/v1/room/{room_id}/member/{user_id}",
-						{
-							params: { path: { room_id, user_id } },
-						},
-					);
-					// HACK: handle 404s
-					type ErrorResp = { error: string } | undefined;
-					if ((error as ErrorResp)?.error === "not found") {
-						const placeholder: RoomMember = {
-							membership: "Leave",
-							room_id,
-							user_id,
-							deaf: false,
-							mute: false,
-							roles: [],
-							joined_at: new Date().toISOString(),
-						};
-						return placeholder;
+					let data;
+					try {
+						data = await fetchWithRetry(() =>
+							this.api.client.http.GET(
+								"/api/v1/room/{room_id}/member/{user_id}",
+								{
+									params: { path: { room_id, user_id } },
+								},
+							)
+						);
+					} catch (error: any) {
+						// HACK: handle 404s
+						if (error?.error === "not found") {
+							const placeholder: RoomMember = {
+								membership: "Leave",
+								room_id,
+								user_id,
+								deaf: false,
+								mute: false,
+								roles: [],
+								joined_at: new Date().toISOString(),
+							};
+							return placeholder;
+						}
+						throw error;
 					}
-					if (error) throw error;
 					this._requests.get(room_id)?.delete(user_id);
 					if (!this.cache.has(room_id)) {
 						this.cache.set(room_id, new ReactiveMap());
@@ -89,25 +95,21 @@ export class RoomMembers {
 		const paginate = async (pagination?: Pagination<RoomMember>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/room/{room_id}/member",
-				{
-					params: {
-						path: { room_id: room_id_sig() },
-						query: {
-							dir: "f",
-							limit: 100,
-							from: pagination?.items.at(-1)?.user_id,
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/room/{room_id}/member",
+					{
+						params: {
+							path: { room_id: room_id_sig() },
+							query: {
+								dir: "f",
+								limit: 100,
+								from: pagination?.items.at(-1)?.user_id,
+							},
 						},
 					},
-				},
+				)
 			);
-
-			if (error) {
-				// TODO: handle unauthenticated
-				console.error(error);
-				throw error;
-			}
 
 			const room_id = room_id_sig();
 			let cache = this.cache.get(room_id);

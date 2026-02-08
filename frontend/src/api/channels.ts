@@ -2,6 +2,7 @@ import type { Channel, Pagination, Tag, TagCreate } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { fetchWithRetry } from "./util.ts";
 
 export class Channels {
 	api: Api = null as unknown as Api;
@@ -28,13 +29,14 @@ export class Channels {
 			if (existing) return existing;
 
 			const req = (async () => {
-				const { data, error } = await this.api.client.http.GET(
-					"/api/v1/channel/{channel_id}",
-					{
-						params: { path: { channel_id: channel_id } },
-					},
+				const data = await fetchWithRetry(() =>
+					this.api.client.http.GET(
+						"/api/v1/channel/{channel_id}",
+						{
+							params: { path: { channel_id: channel_id } },
+						},
+					)
 				);
-				if (error) throw error;
 				this._requests.delete(channel_id);
 				this.cache.set(channel_id, data);
 				return data;
@@ -55,25 +57,21 @@ export class Channels {
 		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/room/{room_id}/channel",
-				{
-					params: {
-						path: { room_id: room_id_signal() },
-						query: {
-							dir: "f",
-							limit: 1024,
-							from: pagination?.items.at(-1)?.id,
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/room/{room_id}/channel",
+					{
+						params: {
+							path: { room_id: room_id_signal() },
+							query: {
+								dir: "f",
+								limit: 1024,
+								from: pagination?.items.at(-1)?.id,
+							},
 						},
 					},
-				},
+				)
 			);
-
-			if (error) {
-				// TODO: handle unauthenticated
-				console.error(error);
-				throw error;
-			}
 
 			batch(() => {
 				for (const item of data.items) {
@@ -152,51 +150,49 @@ export class Channels {
 	}
 
 	async typing(channel_id: string) {
-		await this.api.client.http.POST("/api/v1/channel/{channel_id}/typing", {
-			params: {
-				path: { channel_id },
-			},
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.POST("/api/v1/channel/{channel_id}/typing", {
+				params: {
+					path: { channel_id },
+				},
+			})
+		);
 	}
 
 	async create(
 		room_id: string,
 		body: { name: string; parent_id?: string },
 	): Promise<Channel> {
-		const { data, error } = await this.api.client.http.POST(
-			"/api/v1/room/{room_id}/channel",
-			{
-				params: { path: { room_id } },
-				body: body,
-			},
+		return await fetchWithRetry(() =>
+			this.api.client.http.POST(
+				"/api/v1/room/{room_id}/channel",
+				{
+					params: { path: { room_id } },
+					body: body,
+				},
+			)
 		);
-		if (error) throw error;
-		return data;
 	}
 
 	listArchived(room_id_signal: () => string): Resource<Pagination<Channel>> {
 		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/room/{room_id}/channel/archived",
-				{
-					params: {
-						path: { room_id: room_id_signal() },
-						query: {
-							dir: "f",
-							limit: 1024,
-							from: pagination?.items.at(-1)?.id,
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/room/{room_id}/channel/archived",
+					{
+						params: {
+							path: { room_id: room_id_signal() },
+							query: {
+								dir: "f",
+								limit: 1024,
+								from: pagination?.items.at(-1)?.id,
+							},
 						},
 					},
-				},
+				)
 			);
-
-			if (error) {
-				// TODO: handle unauthenticated
-				console.error(error);
-				throw error;
-			}
 
 			batch(() => {
 				for (const item of data.items) {
@@ -267,25 +263,21 @@ export class Channels {
 		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/room/{room_id}/channel/removed",
-				{
-					params: {
-						path: { room_id: room_id_signal() },
-						query: {
-							dir: "f",
-							limit: 1024,
-							from: pagination?.items.at(-1)?.id,
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/room/{room_id}/channel/removed",
+					{
+						params: {
+							path: { room_id: room_id_signal() },
+							query: {
+								dir: "f",
+								limit: 1024,
+								from: pagination?.items.at(-1)?.id,
+							},
 						},
 					},
-				},
+				)
 			);
-
-			if (error) {
-				// TODO: handle unauthenticated
-				console.error(error);
-				throw error;
-			}
 
 			batch(() => {
 				for (const item of data.items) {
@@ -357,10 +349,12 @@ export class Channels {
 		message_id: string | undefined,
 		version_id: string,
 	) {
-		await this.api.client.http.PUT("/api/v1/channel/{channel_id}/ack", {
-			params: { path: { channel_id: channel_id } },
-			body: { message_id, version_id },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PUT("/api/v1/channel/{channel_id}/ack", {
+				params: { path: { channel_id: channel_id } },
+				body: { message_id, version_id },
+			})
+		);
 		const t = this.cache.get(channel_id);
 		if (t) {
 			this.cache.set(channel_id, {
@@ -372,46 +366,54 @@ export class Channels {
 	}
 
 	async lock(channel_id: string) {
-		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-			params: { path: { channel_id: channel_id } },
-			body: { locked: true },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+				params: { path: { channel_id: channel_id } },
+				body: { locked: true },
+			})
+		);
 	}
 
 	async unlock(channel_id: string) {
-		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-			params: { path: { channel_id: channel_id } },
-			body: { locked: false },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+				params: { path: { channel_id: channel_id } },
+				body: { locked: false },
+			})
+		);
 	}
 
 	async archive(channel_id: string) {
-		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-			params: { path: { channel_id: channel_id } },
-			body: { archived: true },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+				params: { path: { channel_id: channel_id } },
+				body: { archived: true },
+			})
+		);
 	}
 
 	async unarchive(channel_id: string) {
-		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-			params: { path: { channel_id: channel_id } },
-			body: { archived: false },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+				params: { path: { channel_id: channel_id } },
+				body: { archived: false },
+			})
+		);
 	}
 
 	async createTag(
 		channel_id: string,
 		body: TagCreate,
 	): Promise<Tag> {
-		const { data, error } = await this.api.client.http.POST(
-			"/api/v1/channel/{channel_id}/tag",
-			{
-				params: { path: { channel_id } },
-				body: body,
-			},
+		return await fetchWithRetry(() =>
+			this.api.client.http.POST(
+				"/api/v1/channel/{channel_id}/tag",
+				{
+					params: { path: { channel_id } },
+					body: body,
+				},
+			)
 		);
-		if (error) throw error;
-		return data;
 	}
 
 	async updateTag(
@@ -419,15 +421,15 @@ export class Channels {
 		tag_id: string,
 		body: import("sdk").TagPatch,
 	): Promise<import("sdk").Tag> {
-		const { data, error } = await this.api.client.http.PATCH(
-			"/api/v1/channel/{channel_id}/tag/{tag_id}",
-			{
-				params: { path: { channel_id, tag_id } },
-				body: body,
-			},
+		return await fetchWithRetry(() =>
+			this.api.client.http.PATCH(
+				"/api/v1/channel/{channel_id}/tag/{tag_id}",
+				{
+					params: { path: { channel_id, tag_id } },
+					body: body,
+				},
+			)
 		);
-		if (error) throw error;
-		return data;
 	}
 
 	async deleteTag(
@@ -435,13 +437,14 @@ export class Channels {
 		tag_id: string,
 		force: boolean = false,
 	): Promise<void> {
-		const { error } = await this.api.client.http.DELETE(
-			"/api/v1/channel/{channel_id}/tag/{tag_id}",
-			{
-				params: { path: { channel_id, tag_id } },
-				query: { force },
-			},
+		await fetchWithRetry(() =>
+			this.api.client.http.DELETE(
+				"/api/v1/channel/{channel_id}/tag/{tag_id}",
+				{
+					params: { path: { channel_id, tag_id } },
+					query: { force },
+				},
+			)
 		);
-		if (error) throw error;
 	}
 }

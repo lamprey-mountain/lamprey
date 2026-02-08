@@ -2,6 +2,7 @@ import type { Pagination, User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { fetchWithRetry } from "./util.ts";
 
 export class Users {
 	api: Api = null as unknown as Api;
@@ -17,13 +18,14 @@ export class Users {
 			if (existing) return existing;
 
 			const req = (async () => {
-				const { data, error } = await this.api.client.http.GET(
-					"/api/v1/user/{user_id}",
-					{
-						params: { path: { user_id } },
-					},
+				const data = await fetchWithRetry(() =>
+					this.api.client.http.GET(
+						"/api/v1/user/{user_id}",
+						{
+							params: { path: { user_id } },
+						},
+					)
 				);
-				if (error) throw error;
 				this.requests.delete(user_id);
 				this.cache.set(user_id, data);
 				return data;
@@ -49,20 +51,17 @@ export class Users {
 		const paginate = async (pagination?: Pagination<User>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET("/api/v1/user", {
-				params: {
-					query: {
-						dir: "f",
-						limit: 100,
-						from: pagination?.items.at(-1)?.id,
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET("/api/v1/user", {
+					params: {
+						query: {
+							dir: "f",
+							limit: 100,
+							from: pagination?.items.at(-1)?.id,
+						},
 					},
-				},
-			});
-
-			if (error) {
-				console.error(error);
-				throw error;
-			}
+				})
+			);
 
 			// User list doesn't contain relationship data, so we don't cache it here
 			// to avoid partial data in the main user cache.
@@ -110,16 +109,20 @@ export class Users {
 	}
 
 	async getConfig(): Promise<UserConfig> {
-		const { data, error } = await this.api.client.http.GET("/api/v1/config");
-		if (error) throw error;
-		return data as UserConfig;
+		return await fetchWithRetry(() =>
+			this.api.client.http.GET("/api/v1/config")
+		);
 	}
 
 	async createGuest(name: string) {
-		await this.api.client.http.POST("/api/v1/guest", { body: { name } });
+		await fetchWithRetry(() =>
+			this.api.client.http.POST("/api/v1/guest", { body: { name } })
+		);
 	}
 
 	async setConfig(config: UserConfig) {
-		await this.api.client.http.PUT("/api/v1/config", { body: config });
+		await fetchWithRetry(() =>
+			this.api.client.http.PUT("/api/v1/config", { body: config })
+		);
 	}
 }

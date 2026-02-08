@@ -18,6 +18,7 @@ import {
 import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
 import type { Api } from "../api.tsx";
+import { fetchWithRetry } from "./util.ts";
 
 type MessageV2 = {
 	id: string;
@@ -58,7 +59,7 @@ function convertV2MessageToV1(message: MessageV2): Message {
 }
 
 function maybeConvertMessage(data: any): Message {
-	if ("latest_version" in data) {
+	if (data && "latest_version" in data) {
 		return convertV2MessageToV1(data);
 	}
 	return data as Message;
@@ -70,7 +71,7 @@ function maybeConvertMessages(data: any[]): Message[] {
 
 function maybeConvertPagination(data: any): PaginationResponseMessage {
 	if (
-		Array.isArray(data.items) && data.items.length > 0 &&
+		data && Array.isArray(data.items) && data.items.length > 0 &&
 		"latest_version" in data.items[0]
 	) {
 		return {
@@ -311,8 +312,8 @@ export class Messages {
 								console.log("messages reuse range for context");
 							} else {
 								console.log("messages fetch more for context");
-								let dataBefore: Pagination<Message>;
-								let dataAfter: Pagination<Message>;
+								let dataBefore: Pagination<Message> | undefined;
+								let dataAfter: Pagination<Message> | undefined;
 
 								if (!hasEnoughBackwards) {
 									dataBefore = await this.fetchList(thread_id, {
@@ -451,26 +452,24 @@ export class Messages {
 			this._updateMutators(r, thread_id);
 		}
 
-		const { data, error } = await this.api.client.http.POST(
-			"/api/v1/channel/{channel_id}/message",
-			{
-				params: {
-					path: { channel_id: thread_id },
+		const data = await fetchWithRetry(() =>
+			this.api.client.http.POST(
+				"/api/v1/channel/{channel_id}/message",
+				{
+					params: {
+						path: { channel_id: thread_id },
+					},
+					body: {
+						...body,
+						attachments: body.attachments?.map((i) => ({ id: i.id })),
+						nonce: id,
+					},
+					headers: {
+						"Idempotency-Key": id,
+					},
 				},
-				body: {
-					...body,
-					attachments: body.attachments?.map((i) => ({ id: i.id })),
-					nonce: id,
-				},
-				headers: {
-					"Idempotency-Key": id,
-				},
-			},
+			)
 		);
-		if (error) {
-			console.error(error);
-			throw new Error(error);
-		}
 		return maybeConvertMessage(data);
 	}
 
@@ -484,18 +483,16 @@ export class Messages {
 			async ({ thread_id, message_id }) => {
 				const m = this.cache.get(message_id);
 				if (m) return m;
-				const { data, error } = await this.api.client.http.GET(
-					"/api/v1/channel/{channel_id}/message/{message_id}",
-					{
-						params: {
-							path: { channel_id: thread_id, message_id },
+				const data = await fetchWithRetry(() =>
+					this.api.client.http.GET(
+						"/api/v1/channel/{channel_id}/message/{message_id}",
+						{
+							params: {
+								path: { channel_id: thread_id, message_id },
+							},
 						},
-					},
+					)
 				);
-				if (error) {
-					console.error(error);
-					throw new Error(error);
-				}
 				return maybeConvertMessage(data);
 			},
 		);
@@ -519,19 +516,17 @@ export class Messages {
 	}
 
 	private async fetchList(thread_id: string, query: PaginationQuery) {
-		const { data, error } = await this.api.client.http.GET(
-			"/api/v1/channel/{channel_id}/message",
-			{
-				params: {
-					path: { channel_id: thread_id },
-					query,
+		const data = await fetchWithRetry(() =>
+			this.api.client.http.GET(
+				"/api/v1/channel/{channel_id}/message",
+				{
+					params: {
+						path: { channel_id: thread_id },
+						query,
+					},
 				},
-			},
+			)
 		);
-		if (error) {
-			console.error(error);
-			throw new Error(error);
-		}
 		return maybeConvertPagination(data);
 	}
 
@@ -540,19 +535,17 @@ export class Messages {
 		message_id: string,
 		limit: number,
 	) {
-		const { data, error } = await this.api.client.http.GET(
-			"/api/v1/channel/{channel_id}/context/{message_id}",
-			{
-				params: {
-					path: { channel_id: thread_id, message_id },
-					query: { limit },
+		const data = await fetchWithRetry(() =>
+			this.api.client.http.GET(
+				"/api/v1/channel/{channel_id}/context/{message_id}",
+				{
+					params: {
+						path: { channel_id: thread_id, message_id },
+						query: { limit },
+					},
 				},
-			},
+			)
 		);
-		if (error) {
-			console.error(error);
-			throw new Error(error);
-		}
 		return {
 			items: maybeConvertMessages(data.items),
 			has_more: data.has_more,
@@ -587,16 +580,15 @@ export class Messages {
 		}
 
 		try {
-			const { data, error } = await this.api.client.http.PATCH(
-				"/api/v1/channel/{channel_id}/message/{message_id}",
-				{
-					params: { path: { channel_id: thread_id, message_id } },
-					body: { content },
-				},
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.PATCH(
+					"/api/v1/channel/{channel_id}/message/{message_id}",
+					{
+						params: { path: { channel_id: thread_id, message_id } },
+						body: { content },
+					},
+				)
 			);
-			if (error) {
-				throw new Error(error);
-			}
 			return maybeConvertMessage(data);
 		} catch (e) {
 			if (originalMessage) {
@@ -611,20 +603,24 @@ export class Messages {
 	}
 
 	async pin(thread_id: string, message_id: string) {
-		await this.api.client.http.PUT(
-			"/api/v1/channel/{channel_id}/pin/{message_id}",
-			{
-				params: { path: { channel_id: thread_id, message_id } },
-			},
+		await fetchWithRetry(() =>
+			this.api.client.http.PUT(
+				"/api/v1/channel/{channel_id}/pin/{message_id}",
+				{
+					params: { path: { channel_id: thread_id, message_id } },
+				},
+			)
 		);
 	}
 
 	async unpin(thread_id: string, message_id: string) {
-		await this.api.client.http.DELETE(
-			"/api/v1/channel/{channel_id}/pin/{message_id}",
-			{
-				params: { path: { channel_id: thread_id, message_id } },
-			},
+		await fetchWithRetry(() =>
+			this.api.client.http.DELETE(
+				"/api/v1/channel/{channel_id}/pin/{message_id}",
+				{
+					params: { path: { channel_id: thread_id, message_id } },
+				},
+			)
 		);
 	}
 
@@ -640,21 +636,21 @@ export class Messages {
 				query: query?.(),
 			}),
 			async ({ channel_id, message_id, query }) => {
-				const { data, error } = await (message_id
-					? this.api.client.http.GET(
-						"/api/v1/channel/{channel_id}/reply/{message_id}",
-						{
-							params: { path: { channel_id, message_id }, query },
-						},
-					)
-					: this.api.client.http.GET(
-						"/api/v1/channel/{channel_id}/reply",
-						{
-							params: { path: { channel_id }, query },
-						},
-					));
-
-				if (error) throw error;
+				const data = await fetchWithRetry(() =>
+					message_id
+						? this.api.client.http.GET(
+							"/api/v1/channel/{channel_id}/reply/{message_id}",
+							{
+								params: { path: { channel_id, message_id }, query },
+							},
+						)
+						: this.api.client.http.GET(
+							"/api/v1/channel/{channel_id}/reply",
+							{
+								params: { path: { channel_id }, query },
+							},
+						)
+				);
 
 				const convertedData = {
 					...data,
@@ -677,35 +673,42 @@ export class Messages {
 		thread_id: string,
 		messages: { id: string; position: number }[],
 	) {
-		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/pin", {
-			params: { path: { channel_id: thread_id } },
-			body: { messages },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PATCH("/api/v1/channel/{channel_id}/pin", {
+				params: { path: { channel_id: thread_id } },
+				body: { messages },
+			})
+		);
 	}
 
 	async deleteBulk(thread_id: string, message_ids: string[]) {
-		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
-			params: { path: { channel_id: thread_id } },
-			body: { delete: message_ids },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+				params: { path: { channel_id: thread_id } },
+				body: { delete: message_ids },
+			})
+		);
 	}
 
 	async removeBulk(thread_id: string, message_ids: string[]) {
-		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
-			params: { path: { channel_id: thread_id } },
-			body: { remove: message_ids },
-		});
+		await fetchWithRetry(() =>
+			this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+				params: { path: { channel_id: thread_id } },
+				body: { remove: message_ids },
+			})
+		);
 	}
 
 	async search(body: any, params: any): Promise<Pagination<Message>> {
-		const { data, error } = await this.api.client.http.POST(
-			"/api/v1/search/message",
-			{
-				body,
-				params,
-			},
+		const data = await fetchWithRetry(() =>
+			this.api.client.http.POST(
+				"/api/v1/search/message",
+				{
+					body,
+					params,
+				},
+			)
 		);
-		if (error) throw error;
 		return {
 			...data,
 			items: data.items.map(maybeConvertMessage),
@@ -716,25 +719,21 @@ export class Messages {
 		const paginate = async (pagination?: Pagination<Message>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/channel/{channel_id}/pin",
-				{
-					params: {
-						path: { channel_id: thread_id_signal() },
-						query: {
-							dir: "f",
-							limit: 1024,
-							from: pagination?.items.at(-1)?.id,
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/channel/{channel_id}/pin",
+					{
+						params: {
+							path: { channel_id: thread_id_signal() },
+							query: {
+								dir: "f",
+								limit: 1024,
+								from: pagination?.items.at(-1)?.id,
+							},
 						},
 					},
-				},
+				)
 			);
-
-			if (error) {
-				// TODO: handle unauthenticated
-				console.error(error);
-				throw error;
-			}
 
 			const convertedItems = data.items.map(maybeConvertMessage);
 
