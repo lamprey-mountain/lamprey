@@ -5,7 +5,6 @@ import {
 	For,
 	from,
 	onCleanup,
-	onMount,
 	type ParentProps,
 	Show,
 } from "solid-js";
@@ -175,18 +174,6 @@ export const Root1: Component = (props: ParentProps) => {
 	const [config, setConfig] = createSignal(saved);
 	const [resolved, setResolved] = createSignal(false);
 	console.log("[config] temporarily reusing existing config", saved);
-
-	onMount(() => {
-		if ("serviceWorker" in navigator) {
-			navigator.serviceWorker.register("/sw.js", { type: "module" })
-				.then((registration) => {
-					console.log("[sw] registered", registration);
-				})
-				.catch((error) => {
-					console.error("[sw] registration failed", error);
-				});
-		}
-	});
 
 	(async () => {
 		if (localStorage.dontFetchConfig) return;

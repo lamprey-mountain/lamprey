@@ -55,6 +55,9 @@ import { Dms } from "./api/dms.ts";
 import { Auth } from "./api/auth.ts";
 import { Sessions } from "./api/sessions.ts";
 import { notificationPermission } from "./notification.ts";
+import {
+	stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal,
+} from "./notification-util.ts";
 import { deepEqual } from "./utils/deepEqual.ts";
 import { Inbox } from "./api/inbox.ts";
 import { Push } from "./api/push.ts";
@@ -94,6 +97,7 @@ function convertV2MessageToV1(message: MessageV2): Message {
 		nonce: message.nonce ?? null,
 		author_id: message.author_id,
 		pinned: message.pinned,
+		mentions: message.latest_version.mentions,
 		reactions: message.reactions,
 		created_at: message.created_at,
 		deleted_at: message.deleted_at,
@@ -178,7 +182,7 @@ export function createApi(
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
 
-	events.on("sync", ([msg, raw]) => {
+	events.on("sync", async ([msg, raw]) => {
 		if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
@@ -359,7 +363,6 @@ export function createApi(
 					}
 				}
 
-				// Check notification settings for mentions
 				if (is_mentioned && userConfig().notifs.mentions === "Notify") {
 					const author = users.cache.get(m.author_id);
 					const channel = channels.cache.get(m.channel_id);
@@ -367,9 +370,10 @@ export function createApi(
 						channel?.name ?? "channel"
 					}`;
 					const rawContent = m.content ?? "";
-					const processedContent = stripMarkdownAndResolveMentions(
+					const processedContent = await stripMarkdownAndResolveMentions(
 						rawContent,
 						m.channel_id,
+						m.mentions,
 					);
 					const body = processedContent.substring(0, 200);
 
@@ -1127,78 +1131,9 @@ export function createApi(
 	const stripMarkdownAndResolveMentions = (
 		content: string,
 		thread_id: string,
-	) => {
-		let processedContent = content;
-
-		// Replace user mentions <@user-id> with user names
-		const userMentionRegex =
-			/<@([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
-		processedContent = processedContent.replace(
-			userMentionRegex,
-			(match, userId) => {
-				const user = users.cache.get(userId);
-				return user ? `@${user.name}` : match; // Keep original if user not found
-			},
-		);
-
-		// Replace channel mentions <#channel-id> with channel names
-		const channelMentionRegex =
-			/<#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
-		processedContent = processedContent.replace(
-			channelMentionRegex,
-			(match, channelId) => {
-				const channel = channels.cache.get(channelId);
-				return channel ? `#${channel.name}` : match; // Keep original if channel not found
-			},
-		);
-
-		// Replace role mentions <@&role-id> with role names
-		const roleMentionRegex =
-			/<@&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
-		processedContent = processedContent.replace(
-			roleMentionRegex,
-			(match, roleId) => {
-				const thread = channels.cache.get(thread_id);
-				if (!thread?.room_id) return match; // Need room_id to get role
-				const role = roles.cache.get(roleId);
-				return role ? `@${role.name}` : match; // Keep original if role not found
-			},
-		);
-
-		// Replace emoji mentions <:name:id> with emoji name
-		const emojiMentionRegex =
-			/<:(\w+):[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}>/g;
-		processedContent = processedContent.replace(
-			emojiMentionRegex,
-			(match, emojiName) => {
-				return `:${emojiName}:`;
-			},
-		);
-
-		// Remove basic markdown formatting
-		// Bold: **text** -> text
-		processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, "$1");
-		// Italic: *text* or _text_ -> text
-		processedContent = processedContent.replace(/([*_])(.*?)\1/g, "$2");
-		// Strikethrough: ~~text~~ -> text
-		processedContent = processedContent.replace(/~~(.*?)~~/g, "$1");
-		// Code: `text` -> text
-		processedContent = processedContent.replace(/`(.*?)`/g, "$1");
-		// Code blocks: ```language\ntext\n``` -> text
-		processedContent = processedContent.replace(
-			/```(?:\w+\n)?\n?([\s\S]*?)\n?```/g,
-			"$1",
-		);
-		// Blockquotes: > text on new lines -> text
-		processedContent = processedContent.replace(/^ *>(.*)$/gm, "$1");
-		// Links: [text](url) -> text
-		processedContent = processedContent.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-
-		// Clean up extra whitespace
-		processedContent = processedContent.replace(/\s+/g, " ").trim();
-
-		return processedContent;
-	};
+		mentions?: Message["mentions"],
+	) =>
+		stripMarkdownAndResolveMentionsOriginal(content, thread_id, api, mentions);
 
 	const api: Api = {
 		rooms,
