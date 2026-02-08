@@ -54,8 +54,8 @@ impl DataWebhook for Postgres {
 
         sqlx::query!(
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, can_fork, system, registered_at)
-            VALUES ($1, $2, $3, $4, $5, $6, false, false, now())
+            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, can_fork, system, registered_at, totp_enabled)
+            VALUES ($1, $2, $3, $4, $5, $6, false, false, now(), false)
             "#,
             *webhook_id,
             version_id,
@@ -421,6 +421,7 @@ impl DataWebhook for Postgres {
         })
     }
 
+    // FIXME: soft delete
     async fn webhook_delete(&self, webhook_id: WebhookId) -> Result<()> {
         sqlx::query!("DELETE FROM usr WHERE id = $1", *webhook_id)
             .execute(&self.pool)
@@ -428,6 +429,7 @@ impl DataWebhook for Postgres {
         Ok(())
     }
 
+    // FIXME: soft delete
     async fn webhook_delete_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         let res = sqlx::query!(
