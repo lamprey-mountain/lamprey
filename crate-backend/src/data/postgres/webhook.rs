@@ -35,7 +35,7 @@ impl DataWebhook for Postgres {
         let mut tx = self.pool.begin().await?;
 
         let count: i64 = sqlx::query_scalar!(
-            "SELECT count(*) FROM webhook WHERE channel_id = $1",
+            "SELECT count(*) FROM webhook w JOIN usr u ON w.id = u.id WHERE w.channel_id = $1 AND u.deleted_at IS NULL",
             *channel_id
         )
         .fetch_one(&mut *tx)
@@ -165,7 +165,7 @@ impl DataWebhook for Postgres {
                 FROM webhook w
                 JOIN usr u ON w.id = u.id
                 JOIN channel c ON w.channel_id = c.id
-                WHERE w.channel_id = $1 AND w.id > $2 AND w.id < $3
+                WHERE w.channel_id = $1 AND w.id > $2 AND w.id < $3 AND u.deleted_at IS NULL
                 ORDER BY (CASE WHEN $4 = 'f' THEN w.id END), w.id DESC LIMIT $5
                 "#,
                 *channel_id,
@@ -175,7 +175,7 @@ impl DataWebhook for Postgres {
                 (p.limit + 1) as i32
             ),
             sqlx::query_scalar!(
-                "SELECT count(*) FROM webhook WHERE channel_id = $1",
+                "SELECT count(*) FROM webhook w JOIN usr u ON w.id = u.id WHERE w.channel_id = $1 AND u.deleted_at IS NULL",
                 *channel_id
             ),
             |row: DbWebhook| Webhook {
@@ -208,7 +208,7 @@ impl DataWebhook for Postgres {
                 FROM webhook w
                 JOIN usr u ON w.id = u.id
                 JOIN channel c ON w.channel_id = c.id
-                WHERE c.room_id = $1 AND w.id > $2 AND w.id < $3
+                WHERE c.room_id = $1 AND w.id > $2 AND w.id < $3 AND u.deleted_at IS NULL
                 ORDER BY (CASE WHEN $4 = 'f' THEN w.id END), w.id DESC LIMIT $5
                 "#,
                 *room_id,
@@ -218,7 +218,7 @@ impl DataWebhook for Postgres {
                 (p.limit + 1) as i32
             ),
             sqlx::query_scalar!(
-                "SELECT count(*) FROM webhook w JOIN channel c ON w.channel_id = c.id WHERE c.room_id = $1",
+                "SELECT count(*) FROM webhook w JOIN channel c ON w.channel_id = c.id JOIN usr u ON w.id = u.id WHERE c.room_id = $1 AND u.deleted_at IS NULL",
                 *room_id
             ),
             |row: DbWebhook| Webhook {
@@ -421,15 +421,19 @@ impl DataWebhook for Postgres {
         })
     }
 
-    // FIXME: soft delete
     async fn webhook_delete(&self, webhook_id: WebhookId) -> Result<()> {
-        sqlx::query!("DELETE FROM usr WHERE id = $1", *webhook_id)
-            .execute(&self.pool)
-            .await?;
+        let now = time::OffsetDateTime::now_utc();
+        let now = time::PrimitiveDateTime::new(now.date(), now.time());
+        sqlx::query!(
+            "UPDATE usr SET deleted_at = $2 WHERE id = $1",
+            *webhook_id,
+            now
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
-    // FIXME: soft delete
     async fn webhook_delete_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         let res = sqlx::query!(
@@ -442,9 +446,16 @@ impl DataWebhook for Postgres {
         if res.is_none() {
             return Err(Error::NotFound);
         }
-        sqlx::query!("DELETE FROM usr WHERE id = $1", *webhook_id)
-            .execute(&mut *tx)
-            .await?;
+
+        let now = time::OffsetDateTime::now_utc();
+        let now = time::PrimitiveDateTime::new(now.date(), now.time());
+        sqlx::query!(
+            "UPDATE usr SET deleted_at = $2 WHERE id = $1",
+            *webhook_id,
+            now
+        )
+        .execute(&mut *tx)
+        .await?;
         tx.commit().await?;
         Ok(())
     }
