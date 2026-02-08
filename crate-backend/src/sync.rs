@@ -858,24 +858,16 @@ impl Connection {
                     channel: Box::new(srv.channels.get(channel.id, session.user_id()).await?),
                 },
                 MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
-                    message: {
-                        let mut m = d
-                            .message_get(message.channel_id, message.id, session.user_id().unwrap())
-                            .await?;
-                        self.s.presign_message(&mut m).await?;
-                        // FIXME: include nonce
-                        m
-                    },
+                    message: srv
+                        .messages
+                        .get(message.channel_id, message.id, session.user_id().unwrap())
+                        .await?,
                 },
                 MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
-                    message: {
-                        let mut m = d
-                            .message_get(message.channel_id, message.id, session.user_id().unwrap())
-                            .await?;
-                        self.s.presign_message(&mut m).await?;
-                        // FIXME: include nonce
-                        m
-                    },
+                    message: srv
+                        .messages
+                        .get(message.channel_id, message.id, session.user_id().unwrap())
+                        .await?,
                 },
                 MessageSync::VoiceState {
                     user_id,

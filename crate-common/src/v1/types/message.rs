@@ -79,6 +79,7 @@ pub struct MessageVersion {
     pub author_id: Option<UserId>,
 
     /// the type and content of this message
+    // NOTE: message type generally shouldn't change, but i don't know how to "hoist" the type field to the top level Message struct?
     #[serde(flatten)]
     pub message_type: MessageType,
 
@@ -309,7 +310,7 @@ pub struct MessageCreate {
     pub mentions: ParseMentions,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessagePatch {
@@ -349,6 +350,8 @@ pub struct MessagePatch {
 
     // TODO: remove (use header instead)
     pub edited_at: Option<Time>,
+
+    pub mentions: Option<ParseMentions>,
 }
 
 // NOTE: utoipa doesnt seem to like #[deprecated] here

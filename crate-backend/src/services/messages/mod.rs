@@ -372,6 +372,7 @@ impl ServiceMessages {
                 .await?;
         }
         let mut message = self.get(thread_id, message_id, user_id).await?;
+        message.latest_version.mentions = dbg!(mentions.clone());
 
         if let Some(content) = &content {
             let mut should_embed = is_webhook;
@@ -765,6 +766,7 @@ impl ServiceMessages {
             }
             _ => return Err(Error::Unimplemented),
         }?;
+
         let version_id = data
             .message_update(
                 thread_id,
@@ -808,6 +810,9 @@ impl ServiceMessages {
                 tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
             }
         }
+
+        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
+            .await?;
 
         s.presign_message(&mut message).await?;
         s.broadcast_channel(
@@ -1193,8 +1198,7 @@ impl ServiceMessages {
             .chain(after.items)
             .collect();
 
-        self.populate_all(channel_id, user_id, &mut items)
-            .await?;
+        self.populate_all(channel_id, user_id, &mut items).await?;
 
         for item in &mut items {
             s.presign_message(item).await?;

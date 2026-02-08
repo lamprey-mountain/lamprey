@@ -652,17 +652,12 @@ impl Portal {
         let user_id = message.author_id;
 
         let mut req = types::MessagePatch {
-            content: None,
-            attachments: None,
-            metadata: None,
-            reply_id: None,
-            override_name: None,
-            embeds: None,
             edited_at: update.edited_timestamp.map(|t| {
                 OffsetDateTime::from_unix_timestamp(t.unix_timestamp())
                     .unwrap()
                     .into()
             }),
+            ..Default::default()
         };
         req.attachments = if let Some(atts) = &update.attachments {
             let mut v = vec![];
