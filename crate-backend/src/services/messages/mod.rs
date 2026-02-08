@@ -49,17 +49,8 @@ impl ServiceMessages {
             .await?;
         self.state.presign_message(&mut message).await?;
 
-        // Check if a thread was created from this message
-        let thread_channel_id: ChannelId = (*message.id).into();
-        if let Ok(thread) = self
-            .state
-            .services()
-            .channels
-            .get(thread_channel_id, Some(user_id))
-            .await
-        {
-            message.thread = Some(Box::new(thread));
-        }
+        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
+            .await?;
 
         Ok(message)
     }
@@ -1086,9 +1077,8 @@ impl ServiceMessages {
             self.state.presign_message(message).await?;
         }
 
-        self.populate_reactions(channel_id, user_id, &mut ancestors)
+        self.populate_all(channel_id, user_id, &mut ancestors)
             .await?;
-        self.populate_threads(user_id, &mut ancestors).await?;
 
         Ok(ancestors)
     }
@@ -1103,10 +1093,8 @@ impl ServiceMessages {
         let data = s.data();
         let mut res = data.message_list(channel_id, user_id, pagination).await?;
 
-        self.populate_reactions(channel_id, user_id, &mut res.items)
+        self.populate_all(channel_id, user_id, &mut res.items)
             .await?;
-
-        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
@@ -1127,10 +1115,8 @@ impl ServiceMessages {
             .message_list_deleted(channel_id, user_id, pagination)
             .await?;
 
-        self.populate_reactions(channel_id, user_id, &mut res.items)
+        self.populate_all(channel_id, user_id, &mut res.items)
             .await?;
-
-        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
@@ -1151,10 +1137,8 @@ impl ServiceMessages {
             .message_list_removed(channel_id, user_id, pagination)
             .await?;
 
-        self.populate_reactions(channel_id, user_id, &mut res.items)
+        self.populate_all(channel_id, user_id, &mut res.items)
             .await?;
-
-        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
@@ -1209,10 +1193,8 @@ impl ServiceMessages {
             .chain(after.items)
             .collect();
 
-        self.populate_reactions(channel_id, user_id, &mut items)
+        self.populate_all(channel_id, user_id, &mut items)
             .await?;
-
-        self.populate_threads(user_id, &mut items).await?;
 
         for item in &mut items {
             s.presign_message(item).await?;
@@ -1290,10 +1272,8 @@ impl ServiceMessages {
             )
             .await?;
 
-        self.populate_reactions(channel_id, user_id, &mut res.items)
+        self.populate_all(channel_id, user_id, &mut res.items)
             .await?;
-
-        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
@@ -1323,10 +1303,8 @@ impl ServiceMessages {
             .message_pin_list(channel_id, user_id, pagination)
             .await?;
 
-        self.populate_reactions(channel_id, user_id, &mut res.items)
+        self.populate_all(channel_id, user_id, &mut res.items)
             .await?;
-
-        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
@@ -1346,10 +1324,8 @@ impl ServiceMessages {
             .message_list_activity(channel_id, user_id, pagination)
             .await?;
 
-        self.populate_reactions(channel_id, user_id, &mut res.items)
+        self.populate_all(channel_id, user_id, &mut res.items)
             .await?;
-
-        self.populate_threads(user_id, &mut res.items).await?;
 
         for message in &mut res.items {
             s.presign_message(message).await?;
