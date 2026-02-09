@@ -165,6 +165,14 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		const toChannel = api.channels.cache.get(toId);
 		if (!fromChannel || !toChannel) return cats;
 
+		// Don't preview reorder if dragging a thread
+		if (
+			fromChannel.type === "ThreadPublic" ||
+			fromChannel.type === "ThreadPrivate"
+		) {
+			return cats;
+		}
+
 		const newCategories = cats.map((c) => ({
 			category: c.category,
 			channels: [...c.channels],
@@ -203,16 +211,45 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		(e.currentTarget as HTMLElement).dataset.channelId;
 
 	const handleDragStart = (e: DragEvent) => {
+		e.stopPropagation();
 		const id = getChannelId(e);
 		if (id) setDragging(id);
 	};
 
 	const handleDragOver = (e: DragEvent) => {
 		e.preventDefault();
+		e.stopPropagation();
 		const id = getChannelId(e);
 		if (!id || id === dragging()) {
 			return;
 		}
+
+		const draggingId = dragging();
+		if (draggingId) {
+			const draggingChannel = api.channels.cache.get(draggingId);
+			// if dragging a thread
+			if (
+				draggingChannel &&
+				(draggingChannel.type === "ThreadPublic" ||
+					draggingChannel.type === "ThreadPrivate")
+			) {
+				const targetChannel = api.channels.cache.get(id);
+				// only allow dropping on text/announcement/forum channels
+				if (
+					targetChannel &&
+					(targetChannel.type === "Text" ||
+						targetChannel.type === "Announcement" ||
+						targetChannel.type === "Forum")
+				) {
+					if (target()?.id !== id) {
+						setTarget({ id, after: false });
+					}
+					return;
+				}
+				return;
+			}
+		}
+
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		const after = e.clientY > rect.top + rect.height / 2;
 		if (target()?.id !== id || target()?.after !== after) {
@@ -222,6 +259,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 	const handleDrop = (e: DragEvent) => {
 		e.preventDefault();
+		e.stopPropagation();
 		const fromId = dragging();
 		const toId = target()?.id;
 		const after = target()?.after;
@@ -234,6 +272,23 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		const fromChannel = api.channels.cache.get(fromId);
 		const toChannel = api.channels.cache.get(toId);
 		if (!fromChannel || !toChannel) return;
+
+		// Handle thread move
+		if (
+			fromChannel.type === "ThreadPublic" ||
+			fromChannel.type === "ThreadPrivate"
+		) {
+			if (
+				toChannel.type === "Text" ||
+				toChannel.type === "Announcement" ||
+				toChannel.type === "Forum"
+			) {
+				if (fromChannel.parent_id !== toChannel.id) {
+					api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+				}
+			}
+			return;
+		}
 
 		const fromCategory = categories().find(
 			(c) => (c.category?.id ?? null) === fromChannel.parent_id,
@@ -429,9 +484,23 @@ export const ChannelNav = (props: { room_id?: string }) => {
 												setDragging(null);
 												setTarget(null);
 											}}
+											class="toplevel"
 											classList={{
 												dragging: dragging() === channel.id,
 												unread: channel.type !== "Voice" && !!channel.is_unread,
+												"channel-reorder-target": (() => {
+													const dragId = dragging();
+													if (!dragId) return false;
+													const dragChannel = api.channels.cache.get(dragId);
+													if (
+														!dragChannel ||
+														(dragChannel.type !== "ThreadPublic" &&
+															dragChannel.type !== "ThreadPrivate")
+													) {
+														return false;
+													}
+													return target()?.id === channel.id;
+												})(),
 											}}
 										>
 											<ItemChannel channel={channel} />
@@ -441,7 +510,14 @@ export const ChannelNav = (props: { room_id?: string }) => {
 														{(thread: Channel) => (
 															<li
 																data-channel-id={thread.id}
-																draggable={false}
+																draggable={true}
+																onDragStart={handleDragStart}
+																onDragOver={handleDragOver}
+																onDrop={handleDrop}
+																onDragEnd={() => {
+																	setDragging(null);
+																	setTarget(null);
+																}}
 																classList={{
 																	unread: thread.type !== "Voice" &&
 																		!!thread.is_unread,

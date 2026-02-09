@@ -23,8 +23,15 @@
 		flex-direction: column;
 	}
 
-	& li {
-		margin-top: 0.025rem;
+	& li.toplevel {
+		border: solid transparent 1px;
+		margin-top: -1px;
+		margin-bottom: -1px;
+
+		&.channel-reorder-target {
+			background: oklch(var(--color-link-500) / 0.2);
+			border: solid $link-500 1px;
+		}
 	}
 
 	& a {

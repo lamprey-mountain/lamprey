@@ -1,4 +1,4 @@
-import type { Channel, Pagination, Tag, TagCreate } from "sdk";
+import type { Channel, ChannelPatch, Pagination, Tag, TagCreate } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
@@ -168,6 +168,21 @@ export class Channels {
 				"/api/v1/room/{room_id}/channel",
 				{
 					params: { path: { room_id } },
+					body: body,
+				},
+			)
+		);
+	}
+
+	async update(
+		channel_id: string,
+		body: ChannelPatch,
+	): Promise<Channel> {
+		return await fetchWithRetry(() =>
+			this.api.client.http.PATCH(
+				"/api/v1/channel/{channel_id}",
+				{
+					params: { path: { channel_id } },
 					body: body,
 				},
 			)
@@ -398,6 +413,21 @@ export class Channels {
 				params: { path: { channel_id: channel_id } },
 				body: { archived: false },
 			})
+		);
+	}
+
+	async update(
+		channel_id: string,
+		body: import("sdk").ChannelPatch,
+	): Promise<Channel> {
+		return await fetchWithRetry(() =>
+			this.api.client.http.PATCH(
+				"/api/v1/channel/{channel_id}",
+				{
+					params: { path: { channel_id } },
+					body: body,
+				},
+			)
 		);
 	}
 
