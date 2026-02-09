@@ -293,6 +293,15 @@ impl ServiceThreads {
         perms.ensure(Permission::ViewChannel)?;
 
         let parent_id_opt = json.parent_id;
+        let parent = if let Some(parent_id) = parent_id_opt {
+            Some(srv.channels.get(parent_id, Some(auth.user.id)).await?)
+        } else {
+            None
+        };
+
+        if !json.ty.can_be_in(parent.as_ref().map(|c| c.ty)) {
+            return Err(Error::BadStatic("invalid parent channel type"));
+        }
 
         match json.ty {
             ChannelType::Text
@@ -309,15 +318,6 @@ impl ServiceThreads {
                 perms.ensure(Permission::ChannelManage)?;
             }
             ChannelType::ThreadPublic => {
-                let parent_id = json
-                    .parent_id
-                    .ok_or(Error::BadStatic("threads must have a parent channel"))?;
-                let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
-                if !parent.ty.has_public_threads() {
-                    return Err(Error::BadStatic(
-                        "public threads can only be created in specific channel types",
-                    ));
-                }
                 perms.ensure(Permission::ThreadCreatePublic)?;
 
                 if !perms.can_bypass_slowmode() {
@@ -331,7 +331,8 @@ impl ServiceThreads {
                             }
                         }
 
-                        if let Some(slowmode_delay) = parent.slowmode_thread {
+                        // parent is checked to be Some above
+                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
                             let next_thread_time =
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
@@ -345,15 +346,6 @@ impl ServiceThreads {
                 }
             }
             ChannelType::ThreadForum2 => {
-                let parent_id = json
-                    .parent_id
-                    .ok_or(Error::BadStatic("threads must have a parent channel"))?;
-                let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
-                if !parent.ty.has_forum2_threads() {
-                    return Err(Error::BadStatic(
-                        "forum2 threads can only be created in forum2 channels",
-                    ));
-                }
                 perms.ensure(Permission::ThreadCreatePublic)?;
 
                 if !perms.can_bypass_slowmode() {
@@ -367,7 +359,7 @@ impl ServiceThreads {
                             }
                         }
 
-                        if let Some(slowmode_delay) = parent.slowmode_thread {
+                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
                             let next_thread_time =
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
@@ -381,15 +373,6 @@ impl ServiceThreads {
                 }
             }
             ChannelType::ThreadPrivate => {
-                let parent_id = json
-                    .parent_id
-                    .ok_or(Error::BadStatic("threads must have a parent channel"))?;
-                let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
-                if !parent.ty.has_private_threads() {
-                    return Err(Error::BadStatic(
-                        "threads can only be created in specific channel types",
-                    ));
-                }
                 perms.ensure(Permission::ThreadCreatePrivate)?;
 
                 if !perms.can_bypass_slowmode() {
@@ -403,7 +386,7 @@ impl ServiceThreads {
                             }
                         }
 
-                        if let Some(slowmode_delay) = parent.slowmode_thread {
+                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
                             let next_thread_time =
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
@@ -422,8 +405,7 @@ impl ServiceThreads {
                 ))
             }
             ChannelType::Document => {
-                if let Some(parent_id) = json.parent_id {
-                    let parent = srv.channels.get(parent_id, Some(auth.user.id)).await?;
+                if let Some(parent) = parent.as_ref() {
                     if parent.ty == ChannelType::Wiki {
                         perms.ensure(Permission::DocumentCreate)?;
                     } else {
@@ -696,6 +678,25 @@ impl ServiceThreads {
 
             if chan_old.ty.is_thread() && new_ty.is_thread() && chan_old.ty != new_ty {
                 perms.ensure(Permission::ThreadManage)?;
+            }
+        }
+
+        if patch.parent_id.is_some() || patch.ty.is_some() {
+            let target_ty = patch.ty.unwrap_or(chan_old.ty);
+            let target_parent_id = match patch.parent_id {
+                Some(Some(id)) => Some(id),
+                Some(None) => None,
+                None => chan_old.parent_id,
+            };
+
+            let target_parent = if let Some(parent_id) = target_parent_id {
+                Some(self.get(parent_id, None).await?)
+            } else {
+                None
+            };
+
+            if !target_ty.can_be_in(target_parent.map(|c| c.ty)) {
+                return Err(Error::BadStatic("invalid parent channel type"));
             }
         }
 

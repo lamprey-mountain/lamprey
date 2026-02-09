@@ -388,7 +388,7 @@ async fn channel_reorder(
 
     for channel in &json.channels {
         let channel_data = srv.channels.get(channel.id, None).await?;
-        channels_old.insert(channel_data.id, channel_data);
+        channels_old.insert(channel_data.id, channel_data.clone());
 
         let perms_chan = srv.perms.for_channel(auth.user.id, channel.id).await?;
         perms_chan.ensure(Permission::ViewChannel)?;
@@ -400,9 +400,9 @@ async fn channel_reorder(
             perms_parent.ensure(Permission::ChannelManage)?;
 
             let parent_data = srv.channels.get(parent_id, None).await?;
-            if parent_data.ty != ChannelType::Category {
+            if !channel_data.ty.can_be_in(Some(parent_data.ty)) {
                 return Err(Error::BadStatic(
-                    "channels can only be children of category channels",
+                    "invalid parent channel type",
                 ));
             }
         }

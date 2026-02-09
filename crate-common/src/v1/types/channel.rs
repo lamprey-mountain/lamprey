@@ -724,4 +724,52 @@ impl ChannelType {
     pub fn member_list_uses_thread_members(&self) -> bool {
         matches!(self, ChannelType::Dm | ChannelType::Gdm) || self.is_thread()
     }
+
+    /// whether a channel of this type can be inside a channel of this other type. use None for top level rooms.
+    pub fn can_be_in(&self, other: Option<ChannelType>) -> bool {
+        match (self, other) {
+            // text channels can have public or priate threads
+            (ChannelType::ThreadPublic, Some(ChannelType::Text)) => true,
+            (ChannelType::ThreadPrivate, Some(ChannelType::Text)) => true,
+
+            // text channels can have public or priate threads
+            (ChannelType::ThreadPublic, Some(ChannelType::Announcement)) => true,
+            (ChannelType::ThreadPublic, Some(ChannelType::Dm)) => true,
+            (ChannelType::ThreadPublic, Some(ChannelType::Gdm)) => true,
+
+            // forum channels only have public threads
+            (ChannelType::ThreadPublic, Some(ChannelType::Forum)) => true,
+
+            // forum2 channels only have a special public threads
+            (ChannelType::ThreadForum2, Some(ChannelType::Forum2)) => true,
+
+            // ticket channels only have private threads
+            (ChannelType::ThreadPrivate, Some(ChannelType::Ticket)) => true,
+            (ChannelType::ThreadPrivate, Some(ChannelType::Dm)) => true,
+            (ChannelType::ThreadPrivate, Some(ChannelType::Gdm)) => true,
+
+            // rooms and categories can hold non-thread, non-dm channels
+            (ChannelType::Text, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Announcement, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Forum, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Voice, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Broadcast, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Calendar, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Forum2, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Info, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Ticket, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Wiki, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Document, Some(ChannelType::Category) | None) => true,
+
+            // categories can be in room top level
+            (ChannelType::Category, None) => true,
+
+            // documents can be in wikis, document comments can be in documents
+            (ChannelType::Document, Some(ChannelType::Wiki)) => true,
+            (ChannelType::DocumentComment, Some(ChannelType::Document)) => true,
+
+            // everything else is invalid
+            (_, _) => false,
+        }
+    }
 }
