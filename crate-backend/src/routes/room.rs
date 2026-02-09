@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     application::Integration, util::Changes, ApplicationId, AuditLogEntry, AuditLogEntryId,
-    AuditLogEntryType, AuditLogFilter, RoomAdminSearch, RoomSecurityUpdate, RoomType,
+    AuditLogEntryType, AuditLogFilter, RoomSearch, RoomSecurityUpdate, RoomType,
     TransferOwnership, SERVER_ROOM_ID,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -148,7 +148,7 @@ async fn room_list(
 async fn room_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<RoomAdminSearch>,
+    Json(_json): Json<RoomSearch>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;

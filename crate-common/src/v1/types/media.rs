@@ -9,8 +9,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    util::{Diff, Time},
-    MediaId, UserId,
+    search::{FilterRange, Order}, util::{Diff, Time}, MediaId, RoomId, UserId
 };
 
 mod mime;
@@ -227,24 +226,44 @@ pub struct MediaDerived {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MediaAdminSearch {
-    /// what order to return results in
-    pub order: MediaAdminSearchOrder,
-
+pub struct MediaSearch {
     /// include media uploaded by these users
     pub user_id: Vec<UserId>,
-    // TODO: filter by content type
-    // TODO: filter by room id
+
+    /// include media linked in these rooms
+    pub room_id: Vec<RoomId>,
+
+    /// include media with these content types
+    ///
+    /// this field can be
+    /// - just the main type like `image` or `video`
+    /// - the full type like `image/png` or `video/mp4`
+    pub content_type: Vec<String>,
+
+    /// include media created in this time range
+    pub created_at: FilterRange<Time>,
+
+    /// include media in this size range
+    pub size: FilterRange<u64>,
+
+    /// what order to return results in
+    pub sort_order: Order,
+
+    /// field to sort by
+    pub sort_field: MediaSearchOrderField,
+    // TODO: media v2: is quarantined, is deleted, scans, hash
 }
 
+/// which field to order media search results by
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum MediaAdminSearchOrder {
-    Newest,
-    Oldest,
-    Biggest,
-    Smallest,
+pub enum MediaSearchOrderField {
+    /// sort by creation time
+    Created,
+
+    /// sort by file size
+    Size,
 }
 
 impl Diff<Media> for MediaPatch {

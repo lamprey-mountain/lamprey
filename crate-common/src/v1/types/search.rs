@@ -216,3 +216,32 @@ pub struct SearchMessageResponse {
     pub thread_members: Vec<ThreadMember>,
     pub total: u64,
 }
+
+/// filter results to only this range
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum FilterRange<T> {
+    /// only return values in this range
+    Range { min: Option<T>, max: Option<T> },
+
+    /// any non-null value
+    #[cfg_attr(feature = "serde", serde(rename = "any"))]
+    #[default]
+    Any,
+}
+
+/// what order to return items in
+// TODO: use this in more places
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(untagged)]
+pub enum Order {
+    #[default]
+    #[cfg_attr(feature = "serde", serde(rename = "asc"))]
+    Ascending,
+
+    #[cfg_attr(feature = "serde", serde(rename = "desc"))]
+    Descending,
+}

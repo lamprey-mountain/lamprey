@@ -10,9 +10,10 @@ use validator::Validate;
 
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::presence::Presence;
+use crate::v1::types::search::Order;
 use crate::v1::types::user_config::UserConfigUser;
 use crate::v1::types::util::{some_option, Diff, Time};
-use crate::v1::types::MediaId;
+use crate::v1::types::{MediaId, RoleId};
 
 use super::email::EmailInfo;
 use super::user_config::UserConfigGlobal;
@@ -308,16 +309,67 @@ pub enum UserListFilter {
     Puppet,
 }
 
-// TODO: replace with UserSearch
-// bot: option bool, without/with/only bots
-// puppet: option bool, without/with/only puppets
-// guest: option bool, without/with/only guests
-// filter by name, registered at
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[serde(rename_all = "snake_case")]
 pub struct UserListParams {
     pub filter: Option<UserListFilter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct UserSearch {
+    /// whether to only return bots or only return non-bots.
+    ///
+    /// defaults to allowing both.
+    pub bot: Option<bool>,
+
+    /// whether to only return puppets or only return non-puppets.
+    ///
+    /// defaults to allowing both.
+    pub puppet: Option<bool>,
+
+    /// whether to only return guests (non registered users) or only return non-guests.
+    ///
+    /// defaults to allowing both.
+    pub guests: Option<bool>,
+
+    /// whether to only return suspended users or only return non-suspended users.
+    ///
+    /// defaults to allowing both.
+    pub suspended: Option<bool>,
+
+    /// whether to only return deleted users or only return non-deleted users.
+    ///
+    /// defaults to only non deleted users.
+    // FIXME: defaul to Some(false)
+    pub deleted: Option<bool>,
+
+    /// filter by user name, description, and id
+    // NOTE: impl this with ILIKE, similarly to room member filtering
+    pub query: Option<String>,
+
+    /// include users who have these roles in the server room
+    pub server_role_id: Vec<RoleId>,
+
+    /// include users who are members of these rooms
+    pub member_of_room_id: Vec<RoomId>,
+
+    pub sort_order: Order,
+    pub sort_field: UserSearchSortField,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum UserSearchSortField {
+    /// the user name
+    Name,
+
+    /// the user's created_at (aka id)
+    Created,
+
+    /// when the user was registered
+    Registered,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

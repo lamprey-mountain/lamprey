@@ -9,7 +9,7 @@ use axum::{
 };
 use common::{
     v1::types::{
-        media::{MediaAdminSearch, MediaClone},
+        media::{MediaSearch, MediaClone},
         MediaCreateSource, MediaPatch, Permission,
     },
     v2::types::media::MediaDoneParams,
@@ -461,7 +461,7 @@ async fn media_clone(
 async fn media_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<MediaAdminSearch>,
+    Json(_json): Json<MediaSearch>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
