@@ -363,11 +363,6 @@ pub enum MessageType {
     // NOTE(v2): rename to Default
     DefaultMarkdown(MessageDefaultMarkdown),
 
-    #[cfg(feature = "feat_message_forwarding")]
-    /// (TODO) a message copied from somewhere else
-    // NOTE(v2): remove
-    Forward(MessageDefaultTagged),
-
     /// a message was pinned
     MessagePinned(MessagePin),
 
@@ -388,22 +383,25 @@ pub enum MessageType {
     Call(MessageCall),
 
     /// this thread was renamed
-    // TODO: rename to ChannelRename
-    ThreadRename(MessageThreadRename),
-
-    /// A thread was created from a message
-    ThreadCreated(MessageThreadCreated),
+    ChannelRename(MessageChannelRename),
 
     /// (TODO) someone mentioned this thread
+    // TODO: rename to ChannelPingback
     // needs some sort of antispam system. again, see github.
     // doesnt necessarily reference a thread in the same room, but usually should
-    ThreadPingback(MessageThreadPingback),
+    // maybe don't include in log?
+    ChannelPingback(MessageChannelPingback),
+
+    /// this thread was moved
+    ChannelMoved(MessageChannelMove),
 
     /// The channel's icon was changed
     ChannelIcon(MessageChannelIcon),
     // /// (TODO) receive announcement threads from this room
     // // but where does this get sent to???
     // RoomFollowed(MessageRoomFollowed),
+    /// A thread was created from a message
+    ThreadCreated(MessageThreadCreated),
 
     // /// (TODO) interact with a bot, uncertain if i'll go this route
     // BotCommand(MessageBotCommand),
@@ -461,12 +459,20 @@ pub struct MessageAutomodExecution {
 /// Information about a thread being renamed
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageThreadRename {
+pub struct MessageChannelRename {
     #[serde(alias = "new")]
     pub name_new: String,
 
     #[serde(alias = "old")]
     pub name_old: String,
+}
+
+/// Information about a thread being moved
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageChannelMove {
+    pub parent_id_old: Option<ChannelId>,
+    pub parent_id_new: Option<ChannelId>,
 }
 
 /// Information about a thread being created
@@ -480,7 +486,7 @@ pub struct MessageThreadCreated {
 /// Information about the pingback
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageThreadPingback {
+pub struct MessageChannelPingback {
     pub source_room_id: RoomId,
     pub source_channel_id: ChannelId,
     pub source_user_id: UserId,
@@ -761,13 +767,15 @@ impl MessageType {
             MessageType::MemberAdd(_) => false,
             MessageType::MemberRemove(_) => false,
             MessageType::MemberJoin => true,
-            MessageType::ThreadRename(_) => false,
-            MessageType::ThreadPingback(_) => true,
+            MessageType::ChannelRename(_) => false,
+            MessageType::ChannelPingback(_) => true,
             MessageType::ChannelIcon(_) => false,
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
             MessageType::ThreadCreated(_) => false,
+            MessageType::ChannelPingback(_) => true,
+            MessageType::ChannelMoved(_) => false,
 
             // NOTE: this should require the MessageDelete permission
             MessageType::AutomodExecution(_) => true,
@@ -797,9 +805,10 @@ impl MessageType {
             MessageType::MemberAdd(_) => true,
             MessageType::MemberRemove(_) => true,
             MessageType::MemberJoin => false,
-            MessageType::ThreadRename(_) => true,
-            MessageType::ThreadPingback(_) => true,
+            MessageType::ChannelRename(_) => true,
+            MessageType::ChannelPingback(_) => true,
             MessageType::ChannelIcon(_) => true,
+            MessageType::ChannelMoved(_) => true,
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,

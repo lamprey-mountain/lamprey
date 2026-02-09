@@ -65,29 +65,34 @@ pub enum DbMessageType {
     DefaultMarkdown,
     DefaultTagged, // removed
     ThreadUpdate,  // removed
-    ThreadRename,
     MemberAdd,
     MemberRemove,
     MemberJoin,
     MessagePinned,
     ThreadCreated,
+    ChannelRename,
     ChannelIcon,
+    ChannelPingback,
+    ChannelMoved,
     AutomodExecution,
+    Call,
 }
 
 impl From<MessageType> for DbMessageType {
     fn from(value: MessageType) -> Self {
         match value {
             MessageType::DefaultMarkdown(_) => DbMessageType::DefaultMarkdown,
-            MessageType::ThreadRename(_) => DbMessageType::ThreadRename,
+            MessageType::ChannelRename(_) => DbMessageType::ChannelRename,
             MessageType::MemberAdd(_) => DbMessageType::MemberAdd,
             MessageType::MemberRemove(_) => DbMessageType::MemberRemove,
             MessageType::MemberJoin => DbMessageType::MemberJoin,
+            MessageType::Call(_) => DbMessageType::Call,
             MessageType::MessagePinned(_) => DbMessageType::MessagePinned,
             MessageType::ThreadCreated(_) => DbMessageType::ThreadCreated,
             MessageType::ChannelIcon(_) => DbMessageType::ChannelIcon,
+            MessageType::ChannelPingback(_) => DbMessageType::ChannelPingback,
+            MessageType::ChannelMoved(_) => DbMessageType::ChannelMoved,
             MessageType::AutomodExecution(_) => DbMessageType::AutomodExecution,
-            _ => todo!(),
         }
     }
 }
@@ -144,7 +149,7 @@ impl From<DbMessageVersion> for MessageVersionV2 {
                         embeds,
                     })
                 }
-                DbMessageType::ThreadRename => MessageType::ThreadRename(
+                DbMessageType::ChannelRename => MessageType::ChannelRename(
                     row.metadata
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),
@@ -180,7 +185,22 @@ impl From<DbMessageVersion> for MessageVersionV2 {
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),
                 ),
-                ty => {
+                DbMessageType::ChannelPingback => MessageType::ChannelPingback(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::ChannelMoved => MessageType::ChannelMoved(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::Call => MessageType::Call(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                ty @ DbMessageType::ThreadUpdate | ty @ DbMessageType::DefaultTagged => {
                     panic!("{ty:?} messages are deprecated and shouldn't exist in the database anymore")
                 }
             },

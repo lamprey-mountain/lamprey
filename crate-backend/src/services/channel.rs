@@ -6,7 +6,7 @@ use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
-    MessageChannelIcon, MessageSync, MessageThreadRename, MessageType, PaginationQuery, Permission,
+    MessageChannelIcon, MessageSync, MessageChannelRename, MessageType, PaginationQuery, Permission,
     PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
@@ -1016,7 +1016,7 @@ impl ServiceThreads {
                     attachment_ids: vec![],
                     author_id: auth.user.id,
                     embeds: vec![],
-                    message_type: MessageType::ThreadRename(MessageThreadRename {
+                    message_type: MessageType::ChannelRename(MessageChannelRename {
                         name_new: chan_new.name.clone(),
                         name_old: chan_old.name,
                     }),

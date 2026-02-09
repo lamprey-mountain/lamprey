@@ -444,13 +444,15 @@ impl DbMessageCreate {
     pub fn metadata(&self) -> Option<serde_json::Value> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.metadata.clone(),
-            MessageType::ThreadRename(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberAdd(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberRemove(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberJoin => None,
             MessageType::MessagePinned(pinned) => Some(serde_json::to_value(pinned).ok()?),
-            MessageType::ThreadCreated(created) => Some(serde_json::to_value(created).ok()?),
+            MessageType::ChannelMoved(patch) => Some(serde_json::to_value(patch).ok()?),
+            MessageType::ChannelPingback(patch) => Some(serde_json::to_value(patch).ok()?),
+            MessageType::ChannelRename(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::ChannelIcon(icon) => Some(serde_json::to_value(icon).ok()?),
+            MessageType::ThreadCreated(created) => Some(serde_json::to_value(created).ok()?),
             MessageType::AutomodExecution(exec) => Some(serde_json::to_value(exec).ok()?),
             _ => None,
         }
