@@ -168,7 +168,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		// Don't preview reorder if dragging a thread
 		if (
 			fromChannel.type === "ThreadPublic" ||
-			fromChannel.type === "ThreadPrivate"
+			fromChannel.type === "ThreadPrivate" ||
+			fromChannel.type === "ThreadForum2"
 		) {
 			return cats;
 		}
@@ -231,22 +232,49 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			if (
 				draggingChannel &&
 				(draggingChannel.type === "ThreadPublic" ||
-					draggingChannel.type === "ThreadPrivate")
+					draggingChannel.type === "ThreadPrivate" ||
+					draggingChannel.type === "ThreadForum2")
 			) {
-				const targetChannel = api.channels.cache.get(id);
-				// only allow dropping on text/announcement/forum channels
+				let validParents: string[] = [];
 				if (
-					targetChannel &&
-					(targetChannel.type === "Text" ||
-						targetChannel.type === "Announcement" ||
-						targetChannel.type === "Forum")
+					draggingChannel.type === "ThreadPublic" ||
+					draggingChannel.type === "ThreadPrivate"
 				) {
-					if (target()?.id !== id) {
-						setTarget({ id, after: false });
+					validParents = ["Text", "Announcement", "Forum"];
+				} else if (draggingChannel.type === "ThreadForum2") {
+					validParents = ["Forum2"];
+				}
+
+				if (validParents.length > 0) {
+					const targetChannel = api.channels.cache.get(id);
+
+					// if hovering over another thread, check if its parent is a valid target
+					if (
+						targetChannel &&
+						(targetChannel.type === "ThreadPublic" ||
+							targetChannel.type === "ThreadPrivate" ||
+							targetChannel.type === "ThreadForum2") &&
+						targetChannel.parent_id
+					) {
+						// find parent
+						const parent = api.channels.cache.get(targetChannel.parent_id);
+						if (parent && validParents.includes(parent.type)) {
+							if (target()?.id !== parent.id) {
+								setTarget({ id: parent.id, after: false });
+							}
+							return;
+						}
+					}
+
+					// check if target itself is a valid parent
+					if (targetChannel && validParents.includes(targetChannel.type)) {
+						if (target()?.id !== id) {
+							setTarget({ id, after: false });
+						}
+						return;
 					}
 					return;
 				}
-				return;
 			}
 		}
 
@@ -283,6 +311,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				toChannel.type === "Announcement" ||
 				toChannel.type === "Forum"
 			) {
+				if (fromChannel.parent_id !== toChannel.id) {
+					api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+				}
+			}
+			return;
+		}
+
+		if (fromChannel.type === "ThreadForum2") {
+			if (toChannel.type === "Forum2") {
 				if (fromChannel.parent_id !== toChannel.id) {
 					api.channels.update(fromChannel.id, { parent_id: toChannel.id });
 				}
@@ -492,14 +529,25 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													const dragId = dragging();
 													if (!dragId) return false;
 													const dragChannel = api.channels.cache.get(dragId);
+													if (!dragChannel) return false;
+
+													if (target()?.id !== channel.id) return false;
+
 													if (
-														!dragChannel ||
-														(dragChannel.type !== "ThreadPublic" &&
-															dragChannel.type !== "ThreadPrivate")
+														dragChannel.type === "ThreadPublic" ||
+														dragChannel.type === "ThreadPrivate"
 													) {
-														return false;
+														return (
+															channel.type === "Text" ||
+															channel.type === "Announcement" ||
+															channel.type === "Forum"
+														);
 													}
-													return target()?.id === channel.id;
+													if (dragChannel.type === "ThreadForum2") {
+														return channel.type === "Forum2";
+													}
+
+													return false;
 												})(),
 											}}
 										>
