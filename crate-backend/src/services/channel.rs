@@ -6,8 +6,8 @@ use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
-    MessageChannelIcon, MessageSync, MessageChannelRename, MessageType, PaginationQuery, Permission,
-    PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
+    MessageChannelIcon, MessageChannelRename, MessageSync, MessageType, PaginationQuery,
+    Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;

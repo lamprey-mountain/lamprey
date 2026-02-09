@@ -70,14 +70,10 @@ impl ServiceNotifications {
         Ok(Some((encoding_key, vapid_public)))
     }
 
-    fn generate_vapid_token(
-        &self,
-        endpoint: &str,
-        encoding_key: &EncodingKey,
-    ) -> Option<String> {
+    fn generate_vapid_token(&self, endpoint: &str, encoding_key: &EncodingKey) -> Option<String> {
         let url = url::Url::parse(endpoint).ok()?;
         let origin = url.origin().ascii_serialization();
-        
+
         let host = self
             .state
             .config
@@ -120,20 +116,20 @@ impl ServiceNotifications {
         for sub in subscriptions {
             let state = self.state.clone();
             let endpoint = sub.endpoint.clone();
-            
+
             // Clone for the async task
             let encoding_key = encoding_key.clone();
             let vapid_public = vapid_public.clone();
             let json_payload = json_payload.clone();
-            
+
             // Generate token before spawning or inside? Inside is safer for moved data.
             // But we need 'self' for generate_vapid_token if it uses self.state.config
             // So we'll pass the token generation logic or just do it inside.
-            // To access `self` inside tokio::spawn we need to clone the arc state, 
+            // To access `self` inside tokio::spawn we need to clone the arc state,
             // but `generate_vapid_token` needs `self`.
             // Let's just create the token inside the loop *before* spawn or clone what's needed.
             // Actually, we can just extract the host string outside.
-            
+
             let host = self
                 .state
                 .config
@@ -182,7 +178,10 @@ impl ServiceNotifications {
                     .post(&endpoint)
                     .header("Content-Encoding", "aes128gcm")
                     .header("TTL", "2419200")
-                    .header("Authorization", format!("vapid t={token}, k={vapid_public}"))
+                    .header(
+                        "Authorization",
+                        format!("vapid t={token}, k={vapid_public}"),
+                    )
                     .header("Crypto-Key", format!("p256ecdsa={vapid_public}"))
                     .body(ciphertext)
                     .send()

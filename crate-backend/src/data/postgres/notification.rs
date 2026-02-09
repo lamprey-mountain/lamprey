@@ -253,12 +253,9 @@ impl DataNotification for Postgres {
     }
 
     async fn notification_get_unpushed(&self, limit: u32) -> Result<Vec<(UserId, Notification)>> {
-        let rows = query_file!(
-            "sql/notification_get_unpushed.sql",
-            limit as i32
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows = query_file!("sql/notification_get_unpushed.sql", limit as i32)
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(rows
             .into_iter()

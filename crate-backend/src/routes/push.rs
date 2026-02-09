@@ -41,9 +41,10 @@ async fn push_register(
 
     data.push_insert(push_data).await?;
 
-    let config_internal = data.config_get().await?.ok_or_else(|| {
-        Error::Internal("internal config not initialized".to_string())
-    })?;
+    let config_internal = data
+        .config_get()
+        .await?
+        .ok_or_else(|| Error::Internal("internal config not initialized".to_string()))?;
 
     Ok(Json(PushInfo {
         endpoint: json.endpoint,
@@ -60,10 +61,7 @@ async fn push_register(
     tags = ["push"],
     responses((status = NO_CONTENT, description = "ok"))
 )]
-async fn push_delete(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
+async fn push_delete(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     s.data().push_delete(auth.session.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -77,15 +75,13 @@ async fn push_delete(
     tags = ["push"],
     responses((status = OK, body = PushInfo, description = "ok"))
 )]
-async fn push_get(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
+async fn push_get(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let data = s.data();
     let push = data.push_get(auth.session.id).await?;
-    let config_internal = data.config_get().await?.ok_or_else(|| {
-        Error::Internal("internal config not initialized".to_string())
-    })?;
+    let config_internal = data
+        .config_get()
+        .await?
+        .ok_or_else(|| Error::Internal("internal config not initialized".to_string()))?;
 
     Ok(Json(PushInfo {
         endpoint: push.endpoint,

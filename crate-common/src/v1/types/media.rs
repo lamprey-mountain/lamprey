@@ -9,7 +9,9 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    search::{FilterRange, Order}, util::{Diff, Time}, MediaId, RoomId, UserId
+    search::{FilterRange, Order},
+    util::{Diff, Time},
+    MediaId, RoomId, UserId,
 };
 
 mod mime;

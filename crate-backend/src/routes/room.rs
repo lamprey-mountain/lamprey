@@ -8,8 +8,8 @@ use axum::{
 };
 use common::v1::types::{
     application::Integration, util::Changes, ApplicationId, AuditLogEntry, AuditLogEntryId,
-    AuditLogEntryType, AuditLogFilter, RoomSearch, RoomSecurityUpdate, RoomType,
-    TransferOwnership, SERVER_ROOM_ID,
+    AuditLogEntryType, AuditLogFilter, RoomSearch, RoomSecurityUpdate, RoomType, TransferOwnership,
+    SERVER_ROOM_ID,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;

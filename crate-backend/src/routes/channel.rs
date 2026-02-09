@@ -401,9 +401,7 @@ async fn channel_reorder(
 
             let parent_data = srv.channels.get(parent_id, None).await?;
             if !channel_data.ty.can_be_in(Some(parent_data.ty)) {
-                return Err(Error::BadStatic(
-                    "invalid parent channel type",
-                ));
+                return Err(Error::BadStatic("invalid parent channel type"));
             }
         }
     }

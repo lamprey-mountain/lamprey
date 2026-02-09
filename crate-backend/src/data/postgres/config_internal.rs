@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use sqlx::query;
 
+use crate::config::ConfigInternal;
 use crate::data::DataConfigInternal;
 use crate::error::Result;
-use crate::config::ConfigInternal;
 
 use super::Postgres;
 
@@ -22,11 +22,9 @@ impl DataConfigInternal for Postgres {
     }
 
     async fn config_get(&self) -> Result<Option<ConfigInternal>> {
-        let row = query!(
-            "SELECT value FROM config_internal WHERE key = 'main'"
-        )
-        .fetch_optional(&self.pool)
-        .await?;
+        let row = query!("SELECT value FROM config_internal WHERE key = 'main'")
+            .fetch_optional(&self.pool)
+            .await?;
 
         if let Some(row) = row {
             Ok(Some(serde_json::from_value(row.value)?))
