@@ -90,7 +90,7 @@ async fn server_moderation(
 #[utoipa::path(
     get,
     path = "/server/@self/voice",
-    tags = ["server", "badge.admin_only"],
+    tags = ["server", "badge.server-perm.Admin"],
     responses(
         (status = OK, body = Vec<ServerVoiceSfu>, description = "Get server voice sfus success"),
     )
@@ -98,7 +98,7 @@ async fn server_moderation(
 async fn server_voice(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::Admin)?;
+    perms.ensure_server(Permission::Admin)?;
 
     Ok(Json(vec![] as Vec<ServerVoiceSfu>))
 }

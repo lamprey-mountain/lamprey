@@ -182,12 +182,15 @@ pub enum ErrorCode {
     UserSuspended,
 
     /// missing scopes
-    #[error("missing scopes {scopes:?}")]
-    MissingScopes { scopes: Scopes },
+    #[error("missing scopes")]
+    MissingScopes,
 
     /// sudo mode required for this endpoint
     #[error("sudo mode required for this endpoint")]
     SudoRequired,
+
+    #[error("")]
+    MissingPermissions,
 
     // not bot owner
     // user is not a bot
@@ -233,13 +236,12 @@ pub enum ErrorCode {
     // duplicate media id
     // media already used
     /// unknown room
-    // FIXME: the method `as_display` exists for reference `&std::option::Option<Id<MarkerRoom>>`, but its trait bounds were not satisfied
-    #[error("unknown room (tried to fetch room with id {bad_room_id:?})")]
-    UnknownRoom { bad_room_id: Option<RoomId> },
+    #[error("unknown room")]
+    UnknownRoom,
 
     /// unknown channel
-    #[error("unknown channel (tried to fetch channel with id {bad_channel_id:?})")]
-    UnknownChannel { bad_channel_id: Option<ChannelId> },
+    #[error("unknown channel")]
+    UnknownChannel,
     // impl unknown thread, message, message version, user, media, invite, application, automod rule, webhook, room member, thread member, ban, email, document branch, document revision
 
     // calls can only be created in Broadcast channels
@@ -307,11 +309,12 @@ impl ErrorCode {
         match self {
             ErrorCode::InvalidData => 400,
             ErrorCode::UserSuspended => 403,
-            ErrorCode::MissingScopes { .. } => 403,
+            ErrorCode::MissingScopes => 403,
             ErrorCode::SudoRequired => 401,
-            ErrorCode::UnknownRoom { .. } => 404,
-            ErrorCode::UnknownChannel { .. } => 404,
+            ErrorCode::UnknownRoom => 404,
+            ErrorCode::UnknownChannel => 404,
             ErrorCode::Automod => 403,
+            ErrorCode::MissingPermissions => 403,
         }
     }
 }

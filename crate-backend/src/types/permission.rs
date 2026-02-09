@@ -1,7 +1,11 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use common::v1::types::{defaults::ADMIN_ROOM, Permission};
+use common::v1::types::{
+    defaults::ADMIN_ROOM,
+    error::{ApiError, ErrorCode},
+    Permission,
+};
 
 use crate::error::{Error, Result};
 
@@ -117,7 +121,25 @@ impl Permissions {
             if perm == Permission::ViewChannel {
                 return Err(Error::NotFound);
             }
-            Err(Error::MissingPermissions)
+            Err(Error::ApiError(ApiError {
+                required_permissions: vec![perm],
+                ..ApiError::from_code(ErrorCode::MissingPermissions)
+            }))
+        }
+    }
+
+    // TODO: use this instead of ensure when checking server permissions
+    pub fn ensure_server(&self, perm: Permission) -> Result<()> {
+        if self.has(perm) {
+            Ok(())
+        } else {
+            if perm == Permission::ViewChannel {
+                return Err(Error::NotFound);
+            }
+            Err(Error::ApiError(ApiError {
+                required_permissions_server: vec![perm],
+                ..ApiError::from_code(ErrorCode::MissingPermissions)
+            }))
         }
     }
 

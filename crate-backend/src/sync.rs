@@ -848,7 +848,6 @@ impl Connection {
         };
         let should_send = auth_check.should_send(&session, &self.s).await?;
         if should_send {
-            let d = self.s.data();
             let srv = self.s.services();
             let msg = match *msg {
                 MessageSync::ChannelCreate { channel } => MessageSync::ChannelCreate {

@@ -15,6 +15,8 @@
 			});
 		</script>
 		<style>
+			.markdown-alert-serer-permission-required,
+			.markdown-alert-serer-permission-optional,
 			.markdown-alert-permission-required,
 			.markdown-alert-permission-optional,
 			.markdown-alert-scope-required,
@@ -52,6 +54,7 @@
 				&::after {
 					background: #c7e6a6;
 				}
+
 				&::before {
 					content: "optional permission";
 				}
@@ -62,6 +65,7 @@
 				&::after {
 					background: #b1e27d;
 				}
+
 				&::before {
 					content: "required oauth scope";
 				}
@@ -71,8 +75,30 @@
 				&::after {
 					background: #c7e6a6;
 				}
+
 				&::before {
 					content: "optional oauth scope";
+				}
+			}
+
+			/* TODO: give server permissions different colors */
+			.markdown-alert-server-permission-required {
+				&::after {
+					background: #b1e27d;
+				}
+
+				&::before {
+					content: "required server permission";
+				}
+			}
+
+			.markdown-alert-server-permission-optional {
+				&::after {
+					background: #c7e6a6;
+				}
+
+				&::before {
+					content: "optional server permission";
 				}
 			}
 		</style>

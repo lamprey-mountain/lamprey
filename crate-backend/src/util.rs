@@ -32,6 +32,8 @@ impl Modify for BadgeModifier {
                 let mut badges = Vec::new();
                 let mut perms = Vec::new();
                 let mut optional_perms = Vec::new();
+                let mut server_perms = Vec::new();
+                let mut server_optional_perms = Vec::new();
                 let mut scopes = Vec::new();
                 let mut optional_scopes = Vec::new();
 
@@ -57,6 +59,12 @@ impl Modify for BadgeModifier {
                             false
                         } else if let Some(perm) = tag.strip_prefix("badge.perm-opt.") {
                             optional_perms.push(perm.to_string());
+                            false
+                        } else if let Some(server_perm_req) = tag.strip_prefix("badge.server-perm.") {
+                            server_perms.push(server_perm_req.to_string());
+                            false
+                        } else if let Some(server_perm_opt) = tag.strip_prefix("badge.server-perm-opt.") {
+                            server_optional_perms.push(server_perm_opt.to_string());
                             false
                         } else if let Some(scope) = tag.strip_prefix("badge.scope.") {
                             scopes.push(scope.to_string());
@@ -98,6 +106,18 @@ impl Modify for BadgeModifier {
                 for perm in optional_perms {
                     requirements_formatted.push(format!(
                         r#"<div class="markdown-alert-permission-optional">{perm}</div>"#
+                    ));
+                }
+
+                for server_perm in server_perms {
+                    requirements_formatted.push(format!(
+                        r#"<div class="markdown-alert-server-permission-required">server:{server_perm}</div>"#
+                    ));
+                }
+
+                for server_perm in server_optional_perms {
+                    requirements_formatted.push(format!(
+                        r#"<div class="markdown-alert-server-permission-optional">server:{server_perm}</div>"#
                     ));
                 }
 

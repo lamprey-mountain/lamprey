@@ -239,7 +239,7 @@ pub struct Bridge {
 /// an oauth scope
 ///
 /// WORK IN PROGRESS!!! SUBJECT TO CHANGE!!!
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash, EnumIter)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum Scope {
@@ -309,9 +309,10 @@ impl Scopes {
         if self.has(scope) {
             Ok(())
         } else {
-            Err(ApiError::from_code(ErrorCode::MissingScopes {
-                scopes: Scopes(vec![scope.clone()]),
-            }))
+            Err(ApiError {
+                required_scopes: vec![scope.clone()],
+                ..ApiError::from_code(ErrorCode::MissingScopes)
+            })
         }
     }
 
@@ -321,16 +322,17 @@ impl Scopes {
 
         for required_scope in scopes {
             if !self.has(required_scope) {
-                missing.push(required_scope.clone());
+                missing.push(*required_scope);
             }
         }
 
         if missing.is_empty() {
             Ok(())
         } else {
-            Err(ApiError::from_code(ErrorCode::MissingScopes {
-                scopes: Scopes(missing),
-            }))
+            Err(ApiError {
+                required_scopes: missing.clone(),
+                ..ApiError::from_code(ErrorCode::MissingScopes)
+            })
         }
     }
 }
