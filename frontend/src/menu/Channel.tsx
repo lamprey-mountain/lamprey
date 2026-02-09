@@ -7,6 +7,7 @@ import { For, Match, Show, Switch } from "solid-js";
 import { timeAgo } from "../Time.tsx";
 import { Channel } from "sdk";
 import { useModals } from "../contexts/modal";
+import { Checkbox } from "../icons.tsx";
 
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
@@ -26,7 +27,8 @@ export function ChannelMenu(props: { channel_id: string }) {
 	);
 
 	const isThread = () =>
-		channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate";
+		channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate" ||
+		channel()?.type === "ThreadForum2";
 
 	const self_channel_member = api.thread_members.fetch(
 		() => props.channel_id,
@@ -85,6 +87,17 @@ export function ChannelMenu(props: { channel_id: string }) {
 		}
 	};
 
+	const toggleTag = (tagId: string) => {
+		const c = channel();
+		if (!c) return;
+		const currentTags = c.tags || [];
+		const newTags = currentTags.includes(tagId)
+			? currentTags.filter((t) => t !== tagId)
+			: [...currentTags, tagId];
+
+		api.channels.update(props.channel_id, { tags: newTags });
+	};
+
 	const joinOrLeaveChannel = () => {
 		if (self_channel_member()?.membership === "Leave") {
 			ctx.client.http.PUT("/api/v1/thread/{thread_id}/member/{user_id}", {
@@ -123,22 +136,34 @@ export function ChannelMenu(props: { channel_id: string }) {
 				<Item onClick={settings("/webhooks")}>webhooks</Item>
 			</Submenu>
 			<Show
-				when={channel() && isThread()}
+				when={channel() && isThread() && parentChan()?.tags_available}
 			>
 				<Submenu content={"tags"}>
 					<For each={parentChan()!.tags_available}>
 						{(tag) => (
 							<Item
-								onClick={() => {
-									// TODO: add the tag
+								onClick={(e) => {
+									e.stopPropagation();
+									toggleTag(tag.id);
 								}}
 							>
-								{tag.name}
+								<div style="display: flex; align-items: start; gap: 8px">
+									<Checkbox checked={channel()?.tags?.includes(tag.id)} />
+									<div style="margin: 2px 0">
+										<div classList={{ has: channel()?.tags?.includes(tag.id) }}>
+											{tag.name}
+										</div>
+										<Show when={tag.description}>
+											<div class="dim">{tag.description}</div>
+										</Show>
+									</div>
+								</div>
 							</Item>
 						)}
 					</For>
-					{/* TODO: show placeholders when there are no tags */}
-					{/* TODO: show option to create new tag */}
+					<Show when={!parentChan()?.tags_available?.length}>
+						<Item disabled>no tags available</Item>
+					</Show>
 				</Submenu>
 			</Show>
 			<Show when={channel() && isThread()}>
