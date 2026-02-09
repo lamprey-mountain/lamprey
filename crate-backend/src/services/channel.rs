@@ -1072,6 +1072,39 @@ impl ServiceThreads {
                 .await?;
         }
 
+        if chan_old.parent_id != chan_new.parent_id {
+            // send thread moved message to thread
+            let move_message_id = data
+                .message_create(DbMessageCreate {
+                    id: None,
+                    channel_id: thread_id,
+                    attachment_ids: vec![],
+                    author_id: auth.user.id,
+                    embeds: vec![],
+                    message_type: MessageType::ChannelMoved(MessageChannelMove {
+                        parent_id_old: chan_old.parent_id,
+                        parent_id_new: chan_new.parent_id,
+                    }),
+                    edited_at: None,
+                    created_at: None,
+                    removed_at: None,
+                    mentions: Default::default(),
+                })
+                .await?;
+            let move_message = data
+                .message_get(thread_id, move_message_id, auth.user.id)
+                .await?;
+            self.state
+                .broadcast_channel(
+                    thread_id,
+                    auth.user.id,
+                    MessageSync::MessageCreate {
+                        message: move_message,
+                    },
+                )
+                .await?;
+        }
+
         let msg = MessageSync::ChannelUpdate {
             channel: Box::new(chan_new.clone()),
         };
