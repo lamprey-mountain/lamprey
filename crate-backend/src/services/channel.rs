@@ -5,9 +5,7 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
-    MessageChannelIcon, MessageChannelRename, MessageSync, MessageType, PaginationQuery,
-    Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID,
+    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageSync, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -279,6 +277,29 @@ impl ServiceThreads {
         room_id: Option<RoomId>,
         json: ChannelCreate,
     ) -> Result<Channel> {
+        // TODO(al2): use this when creating a channel
+        let channel_id = ChannelId::new();
+        let al = if let Some(room_id) = room_id {
+            Some(auth.audit_log2(
+                room_id,
+                AuditLogEntryType::ChannelCreate {
+                    channel_id,
+                    channel_type: json.ty,
+                    changes: Changes::new()
+                        .add("name", &json.name)
+                        .add("description", &json.description)
+                        .add("nsfw", &json.nsfw)
+                        .add("user_limit", &json.user_limit)
+                        .add("bitrate", &json.bitrate)
+                        .add("type", &json.ty)
+                        .add("parent_id", &json.parent_id)
+                        .add("url", &json.url)
+                        .build(),
+                },
+            ))
+        } else {
+            None
+        };
         let srv = self.state.services();
         let data = self.state.data();
         let perms = if let Some(parent_id) = json.parent_id {
@@ -547,24 +568,12 @@ impl ServiceThreads {
         let thread_member = data.thread_member_get(channel_id, auth.user.id).await?;
 
         let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-        if let Some(room_id) = room_id {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::ChannelCreate {
-                channel_id,
-                channel_type: channel.ty,
-                changes: Changes::new()
-                    .add("name", &channel.name)
-                    .add("description", &channel.description)
-                    .add("nsfw", &channel.nsfw)
-                    .add("user_limit", &channel.user_limit)
-                    .add("bitrate", &channel.bitrate)
-                    .add("type", &channel.ty)
-                    .add("parent_id", &channel.parent_id)
-                    .add("url", &channel.url)
-                    .build(),
-            })
-            .await?;
 
+        if let Some(al) = al {
+            al.success();
+        }
+
+        if let Some(room_id) = room_id {
             self.state
                 .broadcast_room(
                     room_id,
@@ -1081,7 +1090,7 @@ impl ServiceThreads {
                     attachment_ids: vec![],
                     author_id: auth.user.id,
                     embeds: vec![],
-                    message_type: MessageType::ChannelMoved(MessageChannelMove {
+                    message_type: MessageType::ChannelMoved(MessageChannelMoved {
                         parent_id_old: chan_old.parent_id,
                         parent_id_new: chan_new.parent_id,
                     }),

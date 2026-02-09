@@ -12,6 +12,7 @@ use common::v1::types::{
 };
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 use http::{HeaderMap, HeaderName, HeaderValue};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 use crate::{
@@ -395,6 +396,16 @@ pub struct AuditLoggerTransaction<'a> {
     application_id: Option<ApplicationId>,
 }
 
+pub struct AuditLoggerTransaction2<'a> {
+    inner: Option<AuditLoggerTransaction2Inner<'a>>,
+}
+
+pub struct AuditLoggerTransaction2Inner<'a> {
+    txn: AuditLoggerTransaction<'a>,
+    ty: AuditLogEntryType,
+    status: Option<AuditLogEntryStatus>,
+}
+
 impl Auth {
     /// begin an audit log transaction
     // TODO: automatically save failed audit logs
@@ -408,6 +419,27 @@ impl Auth {
             application_id: self.session.app_id,
         }
     }
+
+    #[must_use = "must call commit() to save a successful audit log entry"]
+    pub fn audit_log2(
+        &self,
+        context_id: RoomId,
+        ty: AuditLogEntryType,
+    ) -> AuditLoggerTransaction2<'_> {
+        AuditLoggerTransaction2 {
+            inner: Some(AuditLoggerTransaction2Inner {
+                txn: AuditLoggerTransaction {
+                    context_id,
+                    auth: self,
+                    reason: self.reason.as_deref(),
+                    started_at: Time::now_utc(),
+                    application_id: self.session.app_id,
+                },
+                ty,
+                status: None,
+            }),
+        }
+    }
 }
 
 impl AuditLoggerTransaction<'_> {
@@ -418,7 +450,15 @@ impl AuditLoggerTransaction<'_> {
 
     /// save an audit log entry
     pub async fn commit(
-        self,
+        mut self,
+        status: AuditLogEntryStatus,
+        ty: AuditLogEntryType,
+    ) -> Result<(), Error> {
+        self.commit_inner(status, ty).await
+    }
+
+    async fn commit_inner(
+        &mut self,
         status: AuditLogEntryStatus,
         ty: AuditLogEntryType,
     ) -> Result<(), Error> {
@@ -450,5 +490,41 @@ impl AuditLoggerTransaction<'_> {
             )
             .await?;
         Ok(())
+    }
+}
+
+// FIXME: commit on drop
+impl Drop for AuditLoggerTransaction2<'_> {
+    fn drop(&mut self) {
+        let mut inner = self.inner.take().unwrap();
+        let status = if let Some(s) = inner.status {
+            s
+        } else {
+            debug!("implicitly failing audit log entry");
+            AuditLogEntryStatus::Failed
+        };
+        tokio::spawn(async move {
+            if let Err(err) = inner.txn.commit_inner(status, inner.ty).await {
+                error!("failed to save audit log: {err:?}");
+            }
+        });
+    }
+}
+
+impl AuditLoggerTransaction2<'_> {
+    pub fn set_status(&mut self, status: AuditLogEntryStatus) {
+        self.inner.as_mut().unwrap().status = Some(status);
+    }
+
+    pub fn success(mut self) {
+        self.set_status(AuditLogEntryStatus::Success);
+    }
+
+    pub fn unauthorized(mut self) {
+        self.set_status(AuditLogEntryStatus::Unauthorized);
+    }
+
+    pub fn failed(mut self) {
+        self.set_status(AuditLogEntryStatus::Failed);
     }
 }

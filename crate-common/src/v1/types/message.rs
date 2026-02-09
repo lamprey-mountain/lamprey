@@ -393,7 +393,7 @@ pub enum MessageType {
     ChannelPingback(MessageChannelPingback),
 
     /// this thread was moved
-    ChannelMoved(MessageChannelMove),
+    ChannelMoved(MessageChannelMoved),
 
     /// The channel's icon was changed
     ChannelIcon(MessageChannelIcon),
@@ -470,7 +470,7 @@ pub struct MessageChannelRename {
 /// Information about a thread being moved
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageChannelMove {
+pub struct MessageChannelMoved {
     pub parent_id_old: Option<ChannelId>,
     pub parent_id_new: Option<ChannelId>,
 }
@@ -774,7 +774,6 @@ impl MessageType {
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
             MessageType::ThreadCreated(_) => false,
-            MessageType::ChannelPingback(_) => true,
             MessageType::ChannelMoved(_) => false,
 
             // NOTE: this should require the MessageDelete permission

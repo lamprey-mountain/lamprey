@@ -10,7 +10,7 @@ use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MediaTrackInfo, MessageSync,
     PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus, User, UserCreate, UserId,
-    UserPatch, UserWithRelationship,
+    UserPatch, UserSearch, UserWithRelationship,
 };
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogFilter, HarvestId, Permission, SuspendRequest, Suspended,
@@ -549,6 +549,7 @@ async fn user_presence_set(
 /// User list
 ///
 /// Admin only. List all users on this server.
+// TODO: deprecate
 #[utoipa::path(
     get,
     path = "/user",
@@ -643,6 +644,25 @@ async fn harvest_download(
     Ok(Error::Unimplemented)
 }
 
+/// User search (TODO)
+#[utoipa::path(
+    post,
+    path = "/user/search",
+    tags = ["user", "badge.admin_only"],
+    responses((status = OK, description = "success")),
+)]
+async fn user_search(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(_json): Json<UserSearch>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::Admin)?;
+
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
@@ -659,4 +679,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(harvest_get))
         .routes(routes!(harvest_create))
         .routes(routes!(harvest_download))
+        .routes(routes!(user_search))
 }

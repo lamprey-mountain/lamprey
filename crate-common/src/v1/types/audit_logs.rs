@@ -74,6 +74,7 @@ pub struct AuditLogChange {
 
 // NOTE: maybe i want to also have Channel{Remove,Restore}?
 // NOTE: maybe i want to also have Thread{Create,Update,Etc}?
+// NOTE: maybe i should hoist changes to the top level...?
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type", content = "metadata")]
