@@ -237,17 +237,24 @@ pub struct TransferOwnership {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomAdminSearch {
     /// what order to return results in
+    #[cfg_attr(feature = "serde", serde(default))]
     pub order: RoomAdminSearchOrder,
+
+    /// filter by room name
+    // NOTE: impl this with ILIKE, similarly to room member filtering
+    pub name: Option<String>,
     // TODO: search room name, description
 }
 
-#[derive(Debug, Clone)]
+// NOTE: maybe replace this with sort fields + asc/desc
+#[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum RoomAdminSearchOrder {
+    #[default]
+    Members,
     Newest,
     Oldest,
-    Members,
     Name,
     NameReverse,
 }

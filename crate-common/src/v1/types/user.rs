@@ -297,6 +297,7 @@ impl User {
     }
 }
 
+// TODO: remove?
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(rename_all = "snake_case")]
@@ -307,6 +308,11 @@ pub enum UserListFilter {
     Puppet,
 }
 
+// TODO: replace with UserSearch
+// bot: option bool, without/with/only bots
+// puppet: option bool, without/with/only puppets
+// guest: option bool, without/with/only guests
+// filter by name, registered at
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[serde(rename_all = "snake_case")]
