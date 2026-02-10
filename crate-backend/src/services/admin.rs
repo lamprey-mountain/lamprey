@@ -146,7 +146,6 @@ impl ServiceAdmin {
 
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
             loop {
-                interval.tick().await;
                 let data = state.data();
                 if let Ok(Some(mut config_internal)) = data.config_get().await {
                     let token = nanoid::nanoid!(32);
@@ -157,6 +156,7 @@ impl ServiceAdmin {
                         *srv.admin.cache.write().await = Some(config_internal);
                     }
                 }
+                interval.tick().await;
             }
         });
     }
