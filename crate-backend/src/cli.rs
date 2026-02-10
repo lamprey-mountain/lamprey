@@ -13,7 +13,7 @@ pub struct Args {
 
     /// Token to use for authenticating to the api
     #[arg(short, long)]
-    pub token: String,
+    pub token: Option<String>,
 
     #[command(subcommand)]
     pub command: Command,
