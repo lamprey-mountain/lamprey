@@ -2186,8 +2186,8 @@ table {
 	}
 
 	.reaction.self {
-		border: solid #88f 1px;
-		background: #88f4;
+		border: solid oklch(var(--color-link-500)) 1px;
+		background: oklch(var(--color-link-300) / 0.35);
 	}
 
 	.key {
