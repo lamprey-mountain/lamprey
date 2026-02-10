@@ -70,33 +70,6 @@ impl ServiceNotifications {
         Ok(Some((encoding_key, vapid_public)))
     }
 
-    fn generate_vapid_token(&self, endpoint: &str, encoding_key: &EncodingKey) -> Option<String> {
-        let url = url::Url::parse(endpoint).ok()?;
-        let origin = url.origin().ascii_serialization();
-
-        let host = self
-            .state
-            .config
-            .html_url
-            .host_str()
-            .unwrap_or("example.com")
-            .to_string();
-
-        let claims = JwtClaims {
-            aud: origin,
-            exp: OffsetDateTime::now_utc().unix_timestamp() + 12 * 3600,
-            sub: format!("mailto:admin@{}", host),
-        };
-
-        match encode(&Header::new(Algorithm::ES256), &claims, encoding_key) {
-            Ok(t) => Some(t),
-            Err(e) => {
-                error!("jwt encode failed: {}", e);
-                None
-            }
-        }
-    }
-
     /// send a notification to a user through the web push api
     pub async fn push(&self, user_id: UserId, payload: NotificationPayload) -> Result<()> {
         let data = self.state.data();
