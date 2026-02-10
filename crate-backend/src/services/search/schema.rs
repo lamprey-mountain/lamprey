@@ -460,13 +460,7 @@ pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDo
         doc.add_text(s.media_alt, alt.clone());
     }
 
-    // Add quarantine status if present
     doc.add_bool(s.quarantined, media.quarantine.is_some());
-
-    // Add content if available (using description from metadata)
-    if let Some(quarantine_reason) = &media.quarantine.as_ref().and_then(|q| q.reason.clone()) {
-        doc.add_text(s.content, quarantine_reason);
-    }
 
     doc
 }

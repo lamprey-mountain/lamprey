@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use opendal::{layers::LoggingLayer, Builder, Operator};
+use opendal::{layers::LoggingLayer, Builder, ErrorKind, Operator};
 use tantivy::{
     directory::{
         error::{DeleteError, OpenReadError, OpenWriteError},
@@ -89,13 +89,16 @@ impl ObjectDirectory {
 impl Directory for ObjectDirectory {
     fn get_file_handle(&self, path: &Path) -> Result<Arc<dyn FileHandle>, OpenReadError> {
         let p = self.path_str(path);
-        let meta = self
-            .rt
-            .block_on(self.blobs.stat(&p))
-            .map_err(|err| OpenReadError::IoError {
-                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
-                filepath: path.to_path_buf(),
-            })?;
+        let meta = self.rt.block_on(self.blobs.stat(&p)).map_err(|err| {
+            if err.kind() == ErrorKind::NotFound {
+                OpenReadError::FileDoesNotExist(path.to_path_buf())
+            } else {
+                OpenReadError::IoError {
+                    io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                    filepath: path.to_path_buf(),
+                }
+            }
+        })?;
 
         Ok(Arc::new(ObjectFile {
             rt: Arc::clone(&self.rt),
@@ -125,12 +128,19 @@ impl Directory for ObjectDirectory {
             return Ok(true);
         }
 
-        self.rt
-            .block_on(self.blobs.exists(&self.path_str(path)))
-            .map_err(|err| OpenReadError::IoError {
-                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
-                filepath: path.to_path_buf(),
-            })
+        match self.rt.block_on(self.blobs.exists(&self.path_str(path))) {
+            Ok(exists) => Ok(exists),
+            Err(err) => {
+                if err.kind() == ErrorKind::NotFound {
+                    Ok(false)
+                } else {
+                    Err(OpenReadError::IoError {
+                        io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                        filepath: path.to_path_buf(),
+                    })
+                }
+            }
+        }
     }
 
     fn open_write(&self, path: &Path) -> Result<WritePtr, OpenWriteError> {
@@ -146,9 +156,15 @@ impl Directory for ObjectDirectory {
         let _lock = self.atomic_rw_lock.lock().unwrap();
         self.rt
             .block_on(self.blobs.read(&self.path_str(path)))
-            .map_err(|err| OpenReadError::IoError {
-                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
-                filepath: path.to_path_buf(),
+            .map_err(|err| {
+                if err.kind() == ErrorKind::NotFound {
+                    OpenReadError::FileDoesNotExist(path.to_path_buf())
+                } else {
+                    OpenReadError::IoError {
+                        io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                        filepath: path.to_path_buf(),
+                    }
+                }
             })
             .map(|buf| buf.to_vec())
     }

@@ -32,6 +32,17 @@ impl ServiceSearch {
         user_id: UserId,
         req: MessageSearchRequest,
     ) -> Result<MessageSearch> {
+        let data = self.state.data();
+        let srv = self.state.services();
+        // FIXME: enforce visibility
+        let vis = srv.channels.list_user_room_channels(user_id).await?;
+        let raw = self.tantivy.search_messages(req)?;
+
+        // populate reactions
+        // populate mentions (missing from original search_messages!)
+        // populate threads
+        // presign messages
+
         todo!()
     }
 

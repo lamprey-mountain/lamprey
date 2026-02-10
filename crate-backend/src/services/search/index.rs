@@ -35,8 +35,8 @@ const INDEXING_BUFFER_SIZE: usize = 100_000_000;
 pub struct TantivyHandle {
     command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
     thread: std::thread::JoinHandle<()>,
-    index: Index,
-    schema: LampreySchema,
+    pub index: Index,
+    pub schema: LampreySchema,
 }
 
 pub enum IndexerCommand {
@@ -53,22 +53,25 @@ pub enum IndexerCommand {
 
 /// create a new TantivyHandle
 pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
-    let dir = ObjectDirectory::new(s, PathBuf::from("tantivy/"), PathBuf::from("/tmp/tantivy"));
-    let sch = LampreySchema::default();
-    let index = Index::open_or_create(dir, sch.schema.clone()).unwrap();
-    index
-        .tokenizers()
-        .register("dynamic", DynamicTokenizer::new());
     let (tx, rx) = mpsc::sync_channel::<IndexerCommand>(1000);
-
-    let index2 = index.clone();
-    let sch2 = sch.clone();
+    let (init_tx, init_rx) = mpsc::sync_channel(0);
 
     let thread = std::thread::spawn(move || {
-        let mut index_writer: IndexWriter = index2.writer(INDEXING_BUFFER_SIZE).unwrap();
+        let dir = ObjectDirectory::new(s, PathBuf::from("tantivy/"), PathBuf::from("/tmp/tantivy"));
+        let sch = LampreySchema::default();
+        let index = Index::open_or_create(dir, sch.schema.clone()).unwrap();
+        index
+            .tokenizers()
+            .register("dynamic", DynamicTokenizer::new());
+
+        init_tx
+            .send((index.clone(), sch.clone()))
+            .expect("failed to send init data");
+
+        let mut index_writer: IndexWriter = index.writer(INDEXING_BUFFER_SIZE).unwrap();
 
         let insert_message = |index_writer: &IndexWriter, message: Message| {
-            let doc = tantivy_document_from_message(&sch2, message);
+            let doc = tantivy_document_from_message(&sch, message);
             if let Err(e) = index_writer.add_document(doc) {
                 error!("failed to add document: {}", e);
             }
@@ -108,7 +111,7 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                             }
                             MessageSync::MessageUpdate { message } => {
                                 index_writer.delete_term(Term::from_field_text(
-                                    sch2.id,
+                                    sch.id,
                                     &message.id.to_string(),
                                 ));
                                 insert_message(&index_writer, message);
@@ -118,14 +121,14 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                                 message_id,
                             } => {
                                 index_writer.delete_term(Term::from_field_text(
-                                    sch2.id,
+                                    sch.id,
                                     &message_id.to_string(),
                                 ));
                             }
                             MessageSync::MessageDeleteBulk { message_ids, .. } => {
                                 for message_id in message_ids {
                                     index_writer.delete_term(Term::from_field_text(
-                                        sch2.id,
+                                        sch.id,
                                         &message_id.to_string(),
                                     ));
                                 }
@@ -137,7 +140,7 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                     }
                     IndexerCommand::ReindexChannel(channel_id) => {
                         index_writer.delete_term(Term::from_field_text(
-                            sch2.channel_id,
+                            sch.channel_id,
                             &channel_id.to_string(),
                         ));
                         // Force commit before potential long operation
@@ -170,11 +173,13 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
         let _ = index_writer.commit();
     });
 
+    let (index, schema) = init_rx.recv().expect("failed to recv init data");
+
     TantivyHandle {
         command_tx: tx,
         thread,
         index,
-        schema: sch,
+        schema,
     }
 }
 
@@ -199,36 +204,28 @@ impl TantivyHandle {
         // query_parser.set_field_fuzzy(s.content, false, 3, true);
 
         // also look at parse_query_lenient
-        // TODO: return better error here
+        // TODO: return better errors here?
         let query = query_parser.parse_query(&req.query.unwrap()).unwrap();
 
         let limit = 20;
         let cursor = 0;
         let collector = TopDocs::with_limit(limit).and_offset(cursor);
-        // FIXME: message ordering
+
         let top_docs: Vec<DocAddress> = match (req.sort_field, req.sort_order) {
             (MessageSearchOrderField::Relevancy, _) => searcher
                 .search(&query, &collector)?
                 .into_iter()
                 .map(|(_, doc)| doc)
                 .collect(),
-            (MessageSearchOrderField::Created, Order::Ascending) => searcher
+            (MessageSearchOrderField::Created, ord) => searcher
                 .search(
                     &query,
                     &collector.order_by_fast_field::<tantivy::DateTime>(
                         "created_at",
-                        tantivy::Order::Asc,
-                    ),
-                )?
-                .into_iter()
-                .map(|(_, doc)| doc)
-                .collect(),
-            (MessageSearchOrderField::Created, Order::Descending) => searcher
-                .search(
-                    &query,
-                    &collector.order_by_fast_field::<tantivy::DateTime>(
-                        "created_at",
-                        tantivy::Order::Desc,
+                        match ord {
+                            Order::Ascending => tantivy::Order::Asc,
+                            Order::Descending => tantivy::Order::Desc,
+                        },
                     ),
                 )?
                 .into_iter()
