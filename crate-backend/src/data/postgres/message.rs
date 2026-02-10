@@ -426,6 +426,19 @@ impl DataMessage for Postgres {
         Ok(row.into())
     }
 
+    async fn message_get_many(
+        &self,
+        channel_id: ChannelId,
+        message_ids: &[MessageId],
+        _user_id: UserId,
+    ) -> Result<Vec<MessageV2>> {
+        let ids: Vec<Uuid> = message_ids.iter().map(|id| **id).collect();
+        let rows = query_file_as!(DbMessage, "sql/message_get_many.sql", *channel_id, &ids)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(|r| r.into()).collect())
+    }
+
     async fn message_list(
         &self,
         channel_id: ChannelId,

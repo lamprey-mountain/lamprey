@@ -55,6 +55,27 @@ impl ServiceMessages {
         Ok(message)
     }
 
+    pub async fn get_many(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        message_ids: &[MessageId],
+    ) -> Result<Vec<Message>> {
+        let mut messages = self
+            .state
+            .data()
+            .message_get_many(channel_id, message_ids, user_id)
+            .await?;
+
+        for message in &mut messages {
+            self.state.presign_message(message).await?;
+        }
+
+        self.populate_all(channel_id, user_id, &mut messages).await?;
+
+        Ok(messages)
+    }
+
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,

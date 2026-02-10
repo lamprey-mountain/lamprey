@@ -491,6 +491,12 @@ pub trait DataMessage {
         message_id: MessageId,
         user_id: UserId,
     ) -> Result<MessageV2>;
+    async fn message_get_many(
+        &self,
+        channel_id: ChannelId,
+        message_ids: &[MessageId],
+        user_id: UserId,
+    ) -> Result<Vec<MessageV2>>;
     async fn message_list(
         &self,
         channel_id: ChannelId,

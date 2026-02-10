@@ -26,6 +26,11 @@ pub struct LampreySchema {
     /// the type of this object
     pub doctype: schema::Field,
 
+    /// subtype for storing message type and channel type
+    ///
+    /// for messages and channels
+    pub subtype: schema::Field,
+
     /// when this object was created at
     pub created_at: schema::Field,
 
@@ -175,6 +180,36 @@ pub struct LampreySchema {
 
     /// arbitrary json data in case i need to edit the schema
     pub metadata: schema::Field,
+
+    /// when this user was suspended at
+    ///
+    /// for users
+    pub user_suspended_at: schema::Field,
+
+    /// if this user is a puppet
+    ///
+    /// for users
+    pub user_puppet: schema::Field,
+
+    /// the email of this user
+    ///
+    /// for users
+    pub user_email: schema::Field,
+
+    /// if this user is a webhook
+    ///
+    /// for users
+    pub user_webhook: schema::Field,
+
+    /// if this user is a bot
+    ///
+    /// for users
+    pub user_bot: schema::Field,
+
+    /// if this user has MFA enabled
+    ///
+    /// for users
+    pub user_has_mfa: schema::Field,
 }
 
 /// the type of this item
@@ -210,6 +245,7 @@ impl Default for LampreySchema {
 
         let id = sb.add_text_field("id", STRING | FAST | STORED);
         let doctype = sb.add_text_field("doctype", STRING | FAST | STORED);
+        let subtype = sb.add_text_field("subtype", STRING | FAST);
         let created_at = sb.add_date_field("created_at", FAST);
         let updated_at = sb.add_date_field("updated_at", FAST);
         let archived_at = sb.add_date_field("archived_at", FAST);
@@ -244,6 +280,13 @@ impl Default for LampreySchema {
             "metadata",
             JsonObjectOptions::default().set_indexing_options(TextFieldIndexing::default()),
         );
+
+        let user_suspended_at = sb.add_date_field("user_suspended_at", FAST);
+        let user_puppet = sb.add_bool_field("user_puppet", FAST);
+        let user_email = sb.add_text_field("user_email", STRING | FAST);
+        let user_webhook = sb.add_bool_field("user_webhook", FAST);
+        let user_bot = sb.add_bool_field("user_bot", FAST);
+        let user_has_mfa = sb.add_bool_field("user_has_mfa", FAST);
 
         let schema = sb.build();
 
@@ -281,6 +324,13 @@ impl Default for LampreySchema {
             mentions_user,
             link_hostname,
             metadata,
+            user_suspended_at,
+            user_puppet,
+            user_email,
+            user_webhook,
+            user_bot,
+            user_has_mfa,
+            subtype,
         }
     }
 }

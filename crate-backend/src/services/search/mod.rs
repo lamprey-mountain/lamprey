@@ -1,13 +1,15 @@
 #![allow(unused)] // TEMP: suppress warnings here for now
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use common::v1::types::MessageType;
 use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
 };
 use common::v2::types::message::Message;
+use futures::stream::{FuturesUnordered, StreamExt};
 
 use crate::{error::Result, services::search::index::TantivyHandle, ServerStateInner};
 
@@ -34,16 +36,74 @@ impl ServiceSearch {
     ) -> Result<MessageSearch> {
         let data = self.state.data();
         let srv = self.state.services();
-        // FIXME: enforce visibility
+
         let vis = srv.channels.list_user_room_channels(user_id).await?;
-        let raw = self.tantivy.search_messages(req)?;
+        let visible_channel_ids: Vec<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
 
-        // populate reactions
-        // populate mentions (missing from original search_messages!)
-        // populate threads
-        // presign messages
+        let offset = req.offset;
+        let raw_result = self.tantivy.search_messages(req, &visible_channel_ids)?;
 
-        todo!()
+        // split messages by channel
+        let mut channel_groups: HashMap<ChannelId, Vec<MessageId>> = HashMap::new();
+        for item in &raw_result.items {
+            channel_groups
+                .entry(item.channel_id)
+                .or_default()
+                .push(item.id);
+        }
+
+        // fetch all messages and replies
+        let mut group_futs = FuturesUnordered::new();
+        for (channel_id, ids) in channel_groups {
+            let srv2 = Arc::clone(&srv);
+            group_futs.push(async move {
+                let mut msgs = srv2.messages.get_many(channel_id, user_id, &ids).await?;
+                let reply_ids: Vec<_> = msgs
+                    .iter()
+                    .filter_map(|m| match &m.latest_version.message_type {
+                        MessageType::DefaultMarkdown(m) => m.reply_id,
+                        _ => None,
+                    })
+                    .collect();
+                let replies = srv2
+                    .messages
+                    .get_many(channel_id, user_id, &reply_ids)
+                    .await?;
+                msgs.extend(replies);
+                srv2.messages
+                    .populate_reactions(channel_id, user_id, &mut msgs);
+                srv2.messages
+                    .populate_mentions(channel_id, user_id, &mut msgs);
+                Result::Ok(msgs)
+            });
+        }
+
+        let mut messages = Vec::new();
+        while let Some(res) = group_futs.next().await {
+            messages.extend(res?);
+        }
+
+        let author_ids: HashSet<_> = messages.iter().map(|m| m.author_id).collect();
+
+        let mut threads = todo!();
+        let mut room_members = todo!();
+        let mut thread_members = todo!();
+
+        let users = data
+            .user_get_many(&author_ids.into_iter().collect::<Vec<_>>())
+            .await?;
+        let has_more = (offset as u64 + raw_result.items.len() as u64) < raw_result.total;
+
+        Ok(MessageSearch {
+            results: raw_result.items.iter().map(|r| r.id).collect(),
+            messages,
+            users,
+            threads,
+            room_members,
+            thread_members,
+            has_more,
+            approximate_total: raw_result.total,
+        })
     }
 
     pub async fn search_messages(

@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     path::PathBuf,
     sync::{
         mpsc::{self, Sender},
@@ -12,7 +13,7 @@ use common::v1::types::{
 };
 use tantivy::{
     collector::{Count, TopDocs},
-    query::QueryParser,
+    query::{BooleanQuery, Query, QueryParser},
     schema::Value,
     DocAddress, Document, Index, IndexWriter, Score, TantivyDocument, Term,
 };
@@ -194,21 +195,65 @@ pub struct SearchMessagesResponseRawItem {
 }
 
 impl TantivyHandle {
-    pub fn search_messages(&self, req: MessageSearchRequest) -> Result<SearchMessagesResponseRaw> {
+    pub fn search_messages(
+        &self,
+        req: MessageSearchRequest,
+        visible_channel_ids: &[ChannelId],
+    ) -> Result<SearchMessagesResponseRaw> {
         let reader = self.index.reader()?;
         let s = &self.schema;
         let searcher = reader.searcher();
-        let query_parser = QueryParser::for_index(&self.index, vec![s.content]);
 
-        // // maybe use fuzzy search (within levenshein distance)?
-        // query_parser.set_field_fuzzy(s.content, false, 3, true);
+        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
 
-        // also look at parse_query_lenient
-        // TODO: return better errors here?
-        let query = query_parser.parse_query(&req.query.unwrap()).unwrap();
+        if let Some(q_str) = &req.query {
+            if !q_str.is_empty() {
+                let query_parser = QueryParser::for_index(&self.index, vec![s.content]);
+                let q = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| tantivy::TantivyError::from(e))?;
+                query_clauses.push((tantivy::query::Occur::Must, q));
+            }
+        }
 
-        let limit = 20;
-        let cursor = 0;
+        let channels_to_search: Vec<ChannelId> = if !req.channel_id.is_empty() {
+            let vis_set: HashSet<ChannelId> = visible_channel_ids.iter().cloned().collect();
+            req.channel_id
+                .iter()
+                .cloned()
+                .filter(|id| vis_set.contains(id))
+                .collect()
+        } else {
+            visible_channel_ids.to_vec()
+        };
+
+        if channels_to_search.is_empty() {
+            return Ok(SearchMessagesResponseRaw {
+                items: vec![],
+                total: 0,
+            });
+        }
+
+        let mut chan_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+        for id in channels_to_search {
+            chan_queries.push((
+                tantivy::query::Occur::Should,
+                Box::new(tantivy::query::TermQuery::new(
+                    Term::from_field_text(s.channel_id, &id.to_string()),
+                    tantivy::schema::IndexRecordOption::Basic,
+                )),
+            ));
+        }
+
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(BooleanQuery::new(chan_queries)),
+        ));
+
+        let query = BooleanQuery::new(query_clauses);
+
+        let limit = req.limit as usize;
+        let cursor = req.offset as usize;
         let collector = TopDocs::with_limit(limit).and_offset(cursor);
 
         let top_docs: Vec<DocAddress> = match (req.sort_field, req.sort_order) {
