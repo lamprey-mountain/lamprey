@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
-use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Permission,
@@ -29,7 +28,7 @@ impl ServiceRooms {
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
         let srv = self.state.services();
         let cached = srv.cache.load_room(room_id).await?;
-        let mut room = cached.inner.write().await;
+        let mut room = cached.inner.read().await.clone();
 
         if let Some(user_id) = user_id {
             let user_config = self
@@ -42,7 +41,7 @@ impl ServiceRooms {
 
         let mut online_count = 0;
         for member in &cached.members {
-            if srv.presence.get(*member.key()).status != Status::Offline {
+            if srv.presence.get(*member.key()).status.is_online() {
                 online_count += 1;
             }
         }

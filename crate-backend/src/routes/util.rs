@@ -1,9 +1,16 @@
 use std::{
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::{Duration, SystemTime},
 };
 
-use axum::{extract::FromRequestParts, http::request::Parts};
+use axum::{
+    body::Body,
+    extract::FromRequestParts,
+    http::{request::Parts, Request, StatusCode},
+    middleware::Next,
+    response::Response,
+    Extension,
+};
 use common::v1::types::{
     application::{Scope, Scopes},
     util::Time,
@@ -22,6 +29,7 @@ use crate::{
 };
 
 /// extract authentication info for a request
+#[derive(Clone)]
 pub struct Auth {
     /// the effective user making this request
     pub user: User,
@@ -39,6 +47,9 @@ pub struct Auth {
     ///
     /// extracted from HeaderReason
     reason: Option<String>,
+
+    /// the audit log slot for this request
+    pub audit_log_slot: Option<AuditLogSlot>,
 
     /// a reference to the server state
     s: Arc<ServerState>,
@@ -298,6 +309,8 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
             Scopes::default()
         };
 
+        let audit_log_slot = parts.extensions.get::<AuditLogSlot>().cloned();
+
         Ok(Auth {
             user: effective_user,
             real_user: if puppet_id.is_some() {
@@ -308,6 +321,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
             session,
             scopes,
             reason: reason.0,
+            audit_log_slot,
             s: s.clone(),
         })
     }
@@ -387,62 +401,70 @@ impl FromRequestParts<Arc<ServerState>> for HeaderCache {
     }
 }
 
+pub type AuditLogSlot = Arc<Mutex<Option<AuditLoggerTransaction>>>;
+
 /// an in-progress audit log
-pub struct AuditLoggerTransaction<'a> {
-    context_id: RoomId,
-    auth: &'a Auth,
-    reason: Option<&'a str>,
-    started_at: Time,
-    application_id: Option<ApplicationId>,
+#[derive(Clone)]
+pub struct AuditLoggerTransaction {
+    pub context_id: RoomId,
+    pub auth: Auth,
+    pub reason: Option<String>,
+    pub started_at: Time,
+    pub application_id: Option<ApplicationId>,
+    pub ty: Option<AuditLogEntryType>,
+    pub status: Option<AuditLogEntryStatus>,
 }
 
-pub struct AuditLoggerTransaction2<'a> {
-    inner: Option<AuditLoggerTransaction2Inner<'a>>,
-}
-
-pub struct AuditLoggerTransaction2Inner<'a> {
-    txn: AuditLoggerTransaction<'a>,
-    ty: AuditLogEntryType,
-    status: Option<AuditLogEntryStatus>,
+pub struct AuditLoggerTransaction2 {
+    local_txn: Option<AuditLoggerTransaction>,
+    slot: Option<AuditLogSlot>,
 }
 
 impl Auth {
     /// begin an audit log transaction
     // TODO: automatically save failed audit logs
     #[must_use = "must call commit() to save a successful audit log entry"]
-    pub fn audit_log(&self, context_id: RoomId) -> AuditLoggerTransaction<'_> {
+    pub fn audit_log(&self, context_id: RoomId) -> AuditLoggerTransaction {
         AuditLoggerTransaction {
             context_id,
-            auth: self,
-            reason: self.reason.as_deref(),
+            auth: self.clone(),
+            reason: self.reason.clone(),
             started_at: Time::now_utc(),
             application_id: self.session.app_id,
+            ty: None,
+            status: None,
         }
     }
 
     #[must_use = "must call commit() to save a successful audit log entry"]
-    pub fn audit_log2(
-        &self,
-        context_id: RoomId,
-        ty: AuditLogEntryType,
-    ) -> AuditLoggerTransaction2<'_> {
-        AuditLoggerTransaction2 {
-            inner: Some(AuditLoggerTransaction2Inner {
-                txn: AuditLoggerTransaction {
-                    context_id,
-                    auth: self,
-                    reason: self.reason.as_deref(),
-                    started_at: Time::now_utc(),
-                    application_id: self.session.app_id,
-                },
-                ty,
-                status: None,
-            }),
+    pub fn audit_log2(&self, context_id: RoomId, ty: AuditLogEntryType) -> AuditLoggerTransaction2 {
+        let txn = AuditLoggerTransaction {
+            context_id,
+            auth: self.clone(),
+            reason: self.reason.clone(),
+            started_at: Time::now_utc(),
+            application_id: self.session.app_id,
+            ty: Some(ty),
+            status: None,
+        };
+
+        if let Some(slot) = &self.audit_log_slot {
+            let mut guard = slot.lock().unwrap();
+            *guard = Some(txn);
+            AuditLoggerTransaction2 {
+                local_txn: None,
+                slot: Some(slot.clone()),
+            }
+        } else {
+            AuditLoggerTransaction2 {
+                local_txn: Some(txn),
+                slot: None,
+            }
         }
     }
 }
 
-impl AuditLoggerTransaction<'_> {
+impl AuditLoggerTransaction {
     /// save an audit log entry with the success status
     pub async fn commit_success(self, ty: AuditLogEntryType) -> Result<(), Error> {
         self.commit(AuditLogEntryStatus::Success, ty).await
@@ -468,7 +490,7 @@ impl AuditLoggerTransaction<'_> {
             ty,
             user_id: self.auth.user.id,
             session_id: Some(self.auth.session.id),
-            reason: self.reason.map(|s| s.to_string()),
+            reason: self.reason.clone(),
             status,
             started_at: self.started_at,
             ended_at: Time::now_utc(),
@@ -494,26 +516,38 @@ impl AuditLoggerTransaction<'_> {
 }
 
 // FIXME: commit on drop
-impl Drop for AuditLoggerTransaction2<'_> {
+impl Drop for AuditLoggerTransaction2 {
     fn drop(&mut self) {
-        let mut inner = self.inner.take().unwrap();
-        let status = if let Some(s) = inner.status {
-            s
-        } else {
-            debug!("implicitly failing audit log entry");
-            AuditLogEntryStatus::Failed
-        };
-        tokio::spawn(async move {
-            if let Err(err) = inner.txn.commit_inner(status, inner.ty).await {
-                error!("failed to save audit log: {err:?}");
-            }
-        });
+        if self.slot.is_some() {
+            return;
+        }
+        if let Some(mut txn) = self.local_txn.take() {
+            let status = if let Some(s) = &txn.status {
+                s.to_owned()
+            } else {
+                debug!("implicitly failing audit log entry");
+                AuditLogEntryStatus::Failed
+            };
+            tokio::spawn(async move {
+                if let Err(err) = txn.commit_inner(status, txn.ty.clone().unwrap()).await {
+                    error!("failed to save audit log: {err:?}");
+                }
+            });
+        }
     }
 }
 
-impl AuditLoggerTransaction2<'_> {
+impl AuditLoggerTransaction2 {
     pub fn set_status(&mut self, status: AuditLogEntryStatus) {
-        self.inner.as_mut().unwrap().status = Some(status);
+        if let Some(slot) = &self.slot {
+            if let Ok(mut guard) = slot.lock() {
+                if let Some(txn) = guard.as_mut() {
+                    txn.status = Some(status);
+                }
+            }
+        } else if let Some(txn) = self.local_txn.as_mut() {
+            txn.status = Some(status);
+        }
     }
 
     pub fn success(mut self) {
@@ -527,4 +561,35 @@ impl AuditLoggerTransaction2<'_> {
     pub fn failed(mut self) {
         self.set_status(AuditLogEntryStatus::Failed);
     }
+}
+
+pub async fn audit_log_middleware(mut req: Request<Body>, next: Next) -> Response {
+    let slot: AuditLogSlot = Arc::new(Mutex::new(None));
+    req.extensions_mut().insert(slot.clone());
+
+    let response = next.run(req).await;
+
+    if let Ok(mut guard) = slot.lock() {
+        if let Some(mut txn) = guard.take() {
+            let status = if let Some(s) = txn.status.clone() {
+                s
+            } else if response.status().is_success() {
+                AuditLogEntryStatus::Success
+            } else if response.status() == StatusCode::FORBIDDEN
+                || response.status() == StatusCode::UNAUTHORIZED
+            {
+                AuditLogEntryStatus::Unauthorized
+            } else {
+                AuditLogEntryStatus::Failed
+            };
+
+            tokio::spawn(async move {
+                if let Err(err) = txn.commit_inner(status, txn.ty.clone().unwrap()).await {
+                    error!("failed to save audit log: {err:?}");
+                }
+            });
+        }
+    }
+
+    response
 }

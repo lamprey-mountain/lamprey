@@ -10,7 +10,6 @@ use validator::Validate;
 
 use crate::v1::types::{
     notifications::NotifsRoom,
-    search::{FilterRange, Order},
     user_config::UserConfigRoom,
     util::{some_option, Diff},
     ChannelId, MediaId, Permission, UserId,
@@ -233,56 +232,8 @@ pub struct TransferOwnership {
     pub owner_id: UserId,
 }
 
-/// admins can search rooms
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomSearch {
-    /// what order to return results in
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub order: RoomSearchOrderField,
-
-    /// filter by room name, description, and id
-    // NOTE: impl this with ILIKE, similarly to room member filtering
-    pub query: Option<String>,
-
-    /// only return rooms created in this range
-    pub created_at: FilterRange<Time>,
-
-    /// filter by owner id
-    pub owner_id: Vec<UserId>,
-
-    /// filter by deletion timestamp range
-    pub deleted_at: FilterRange<Time>,
-
-    /// filter by archival timestamp range
-    pub archived_at: FilterRange<Time>,
-
-    /// filter by quarantine status
-    pub quarantined: Option<bool>,
-
-    /// sort order (ascending/descending)
-    pub sort_order: Order,
-
-    /// field to sort by
-    pub sort_field: RoomSearchOrderField,
-}
-
-/// which field to order room search results by
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum RoomSearchOrderField {
-    /// sort by number of members
-    #[default]
-    Members,
-
-    /// sort by creation time
-    Created,
-
-    /// sort by room name
-    Name,
-}
+// TODO: move
+pub use super::search::RoomSearchRequest as SearchRooms;
 
 impl Diff<Room> for RoomPatch {
     fn changes(&self, other: &Room) -> bool {

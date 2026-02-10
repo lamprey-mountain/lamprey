@@ -7,10 +7,7 @@ use thiserror::Error;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{
-    application::{Scope, Scopes},
-    ChannelId, Permission, RoomId,
-};
+use crate::v1::types::{application::Scope, Permission};
 
 // TODO: cfg_attr serde
 /// an error that may be returned from the api
@@ -242,7 +239,66 @@ pub enum ErrorCode {
     /// unknown channel
     #[error("unknown channel")]
     UnknownChannel,
-    // impl unknown thread, message, message version, user, media, invite, application, automod rule, webhook, room member, thread member, ban, email, document branch, document revision
+
+    /// unknown thread
+    #[error("unknown thread")]
+    UnknownThread,
+
+    /// unknown message
+    #[error("unknown message")]
+    UnknownMessage,
+
+    /// unknown message version
+    #[error("unknown message version")]
+    UnknownMessageVersion,
+
+    /// unknown user
+    #[error("unknown user")]
+    UnknownUser,
+
+    /// unknown media
+    #[error("unknown media")]
+    UnknownMedia,
+
+    /// unknown invite
+    #[error("unknown invite")]
+    UnknownInvite,
+
+    /// unknown application
+    #[error("unknown application")]
+    UnknownApplication,
+
+    /// unknown automod rule
+    #[error("unknown automod rule")]
+    UnknownAutomodRule,
+
+    /// unknown webhook
+    #[error("unknown webhook")]
+    UnknownWebhook,
+
+    /// unknown room member
+    #[error("unknown room member")]
+    UnknownRoomMember,
+
+    /// unknown thread member
+    #[error("unknown thread member")]
+    UnknownThreadMember,
+
+    /// unknown room ban
+    #[error("unknown room ban")]
+    UnknownRoomBan,
+
+    /// unknown user email
+    #[error("unknown user email")]
+    UnknownUserEmail,
+
+    /// unknown document branch
+    #[error("unknown document branch")]
+    UnknownDocumentBranch,
+
+    /// unknown document revision
+    #[error("unknown document revision")]
+    UnknownDocumentRevision,
 
     // calls can only be created in Broadcast channels
     // calls can only be deleted in Broadcast channels
@@ -313,6 +369,21 @@ impl ErrorCode {
             ErrorCode::SudoRequired => 401,
             ErrorCode::UnknownRoom => 404,
             ErrorCode::UnknownChannel => 404,
+            ErrorCode::UnknownThread => 404,
+            ErrorCode::UnknownMessage => 404,
+            ErrorCode::UnknownMessageVersion => 404,
+            ErrorCode::UnknownUser => 404,
+            ErrorCode::UnknownMedia => 404,
+            ErrorCode::UnknownInvite => 404,
+            ErrorCode::UnknownApplication => 404,
+            ErrorCode::UnknownAutomodRule => 404,
+            ErrorCode::UnknownWebhook => 404,
+            ErrorCode::UnknownRoomMember => 404,
+            ErrorCode::UnknownThreadMember => 404,
+            ErrorCode::UnknownRoomBan => 404,
+            ErrorCode::UnknownUserEmail => 404,
+            ErrorCode::UnknownDocumentBranch => 404,
+            ErrorCode::UnknownDocumentRevision => 404,
             ErrorCode::Automod => 403,
             ErrorCode::MissingPermissions => 403,
         }

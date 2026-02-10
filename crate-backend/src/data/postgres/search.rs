@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    search::{SearchChannelsRequest, SearchMessageRequest},
+    search::{ChannelSearchRequest, MessageSearchRequest},
     Channel, ChannelId, ChannelType, MessageId, PaginationDirection, PaginationQuery,
     PaginationResponse, UserId,
 };
@@ -28,7 +28,7 @@ impl DataSearch for Postgres {
     async fn search_message(
         &self,
         user_id: UserId,
-        query: SearchMessageRequest,
+        query: MessageSearchRequest,
         paginate: PaginationQuery<MessageId>,
         channel_visibility: &[(ChannelId, bool)],
     ) -> Result<PaginationResponse<Message>> {
@@ -106,7 +106,7 @@ impl DataSearch for Postgres {
     async fn search_channel(
         &self,
         user_id: UserId,
-        query: SearchChannelsRequest,
+        query: ChannelSearchRequest,
         paginate: PaginationQuery<ChannelId>,
         channel_visibility: &[(ChannelId, bool)],
     ) -> Result<PaginationResponse<Channel>> {

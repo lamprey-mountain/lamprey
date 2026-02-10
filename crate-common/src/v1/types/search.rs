@@ -7,16 +7,18 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+#[cfg(feature = "feat_search_ordering")]
+use crate::v1::types::MessageId;
 use crate::v1::types::{
-    Channel, ChannelId, ChannelType, Message, RoleId, RoomId, RoomMember, TagId, ThreadMember,
-    User, UserId,
+    misc::Time, Channel, ChannelId, ChannelType, Message, RoleId, RoomId, RoomMember, TagId,
+    ThreadMember, User, UserId,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct SearchMessageRequest {
+pub struct MessageSearchRequest {
     /// The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function.
     #[cfg_attr(
         feature = "utoipa",
@@ -59,9 +61,10 @@ pub struct SearchMessageRequest {
     /// Only return messages that have an embed
     pub has_embed: Option<bool>,
 
-    // /// Only return messages that have an associated thread
-    // // maybe not as useful due to the upcoming thread search endpoint
-    // pub has_thread: Option<bool>,
+    /// Only return messages that have an associated thread
+    // NOTE: maybe not as useful due to the channel/thread search endpoint
+    pub has_thread: Option<bool>,
+
     /// Only return pinned (or unpinned) messages
     pub pinned: Option<bool>,
 
@@ -83,32 +86,52 @@ pub struct SearchMessageRequest {
     /// Only return messages that mentions everyone
     pub mentions_everyone: Option<bool>,
 
-    #[cfg(feature = "feat_search_ordering")]
-    /// The key to start paginating from. Not inclusive. Optional.
-    pub from: Option<MessageId>,
+    /// only include messages ids in this range
+    #[serde(default)]
+    pub message_id: FilterRange<MessageId>,
 
-    /// The key to stop paginating at. Not inclusive. Optional.
-    #[cfg(feature = "feat_search_ordering")]
-    pub to: Option<MessageId>,
+    /// sort order (ascending/descending)
+    #[serde(default = "Order::descending")] // return newest by default
+    pub sort_order: Order,
 
-    /// The order to return messages in
-    pub order: SearchMessageOrder,
+    /// field to sort by
+    #[serde(default)]
+    pub sort_field: MessageSearchOrderField,
 
-    /// The maximum number of items to return.
-    #[cfg(feature = "feat_search_ordering")]
-    // TODO: min 0, max 1024, default 100
-    pub limit: Option<u16>,
+    /// the maximum number of messages to return
+    #[serde(default = "default_limit")]
+    #[cfg_attr(feature = "utoipa", schema(default = 100, minimum = 0, maximum = 1024))]
+    #[cfg_attr(feature = "validator", validate(range(min = 0, max = 1024)))]
+    pub limit: u16,
 
-    #[cfg(any())]
+    /// the number of messages to skip before returning
+    #[serde(default)]
+    #[cfg_attr(feature = "utoipa", schema(default = 0, minimum = 0, maximum = 65535))]
+    #[cfg_attr(feature = "validator", validate(range(min = 0, max = 65535)))]
+    pub offset: u16,
+
     /// whether to include results from nsfw channels
-    pub include_nsfw: bool,
+    pub include_nsfw: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// which field to order message search results by
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MessageSearchOrderField {
+    /// sort by creation time
+    #[default]
+    Created,
+
+    /// sort by relevancy
+    Relevancy,
+}
+
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct SearchChannelsRequest {
+pub struct ChannelSearchRequest {
     /// The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function.
     #[cfg_attr(
         feature = "utoipa",
@@ -129,6 +152,7 @@ pub struct SearchChannelsRequest {
     pub parent_id: Vec<ChannelId>,
 
     /// Only return threads with these tags.
+    // maybe allow configuring tag matching (any/all)
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub tag_id: Vec<TagId>,
@@ -144,78 +168,175 @@ pub struct SearchChannelsRequest {
     #[cfg_attr(feature = "validator", validate(length(max = 32)))]
     pub ty: Vec<ChannelType>,
 
-    #[cfg(feature = "feat_search_ordering")]
-    /// The key to start paginating from. Not inclusive. Optional.
-    pub from: Option<MessageId>,
+    /// only include channel ids in this range
+    #[serde(default)]
+    pub message_id: FilterRange<MessageId>,
 
-    /// The key to stop paginating at. Not inclusive. Optional.
-    #[cfg(feature = "feat_search_ordering")]
-    pub to: Option<MessageId>,
+    /// sort order (ascending/descending)
+    #[serde(default = "Order::descending")] // return newest by default
+    pub sort_order: Order,
 
-    /// The order to return channels in
-    #[cfg(feature = "feat_search_ordering")]
-    pub order: SearchChannelsOrder,
+    /// field to sort by
+    #[serde(default)]
+    pub sort_field: ChannelSearchOrderField,
 
-    /// The maximum number of items to return.
-    #[cfg(feature = "feat_search_ordering")]
-    // TODO: min 0, max 1024, default 100
-    pub limit: Option<u16>,
+    /// the maximum number of channels to return
+    #[serde(default = "default_limit")]
+    #[cfg_attr(feature = "utoipa", schema(default = 100, minimum = 0, maximum = 1024))]
+    #[cfg_attr(feature = "validator", validate(range(min = 0, max = 1024)))]
+    pub limit: u16,
 
-    #[cfg(any())]
-    /// whether to include results from nsfw channels
-    pub include_nsfw: bool,
+    /// the number of channels to skip before returning
+    #[serde(default)]
+    #[cfg_attr(feature = "utoipa", schema(default = 0, minimum = 0, maximum = 65535))]
+    #[cfg_attr(feature = "validator", validate(range(min = 0, max = 65535)))]
+    pub offset: u16,
+
+    /// whether to include nsfw channels
+    pub include_nsfw: Option<bool>,
 }
 
+/// which field to order channel search results by
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ChannelSearchOrderField {
+    /// sort by creation time
+    #[default]
+    Created,
+
+    /// sort by relevancy
+    Relevancy,
+
+    /// sort by last activity time
+    Activity,
+
+    /// sort by archival time
+    Archived,
+}
+
+/// room search request
 // TODO(#77): room searching
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct SearchRoomsRequest {
-    /// The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function.
+pub struct RoomSearchRequest {
+    /// what order to return results in
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub order: RoomSearchOrderField,
+
+    /// filter by room name, description, and id
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 2048)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    pub query: String,
+    #[serde(default)]
+    pub query: Option<String>,
+
+    /// only return rooms created in this range
+    #[serde(default)]
+    pub created_at: FilterRange<Time>,
+
+    /// filter by owner id
+    ///
+    /// admin only
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    #[cfg_attr(feature = "utoipa", schema(max_items = 128))]
+    pub owner_id: Vec<UserId>,
+
+    /// filter by deletion timestamp range
+    ///
+    /// admin only
+    pub deleted_at: FilterRange<Time>,
+
+    /// filter by archival timestamp range
+    ///
+    /// admin only
+    pub archived_at: FilterRange<Time>,
+
+    /// filter by quarantine status
+    ///
+    /// admin only
+    pub quarantined: Option<bool>,
+
+    /// filter by if this room is public
+    ///
+    /// required to be true for non-admins
+    pub public: Option<bool>,
+
+    /// sort order (ascending/descending)
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub sort_order: Order,
+
+    /// field to sort by
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub sort_field: RoomSearchOrderField,
+
+    /// the maximum number of messages to return
+    #[serde(default = "default_limit")]
+    #[cfg_attr(feature = "utoipa", schema(default = 100, minimum = 0, maximum = 1024))]
+    #[cfg_attr(feature = "validator", validate(range(min = 0, max = 1024)))]
+    pub limit: u16,
+
+    /// the number of channels to skip before returning
+    #[serde(default)]
+    #[cfg_attr(feature = "utoipa", schema(default = 0, minimum = 0, maximum = 65535))]
+    #[cfg_attr(feature = "validator", validate(range(min = 0, max = 65535)))]
+    pub offset: u16,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// which field to order room search results by
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum SearchMessageOrder {
-    Relevancy,
-    Newest,
-    Oldest,
-}
+pub enum RoomSearchOrderField {
+    /// sort by number of members
+    #[default]
+    Members,
 
-#[cfg(feature = "feat_search_ordering")]
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum SearchChannelsOrder {
-    Relevancy,
-    CreatedNewest,
-    CreatedOldest,
-    ActivityNewest,
-    ActivityOldest,
-    ArchiveNewest,
-    ArchiveOldest,
+    /// sort by creation time
+    Created,
+
+    /// sort by room name
+    Name,
 }
 
 // TODO: return extra data with search response
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct SearchMessageResponse {
+pub struct MessageSearch {
+    /// the ids of the matched messages
+    pub results: Vec<MessageId>,
+
+    /// all relevant messages (eg. messages that a result replied to)
     pub messages: Vec<Message>,
+
+    /// the authors of the messages
     pub users: Vec<User>,
+
+    /// threads the messages are in
     pub threads: Vec<Channel>,
+
+    /// room members objects for each author, if they exist
     pub room_members: Vec<RoomMember>,
+
+    /// thread member objects for each author, if they exist
     pub thread_members: Vec<ThreadMember>,
-    pub total: u64,
+
+    /// whether there are more threads
+    pub has_more: bool,
+
+    /// approximate count of total results that match this query
+    pub approximate_total: u64,
 }
+
+// pub struct ChannelSearch {}
+// pub struct UserSearch {}
+// pub struct RoomSearch {}
 
 /// filter results to only this range
 #[derive(Debug, Default, Clone)]
@@ -232,7 +353,6 @@ pub enum FilterRange<T> {
 }
 
 /// what order to return items in
-// TODO: use this in more places
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -244,4 +364,14 @@ pub enum Order {
 
     #[cfg_attr(feature = "serde", serde(rename = "desc"))]
     Descending,
+}
+
+impl Order {
+    pub fn descending() -> Order {
+        Order::Descending
+    }
+}
+
+const fn default_limit() -> u16 {
+    100
 }

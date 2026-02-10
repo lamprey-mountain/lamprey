@@ -7,8 +7,7 @@ use std::{
 };
 
 use common::v1::types::{
-    search::{SearchMessageOrder, SearchMessageRequest},
-    ChannelId, Message, MessageId, MessageSync, MessageType,
+    search::{MessageSearchOrderField, MessageSearchRequest, Order}, ChannelId, Message, MessageId, MessageSync, MessageType,
 };
 use tantivy::{
     collector::{Count, TopDocs},
@@ -19,7 +18,11 @@ use tantivy::{
 use tracing::error;
 
 use crate::{
-    services::search::{directory::ObjectDirectory, schema::MessageSchema},
+    services::search::{
+        directory::ObjectDirectory,
+        schema::{tantivy_document_from_message, LampreySchema},
+        tokenizer::DynamicTokenizer,
+    },
     Result, ServerState, ServerStateInner,
 };
 
@@ -32,7 +35,7 @@ pub struct TantivyHandle {
     command_tx: Sender<IndexerCommand>,
     thread: std::thread::JoinHandle<()>,
     index: Index,
-    schema: MessageSchema,
+    schema: LampreySchema,
 }
 
 pub enum IndexerCommand {
@@ -40,16 +43,21 @@ pub enum IndexerCommand {
     Message(MessageSync),
 
     /// reindex all messages in this channel
+    // TODO: save index status? (eg. last indexed message id per channel)
     ReindexChannel(ChannelId),
 
     /// commit/flush then exit
     Shutdown,
 }
 
+/// create a new TantivyHandle
 pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
     let dir = ObjectDirectory::new(s, PathBuf::from("tantivy/"), PathBuf::from("/tmp/tantivy"));
-    let sch = MessageSchema::default();
+    let sch = LampreySchema::default();
     let index = Index::open_or_create(dir, sch.schema.clone()).unwrap();
+    index
+        .tokenizers()
+        .register("dynamic", DynamicTokenizer::new());
     let (tx, rx) = mpsc::channel::<IndexerCommand>();
 
     let index2 = index.clone();
@@ -61,48 +69,12 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
             .build()
             .unwrap();
 
+        // TODO: better error handling
         rt.block_on(async move {
             let mut index_writer: IndexWriter = index2.writer(INDEXING_BUFFER_SIZE).unwrap();
 
             let insert_message = |index_writer: &IndexWriter, message: Message| {
-                let mut doc = TantivyDocument::new();
-                doc.add_text(sch2.id, message.id.to_string());
-                doc.add_text(sch2.channel_id, message.channel_id.to_string());
-                doc.add_text(sch2.author_id, message.author_id.to_string());
-                doc.add_date(
-                    sch2.created_at,
-                    tantivy::DateTime::from_utc(*message.created_at),
-                );
-                match message.latest_version.message_type {
-                    MessageType::DefaultMarkdown(m) => {
-                        if let Some(c) = &m.content {
-                            doc.add_text(sch2.content, c);
-                        }
-                        doc.add_bool(sch2.has_attachment, !m.attachments.is_empty());
-                        doc.add_bool(
-                            sch2.has_image,
-                            m.attachments
-                                .iter()
-                                .any(|a| a.source.mime.starts_with("image/")),
-                        );
-                        doc.add_bool(
-                            sch2.has_audio,
-                            m.attachments
-                                .iter()
-                                .any(|a| a.source.mime.starts_with("audio/")),
-                        );
-                        doc.add_bool(
-                            sch2.has_video,
-                            m.attachments
-                                .iter()
-                                .any(|a| a.source.mime.starts_with("video/")),
-                        );
-                        doc.add_bool(sch2.has_embed, !m.embeds.is_empty());
-                        // doc.add_bool(sch2.has_link, todo);
-                        // doc.add_bool(sch2.has_thread, todo);
-                    }
-                    _ => {}
-                }
+                let doc = tantivy_document_from_message(&sch2, message);
                 index_writer.add_document(doc).unwrap();
             };
 
@@ -182,7 +154,7 @@ pub struct SearchMessagesResponseRawItem {
 }
 
 impl TantivyHandle {
-    pub fn search_messages(&self, req: SearchMessageRequest) -> Result<SearchMessagesResponseRaw> {
+    pub fn search_messages(&self, req: MessageSearchRequest) -> Result<SearchMessagesResponseRaw> {
         let reader = self.index.reader()?;
         let s = &self.schema;
         let searcher = reader.searcher();
@@ -198,13 +170,14 @@ impl TantivyHandle {
         let limit = 20;
         let cursor = 0;
         let collector = TopDocs::with_limit(limit).and_offset(cursor);
-        let top_docs: Vec<DocAddress> = match req.order {
-            SearchMessageOrder::Relevancy => searcher
+        // FIXME: message ordering
+        let top_docs: Vec<DocAddress> = match (req.sort_field, req.sort_order) {
+            (MessageSearchOrderField::Relevancy, _) => searcher
                 .search(&query, &collector)?
                 .into_iter()
                 .map(|(_, doc)| doc)
                 .collect(),
-            SearchMessageOrder::Newest => searcher
+            (MessageSearchOrderField::Created, Order::Ascending) => searcher
                 .search(
                     &query,
                     &collector.order_by_fast_field::<tantivy::DateTime>(
@@ -215,7 +188,7 @@ impl TantivyHandle {
                 .into_iter()
                 .map(|(_, doc)| doc)
                 .collect(),
-            SearchMessageOrder::Oldest => searcher
+            (MessageSearchOrderField::Created, Order::Descending) => searcher
                 .search(
                     &query,
                     &collector.order_by_fast_field::<tantivy::DateTime>(

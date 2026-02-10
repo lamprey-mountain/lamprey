@@ -7,9 +7,9 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    application::Integration, util::Changes, ApplicationId, AuditLogEntry, AuditLogEntryId,
-    AuditLogEntryType, AuditLogFilter, RoomSearch, RoomSecurityUpdate, RoomType, TransferOwnership,
-    SERVER_ROOM_ID,
+    application::Integration, search::RoomSearchRequest, util::Changes, ApplicationId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, AuditLogFilter, RoomSecurityUpdate,
+    RoomType, TransferOwnership, SERVER_ROOM_ID,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -148,7 +148,7 @@ async fn room_list(
 async fn room_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<RoomSearch>,
+    Json(_json): Json<RoomSearchRequest>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;

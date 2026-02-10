@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::search::{SearchChannelsRequest, SearchMessageRequest, SearchRoomsRequest};
+use common::v1::types::search::{ChannelSearchRequest, MessageSearchRequest, RoomSearchRequest};
 use common::v1::types::{
     Channel, ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, Room, RoomId,
 };
@@ -28,7 +28,7 @@ pub async fn search_messages(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Json(json): Json<SearchMessageRequest>,
+    Json(json): Json<MessageSearchRequest>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let res = s
@@ -52,7 +52,7 @@ pub async fn search_channels(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<ChannelId>>,
-    Json(json): Json<SearchChannelsRequest>,
+    Json(json): Json<ChannelSearchRequest>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let res = s
@@ -76,7 +76,7 @@ pub async fn search_rooms(
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
     Query(_q): Query<PaginationQuery<RoomId>>,
-    Json(_json): Json<SearchRoomsRequest>,
+    Json(_json): Json<RoomSearchRequest>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
 }

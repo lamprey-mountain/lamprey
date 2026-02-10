@@ -45,5 +45,6 @@ default = [
   "feat_thread_type_forums",
   "feat_interaction",
   "feat_interaction_reaction",
+  "feat_search_ordering",
   "str0m",
 ]

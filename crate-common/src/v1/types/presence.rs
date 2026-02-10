@@ -54,6 +54,12 @@ pub enum Activity {
     },
 }
 
+impl Status {
+    pub fn is_online(&self) -> bool {
+        self != &Status::Offline
+    }
+}
+
 impl Presence {
     /// construct a default online presence
     pub fn online() -> Presence {

@@ -25,7 +25,7 @@ use common::v1::types::room_analytics::{
     RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
     RoomAnalyticsOverview, RoomAnalyticsParams,
 };
-use common::v1::types::search::{SearchChannelsRequest, SearchMessageRequest};
+use common::v1::types::search::{ChannelSearchRequest, MessageSearchRequest};
 use common::v1::types::tag::{Tag, TagCreate, TagPatch};
 use common::v1::types::user_config::{
     UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
@@ -812,14 +812,14 @@ pub trait DataSearch {
     async fn search_message(
         &self,
         user_id: UserId,
-        query: SearchMessageRequest,
+        query: MessageSearchRequest,
         paginate: PaginationQuery<MessageId>,
         channel_visibility: &[(ChannelId, bool)],
     ) -> Result<PaginationResponse<MessageV2>>;
     async fn search_channel(
         &self,
         user_id: UserId,
-        query: SearchChannelsRequest,
+        query: ChannelSearchRequest,
         paginate: PaginationQuery<ChannelId>,
         channel_visibility: &[(ChannelId, bool)],
     ) -> Result<PaginationResponse<Channel>>;

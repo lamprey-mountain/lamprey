@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use common::v1::types::{
-    search::{SearchChannelsRequest, SearchMessageRequest},
+    search::{ChannelSearchRequest, MessageSearchRequest, MessageSearch},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
 };
 use common::v2::types::message::Message;
@@ -14,6 +14,7 @@ use crate::{error::Result, services::search::index::TantivyHandle, ServerStateIn
 mod directory;
 mod index;
 mod schema;
+mod tokenizer;
 
 pub struct ServiceSearch {
     state: Arc<ServerStateInner>,
@@ -27,10 +28,18 @@ impl ServiceSearch {
         // Self { state, tantivy }
     }
 
+    pub async fn search_messages2(
+        &self,
+        user_id: UserId,
+        req: MessageSearchRequest,
+    ) -> Result<MessageSearch> {
+        todo!()
+    }
+
     pub async fn search_messages(
         &self,
         user_id: UserId,
-        json: SearchMessageRequest,
+        json: MessageSearchRequest,
         q: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let data = self.state.data();
@@ -76,7 +85,7 @@ impl ServiceSearch {
     pub async fn search_channels(
         &self,
         user_id: UserId,
-        json: SearchChannelsRequest,
+        json: ChannelSearchRequest,
         q: PaginationQuery<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
         let data = self.state.data();

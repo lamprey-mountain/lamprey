@@ -1,6 +1,6 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
 
-use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
+use axum::{extract::DefaultBodyLimit, middleware, response::Html, routing::get, Json};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
 use common::v1::types::{misc::ApplicationIdReq, util::Time, AuditLogEntry, AuditLogEntryType};
@@ -303,6 +303,7 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
         .layer(cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
+        .layer(middleware::from_fn(routes::util::audit_log_middleware))
         .layer(CatchPanicLayer::new())
         .layer(PropagateHeaderLayer::new(HeaderName::from_static(
             "x-trace-id",

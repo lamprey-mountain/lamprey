@@ -1,5 +1,3 @@
-#![allow(unused)] // TEMP: suppress warnings here for now
-
 use std::{
     io::{BufWriter, Error as IoError, Result as IoResult, Write},
     ops::Range,
@@ -7,6 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use opendal::Operator;
 use tantivy::{
     directory::{
         error::{DeleteError, OpenReadError, OpenWriteError},
@@ -25,7 +24,9 @@ use crate::ServerStateInner;
 // TODO: replace with just rt?
 struct AsyncIo {
     rt: Runtime,
-    s: Arc<ServerStateInner>,
+    // apparently using s.blobs doesnt work
+    // s: Arc<ServerStateInner>,
+    blobs: opendal::Operator,
 }
 
 impl std::fmt::Debug for AsyncIo {
@@ -65,12 +66,20 @@ impl ObjectDirectory {
             .enable_all()
             .build()
             .unwrap();
+        let blobs: opendal::Operator =
+            todo!("somehow clone existing operator here while making it combatible");
         Self {
-            io: Arc::new(AsyncIo { rt, s }),
+            io: Arc::new(AsyncIo { rt, blobs }),
             base_path,
             cache_path,
             atomic_rw_lock: Arc::new(Mutex::new(())),
         }
+    }
+}
+
+impl ObjectDirectory {
+    fn blobs(&self) -> &opendal::Operator {
+        &self.io.blobs
     }
 }
 
@@ -85,9 +94,7 @@ impl Directory for ObjectDirectory {
         }
 
         let result = self.io.rt.block_on(
-            self.io
-                .s
-                .blobs
+            self.blobs()
                 .delete(self.base_path.join(path).to_str().unwrap()),
         );
 
@@ -104,9 +111,7 @@ impl Directory for ObjectDirectory {
         }
 
         let result = self.io.rt.block_on(
-            self.io
-                .s
-                .blobs
+            self.blobs()
                 .exists(self.base_path.join(path).to_str().unwrap()),
         );
 
@@ -126,7 +131,7 @@ impl Directory for ObjectDirectory {
         let result = self
             .io
             .rt
-            .block_on(self.io.s.blobs.read(path.to_str().unwrap()));
+            .block_on(self.blobs().read(path.to_str().unwrap()));
 
         result
             .map_err(|err| OpenReadError::IoError {
@@ -143,7 +148,7 @@ impl Directory for ObjectDirectory {
         let result = self
             .io
             .rt
-            .block_on(self.io.s.blobs.write(path.to_str().unwrap(), data.to_vec()));
+            .block_on(self.blobs().write(path.to_str().unwrap(), data.to_vec()));
 
         result
             .map(|_| ())
