@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use opendal::Operator;
+use opendal::{layers::LoggingLayer, Builder, Operator};
 use tantivy::{
     directory::{
         error::{DeleteError, OpenReadError, OpenWriteError},
@@ -13,96 +13,111 @@ use tantivy::{
     },
     Directory, HasLen,
 };
-use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 use tracing::error;
 
 use crate::ServerStateInner;
 
-// TODO: write out all of this
-
-/// minimal shim runtime for tantivy
-// TODO: replace with just rt?
-struct AsyncIo {
-    rt: Runtime,
-    // apparently using s.blobs doesnt work
-    // s: Arc<ServerStateInner>,
-    blobs: opendal::Operator,
-}
-
-impl std::fmt::Debug for AsyncIo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "AsyncIo {{ ... }}")
-    }
-}
-
-/// a directory on object storage
+/// a directory on object storage using blocking IO
 #[derive(Debug, Clone)]
 pub struct ObjectDirectory {
-    io: Arc<AsyncIo>,
+    /// opendal operator to access s3
+    blobs: Operator,
+
+    /// tokio runtime to use the opendal operator with
+    rt: Arc<tokio::runtime::Runtime>,
 
     /// which directory to write inside of the object store
     base_path: PathBuf,
 
     /// location of the local filesystem cache
     cache_path: PathBuf,
-    // read_version: Option<u64>,
-    // write_version: u64,
     atomic_rw_lock: Arc<Mutex<()>>,
 }
 
 /// a file on object storage
 #[derive(Debug)]
 struct ObjectFile {
-    io: Arc<AsyncIo>,
-    path: PathBuf,
+    rt: Arc<tokio::runtime::Runtime>,
+    blobs: Operator,
+    path: String,
     len: usize,
 }
 
-struct ObjectFileWrite;
+/// a handle to write to a file on object storage
+struct ObjectFileWrite {
+    rt: Arc<tokio::runtime::Runtime>,
+    blobs: Operator,
+    path: String,
+    buf: Vec<u8>,
+}
 
 impl ObjectDirectory {
     pub fn new(s: Arc<ServerStateInner>, base_path: PathBuf, cache_path: PathBuf) -> Self {
-        let rt = tokio::runtime::Builder::new_multi_thread()
+        let config = &s.config;
+        let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap();
-        let blobs: opendal::Operator =
-            todo!("somehow clone existing operator here while making it combatible");
+
+        // copied from main
+        let blobs_builder = opendal::services::S3::default()
+            .bucket(&config.s3.bucket)
+            .endpoint(config.s3.endpoint.as_str())
+            .region(&config.s3.region)
+            .access_key_id(&config.s3.access_key_id)
+            .secret_access_key(&config.s3.secret_access_key);
+        let blobs = Operator::new(blobs_builder)
+            .expect("if this worked in main server state it should work here too")
+            .layer(LoggingLayer::default())
+            .finish();
+
         Self {
-            io: Arc::new(AsyncIo { rt, blobs }),
+            blobs,
+            rt: Arc::new(rt),
             base_path,
             cache_path,
             atomic_rw_lock: Arc::new(Mutex::new(())),
         }
     }
-}
 
-impl ObjectDirectory {
-    fn blobs(&self) -> &opendal::Operator {
-        &self.io.blobs
+    fn path_str(&self, path: &Path) -> String {
+        self.base_path.join(path).to_str().unwrap().to_string()
     }
 }
 
 impl Directory for ObjectDirectory {
     fn get_file_handle(&self, path: &Path) -> Result<Arc<dyn FileHandle>, OpenReadError> {
-        todo!()
+        let p = self.path_str(path);
+        let meta = self
+            .rt
+            .block_on(self.blobs.stat(&p))
+            .map_err(|err| OpenReadError::IoError {
+                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                filepath: path.to_path_buf(),
+            })?;
+
+        Ok(Arc::new(ObjectFile {
+            rt: Arc::clone(&self.rt),
+            blobs: self.blobs.clone(),
+            path: p,
+            len: meta.content_length() as usize,
+        }))
     }
 
     fn delete(&self, path: &Path) -> Result<(), DeleteError> {
         if let Err(err) = std::fs::remove_file(self.cache_path.join(path)) {
-            error!(path = ?path, "failed to remove file from cache");
+            if err.kind() != std::io::ErrorKind::NotFound {
+                error!(path = ?path, "failed to remove file from cache");
+            }
         }
 
-        let result = self.io.rt.block_on(
-            self.blobs()
-                .delete(self.base_path.join(path).to_str().unwrap()),
-        );
-
-        result.map_err(|err| DeleteError::IoError {
-            // TODO: map opendal errors to std::io better
-            io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
-            filepath: path.to_path_buf(),
-        })
+        self.rt
+            .block_on(self.blobs.delete(&self.path_str(path)))
+            .map_err(|err| DeleteError::IoError {
+                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                filepath: path.to_path_buf(),
+            })
     }
 
     fn exists(&self, path: &Path) -> Result<bool, OpenReadError> {
@@ -110,32 +125,28 @@ impl Directory for ObjectDirectory {
             return Ok(true);
         }
 
-        let result = self.io.rt.block_on(
-            self.blobs()
-                .exists(self.base_path.join(path).to_str().unwrap()),
-        );
-
-        result.map_err(|err| OpenReadError::IoError {
-            // TODO: map opendal errors to std::io better
-            io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
-            filepath: path.to_path_buf(),
-        })
+        self.rt
+            .block_on(self.blobs.exists(&self.path_str(path)))
+            .map_err(|err| OpenReadError::IoError {
+                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                filepath: path.to_path_buf(),
+            })
     }
 
     fn open_write(&self, path: &Path) -> Result<WritePtr, OpenWriteError> {
-        Ok(BufWriter::new(Box::new(ObjectFileWrite {})))
+        Ok(BufWriter::new(Box::new(ObjectFileWrite {
+            rt: Arc::clone(&self.rt),
+            blobs: self.blobs.clone(),
+            path: self.path_str(path),
+            buf: Vec::new(),
+        })))
     }
 
     fn atomic_read(&self, path: &Path) -> Result<Vec<u8>, OpenReadError> {
         let _lock = self.atomic_rw_lock.lock().unwrap();
-        let result = self
-            .io
-            .rt
-            .block_on(self.blobs().read(path.to_str().unwrap()));
-
-        result
+        self.rt
+            .block_on(self.blobs.read(&self.path_str(path)))
             .map_err(|err| OpenReadError::IoError {
-                // TODO: map opendal errors to std::io better
                 io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
                 filepath: path.to_path_buf(),
             })
@@ -144,30 +155,42 @@ impl Directory for ObjectDirectory {
 
     fn atomic_write(&self, path: &Path, data: &[u8]) -> IoResult<()> {
         let _lock = self.atomic_rw_lock.lock().unwrap();
-
-        let result = self
-            .io
-            .rt
-            .block_on(self.blobs().write(path.to_str().unwrap(), data.to_vec()));
-
-        result
-            .map(|_| ())
+        self.rt
+            .block_on(self.blobs.write(&self.path_str(path), data.to_vec()))
             .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))
+            .map(|_| ())
     }
 
     fn sync_directory(&self) -> IoResult<()> {
-        todo!()
+        Ok(())
     }
 
-    fn watch(&self, watch_callback: WatchCallback) -> tantivy::Result<WatchHandle> {
-        todo!()
+    fn watch(&self, _watch_callback: WatchCallback) -> tantivy::Result<WatchHandle> {
+        Ok(WatchHandle::empty())
     }
 }
 
 impl FileHandle for ObjectFile {
     fn read_bytes(&self, range: Range<usize>) -> IoResult<OwnedBytes> {
-        self.io.rt.block_on(async {});
-        todo!()
+        let range_len = range.end - range.start;
+        let buf = self
+            .rt
+            .block_on(async {
+                self.blobs
+                    .read_with(&self.path)
+                    .range(range.start as u64..range.end as u64)
+                    .await
+            })
+            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+
+        if buf.len() != range_len {
+            return Err(IoError::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "failed to read full range from object store",
+            ));
+        }
+
+        Ok(OwnedBytes::new(buf.to_vec()))
     }
 }
 
@@ -179,16 +202,19 @@ impl HasLen for ObjectFile {
 
 impl TerminatingWrite for ObjectFileWrite {
     fn terminate_ref(&mut self, _: tantivy::directory::AntiCallToken) -> std::io::Result<()> {
-        todo!()
+        self.rt
+            .block_on(self.blobs.write(&self.path, self.buf.clone()))
+            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+        Ok(())
     }
 }
 
 impl Write for ObjectFileWrite {
     fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        todo!()
+        self.buf.write(buf)
     }
 
     fn flush(&mut self) -> IoResult<()> {
-        todo!()
+        Ok(())
     }
 }

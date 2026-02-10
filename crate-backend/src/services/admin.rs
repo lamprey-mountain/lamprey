@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use subtle::ConstantTimeEq;
+use tokio::sync::RwLock;
 use utoipa::ToSchema;
 
-use crate::{error::Result, ServerStateInner};
+use crate::{config::ConfigInternal, error::Result, ServerStateInner};
 
 pub struct ServiceAdmin {
     state: Arc<ServerStateInner>,
+    cache: RwLock<Option<ConfigInternal>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -90,7 +93,72 @@ pub enum AdminCollectGarbageMode {
 
 impl ServiceAdmin {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+        Self {
+            state,
+            cache: RwLock::new(None),
+        }
+    }
+
+    pub async fn get_config(&self) -> Result<ConfigInternal> {
+        if let Some(config) = self.cache.read().await.as_ref() {
+            return Ok(config.to_owned());
+        }
+
+        let config =
+            self.state.data().config_get().await?.ok_or_else(|| {
+                crate::Error::Internal("internal config not initialized".to_string())
+            })?;
+
+        *self.cache.write().await = Some(config.clone());
+        Ok(config)
+    }
+
+    pub async fn verify_admin_token(&self, token: &str) -> bool {
+        let Ok(config) = self.get_config().await else {
+            return false;
+        };
+
+        let Some(admin_token) = config.admin_token else {
+            return false;
+        };
+
+        if admin_token.len() != token.len() {
+            return false;
+        }
+
+        admin_token.as_bytes().ct_eq(token.as_bytes()).into()
+    }
+
+    pub fn start_background_tasks(&self) {
+        let state = self.state.clone();
+        tokio::spawn(async move {
+            let srv = state.services();
+            if !state.config.enable_admin_token {
+                let data = state.data();
+                if let Ok(Some(mut config_internal)) = data.config_get().await {
+                    config_internal.admin_token = None;
+                    if let Ok(()) = data.config_put(config_internal.clone()).await {
+                        *srv.admin.cache.write().await = Some(config_internal);
+                    }
+                }
+                return;
+            }
+
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
+            loop {
+                interval.tick().await;
+                let data = state.data();
+                if let Ok(Some(mut config_internal)) = data.config_get().await {
+                    let token = nanoid::nanoid!(32);
+                    config_internal.admin_token = Some(token);
+                    if let Err(err) = data.config_put(config_internal.clone()).await {
+                        tracing::error!("failed to rotate admin token: {err:?}");
+                    } else {
+                        *srv.admin.cache.write().await = Some(config_internal);
+                    }
+                }
+            }
+        });
     }
 
     pub async fn collect_garbage(

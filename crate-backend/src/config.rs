@@ -51,9 +51,20 @@ pub struct Config {
 
     #[serde(default)]
     pub media_scanners: Vec<ConfigMediaScanner>,
+
+    /// whether to enable admin tokens
+    ///
+    /// this stores a token in the database that allows full access to the
+    /// server. this must be enabled to use the cli interface.
+    #[serde(default = "default_true")]
+    pub enable_admin_token: bool,
 }
 
 fn default_require_server_invite() -> bool {
+    true
+}
+
+fn default_true() -> bool {
     true
 }
 
@@ -193,13 +204,27 @@ pub struct ConfigMediaScanner {
 }
 
 /// internal config that is saved in the database
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigInternal {
+    /// web push api vapid public key
     pub vapid_private_key: String,
+
+    /// web push api vapid private key
     pub vapid_public_key: String,
+
+    /// openid connect key
     pub oidc_jwk_key: String,
+
+    /// a token that can be used to do administrative operations on this server
+    ///
+    /// - DO NOT LEAK THIS TOKEN!
+    /// - if this is None, there is no valid token
+    /// - this gets rotated every 5 minutes
+    /// - cli tools will fetch this token from the db, then do admin tasks through the http api
+    pub admin_token: Option<String>,
 }
 
+// TODO: use this
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Secret {

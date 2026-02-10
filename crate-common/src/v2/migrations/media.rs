@@ -111,6 +111,11 @@ impl Into<Media> for V1Media {
             scans: vec![],
             has_thumbnail: false,
             has_gifv: false,
+
+            // NOTE: these should probably be populated later?
+            links: vec![],
+            room_id: None,
+            channel_id: None,
         }
     }
 }

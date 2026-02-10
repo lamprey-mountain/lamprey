@@ -166,6 +166,7 @@ impl Session {
     }
 }
 
+// TODO: remove?
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SessionType {

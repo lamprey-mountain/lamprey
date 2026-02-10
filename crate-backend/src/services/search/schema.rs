@@ -1,4 +1,8 @@
-use common::v1::types::{Channel, Media, Message, MessageId, MessageType, Room, User};
+use std::path::Path;
+
+use common::v1::types::util::Time;
+use common::v1::types::{Channel, Message, MessageId, MessageType, Room, User};
+use common::v2::types::media::Media;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use tantivy::{
@@ -40,6 +44,7 @@ pub struct LampreySchema {
     /// - bot users owner_id
     /// - channel owner_id
     /// - message author_id
+    /// - media user_id
     // NOTE: for channels, author_id exists, but owner_id could be better in the case of gdms
     pub author_id: schema::Field,
 
@@ -107,6 +112,11 @@ pub struct LampreySchema {
     ///
     /// for media and messages (attachments)
     pub media_filename: schema::Field,
+
+    /// the extension of the media
+    ///
+    /// for media and messages (attachments)
+    pub media_extension: schema::Field,
 
     /// if this thing is quarantined
     ///
@@ -189,6 +199,7 @@ impl Default for LampreySchema {
     fn default() -> Self {
         let mut sb = SchemaBuilder::new();
 
+        // config for human readable text
         let text_options = TextOptions::default()
             .set_indexing_options(
                 TextFieldIndexing::default()
@@ -198,35 +209,36 @@ impl Default for LampreySchema {
             .set_stored();
 
         let id = sb.add_text_field("id", STRING | FAST | STORED);
-        let doctype = sb.add_text_field("doctype", STRING | FAST);
-        let created_at = sb.add_date_field("created_at", INDEXED | STORED);
-        let updated_at = sb.add_date_field("updated_at", INDEXED | STORED);
-        let archived_at = sb.add_date_field("archived_at", INDEXED | STORED);
-        let deleted_at = sb.add_date_field("deleted_at", INDEXED | STORED);
-        let author_id = sb.add_text_field("author_id", STRING);
-        let channel_id = sb.add_text_field("channel_id", STRING | FAST);
-        let room_id = sb.add_text_field("room_id", STRING | FAST);
-        let tag_id = sb.add_text_field("tag_id", STRING);
+        let doctype = sb.add_text_field("doctype", STRING | FAST | STORED);
+        let created_at = sb.add_date_field("created_at", FAST);
+        let updated_at = sb.add_date_field("updated_at", FAST);
+        let archived_at = sb.add_date_field("archived_at", FAST);
+        let deleted_at = sb.add_date_field("deleted_at", FAST);
+        let author_id = sb.add_text_field("author_id", STRING | FAST);
+        let channel_id = sb.add_text_field("channel_id", STRING | FAST | STORED);
+        let room_id = sb.add_text_field("room_id", STRING | FAST | STORED);
+        let tag_id = sb.add_text_field("tag_id", STRING | FAST);
         let name = sb.add_text_field("name", text_options.clone());
         let content = sb.add_text_field("content", text_options.clone());
-        let has_thread = sb.add_bool_field("has_thread", INDEXED);
-        let pinned = sb.add_bool_field("pinned", INDEXED);
-        let reply = sb.add_text_field("reply", STRING);
-        let media_size = sb.add_u64_field("media_size", INDEXED);
-        let media_content_type = sb.add_text_field("media_content_type", STRING);
+        let has_thread = sb.add_bool_field("has_thread", FAST);
+        let pinned = sb.add_bool_field("pinned", FAST);
+        let reply = sb.add_text_field("reply", STRING | FAST);
+        let media_size = sb.add_u64_field("media_size", FAST);
+        let media_content_type = sb.add_text_field("media_content_type", STRING | FAST);
         let media_alt = sb.add_text_field("media_alt", text_options.clone());
-        let media_filename = sb.add_text_field("media_filename", STRING);
-        let quarantined = sb.add_bool_field("quarantined", INDEXED);
-        let has_attachment = sb.add_bool_field("has_attachment", INDEXED);
-        let has_audio = sb.add_bool_field("has_audio", INDEXED);
-        let has_embed = sb.add_bool_field("has_embed", INDEXED);
-        let has_image = sb.add_bool_field("has_image", INDEXED);
-        let has_link = sb.add_bool_field("has_link", INDEXED);
-        let has_video = sb.add_bool_field("has_video", INDEXED);
-        let mentions_everyone = sb.add_bool_field("mentions_everyone", INDEXED);
-        let mentions_role = sb.add_text_field("mentions_role", STRING);
-        let mentions_user = sb.add_text_field("mentions_user", STRING);
-        let link_hostname = sb.add_text_field("link_hostname", STRING);
+        let media_filename = sb.add_text_field("media_filename", STRING | FAST);
+        let media_extension = sb.add_text_field("media_extension", STRING | FAST);
+        let quarantined = sb.add_bool_field("quarantined", FAST);
+        let has_attachment = sb.add_bool_field("has_attachment", FAST);
+        let has_audio = sb.add_bool_field("has_audio", FAST);
+        let has_embed = sb.add_bool_field("has_embed", FAST);
+        let has_image = sb.add_bool_field("has_image", FAST);
+        let has_link = sb.add_bool_field("has_link", FAST);
+        let has_video = sb.add_bool_field("has_video", FAST);
+        let mentions_everyone = sb.add_bool_field("mentions_everyone", FAST);
+        let mentions_role = sb.add_text_field("mentions_role", STRING | FAST);
+        let mentions_user = sb.add_text_field("mentions_user", STRING | FAST);
+        let link_hostname = sb.add_text_field("link_hostname", STRING | FAST);
 
         let metadata = sb.add_json_field(
             "metadata",
@@ -256,6 +268,7 @@ impl Default for LampreySchema {
             media_content_type,
             media_alt,
             media_filename,
+            media_extension,
             quarantined,
             has_attachment,
             has_audio,
@@ -276,6 +289,7 @@ impl Default for LampreySchema {
 pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
     doc.add_text(s.id, message.id.to_string());
+    doc.add_text(s.doctype, "Message");
     doc.add_text(s.channel_id, message.channel_id.to_string());
     doc.add_text(s.author_id, message.author_id.to_string());
     doc.add_date(
@@ -283,98 +297,113 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
         tantivy::DateTime::from_utc(*message.created_at),
     );
 
+    // get what this message is "replying" to
     let reply = match &message.latest_version.message_type {
         MessageType::DefaultMarkdown(m) => m.reply_id,
-        MessageType::MessagePinned(p) => Some(p.pinned_message_id), // not *technically* correct, but still useful
-        MessageType::ThreadCreated(m) => m.source_message_id, // not *technically* correct, but still useful
+
+        // these are not *technically* correct, but still useful
+        MessageType::MessagePinned(p) => Some(p.pinned_message_id),
+        MessageType::ThreadCreated(m) => m.source_message_id,
         _ => None,
     };
 
-    let mn = &message.latest_version.mentions;
+    doc.add_text(s.content, message.latest_version.message_type.to_string());
 
-    // TODO: index all messages, not just DefaultMarkdown
-    match message.latest_version.message_type {
-        MessageType::DefaultMarkdown(m) => {
-            if let Some(c) = &m.content {
-                doc.add_text(s.content, c);
-            }
+    if let MessageType::DefaultMarkdown(ref m) = message.latest_version.message_type {
+        if !m.attachments.is_empty() {
+            doc.add_bool(s.has_attachment, true);
 
-            // Add individual fields instead of JSON metadata
-            doc.add_bool(s.has_thread, message.thread.is_some());
-            doc.add_bool(s.pinned, message.pinned.is_some());
+            let has_audio = m
+                .attachments
+                .iter()
+                .any(|a| a.source.mime.starts_with("audio/"));
+            let has_image = m
+                .attachments
+                .iter()
+                .any(|a| a.source.mime.starts_with("image/"));
+            let has_video = m
+                .attachments
+                .iter()
+                .any(|a| a.source.mime.starts_with("video/"));
 
-            if let Some(reply_id) = reply {
-                doc.add_text(s.reply, reply_id.to_string());
-            }
+            doc.add_bool(s.has_audio, has_audio);
+            doc.add_bool(s.has_image, has_image);
+            doc.add_bool(s.has_video, has_video);
 
-            // Process attachments to populate media-related fields
-            if !m.attachments.is_empty() {
-                // Add attachment-related flags
-                doc.add_bool(s.has_attachment, true);
+            for att in &m.attachments {
+                doc.add_u64(s.media_size, att.source.size);
+                doc.add_text(s.media_content_type, att.source.mime.to_string());
 
-                // Check for different media types
-                let has_audio = m
-                    .attachments
-                    .iter()
-                    .any(|a| a.source.mime.starts_with("audio/"));
-                let has_image = m
-                    .attachments
-                    .iter()
-                    .any(|a| a.source.mime.starts_with("image/"));
-                let has_video = m
-                    .attachments
-                    .iter()
-                    .any(|a| a.source.mime.starts_with("video/"));
-
-                doc.add_bool(s.has_audio, has_audio);
-                doc.add_bool(s.has_image, has_image);
-                doc.add_bool(s.has_video, has_video);
-
-                // Add details for the first attachment as examples (in a real implementation, you might want to handle multiple attachments differently)
-                if let Some(first_attachment) = m.attachments.first() {
-                    doc.add_u64(s.media_size, first_attachment.source.size);
-                    doc.add_text(
-                        s.media_content_type,
-                        first_attachment.source.mime.to_string(),
-                    );
-
-                    if let Some(alt) = &first_attachment.alt {
-                        doc.add_text(s.media_alt, alt.clone());
-                    }
-
-                    doc.add_text(s.media_filename, first_attachment.filename.clone());
+                if let Some(alt) = &att.alt {
+                    doc.add_text(s.media_alt, alt.clone());
                 }
-            } else {
-                doc.add_bool(s.has_attachment, false);
-                doc.add_bool(s.has_audio, false);
-                doc.add_bool(s.has_image, false);
-                doc.add_bool(s.has_video, false);
+
+                doc.add_text(s.media_filename, att.filename.clone());
+
+                let extension = Path::new(&att.filename)
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|ext| ext.to_lowercase());
+                if let Some(e) = extension {
+                    doc.add_text(s.media_extension, e);
+                }
             }
-
-            // Add embed-related flag
-            doc.add_bool(s.has_embed, !m.embeds.is_empty());
-
-            // Add mention-related fields
-            doc.add_bool(s.mentions_everyone, mn.everyone);
-
-            if !mn.roles.is_empty() {
-                let role_ids: Vec<String> = mn.roles.iter().map(|r| r.id.to_string()).collect();
-                // For simplicity, we'll store as a joined string; in practice, you might want to add multiple values
-                doc.add_text(s.mentions_role, role_ids.join(","));
-            }
-
-            if !mn.users.is_empty() {
-                let user_ids: Vec<String> = mn.users.iter().map(|u| u.id.to_string()).collect();
-                // For simplicity, we'll store as a joined string; in practice, you might want to add multiple values
-                doc.add_text(s.mentions_user, user_ids.join(","));
-            }
-
-            // Add link-related fields (placeholder - would need actual link detection)
-            doc.add_bool(s.has_link, false); // TODO: implement link detection
-                                             // doc.add_text(s.link_hostname, ""); // TODO: implement link hostname extraction
+        } else {
+            // shortcut for messages with no attachments
+            doc.add_bool(s.has_attachment, false);
+            doc.add_bool(s.has_audio, false);
+            doc.add_bool(s.has_image, false);
+            doc.add_bool(s.has_video, false);
         }
-        _ => {}
+
+        doc.add_bool(s.has_embed, !m.embeds.is_empty());
     };
+
+    // common fields for all message types
+    doc.add_bool(s.has_thread, message.thread.is_some());
+    doc.add_bool(s.pinned, message.pinned.is_some());
+
+    if let Some(reply_id) = reply {
+        doc.add_text(s.reply, reply_id.to_string());
+    }
+
+    // add mention fields
+    let mn = &message.latest_version.mentions;
+    doc.add_bool(s.mentions_everyone, mn.everyone);
+
+    if !mn.roles.is_empty() {
+        for role in &mn.roles {
+            doc.add_text(s.mentions_role, role.id.to_string());
+        }
+    }
+
+    if !mn.users.is_empty() {
+        for user in &mn.users {
+            doc.add_text(s.mentions_user, user.id.to_string());
+        }
+    }
+
+    // link fields
+    let mut has_links = false;
+    if let MessageType::DefaultMarkdown(ref m) = message.latest_version.message_type {
+        if let Some(ref content) = m.content {
+            let finder = linkify::LinkFinder::new();
+            for link in finder.links(content) {
+                if let Ok(url) = url::Url::parse(link.as_str()) {
+                    if let Some(host) = url.host_str() {
+                        // reverse the hostname (e.g., "foobar.example.com" -> "com.example.foobar")
+                        // this is so that searching "example.com" can return results for "foobar.example.com" if needed
+                        let reversed_hostname = host.split('.').rev().collect::<Vec<_>>().join(".");
+
+                        doc.add_text(s.link_hostname, reversed_hostname);
+                        has_links = true;
+                    }
+                }
+            }
+        }
+    }
+    doc.add_bool(s.has_link, has_links);
+
     doc
 }
 
@@ -390,6 +419,54 @@ pub fn tantivy_document_from_channel(user: Channel) -> TantivyDocument {
     todo!()
 }
 
-pub fn tantivy_document_from_media(user: Media) -> TantivyDocument {
-    todo!()
+pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {
+    let mut doc = TantivyDocument::new();
+
+    doc.add_text(s.id, media.id.to_string());
+    doc.add_text(s.doctype, "Media");
+
+    let created_at: Time = media.id.try_into().unwrap();
+    doc.add_date(s.created_at, tantivy::DateTime::from_utc(*created_at));
+    doc.add_text(
+        s.author_id,
+        media
+            .user_id
+            .as_ref()
+            .expect("the server should always have user_id")
+            .to_string(),
+    );
+
+    if let Some(r) = media.room_id {
+        doc.add_text(s.room_id, r.to_string());
+    }
+
+    if let Some(r) = media.channel_id {
+        doc.add_text(s.channel_id, r.to_string());
+    }
+
+    doc.add_u64(s.media_size, media.size);
+    doc.add_text(s.media_content_type, media.content_type.to_string());
+    doc.add_text(s.media_filename, media.filename.clone());
+
+    let extension = Path::new(&media.filename)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|ext| ext.to_lowercase());
+    if let Some(e) = extension {
+        doc.add_text(s.media_extension, e);
+    }
+
+    if let Some(alt) = &media.alt {
+        doc.add_text(s.media_alt, alt.clone());
+    }
+
+    // Add quarantine status if present
+    doc.add_bool(s.quarantined, media.quarantine.is_some());
+
+    // Add content if available (using description from metadata)
+    if let Some(quarantine_reason) = &media.quarantine.as_ref().and_then(|q| q.reason.clone()) {
+        doc.add_text(s.content, quarantine_reason);
+    }
+
+    doc
 }

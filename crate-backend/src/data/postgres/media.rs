@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::media::MediaWithAdmin;
-use common::v1::types::{MediaPatch, MediaTrack};
+use common::v1::types::{Media as MediaV1, MediaPatch as MediaPatchV1, MediaTrack as MediaTrackV1};
+use common::v2::types::media::Media as MediaV2;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use time::PrimitiveDateTime;
@@ -8,7 +9,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{Media, MediaId, MediaLink, MediaLinkType, UserId};
+use crate::types::{MediaId, MediaLink, MediaLinkType, UserId};
 
 use crate::data::DataMedia;
 
@@ -24,9 +25,10 @@ pub struct DbMedia {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "v")]
 pub enum DbMediaData {
-    V1(Media),
+    V1(MediaV1),
 
-    // V2(common::v2::types::media::Media),
+    V2(MediaV2),
+
     #[serde(untagged)]
     Raw(DbMediaRaw),
 }
@@ -37,19 +39,33 @@ pub struct DbMediaRaw {
     user_id: UserId,
     filename: String,
     alt: Option<String>,
-    tracks: Vec<MediaTrack>,
+    tracks: Vec<MediaTrackV1>,
 }
 
-impl From<DbMediaData> for Media {
+impl From<DbMediaData> for MediaV1 {
     fn from(value: DbMediaData) -> Self {
         match value {
             DbMediaData::V1(media) => media,
+            DbMediaData::V2(media) => media.into(),
             DbMediaData::Raw(db_media_raw) => db_media_raw.into(),
         }
     }
 }
 
-impl From<DbMediaRaw> for Media {
+impl From<DbMediaData> for MediaV2 {
+    fn from(value: DbMediaData) -> Self {
+        match value {
+            DbMediaData::V1(media) => media.into(),
+            DbMediaData::V2(media) => media,
+            DbMediaData::Raw(db_media_raw) => {
+                let v1: MediaV1 = db_media_raw.into();
+                v1.into()
+            }
+        }
+    }
+}
+
+impl From<DbMediaRaw> for MediaV1 {
     fn from(value: DbMediaRaw) -> Self {
         let tracks = value.tracks;
 
@@ -66,7 +82,7 @@ impl From<DbMediaRaw> for Media {
             .expect("media should always have at least one track")
             .clone();
 
-        Media {
+        MediaV1 {
             id: value.id,
             filename: value.filename,
             alt: value.alt,
@@ -77,7 +93,7 @@ impl From<DbMediaRaw> for Media {
 
 #[async_trait]
 impl DataMedia for Postgres {
-    async fn media_insert(&self, user_id: UserId, media: Media) -> Result<()> {
+    async fn media_insert(&self, user_id: UserId, media: MediaV1) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         let media_id = media.id;
         let data =
@@ -118,7 +134,7 @@ impl DataMedia for Postgres {
         })
     }
 
-    async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()> {
+    async fn media_update(&self, media_id: MediaId, patch: MediaPatchV1) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         let mut media = query_as!(
             DbMedia,
@@ -141,7 +157,7 @@ impl DataMedia for Postgres {
 
         let media_data: DbMediaData =
             serde_json::from_value(media.data).expect("invalid data in db");
-        let mut media_data: Media = media_data.into();
+        let mut media_data: MediaV1 = media_data.into();
         media_data.alt = patch.alt.flatten();
         media.data = serde_json::to_value(media_data).expect("failed to serialize media");
 

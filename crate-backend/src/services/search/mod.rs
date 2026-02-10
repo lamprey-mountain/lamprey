@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use common::v1::types::{
-    search::{ChannelSearchRequest, MessageSearchRequest, MessageSearch},
+    search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
 };
 use common::v2::types::message::Message;
@@ -18,14 +18,13 @@ mod tokenizer;
 
 pub struct ServiceSearch {
     state: Arc<ServerStateInner>,
-    // tantivy: TantivyHandle,
+    tantivy: TantivyHandle,
 }
 
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
-        // let tantivy = index::spawn_indexer(Arc::clone(&state));
-        // Self { state, tantivy }
+        let tantivy = index::spawn_indexer(Arc::clone(&state));
+        Self { state, tantivy }
     }
 
     pub async fn search_messages2(

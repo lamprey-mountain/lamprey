@@ -9,7 +9,6 @@ use axum::{
     http::{request::Parts, Request, StatusCode},
     middleware::Next,
     response::Response,
-    Extension,
 };
 use common::v1::types::{
     application::{Scope, Scopes},
@@ -197,8 +196,41 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
             .headers
             .typed_get()
             .ok_or_else(|| Error::MissingAuth)?;
-        let reason = HeaderReason::from_request_parts(parts, s).await?;
+        let token = auth.token();
         let srv = s.services();
+
+        // check admin token
+        if srv.admin.verify_admin_token(token).await {
+            let user = srv.users.get(crate::types::SERVER_USER_ID, None).await?;
+            let session = Session {
+                id: crate::types::SERVER_TOKEN_SESSION_ID,
+                status: SessionStatus::Sudo {
+                    user_id: crate::types::SERVER_USER_ID,
+                    sudo_expires_at: Time::now_utc() + Duration::from_secs(3600),
+                },
+                name: Some("admin token".to_string()),
+                ty: SessionType::User,
+                expires_at: None,
+                app_id: None,
+                last_seen_at: Time::now_utc(),
+                ip_addr: None,
+                user_agent: None,
+                authorized_at: Some(Time::now_utc()),
+                deauthorized_at: None,
+            };
+
+            return Ok(Auth {
+                user,
+                real_user: None,
+                session,
+                scopes: Scopes(vec![Scope::Full]),
+                reason: HeaderReason::from_request_parts(parts, s).await?.0,
+                audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
+                s: s.clone(),
+            });
+        }
+
+        let reason = HeaderReason::from_request_parts(parts, s).await?;
         let session = srv
             .sessions
             .get_by_token(SessionToken(auth.token().to_string()))
@@ -515,7 +547,6 @@ impl AuditLoggerTransaction {
     }
 }
 
-// FIXME: commit on drop
 impl Drop for AuditLoggerTransaction2 {
     fn drop(&mut self) {
         if self.slot.is_some() {

@@ -5,7 +5,10 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageSync, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId, SERVER_USER_ID
+    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
+    MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageSync, MessageType,
+    PaginationQuery, Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId,
+    SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -280,23 +283,25 @@ impl ServiceThreads {
         // TODO(al2): use this when creating a channel
         let channel_id = ChannelId::new();
         let al = if let Some(room_id) = room_id {
-            Some(auth.audit_log2(
-                room_id,
-                AuditLogEntryType::ChannelCreate {
-                    channel_id,
-                    channel_type: json.ty,
-                    changes: Changes::new()
-                        .add("name", &json.name)
-                        .add("description", &json.description)
-                        .add("nsfw", &json.nsfw)
-                        .add("user_limit", &json.user_limit)
-                        .add("bitrate", &json.bitrate)
-                        .add("type", &json.ty)
-                        .add("parent_id", &json.parent_id)
-                        .add("url", &json.url)
-                        .build(),
-                },
-            ))
+            Some(
+                auth.audit_log2(
+                    room_id,
+                    AuditLogEntryType::ChannelCreate {
+                        channel_id,
+                        channel_type: json.ty,
+                        changes: Changes::new()
+                            .add("name", &json.name)
+                            .add("description", &json.description)
+                            .add("nsfw", &json.nsfw)
+                            .add("user_limit", &json.user_limit)
+                            .add("bitrate", &json.bitrate)
+                            .add("type", &json.ty)
+                            .add("parent_id", &json.parent_id)
+                            .add("url", &json.url)
+                            .build(),
+                    },
+                ),
+            )
         } else {
             None
         };

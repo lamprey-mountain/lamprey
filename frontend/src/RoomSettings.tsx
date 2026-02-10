@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch } from "solid-js";
+import { Component, For, Match, Show, Switch } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { Dynamic } from "solid-js/web";
 import {
@@ -15,7 +15,7 @@ import {
 	Webhooks,
 } from "./room_settings/mod.tsx";
 import * as Admin from "./admin_settings/mod.tsx";
-import { SERVER_ROOM_ID } from "sdk";
+import { Permission, SERVER_ROOM_ID } from "sdk";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
@@ -25,7 +25,22 @@ import { flags } from "./flags.ts";
 
 // TODO: hide empty categories
 // TODO: more permission checks
-const tabs = [
+const tabs: Array<
+	{ category: string } | {
+		name: string;
+		path: string;
+		noPad?: boolean;
+		// TODO: fix type errors
+		// component: Component,
+		component: any;
+		permissionCheck?: (p: Set<Permission>) => boolean;
+	} | {
+		name: string;
+		action: "delete";
+		style?: "danger";
+		permissionCheck?: (p: Set<Permission>) => boolean;
+	}
+> = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Info },
 	{ name: "analytics", path: "analytics", component: Analytics },
@@ -80,9 +95,23 @@ const tabs = [
 	},
 ];
 
-const adminTabs = [
+const todo = (what: string) => () => `todo: ${what}` as Component;
+
+const adminTabs: Array<
+	{ category: string } | {
+		name: string;
+		path: string;
+		noPad?: boolean;
+		// TODO: fix type errors
+		// component: Component,
+		component: any;
+		permissionCheck?: (p: Set<Permission>) => boolean;
+	}
+> = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Admin.ServerInfo },
+
+	// control access to this server
 	{ category: "access" },
 	{
 		name: "invites",
@@ -97,9 +126,38 @@ const adminTabs = [
 		noPad: true,
 		permissionCheck: (p) => p.has("RoleManage"),
 	},
-	{ category: "content" },
+
+	// manage data/content/resources on this server
+	{ category: "resources" },
 	{ name: "users", path: "users", component: Admin.Users },
 	{ name: "rooms", path: "rooms", component: Admin.Rooms },
+	{ name: "media", path: "media", component: todo("query and manage media") },
+	{
+		name: "applications",
+		path: "applications",
+		component: todo("query and manage applications"),
+	},
+	{
+		name: "channels",
+		path: "channels",
+		component: todo("query and manage channels"),
+	},
+	{
+		name: "servers",
+		path: "servers",
+		component: todo("query and manage servers"),
+	},
+
+	// manage services
+	{ category: "service" },
+	{
+		name: "voice",
+		path: "voice",
+		component: todo("list and manage voice sfus/servers"),
+	},
+	// { name: "media", path: "media", component: todo("view stats about cdn/media?") },
+
+	// server moderation
 	{ category: "moderation" },
 	{
 		name: "audit log",

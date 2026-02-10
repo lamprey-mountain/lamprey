@@ -60,10 +60,13 @@ impl Modify for BadgeModifier {
                         } else if let Some(perm) = tag.strip_prefix("badge.perm-opt.") {
                             optional_perms.push(perm.to_string());
                             false
-                        } else if let Some(server_perm_req) = tag.strip_prefix("badge.server-perm.") {
+                        } else if let Some(server_perm_req) = tag.strip_prefix("badge.server-perm.")
+                        {
                             server_perms.push(server_perm_req.to_string());
                             false
-                        } else if let Some(server_perm_opt) = tag.strip_prefix("badge.server-perm-opt.") {
+                        } else if let Some(server_perm_opt) =
+                            tag.strip_prefix("badge.server-perm-opt.")
+                        {
                             server_optional_perms.push(server_perm_opt.to_string());
                             false
                         } else if let Some(scope) = tag.strip_prefix("badge.scope.") {

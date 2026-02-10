@@ -10,7 +10,7 @@ use validator::Validate;
 
 use crate::v1::types::{
     util::{Diff, Time},
-    MediaId, Mime, UserId,
+    ChannelId, EmbedId, MediaId, MessageId, MessageVerId, Mime, RoomId, UserId,
 };
 
 /// A reference to a piece of media to be used.
@@ -112,6 +112,17 @@ pub struct Media {
 
     /// Whether this media can be fetched through the `/gifv/{media_id}` cdn route.
     pub has_gifv: bool,
+
+    // TODO: skip serde if is empty
+    /// what this piece of media is linked to (admin only)
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub links: Vec<MediaLinkType>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channel_id: Option<ChannelId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -271,6 +282,52 @@ pub struct MediaCreated {
 
     /// A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
     pub upload_url: Option<Url>,
+}
+
+/// describes how this piece of media is linked to another resource
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MediaLinkType {
+    /// this piece of media is linked to a message
+    // NOTE: auth checks copy MessageUpdate
+    // NOTE: should never exist on its own, always comes with a Message + MessageVersion link
+    Message { message_id: MessageId },
+
+    /// this piece of media is linked to a message version
+    // NOTE: auth checks copy MessageUpdate
+    MessageVersion {
+        message_id: MessageId,
+        version_id: MessageVerId,
+    },
+
+    /// this piece of media is used as a user avatar
+    // NOTE: auth checks copy UserUpdate
+    UserAvatar { user_id: UserId },
+
+    /// this piece of media is used as a user banner
+    // NOTE: auth checks copy UserUpdate
+    UserBanner { user_id: UserId },
+
+    /// this piece of media is used as a channel icon
+    // NOTE: auth checks copy ChannelUpdate
+    ChannelIcon { channel_id: ChannelId },
+
+    /// this piece of media is used as a room icon
+    // NOTE: auth checks copy RoomUpdate
+    RoomIcon { room_id: RoomId },
+
+    /// this piece of media is embedded in a message
+    // NOTE: auth checks copy Message
+    // NOTE: should never exist on its own, always comes with a Message + MessageVersion link
+    Embed { id: EmbedId },
+
+    /// this piece of media is used as a custom emoji
+    // NOTE: auth checks copy EmojiUpdate
+    CustomEmoji { room_id: RoomId },
+
+    /// this piece of media is used as a room banner
+    // NOTE: auth checks copy RoomUpdate
+    RoomBanner { room_id: RoomId },
 }
 
 impl MediaCreateSource {

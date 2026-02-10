@@ -218,17 +218,44 @@ genid!(Connection);
 #[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");
 
+/// the user id of the server system user (aka root)
+// hex translates to "root"
 pub const SERVER_USER_ID: UserId = Id {
     inner: uuid!("00000000-0000-7000-0000-0000726f6f74"),
     phantom: std::marker::PhantomData,
 };
 
+/// the room id of the server system room
+// hex translates to "server"
 pub const SERVER_ROOM_ID: RoomId = Id {
     inner: uuid!("00000000-0000-7000-0000-736572766572"),
     phantom: std::marker::PhantomData,
 };
 
+/// the user id of the automod system user
+// hex translates to "automod"
 pub const AUTOMOD_USER_ID: UserId = Id {
     inner: uuid!("00000000-0000-7000-0061-75746f6d6f64"),
+    phantom: std::marker::PhantomData,
+};
+
+/// the session id used for the admin token
+// hex translates to "skeletonkey"
+pub const SERVER_TOKEN_SESSION_ID: SessionId = Id {
+    inner: uuid!("00000000-0073-6b65-6c65-746f6e6b6579"),
+    phantom: std::marker::PhantomData,
+};
+
+/// server room role id for server admins
+// hex translates to "admin"
+pub const SERVER_ADMIN_ROLE_ID: SessionId = Id {
+    inner: uuid!("00000000-0000-0000-0000-0061646d696e"),
+    phantom: std::marker::PhantomData,
+};
+
+/// server room role id for registered users
+// hex translates to "registered"
+pub const SERVER_REGISTERED_ROLE_ID: SessionId = Id {
+    inner: uuid!("00000000-0000-7265-6769-737465726564"),
     phantom: std::marker::PhantomData,
 };

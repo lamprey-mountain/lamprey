@@ -7,7 +7,8 @@ use std::{
 };
 
 use common::v1::types::{
-    search::{MessageSearchOrderField, MessageSearchRequest, Order}, ChannelId, Message, MessageId, MessageSync, MessageType,
+    search::{MessageSearchOrderField, MessageSearchRequest, Order},
+    ChannelId, Message, MessageId, MessageSync, MessageType,
 };
 use tantivy::{
     collector::{Count, TopDocs},
@@ -32,7 +33,7 @@ use crate::{
 const INDEXING_BUFFER_SIZE: usize = 100_000_000;
 
 pub struct TantivyHandle {
-    command_tx: Sender<IndexerCommand>,
+    command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
     thread: std::thread::JoinHandle<()>,
     index: Index,
     schema: LampreySchema,
@@ -58,71 +59,94 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
     index
         .tokenizers()
         .register("dynamic", DynamicTokenizer::new());
-    let (tx, rx) = mpsc::channel::<IndexerCommand>();
+    let (tx, rx) = mpsc::sync_channel::<IndexerCommand>(1000);
 
     let index2 = index.clone();
     let sch2 = sch.clone();
 
     let thread = std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let mut index_writer: IndexWriter = index2.writer(INDEXING_BUFFER_SIZE).unwrap();
 
-        // TODO: better error handling
-        rt.block_on(async move {
-            let mut index_writer: IndexWriter = index2.writer(INDEXING_BUFFER_SIZE).unwrap();
+        let insert_message = |index_writer: &IndexWriter, message: Message| {
+            let doc = tantivy_document_from_message(&sch2, message);
+            if let Err(e) = index_writer.add_document(doc) {
+                error!("failed to add document: {}", e);
+            }
+        };
 
-            let insert_message = |index_writer: &IndexWriter, message: Message| {
-                let doc = tantivy_document_from_message(&sch2, message);
-                index_writer.add_document(doc).unwrap();
+        let mut last_commit = std::time::Instant::now();
+        let mut uncommitted_count = 0;
+        const COMMIT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
+        const MAX_UNCOMMITTED: usize = 1000;
+
+        loop {
+            let timeout = if uncommitted_count > 0 {
+                COMMIT_INTERVAL.saturating_sub(last_commit.elapsed())
+            } else {
+                std::time::Duration::from_secs(5)
             };
 
-            while let Ok(cmd) = rx.recv() {
-                // PERF: don't commit every time, batch commits togeter. maybe throttle commits to every n seconds.
+            // If we are overdue, poll immediately (small timeout)
+            let timeout = if timeout.is_zero() {
+                std::time::Duration::from_millis(1)
+            } else {
+                timeout
+            };
+
+            let cmd = match rx.recv_timeout(timeout) {
+                Ok(cmd) => Some(cmd),
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => None,
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            };
+
+            if let Some(cmd) = cmd {
                 match cmd {
-                    IndexerCommand::Message(msg) => match msg {
-                        MessageSync::MessageCreate { message } => {
-                            insert_message(&index_writer, message);
-                            index_writer.commit().unwrap();
-                        }
-                        MessageSync::MessageUpdate { message } => {
-                            index_writer.delete_term(Term::from_field_text(
-                                sch2.id,
-                                &message.id.to_string(),
-                            ));
-                            insert_message(&index_writer, message);
-                            index_writer.commit().unwrap();
-                        }
-                        MessageSync::MessageDelete {
-                            channel_id,
-                            message_id,
-                        } => {
-                            index_writer.delete_term(Term::from_field_text(
-                                sch2.id,
-                                &message_id.to_string(),
-                            ));
-                            index_writer.commit().unwrap();
-                        }
-                        MessageSync::MessageDeleteBulk { message_ids, .. } => {
-                            for message_id in message_ids {
+                    IndexerCommand::Message(msg) => {
+                        match msg {
+                            MessageSync::MessageCreate { message } => {
+                                insert_message(&index_writer, message);
+                            }
+                            MessageSync::MessageUpdate { message } => {
+                                index_writer.delete_term(Term::from_field_text(
+                                    sch2.id,
+                                    &message.id.to_string(),
+                                ));
+                                insert_message(&index_writer, message);
+                            }
+                            MessageSync::MessageDelete {
+                                channel_id: _,
+                                message_id,
+                            } => {
                                 index_writer.delete_term(Term::from_field_text(
                                     sch2.id,
                                     &message_id.to_string(),
                                 ));
                             }
-                            let _opstamp = index_writer.commit().unwrap();
-                            // everything up to opstamp has been successfully written now
+                            MessageSync::MessageDeleteBulk { message_ids, .. } => {
+                                for message_id in message_ids {
+                                    index_writer.delete_term(Term::from_field_text(
+                                        sch2.id,
+                                        &message_id.to_string(),
+                                    ));
+                                }
+                            }
+                            // TODO: handle Message{Remove,Restore}
+                            _ => {}
                         }
-                        // TODO: handle Message{Remove,Restore}
-                        _ => {}
-                    },
+                        uncommitted_count += 1;
+                    }
                     IndexerCommand::ReindexChannel(channel_id) => {
                         index_writer.delete_term(Term::from_field_text(
                             sch2.channel_id,
                             &channel_id.to_string(),
                         ));
-                        let _opstamp = index_writer.commit().unwrap();
+                        // Force commit before potential long operation
+                        if let Err(e) = index_writer.commit() {
+                            error!("Commit failed: {}", e);
+                        }
+                        last_commit = std::time::Instant::now();
+                        uncommitted_count = 0;
+
                         // TODO: fetch messages from db, index them into tantivy
                         // TODO: resume when server is restarted
                         todo!()
@@ -131,8 +155,19 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                 }
             }
 
-            let _ = index_writer.commit();
-        });
+            if uncommitted_count > 0
+                && (uncommitted_count >= MAX_UNCOMMITTED
+                    || last_commit.elapsed() >= COMMIT_INTERVAL)
+            {
+                if let Err(e) = index_writer.commit() {
+                    error!("Commit failed: {}", e);
+                }
+                last_commit = std::time::Instant::now();
+                uncommitted_count = 0;
+            }
+        }
+
+        let _ = index_writer.commit();
     });
 
     TantivyHandle {

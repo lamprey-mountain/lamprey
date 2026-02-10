@@ -110,7 +110,10 @@ export class Rooms {
 
 		this._cachedListing.resource = resource;
 		this._cachedListing.refetch = refetch;
-		this._cachedListing.mutate = mutate;
+		this._cachedListing.mutate = (value: Pagination<Room>) => {
+			this._cachedListing!.pagination = value;
+			mutate(value);
+		};
 
 		return resource;
 	}
@@ -187,7 +190,10 @@ export class Rooms {
 
 		this._cachedListingAll.resource = resource;
 		this._cachedListingAll.refetch = refetch;
-		this._cachedListingAll.mutate = mutate;
+		this._cachedListingAll.mutate = (value: Pagination<Room>) => {
+			this._cachedListingAll!.pagination = value;
+			mutate(value);
+		};
 
 		return resource;
 	}

@@ -11,6 +11,10 @@ pub struct Args {
     #[arg(short, long, default_value = "config.toml")]
     pub config: PathBuf,
 
+    /// Token to use for authenticating to the api
+    #[arg(short, long)]
+    pub token: String,
+
     #[command(subcommand)]
     pub command: Command,
 }

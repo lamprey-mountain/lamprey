@@ -106,6 +106,7 @@ impl Services {
     }
 
     pub async fn start_background_tasks(&self) {
+        self.admin.start_background_tasks();
         self.channels.start_background_tasks();
         self.documents.start_background_tasks();
         self.notifications.start_background_tasks();

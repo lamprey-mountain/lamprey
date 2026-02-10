@@ -6,23 +6,25 @@ use tantivy::tokenizer::{
     Tokenizer,
 };
 
-static ANALYZER: Lazy<Mutex<TextAnalyzer>> = Lazy::new(|| {
-    Mutex::new(
-        TextAnalyzer::builder(SimpleTokenizer::default())
-            .filter(RemoveLongFilter::limit(40))
-            .filter(LowerCaser)
-            .filter(Stemmer::new(Language::English))
-            .build(),
-    )
+static ANALYZER: Lazy<TextAnalyzer> = Lazy::new(|| {
+    TextAnalyzer::builder(SimpleTokenizer::default())
+        .filter(RemoveLongFilter::limit(40))
+        .filter(LowerCaser)
+        .filter(Stemmer::new(Language::English))
+        .build()
 });
 
 /// a tokenizer that can change depending on the language
-#[derive(Debug, Clone)]
-pub struct DynamicTokenizer;
+#[derive(Clone)]
+pub struct DynamicTokenizer {
+    analyzer: TextAnalyzer,
+}
 
 impl DynamicTokenizer {
     pub fn new() -> Self {
-        Self
+        Self {
+            analyzer: ANALYZER.clone(),
+        }
     }
 }
 
@@ -30,7 +32,6 @@ impl Tokenizer for DynamicTokenizer {
     type TokenStream<'a> = BoxTokenStream<'a>;
 
     fn token_stream<'a>(&'a mut self, text: &'a str) -> Self::TokenStream<'a> {
-        // HACK: wrap around the default en_stem tokenizer for now
-        ANALYZER.lock().unwrap().token_stream(text)
+        self.analyzer.token_stream(text)
     }
 }

@@ -41,10 +41,12 @@ pub struct User {
     pub avatar: Option<MediaId>,
     pub banner: Option<MediaId>,
 
-    // pub bot: Option<Bot>,
-    // Bot has been removed and replaced with a bool
+    /// whether this user is a bot
     pub bot: bool,
+
+    /// whether this user is an official system user
     pub system: bool,
+
     pub puppet: Option<Puppet>,
     pub webhook: Option<UserWebhook>,
     pub suspended: Option<Suspended>,

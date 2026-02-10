@@ -452,10 +452,10 @@ pre {
 
 .editor .mention,
 .markdown .mention {
-	background-color: hsl(220 50% 50% / 0.5);
+	background: oklch(var(--color-link-300) / 0.2);
+	color: oklch(var(--color-link-500));
 	border-radius: 3px;
 	padding: 0 2px;
-	color: white;
 }
 
 .markdown .mention {

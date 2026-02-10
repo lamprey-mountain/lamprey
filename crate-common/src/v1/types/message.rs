@@ -24,6 +24,7 @@ use super::{
     media::{Media, MediaRef},
     ChannelId, MessageId, MessageVerId,
 };
+use std::fmt;
 
 pub mod components;
 
@@ -811,7 +812,7 @@ impl MessageType {
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
-            MessageType::ThreadCreated(_) => false,
+            MessageType::ThreadCreated(_) => true,
             MessageType::AutomodExecution(_) => false,
         }
     }
@@ -837,5 +838,72 @@ impl MessageDefaultMarkdown {
         self.content = None;
         self.attachments = vec![];
         self.embeds = vec![];
+    }
+}
+
+impl fmt::Display for MessageType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MessageType::DefaultMarkdown(m) => {
+                if let Some(content) = &m.content {
+                    write!(f, "{}", content)
+                } else {
+                    write!(f, "")
+                }
+            }
+            MessageType::MessagePinned(_) => {
+                write!(f, "message pinned")
+            }
+            MessageType::MemberAdd(_) => {
+                write!(f, "member add")
+            }
+            MessageType::MemberRemove(_) => {
+                write!(f, "member removed")
+            }
+            MessageType::MemberJoin => {
+                write!(f, "member joined")
+            }
+            MessageType::Call(call_msg) => {
+                if call_msg.ended_at.is_some() {
+                    write!(f, "call (ended)")
+                } else {
+                    write!(f, "call (active)")
+                }
+            }
+            MessageType::ChannelRename(rename) => {
+                write!(f, "channel renamed from to \"{}\"", rename.name_new)
+            }
+            MessageType::ChannelPingback(_) => {
+                write!(f, "channel pingback")
+            }
+            MessageType::ChannelMoved(_) => {
+                write!(f, "channel moved")
+            }
+            MessageType::ChannelIcon(_) => {
+                write!(f, "channel icon changed")
+            }
+            MessageType::ThreadCreated(thread_msg) => {
+                if thread_msg.source_message_id.is_some() {
+                    write!(f, "thread created from message")
+                } else {
+                    write!(f, "thread created")
+                }
+            }
+            MessageType::AutomodExecution(_exec) => {
+                write!(f, "auto moderation action executed")
+
+                // TODO: log rule names, matches, etc
+                // write!(
+                //     f,
+                //     "Auto moderation action executed",
+                //     automod_msg.matches[0].matches,
+                //     automod_msg.rules.iter().map(|r| r.name.as_str()).join(" ")
+                // )
+            }
+            #[cfg(feature = "feat_message_move")]
+            MessageType::MessagesMoved(move_msg) => {
+                write!(f, "messages moved ",)
+            }
+        }
     }
 }

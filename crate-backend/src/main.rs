@@ -158,6 +158,7 @@ async fn main() -> Result<()> {
             vapid_private_key,
             vapid_public_key,
             oidc_jwk_key: serde_json::to_string(&jwk)?,
+            admin_token: None,
         })
         .await?;
     }

@@ -21,6 +21,6 @@ FROM message AS m
 JOIN message_version AS mv ON m.latest_version_id = mv.version_id
 LEFT JOIN att_json ON att_json.version_id = mv.version_id
 WHERE m.channel_id = $1 AND m.deleted_at IS NULL
-  AND mv.type IN ('MessagePinned', 'MemberAdd', 'MemberRemove', 'ThreadRename', 'ChannelIcon')
+  AND mv.type IN ('MessagePinned', 'MemberAdd', 'MemberRemove', 'ChannelRename', 'ChannelIcon', 'ChannelMoved', 'ChannelPingback', 'ThreadCreated')
   AND m.id > $2 AND m.id < $3
 ORDER BY (CASE WHEN $4 = 'f' THEN m.id END), m.id DESC LIMIT $5

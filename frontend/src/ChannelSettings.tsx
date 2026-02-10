@@ -1,5 +1,5 @@
-import { For, Match, Show, Switch } from "solid-js";
-import type { Channel } from "sdk";
+import { Component, For, Match, Show, Switch } from "solid-js";
+import type { Channel, Permission } from "sdk";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {
@@ -13,7 +13,16 @@ import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { useApi } from "./api.tsx";
 
-const tabs = [
+const tabs: Array<{
+	name: string;
+	path: string;
+	noPad?: boolean;
+	// TODO: fix type errors
+	// component: Component,
+	component: any;
+	action?: "remove";
+	permissionCheck?: (p: Set<Permission>) => boolean;
+}> = [
 	{ name: "info", path: "", component: Info },
 	{
 		name: "invites",
@@ -27,6 +36,13 @@ const tabs = [
 		component: Permissions,
 		noPad: true,
 		permissionCheck: (p) => p.has("RoleManage"),
+	},
+	{
+		name: "tags",
+		path: "tags",
+		component: () => "todo: manage tags",
+		permissionCheck: (p) => p.has("TagManage"),
+		// permissionCheck: (p) => p.has("TagManage") || p.has("ChannelManage"),
 	},
 	{
 		name: "webhooks",
