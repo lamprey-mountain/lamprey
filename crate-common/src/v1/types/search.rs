@@ -324,7 +324,10 @@ pub struct MessageSearch {
     /// room members objects for each author, if they exist
     pub room_members: Vec<RoomMember>,
 
-    /// thread member objects for each author, if they exist
+    /// relevant thread member objects
+    ///
+    /// - one for each (message author, thread) tuple
+    /// - one for each thread the requesting user is a member of
     pub thread_members: Vec<ThreadMember>,
 
     /// whether there are more threads

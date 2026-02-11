@@ -3,11 +3,11 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use common::v1::types::MessageType;
 use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
 };
+use common::v1::types::{MessageType, RoomId};
 use common::v2::types::message::Message;
 use futures::stream::{FuturesUnordered, StreamExt};
 
@@ -31,13 +31,13 @@ impl ServiceSearch {
 
     pub async fn search_messages2(
         &self,
-        user_id: UserId,
+        auth_user_id: UserId,
         req: MessageSearchRequest,
     ) -> Result<MessageSearch> {
         let data = self.state.data();
         let srv = self.state.services();
 
-        let vis = srv.channels.list_user_room_channels(user_id).await?;
+        let vis = srv.channels.list_user_room_channels(auth_user_id).await?;
         let visible_channel_ids: Vec<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
 
         let offset = req.offset;
@@ -57,7 +57,10 @@ impl ServiceSearch {
         for (channel_id, ids) in channel_groups {
             let srv2 = Arc::clone(&srv);
             group_futs.push(async move {
-                let mut msgs = srv2.messages.get_many(channel_id, user_id, &ids).await?;
+                let mut msgs = srv2
+                    .messages
+                    .get_many(channel_id, auth_user_id, &ids)
+                    .await?;
                 let reply_ids: Vec<_> = msgs
                     .iter()
                     .filter_map(|m| match &m.latest_version.message_type {
@@ -67,13 +70,13 @@ impl ServiceSearch {
                     .collect();
                 let replies = srv2
                     .messages
-                    .get_many(channel_id, user_id, &reply_ids)
+                    .get_many(channel_id, auth_user_id, &reply_ids)
                     .await?;
                 msgs.extend(replies);
                 srv2.messages
-                    .populate_reactions(channel_id, user_id, &mut msgs);
+                    .populate_reactions(channel_id, auth_user_id, &mut msgs);
                 srv2.messages
-                    .populate_mentions(channel_id, user_id, &mut msgs);
+                    .populate_mentions(channel_id, auth_user_id, &mut msgs);
                 Result::Ok(msgs)
             });
         }
@@ -85,13 +88,59 @@ impl ServiceSearch {
 
         let author_ids: HashSet<_> = messages.iter().map(|m| m.author_id).collect();
 
-        let mut threads = todo!();
-        let mut room_members = todo!();
-        let mut thread_members = todo!();
+        let mut threads = Vec::new();
+        let mut room_members = Vec::new();
+        let mut thread_members = Vec::new();
+
+        // fetch threads
+        // TODO: batch fetch, only fetch archived threads
+        let channel_ids: HashSet<ChannelId> = messages.iter().map(|m| m.channel_id).collect();
+        let mut channel_room_map: HashMap<ChannelId, Option<RoomId>> = HashMap::new();
+        for channel_id in channel_ids {
+            let chan = srv.channels.get(channel_id, Some(auth_user_id)).await?;
+            channel_room_map.insert(channel_id, chan.room_id);
+            if chan.ty.is_thread() && chan.archived_at.is_some() {
+                threads.push(chan);
+            }
+        }
+
+        // fetch room members
+        let mut room_users_map: HashMap<RoomId, HashSet<UserId>> = HashMap::new();
+        for msg in &messages {
+            if let Some(Some(room_id)) = channel_room_map.get(&msg.channel_id) {
+                room_users_map
+                    .entry(*room_id)
+                    .or_default()
+                    .insert(msg.author_id);
+            }
+        }
+
+        for (room_id, user_ids) in room_users_map {
+            if let Ok(cached_room) = srv.cache.load_room(room_id).await {
+                for user_id in user_ids {
+                    if let Some(member) = cached_room.members.get(&user_id) {
+                        room_members.push(member.clone());
+                    }
+                }
+            }
+        }
+
+        // fetch thread members for the requesting user
+        // FIXME: return thread members for message authors too
+        let thread_ids: Vec<ChannelId> = threads.iter().map(|c| c.id).collect();
+        if !thread_ids.is_empty() {
+            if let Ok(members) = data
+                .thread_member_bulk_fetch(auth_user_id, &thread_ids)
+                .await
+            {
+                thread_members.extend(members.into_iter().map(|(_, m)| m));
+            }
+        }
 
         let users = data
             .user_get_many(&author_ids.into_iter().collect::<Vec<_>>())
             .await?;
+
         let has_more = (offset as u64 + raw_result.items.len() as u64) < raw_result.total;
 
         Ok(MessageSearch {
@@ -106,6 +155,7 @@ impl ServiceSearch {
         })
     }
 
+    // TODO: deprecate
     pub async fn search_messages(
         &self,
         user_id: UserId,

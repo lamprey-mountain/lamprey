@@ -289,8 +289,6 @@ impl TantivyHandle {
                 .unwrap()
                 .as_str()
                 .unwrap();
-            println!("{}", retrieved_doc.to_json(&s.schema));
-            dbg!((id, channel_id));
             items.push(SearchMessagesResponseRawItem {
                 id: id.parse().unwrap(),
                 channel_id: channel_id.parse().unwrap(),

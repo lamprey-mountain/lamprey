@@ -3,7 +3,9 @@ use std::sync::Arc;
 use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::search::{ChannelSearchRequest, MessageSearchRequest, RoomSearchRequest};
+use common::v1::types::search::{
+    ChannelSearchRequest, MessageSearch, MessageSearchRequest, RoomSearchRequest,
+};
 use common::v1::types::{
     Channel, ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, Room, RoomId,
 };
@@ -35,6 +37,29 @@ pub async fn search_messages(
         .services()
         .search
         .search_messages(auth.user.id, json, q)
+        .await?;
+    Ok(Json(res))
+}
+
+/// Search messages experimental rewrite
+#[utoipa::path(
+    post,
+    path = "/search/message2",
+    tags = ["search"],
+    responses(
+        (status = OK, body = MessageSearch, description = "success"),
+    )
+)]
+pub async fn search_messages2(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(query): Json<MessageSearchRequest>,
+) -> Result<impl IntoResponse> {
+    query.validate()?;
+    let res = s
+        .services()
+        .search
+        .search_messages2(auth.user.id, query)
         .await?;
     Ok(Json(res))
 }
@@ -84,6 +109,7 @@ pub async fn search_rooms(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(search_messages))
+        .routes(routes!(search_messages2))
         .routes(routes!(search_channels))
         .routes(routes!(search_rooms))
 }
