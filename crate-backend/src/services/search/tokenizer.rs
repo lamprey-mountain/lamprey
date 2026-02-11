@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use once_cell::sync::Lazy;
 use tantivy::tokenizer::{
     BoxTokenStream, Language, LowerCaser, RemoveLongFilter, SimpleTokenizer, Stemmer, TextAnalyzer,

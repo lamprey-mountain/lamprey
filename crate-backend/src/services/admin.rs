@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
+use common::v1::types::ChannelId;
 use serde::{Deserialize, Serialize};
 use subtle::ConstantTimeEq;
 use tokio::sync::RwLock;
 use utoipa::ToSchema;
 
-use crate::{config::ConfigInternal, error::Result, ServerStateInner};
+use crate::{
+    config::ConfigInternal, error::Result, services::search::IndexerCommand, ServerStateInner,
+};
 
 pub struct ServiceAdmin {
     state: Arc<ServerStateInner>,
@@ -259,5 +262,12 @@ impl ServiceAdmin {
             });
         }
         Ok(AdminPurgeCacheResponse { stats })
+    }
+
+    pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
+        let srv = self.state.services();
+        srv.search
+            .send_indexer_command(IndexerCommand::ReindexChannel(channel_id))?;
+        Ok(())
     }
 }

@@ -553,6 +553,10 @@ pub enum AuditLogEntryType {
         #[serde(default)]
         changes: Vec<AuditLogChange>,
     },
+
+    ChannelReindex {
+        channel_id: ChannelId,
+    },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,
 }

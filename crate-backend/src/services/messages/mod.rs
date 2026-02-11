@@ -71,7 +71,8 @@ impl ServiceMessages {
             self.state.presign_message(message).await?;
         }
 
-        self.populate_all(channel_id, user_id, &mut messages).await?;
+        self.populate_all(channel_id, user_id, &mut messages)
+            .await?;
 
         Ok(messages)
     }
@@ -1021,9 +1022,11 @@ impl ServiceMessages {
         }
 
         let mut thread_futs = FuturesUnordered::new();
+
+        // PERF: fetch all threads in parallel with get_many
         for message in messages.iter() {
-            let thread_channel_id: ChannelId = (*message.id).into();
             let srv = self.state.services();
+            let thread_channel_id: ChannelId = (*message.id).into();
             thread_futs.push(async move {
                 // we dont care about the result, if it errors it means no thread
                 let thread = srv.channels.get(thread_channel_id, Some(user_id)).await;

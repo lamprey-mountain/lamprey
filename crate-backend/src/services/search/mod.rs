@@ -1,5 +1,3 @@
-#![allow(unused)] // TEMP: suppress warnings here for now
-
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -11,12 +9,15 @@ use common::v1::types::{MessageType, RoomId};
 use common::v2::types::message::Message;
 use futures::stream::{FuturesUnordered, StreamExt};
 
+use crate::Error;
 use crate::{error::Result, services::search::index::TantivyHandle, ServerStateInner};
 
 mod directory;
 mod index;
 mod schema;
 mod tokenizer;
+
+pub use index::IndexerCommand;
 
 pub struct ServiceSearch {
     state: Arc<ServerStateInner>,
@@ -74,9 +75,11 @@ impl ServiceSearch {
                     .await?;
                 msgs.extend(replies);
                 srv2.messages
-                    .populate_reactions(channel_id, auth_user_id, &mut msgs);
+                    .populate_reactions(channel_id, auth_user_id, &mut msgs)
+                    .await?;
                 srv2.messages
-                    .populate_mentions(channel_id, auth_user_id, &mut msgs);
+                    .populate_mentions(channel_id, auth_user_id, &mut msgs)
+                    .await?;
                 Result::Ok(msgs)
             });
         }
@@ -213,5 +216,13 @@ impl ServiceSearch {
         let vis = srv.channels.list_user_room_channels(user_id).await?;
         let res = data.search_channel(user_id, json, q, &vis).await?;
         Ok(res)
+    }
+
+    pub fn send_indexer_command(&self, cmd: IndexerCommand) -> Result<()> {
+        self.tantivy
+            .command_tx
+            .send(cmd)
+            .map_err(|e| Error::Internal(format!("Failed to send reindex command: {}", e)))?;
+        Ok(())
     }
 }

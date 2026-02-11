@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use axum::extract::Path;
 use axum::{extract::State, response::IntoResponse, Json};
 use common::v1::types::PaginationQuery;
 use common::v1::types::{
@@ -21,6 +22,7 @@ use crate::{
     },
     ServerState,
 };
+use common::v1::types::ChannelId;
 
 // NOTE: do i want to standardize admin apis, ie. move them to common types, or keep this internal?
 
@@ -267,6 +269,39 @@ async fn admin_collect_garbage(
     Ok(Json(res))
 }
 
+/// Admin reindex channel
+///
+/// Queue a channel to be reindexed for search
+#[utoipa::path(
+    post,
+    path = "/admin/reindex-channel/{channel_id}",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
+    params(("channel_id" = String, Path, description = "Channel id to reindex")),
+    responses(
+        (status = ACCEPTED, description = "Channel reindexing queued"),
+    )
+)]
+async fn admin_reindex_channel(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Path(channel_id): Path<ChannelId>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    let srv = s.services();
+
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::Admin)?;
+
+    srv.admin.reindex_channel(channel_id).await?;
+
+    al.commit_success(AuditLogEntryType::ChannelReindex { channel_id })
+        .await?;
+
+    Ok(StatusCode::ACCEPTED)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(admin_whisper))
@@ -274,4 +309,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(admin_register_user))
         .routes(routes!(admin_purge_cache))
         .routes(routes!(admin_collect_garbage))
+        .routes(routes!(admin_reindex_channel))
 }

@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use opendal::{layers::LoggingLayer, Builder, ErrorKind, Operator};
+use opendal::{ErrorKind, Operator};
 use tantivy::{
     directory::{
         error::{DeleteError, OpenReadError, OpenWriteError},
@@ -13,7 +13,7 @@ use tantivy::{
     },
     Directory, HasLen,
 };
-use tokio::runtime::Handle;
+use tokio::runtime::Handle as TokioHandle;
 use tracing::error;
 
 use crate::ServerStateInner;
@@ -25,7 +25,7 @@ pub struct ObjectDirectory {
     blobs: Operator,
 
     /// tokio runtime to use the opendal operator with
-    rt: Arc<tokio::runtime::Runtime>,
+    rt: TokioHandle,
 
     /// which directory to write inside of the object store
     base_path: PathBuf,
@@ -38,7 +38,7 @@ pub struct ObjectDirectory {
 /// a file on object storage
 #[derive(Debug)]
 struct ObjectFile {
-    rt: Arc<tokio::runtime::Runtime>,
+    rt: TokioHandle,
     blobs: Operator,
     path: String,
     len: usize,
@@ -46,33 +46,15 @@ struct ObjectFile {
 
 /// a handle to write to a file on object storage
 struct ObjectFileWrite {
-    rt: Arc<tokio::runtime::Runtime>,
+    rt: TokioHandle,
     writer: opendal::Writer,
 }
 
 impl ObjectDirectory {
     pub fn new(s: Arc<ServerStateInner>, base_path: PathBuf, cache_path: PathBuf) -> Self {
-        let config = &s.config;
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-
-        // copied from main
-        let blobs_builder = opendal::services::S3::default()
-            .bucket(&config.s3.bucket)
-            .endpoint(config.s3.endpoint.as_str())
-            .region(&config.s3.region)
-            .access_key_id(&config.s3.access_key_id)
-            .secret_access_key(&config.s3.secret_access_key);
-        let blobs = Operator::new(blobs_builder)
-            .expect("if this worked in main server state it should work here too")
-            .layer(LoggingLayer::default())
-            .finish();
-
         Self {
-            blobs,
-            rt: Arc::new(rt),
+            blobs: s.blobs.clone(),
+            rt: s.tokio.clone(),
             base_path,
             cache_path,
             atomic_rw_lock: Arc::new(Mutex::new(())),
@@ -99,7 +81,7 @@ impl Directory for ObjectDirectory {
         })?;
 
         Ok(Arc::new(ObjectFile {
-            rt: Arc::clone(&self.rt),
+            rt: self.rt.clone(),
             blobs: self.blobs.clone(),
             path: p,
             len: meta.content_length() as usize,
@@ -145,15 +127,13 @@ impl Directory for ObjectDirectory {
         let writer = self
             .rt
             .block_on(self.blobs.writer(&self.path_str(path)))
-            .map_err(|err| {
-                OpenWriteError::IoError {
-                    io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
-                    filepath: path.to_path_buf(),
-                }
+            .map_err(|err| OpenWriteError::IoError {
+                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                filepath: path.to_path_buf(),
             })?;
 
         Ok(BufWriter::new(Box::new(ObjectFileWrite {
-            rt: Arc::clone(&self.rt),
+            rt: self.rt.clone(),
             writer,
         })))
     }

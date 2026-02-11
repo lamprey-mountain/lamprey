@@ -77,6 +77,7 @@ pub trait Data:
     + DataUnread
     + DataUser
     + DataSearch
+    + DataSearchQueue
     + DataAuth
     + DataAuditLogs
     + DataThreadMember
@@ -829,6 +830,20 @@ pub trait DataSearch {
         paginate: PaginationQuery<ChannelId>,
         channel_visibility: &[(ChannelId, bool)],
     ) -> Result<PaginationResponse<Channel>>;
+}
+
+#[async_trait]
+pub trait DataSearchQueue {
+    async fn search_reindex_queue_upsert(
+        &self,
+        channel_id: ChannelId,
+        last_message_id: Option<MessageId>,
+    ) -> Result<()>;
+    async fn search_reindex_queue_list(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<(ChannelId, Option<MessageId>)>>;
+    async fn search_reindex_queue_delete(&self, channel_id: ChannelId) -> Result<()>;
 }
 
 #[async_trait]

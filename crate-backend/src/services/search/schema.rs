@@ -2,18 +2,15 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, Message, MessageId, MessageType, Room, User};
+use common::v1::types::{Channel, Message, MessageType, Room, User};
 use common::v2::types::media::Media;
 use serde::{Deserialize, Serialize};
 use tantivy::schema::TextOptions;
-use tantivy::{
-    schema::{
-        self, IndexRecordOption, JsonObjectOptions, OwnedValue, Schema, SchemaBuilder,
-        TextFieldIndexing, FAST, INDEXED, STORED, STRING,
-    },
-    tokenizer::Tokenizer,
-    TantivyDocument,
+use tantivy::schema::{
+    self, IndexRecordOption, JsonObjectOptions, OwnedValue, Schema, SchemaBuilder,
+    TextFieldIndexing, FAST, STORED, STRING,
 };
+use tantivy::TantivyDocument;
 
 /// tantivy schema for lamprey
 #[derive(Debug, Clone)]
@@ -187,6 +184,29 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
         tantivy::DateTime::from_utc(*message.created_at),
     );
 
+    let updated_at = message.latest_version.created_at;
+    if updated_at != message.created_at {
+        doc.add_date(s.updated_at, tantivy::DateTime::from_utc(*updated_at));
+    }
+
+    doc.add_text(
+        s.subtype,
+        match &message.latest_version.message_type {
+            MessageType::DefaultMarkdown(..) => "DefaultMarkdown",
+            MessageType::MessagePinned(..) => "MessagePinned",
+            MessageType::MemberAdd(..) => "MemberAdd",
+            MessageType::MemberRemove(..) => "MemberRemove",
+            MessageType::MemberJoin => "MemberJoin",
+            MessageType::Call(..) => "Call",
+            MessageType::ChannelRename(..) => "ChannelRename",
+            MessageType::ChannelPingback(..) => "ChannelPingback",
+            MessageType::ChannelMoved(..) => "ChannelMoved",
+            MessageType::ChannelIcon(..) => "ChannelIcon",
+            MessageType::ThreadCreated(..) => "ThreadCreated",
+            MessageType::AutomodExecution(..) => "AutomodExecution",
+        },
+    );
+
     let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
     let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();
 
@@ -200,10 +220,7 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
         _ => None,
     };
 
-    doc.add_text(
-        s.content,
-        message.latest_version.message_type.to_string(),
-    );
+    doc.add_text(s.content, message.latest_version.message_type.to_string());
 
     if let MessageType::DefaultMarkdown(ref m) = message.latest_version.message_type {
         if !m.attachments.is_empty() {
@@ -238,11 +255,7 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
                         }
                     };
 
-                push_val(
-                    &mut meta_fast,
-                    "media_size",
-                    att.source.size.into(),
-                );
+                push_val(&mut meta_fast, "media_size", att.source.size.into());
                 push_val(
                     &mut meta_fast,
                     "media_content_type",
@@ -263,11 +276,7 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
                     .and_then(|e| e.to_str())
                     .map(|ext| ext.to_lowercase());
                 if let Some(e) = extension {
-                    push_val(
-                        &mut meta_fast,
-                        "media_extension",
-                        e.as_str().into(),
-                    );
+                    push_val(&mut meta_fast, "media_extension", e.as_str().into());
                 }
             }
         } else {
@@ -278,51 +287,28 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
             meta_fast.insert("has_video".to_string(), false.into());
         }
 
-        meta_fast.insert(
-            "has_embed".to_string(),
-            (!m.embeds.is_empty()).into(),
-        );
+        meta_fast.insert("has_embed".to_string(), (!m.embeds.is_empty()).into());
     };
 
     // common fields for all message types
-    meta_fast.insert(
-        "has_thread".to_string(),
-        message.thread.is_some().into(),
-    );
-    meta_fast.insert(
-        "pinned".to_string(),
-        message.pinned.is_some().into(),
-    );
+    meta_fast.insert("has_thread".to_string(), message.thread.is_some().into());
+    meta_fast.insert("pinned".to_string(), message.pinned.is_some().into());
 
     if let Some(reply_id) = reply {
-        meta_fast.insert(
-            "reply".to_string(),
-            reply_id.to_string().into(),
-        );
+        meta_fast.insert("reply".to_string(), reply_id.to_string().into());
     }
 
     // add mention fields
     let mn = &message.latest_version.mentions;
-    meta_fast.insert(
-        "mentions_everyone".to_string(),
-        mn.everyone.into(),
-    );
+    meta_fast.insert("mentions_everyone".to_string(), mn.everyone.into());
 
     if !mn.roles.is_empty() {
-        let roles: Vec<OwnedValue> = mn
-            .roles
-            .iter()
-            .map(|r| r.id.to_string().into())
-            .collect();
+        let roles: Vec<OwnedValue> = mn.roles.iter().map(|r| r.id.to_string().into()).collect();
         meta_fast.insert("mentions_role".to_string(), OwnedValue::Array(roles));
     }
 
     if !mn.users.is_empty() {
-        let users: Vec<OwnedValue> = mn
-            .users
-            .iter()
-            .map(|u| u.id.to_string().into())
-            .collect();
+        let users: Vec<OwnedValue> = mn.users.iter().map(|u| u.id.to_string().into()).collect();
         meta_fast.insert("mentions_user".to_string(), OwnedValue::Array(users));
     }
 
@@ -356,22 +342,20 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
     doc
 }
 
-pub fn tantivy_document_from_user(user: User) -> TantivyDocument {
+pub fn _tantivy_document_from_user(_user: User) -> TantivyDocument {
     todo!()
 }
 
-pub fn tantivy_document_from_room(user: Room) -> TantivyDocument {
+pub fn _tantivy_document_from_room(_room: Room) -> TantivyDocument {
     todo!()
 }
 
-pub fn tantivy_document_from_channel(user: Channel) -> TantivyDocument {
+pub fn _tantivy_document_from_channel(_channel: Channel) -> TantivyDocument {
     todo!()
 }
 
-pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {
+pub fn _tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
-    let mut meta_fast = serde_json::Map::new();
-    let mut meta_text = serde_json::Map::new();
 
     doc.add_text(s.id, media.id.to_string());
     doc.add_text(s.doctype, "Media");
@@ -403,10 +387,7 @@ pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDo
         "media_content_type".to_string(),
         media.content_type.to_string().into(),
     );
-    meta_fast.insert(
-        "media_filename".to_string(),
-        media.filename.clone().into(),
-    );
+    meta_fast.insert("media_filename".to_string(), media.filename.clone().into());
 
     let extension = Path::new(&media.filename)
         .extension()
@@ -420,10 +401,7 @@ pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDo
         meta_text.insert("media_alt".to_string(), alt.clone().into());
     }
 
-    meta_fast.insert(
-        "quarantined".to_string(),
-        media.quarantine.is_some().into(),
-    );
+    meta_fast.insert("quarantined".to_string(), media.quarantine.is_some().into());
 
     doc.add_object(s.metadata_fast, meta_fast);
     doc.add_object(s.metadata_text, meta_text);

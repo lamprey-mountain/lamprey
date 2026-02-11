@@ -12,7 +12,7 @@ use common::{
 use dashmap::DashMap;
 
 use sqlx::PgPool;
-use tokio::sync::broadcast::Sender;
+use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
 use url::Url;
 
 use crate::{
@@ -24,6 +24,7 @@ use crate::{
 };
 
 pub struct ServerStateInner {
+    pub tokio: TokioHandle,
     pub config: Config,
     pub pool: PgPool,
     pub services: Weak<Services>,
@@ -171,6 +172,7 @@ impl ServerState {
         // though i probably need some way to access global state/services from within them anyways
         let services = Arc::new_cyclic(|weak| {
             let inner = Arc::new(ServerStateInner {
+                tokio: TokioHandle::current(),
                 config,
                 pool,
                 services: weak.to_owned(),

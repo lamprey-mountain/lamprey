@@ -1,23 +1,21 @@
 use std::{
     collections::HashSet,
     path::PathBuf,
-    sync::{
-        mpsc::{self, Sender},
-        Arc,
-    },
+    sync::{mpsc, Arc},
 };
 
 use common::v1::types::{
     search::{MessageSearchOrderField, MessageSearchRequest, Order},
-    ChannelId, Message, MessageId, MessageSync, MessageType,
+    ChannelId, Message, MessageId, MessageSync, PaginationDirection, PaginationQuery,
+    SERVER_USER_ID,
 };
 use tantivy::{
     collector::{Count, TopDocs},
     query::{BooleanQuery, Query, QueryParser},
     schema::Value,
-    DocAddress, Document, Index, IndexWriter, Score, TantivyDocument, Term,
+    DocAddress, Index, IndexWriter, TantivyDocument, Term,
 };
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::{
     services::search::{
@@ -25,7 +23,7 @@ use crate::{
         schema::{tantivy_document_from_message, LampreySchema},
         tokenizer::DynamicTokenizer,
     },
-    Result, ServerState, ServerStateInner,
+    Result, ServerStateInner,
 };
 
 /// buffer size split between indexing threads
@@ -34,10 +32,11 @@ use crate::{
 const INDEXING_BUFFER_SIZE: usize = 100_000_000;
 
 pub struct TantivyHandle {
-    command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
-    thread: std::thread::JoinHandle<()>,
-    pub index: Index,
-    pub schema: LampreySchema,
+    pub(super) command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
+    #[allow(unused)] // TEMP
+    pub(super) thread: std::thread::JoinHandle<()>,
+    pub(super) index: Index,
+    pub(super) schema: LampreySchema,
 }
 
 pub enum IndexerCommand {
@@ -58,7 +57,12 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
     let (init_tx, init_rx) = mpsc::sync_channel(0);
 
     let thread = std::thread::spawn(move || {
-        let dir = ObjectDirectory::new(s, PathBuf::from("tantivy/"), PathBuf::from("/tmp/tantivy"));
+        let rt = s.tokio.clone();
+        let dir = ObjectDirectory::new(
+            Arc::clone(&s),
+            PathBuf::from("tantivy/"),
+            PathBuf::from("/tmp/tantivy"),
+        );
         let sch = LampreySchema::default();
         let index = Index::open_or_create(dir, sch.schema.clone()).unwrap();
         index
@@ -151,9 +155,11 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                         last_commit = std::time::Instant::now();
                         uncommitted_count = 0;
 
-                        // TODO: fetch messages from db, index them into tantivy
-                        // TODO: resume when server is restarted
-                        todo!()
+                        if let Err(e) =
+                            rt.block_on(s.data().search_reindex_queue_upsert(channel_id, None))
+                        {
+                            error!("Failed to upsert reindex queue: {}", e);
+                        }
                     }
                     IndexerCommand::Shutdown => break,
                 }
@@ -168,6 +174,67 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                 }
                 last_commit = std::time::Instant::now();
                 uncommitted_count = 0;
+            }
+
+            // process reindex queue
+            let queue_result = rt.block_on(s.data().search_reindex_queue_list(1));
+            match queue_result {
+                Ok(items) => {
+                    if let Some((channel_id, last_message_id)) = items.first() {
+                        let limit = 100;
+                        debug!(
+                            "reindexing channel {} from {:?}",
+                            channel_id, last_message_id
+                        );
+                        let res = rt.block_on(s.services().messages.list(
+                            *channel_id,
+                            SERVER_USER_ID,
+                            PaginationQuery {
+                                from: *last_message_id,
+                                to: None,
+                                dir: Some(PaginationDirection::F),
+                                limit: Some(limit),
+                            },
+                        ));
+
+                        match res {
+                            Ok(page) => {
+                                if page.items.is_empty() {
+                                    // finished reindexing this channel!
+                                    if let Err(e) = rt
+                                        .block_on(s.data().search_reindex_queue_delete(*channel_id))
+                                    {
+                                        error!("failed to delete from reindex queue: {}", e);
+                                    }
+                                } else {
+                                    let last_id = page.items.last().map(|m| m.id);
+                                    for msg_v2 in page.items {
+                                        let msg: Message = msg_v2.into();
+                                        insert_message(&index_writer, msg);
+                                    }
+                                    uncommitted_count += limit as usize;
+
+                                    if let Some(lid) = last_id {
+                                        if let Err(e) =
+                                            rt.block_on(s.data().search_reindex_queue_upsert(
+                                                *channel_id,
+                                                Some(lid),
+                                            ))
+                                        {
+                                            error!("failed to update reindex queue: {}", e);
+                                        }
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                error!("failed to list messages for reindex: {}", e);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("failed to retrieve reindex queue: {}", e);
+                }
             }
         }
 
