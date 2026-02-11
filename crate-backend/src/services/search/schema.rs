@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, Message, MessageType, Room, User};
+use common::v1::types::{Channel, ChannelType, Message, MessageType, Room, User};
 use common::v2::types::media::Media;
 use serde::{Deserialize, Serialize};
 use tantivy::schema::TextOptions;
@@ -178,7 +178,11 @@ impl Default for LampreySchema {
 }
 
 /// create a tantivy document from a message
-pub fn tantivy_document_from_message(s: &LampreySchema, message: Message, room_id: Option<common::v1::types::RoomId>) -> TantivyDocument {
+pub fn tantivy_document_from_message(
+    s: &LampreySchema,
+    message: Message,
+    room_id: Option<common::v1::types::RoomId>,
+) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
     doc.add_text(s.id, message.id.to_string());
     doc.add_text(s.doctype, "Message");
@@ -367,8 +371,86 @@ pub fn _tantivy_document_from_room(_room: Room) -> TantivyDocument {
     todo!()
 }
 
-pub fn _tantivy_document_from_channel(_channel: Channel) -> TantivyDocument {
-    todo!()
+pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> TantivyDocument {
+    let mut doc = TantivyDocument::new();
+    doc.add_text(s.id, channel.id.to_string());
+    doc.add_text(s.doctype, "Channel");
+    doc.add_text(s.name, channel.name);
+
+    if let Some(description) = channel.description {
+        doc.add_text(s.content, description);
+    }
+
+    if let Some(room_id) = channel.room_id {
+        doc.add_text(s.room_id, room_id.to_string());
+    }
+
+    if let Some(parent_id) = channel.parent_id {
+        doc.add_text(s.channel_id, parent_id.to_string());
+    }
+
+    if let Some(owner_id) = channel.owner_id.map(|i| i.to_string()) {
+        doc.add_text(s.author_id, owner_id);
+    }
+
+    if let Some(tags) = &channel.tags {
+        for tag_id in tags {
+            doc.add_text(s.tag_id, tag_id.to_string());
+        }
+    }
+
+    let created_at: Time = channel.id.try_into().unwrap();
+    doc.add_date(s.created_at, tantivy::DateTime::from_utc(*created_at));
+
+    if let Some(deleted_at) = channel.deleted_at {
+        doc.add_date(s.deleted_at, tantivy::DateTime::from_utc(*deleted_at));
+    }
+
+    if let Some(archived_at) = channel.archived_at {
+        doc.add_date(s.archived_at, tantivy::DateTime::from_utc(*archived_at));
+    }
+
+    doc.add_text(
+        s.subtype,
+        match channel.ty {
+            ChannelType::Text => "Text",
+            ChannelType::Announcement => "Announcement",
+            ChannelType::ThreadPublic => "ThreadPublic",
+            ChannelType::ThreadPrivate => "ThreadPrivate",
+            ChannelType::ThreadForum2 => "ThreadForum2",
+            ChannelType::Dm => "Dm",
+            ChannelType::Gdm => "Gdm",
+            ChannelType::Forum => "Forum",
+            ChannelType::Voice => "Voice",
+            ChannelType::Broadcast => "Broadcast",
+            ChannelType::Category => "Category",
+            ChannelType::Calendar => "Calendar",
+            ChannelType::Forum2 => "Forum2",
+            ChannelType::Info => "Info",
+            ChannelType::Ticket => "Ticket",
+            ChannelType::Document => "Document",
+            ChannelType::DocumentComment => "DocumentComment",
+            ChannelType::Wiki => "Wiki",
+        },
+    );
+
+    let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
+    let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();
+
+    meta_fast.insert("nsfw".to_string(), channel.nsfw.into());
+
+    if let Some(bitrate) = channel.bitrate {
+        meta_fast.insert("bitrate".to_string(), bitrate.into());
+    }
+
+    if let Some(user_limit) = channel.user_limit {
+        meta_fast.insert("user_limit".to_string(), user_limit.into());
+    }
+
+    doc.add_object(s.metadata_fast, meta_fast);
+    doc.add_object(s.metadata_text, meta_text);
+
+    doc
 }
 
 pub fn _tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {

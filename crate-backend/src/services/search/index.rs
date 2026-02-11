@@ -20,7 +20,7 @@ use tracing::{debug, error};
 use crate::{
     services::search::{
         directory::ObjectDirectory,
-        schema::{tantivy_document_from_message, LampreySchema},
+        schema::{tantivy_document_from_message, tantivy_document_from_channel, LampreySchema},
         tokenizer::DynamicTokenizer,
     },
     Result, ServerStateInner,
@@ -145,6 +145,22 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                                         sch.id,
                                         &message_id.to_string(),
                                     ));
+                                }
+                            }
+                            MessageSync::ChannelCreate { channel } => {
+                                let doc = tantivy_document_from_channel(&sch, *channel);
+                                if let Err(e) = index_writer.add_document(doc) {
+                                    error!("failed to add channel document: {}", e);
+                                }
+                            }
+                            MessageSync::ChannelUpdate { channel } => {
+                                index_writer.delete_term(Term::from_field_text(
+                                    sch.id,
+                                    &channel.id.to_string(),
+                                ));
+                                let doc = tantivy_document_from_channel(&sch, *channel);
+                                if let Err(e) = index_writer.add_document(doc) {
+                                    error!("failed to update channel document: {}", e);
                                 }
                             }
                             // TODO: handle Message{Remove,Restore}
