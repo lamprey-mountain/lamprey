@@ -208,7 +208,8 @@ impl TantivyHandle {
 
         if let Some(q_str) = &req.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(&self.index, vec![s.content]);
+                let mut query_parser = QueryParser::for_index(&self.index, vec![s.content, s.name]);
+                query_parser.set_field_boost(s.name, 1.5);
                 let q = query_parser
                     .parse_query(q_str)
                     .map_err(|e| tantivy::TantivyError::from(e))?;

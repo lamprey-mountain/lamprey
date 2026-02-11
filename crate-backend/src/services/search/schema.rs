@@ -1,14 +1,15 @@
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use common::v1::types::util::Time;
 use common::v1::types::{Channel, Message, MessageId, MessageType, Room, User};
 use common::v2::types::media::Media;
 use serde::{Deserialize, Serialize};
-use serde_json;
+use tantivy::schema::TextOptions;
 use tantivy::{
     schema::{
-        self, IndexRecordOption, JsonObjectOptions, Schema, SchemaBuilder, TextFieldIndexing,
-        TextOptions, FAST, INDEXED, STORED, STRING,
+        self, IndexRecordOption, JsonObjectOptions, OwnedValue, Schema, SchemaBuilder,
+        TextFieldIndexing, FAST, INDEXED, STORED, STRING,
     },
     tokenizer::Tokenizer,
     TantivyDocument,
@@ -83,133 +84,15 @@ pub struct LampreySchema {
     /// - message content
     pub content: schema::Field,
 
-    /// if this message has an associated thread
+    /// fast metadata for filtering and sorting
     ///
-    /// for messages
-    pub has_thread: schema::Field,
+    /// contains booleans, numbers, keywords (IDs)
+    pub metadata_fast: schema::Field,
 
-    /// if this message is pinned
+    /// text metadata for full-text search
     ///
-    /// for messages
-    pub pinned: schema::Field,
-
-    /// the message this is replying to
-    ///
-    /// for messages
-    pub reply: schema::Field,
-
-    /// the size of this media
-    ///
-    /// for media and messages (attachments)
-    pub media_size: schema::Field,
-
-    /// the content type of the media
-    ///
-    /// for media and messages (attachments)
-    pub media_content_type: schema::Field,
-
-    /// the alt text of the media
-    ///
-    /// for media and messages (attachments)
-    pub media_alt: schema::Field,
-
-    /// the filename of the media
-    ///
-    /// for media and messages (attachments)
-    pub media_filename: schema::Field,
-
-    /// the extension of the media
-    ///
-    /// for media and messages (attachments)
-    pub media_extension: schema::Field,
-
-    /// if this thing is quarantined
-    ///
-    /// for rooms and media
-    pub quarantined: schema::Field,
-
-    /// if this message has an attachment
-    ///
-    /// for messages
-    pub has_attachment: schema::Field,
-
-    /// if this message has audio
-    ///
-    /// for messages
-    pub has_audio: schema::Field,
-
-    /// if this message has an embed
-    ///
-    /// for messages
-    pub has_embed: schema::Field,
-
-    /// if this message has an image
-    ///
-    /// for messages
-    pub has_image: schema::Field,
-
-    /// if this message has a link
-    ///
-    /// for messages
-    pub has_link: schema::Field,
-
-    /// if this message has a video
-    ///
-    /// for messages
-    pub has_video: schema::Field,
-
-    /// if this message mentions everyone
-    ///
-    /// for messages
-    pub mentions_everyone: schema::Field,
-
-    /// IDs of roles mentioned in this message
-    ///
-    /// for messages
-    pub mentions_role: schema::Field,
-
-    /// IDs of users mentioned in this message
-    ///
-    /// for messages
-    pub mentions_user: schema::Field,
-
-    /// hostname of links in this message
-    ///
-    /// for messages
-    pub link_hostname: schema::Field,
-
-    /// arbitrary json data in case i need to edit the schema
-    pub metadata: schema::Field,
-
-    /// when this user was suspended at
-    ///
-    /// for users
-    pub user_suspended_at: schema::Field,
-
-    /// if this user is a puppet
-    ///
-    /// for users
-    pub user_puppet: schema::Field,
-
-    /// the email of this user
-    ///
-    /// for users
-    pub user_email: schema::Field,
-
-    /// if this user is a webhook
-    ///
-    /// for users
-    pub user_webhook: schema::Field,
-
-    /// if this user is a bot
-    ///
-    /// for users
-    pub user_bot: schema::Field,
-
-    /// if this user has MFA enabled
-    ///
-    /// for users
-    pub user_has_mfa: schema::Field,
+    /// contains natural language text (alt text, etc.)
+    pub metadata_text: schema::Field,
 }
 
 /// the type of this item
@@ -254,39 +137,20 @@ impl Default for LampreySchema {
         let channel_id = sb.add_text_field("channel_id", STRING | FAST | STORED);
         let room_id = sb.add_text_field("room_id", STRING | FAST | STORED);
         let tag_id = sb.add_text_field("tag_id", STRING | FAST);
-        let name = sb.add_text_field("name", text_options.clone());
+        let name = sb.add_text_field("name", text_options.clone()); // TODO: boost
         let content = sb.add_text_field("content", text_options.clone());
-        let has_thread = sb.add_bool_field("has_thread", FAST);
-        let pinned = sb.add_bool_field("pinned", FAST);
-        let reply = sb.add_text_field("reply", STRING | FAST);
-        let media_size = sb.add_u64_field("media_size", FAST);
-        let media_content_type = sb.add_text_field("media_content_type", STRING | FAST);
-        let media_alt = sb.add_text_field("media_alt", text_options.clone());
-        let media_filename = sb.add_text_field("media_filename", STRING | FAST);
-        let media_extension = sb.add_text_field("media_extension", STRING | FAST);
-        let quarantined = sb.add_bool_field("quarantined", FAST);
-        let has_attachment = sb.add_bool_field("has_attachment", FAST);
-        let has_audio = sb.add_bool_field("has_audio", FAST);
-        let has_embed = sb.add_bool_field("has_embed", FAST);
-        let has_image = sb.add_bool_field("has_image", FAST);
-        let has_link = sb.add_bool_field("has_link", FAST);
-        let has_video = sb.add_bool_field("has_video", FAST);
-        let mentions_everyone = sb.add_bool_field("mentions_everyone", FAST);
-        let mentions_role = sb.add_text_field("mentions_role", STRING | FAST);
-        let mentions_user = sb.add_text_field("mentions_user", STRING | FAST);
-        let link_hostname = sb.add_text_field("link_hostname", STRING | FAST);
 
-        let metadata = sb.add_json_field(
-            "metadata",
-            JsonObjectOptions::default().set_indexing_options(TextFieldIndexing::default()),
+        let metadata_fast =
+            sb.add_json_field("metadata_fast", JsonObjectOptions::default().set_fast(None));
+
+        let metadata_text = sb.add_json_field(
+            "metadata_text",
+            JsonObjectOptions::default().set_indexing_options(
+                TextFieldIndexing::default()
+                    .set_tokenizer("dynamic")
+                    .set_index_option(IndexRecordOption::WithFreqsAndPositions),
+            ),
         );
-
-        let user_suspended_at = sb.add_date_field("user_suspended_at", FAST);
-        let user_puppet = sb.add_bool_field("user_puppet", FAST);
-        let user_email = sb.add_text_field("user_email", STRING | FAST);
-        let user_webhook = sb.add_bool_field("user_webhook", FAST);
-        let user_bot = sb.add_bool_field("user_bot", FAST);
-        let user_has_mfa = sb.add_bool_field("user_has_mfa", FAST);
 
         let schema = sb.build();
 
@@ -304,32 +168,8 @@ impl Default for LampreySchema {
             tag_id,
             name,
             content,
-            has_thread,
-            pinned,
-            reply,
-            media_size,
-            media_content_type,
-            media_alt,
-            media_filename,
-            media_extension,
-            quarantined,
-            has_attachment,
-            has_audio,
-            has_embed,
-            has_image,
-            has_link,
-            has_video,
-            mentions_everyone,
-            mentions_role,
-            mentions_user,
-            link_hostname,
-            metadata,
-            user_suspended_at,
-            user_puppet,
-            user_email,
-            user_webhook,
-            user_bot,
-            user_has_mfa,
+            metadata_fast,
+            metadata_text,
             subtype,
         }
     }
@@ -347,6 +187,9 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
         tantivy::DateTime::from_utc(*message.created_at),
     );
 
+    let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
+    let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();
+
     // get what this message is "replying" to
     let reply = match &message.latest_version.message_type {
         MessageType::DefaultMarkdown(m) => m.reply_id,
@@ -357,11 +200,14 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
         _ => None,
     };
 
-    doc.add_text(s.content, message.latest_version.message_type.to_string());
+    doc.add_text(
+        s.content,
+        message.latest_version.message_type.to_string(),
+    );
 
     if let MessageType::DefaultMarkdown(ref m) = message.latest_version.message_type {
         if !m.attachments.is_empty() {
-            doc.add_bool(s.has_attachment, true);
+            meta_fast.insert("has_attachment".to_string(), true.into());
 
             let has_audio = m
                 .attachments
@@ -376,61 +222,108 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
                 .iter()
                 .any(|a| a.source.mime.starts_with("video/"));
 
-            doc.add_bool(s.has_audio, has_audio);
-            doc.add_bool(s.has_image, has_image);
-            doc.add_bool(s.has_video, has_video);
+            meta_fast.insert("has_audio".to_string(), has_audio.into());
+            meta_fast.insert("has_image".to_string(), has_image.into());
+            meta_fast.insert("has_video".to_string(), has_video.into());
 
             for att in &m.attachments {
-                doc.add_u64(s.media_size, att.source.size);
-                doc.add_text(s.media_content_type, att.source.mime.to_string());
+                // Helper to push to array
+                let push_val =
+                    |map: &mut BTreeMap<String, OwnedValue>, key: &str, val: OwnedValue| {
+                        let entry = map
+                            .entry(key.to_string())
+                            .or_insert_with(|| OwnedValue::Array(Vec::new()));
+                        if let OwnedValue::Array(vec) = entry {
+                            vec.push(val);
+                        }
+                    };
+
+                push_val(
+                    &mut meta_fast,
+                    "media_size",
+                    att.source.size.into(),
+                );
+                push_val(
+                    &mut meta_fast,
+                    "media_content_type",
+                    att.source.mime.as_str().into(),
+                );
+                push_val(
+                    &mut meta_fast,
+                    "media_filename",
+                    att.filename.as_str().into(),
+                );
 
                 if let Some(alt) = &att.alt {
-                    doc.add_text(s.media_alt, alt.clone());
+                    push_val(&mut meta_text, "media_alt", alt.as_str().into());
                 }
-
-                doc.add_text(s.media_filename, att.filename.clone());
 
                 let extension = Path::new(&att.filename)
                     .extension()
                     .and_then(|e| e.to_str())
                     .map(|ext| ext.to_lowercase());
                 if let Some(e) = extension {
-                    doc.add_text(s.media_extension, e);
+                    push_val(
+                        &mut meta_fast,
+                        "media_extension",
+                        e.as_str().into(),
+                    );
                 }
             }
         } else {
             // shortcut for messages with no attachments
-            doc.add_bool(s.has_attachment, false);
-            doc.add_bool(s.has_audio, false);
-            doc.add_bool(s.has_image, false);
-            doc.add_bool(s.has_video, false);
+            meta_fast.insert("has_attachment".to_string(), false.into());
+            meta_fast.insert("has_audio".to_string(), false.into());
+            meta_fast.insert("has_image".to_string(), false.into());
+            meta_fast.insert("has_video".to_string(), false.into());
         }
 
-        doc.add_bool(s.has_embed, !m.embeds.is_empty());
+        meta_fast.insert(
+            "has_embed".to_string(),
+            (!m.embeds.is_empty()).into(),
+        );
     };
 
     // common fields for all message types
-    doc.add_bool(s.has_thread, message.thread.is_some());
-    doc.add_bool(s.pinned, message.pinned.is_some());
+    meta_fast.insert(
+        "has_thread".to_string(),
+        message.thread.is_some().into(),
+    );
+    meta_fast.insert(
+        "pinned".to_string(),
+        message.pinned.is_some().into(),
+    );
 
     if let Some(reply_id) = reply {
-        doc.add_text(s.reply, reply_id.to_string());
+        meta_fast.insert(
+            "reply".to_string(),
+            reply_id.to_string().into(),
+        );
     }
 
     // add mention fields
     let mn = &message.latest_version.mentions;
-    doc.add_bool(s.mentions_everyone, mn.everyone);
+    meta_fast.insert(
+        "mentions_everyone".to_string(),
+        mn.everyone.into(),
+    );
 
     if !mn.roles.is_empty() {
-        for role in &mn.roles {
-            doc.add_text(s.mentions_role, role.id.to_string());
-        }
+        let roles: Vec<OwnedValue> = mn
+            .roles
+            .iter()
+            .map(|r| r.id.to_string().into())
+            .collect();
+        meta_fast.insert("mentions_role".to_string(), OwnedValue::Array(roles));
     }
 
     if !mn.users.is_empty() {
-        for user in &mn.users {
-            doc.add_text(s.mentions_user, user.id.to_string());
-        }
+        let users: Vec<OwnedValue> = mn
+            .users
+            .iter()
+            .map(|u| u.id.to_string().into())
+            .collect();
+        meta_fast.insert("mentions_user".to_string(), OwnedValue::Array(users));
     }
 
     // link fields
@@ -438,21 +331,27 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
     if let MessageType::DefaultMarkdown(ref m) = message.latest_version.message_type {
         if let Some(ref content) = m.content {
             let finder = linkify::LinkFinder::new();
+            let mut hostnames = Vec::new();
             for link in finder.links(content) {
                 if let Ok(url) = url::Url::parse(link.as_str()) {
                     if let Some(host) = url.host_str() {
                         // reverse the hostname (e.g., "foobar.example.com" -> "com.example.foobar")
                         // this is so that searching "example.com" can return results for "foobar.example.com" if needed
                         let reversed_hostname = host.split('.').rev().collect::<Vec<_>>().join(".");
-
-                        doc.add_text(s.link_hostname, reversed_hostname);
+                        hostnames.push(reversed_hostname.into());
                         has_links = true;
                     }
                 }
             }
+            if !hostnames.is_empty() {
+                meta_fast.insert("link_hostname".to_string(), OwnedValue::Array(hostnames));
+            }
         }
     }
-    doc.add_bool(s.has_link, has_links);
+    meta_fast.insert("has_link".to_string(), has_links.into());
+
+    doc.add_object(s.metadata_fast, meta_fast);
+    doc.add_object(s.metadata_text, meta_text);
 
     doc
 }
@@ -471,6 +370,8 @@ pub fn tantivy_document_from_channel(user: Channel) -> TantivyDocument {
 
 pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
+    let mut meta_fast = serde_json::Map::new();
+    let mut meta_text = serde_json::Map::new();
 
     doc.add_text(s.id, media.id.to_string());
     doc.add_text(s.doctype, "Media");
@@ -494,23 +395,38 @@ pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDo
         doc.add_text(s.channel_id, r.to_string());
     }
 
-    doc.add_u64(s.media_size, media.size);
-    doc.add_text(s.media_content_type, media.content_type.to_string());
-    doc.add_text(s.media_filename, media.filename.clone());
+    let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
+    let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();
+
+    meta_fast.insert("media_size".to_string(), media.size.into());
+    meta_fast.insert(
+        "media_content_type".to_string(),
+        media.content_type.to_string().into(),
+    );
+    meta_fast.insert(
+        "media_filename".to_string(),
+        media.filename.clone().into(),
+    );
 
     let extension = Path::new(&media.filename)
         .extension()
         .and_then(|e| e.to_str())
         .map(|ext| ext.to_lowercase());
     if let Some(e) = extension {
-        doc.add_text(s.media_extension, e);
+        meta_fast.insert("media_extension".to_string(), e.into());
     }
 
     if let Some(alt) = &media.alt {
-        doc.add_text(s.media_alt, alt.clone());
+        meta_text.insert("media_alt".to_string(), alt.clone().into());
     }
 
-    doc.add_bool(s.quarantined, media.quarantine.is_some());
+    meta_fast.insert(
+        "quarantined".to_string(),
+        media.quarantine.is_some().into(),
+    );
+
+    doc.add_object(s.metadata_fast, meta_fast);
+    doc.add_object(s.metadata_text, meta_text);
 
     doc
 }
