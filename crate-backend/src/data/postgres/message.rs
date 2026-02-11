@@ -900,4 +900,28 @@ impl DataMessage for Postgres {
 
         Ok(result)
     }
+
+    async fn message_list_all(
+        &self,
+        channel_id: ChannelId,
+        _user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<MessageV2>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbMessage,
+                r"sql/message_list_all.sql",
+                *channel_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!("sql/message_list_all_count.sql", channel_id.into_inner()),
+            |i: &MessageV2| i.id.to_string()
+        )
+    }
 }

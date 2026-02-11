@@ -1176,6 +1176,26 @@ impl ServiceMessages {
         Ok(res)
     }
 
+    pub async fn list_all(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let s = &self.state;
+        let data = s.data();
+        let mut res = data.message_list_all(channel_id, user_id, pagination).await?;
+
+        self.populate_all(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            s.presign_message(message).await?;
+        }
+
+        Ok(res)
+    }
+
     pub async fn list_context(
         &self,
         channel_id: ChannelId,

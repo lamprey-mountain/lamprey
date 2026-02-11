@@ -76,7 +76,16 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
         let mut index_writer: IndexWriter = index.writer(INDEXING_BUFFER_SIZE).unwrap();
 
         let insert_message = |index_writer: &IndexWriter, message: Message| {
-            let doc = tantivy_document_from_message(&sch, message);
+            // TODO: add message.room_id
+            let room_id = rt.block_on(async {
+                if let Ok(channel) = s.services().channels.get(message.channel_id, None).await {
+                    channel.room_id
+                } else {
+                    None
+                }
+            });
+
+            let doc = tantivy_document_from_message(&sch, message, room_id);
             if let Err(e) = index_writer.add_document(doc) {
                 error!("failed to add document: {}", e);
             }
@@ -186,7 +195,7 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                             "reindexing channel {} from {:?}",
                             channel_id, last_message_id
                         );
-                        let res = rt.block_on(s.services().messages.list(
+                        let res = rt.block_on(s.services().messages.list_all(
                             *channel_id,
                             SERVER_USER_ID,
                             PaginationQuery {

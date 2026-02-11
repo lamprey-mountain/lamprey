@@ -41,6 +41,9 @@ pub struct LampreySchema {
     /// when this object was deleted at, for admins only.
     pub deleted_at: schema::Field,
 
+    /// when this object was removed at, for moderators only.
+    pub removed_at: schema::Field,
+
     /// the author of this object
     ///
     /// - room owner_id
@@ -130,6 +133,7 @@ impl Default for LampreySchema {
         let updated_at = sb.add_date_field("updated_at", FAST);
         let archived_at = sb.add_date_field("archived_at", FAST);
         let deleted_at = sb.add_date_field("deleted_at", FAST);
+        let removed_at = sb.add_date_field("removed_at", FAST);
         let author_id = sb.add_text_field("author_id", STRING | FAST);
         let channel_id = sb.add_text_field("channel_id", STRING | FAST | STORED);
         let room_id = sb.add_text_field("room_id", STRING | FAST | STORED);
@@ -159,6 +163,7 @@ impl Default for LampreySchema {
             updated_at,
             archived_at,
             deleted_at,
+            removed_at,
             author_id,
             channel_id,
             room_id,
@@ -172,8 +177,8 @@ impl Default for LampreySchema {
     }
 }
 
-/// creaet a tantivy document from a message
-pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> TantivyDocument {
+/// create a tantivy document from a message
+pub fn tantivy_document_from_message(s: &LampreySchema, message: Message, room_id: Option<common::v1::types::RoomId>) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
     doc.add_text(s.id, message.id.to_string());
     doc.add_text(s.doctype, "Message");
@@ -187,6 +192,18 @@ pub fn tantivy_document_from_message(s: &LampreySchema, message: Message) -> Tan
     let updated_at = message.latest_version.created_at;
     if updated_at != message.created_at {
         doc.add_date(s.updated_at, tantivy::DateTime::from_utc(*updated_at));
+    }
+
+    if let Some(deleted_at) = message.deleted_at {
+        doc.add_date(s.deleted_at, tantivy::DateTime::from_utc(*deleted_at));
+    }
+
+    if let Some(removed_at) = message.removed_at {
+        doc.add_date(s.removed_at, tantivy::DateTime::from_utc(*removed_at));
+    }
+
+    if let Some(room_id) = room_id {
+        doc.add_text(s.room_id, room_id.to_string());
     }
 
     doc.add_text(
