@@ -47,9 +47,7 @@ struct ObjectFile {
 /// a handle to write to a file on object storage
 struct ObjectFileWrite {
     rt: Arc<tokio::runtime::Runtime>,
-    blobs: Operator,
-    path: String,
-    buf: Vec<u8>,
+    writer: opendal::Writer,
 }
 
 impl ObjectDirectory {
@@ -144,11 +142,19 @@ impl Directory for ObjectDirectory {
     }
 
     fn open_write(&self, path: &Path) -> Result<WritePtr, OpenWriteError> {
+        let writer = self
+            .rt
+            .block_on(self.blobs.writer(&self.path_str(path)))
+            .map_err(|err| {
+                OpenWriteError::IoError {
+                    io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
+                    filepath: path.to_path_buf(),
+                }
+            })?;
+
         Ok(BufWriter::new(Box::new(ObjectFileWrite {
             rt: Arc::clone(&self.rt),
-            blobs: self.blobs.clone(),
-            path: self.path_str(path),
-            buf: Vec::new(),
+            writer,
         })))
     }
 
@@ -219,7 +225,7 @@ impl HasLen for ObjectFile {
 impl TerminatingWrite for ObjectFileWrite {
     fn terminate_ref(&mut self, _: tantivy::directory::AntiCallToken) -> std::io::Result<()> {
         self.rt
-            .block_on(self.blobs.write(&self.path, self.buf.clone()))
+            .block_on(self.writer.close())
             .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
         Ok(())
     }
@@ -227,7 +233,11 @@ impl TerminatingWrite for ObjectFileWrite {
 
 impl Write for ObjectFileWrite {
     fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        self.buf.write(buf)
+        let len = buf.len();
+        self.rt
+            .block_on(self.writer.write(buf.to_vec()))
+            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+        Ok(len)
     }
 
     fn flush(&mut self) -> IoResult<()> {
