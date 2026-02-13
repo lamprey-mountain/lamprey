@@ -31,12 +31,19 @@ use crate::{
 /// currently set to 100mb
 const INDEXING_BUFFER_SIZE: usize = 100_000_000;
 
+#[derive(Clone)]
+pub struct TantivySearcher {
+    pub index: Index,
+    pub schema: LampreySchema,
+}
+
 pub struct TantivyHandle {
     pub(super) command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
     #[allow(unused)] // TEMP
     pub(super) thread: std::thread::JoinHandle<()>,
     pub(super) index: Index,
     pub(super) schema: LampreySchema,
+    pub(super) searcher: TantivySearcher,
 }
 
 pub enum IndexerCommand {
@@ -77,15 +84,15 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
 
         let insert_message = |index_writer: &IndexWriter, message: Message| {
             // TODO: add message.room_id
-            let room_id = rt.block_on(async {
+            let (room_id, parent_channel_id) = rt.block_on(async {
                 if let Ok(channel) = s.services().channels.get(message.channel_id, None).await {
-                    channel.room_id
+                    (channel.room_id, channel.parent_id)
                 } else {
-                    None
+                    (None, None)
                 }
             });
 
-            let doc = tantivy_document_from_message(&sch, message, room_id);
+            let doc = tantivy_document_from_message(&sch, message, room_id, parent_channel_id);
             if let Err(e) = index_writer.add_document(doc) {
                 error!("failed to add document: {}", e);
             }
@@ -268,11 +275,17 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
 
     let (index, schema) = init_rx.recv().expect("failed to recv init data");
 
+    let searcher = TantivySearcher {
+        index: index.clone(),
+        schema: schema.clone(),
+    };
+
     TantivyHandle {
         command_tx: tx,
         thread,
         index,
         schema,
+        searcher,
     }
 }
 
@@ -287,10 +300,16 @@ pub struct SearchMessagesResponseRawItem {
 }
 
 impl TantivyHandle {
+    pub fn searcher(&self) -> TantivySearcher {
+        self.searcher.clone()
+    }
+}
+
+impl TantivySearcher {
     pub fn search_messages(
         &self,
         req: MessageSearchRequest,
-        visible_channel_ids: &[ChannelId],
+        visible_channel_ids: &[(ChannelId, bool)],
     ) -> Result<SearchMessagesResponseRaw> {
         let reader = self.index.reader()?;
         let s = &self.schema;
@@ -309,39 +328,58 @@ impl TantivyHandle {
             }
         }
 
-        let channels_to_search: Vec<ChannelId> = if !req.channel_id.is_empty() {
-            let vis_set: HashSet<ChannelId> = visible_channel_ids.iter().cloned().collect();
-            req.channel_id
-                .iter()
-                .cloned()
-                .filter(|id| vis_set.contains(id))
-                .collect()
-        } else {
-            visible_channel_ids.to_vec()
-        };
-
-        if channels_to_search.is_empty() {
-            return Ok(SearchMessagesResponseRaw {
-                items: vec![],
-                total: 0,
-            });
-        }
-
-        let mut chan_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
-        for id in channels_to_search {
-            chan_queries.push((
+        // Visibility filter:
+        // (channel_id IS visible) OR (parent_channel_id IS visible_parent)
+        let mut vis_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+        for (id, can_view_private_threads) in visible_channel_ids {
+            vis_queries.push((
                 tantivy::query::Occur::Should,
                 Box::new(tantivy::query::TermQuery::new(
                     Term::from_field_text(s.channel_id, &id.to_string()),
                     tantivy::schema::IndexRecordOption::Basic,
                 )),
             ));
+
+            if *can_view_private_threads {
+                vis_queries.push((
+                    tantivy::query::Occur::Should,
+                    Box::new(tantivy::query::TermQuery::new(
+                        Term::from_field_text(s.parent_channel_id, &id.to_string()),
+                        tantivy::schema::IndexRecordOption::Basic,
+                    )),
+                ));
+            }
+        }
+
+        if vis_queries.is_empty() {
+            return Ok(SearchMessagesResponseRaw {
+                items: vec![],
+                total: 0,
+            });
         }
 
         query_clauses.push((
             tantivy::query::Occur::Must,
-            Box::new(BooleanQuery::new(chan_queries)),
+            Box::new(BooleanQuery::new(vis_queries)),
         ));
+
+        // User requested channel filter
+        if !req.channel_id.is_empty() {
+            let mut chan_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+            for id in &req.channel_id {
+                chan_queries.push((
+                    tantivy::query::Occur::Should,
+                    Box::new(tantivy::query::TermQuery::new(
+                        Term::from_field_text(s.channel_id, &id.to_string()),
+                        tantivy::schema::IndexRecordOption::Basic,
+                    )),
+                ));
+            }
+            query_clauses.push((
+                tantivy::query::Occur::Must,
+                Box::new(BooleanQuery::new(chan_queries)),
+            ));
+        }
 
         let query = BooleanQuery::new(query_clauses);
 

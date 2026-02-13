@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, ChannelType, Message, MessageType, Room, User};
+use common::v1::types::{
+    Channel, ChannelId, ChannelType, Message, MessageType, Room, RoomId, User,
+};
 use common::v2::types::media::Media;
 use serde::{Deserialize, Serialize};
 use tantivy::schema::TextOptions;
@@ -59,6 +61,9 @@ pub struct LampreySchema {
     /// - threads: the channel's parent_id
     /// - message: the message's channel_id
     pub channel_id: schema::Field,
+
+    /// the parent channel of the channel this object is in
+    pub parent_channel_id: schema::Field,
 
     /// the channel this object is in
     ///
@@ -136,9 +141,10 @@ impl Default for LampreySchema {
         let removed_at = sb.add_date_field("removed_at", FAST);
         let author_id = sb.add_text_field("author_id", STRING | FAST);
         let channel_id = sb.add_text_field("channel_id", STRING | FAST | STORED);
+        let parent_channel_id = sb.add_text_field("parent_channel_id", STRING | FAST | STORED);
         let room_id = sb.add_text_field("room_id", STRING | FAST | STORED);
         let tag_id = sb.add_text_field("tag_id", STRING | FAST);
-        let name = sb.add_text_field("name", text_options.clone()); // TODO: boost
+        let name = sb.add_text_field("name", text_options.clone());
         let content = sb.add_text_field("content", text_options.clone());
 
         let metadata_fast =
@@ -166,6 +172,7 @@ impl Default for LampreySchema {
             removed_at,
             author_id,
             channel_id,
+            parent_channel_id,
             room_id,
             tag_id,
             name,
@@ -181,12 +188,18 @@ impl Default for LampreySchema {
 pub fn tantivy_document_from_message(
     s: &LampreySchema,
     message: Message,
-    room_id: Option<common::v1::types::RoomId>,
+    room_id: Option<RoomId>,
+    parent_channel_id: Option<ChannelId>,
 ) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
     doc.add_text(s.id, message.id.to_string());
     doc.add_text(s.doctype, "Message");
     doc.add_text(s.channel_id, message.channel_id.to_string());
+
+    if let Some(pid) = parent_channel_id {
+        doc.add_text(s.parent_channel_id, pid.to_string());
+    }
+
     doc.add_text(s.author_id, message.author_id.to_string());
     doc.add_date(
         s.created_at,

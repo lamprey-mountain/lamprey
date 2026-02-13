@@ -39,10 +39,19 @@ impl ServiceSearch {
         let srv = self.state.services();
 
         let vis = srv.channels.list_user_room_channels(auth_user_id).await?;
-        let visible_channel_ids: Vec<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
+        // let visible_channel_ids: Vec<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
 
         let offset = req.offset;
-        let raw_result = self.tantivy.search_messages(req, &visible_channel_ids)?;
+
+        let searcher = self.tantivy.searcher();
+        let req_clone = req.clone();
+        let vis_clone = vis.clone();
+
+        let raw_result = tokio::task::spawn_blocking(move || {
+            searcher.search_messages(req_clone, &vis_clone)
+        })
+        .await
+        .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
 
         // split messages by channel
         let mut channel_groups: HashMap<ChannelId, Vec<MessageId>> = HashMap::new();

@@ -27,3 +27,18 @@ pub struct PushInfo {
     /// the server's vapid key
     pub server_key: String,
 }
+
+#[cfg(any())]
+mod next {
+    // TODO: implement other push notification providers?
+    enum PushProvider {
+        /// web push
+        Web,
+
+        /// apple push notification service (apns)
+        Apple,
+
+        /// google cloud messaging (gcm)
+        Google,
+    }
+}

@@ -9,12 +9,16 @@ use common::v1::types::{
 
 use crate::error::{Error, Result};
 
+mod bits;
+
 /// permission calculator
 #[derive(Debug, Clone)]
 pub struct Permissions {
     /// the set of permissions this user has
     p: HashSet<Permission>,
 
+    // // TODO: swap over to bits
+    // p: PermisionBits,
     /// whether this user is timed out
     ///
     /// used to determine if they can react with existing reactions or not

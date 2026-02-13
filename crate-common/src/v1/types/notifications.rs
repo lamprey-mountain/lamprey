@@ -253,3 +253,144 @@ pub struct NotificationPagination {
     pub messages: Vec<Message>,
     pub rooms: Vec<Room>,
 }
+
+mod next {
+    #[cfg(feature = "serde")]
+    use serde::{Deserialize, Serialize};
+
+    #[cfg(feature = "utoipa")]
+    use utoipa::{IntoParams, ToSchema};
+
+    #[cfg(feature = "validator")]
+    use validator::Validate;
+
+    use crate::v1::types::{
+        util::Time, Channel, ChannelId, MessageId, NotificationId, PaginationResponse, Room, RoomId,
+    };
+    use crate::v2::types::message::Message;
+
+    /// notification config for a user (works globally)
+    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct NotifsGlobal {
+        pub mute: Option<Mute>,
+        pub messages: NotifsMessages, // default mentions
+        pub threads: NotifsThreads,   // default inbox
+    }
+
+    /// notification config for a room
+    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct NotifsRoom {
+        pub mute: Option<Mute>,
+
+        /// how to handle new messages
+        pub messages: Option<NotifsMessages>,
+
+        /// how to handle new threads
+        pub threads: Option<NotifsThreads>,
+
+        /// whether to receive @everyone and @here mentions
+        pub mention_everyone: bool,
+
+        /// whether to receive all @role mentions
+        pub mention_roles: bool,
+    }
+
+    /// notification config for a channel
+    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct NotifsChannel {
+        pub mute: Option<Mute>,
+
+        /// message notif config
+        ///
+        /// None means inherit from category/room
+        pub messages: Option<NotifsMessages>,
+
+        /// can't be set on voice and thread channels
+        ///
+        /// None means inherit from category/room
+        pub threads: Option<NotifsThreads>,
+    }
+
+    /// how to handle new messages
+    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub enum NotifsMessages {
+        /// notify on every message
+        Everything,
+
+        /// notify on mentions; add all new messages to inbox
+        Watching,
+
+        /// notify on mentions
+        #[default]
+        Mentions,
+
+        /// don't receive any notifications for messages
+        // how does this compare with Mute? maybe make mute *completely* hide
+        // everything (including red mention circles), while this just doesnt notify
+        // you
+        Nothing,
+    }
+
+    /// how to handle new threads
+    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub enum NotifsThreads {
+        /// notify whenever a new thread is created
+        Notify,
+
+        /// add all new threads to your inbox
+        #[default]
+        Inbox,
+
+        /// ignore new threads
+        Nothing,
+    }
+
+    // only affects private rooms
+    pub enum NotifsVoice {
+        /// when someone starts streaming
+        Streams,
+        /// when anyone connects
+        Voice,
+        Nothing,
+    }
+
+    pub enum NotifsReactions {
+        /// notify for all reactions
+        Always,
+
+        /// reactions in direct messages and private rooms only
+        Restricted,
+
+        /// reactions in direct messages only
+        Dms,
+
+        Nothing,
+    }
+
+    /// don't receive any notifications
+    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct Mute {
+        /// how long to mute for, or forever if None
+        pub expires_at: Option<Time>,
+    }
+
+    /// serialized notification payload, sent through web push
+    // TODO: implement
+    pub struct NotificationBytes {
+        // 1 byte: version
+        // 1 byte: type
+        // 2 bytes: 0x00 0x00 (unused, use for flags?)
+
+        // 4 bytes: notification id
+        // 4 bytes: channel id
+        // 4 bytes: message id
+
+        // flags: is edit, author is ignored, channel is muted, what else?
+    }
+}

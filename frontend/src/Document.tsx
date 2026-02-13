@@ -31,7 +31,7 @@ export const Document = (props: DocumentProps) => {
 
 const DocumentHeader = (props: DocumentProps) => {
 	const [doc, update] = useDocument();
-	const [active, setActive] = createSignal<"branches" | "merge" | null>(null);
+	const [active, setActive] = createSignal<"branches" | "merge" | "export" | null>(null);
 
 	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
 	const [branchMenu, setBranchMenu] = createSignal<HTMLElement>();
@@ -44,6 +44,14 @@ const DocumentHeader = (props: DocumentProps) => {
 	const [mergeBtn, setMergeBtn] = createSignal<HTMLElement>();
 	const [mergeMenu, setMergeMenu] = createSignal<HTMLElement>();
 	const mergePos = useFloating(mergeBtn, mergeMenu, {
+		whileElementsMounted: autoUpdate,
+		placement: "bottom-start",
+		middleware: [offset(4), flip(), shift()],
+	});
+
+	const [exportBtn, setExportBtn] = createSignal<HTMLElement>();
+	const [exportMenu, setExportMenu] = createSignal<HTMLElement>();
+	const exportPos = useFloating(exportBtn, exportMenu, {
 		whileElementsMounted: autoUpdate,
 		placement: "bottom-start",
 		middleware: [offset(4), flip(), shift()],
@@ -82,6 +90,16 @@ const DocumentHeader = (props: DocumentProps) => {
 						merge
 					</button>
 				</Show>
+				<button
+					ref={setExportBtn}
+					onClick={(e) => {
+						e.stopPropagation();
+						setActive(active() === "export" ? null : "export");
+					}}
+					classList={{ active: active() === "export" }}
+				>
+					export
+				</button>
 			</div>
 			<Show when={active() === "branches"}>
 				<Portal>
@@ -208,6 +226,56 @@ const DocumentHeader = (props: DocumentProps) => {
 									<div class="info">
 										<div>cherry pick</div>
 										<div class="dim">view diff; merge specific changes</div>
+									</div>
+								</button>
+							</li>
+						</ul>
+					</menu>
+				</Portal>
+			</Show>
+			<Show when={active() === "export"}>
+				<Portal>
+					<menu
+						class="export-menu"
+						ref={setExportMenu}
+						style={{
+							position: exportPos.strategy,
+							top: `${exportPos.y ?? 0}px`,
+							left: `${exportPos.x ?? 0}px`,
+							"z-index": 100,
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<ul>
+							<li>
+								<button onClick={() => {
+									// TODO: publishing documents
+									setActive(null);
+								}}>
+									<div class="info">
+										<div>{false ? "open in new tab" : "publish document"}</div>
+									</div>
+								</button>
+							</li>
+							<li class="separator"></li>
+							<li>
+								<button onClick={() => {
+									// TODO: download as html
+									setActive(null);
+								}}>
+									<div class="info">
+										<div>download as html</div>
+										<div class="dim">single file .mhtml file</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button onClick={() => {
+									// TODO: download as markdown (how do i handle media?)
+									setActive(null);
+								}}>
+									<div class="info">
+										<div>download as markdown</div>
 									</div>
 								</button>
 							</li>
