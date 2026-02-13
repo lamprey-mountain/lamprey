@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::iter::FromIterator;
 
 use common::v1::types::{
@@ -10,15 +9,14 @@ use common::v1::types::{
 use crate::error::{Error, Result};
 
 mod bits;
+use bits::PermissionBits;
 
 /// permission calculator
 #[derive(Debug, Clone)]
 pub struct Permissions {
     /// the set of permissions this user has
-    p: HashSet<Permission>,
+    p: PermissionBits,
 
-    // // TODO: swap over to bits
-    // p: PermisionBits,
     /// whether this user is timed out
     ///
     /// used to determine if they can react with existing reactions or not
@@ -42,7 +40,7 @@ pub struct Permissions {
 impl Permissions {
     pub fn empty() -> Permissions {
         Permissions {
-            p: HashSet::new(),
+            p: PermissionBits::default(),
             timed_out: false,
             quarantined: false,
             locked_bypass: false,
@@ -77,22 +75,23 @@ impl Permissions {
 
     #[inline]
     pub fn add(&mut self, perm: Permission) {
+        // Handle implied permissions
         if perm == Permission::Admin {
-            self.p.extend(ADMIN_ROOM);
+            for admin_perm in ADMIN_ROOM.iter() {
+                self.p.add(*admin_perm);
+            }
+        } else if perm == Permission::CalendarEventManage {
+            self.p.add(Permission::CalendarEventCreate);
         }
 
-        if perm == Permission::CalendarEventManage {
-            self.p.insert(Permission::CalendarEventCreate);
-        }
-
-        // TODO: more implied permissions?
-        self.p.insert(perm);
+        // Add the permission itself
+        self.p.add(perm);
     }
 
     #[inline]
     pub fn remove(&mut self, perm: Permission) {
         // TODO: handle implied permissions?
-        self.p.remove(&perm);
+        self.p.remove(perm);
     }
 
     #[inline]
@@ -115,7 +114,7 @@ impl Permissions {
             // || perm == Permission::VoiceSpeak
         }
 
-        self.p.contains(&perm)
+        self.p.has(perm)
     }
 
     pub fn ensure(&self, perm: Permission) -> Result<()> {
@@ -159,10 +158,10 @@ impl Permissions {
 
     /// remove all permissions except those in the allowed set
     pub fn mask(&mut self, perms: &[Permission]) {
-        let mut new = HashSet::new();
+        let mut new = PermissionBits::default();
         for p in perms {
             if self.has(*p) {
-                new.insert(*p);
+                new.add(*p);
             }
         }
         self.p = new;
@@ -200,29 +199,21 @@ impl Permissions {
 
 impl FromIterator<Permission> for Permissions {
     fn from_iter<T: IntoIterator<Item = Permission>>(iter: T) -> Self {
-        let mut p = HashSet::new();
-        for i in iter {
-            if i == Permission::Admin {
-                p.extend(ADMIN_ROOM);
-            }
-            p.insert(i);
+        let mut perms = Permissions::empty();
+        for perm in iter {
+            perms.add(perm);
         }
-        Permissions {
-            p,
-            timed_out: false,
-            quarantined: false,
-            locked_bypass: false,
-            channel_locked: false,
-            lurker: false,
-        }
+        perms
     }
 }
 
 impl IntoIterator for Permissions {
     type Item = Permission;
-    type IntoIter = std::collections::hash_set::IntoIter<Self::Item>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.p.into_iter()
+        // Convert PermissionBits to Vec and then into iterator
+        let perms: Vec<Permission> = self.p.into();
+        perms.into_iter()
     }
 }
