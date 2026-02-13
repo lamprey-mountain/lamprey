@@ -33,12 +33,18 @@ mod next {
     // TODO: implement other push notification providers?
     enum PushProvider {
         /// web push
+        // server: vapid key
+        // client: endpoint, keys
         Web,
 
         /// apple push notification service (apns)
+        // server: app_id
+        // client: token
         Apple,
 
         /// google cloud messaging (gcm)
+        // server: app_id
+        // client: token
         Google,
     }
 }

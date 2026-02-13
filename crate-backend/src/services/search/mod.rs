@@ -8,6 +8,7 @@ use common::v1::types::{
 use common::v1::types::{MessageType, RoomId};
 use common::v2::types::message::Message;
 use futures::stream::{FuturesUnordered, StreamExt};
+use tracing::trace;
 
 use crate::Error;
 use crate::{error::Result, services::search::index::TantivyHandle, ServerStateInner};
@@ -39,7 +40,7 @@ impl ServiceSearch {
         let srv = self.state.services();
 
         let vis = srv.channels.list_user_room_channels(auth_user_id).await?;
-        // let visible_channel_ids: Vec<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
+        trace!("visible channels: {:?}", vis);
 
         let offset = req.offset;
 
@@ -47,11 +48,12 @@ impl ServiceSearch {
         let req_clone = req.clone();
         let vis_clone = vis.clone();
 
-        let raw_result = tokio::task::spawn_blocking(move || {
-            searcher.search_messages(req_clone, &vis_clone)
-        })
-        .await
-        .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("starting search task");
+        let raw_result =
+            tokio::task::spawn_blocking(move || searcher.search_messages(req_clone, &vis_clone))
+                .await
+                .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("finished search task");
 
         // split messages by channel
         let mut channel_groups: HashMap<ChannelId, Vec<MessageId>> = HashMap::new();

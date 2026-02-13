@@ -254,6 +254,7 @@ pub struct NotificationPagination {
     pub rooms: Vec<Room>,
 }
 
+#[cfg(any())]
 mod next {
     #[cfg(feature = "serde")]
     use serde::{Deserialize, Serialize};

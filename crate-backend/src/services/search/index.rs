@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     path::PathBuf,
     sync::{mpsc, Arc},
 };
@@ -15,12 +14,12 @@ use tantivy::{
     schema::Value,
     DocAddress, Index, IndexWriter, TantivyDocument, Term,
 };
-use tracing::{debug, error};
+use tracing::{debug, error, trace};
 
 use crate::{
     services::search::{
         directory::ObjectDirectory,
-        schema::{tantivy_document_from_message, tantivy_document_from_channel, LampreySchema},
+        schema::{tantivy_document_from_channel, tantivy_document_from_message, LampreySchema},
         tokenizer::DynamicTokenizer,
     },
     Result, ServerStateInner,
@@ -37,9 +36,9 @@ pub struct TantivySearcher {
     pub schema: LampreySchema,
 }
 
+#[allow(unused)] // TEMP
 pub struct TantivyHandle {
     pub(super) command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
-    #[allow(unused)] // TEMP
     pub(super) thread: std::thread::JoinHandle<()>,
     pub(super) index: Index,
     pub(super) schema: LampreySchema,
@@ -51,7 +50,6 @@ pub enum IndexerCommand {
     Message(MessageSync),
 
     /// reindex all messages in this channel
-    // TODO: save index status? (eg. last indexed message id per channel)
     ReindexChannel(ChannelId),
 
     /// commit/flush then exit
@@ -312,6 +310,7 @@ impl TantivySearcher {
         visible_channel_ids: &[(ChannelId, bool)],
     ) -> Result<SearchMessagesResponseRaw> {
         let reader = self.index.reader()?;
+        trace!("obtained index reader");
         let s = &self.schema;
         let searcher = reader.searcher();
 
@@ -383,6 +382,8 @@ impl TantivySearcher {
 
         let query = BooleanQuery::new(query_clauses);
 
+        trace!("calculated query");
+
         let limit = req.limit as usize;
         let cursor = req.offset as usize;
         let collector = TopDocs::with_limit(limit).and_offset(cursor);
@@ -408,8 +409,11 @@ impl TantivySearcher {
                 .map(|(_, doc)| doc)
                 .collect(),
         };
+        trace!("got top docs");
 
         let total = searcher.search(&query, &Count)? as u64;
+        trace!("got count");
+
         let mut items = vec![];
 
         for doc_address in top_docs {
