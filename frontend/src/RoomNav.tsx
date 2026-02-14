@@ -15,6 +15,7 @@ import { useCtx } from "./context";
 import type { Room } from "sdk";
 import icHome from "./assets/home.png";
 import icFolder1 from "./assets/folder-1.png";
+import { RoomIcon } from "./User";
 
 export type RoomNavItem =
 	| {
@@ -37,37 +38,37 @@ export type RoomNavItem =
 TODO: room nav views
 
 type RoomNavToplevelItem = RoomNavItem & {
-  type: "folder",
-  name: string,
-  items: RoomNavItem[],
+	type: "folder",
+	name: string,
+	items: RoomNavItem[],
 }
 
 type RoomNavItem = {
-  type: "room",
-  room_id: string,
+	type: "room",
+	room_id: string,
 } | {
-  type: "view",
-  name: "string",
-  uncategorized_channels: Array<ViewChannel>;
-  categories: Array<ViewCategory>;
+	type: "view",
+	name: "string",
+	uncategorized_channels: Array<ViewChannel>;
+	categories: Array<ViewCategory>;
 }
 
 // either a local category for this view or a category from a room
 type ViewCategory =
-  | {
-    name: string;
-    channels: Array<Channel>;
-  }
-  | {
-    id: string;
-    room_id: string;
-    nickname?: string;
-  };
+	| {
+		name: string;
+		channels: Array<Channel>;
+	}
+	| {
+		id: string;
+		room_id: string;
+		nickname?: string;
+	};
 
 type ViewChannel = {
-  id: string;
-  room_id?: string;
-  nickname?: string;
+	id: string;
+	room_id?: string;
+	nickname?: string;
 };
 */
 
@@ -77,6 +78,16 @@ export const RoomNav = () => {
 	const api = useApi();
 	const ctx = useCtx();
 	const rooms = api.rooms.list();
+
+	const getRoomMentionCount = (roomId: string) => {
+		let totalMentions = 0;
+		for (const channel of api.channels.cache.values()) {
+			if (channel.room_id === roomId && channel.mention_count) {
+				totalMentions += channel.mention_count;
+			}
+		}
+		return totalMentions;
+	};
 
 	const [dragging, setDragging] = createSignal<
 		{
@@ -441,40 +452,45 @@ export const RoomNav = () => {
 		});
 	};
 
-	const RoomItem = (props: { room: Room }) => (
-		<li
-			draggable="true"
-			class="menu-room room-item"
-			data-id={props.room.id}
-			data-room-id={props.room.id}
-			data-type="room"
-			onDragStart={(e) => handleDragStart(e, "room")}
-			onDragOver={handleDragOver}
-			onDragLeave={handleDragLeave}
-			onDrop={handleDrop}
-			onDragEnd={() => {
-				setDragging(null);
-				setTarget(null);
-				clearTimeout(folderTimer);
-				setFolderPreview(null);
-			}}
-			classList={{
-				dragging: dragging()?.id === props.room.id,
-				"drag-over": target()?.id === props.room.id && !target()?.after,
-				"drag-over-after": target()?.id === props.room.id && target()?.after,
-				"folder-preview": folderPreview() === props.room.id,
-			}}
-		>
-			<A draggable="false" href={`/room/${props.room.id}`} class="nav">
-				<Show
-					when={props.room.icon}
-					fallback={<div class="avatar">{props.room.name}</div>}
-				>
-					<img src={getThumbFromId(props.room.icon!, 64)} class="avatar" />
-				</Show>
-			</A>
-		</li>
-	);
+	const RoomItem = (props: { room: Room }) => {
+		const mentionCount = () => getRoomMentionCount(props.room.id);
+
+		return (
+			<li
+				draggable="true"
+				class="menu-room room-item"
+				data-id={props.room.id}
+				data-room-id={props.room.id}
+				data-type="room"
+				onDragStart={(e) => handleDragStart(e, "room")}
+				onDragOver={handleDragOver}
+				onDragLeave={handleDragLeave}
+				onDrop={handleDrop}
+				onDragEnd={() => {
+					setDragging(null);
+					setTarget(null);
+					clearTimeout(folderTimer);
+					setFolderPreview(null);
+				}}
+				classList={{
+					dragging: dragging()?.id === props.room.id,
+					"drag-over": target()?.id === props.room.id && !target()?.after,
+					"drag-over-after": target()?.id === props.room.id && target()?.after,
+					"folder-preview": folderPreview() === props.room.id,
+					"no-icon": !props.room.icon,
+				}}
+			>
+				<A draggable="false" href={`/room/${props.room.id}`} class="nav">
+					<Show
+						when={props.room.icon}
+						fallback={<div class="avatar">{props.room.name}</div>}
+					>
+						<RoomIcon room={props.room} mentionCount={mentionCount()} />
+					</Show>
+				</A>
+			</li>
+		);
+	};
 
 	return (
 		<Show when={flags.has("two_tier_nav")}>

@@ -31,7 +31,9 @@ export const Document = (props: DocumentProps) => {
 
 const DocumentHeader = (props: DocumentProps) => {
 	const [doc, update] = useDocument();
-	const [active, setActive] = createSignal<"branches" | "merge" | "export" | null>(null);
+	const [active, setActive] = createSignal<
+		"branches" | "merge" | "export" | null
+	>(null);
 
 	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
 	const [branchMenu, setBranchMenu] = createSignal<HTMLElement>();
@@ -248,10 +250,12 @@ const DocumentHeader = (props: DocumentProps) => {
 					>
 						<ul>
 							<li>
-								<button onClick={() => {
-									// TODO: publishing documents
-									setActive(null);
-								}}>
+								<button
+									onClick={() => {
+										// TODO: publishing documents
+										setActive(null);
+									}}
+								>
 									<div class="info">
 										<div>{false ? "open in new tab" : "publish document"}</div>
 									</div>
@@ -259,10 +263,12 @@ const DocumentHeader = (props: DocumentProps) => {
 							</li>
 							<li class="separator"></li>
 							<li>
-								<button onClick={() => {
-									// TODO: download as html
-									setActive(null);
-								}}>
+								<button
+									onClick={() => {
+										// TODO: download as html
+										setActive(null);
+									}}
+								>
 									<div class="info">
 										<div>download as html</div>
 										<div class="dim">single file .mhtml file</div>
@@ -270,10 +276,12 @@ const DocumentHeader = (props: DocumentProps) => {
 								</button>
 							</li>
 							<li>
-								<button onClick={() => {
-									// TODO: download as markdown (how do i handle media?)
-									setActive(null);
-								}}>
+								<button
+									onClick={() => {
+										// TODO: download as markdown (how do i handle media?)
+										setActive(null);
+									}}
+								>
 									<div class="info">
 										<div>download as markdown</div>
 									</div>

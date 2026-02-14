@@ -323,7 +323,16 @@ export function createApi(
 				typing_timeout.set(thread_id, tt);
 			}
 		} else if (msg.type === "ChannelAck") {
-			// TODO
+			const { channel_id, version_id } = msg;
+			const t = channels.cache.get(channel_id);
+			if (t) {
+				channels.cache.set(channel_id, {
+					...t,
+					last_read_id: version_id,
+					mention_count: 0,
+					is_unread: version_id < (t.last_version_id ?? ""),
+				});
+			}
 		} else if (msg.type === "MessageCreate") {
 			const m = "latest_version" in msg.message
 				? convertV2MessageToV1(msg.message)
@@ -331,79 +340,80 @@ export function createApi(
 			m.nonce = raw.nonce;
 
 			const me = users.cache.get("@self");
+			let is_mentioned = false;
+			const mentions = m.mentions;
 			if (
-				me && m.author_id !== me.id && m.type === "DefaultMarkdown" &&
-				notificationPermission() === "granted" &&
-				userConfig().frontend["desktop_notifs"] === "yes"
+				me && m.author_id !== me.id && m.type === "DefaultMarkdown" && mentions
 			) {
-				const mentions = m.mentions;
-				let is_mentioned = false;
-				if (mentions) {
-					if (mentions.users.some((u) => u.id === me.id)) {
-						is_mentioned = true;
-					}
-					if (!is_mentioned && mentions.everyone) {
-						is_mentioned = true;
-					}
-					if (!is_mentioned && mentions.roles.length > 0) {
-						const channel = channels.cache.get(m.channel_id);
-						if (channel?.room_id) {
-							const room_member = room_members.cache.get(channel.room_id)?.get(
-								me.id,
-							);
-							if (room_member) {
-								for (const role of mentions.roles) {
-									if (room_member.roles.some((r) => r.id === role.id)) {
-										is_mentioned = true;
-										break;
-									}
+				if (mentions.users.some((u) => u.id === me.id)) {
+					is_mentioned = true;
+				}
+				if (!is_mentioned && mentions.everyone) {
+					is_mentioned = true;
+				}
+				if (!is_mentioned && mentions.roles.length > 0) {
+					const channel = channels.cache.get(m.channel_id);
+					if (channel?.room_id) {
+						const room_member = room_members.cache.get(channel.room_id)?.get(
+							me.id,
+						);
+						if (room_member) {
+							for (const role of mentions.roles) {
+								if (room_member.roles.some((r) => r.id === role.id)) {
+									is_mentioned = true;
+									break;
 								}
 							}
 						}
 					}
 				}
+			}
 
-				if (is_mentioned && userConfig().notifs.mentions === "Notify") {
-					const author = users.cache.get(m.author_id);
-					const channel = channels.cache.get(m.channel_id);
-					const title = `${author?.name ?? "Someone"} in #${
-						channel?.name ?? "channel"
-					}`;
-					const rawContent = m.content ?? "";
-					const processedContent = await stripMarkdownAndResolveMentions(
-						rawContent,
-						m.channel_id,
-						m.mentions,
-					);
-					const body = processedContent.substring(0, 200);
+			if (
+				is_mentioned &&
+				notificationPermission() === "granted" &&
+				userConfig().frontend["desktop_notifs"] === "yes" &&
+				userConfig().notifs.mentions === "Notify"
+			) {
+				const author = users.cache.get(m.author_id);
+				const channel = channels.cache.get(m.channel_id);
+				const title = `${author?.name ?? "Someone"} in #${
+					channel?.name ?? "channel"
+				}`;
+				const rawContent = m.content ?? "";
+				const processedContent = await stripMarkdownAndResolveMentions(
+					rawContent,
+					m.channel_id,
+					m.mentions,
+				);
+				const body = processedContent.substring(0, 200);
 
-					(async () => {
-						let icon: string | undefined;
-						if (author) {
-							const room = channel?.room_id
-								? rooms.cache.get(channel.room_id)
-								: undefined;
-							const iconBlob = await generateNotificationIcon(
-								author,
-								room ?? undefined,
-							);
-							if (iconBlob) {
-								icon = URL.createObjectURL(iconBlob);
-							}
+				(async () => {
+					let icon: string | undefined;
+					if (author) {
+						const room = channel?.room_id
+							? rooms.cache.get(channel.room_id)
+							: undefined;
+						const iconBlob = await generateNotificationIcon(
+							author,
+							room ?? undefined,
+						);
+						if (iconBlob) {
+							icon = URL.createObjectURL(iconBlob);
 						}
+					}
 
-						const notification = new Notification(title, { body, icon });
-						notification.onclick = () => {
-							window.focus();
-							location.href = `/channel/${m.channel_id}/message/${m.id}`;
+					const notification = new Notification(title, { body, icon });
+					notification.onclick = () => {
+						window.focus();
+						location.href = `/channel/${m.channel_id}/message/${m.id}`;
+					};
+					if (icon) {
+						notification.onclose = () => {
+							URL.revokeObjectURL(icon!);
 						};
-						if (icon) {
-							notification.onclose = () => {
-								URL.revokeObjectURL(icon!);
-							};
-						}
-					})();
-				}
+					}
+				})();
 			}
 
 			const r = messages.cacheRanges.get(m.channel_id);
@@ -440,6 +450,7 @@ export function createApi(
 				api.channels.cache.set(m.channel_id, {
 					...t,
 					message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
+					mention_count: (t.mention_count ?? 0) + (is_mentioned ? 1 : 0),
 					last_version_id: m.version_id,
 					is_unread,
 				});

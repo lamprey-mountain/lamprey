@@ -375,6 +375,7 @@ export class Channels {
 			this.cache.set(channel_id, {
 				...t,
 				last_read_id: version_id,
+				mention_count: 0,
 				is_unread: version_id < (t.last_version_id ?? ""),
 			});
 		}

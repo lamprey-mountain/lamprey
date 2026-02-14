@@ -240,7 +240,10 @@
 		border-radius: 4px;
 		display: flex;
 		overflow: hidden;
-		background: #2a2a2a;
+
+		&.home-item, &.no-icon {
+			background: #2a2a2a;
+		}
 
 		&.dragging {
 			opacity: 0.5;
@@ -297,5 +300,9 @@
 		&.collapsed {
 			background: none;
 		}
+	}
+
+	.mention-count {
+		fill: oklch(54.03% 0.1759 13.16);
 	}
 }
