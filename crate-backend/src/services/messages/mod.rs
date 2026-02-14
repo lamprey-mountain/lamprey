@@ -1184,7 +1184,9 @@ impl ServiceMessages {
     ) -> Result<PaginationResponse<Message>> {
         let s = &self.state;
         let data = s.data();
-        let mut res = data.message_list_all(channel_id, user_id, pagination).await?;
+        let mut res = data
+            .message_list_all(channel_id, user_id, pagination)
+            .await?;
 
         self.populate_all(channel_id, user_id, &mut res.items)
             .await?;

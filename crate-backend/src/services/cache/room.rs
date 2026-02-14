@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use common::v1::types::{
-    Channel, ChannelId, Role, RoleId, Room, RoomMember, RoomSecurity, ThreadMember, User, UserId
+    Channel, ChannelId, Role, RoleId, Room, RoomMember, RoomSecurity, ThreadMember, User, UserId,
 };
 use dashmap::DashMap;
 use tokio::sync::RwLock;

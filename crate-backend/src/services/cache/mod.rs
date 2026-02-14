@@ -369,7 +369,8 @@ impl ServiceCache {
                     }
                 }
             }
-            MessageSync::RoomMemberCreate { member, user } | MessageSync::RoomMemberUpdate { member, user } => {
+            MessageSync::RoomMemberCreate { member, user }
+            | MessageSync::RoomMemberUpdate { member, user } => {
                 if let Some(room) = self.rooms.get(&member.room_id).await {
                     let cached_member = CachedRoomMember {
                         member: member.clone(),
