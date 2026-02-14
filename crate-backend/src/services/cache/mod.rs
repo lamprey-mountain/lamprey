@@ -1,9 +1,10 @@
 //! Unified cache for data
 
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 use common::v1::types::{ChannelId, MessageSync, RoleId, Room, RoomId, User, UserId};
 use dashmap::DashMap;
+use futures::future::BoxFuture;
 use moka::future::Cache;
 use tokio::sync::RwLock;
 use tracing::warn;
@@ -26,9 +27,7 @@ use permissions::PermissionsCalculator;
 pub struct ServiceCache {
     state: Arc<ServerStateInner>,
     rooms: Cache<RoomId, Arc<CachedRoom>>,
-
-    // FIXME: use some kind of weak map instead
-    users: DashMap<UserId, Weak<User>>,
+    pub(crate) users: Cache<UserId, User>,
     // presences: DashMap<UserId, Presence>,
     // TODO: more caching?
     // - dm/gdm channels?
@@ -42,7 +41,10 @@ impl ServiceCache {
         Self {
             state,
             rooms: Cache::builder().max_capacity(100).build(),
-            users: DashMap::new(),
+            users: Cache::builder()
+                .max_capacity(100_000)
+                .support_invalidation_closures()
+                .build(),
         }
     }
 
@@ -64,13 +66,15 @@ impl ServiceCache {
     }
 
     // NOTE: i probably want to shard this later
-    pub async fn load_room(&self, room_id: RoomId) -> Result<Arc<CachedRoom>> {
-        self.rooms
-            .try_get_with(room_id, async {
-                self.load_room_inner(room_id).await.map(Arc::new)
-            })
-            .await
-            .map_err(|e| e.fake_clone())
+    pub fn load_room(&self, room_id: RoomId) -> BoxFuture<'_, Result<Arc<CachedRoom>>> {
+        Box::pin(async move {
+            self.rooms
+                .try_get_with(room_id, async {
+                    self.load_room_inner(room_id).await.map(Arc::new)
+                })
+                .await
+                .map_err(|e| e.fake_clone())
+        })
     }
 
     async fn load_room_inner(&self, room_id: RoomId) -> Result<CachedRoom> {
@@ -270,6 +274,24 @@ impl ServiceCache {
     /// unload all rooms
     pub fn unload_all(&self) {
         self.rooms.invalidate_all();
+    }
+
+    /// get a user from the cache, loading from the database if not present
+    pub async fn user_get(&self, user_id: UserId) -> Result<User> {
+        self.users
+            .try_get_with(user_id, self.state.data().user_get(user_id))
+            .await
+            .map_err(|err| err.fake_clone())
+    }
+
+    /// invalidate a user in the cache
+    pub async fn user_invalidate(&self, user_id: UserId) {
+        self.users.invalidate(&user_id).await;
+    }
+
+    /// purge all users from the cache
+    pub fn user_purge(&self) {
+        self.users.invalidate_all();
     }
 
     /// get the permission calculator for this room, loading the room if it doesn't exist

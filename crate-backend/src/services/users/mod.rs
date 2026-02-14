@@ -6,7 +6,6 @@ use std::sync::Arc;
 use common::v1::types::{Channel, Permission, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
-use moka::future::Cache;
 use tracing::debug;
 
 use crate::types::{DbChannelCreate, DbChannelType};
@@ -16,7 +15,6 @@ mod affinity;
 
 pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
-    cache_users: Cache<UserId, User>,
     dm_lock: DashMap<(UserId, UserId), ()>,
 }
 
@@ -37,20 +35,12 @@ impl ServiceUsers {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            cache_users: Cache::builder()
-                .max_capacity(100_000)
-                .support_invalidation_closures()
-                .build(),
             dm_lock: DashMap::new(),
         }
     }
 
     pub async fn get(&self, user_id: UserId, viewer_id: Option<UserId>) -> Result<User> {
-        let mut usr = self
-            .cache_users
-            .try_get_with(user_id, self.state.data().user_get(user_id))
-            .await
-            .map_err(|err| err.fake_clone())?;
+        let mut usr = self.state.services().cache.user_get(user_id).await?;
 
         if let Some(viewer_id) = viewer_id {
             usr.user_config = Some(
@@ -89,11 +79,11 @@ impl ServiceUsers {
     }
 
     pub async fn invalidate(&self, user_id: UserId) {
-        self.cache_users.invalidate(&user_id).await
+        self.state.services().cache.user_invalidate(user_id).await
     }
 
     pub fn purge_cache(&self) {
-        self.cache_users.invalidate_all();
+        self.state.services().cache.user_purge();
     }
 
     pub async fn init_dm(
