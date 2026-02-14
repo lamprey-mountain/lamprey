@@ -2,7 +2,7 @@ use std::{
     io::{BufWriter, Error as IoError, Result as IoResult, Write},
     ops::Range,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use opendal::{ErrorKind, Operator};
@@ -32,7 +32,6 @@ pub struct ObjectDirectory {
 
     /// location of the local filesystem cache
     cache_path: PathBuf,
-    atomic_rw_lock: Arc<Mutex<()>>,
 }
 
 /// a file on object storage
@@ -57,7 +56,6 @@ impl ObjectDirectory {
             rt: s.tokio.clone(),
             base_path,
             cache_path,
-            atomic_rw_lock: Arc::new(Mutex::new(())),
         }
     }
 
@@ -139,7 +137,6 @@ impl Directory for ObjectDirectory {
     }
 
     fn atomic_read(&self, path: &Path) -> Result<Vec<u8>, OpenReadError> {
-        let _lock = self.atomic_rw_lock.lock().unwrap();
         self.rt
             .block_on(self.blobs.read(&self.path_str(path)))
             .map_err(|err| {
@@ -156,7 +153,6 @@ impl Directory for ObjectDirectory {
     }
 
     fn atomic_write(&self, path: &Path, data: &[u8]) -> IoResult<()> {
-        let _lock = self.atomic_rw_lock.lock().unwrap();
         self.rt
             .block_on(self.blobs.write(&self.path_str(path), data.to_vec()))
             .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))
