@@ -66,6 +66,9 @@ pub struct User {
     #[cfg(any())]
     /// public connections on this user that you can view
     pub connections: Vec<Connection>,
+
+    #[cfg(any())]
+    pub remote: Option<Remote>,
 }
 
 #[derive(Debug, Clone)]

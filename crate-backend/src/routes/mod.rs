@@ -15,6 +15,7 @@ mod debug;
 mod dm;
 mod document;
 mod emoji;
+mod federation;
 mod internal;
 mod invite;
 mod media;
@@ -56,12 +57,12 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(auth::routes())
         .merge(automod::routes())
         .merge(calendar::routes())
-        .merge(user_connection::routes())
         .merge(channel::routes())
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(document::routes())
         .merge(emoji::routes())
+        .merge(federation::routes())
         .merge(internal::routes())
         .merge(invite::routes())
         .merge(media::routes())
@@ -87,6 +88,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(thread::routes())
         .merge(user::routes())
         .merge(user_config::routes())
+        .merge(user_connection::routes())
         .merge(user_email::routes())
         .merge(voice::routes())
         .merge(webhook::routes())

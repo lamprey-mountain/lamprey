@@ -95,6 +95,9 @@ pub struct Room {
 
     /// how long to wait before moving idle people to the afk channel, in milliseconds
     pub afk_channel_timeout: u64,
+
+    #[cfg(any())]
+    pub remote: Option<Remote>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

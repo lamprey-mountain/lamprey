@@ -557,8 +557,11 @@ pub enum AuditLogEntryType {
     ChannelReindex {
         channel_id: ChannelId,
     },
-    // // TODO: for server audit log; log when routes for these are implemented
-    // ServerUpdate,
+
+    ServerUpdate {
+        hostname: String,
+        changes: Vec<AuditLogChange>,
+    },
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
