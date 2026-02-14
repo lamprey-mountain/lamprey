@@ -590,6 +590,11 @@ pub trait DataMessage {
         channel_id: ChannelId,
         version_ids: &[MessageVerId],
     ) -> Result<Vec<MentionsIds>>;
+    async fn message_id_get_by_version(
+        &self,
+        channel_id: ChannelId,
+        version_id: MessageVerId,
+    ) -> Result<MessageId>;
 }
 
 #[async_trait]

@@ -924,4 +924,24 @@ impl DataMessage for Postgres {
             |i: &MessageV2| i.id.to_string()
         )
     }
+
+    async fn message_id_get_by_version(
+        &self,
+        channel_id: ChannelId,
+        version_id: MessageVerId,
+    ) -> Result<MessageId> {
+        let message_id = query_scalar!(
+            r#"
+            SELECT m.id
+            FROM message_version mv
+            JOIN message m ON m.id = mv.message_id
+            WHERE mv.version_id = $1 AND m.channel_id = $2
+            "#,
+            *version_id,
+            *channel_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(message_id.into())
+    }
 }

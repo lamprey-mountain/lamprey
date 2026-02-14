@@ -509,13 +509,8 @@ async fn channel_ack(
     let message_id = if let Some(message_id) = json.message_id {
         message_id
     } else {
-        // FIXME: version_id to message id lookups
-        return Err(Error::BadStatic(
-            "i broke version_id -> messaege id lookups :(",
-        ));
-        // data.message_version_get(channel_id, version_id, auth.user.id)
-        //     .await?
-        //     .id
+        data.message_id_get_by_version(channel_id, version_id)
+            .await?
     };
     data.unread_ack(
         auth.user.id,
