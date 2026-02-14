@@ -1147,6 +1147,7 @@ impl ServiceThreads {
     }
 
     /// get all channels a user can see that are in rooms, along with whether the user has the ThreadManage permission. does not include dm channels
+    // PERF: use cache service
     pub async fn list_user_room_channels(&self, user_id: UserId) -> Result<Vec<(ChannelId, bool)>> {
         // TODO: batch these queries
         let rooms = self

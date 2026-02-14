@@ -1,8 +1,8 @@
 //! Unified cache for data
 
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
-use common::v1::types::{ChannelId, MessageSync, RoleId, Room, RoomId, UserId};
+use common::v1::types::{ChannelId, MessageSync, RoleId, Room, RoomId, User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::sync::RwLock;
@@ -10,7 +10,7 @@ use tracing::warn;
 
 use crate::{
     error::Result,
-    services::cache::room::{CachedRoom, CachedThread},
+    services::cache::room::{CachedRoom, CachedRoomMember, CachedThread},
     types::PaginationQuery,
     ServerStateInner,
 };
@@ -21,13 +21,14 @@ mod user;
 
 use permissions::PermissionsCalculator;
 
-/// service for loading and storing data used by the server
-// NOTE: do i really want to be using dashmap everywhere?
+/// service for caching all in-memory data used by the server
 #[derive(Clone)]
 pub struct ServiceCache {
     state: Arc<ServerStateInner>,
     rooms: Cache<RoomId, Arc<CachedRoom>>,
-    // users: DashMap<UserId, User>,
+
+    // FIXME: use some kind of weak map instead
+    users: DashMap<UserId, Weak<User>>,
     // presences: DashMap<UserId, Presence>,
     // TODO: more caching?
     // - dm/gdm channels?
@@ -41,6 +42,7 @@ impl ServiceCache {
         Self {
             state,
             rooms: Cache::builder().max_capacity(100).build(),
+            users: DashMap::new(),
         }
     }
 
@@ -73,6 +75,7 @@ impl ServiceCache {
 
     async fn load_room_inner(&self, room_id: RoomId) -> Result<CachedRoom> {
         let data = self.state.data();
+        let srv = self.state.services();
 
         // 1. load room
         let room = data.room_get(room_id).await?;
@@ -81,7 +84,15 @@ impl ServiceCache {
         let room_members = data.room_member_list_all(room_id).await?;
         let members = DashMap::new();
         for member in room_members {
-            members.insert(member.user_id, member);
+            // PERF: use get_many
+            let user = srv.users.get(member.user_id, None).await?;
+            members.insert(
+                member.user_id,
+                CachedRoomMember {
+                    member,
+                    user: Arc::new(user),
+                },
+            );
         }
 
         // 3. load roles
@@ -154,7 +165,14 @@ impl ServiceCache {
     pub async fn reload_member(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
         if let Some(cached) = self.rooms.get(&room_id).await {
             let member = self.state.data().room_member_get(room_id, user_id).await?;
-            cached.members.insert(user_id, member);
+            let user = self.state.services().users.get(user_id, None).await?;
+            cached.members.insert(
+                user_id,
+                CachedRoomMember {
+                    member,
+                    user: Arc::new(user),
+                },
+            );
         }
         Ok(())
     }

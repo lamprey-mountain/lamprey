@@ -133,7 +133,7 @@ impl ServiceSearch {
             if let Ok(cached_room) = srv.cache.load_room(room_id).await {
                 for user_id in user_ids {
                     if let Some(member) = cached_room.members.get(&user_id) {
-                        room_members.push(member.clone());
+                        room_members.push(member.member.clone());
                     }
                 }
             }

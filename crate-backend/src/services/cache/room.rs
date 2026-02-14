@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use common::v1::types::{
-    Channel, ChannelId, Role, RoleId, Room, RoomMember, RoomSecurity, ThreadMember, UserId,
+    Channel, ChannelId, Role, RoleId, Room, RoomMember, RoomSecurity, ThreadMember, User, UserId
 };
 use dashmap::DashMap;
 use tokio::sync::RwLock;
@@ -17,7 +17,7 @@ pub struct CachedRoom {
     pub inner: RwLock<Room>,
 
     /// every member in this room
-    pub members: DashMap<UserId, RoomMember>,
+    pub members: DashMap<UserId, CachedRoomMember>,
 
     /// every non-thread channel in this room
     pub channels: DashMap<ChannelId, Channel>,
@@ -27,6 +27,14 @@ pub struct CachedRoom {
 
     /// all active threads in the room
     pub threads: DashMap<ChannelId, CachedThread>,
+}
+
+pub struct CachedRoomMember {
+    /// the room member
+    pub member: RoomMember,
+
+    /// the user associated with the room member
+    pub user: Arc<User>,
 }
 
 pub struct CachedThread {

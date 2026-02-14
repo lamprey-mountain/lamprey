@@ -24,7 +24,7 @@ impl PermissionsCalculator {
     /// query permissions for a room member, optionally in a specific channel
     pub fn query(&self, user_id: UserId, channel: Option<&Channel>) -> Permissions {
         let member_guard = self.room.members.get(&user_id);
-        let member = member_guard.as_deref();
+        let member = member_guard.as_deref().map(|m| &m.member);
 
         // calculate base perms
         let mut perms = self.calculate_room_permissions(user_id, member);
@@ -248,7 +248,7 @@ impl PermissionsCalculator {
         }
 
         let member_guard = self.room.members.get(&user_id);
-        let Some(member) = member_guard.as_deref() else {
+        let Some(member) = member_guard.as_deref().map(|m| &m.member) else {
             // user is not a member, return 0
             return 0;
         };
