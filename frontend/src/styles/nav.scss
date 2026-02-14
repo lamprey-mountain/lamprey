@@ -108,7 +108,7 @@
 			margin-left: -8px;
 
 			& > li > a {
-				padding-left: 24px;
+				padding-left: 32px;
 			}
 		}
 	}
@@ -219,6 +219,31 @@
 	& a.muted {
 		color: $fg-500;
 		opacity: 0.6;
+	}
+
+	.threads > li {
+		position: relative;
+
+		&::before {
+			content: "";
+			position: absolute;
+			left: 22px;
+			top: 0;
+			width: 8px;
+			height: 12px;
+			border-bottom: 2px solid $sep-400;
+			border-left: 2px solid $sep-400;
+			border-bottom-left-radius: 4px;
+		}
+
+		&:not(:first-child)::after {
+			content: "";
+			position: absolute;
+			left: 22px;
+			top: -16px;
+			height: 24px;
+			border-left: 2px solid $sep-400;
+		}
 	}
 }
 
