@@ -855,11 +855,13 @@ async fn channel_upgrade(
 
     for member in members {
         let room_member = data.room_member_get(room.id, member.user_id).await?;
+        let user = srv.users.get(member.user_id, None).await?;
         s.broadcast_room(
             room.id,
             auth.user.id,
             MessageSync::RoomMemberCreate {
                 member: room_member,
+                user,
             },
         )
         .await?;

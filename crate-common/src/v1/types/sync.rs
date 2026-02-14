@@ -323,12 +323,12 @@ pub enum MessageSync {
 
     RoomMemberCreate {
         member: RoomMember,
-        // user: User,
+        user: User,
     },
 
     RoomMemberUpdate {
         member: RoomMember,
-        // user: User,
+        user: User,
     },
 
     RoomMemberDelete {

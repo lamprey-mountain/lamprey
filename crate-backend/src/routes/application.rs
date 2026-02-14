@@ -366,12 +366,14 @@ async fn app_invite_bot(
     .await?;
 
     let member = data.room_member_get(json.room_id, bot_user_id).await?;
+    let user = srv.users.get(bot_user_id, None).await?;
 
     s.broadcast_room(
         json.room_id,
         auth.user.id,
         MessageSync::RoomMemberCreate {
             member: member.clone(),
+            user,
         },
     )
     .await?;

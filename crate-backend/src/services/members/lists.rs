@@ -170,7 +170,7 @@ impl MemberList {
     pub fn process(&mut self, event: &MessageSync) -> Vec<MemberListOp> {
         trace!("processing event");
         match event {
-            MessageSync::RoomMemberCreate { member } | MessageSync::RoomMemberUpdate { member } => {
+            MessageSync::RoomMemberCreate { member, .. } | MessageSync::RoomMemberUpdate { member, .. } => {
                 // member joined, changed roles, or changed override_name
                 self.room_members.insert(member.user_id, member.clone());
                 if self.users.contains_key(&member.user_id) {

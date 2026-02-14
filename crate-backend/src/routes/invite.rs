@@ -298,17 +298,19 @@ async fn invite_use(
                     MessageSync::RoomCreate { room: room.clone() },
                 )
                 .await?;
+                let user = srv.users.get(member.user_id, None).await?;
                 s.broadcast_room(
                     room_id,
                     auth.user.id,
-                    MessageSync::RoomMemberCreate { member },
+                    MessageSync::RoomMemberCreate { member, user },
                 )
                 .await?;
             } else {
+                let user = srv.users.get(member.user_id, None).await?;
                 s.broadcast_room(
                     room_id,
                     auth.user.id,
-                    MessageSync::RoomMemberUpdate { member },
+                    MessageSync::RoomMemberUpdate { member, user },
                 )
                 .await?;
             }

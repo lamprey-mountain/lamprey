@@ -432,8 +432,10 @@ async fn role_member_add(
 
     d.role_member_put(room_id, target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
+    let user = srv.users.get(target_user_id, None).await?;
     let msg = MessageSync::RoomMemberUpdate {
         member: member.clone(),
+        user,
     };
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::RoleApply {
@@ -497,8 +499,10 @@ async fn role_member_remove(
     d.role_member_delete(room_id, target_user_id, role_id)
         .await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
+    let user = srv.users.get(target_user_id, None).await?;
     let msg = MessageSync::RoomMemberUpdate {
         member: member.clone(),
+        user,
     };
 
     let al = auth.audit_log(room_id);
@@ -591,8 +595,10 @@ async fn role_member_bulk_edit(
 
     for user_id in all_user_ids {
         let member = d.room_member_get(room_id, user_id).await?;
+        let user = srv.users.get(user_id, None).await?;
         let msg = MessageSync::RoomMemberUpdate {
             member: member.clone(),
+            user,
         };
 
         if body.apply.contains(&user_id) {

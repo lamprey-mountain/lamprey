@@ -266,11 +266,13 @@ async fn room_member_add(
             }
 
             if is_new_join {
+                let user = srv.users.get(res.user_id, None).await?;
                 s.broadcast_room(
                     room_id,
                     auth.user.id,
                     MessageSync::RoomMemberCreate {
                         member: res.clone(),
+                        user,
                     },
                 )
                 .await?;
@@ -453,20 +455,24 @@ async fn room_member_add(
         .await?;
 
         if existing.is_err() {
+            let user = srv.users.get(res.user_id, None).await?;
             s.broadcast_room(
                 room_id,
                 auth.user.id,
                 MessageSync::RoomMemberCreate {
                     member: res.clone(),
+                    user,
                 },
             )
             .await?;
         } else {
+            let user = srv.users.get(res.user_id, None).await?;
             s.broadcast_room(
                 room_id,
                 auth.user.id,
                 MessageSync::RoomMemberUpdate {
                     member: res.clone(),
+                    user,
                 },
             )
             .await?;
@@ -643,11 +649,13 @@ async fn room_member_update(
         .await?;
     }
 
+    let user = srv.users.get(res.user_id, None).await?;
     s.broadcast_room(
         room_id,
         auth.user.id,
         MessageSync::RoomMemberUpdate {
             member: res.clone(),
+            user,
         },
     )
     .await?;

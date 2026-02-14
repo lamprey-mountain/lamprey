@@ -347,9 +347,13 @@ impl ServiceCache {
                     }
                 }
             }
-            MessageSync::RoomMemberCreate { member } | MessageSync::RoomMemberUpdate { member } => {
+            MessageSync::RoomMemberCreate { member, user } | MessageSync::RoomMemberUpdate { member, user } => {
                 if let Some(room) = self.rooms.get(&member.room_id).await {
-                    room.members.insert(member.user_id, member.clone());
+                    let cached_member = CachedRoomMember {
+                        member: member.clone(),
+                        user: Arc::new(user.clone()),
+                    };
+                    room.members.insert(member.user_id, cached_member);
                 }
             }
             MessageSync::RoomMemberDelete { room_id, user_id } => {
