@@ -44,6 +44,8 @@ import icChanVoice1 from "./assets/channel-voice-1.png";
 import icChanVoice2 from "./assets/channel-voice-2.png";
 import icChanForum1 from "./assets/channel-forum-1.png";
 import icChanCalendar1 from "./assets/channel-calendar-1.png";
+import icChanDocument1 from "./assets/channel-document-1.png";
+import icChanWiki1 from "./assets/channel-wiki-1.png";
 import icChanNsfw from "./assets/channel-nsfw.png";
 import { cyrb53, LCG } from "./rng.ts";
 
@@ -611,6 +613,10 @@ export const ChannelIcon = (
 				return rnd([icChanForum1]);
 			case "Calendar":
 				return rnd([icChanCalendar1]);
+			case "Document":
+				return rnd([icChanDocument1]);
+			case "Wiki":
+				return rnd([icChanWiki1]);
 			case "Text":
 			default:
 				return rnd([icChanText1, icChanText2, icChanText3, icChanText4]);
@@ -634,9 +640,10 @@ export const ChannelIcon = (
 				<ChannelIconGdm id={props.channel.id} icon={props.channel.icon} />
 			</Match>
 			<Match
-				when={["Text", "Voice", "Forum", "Calendar"].includes(
-					props.channel.type,
-				)}
+				when={["Text", "Voice", "Forum", "Calendar", "Document", "Wiki"]
+					.includes(
+						props.channel.type,
+					)}
 			>
 				<svg class="icon" viewBox="0 0 64 64">
 					<mask id="nsfw">
