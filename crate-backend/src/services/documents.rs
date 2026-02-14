@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use common::v1::types::document::serialized::Serdoc;
+use common::v1::types::document::serialized::{Serdoc, SerdocBlock};
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
@@ -14,9 +14,10 @@ use futures::StreamExt;
 use tokio::sync::{broadcast, RwLock};
 use tracing::{debug, error};
 use uuid::Uuid;
+use yrs::types::{Delta, Event};
 use yrs::updates::encoder::Encode;
-use yrs::DeepObservable;
-use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
+use yrs::{updates::decoder::Decode, Doc, GetString, ReadTxn, StateVector, Transact, Update};
+use yrs::{DeepObservable, Out};
 
 use crate::types::DocumentUpdateSummary;
 use crate::{Error, Result, ServerStateInner};
@@ -297,29 +298,38 @@ impl ServiceDocuments {
             let mut stats = stats_inner.lock().unwrap();
             for e in events.iter() {
                 match e {
-                    yrs::types::Event::Text(text_event) => {
-                        for change in text_event.delta(txn) {
+                    Event::Text(e) => {
+                        for change in e.delta(txn) {
                             match change {
-                                yrs::types::Delta::Inserted(t, _) => {
-                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
-                                        stats.0 += s.chars().count();
-                                    }
+                                Delta::Inserted(t, _) => {
+                                    stats.0 += get_update_len(t, txn);
                                 }
-                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
-                                yrs::types::Delta::Retain(_, _) => {}
+                                Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                Delta::Retain(_, _) => {}
                             }
                         }
                     }
-                    yrs::types::Event::XmlText(text_event) => {
-                        for change in text_event.delta(txn) {
+                    Event::XmlText(e) => {
+                        for change in e.delta(txn) {
                             match change {
-                                yrs::types::Delta::Inserted(t, _) => {
-                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
-                                        stats.0 += s.chars().count();
+                                Delta::Inserted(t, _) => {
+                                    stats.0 += get_update_len(t, txn);
+                                }
+                                Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                Delta::Retain(_, _) => {}
+                            }
+                        }
+                    }
+                    Event::XmlFragment(e) => {
+                        for change in e.delta(txn) {
+                            match change {
+                                yrs::types::Change::Added(values) => {
+                                    for v in values {
+                                        stats.0 += get_update_len(v, txn);
                                     }
                                 }
-                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
-                                yrs::types::Delta::Retain(_, _) => {}
+                                yrs::types::Change::Removed(len) => stats.1 += (*len) as usize,
+                                yrs::types::Change::Retain(_) => {}
                             }
                         }
                     }
@@ -403,48 +413,28 @@ impl ServiceDocuments {
         let ctx = self.load(context_id, Some(author_id)).await?;
         let mut ctx = ctx.write().await;
 
-        let stats = Arc::new(std::sync::Mutex::new((0, 0)));
-        let stats_inner = stats.clone();
+        // calculate stats
+        let old_serdoc = serdoc::doc_to_serdoc(&ctx.doc);
+        let stat_removed = old_serdoc
+            .root
+            .blocks
+            .iter()
+            .map(|b| match b {
+                SerdocBlock::Markdown { content } => content.chars().count(),
+            })
+            .sum::<usize>() as u32;
+
+        let stat_added = content
+            .root
+            .blocks
+            .iter()
+            .map(|b| match b {
+                SerdocBlock::Markdown { content } => content.chars().count(),
+            })
+            .sum::<usize>() as u32;
 
         let update_out = Arc::new(std::sync::Mutex::new(Vec::new()));
         let update_out_inner = update_out.clone();
-
-        let xml = ctx.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
-
-        let _sub_stats = xml.observe_deep(move |txn, events| {
-            let mut stats = stats_inner.lock().unwrap();
-            for e in events.iter() {
-                match e {
-                    yrs::types::Event::Text(text_event) => {
-                        for change in text_event.delta(txn) {
-                            match change {
-                                yrs::types::Delta::Inserted(t, _) => {
-                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
-                                        stats.0 += s.chars().count();
-                                    }
-                                }
-                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
-                                yrs::types::Delta::Retain(_, _) => {}
-                            }
-                        }
-                    }
-                    yrs::types::Event::XmlText(text_event) => {
-                        for change in text_event.delta(txn) {
-                            match change {
-                                yrs::types::Delta::Inserted(t, _) => {
-                                    if let yrs::Out::Any(yrs::Any::String(s)) = t {
-                                        stats.0 += s.chars().count();
-                                    }
-                                }
-                                yrs::types::Delta::Deleted(len) => stats.1 += *len as usize,
-                                yrs::types::Delta::Retain(_, _) => {}
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        });
 
         let _sub_update = ctx.doc.observe_update_v1(move |_, event| {
             let mut u = update_out_inner.lock().unwrap();
@@ -453,13 +443,7 @@ impl ServiceDocuments {
 
         serdoc::serdoc_apply_to_doc(&ctx.doc, &content);
 
-        drop(_sub_stats);
         drop(_sub_update);
-
-        let (stat_inserted, stat_deleted) = {
-            let s = stats.lock().unwrap();
-            (s.0 as u32, s.1 as u32)
-        };
 
         let update_bytes = {
             let u = update_out.lock().unwrap();
@@ -475,8 +459,8 @@ impl ServiceDocuments {
         ctx.pending_changes.push(PendingChange {
             author_id,
             change: update_bytes.clone(),
-            stat_added: stat_inserted,
-            stat_removed: stat_deleted,
+            stat_added,
+            stat_removed,
         });
 
         let data = self.state.data();
@@ -971,5 +955,15 @@ impl EditContext {
     /// whether we should unload this document
     pub fn should_unload(&self) -> bool {
         self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(60)
+    }
+}
+
+fn get_update_len(v: &Out, txn: &yrs::TransactionMut) -> usize {
+    match v {
+        Out::Any(yrs::Any::String(s)) => s.chars().count(),
+        Out::YText(t) => t.get_string(txn).chars().count(),
+        Out::YXmlText(t) => t.get_string(txn).chars().count(),
+        Out::YXmlElement(e) => e.get_string(txn).chars().count(),
+        _ => 0,
     }
 }
