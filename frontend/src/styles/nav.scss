@@ -80,12 +80,16 @@
 			position: relative;
 
 			&::before {
+				--size: 8px;
 				position: absolute;
-				top: 10%;
-				left: 0;
+				top: 50%;
+				left: calc(var(--size) / -2);
 				content: "";
-				border-left: solid $sep-500 3px;
-				height: 80%;
+				translate: 0 -50%;
+				border-radius: 50%;
+				background: $bg-400;
+				height: var(--size);
+				width: var(--size);
 			}
 		}
 
