@@ -21,6 +21,7 @@ import { flags } from "./flags";
 import { ChannelContext, createInitialChannelState } from "./channelctx";
 import { createStore } from "solid-js/store";
 import { Document } from "./Document";
+import { Resizable } from "./Resizable";
 
 export const Wiki = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -133,242 +134,245 @@ export const Wiki = (props: { channel: Channel }) => {
 
 	return (
 		<div class="forum2">
-			<div class="list">
-				<Show when={flags.has("thread_quick_create")}>
-					<br />
-					{/* <QuickCreate channel={props.channel} /> */}
-					<br />
-				</Show>
-				<div style="display:flex; align-items:center">
-					<input
-						placeholder="search documents"
-						type="search"
-						class="search-pad"
-					/>
-					<button
-						class="primary"
-						style="margin-left: 8px;border-radius:4px"
-						onClick={() => createDocument(room_id())}
-					>
-						create document
-					</button>
-				</div>
-				<div style="display:flex; align-items:center">
-					<h3 style="font-size:1rem; margin-top:8px;flex:1">
-						{getDocuments().length} {documentFilter()} documents
-					</h3>
-					<div class="sort-view-container">
+			<Resizable
+				storageKey="wiki-sidebar-width"
+				side="left"
+				initialWidth={350}
+				minWidth={250}
+				maxWidth={600}
+			>
+				<div class="list">
+					<div style="display:flex; align-items:center">
+						<input
+							placeholder="search documents"
+							type="search"
+							class="search-pad"
+						/>
 						<button
-							ref={setReferenceEl}
-							onClick={() => setMenuOpen(!menuOpen())}
-							class="secondary sort-view-button"
-							classList={{ selected: menuOpen() }}
+							class="primary"
+							style="margin-left: 8px;border-radius:4px"
+							onClick={() => createDocument(room_id())}
 						>
-							<span>sort and view</span>
-							<svg
-								width="10"
-								height="6"
-								viewBox="0 0 10 6"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M1 1L5 5L9 1"
-									stroke="currentColor"
-									stroke-width="1.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
+							create document
 						</button>
-						<Portal>
-							<Show when={menuOpen()}>
-								<div
-									ref={setFloatingEl}
-									class="sort-view-menu"
-									style={{
-										position: position.strategy,
-										top: `${position.y ?? 0}px`,
-										left: `${position.x ?? 0}px`,
-										"z-index": 1000,
-									}}
-								>
-									<menu>
-										<div class="subtext header">
-											sort by
-										</div>
-										<button
-											onClick={() => {
-												setSortBy("new");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											Newest documents first
-											<Show when={sortBy() === "new"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											onClick={() => {
-												setSortBy("activity");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											Recently active documents
-											<Show when={sortBy() === "activity"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											onClick={() => {
-												setSortBy("reactions:+1");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											Expected to be helpful
-											<Show when={sortBy() === "reactions:+1"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											onClick={() => {
-												setSortBy("random");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											Random ordering
-											<Show when={sortBy() === "random"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											onClick={() => {
-												setSortBy("hot");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											Hot
-											<Show when={sortBy() === "hot"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											onClick={() => {
-												setSortBy("hot2");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											Hot 2
-											<Show when={sortBy() === "hot2"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<hr />
-										<div class="subtext header">
-											view as
-										</div>
-										<button
-											onClick={() => {
-												setViewAs("list");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											List
-											<Show when={viewAs() === "list"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											onClick={() => {
-												setViewAs("gallery");
-												setMenuOpen(false);
-											}}
-											class="menu-item"
-										>
-											Gallery
-											<Show when={viewAs() === "gallery"}>
-												<span>✓</span>
-											</Show>
-										</button>
-									</menu>
-								</div>
-							</Show>
-						</Portal>
 					</div>
-					<div class="filters">
-						<button
-							classList={{ selected: documentFilter() === "active" }}
-							onClick={[setDocumentFilter, "active"]}
-						>
-							active
-						</button>
-						<button
-							classList={{ selected: documentFilter() === "archived" }}
-							onClick={[setDocumentFilter, "archived"]}
-						>
-							archived
-						</button>
-						<Show when={perms.has("ThreadManage")}>
+					<div style="display:flex; align-items:center">
+						<h3 style="font-size:1rem; margin-top:8px;flex:1">
+							{getDocuments().length} {documentFilter()} documents
+						</h3>
+						<div class="sort-view-container">
 							<button
-								classList={{ selected: documentFilter() === "removed" }}
-								onClick={[setDocumentFilter, "removed"]}
+								ref={setReferenceEl}
+								onClick={() => setMenuOpen(!menuOpen())}
+								class="secondary sort-view-button"
+								classList={{ selected: menuOpen() }}
 							>
-								removed
-							</button>
-						</Show>
-					</div>
-				</div>
-				<ul>
-					<For each={getDocuments()}>
-						{(doc) => (
-							<li>
-								<article
-									class="thread menu-thread thread-card"
-									data-thread-id={doc.id}
+								<span>sort and view</span>
+								<svg
+									width="10"
+									height="6"
+									viewBox="0 0 10 6"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
 								>
-									<header onClick={() => setDocumentId(doc.id)}>
-										<div class="top">
-											<div class="icon"></div>
-											<div class="spacer">{doc.name}</div>
-											<div class="time">
-												Created <Time date={getTimestampFromUUID(doc.id)} />
+									<path
+										d="M1 1L5 5L9 1"
+										stroke="currentColor"
+										stroke-width="1.5"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
+								</svg>
+							</button>
+							<Portal>
+								<Show when={menuOpen()}>
+									<div
+										ref={setFloatingEl}
+										class="sort-view-menu"
+										style={{
+											position: position.strategy,
+											top: `${position.y ?? 0}px`,
+											left: `${position.x ?? 0}px`,
+											"z-index": 1000,
+										}}
+									>
+										<menu>
+											<div class="subtext header">
+												sort by
 											</div>
-										</div>
-										<div
-											class="bottom"
-											onClick={() => setDocumentId(doc.id)}
-										>
-											<div class="dim">
-												{doc.message_count} message(s) &bull; last update{" "}
-												<Time
-													date={getTimestampFromUUID(
-														doc.last_version_id ?? doc.id,
-													)}
-												/>
+											<button
+												onClick={() => {
+													setSortBy("new");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												Newest documents first
+												<Show when={sortBy() === "new"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												onClick={() => {
+													setSortBy("activity");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												Recently active documents
+												<Show when={sortBy() === "activity"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												onClick={() => {
+													setSortBy("reactions:+1");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												Expected to be helpful
+												<Show when={sortBy() === "reactions:+1"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												onClick={() => {
+													setSortBy("random");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												Random ordering
+												<Show when={sortBy() === "random"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												onClick={() => {
+													setSortBy("hot");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												Hot
+												<Show when={sortBy() === "hot"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												onClick={() => {
+													setSortBy("hot2");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												Hot 2
+												<Show when={sortBy() === "hot2"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<hr />
+											<div class="subtext header">
+												view as
 											</div>
-											<Show when={doc.description}>
-												<div
-													class="description markdown"
-													innerHTML={md(doc.description ?? "") as string}
-												>
+											<button
+												onClick={() => {
+													setViewAs("list");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												List
+												<Show when={viewAs() === "list"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												onClick={() => {
+													setViewAs("gallery");
+													setMenuOpen(false);
+												}}
+												class="menu-item"
+											>
+												Gallery
+												<Show when={viewAs() === "gallery"}>
+													<span>✓</span>
+												</Show>
+											</button>
+										</menu>
+									</div>
+								</Show>
+							</Portal>
+						</div>
+						<div class="filters">
+							<button
+								classList={{ selected: documentFilter() === "active" }}
+								onClick={[setDocumentFilter, "active"]}
+							>
+								active
+							</button>
+							<button
+								classList={{ selected: documentFilter() === "archived" }}
+								onClick={[setDocumentFilter, "archived"]}
+							>
+								archived
+							</button>
+							<Show when={perms.has("ThreadManage")}>
+								<button
+									classList={{ selected: documentFilter() === "removed" }}
+									onClick={[setDocumentFilter, "removed"]}
+								>
+									removed
+								</button>
+							</Show>
+						</div>
+					</div>
+					<ul>
+						<For each={getDocuments()}>
+							{(doc) => (
+								<li>
+									<article
+										class="thread menu-thread thread-card"
+										data-thread-id={doc.id}
+									>
+										<header onClick={() => setDocumentId(doc.id)}>
+											<div class="top">
+												<div class="icon"></div>
+												<div class="spacer">{doc.name}</div>
+												<div class="time">
+													Created <Time date={getTimestampFromUUID(doc.id)} />
 												</div>
-											</Show>
-										</div>
-									</header>
-								</article>
-							</li>
-						)}
-					</For>
-				</ul>
-				<div ref={setBottom}></div>
-			</div>
+											</div>
+											<div
+												class="bottom"
+												onClick={() => setDocumentId(doc.id)}
+											>
+												<div class="dim">
+													{doc.message_count} message(s) &bull; last update{" "}
+													<Time
+														date={getTimestampFromUUID(
+															doc.last_version_id ?? doc.id,
+														)}
+													/>
+												</div>
+												<Show when={doc.description}>
+													<div
+														class="description markdown"
+														innerHTML={md(doc.description ?? "") as string}
+													>
+													</div>
+												</Show>
+											</div>
+										</header>
+									</article>
+								</li>
+							)}
+						</For>
+					</ul>
+					<div ref={setBottom}></div>
+				</div>
+			</Resizable>
 			<Show when={documentId()}>
 				{(did) => {
 					const documentChannel = api.channels.cache.get(did());

@@ -343,7 +343,9 @@ const DocumentHeader = (props: DocumentProps) => {
 								<button onClick={() => setActive(null)}>
 									<div class="info">
 										<div>code</div>
-										<div class="dim">insert code blocks with syntax highlighting</div>
+										<div class="dim">
+											insert code blocks with syntax highlighting
+										</div>
 									</div>
 								</button>
 							</li>
