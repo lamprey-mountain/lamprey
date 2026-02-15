@@ -23,11 +23,19 @@ async (action) => {
 			return;
 		}
 
-		const [_ch, chUpdate] = ctx.channel_contexts.get(thread_id)!;
-		if (also_local) {
-			chUpdate("read_marker_id", version_id);
+		const cc = ctx.channel_contexts.get(thread_id);
+
+		if (cc) {
+			const [_ch, chUpdate] = cc;
+			if (also_local) {
+				chUpdate("read_marker_id", version_id);
+			}
+			await api.channels.ack(thread_id, undefined, version_id);
+		} else {
+			const c = api.channels.cache.get(thread_id);
+			if (!c) throw new Error("could not find channel " + thread_id);
+			await api.channels.ack(thread_id, undefined, c.last_version_id!);
 		}
-		await api.channels.ack(thread_id, undefined, version_id);
 	} else {
 		next(action);
 	}
