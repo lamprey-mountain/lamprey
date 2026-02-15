@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
+    body::Bytes,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
@@ -673,7 +674,6 @@ async fn document_history(
     }))
 }
 
-// TODO: make this accept and return binary
 /// Document crdt diff
 ///
 /// get a crdt (yjs/yrs) snapshot since a state vector
@@ -687,7 +687,7 @@ async fn document_history(
     ),
     tags = ["document"],
     responses(
-        (status = OK, description = "ok", body = DocumentUpdate),
+        (status = OK, description = "ok", body = Vec<u8>),
     )
 )]
 async fn document_crdt_diff(
@@ -712,11 +712,9 @@ async fn document_crdt_diff(
         .diff((channel_id, branch_id), Some(auth.user.id), &sv)
         .await?;
 
-    Ok(Json(DocumentUpdate(update)))
+    Ok(update.into_response())
 }
 
-// TODO: make this accept and return binary
-// TODO: make this return the new document
 /// Document crdt apply
 ///
 /// apply a crdt (yjs/yrs) update
@@ -727,6 +725,7 @@ async fn document_crdt_diff(
         ("channel_id", description = "Channel id"),
         ("branch_id", description = "Branch id"),
     ),
+    request_body(content = Vec<u8>, content_type = "application/octet-stream"),
     tags = ["document"],
     responses(
         (status = OK, description = "ok"),
@@ -736,7 +735,7 @@ async fn document_crdt_apply(
     Path((channel_id, branch_id)): Path<(ChannelId, DocumentBranchId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<DocumentCrdtApply>,
+    body: Bytes,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
@@ -749,8 +748,9 @@ async fn document_crdt_apply(
         return Err(Error::NotFound);
     }
 
+    let update_data = body.to_vec();
     srv.documents
-        .apply_update((channel_id, branch_id), auth.user.id, None, &json.update.0)
+        .apply_update((channel_id, branch_id), auth.user.id, None, &update_data)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
