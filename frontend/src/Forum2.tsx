@@ -446,36 +446,25 @@ export const Forum2 = (props: { channel: Channel }) => {
 	return (
 		<div class="forum2">
 			<div class="list">
-				<div style="display:flex">
-					<div style="flex:1">
-						<h2>{props.channel.name}</h2>
-						<p
-							class="markdown"
-							innerHTML={md(props.channel.description ?? "") as string}
-						>
-						</p>
-					</div>
-					<div style="display:flex;flex-direction:column;gap:4px">
-						<A
-							style="padding: 0 4px"
-							href={`/channel/${props.channel.id}/settings`}
-						>
-							settings
-						</A>
-					</div>
-				</div>
 				<Show when={flags.has("thread_quick_create")}>
 					<br />
 					{/* TODO: <QuickCreate channel={props.channel} /> */}
 					<br />
 				</Show>
 				<div style="display:flex; align-items:center">
+					<input placeholder="search" type="search" class="search-pad" />
+					<button
+						class="primary"
+						style="margin-left: 8px;border-radius:4px"
+						onClick={() => createThread(room_id())}
+					>
+						create thread
+					</button>
+				</div>
+				<div style="display:flex; align-items:center">
 					<h3 style="font-size:1rem; margin-top:8px;flex:1">
 						{getThreads().length} {threadFilter()} threads
 					</h3>
-					{
-						/*
-					TODO: thread ordering
 					<div>
 						<h3 class="dim">order by</h3>
 						<Dropdown
@@ -486,30 +475,23 @@ export const Forum2 = (props: { channel: Channel }) => {
 									item: "activity",
 									label: "recently active threads",
 								},
-								{ item: "reactions:+1", label: "most +1 reactions" },
-								{ item: "random", label: "random ordering" },
-								{ item: "hot", label: "mystery algorithm 1" },
-								{ item: "hot2", label: "mystery algorithm 2" },
+								// { item: "reactions:+1", label: "most +1 reactions" },
+								// { item: "random", label: "random ordering" },
+								// { item: "hot", label: "mystery algorithm 1" },
+								// { item: "hot2", label: "mystery algorithm 2" },
 							]}
 						/>
 					</div>
-					*/
-					}
-					{
-						/*
-					TODO: gallery view
 					<div>
 						<h3 class="dim">view as</h3>
 						<Dropdown
 							style="max-width:150px"
 							options={[
 								{ item: "list", label: "list" },
-								{ item: "gallery", label: "gallery" },
+								// { item: "gallery", label: "gallery" },
 							]}
 						/>
 					</div>
-				*/
-					}
 					<div class="filters">
 						<button
 							classList={{ selected: threadFilter() === "active" }}
@@ -523,7 +505,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 						>
 							archived
 						</button>
-						<Show when={perms.has("ThreadRemove")}>
+						<Show when={perms.has("ThreadManage")}>
 							<button
 								classList={{ selected: threadFilter() === "removed" }}
 								onClick={[setThreadFilter, "removed"]}
@@ -532,13 +514,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 							</button>
 						</Show>
 					</div>
-					<button
-						class="primary"
-						style="margin-left: 8px;border-radius:4px"
-						onClick={() => createThread(room_id())}
-					>
-						create thread
-					</button>
 				</div>
 				<ul>
 					<For each={getThreads()}>
@@ -830,7 +805,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		<div class="thread">
 			<div class="main">
 				<div>
-					<h2>{props.channel.name}</h2>
+					<h2 class="title">{props.channel.name}</h2>
 				</div>
 				<div style="display:flex">
 					<div style="flex:1">
@@ -1047,7 +1022,10 @@ const Comment = (
 			class="comment menu-message"
 			data-message-id={message().id}
 			classList={{ collapsed: collapsed() }}
-			style={{ "--depth": props.depth }}
+			style={{
+				"--depth": props.depth,
+				"--is-darker": props.depth % 2 === 1 ? 1 : 0,
+			}}
 		>
 			<div class="inner">
 				<header>

@@ -114,7 +114,7 @@ export const Forum = (props: { channel: Channel }) => {
 					>
 						archived
 					</button>
-					<Show when={perms.has("ThreadRemove")}>
+					<Show when={perms.has("ThreadManage")}>
 						<button
 							classList={{ selected: threadFilter() === "removed" }}
 							onClick={[setThreadFilter, "removed"]}

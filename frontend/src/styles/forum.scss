@@ -40,8 +40,11 @@
 		.comment {
 			position: relative;
 			border-left: solid $sep-500 1px;
-			margin-left: calc(var(--depth) * 24px);
 			margin-bottom: -1px;
+
+			& .comment {
+				margin-left: 24px;
+			}
 
 			& > .inner:hover > .message-toolbar,
 			&.toolbar-visible > .message-toolbar {
@@ -60,6 +63,9 @@
 			/* //   border-left: solid var(--borders) 1px; */
 			/* // } */
 
+			background: rgba(0, 0, 0, calc(var(--is-darker) * 0.1));
+			border-radius: 4px;
+
 			/* &.replied { */
 			/* border-left: solid var(--color-accent) 1px; */
 			/* } */
@@ -67,7 +73,7 @@
 			& > header {
 				display: flex;
 				gap: 8px;
-				background: $bg-150;
+				/* background: $bg-150; */
 				white-space: nowrap;
 				align-items: center;
 
@@ -139,5 +145,9 @@
 				margin-top: 8px;
 			}
 		}
+	}
+
+	.title {
+		font-weight: bold;
 	}
 }
