@@ -114,30 +114,47 @@ impl DataReaction for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         let key = key.to_string();
 
-        gen_paginate!(
+        let mut res = gen_paginate!(
             p,
             self.pool,
-            query_as!(
-                ReactionListItem,
-                r#"
-                SELECT user_id FROM reaction
-                WHERE message_id = $1 AND key = $2 AND user_id > $3 AND user_id < $4
-            	ORDER BY (CASE WHEN $5 = 'f' THEN user_id END), user_id DESC LIMIT $6
-                "#,
-                *message_id,
-                key,
-                *p.after,
-                *p.before,
-                p.dir.to_string(),
-                (p.limit + 1) as i32
-            ),
+            {
+                #[derive(sqlx::FromRow)]
+                struct ReactionRow {
+                    user_id: uuid::Uuid,
+                    created_at: time::PrimitiveDateTime,
+                }
+
+                query_as!(
+                    ReactionRow,
+                    r#"
+                    SELECT user_id, created_at FROM reaction
+                    WHERE message_id = $1 AND key = $2 AND user_id > $3 AND user_id < $4
+                	ORDER BY (CASE WHEN $5 = 'f' THEN user_id END), user_id DESC LIMIT $6
+                    "#,
+                    *message_id,
+                    key,
+                    *p.after,
+                    *p.before,
+                    p.dir.to_string(),
+                    (p.limit + 1) as i32
+                )
+            },
             query_scalar!(
                 r#"SELECT count(*) FROM reaction WHERE message_id = $1 AND key = $2"#,
                 *message_id,
                 key,
             ),
             |i: &ReactionListItem| i.user_id.to_string()
-        )
+        )?;
+        res.items = res
+            .items
+            .into_iter()
+            .map(|row| ReactionListItem {
+                user_id: row.user_id.into(),
+                created_at: row.created_at.into(),
+            })
+            .collect::<Vec<_>>();
+        Ok(res)
     }
 
     async fn reaction_delete_key(

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{emoji::EmojiCustom, EmojiId};
+use crate::v1::types::{emoji::EmojiCustom, util::Time, EmojiId};
 
 use super::UserId;
 
@@ -31,6 +31,7 @@ pub struct ReactionCount {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct ReactionListItem {
     pub user_id: UserId,
+    pub created_at: Time,
 }
 
 /// reaction key returned in reaction counts for messages
