@@ -114,6 +114,9 @@ pub enum SessionStatus {
     /// The session exists but can't do anything besides authenticate
     Unauthorized,
 
+    /// The session exists and belongs to a user, but can't really do anything yet
+    Bound { user_id: UserId },
+
     /// The session exists and can do non-critical actions
     Authorized { user_id: UserId },
 
@@ -146,6 +149,7 @@ impl SessionStatus {
     pub fn user_id(&self) -> Option<UserId> {
         match self {
             SessionStatus::Unauthorized => None,
+            SessionStatus::Bound { user_id } => Some(*user_id),
             SessionStatus::Authorized { user_id } => Some(*user_id),
             SessionStatus::Sudo { user_id, .. } => Some(*user_id),
         }

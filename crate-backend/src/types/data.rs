@@ -366,6 +366,7 @@ pub struct DbSessionCreate {
 #[sqlx(type_name = "session_status")]
 pub enum DbSessionStatus {
     Unauthorized,
+    Bound,
     Authorized,
     Sudo,
 }
@@ -376,6 +377,9 @@ impl From<DbSession> for Session {
             id: row.id.into(),
             status: match row.status {
                 DbSessionStatus::Unauthorized => SessionStatus::Unauthorized,
+                DbSessionStatus::Bound => SessionStatus::Bound {
+                    user_id: row.user_id.expect("invalid data in db!").into(),
+                },
                 DbSessionStatus::Authorized => SessionStatus::Authorized {
                     user_id: row.user_id.expect("invalid data in db!").into(),
                 },
@@ -401,6 +405,7 @@ impl From<SessionStatus> for DbSessionStatus {
     fn from(value: SessionStatus) -> Self {
         match value {
             SessionStatus::Unauthorized => DbSessionStatus::Unauthorized,
+            SessionStatus::Bound { .. } => DbSessionStatus::Bound,
             SessionStatus::Authorized { .. } => DbSessionStatus::Authorized,
             SessionStatus::Sudo { .. } => DbSessionStatus::Sudo,
         }

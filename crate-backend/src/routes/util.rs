@@ -23,7 +23,7 @@ use uuid::Uuid;
 
 use crate::{
     error::Error,
-    types::{Session, SessionStatus, SessionType},
+    types::{Session, SessionStatus, SessionType, SERVER_TOKEN_SESSION_ID, SERVER_USER_ID},
     ServerState,
 };
 
@@ -62,6 +62,7 @@ impl Auth {
     pub fn ensure_sudo(&self) -> Result<(), Error> {
         match &self.session.status {
             SessionStatus::Unauthorized => Err(Error::UnauthSession),
+            SessionStatus::Bound { .. } => Err(Error::UnauthSession),
             SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
             SessionStatus::Sudo {
                 sudo_expires_at, ..
@@ -201,11 +202,11 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
 
         // check admin token
         if srv.admin.verify_admin_token(token).await {
-            let user = srv.users.get(crate::types::SERVER_USER_ID, None).await?;
+            let user = srv.users.get(SERVER_USER_ID, None).await?;
             let session = Session {
-                id: crate::types::SERVER_TOKEN_SESSION_ID,
+                id: SERVER_TOKEN_SESSION_ID,
                 status: SessionStatus::Sudo {
-                    user_id: crate::types::SERVER_USER_ID,
+                    user_id: SERVER_USER_ID,
                     sudo_expires_at: Time::now_utc() + Duration::from_secs(3600),
                 },
                 name: Some("admin token".to_string()),
@@ -245,6 +246,9 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
         if session.last_seen_at < Time::now_utc() - Duration::from_secs(60) {
             s.data().session_set_last_seen_at(session.id).await?;
             srv.sessions.invalidate(session.id).await;
+        }
+        if matches!(session.status, SessionStatus::Bound { .. }) {
+            return Err(Error::MissingAuth);
         }
 
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
