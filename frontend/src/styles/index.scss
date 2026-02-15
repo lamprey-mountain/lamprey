@@ -3492,9 +3492,7 @@ input[type="color"] {
 	}
 }
 
-.merge-menu,
-.branch-menu,
-.export-menu {
+.document-menu {
 	display: flex;
 	flex-direction: column;
 	background-color: $bg-150;

@@ -32,7 +32,7 @@ export const Document = (props: DocumentProps) => {
 const DocumentHeader = (props: DocumentProps) => {
 	const [doc, update] = useDocument();
 	const [active, setActive] = createSignal<
-		"branches" | "merge" | "export" | null
+		"branches" | "merge" | "export" | "insert" | null
 	>(null);
 
 	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
@@ -54,6 +54,14 @@ const DocumentHeader = (props: DocumentProps) => {
 	const [exportBtn, setExportBtn] = createSignal<HTMLElement>();
 	const [exportMenu, setExportMenu] = createSignal<HTMLElement>();
 	const exportPos = useFloating(exportBtn, exportMenu, {
+		whileElementsMounted: autoUpdate,
+		placement: "bottom-start",
+		middleware: [offset(4), flip(), shift()],
+	});
+
+	const [insertBtn, setInsertBtn] = createSignal<HTMLElement>();
+	const [insertMenu, setInsertMenu] = createSignal<HTMLElement>();
+	const insertPos = useFloating(insertBtn, insertMenu, {
 		whileElementsMounted: autoUpdate,
 		placement: "bottom-start",
 		middleware: [offset(4), flip(), shift()],
@@ -102,11 +110,21 @@ const DocumentHeader = (props: DocumentProps) => {
 				>
 					export
 				</button>
+				<button
+					ref={setInsertBtn}
+					onClick={(e) => {
+						e.stopPropagation();
+						setActive(active() === "insert" ? null : "insert");
+					}}
+					classList={{ active: active() === "insert" }}
+				>
+					insert
+				</button>
 			</div>
 			<Show when={active() === "branches"}>
 				<Portal>
 					<menu
-						class="branch-menu"
+						class="branch-menu document-menu"
 						ref={setBranchMenu}
 						style={{
 							position: branchPos.strategy,
@@ -200,7 +218,7 @@ const DocumentHeader = (props: DocumentProps) => {
 			<Show when={active() === "merge"}>
 				<Portal>
 					<menu
-						class="merge-menu"
+						class="merge-menu document-menu"
 						ref={setMergeMenu}
 						style={{
 							position: mergePos.strategy,
@@ -238,7 +256,7 @@ const DocumentHeader = (props: DocumentProps) => {
 			<Show when={active() === "export"}>
 				<Portal>
 					<menu
-						class="export-menu"
+						class="export-menu document-menu"
 						ref={setExportMenu}
 						style={{
 							position: exportPos.strategy,
@@ -284,6 +302,64 @@ const DocumentHeader = (props: DocumentProps) => {
 								>
 									<div class="info">
 										<div>download as markdown</div>
+									</div>
+								</button>
+							</li>
+						</ul>
+					</menu>
+				</Portal>
+			</Show>
+			<Show when={active() === "insert"}>
+				<Portal>
+					<menu
+						class="insert-menu document-menu"
+						ref={setInsertMenu}
+						style={{
+							position: insertPos.strategy,
+							top: `${insertPos.y ?? 0}px`,
+							left: `${insertPos.x ?? 0}px`,
+							"z-index": 100,
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<ul>
+							<li>
+								<button onClick={() => setActive(null)}>
+									<div class="info">
+										<div>media</div>
+										<div class="dim">insert images, videos, and audio</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button onClick={() => setActive(null)}>
+									<div class="info">
+										<div>table</div>
+										<div class="dim">insert tables with rows and columns</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button onClick={() => setActive(null)}>
+									<div class="info">
+										<div>code</div>
+										<div class="dim">insert code blocks with syntax highlighting</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button onClick={() => setActive(null)}>
+									<div class="info">
+										<div>symbols</div>
+										<div class="dim">insert special characters and symbols</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button onClick={() => setActive(null)}>
+									<div class="info">
+										<div>time</div>
+										<div class="dim">insert current date and time</div>
 									</div>
 								</button>
 							</li>
