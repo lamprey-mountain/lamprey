@@ -487,7 +487,7 @@ async fn thread_create(
 
     if !matches!(
         json.ty,
-        ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2
+        ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2 | ChannelType::Document
     ) {
         return Err(Error::BadStatic("invalid thread type"));
     }

@@ -21,7 +21,7 @@ WHERE t.parent_id = $5
   AND t.id > $1
   AND t.id < $2
   AND t.deleted_at IS NOT NULL
-  AND t.type IN ('ThreadPublic', 'ThreadPrivate', 'ThreadForum2')
+  AND t.type IN ('ThreadPublic', 'ThreadPrivate', 'ThreadForum2', 'Document')
   AND ($7::boolean OR t.type IN ('ThreadPublic', 'ThreadForum2') OR (t.type = 'ThreadPrivate' AND tm.user_id IS NOT NULL AND tm.membership = 'Join'))
 ORDER BY
     (CASE WHEN $3 = 'f' THEN t.id END),
