@@ -68,6 +68,7 @@ import {
 	RouteHome,
 	RouteInbox,
 	RouteInvite,
+	RouteNotFound,
 	RouteRoom,
 	RouteRoomSettings,
 	RouteUser,
@@ -572,15 +573,6 @@ function RouteSettings(p: RouteSectionProps) {
 				<UserSettings user={user()!} page={p.params.page} />
 			</Show>
 		</>
-	);
-}
-
-function RouteNotFound() {
-	const { t } = useCtx();
-	return (
-		<div style="padding:8px">
-			{t("not_found")}
-		</div>
 	);
 }
 

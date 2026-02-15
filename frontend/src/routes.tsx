@@ -449,3 +449,19 @@ export function RouteFriends() {
 		</LayoutDefault>
 	);
 }
+
+export function RouteNotFound() {
+	const { t } = useCtx();
+
+	return (
+		<LayoutDefault
+			title="not found"
+			showChannelNav={true}
+			showVoiceTray={true}
+		>
+			<div style="padding:8px">
+				{t("not_found")}
+			</div>
+		</LayoutDefault>
+	);
+}
