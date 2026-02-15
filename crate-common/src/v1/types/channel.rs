@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::tag::Tag;
-use crate::v1::types::user_config::UserConfigChannel;
+use crate::v1::types::user_config::PreferencesChannel;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
 use crate::v1::types::{MediaId, MessageVerId, RoleId, TagId, ThreadMember, User};
@@ -123,7 +123,7 @@ pub struct Channel {
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,
-    pub user_config: Option<UserConfigChannel>,
+    pub user_config: Option<PreferencesChannel>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub document: Option<Document>,

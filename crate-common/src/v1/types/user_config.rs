@@ -1,4 +1,5 @@
 //! things that the user can configure
+// TODO: strongly type user settings
 
 use std::collections::HashMap;
 
@@ -8,44 +9,68 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+// TODO: add sanity checks
 // #[cfg(feature = "validator")]
 // use validator::Validate;
 
-use crate::v1::types::notifications::{NotifsChannel, NotifsGlobal, NotifsRoom};
+use crate::v1::types::{
+    misc::Time,
+    notifications::{NotifsChannel, NotifsGlobal, NotifsRoom},
+};
 
-/// configuration for a user
+/// preferences for a user
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct UserConfigGlobal {
-    // TODO: implement notifications
+pub struct PreferencesGlobal {
     /// global notification config
     pub notifs: NotifsGlobal,
 
-    // TODO: implement privacy/safety stuff
-    // /// privacy and safety config
-    // pub privacy_safety: PrivacySafety,
+    /// global privacy settings
+    pub privacy: PreferencesGlobalPrivacy,
+
     /// config specific to frontend
-    pub frontend: HashMap<String, serde_json::Value>,
+    pub frontend: PreferencesGlobalFrontend,
 }
 
-/// configuration for a user in a room
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct UserConfigRoom {
+pub struct PreferencesGlobalFrontend {
+    /// extra implementation defined config
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub extra: HashMap<String, serde_json::Value>,
+}
+
+/// preferences for a user in a room
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PreferencesRoom {
     /// room notification config
     pub notifs: NotifsRoom,
 
+    /// room privacy settings
+    pub privacy: PreferencesRoomPrivacy,
+
     /// config specific to frontend
     pub frontend: HashMap<String, serde_json::Value>,
 }
 
-/// configuration for a user in a thread
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct UserConfigChannel {
+pub struct PreferencesRoomFrontend {
+    /// extra implementation defined config
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub extra: HashMap<String, serde_json::Value>,
+}
+
+/// preferences for a user in a thread
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PreferencesChannel {
     /// thread notification config
     pub notifs: NotifsChannel,
 
@@ -53,16 +78,34 @@ pub struct UserConfigChannel {
     pub frontend: HashMap<String, serde_json::Value>,
 }
 
-/// configuration for a user for another user
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct UserConfigUser {
+pub struct PreferencesChannelFrontend {
+    /// extra implementation defined config
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub extra: HashMap<String, serde_json::Value>,
+}
+
+/// preferences for a user for another user
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PreferencesUser {
     /// config in voice threads
     pub voice: VoiceConfig,
 
     /// config specific to frontend
     pub frontend: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PreferencesUserFrontend {
+    /// extra implementation defined config
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub extra: HashMap<String, serde_json::Value>,
 }
 
 /// voice config the local user can set on someone else
@@ -86,46 +129,68 @@ impl Default for VoiceConfig {
     }
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct PrivacySafety {
-//     pub friends: FriendsFilter,
-//     pub rooms: HashMap<RoomId, UserRoomConfig>,
+/// user privacy settings for friends
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PreferencesGlobalFriends {
+    pub filter: FriendsFilter,
+}
 
-//     /// copied, not inherited
-//     pub rooms_default: UserRoomConfig,
+/// user privacy settings globally
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PreferencesGlobalPrivacy {
+    pub friends: PreferencesGlobalFriends,
 
-//     // for dms
-//     // pub spam_filtering: none | mild | aggressive,
-//     // pub nsfw_filtering: none | non-friends | everyone,
-// }
+    /// default room privacy setings
+    ///
+    /// copied, not inherited
+    pub rooms_default: PreferencesRoomPrivacy,
+}
 
-// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct UserRoomConfig {
-//     /// whether to allow direct messages
-//     /// bots and moderators can always dm you
-//     pub allow_dms: bool,
+/// user privacy settings for a room
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PreferencesRoomPrivacy {
+    /// allow dms from room members
+    ///
+    /// bots, moderators, and friends can always start dms
+    pub dms: bool,
 
-//     /// whether to strip location metadata (exif)
-//     pub strip_location: bool,
-// }
+    /// allow friend requests from mutual room members
+    pub friends: bool,
 
-// /// who can send friend requests
-// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct FriendsFilter {
-//     /// overrides everything if you need a break from all the friends
-//     pub pause_until: Option<Time>,
+    /// share rich presence with mutual room members
+    pub rpc: bool,
 
-//     /// allow everyone to send you a friend request
-//     /// overrides everything else
-//     pub allow_everyone: bool,
+    /// whether to enable exif metadata, including location.
+    ///
+    /// setting to false will strip sensitive exif data
+    pub exif: bool,
+}
 
-//     /// allow everyone who shares a room with you send you a friend request
-//     /// requires the room to have allow_dms set
-//     pub allow_mutual_room: bool,
+/// who can send friend requests
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct FriendsFilter {
+    /// pause all friend requests
+    ///
+    /// overrides everything else
+    pub pause_until: Option<Time>,
 
-//     /// allow everyone who shares a friend with you send you a friend request
-//     pub allow_mutual_friend: bool,
-// }
+    /// allow everyone to send you a friend request
+    ///
+    /// overrides everything except pause_until
+    pub allow_everyone: bool,
+
+    /// allow everyone who shares a room with you send you a friend request
+    /// requires the room to have allow_dms set
+    pub allow_mutual_room: bool,
+
+    /// allow everyone who shares a friend with you send you a friend request
+    pub allow_mutual_friend: bool,
+}

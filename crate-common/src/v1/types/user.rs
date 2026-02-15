@@ -11,12 +11,12 @@ use validator::Validate;
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::presence::Presence;
 use crate::v1::types::search::Order;
-use crate::v1::types::user_config::UserConfigUser;
+use crate::v1::types::user_config::PreferencesUser;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::{MediaId, RoleId};
 
 use super::email::EmailInfo;
-use super::user_config::UserConfigGlobal;
+use super::user_config::PreferencesGlobal;
 use super::{ApplicationId, ChannelId, RoomId, UserId, UserVerId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +55,7 @@ pub struct User {
     pub deleted_at: Option<Time>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emails: Option<Vec<EmailInfo>>,
-    pub user_config: Option<UserConfigUser>,
+    pub user_config: Option<PreferencesUser>,
     // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 16)))]
     // pub fields: Vec<UserField>,
     /// whether this user is considered to have mutifactor authentication enabled on their account
@@ -133,7 +133,7 @@ pub struct Puppet {
 pub struct UserWithPrivate {
     #[serde(flatten)]
     pub inner: User,
-    pub config: UserConfigGlobal,
+    pub config: PreferencesGlobal,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

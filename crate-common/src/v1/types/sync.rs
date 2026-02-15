@@ -26,7 +26,7 @@ use super::{
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,
     role::RoleReorderItem,
-    user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
+    user_config::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     voice::{SignallingMessage, VoiceState},
     Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
     RoomMember, Session, SessionId, SessionToken, User, UserId,
@@ -464,25 +464,25 @@ pub enum MessageSync {
     // TODO: rename these UserConfig -> Config
     UserConfigGlobal {
         user_id: UserId,
-        config: UserConfigGlobal,
+        config: PreferencesGlobal,
     },
 
     UserConfigRoom {
         user_id: UserId,
         room_id: RoomId,
-        config: UserConfigRoom,
+        config: PreferencesRoom,
     },
 
     UserConfigChannel {
         user_id: UserId,
         channel_id: ChannelId,
-        config: UserConfigChannel,
+        config: PreferencesChannel,
     },
 
     UserConfigUser {
         user_id: UserId,
         target_user_id: UserId,
-        config: UserConfigUser,
+        config: PreferencesUser,
     },
 
     UserDelete {

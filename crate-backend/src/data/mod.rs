@@ -28,7 +28,7 @@ use common::v1::types::room_analytics::{
 use common::v1::types::search::{ChannelSearchRequest, MessageSearchRequest};
 use common::v1::types::tag::{Tag, TagCreate, TagPatch};
 use common::v1::types::user_config::{
-    UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
+    PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser,
 };
 use common::v1::types::util::Time;
 use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
@@ -988,41 +988,41 @@ pub trait DataUserRelationship {
 
 #[async_trait]
 pub trait DataUserConfig {
-    async fn user_config_set(&self, user_id: UserId, config: &UserConfigGlobal) -> Result<()>;
-    async fn user_config_get(&self, user_id: UserId) -> Result<UserConfigGlobal>;
+    async fn user_config_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()>;
+    async fn user_config_get(&self, user_id: UserId) -> Result<PreferencesGlobal>;
     async fn user_config_room_set(
         &self,
         user_id: UserId,
         room_id: RoomId,
-        config: &UserConfigRoom,
+        config: &PreferencesRoom,
     ) -> Result<()>;
     async fn user_config_room_get(
         &self,
         user_id: UserId,
         room_id: RoomId,
-    ) -> Result<UserConfigRoom>;
+    ) -> Result<PreferencesRoom>;
     async fn user_config_channel_set(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
-        config: &UserConfigChannel,
+        config: &PreferencesChannel,
     ) -> Result<()>;
     async fn user_config_channel_get(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
-    ) -> Result<UserConfigChannel>;
+    ) -> Result<PreferencesChannel>;
     async fn user_config_user_set(
         &self,
         user_id: UserId,
         other_id: UserId,
-        config: &UserConfigUser,
+        config: &PreferencesUser,
     ) -> Result<()>;
     async fn user_config_user_get(
         &self,
         user_id: UserId,
         other_id: UserId,
-    ) -> Result<UserConfigUser>;
+    ) -> Result<PreferencesUser>;
 }
 
 #[async_trait]

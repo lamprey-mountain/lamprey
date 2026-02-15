@@ -4,7 +4,7 @@ use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::user_config::{
-    UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
+    PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser,
 };
 use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
 use tower_http::limit::RequestBodyLimitLayer;
@@ -19,12 +19,12 @@ use crate::ServerState;
     put,
     path = "/config",
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigGlobal, description = "success"))
+    responses((status = OK, body = PreferencesGlobal, description = "success"))
 )]
 async fn user_config_global_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<UserConfigGlobal>,
+    Json(json): Json<PreferencesGlobal>,
 ) -> Result<impl IntoResponse> {
     s.data().user_config_set(auth.user.id, &json).await?;
     s.broadcast(MessageSync::UserConfigGlobal {
@@ -40,13 +40,13 @@ async fn user_config_global_put(
     path = "/config/room/{room_id}",
     params(("room_id", description = "Room id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigRoom, description = "success"))
+    responses((status = OK, body = PreferencesRoom, description = "success"))
 )]
 async fn user_config_room_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
-    Json(json): Json<UserConfigRoom>,
+    Json(json): Json<PreferencesRoom>,
 ) -> Result<impl IntoResponse> {
     s.data()
         .user_config_room_set(auth.user.id, room_id, &json)
@@ -65,13 +65,13 @@ async fn user_config_room_put(
     path = "/config/thread/{thread_id}",
     params(("thread_id", description = "Thread id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigChannel, description = "success"))
+    responses((status = OK, body = PreferencesChannel, description = "success"))
 )]
 async fn user_config_channel_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(channel_id): Path<ChannelId>,
-    Json(json): Json<UserConfigChannel>,
+    Json(json): Json<PreferencesChannel>,
 ) -> Result<impl IntoResponse> {
     s.data()
         .user_config_channel_set(auth.user.id, channel_id, &json)
@@ -90,13 +90,13 @@ async fn user_config_channel_put(
     path = "/config/user/{user_id}",
     params(("user_id", description = "User id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigUser, description = "success"))
+    responses((status = OK, body = PreferencesUser, description = "success"))
 )]
 async fn user_config_user_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(user_id): Path<UserId>,
-    Json(json): Json<UserConfigUser>,
+    Json(json): Json<PreferencesUser>,
 ) -> Result<impl IntoResponse> {
     s.data()
         .user_config_user_set(auth.user.id, user_id, &json)
@@ -114,7 +114,7 @@ async fn user_config_user_put(
     get,
     path = "/config",
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigGlobal, description = "success"))
+    responses((status = OK, body = PreferencesGlobal, description = "success"))
 )]
 async fn user_config_global_get(
     auth: Auth,
@@ -130,7 +130,7 @@ async fn user_config_global_get(
     path = "/config/room/{room_id}",
     params(("room_id", description = "Room id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigRoom, description = "success"))
+    responses((status = OK, body = PreferencesRoom, description = "success"))
 )]
 async fn user_config_room_get(
     auth: Auth,
@@ -147,7 +147,7 @@ async fn user_config_room_get(
     path = "/config/channel/{channel_id}",
     params(("channel_id", description = "Channel id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigChannel, description = "success"))
+    responses((status = OK, body = PreferencesChannel, description = "success"))
 )]
 async fn user_config_channel_get(
     auth: Auth,
@@ -167,7 +167,7 @@ async fn user_config_channel_get(
     path = "/config/user/{user_id}",
     params(("user_id", description = "User id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigUser, description = "success"))
+    responses((status = OK, body = PreferencesUser, description = "success"))
 )]
 async fn user_config_user_get(
     auth: Auth,

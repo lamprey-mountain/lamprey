@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
+    user_config::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     ChannelId, RoomId,
 };
 use sqlx::{query, query_scalar};
@@ -14,7 +14,7 @@ use super::Postgres;
 
 #[async_trait]
 impl DataUserConfig for Postgres {
-    async fn user_config_set(&self, user_id: UserId, config: &UserConfigGlobal) -> Result<()> {
+    async fn user_config_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()> {
         query!(
             "update usr set config = $2 where id = $1",
             *user_id,
@@ -25,7 +25,7 @@ impl DataUserConfig for Postgres {
         Ok(())
     }
 
-    async fn user_config_get(&self, user_id: UserId) -> Result<UserConfigGlobal> {
+    async fn user_config_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
         let conf = query_scalar!("select config from usr where id = $1", *user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -40,7 +40,7 @@ impl DataUserConfig for Postgres {
         &self,
         user_id: UserId,
         room_id: RoomId,
-        config: &UserConfigRoom,
+        config: &PreferencesRoom,
     ) -> Result<()> {
         query!(
             "
@@ -61,7 +61,7 @@ impl DataUserConfig for Postgres {
         &self,
         user_id: UserId,
         room_id: RoomId,
-    ) -> Result<UserConfigRoom> {
+    ) -> Result<PreferencesRoom> {
         let conf = query_scalar!(
             "SELECT config FROM user_config_room WHERE user_id = $1 AND room_id = $2",
             *user_id,
@@ -80,7 +80,7 @@ impl DataUserConfig for Postgres {
         &self,
         user_id: UserId,
         channel_id: ChannelId,
-        config: &UserConfigChannel,
+        config: &PreferencesChannel,
     ) -> Result<()> {
         query!(
             "
@@ -101,7 +101,7 @@ impl DataUserConfig for Postgres {
         &self,
         user_id: UserId,
         channel_id: ChannelId,
-    ) -> Result<UserConfigChannel> {
+    ) -> Result<PreferencesChannel> {
         let conf = query_scalar!(
             "SELECT config FROM user_config_channel WHERE user_id = $1 AND channel_id = $2",
             *user_id,
@@ -120,7 +120,7 @@ impl DataUserConfig for Postgres {
         &self,
         user_id: UserId,
         other_id: UserId,
-        config: &UserConfigUser,
+        config: &PreferencesUser,
     ) -> Result<()> {
         query!(
             "
@@ -141,7 +141,7 @@ impl DataUserConfig for Postgres {
         &self,
         user_id: UserId,
         other_id: UserId,
-    ) -> Result<UserConfigUser> {
+    ) -> Result<PreferencesUser> {
         let conf = query_scalar!(
             "SELECT config FROM user_config_user WHERE user_id = $1 AND other_id = $2",
             *user_id,
