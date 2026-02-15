@@ -308,8 +308,3 @@ const DocumentMain = (props: DocumentProps) => {
 		</main>
 	);
 };
-
-export const Wiki = (props: DocumentProps) => {
-	// maybe copy forum channels here
-	return "todo";
-};

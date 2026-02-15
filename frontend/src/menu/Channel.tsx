@@ -26,6 +26,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 		() => props.channel_id,
 	);
 
+	// FIXME: documents are threads if they are in wikis
 	const isThread = () =>
 		channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate" ||
 		channel()?.type === "ThreadForum2";

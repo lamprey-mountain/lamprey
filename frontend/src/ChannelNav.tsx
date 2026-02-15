@@ -67,11 +67,22 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 		const threads = allChannels.filter(
 			(c) =>
-				(c.type === "ThreadPublic" || c.type === "ThreadPrivate") &&
+				(c.type === "ThreadPublic" ||
+					c.type === "ThreadPrivate" ||
+					(c.type === "Document" &&
+						c.parent_id &&
+						api.channels.cache.get(c.parent_id)?.type === "Wiki")) &&
 				!c.archived_at,
 		);
 		const channels = allChannels.filter(
-			(c) => c.type !== "ThreadPublic" && c.type !== "ThreadPrivate",
+			(c) =>
+				c.type !== "ThreadPublic" &&
+				c.type !== "ThreadPrivate" &&
+				!(
+					c.type === "Document" &&
+					c.parent_id &&
+					api.channels.cache.get(c.parent_id)?.type === "Wiki"
+				),
 		);
 
 		if (props.room_id) {
@@ -97,9 +108,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		}
 
 		for (const thread of threads) {
-			const parent = channelMap.get(thread.parent_id!);
-			if (parent) {
-				parent.threads.push(thread);
+			// parent_id should assume to be present if it was filtered as a thread/nested doc
+			// but we handle null just in case
+			if (thread.parent_id) {
+				const parent = channelMap.get(thread.parent_id);
+				if (parent) {
+					parent.threads.push(thread);
+				}
 			}
 		}
 
@@ -276,6 +291,26 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					return;
 				}
 			}
+
+			if (draggingChannel && draggingChannel.type === "Document") {
+				const targetChannel = api.channels.cache.get(id);
+				if (targetChannel?.type === "Wiki") {
+					if (target()?.id !== id) {
+						setTarget({ id, after: false });
+					}
+					return;
+				}
+				// if hovering over another document in a wiki, target the wiki
+				if (targetChannel?.type === "Document" && targetChannel.parent_id) {
+					const p = api.channels.cache.get(targetChannel.parent_id);
+					if (p?.type === "Wiki") {
+						if (target()?.id !== p.id) {
+							setTarget({ id: p.id, after: false });
+						}
+						return;
+					}
+				}
+			}
 		}
 
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -325,6 +360,49 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				}
 			}
 			return;
+		}
+
+		if (fromChannel.type === "Document") {
+			if (toChannel.type === "Wiki") {
+				if (fromChannel.parent_id !== toChannel.id) {
+					api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+				}
+				return;
+			}
+			const fromParent = fromChannel.parent_id
+				? api.channels.cache.get(fromChannel.parent_id)
+				: undefined;
+			if (fromParent?.type === "Wiki") {
+				// Moving out of Wiki to Top Level
+				let newParentId: string | null | undefined = undefined;
+				let position: number | undefined = undefined;
+
+				if (toChannel.type === "Category") {
+					newParentId = toChannel.id;
+				} else {
+					// Moving to a channel position
+					newParentId = toChannel.parent_id;
+					// We'd ideally calculate position here, but simplest 'move out' is just reparent
+					// If we start calculating position, we need to fetch the category list
+					const toCat = categories().find(
+						(c) => (c.category?.id ?? null) === toChannel.parent_id,
+					);
+					if (toCat) {
+						const idx = toCat.channels.findIndex((c) => c.id === toId);
+						if (idx !== -1) {
+							// Just update parent for now, position handling is complex without full reorder logic reuse
+							// but the generic logic below FAILS for nested documents.
+							// So we must handle it here or adapt generic logic.
+							// Let's just update parent.
+						}
+					}
+				}
+
+				if (newParentId !== undefined) {
+					api.channels.update(fromChannel.id, { parent_id: newParentId });
+				}
+				return;
+			}
 		}
 
 		const fromCategory = categories().find(
