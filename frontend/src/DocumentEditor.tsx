@@ -19,6 +19,7 @@ import { useCtx } from "./context";
 import {
 	base64UrlDecode,
 	base64UrlEncode,
+	createListContinueCommand,
 	createWrapCommand,
 	handleAutocomplete,
 } from "./editor-utils.ts";
@@ -246,7 +247,7 @@ export const createEditor = (
 	let editorRef!: HTMLDivElement;
 	let view: EditorView | undefined;
 	let onSubmit!: (content: string) => boolean | undefined;
-	let submitOnEnter = true;
+	let submitOnEnter = false;
 
 	const submitCommand: Command = (state, dispatch) => {
 		const shouldClear = onSubmit?.(state.doc.textContent.trim());
@@ -300,8 +301,7 @@ export const createEditor = (
 						if (submitOnEnter) {
 							return submitCommand(state, dispatch);
 						}
-						dispatch?.(state.tr.insertText("\n"));
-						return true;
+						return createListContinueCommand()(state, dispatch);
 					},
 					"Backspace": (state, dispatch) => {
 						const sel = state.tr.selection;

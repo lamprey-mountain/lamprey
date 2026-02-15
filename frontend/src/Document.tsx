@@ -303,6 +303,7 @@ const DocumentMain = (props: DocumentProps) => {
 			<editor.View
 				onSubmit={() => false}
 				channelId={props.channel.id}
+				submitOnEnter={false}
 			/>
 		</main>
 	);

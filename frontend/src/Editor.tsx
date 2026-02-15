@@ -7,7 +7,11 @@ import { createEffect, onCleanup, onMount } from "solid-js";
 import { initTurndownService } from "./turndown.ts";
 import { decorate, md } from "./markdown.tsx";
 import { useCtx } from "./context";
-import { createWrapCommand, handleAutocomplete } from "./editor-utils.ts";
+import {
+	createListContinueCommand,
+	createWrapCommand,
+	handleAutocomplete,
+} from "./editor-utils.ts";
 
 const turndown = initTurndownService();
 
@@ -170,10 +174,7 @@ export const createEditor = (opts: EditorProps) => {
 					"Ctrl-m": (_state) => {
 						return false;
 					},
-					"Shift-Enter": (state, dispatch) => {
-						dispatch?.(state.tr.insertText("\n"));
-						return true;
-					},
+					"Shift-Enter": createListContinueCommand(),
 					"Ctrl-Enter": submitCommand,
 					"Enter": (state, dispatch) => {
 						if (submitOnEnter) {

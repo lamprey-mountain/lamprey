@@ -343,3 +343,139 @@ export function base64UrlEncode(bytes: Uint8Array): string {
 		.replace(/\//g, "_")
 		.replace(/=+$/, "");
 }
+
+/**
+ * Detects if the current line is part of a list (ordered, unordered, or blockquote)
+ * and returns the list type and prefix if applicable
+ */
+export function getListPrefix(
+	line: string,
+): {
+	type: "ordered" | "unordered" | "blockquote";
+	prefix: string;
+	number?: number;
+} | null {
+	// Check for ordered list: digits followed by a dot and space
+	const orderedMatch = line.match(/^(\s*)(\d+)\.(\s+)/);
+	if (orderedMatch) {
+		const prefix = orderedMatch[0];
+		const number = parseInt(orderedMatch[2], 10);
+		return { type: "ordered", prefix, number };
+	}
+
+	// Check for unordered list: dash, asterisk, or plus followed by space
+	const unorderedMatch = line.match(/^(\s*)([-*+])(\s+)/);
+	if (unorderedMatch) {
+		return { type: "unordered", prefix: unorderedMatch[0] };
+	}
+
+	// Check for blockquote: greater than symbol followed by space
+	const blockquoteMatch = line.match(/^(\s*)>(\s+)/);
+	if (blockquoteMatch) {
+		return { type: "blockquote", prefix: blockquoteMatch[0] };
+	}
+
+	return null;
+}
+
+/**
+ * Creates a command to handle Enter key in lists
+ */
+export function createListContinueCommand(): Command {
+	return (state, dispatch) => {
+		const { from, to } = state.selection;
+		const $from = state.selection.$from;
+
+		// We need to find the start and end of the current "line" within the block
+		// ProseMirror blocks (like paragraphs) can contain newlines if whitespace: "pre"
+		const parent = $from.parent;
+		if (!parent.isTextblock) {
+			return false;
+		}
+
+		const parentStart = $from.start();
+		// Use a custom leafText function to ensure atomic nodes (like mentions) are treated as length 1
+		// This matches the document structure indices
+		const text = state.doc.textBetween(
+			parentStart,
+			$from.end(),
+			"\n",
+			"\ufffc",
+		);
+
+		const offsetInParent = from - parentStart;
+		const lastNewline = text.lastIndexOf("\n", offsetInParent - 1);
+		const nextNewline = text.indexOf("\n", offsetInParent);
+
+		const lineStart = parentStart + (lastNewline === -1 ? 0 : lastNewline + 1);
+		const lineEnd = parentStart +
+			(nextNewline === -1 ? text.length : nextNewline);
+
+		const currentLine = state.doc.textBetween(
+			lineStart,
+			lineEnd,
+			undefined,
+			"\ufffc",
+		);
+		const listPrefix = getListPrefix(currentLine);
+
+		if (!listPrefix) {
+			// Not in a list, just insert newline
+			dispatch?.(state.tr.insertText("\n"));
+			return true;
+		}
+
+		// Get the position of the cursor within the line
+		const cursorInLine = from - lineStart;
+
+		// Check if the line has content after the cursor
+		const lineAfterCursor = currentLine.substring(cursorInLine);
+
+		// Check if the line has content before the cursor (after removing the prefix)
+		const lineBeforeCursor = currentLine.substring(0, cursorInLine);
+		const contentAfterPrefix = lineBeforeCursor.substring(
+			listPrefix.prefix.length,
+		);
+
+		// If both before and after cursor are empty (just the prefix), remove the list item
+		const isLineEmpty = contentAfterPrefix.trim() === "" &&
+			lineAfterCursor.trim() === "";
+
+		if (isLineEmpty) {
+			// Remove the entire line (list prefix and all)
+			// This effectively "exits" the list for the current line
+			const tr = state.tr.delete(lineStart, lineEnd);
+
+			// If we are at the very start of the block/doc, we might want to ensure a newline exists if we are breaking out?
+			// But deleting the only line leaves an empty block/doc which is valid.
+			// If we are after a newline, deleting the content leaves us after that newline (empty line).
+			// This is the desired behavior for "breaking out of a list":
+			// 1. Item
+			// 2. [Cursor] -> Enter ->
+			// 1. Item
+			// [Cursor]
+
+			dispatch?.(tr);
+			return true;
+		} else {
+			// Continue the list with the next item
+			let newPrefix = listPrefix.prefix;
+
+			if (listPrefix.type === "ordered") {
+				// Increment the number for ordered lists
+				const nextNumber = (listPrefix.number || 0) + 1;
+				newPrefix = newPrefix.replace(/(\d+)/, String(nextNumber));
+			}
+
+			// Insert newline and the new prefix
+			const tr = state.tr.insertText(`\n${newPrefix}`, to);
+
+			// Move cursor to after the new prefix
+			const newPos = to + 1 + newPrefix.length;
+			tr.setSelection(TextSelection.create(tr.doc, newPos));
+
+			dispatch?.(tr);
+			return true;
+		}
+	};
+}
