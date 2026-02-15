@@ -14,6 +14,19 @@
 		display: flex;
 		flex-direction: column;
 		overflow-y: auto;
+
+		.sort-view-container {
+			.sort-view-button {
+				border-radius: 4px;
+				display: flex;
+				align-items: center;
+				gap: 4px;
+
+				&.selected {
+					background: $bg-200;
+				}
+			}
+		}
 	}
 
 	& > .thread {
@@ -149,5 +162,48 @@
 
 	.title {
 		font-weight: bold;
+	}
+}
+
+.sort-view-menu {
+	menu {
+		background-color: $bg-300;
+		border: solid 1px $sep-500;
+		box-shadow: 2px 2px 8px $bg-100;
+		min-width: 128px;
+		padding: 4px 0;
+	}
+
+	.header {
+		color: $fg-500;
+		padding: 2px 4px;
+		font-size: 0.8rem;
+		font-weight: bold;
+	}
+
+	.menu-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 2px 4px;
+		width: 100%;
+		background: none;
+		border: none;
+		color: $fg-200;
+		cursor: pointer;
+
+		&:hover {
+			background-color: $bg-400;
+		}
+
+		span {
+			color: $link-500;
+		}
+	}
+
+	hr {
+		margin: 4px 0;
+		height: 1px;
+		background: $sep-500;
 	}
 }

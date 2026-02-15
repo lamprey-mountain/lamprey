@@ -6,10 +6,14 @@ import {
 	createMemo,
 	createResource,
 	createSignal,
+	createUniqueId,
 	For,
 	onCleanup,
 	Show,
 } from "solid-js";
+import { Portal } from "solid-js/web";
+import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
 import { useApi } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
@@ -384,6 +388,37 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const forum_id = () => props.channel.id;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
+	const [sortBy, setSortBy] = createSignal<
+		"new" | "activity" | "reactions:+1" | "random" | "hot" | "hot2"
+	>("new");
+	const [viewAs, setViewAs] = createSignal<"list" | "gallery">("list");
+	const [menuOpen, setMenuOpen] = createSignal(false);
+	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
+	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
+	const position = useFloating(referenceEl, floatingEl, {
+		whileElementsMounted: autoUpdate,
+		middleware: [offset(5), flip(), shift()],
+		placement: "bottom-end",
+	});
+
+	const clickOutside = (e: MouseEvent) => {
+		if (
+			menuOpen() &&
+			referenceEl() &&
+			!referenceEl()!.contains(e.target as Node) &&
+			floatingEl() &&
+			!floatingEl()!.contains(e.target as Node)
+		) {
+			setMenuOpen(false);
+		}
+	};
+
+	createEffect(() => {
+		if (menuOpen()) {
+			document.addEventListener("mousedown", clickOutside);
+			onCleanup(() => document.removeEventListener("mousedown", clickOutside));
+		}
+	});
 
 	const fetchMore = () => {
 		const filter = threadFilter();
@@ -416,7 +451,17 @@ export const Forum2 = (props: { channel: Channel }) => {
 		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
 			a,
 			b,
-		) => (a.id < b.id ? 1 : -1));
+		) => {
+			if (sortBy() === "new") {
+				return a.id < b.id ? 1 : -1;
+			} else if (sortBy() === "activity") {
+				// activity
+				const tA = a.last_version_id ?? a.id;
+				const tB = b.last_version_id ?? b.id;
+				return tA < tB ? 1 : -1;
+			}
+			return 0;
+		});
 	};
 
 	function createThread(room_id: string) {
@@ -465,32 +510,150 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<h3 style="font-size:1rem; margin-top:8px;flex:1">
 						{getThreads().length} {threadFilter()} threads
 					</h3>
-					<div>
-						<h3 class="dim">order by</h3>
-						<Dropdown
-							style="max-width:150px"
-							options={[
-								{ item: "new", label: "newest threads first" },
-								{
-									item: "activity",
-									label: "recently active threads",
-								},
-								// { item: "reactions:+1", label: "most +1 reactions" },
-								// { item: "random", label: "random ordering" },
-								// { item: "hot", label: "mystery algorithm 1" },
-								// { item: "hot2", label: "mystery algorithm 2" },
-							]}
-						/>
-					</div>
-					<div>
-						<h3 class="dim">view as</h3>
-						<Dropdown
-							style="max-width:150px"
-							options={[
-								{ item: "list", label: "list" },
-								// { item: "gallery", label: "gallery" },
-							]}
-						/>
+					<div class="sort-view-container">
+						<button
+							ref={setReferenceEl}
+							onClick={() => setMenuOpen(!menuOpen())}
+							class="secondary sort-view-button"
+							classList={{ selected: menuOpen() }}
+						>
+							<span>sort and view</span>
+							<svg
+								width="10"
+								height="6"
+								viewBox="0 0 10 6"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M1 1L5 5L9 1"
+									stroke="currentColor"
+									stroke-width="1.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+						</button>
+						<Portal>
+							<Show when={menuOpen()}>
+								<div
+									ref={setFloatingEl}
+									class="sort-view-menu"
+									style={{
+										position: position.strategy,
+										top: `${position.y ?? 0}px`,
+										left: `${position.x ?? 0}px`,
+										"z-index": 1000,
+									}}
+								>
+									<menu>
+										<div class="subtext header">
+											sort by
+										</div>
+										<button
+											onClick={() => {
+												setSortBy("new");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											Newest threads first
+											<Show when={sortBy() === "new"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											onClick={() => {
+												setSortBy("activity");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											Recently active threads
+											<Show when={sortBy() === "activity"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											onClick={() => {
+												setSortBy("reactions:+1");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											Expected to be helpful
+											<Show when={sortBy() === "reactions:+1"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											onClick={() => {
+												setSortBy("random");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											Random ordering
+											<Show when={sortBy() === "random"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											onClick={() => {
+												setSortBy("hot");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											Hot
+											<Show when={sortBy() === "hot"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											onClick={() => {
+												setSortBy("hot2");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											Hot 2
+											<Show when={sortBy() === "hot2"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<hr />
+										<div class="subtext header">
+											view as
+										</div>
+										<button
+											onClick={() => {
+												setViewAs("list");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											List
+											<Show when={viewAs() === "list"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											onClick={() => {
+												setViewAs("gallery");
+												setMenuOpen(false);
+											}}
+											class="menu-item"
+										>
+											Gallery
+											<Show when={viewAs() === "gallery"}>
+												<span>✓</span>
+											</Show>
+										</button>
+									</menu>
+								</div>
+							</Show>
+						</Portal>
 					</div>
 					<div class="filters">
 						<button
