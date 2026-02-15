@@ -251,6 +251,19 @@ export const createEditor = (opts: EditorProps) => {
 							for (const file of files) props.onUpload?.(file);
 							return true;
 						}
+
+						const html = event.clipboardData?.getData("text/html");
+						if (html) {
+							const markdown = turndown.turndown(html);
+							view.dispatch(
+								view.state.tr.replaceSelectionWith(
+									schema.text(markdown),
+								).scrollIntoView()
+									.setMeta("paste", true),
+							);
+							return true;
+						}
+
 						const str = slice.content.textBetween(0, slice.size);
 						const tr = view.state.tr;
 						if (
@@ -289,12 +302,6 @@ export const createEditor = (opts: EditorProps) => {
 							schema,
 							props.channelId || "",
 						);
-					},
-					transformPastedHTML(html) {
-						const markdown = turndown.turndown(html);
-						const div = document.createElement("div");
-						div.innerHTML = md.parser(md.lexer(markdown));
-						return div.innerHTML;
 					},
 					editable: () => !(props.disabled ?? false),
 					dispatchTransaction(tr) {
