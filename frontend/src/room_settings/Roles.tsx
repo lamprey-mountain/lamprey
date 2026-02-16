@@ -43,6 +43,7 @@ function isDirty(a: Role, b: Role): boolean {
 		a.description !== b.description ||
 		a.is_self_applicable !== b.is_self_applicable ||
 		a.is_mentionable !== b.is_mentionable ||
+		a.hoist !== b.hoist ||
 		allowDiff1.size + allowDiff2.size + denyDiff1.size + denyDiff2.size > 0;
 }
 
@@ -362,6 +363,10 @@ const RoleList = (
 								<div class="divider"></div>
 								<div class="mentionable">@mentionable</div>
 							</Show>
+							<Show when={i.hoist}>
+								<div class="divider"></div>
+								<div class="hoist">hoist</div>
+							</Show>
 						</div>
 					</li>
 				)}
@@ -402,6 +407,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				deny: r.deny,
 				is_mentionable: r.is_mentionable,
 				is_self_applicable: r.is_self_applicable,
+				hoist: r.hoist,
 			},
 		});
 	};

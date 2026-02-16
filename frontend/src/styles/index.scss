@@ -1210,6 +1210,10 @@ summary {
 			color: $color-green;
 		}
 
+		& .hoist {
+			color: $color-blue;
+		}
+
 		&.dragging {
 			opacity: 0.5;
 		}
