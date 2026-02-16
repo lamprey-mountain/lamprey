@@ -405,7 +405,7 @@ export const createVoiceClient = () => {
 	return {
 		conn,
 		state: rtcState,
-		connect(thread_id: string) {
+		connect(channel_id: string) {
 			const existing = api.voiceState();
 			if (existing) {
 				console.warn(
@@ -416,7 +416,7 @@ export const createVoiceClient = () => {
 			send({
 				type: "VoiceState",
 				state: {
-					thread_id,
+					channel_id,
 					self_mute: true,
 					self_deaf: false,
 					self_video: false,
@@ -483,7 +483,7 @@ export const createVoiceClient = () => {
 			send({
 				type: "VoiceState",
 				state: {
-					thread_id: existing.thread_id,
+					channel_id: existing.channel_id,
 					...indicators,
 				},
 			});

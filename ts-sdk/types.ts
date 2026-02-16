@@ -132,7 +132,7 @@ export type SignallingMessage =
 
 export type VoiceState = {
 	user_id: string;
-	thread_id: string;
+	channel_id: string;
 	session_id: string | null;
 	joined_at: string;
 	mute: boolean;
