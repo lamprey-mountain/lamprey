@@ -5,10 +5,8 @@ use common::v1::types::{
     ChannelId, ConnectionId, SessionToken, UserId,
 };
 use flate2::{
-    write::{ZlibDecoder, ZlibEncoder},
-    Compression as FlateCompression,
+    Compress, Compression as FlateCompression, Decompress, FlushCompress, FlushDecompress, Status,
 };
-use std::io::Write;
 use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
@@ -62,8 +60,9 @@ pub struct Connection {
 
 pub enum Compression {
     Deflate {
-        encoder: ZlibEncoder<Vec<u8>>,
-        decoder: ZlibDecoder<Vec<u8>>,
+        compressor: Compress,
+        decompressor: Decompress,
+        buffer: Vec<u8>,
     },
 }
 
@@ -78,8 +77,9 @@ impl Connection {
     pub fn new(s: Arc<ServerState>, params: SyncParams) -> Self {
         let compression = match params.compression {
             Some(SyncCompression::Deflate) => Some(Compression::Deflate {
-                encoder: ZlibEncoder::new(Vec::new(), FlateCompression::default()),
-                decoder: ZlibDecoder::new(Vec::new()),
+                compressor: Compress::new(FlateCompression::default(), true),
+                decompressor: Decompress::new(true),
+                buffer: Vec::new(),
             }),
             None => None,
         };
@@ -136,32 +136,77 @@ impl Connection {
         ws: &mut WebSocket,
         timeout: &mut Timeout,
     ) -> Result<()> {
-        let msg = match ws_msg {
+        match ws_msg {
             Message::Text(utf8_bytes) => {
                 if self.compression.is_some() {
                     return Err(Error::BadStatic(
                         "expected binary message for compressed session",
                     ));
                 }
-                serde_json::from_str::<MessageClient>(&utf8_bytes)?
+                let msg = serde_json::from_str::<MessageClient>(&utf8_bytes)?;
+                self.handle_message_client(msg, ws, timeout).await
             }
             Message::Binary(bytes) => {
-                if let Some(Compression::Deflate { decoder, .. }) = &mut self.compression {
-                    decoder.write_all(&bytes)?;
-                    decoder.flush()?;
-                    let decompressed = decoder.get_mut();
-                    let msg = serde_json::from_slice::<MessageClient>(decompressed)?;
-                    decompressed.clear();
-                    msg
+                if let Some(Compression::Deflate {
+                    decompressor,
+                    buffer,
+                    ..
+                }) = &mut self.compression
+                {
+                    let mut input_offset = 0;
+                    while input_offset < bytes.len() {
+                        let mut output = [0u8; 4096];
+                        let before_in = decompressor.total_in();
+                        let before_out = decompressor.total_out();
+                        let status = decompressor.decompress(
+                            &bytes[input_offset..],
+                            &mut output,
+                            FlushDecompress::None,
+                        )?;
+                        let consumed = (decompressor.total_in() - before_in) as usize;
+                        let produced = (decompressor.total_out() - before_out) as usize;
+                        buffer.extend_from_slice(&output[..produced]);
+                        input_offset += consumed;
+                        if status == Status::StreamEnd {
+                            break;
+                        }
+                        if consumed == 0 && produced == 0 {
+                            break;
+                        }
+                    }
+
+                    let mut msgs = Vec::new();
+                    let mut consumed = 0;
+                    {
+                        let mut stream = serde_json::Deserializer::from_slice(buffer)
+                            .into_iter::<MessageClient>();
+                        while let Some(msg_res) = stream.next() {
+                            match msg_res {
+                                Ok(msg) => {
+                                    msgs.push(msg);
+                                    consumed = stream.byte_offset();
+                                }
+                                Err(e) if e.is_eof() => break,
+                                Err(e) => return Err(e.into()),
+                            }
+                        }
+                    }
+                    if consumed > 0 {
+                        buffer.drain(..consumed);
+                    }
+
+                    for msg in msgs {
+                        self.handle_message_client(msg, ws, timeout).await?;
+                    }
+                    Ok(())
                 } else {
                     return Err(Error::BadStatic(
                         "unexpected binary message for uncompressed session",
                     ));
                 }
             }
-            _ => return Ok(()),
-        };
-        self.handle_message_client(msg, ws, timeout).await
+            _ => Ok(()),
+        }
     }
 
     #[tracing::instrument(level = "debug", skip(self, ws, timeout), fields(id = self.get_id().to_string()))]
@@ -960,18 +1005,41 @@ impl Connection {
         msg: &MessageEnvelope,
     ) -> Result<WsMessage> {
         let json = serde_json::to_string(msg)?;
-        Ok(
-            if let Some(Compression::Deflate { encoder, .. }) = compression {
-                encoder.write_all(json.as_bytes())?;
-                encoder.flush()?;
-                let compressed = encoder.get_mut();
-                let data = compressed.clone();
-                compressed.clear();
-                WsMessage::Binary(data.into())
-            } else {
-                WsMessage::text(json)
-            },
-        )
+        if let Some(Compression::Deflate { compressor, .. }) = compression {
+            let mut output = Vec::with_capacity(json.len() + 64);
+            let input = json.as_bytes();
+
+            let mut input_offset = 0;
+            while input_offset < input.len() {
+                let mut out_buf = [0u8; 4096];
+                let before_in = compressor.total_in();
+                let before_out = compressor.total_out();
+                compressor.compress(&input[input_offset..], &mut out_buf, FlushCompress::None)?;
+                let consumed = (compressor.total_in() - before_in) as usize;
+                let produced = (compressor.total_out() - before_out) as usize;
+                output.extend_from_slice(&out_buf[..produced]);
+                input_offset += consumed;
+                if consumed == 0 && produced == 0 {
+                    break;
+                }
+            }
+
+            // Sync Flush
+            loop {
+                let mut out_buf = [0u8; 4096];
+                let before_out = compressor.total_out();
+                let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
+                let produced = (compressor.total_out() - before_out) as usize;
+                output.extend_from_slice(&out_buf[..produced]);
+                if produced == 0 || status == Status::StreamEnd {
+                    break;
+                }
+            }
+
+            Ok(WsMessage::Binary(output.into()))
+        } else {
+            Ok(WsMessage::text(json))
+        }
     }
 
     fn serialize_and_compress(&mut self, msg: &MessageEnvelope) -> Result<WsMessage> {

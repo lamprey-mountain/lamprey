@@ -69,6 +69,12 @@ pub enum Error {
     #[error("url parse error: {0}")]
     UrlParseError(#[from] url::ParseError),
 
+    #[error("compress error: {0}")]
+    Compress(#[from] flate2::CompressError),
+
+    #[error("decompress error: {0}")]
+    Decompress(#[from] flate2::DecompressError),
+
     #[error("unmodified")]
     // HACK: not really an error, but still kind of helpful to have here
     NotModified,
