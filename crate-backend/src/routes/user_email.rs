@@ -16,6 +16,41 @@ use crate::ServerState;
 
 use crate::error::{Error, Result};
 
+use super::auth::fetch_auth_state;
+
+/// Check if a user can still login after potentially removing an auth method
+/// This prevents users from removing all auth methods which would lock them out
+async fn ensure_can_still_login_after_email_removal(
+    s: &ServerState,
+    user_id: UserId,
+) -> Result<()> {
+    let mut auth_state = fetch_auth_state(s, user_id).await?;
+
+    // Temporarily "remove" the email auth method to simulate the state after removal
+    auth_state.has_email = false;
+
+    // Check if the user can still login with remaining methods
+    // According to AuthState::can_login logic:
+    // - has_email: if there is at least one verified and primary email address
+    // - oauth_providers: if there are any OAuth providers
+    // - authenticators: if there are any WebAuthn authenticators (currently not implemented properly)
+    if !auth_state.has_email
+        && auth_state.oauth_providers.is_empty()
+        && auth_state.authenticators.is_empty()
+    {
+        // Special case: password alone is not sufficient for login according to can_login()
+        // A password requires an email to be useful for login (password reset, etc.)
+        if auth_state.has_password {
+            // If only password remains, they still can't login (based on can_login logic)
+            return Err(Error::BadStatic("Cannot remove email: this would lock you out of your account. You must have at least one authentication method remaining."));
+        }
+
+        return Err(Error::BadStatic("Cannot remove email: this would lock you out of your account. You must have at least one authentication method remaining."));
+    }
+
+    Ok(())
+}
+
 /// Email add
 #[utoipa::path(
     put,
@@ -141,6 +176,10 @@ async fn email_delete(
         .iter()
         .find(|e| e.email == email)
         .ok_or(Error::NotFound)?;
+
+    if email_info.is_verified && email_info.is_primary {
+        ensure_can_still_login_after_email_removal(&s, target_user_id).await?;
+    }
 
     s.data()
         .user_email_delete(target_user_id, email.clone())

@@ -384,6 +384,9 @@ async fn auth_oauth_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
+
+    ensure_can_still_login_after_removal(&s, auth.user.id, "oauth", Some(&provider)).await?;
+
     let start_state = fetch_auth_state(&s, auth.user.id).await?;
     let data = s.data();
     data.auth_oauth_delete(provider, auth.user.id).await?;
@@ -779,6 +782,9 @@ async fn auth_totp_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
+
+    ensure_can_still_login_after_removal(&s, auth.user.id, "totp", None).await?;
+
     let had_totp = s
         .data()
         .auth_totp_get(auth.user.id)
@@ -900,6 +906,9 @@ async fn auth_password_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
+
+    ensure_can_still_login_after_removal(&s, auth.user.id, "password", None).await?;
+
     let data = s.data();
     let has_password = data.auth_password_get(auth.user.id).await?.is_some();
     if !has_password {
@@ -989,6 +998,64 @@ pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthSt
         authenticators: vec![], // webauthn not implemented yet
     };
     Ok(auth_state)
+}
+
+/// Check if a user can still login after potentially removing an auth method
+/// This prevents users from removing all auth methods which would lock them out
+async fn ensure_can_still_login_after_removal(
+    s: &ServerState,
+    user_id: UserId,
+    method_to_remove: &str,
+    oauth_provider_to_remove: Option<&str>,
+) -> Result<()> {
+    let mut auth_state = fetch_auth_state(s, user_id).await?;
+
+    // Temporarily "remove" the specified method to simulate the state after removal
+    match method_to_remove {
+        "oauth" => {
+            if let Some(provider_to_remove) = oauth_provider_to_remove {
+                auth_state
+                    .oauth_providers
+                    .retain(|p| p != provider_to_remove);
+            } else {
+                panic!("you want to remove an oauth provider but didn't specify which one")
+            }
+        }
+        "totp" => {
+            auth_state.has_totp = false;
+        }
+        "password" => {
+            auth_state.has_password = false;
+        }
+        "email" => {
+            // This would be for removing email auth specifically, but email is handled differently
+            // Email is checked via has_email which depends on verified primary emails
+            // For now, we'll treat this separately if needed
+            auth_state.has_email = false;
+        }
+        _ => {}
+    }
+
+    // Check if the user can still login with remaining methods
+    // According to AuthState::can_login logic:
+    // - has_email: if there is at least one verified and primary email address
+    // - oauth_providers: if there are any OAuth providers
+    // - authenticators: if there are any WebAuthn authenticators (currently not implemented properly)
+    if !auth_state.has_email
+        && auth_state.oauth_providers.is_empty()
+        && auth_state.authenticators.is_empty()
+    {
+        // Special case: password alone is not sufficient for login according to can_login()
+        // A password requires an email to be useful for login (password reset, etc.)
+        if auth_state.has_password {
+            // If only password remains, they still can't login (based on can_login logic)
+            return Err(Error::BadStatic("Cannot remove authentication method: this would lock you out of your account. You must have at least one authentication method remaining."));
+        }
+
+        return Err(Error::BadStatic("Cannot remove authentication method: this would lock you out of your account. You must have at least one authentication method remaining."));
+    }
+
+    Ok(())
 }
 
 /// Auth captcha init (TODO)
