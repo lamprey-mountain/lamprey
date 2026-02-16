@@ -23,4 +23,11 @@ export enum MessageType {
 	DefaultMarkdown = "DefaultMarkdown",
 	DefaultTagged = "DefaultTagged",
 	ThreadUpdate = "ThreadUpdate",
+	MessagesMoved = "MessagesMoved",
+	Call = "Call",
+	ChannelPingback = "ChannelPingback",
+	ChannelMoved = "ChannelMoved",
+	ChannelIcon = "ChannelIcon",
+	ThreadCreated = "ThreadCreated",
+	AutomodExecution = "AutomodExecution",
 }

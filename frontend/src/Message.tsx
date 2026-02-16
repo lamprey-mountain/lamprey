@@ -594,7 +594,7 @@ export function MessageView(props: MessageProps) {
 					<MessageToolbar message={props.message} />
 				</article>
 			);
-		} else if (props.message.type === "ThreadRename") {
+		} else if (props.message.type === "ChannelRename") {
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -620,6 +620,238 @@ export function MessageView(props: MessageProps) {
 								<Author message={props.message} thread={thread()} />
 							</span>{" "}
 							renamed the thread to <b>{props.message.name_new}</b>
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "MessagesMoved") {
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icEdit} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							moved messages to a different channel
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "Call") {
+			// TODO: say "you missed a call" in dm channels
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icMemberJoin} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							{props.message.ended_at
+								? `call ended with ${props.message.participants.length} participant(s)`
+								: `started a call with ${props.message.participants.length} participant(s)`}
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "ChannelPingback") {
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icReply} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							mentioned this channel from another channel
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "ChannelMoved") {
+			// TODO: show source and target channel names
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icEdit} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							moved this thread
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "ChannelIcon") {
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icEdit} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							changed the channel icon
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "ThreadCreated") {
+			// TODO: link to thread
+			// TODO: button to view all threads
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icMemberJoin} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							created a thread
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "AutomodExecution") {
+			// TODO: richer automod exec rendering
+			// TODO: show some buttons for quick actions (eg. delete, timeout, kick, ban, etc)
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icMemberRemove} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							automod action triggered
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
