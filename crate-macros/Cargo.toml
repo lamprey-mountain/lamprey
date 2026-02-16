@@ -16,3 +16,4 @@ syn = { version = "2.0", features = ["full", "extra-traits"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 uuid = { version = "1.11.1", features = ["v7", "macro-diagnostics"] }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
