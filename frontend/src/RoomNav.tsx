@@ -119,7 +119,7 @@ export const RoomNav = () => {
 		} | null
 	>(null);
 	const [target, setTarget] = createSignal<
-		{ id: string; after: boolean } | null
+		{ id: string; position: "before" | "after" | "inside" } | null
 	>(
 		null,
 	);
@@ -196,7 +196,7 @@ export const RoomNav = () => {
 	const previewedItems = createMemo(() => {
 		const fromId = dragging()?.id;
 		const toId = target()?.id;
-		const after = target()?.after;
+		const position = target()?.position;
 		const items = reorderedItems();
 		const creatingFolder = folderPreview();
 
@@ -246,7 +246,9 @@ export const RoomNav = () => {
 			}
 
 			const [fromItem] = fromResult.parentList.splice(fromResult.index, 1);
-			const toIndex = newItems.findIndex((i: any) => i.id === toId);
+			const toIndex = newItems.findIndex((i: any) =>
+				(i.type === "folder" ? i.id : i.id) === toId
+			);
 			if (toIndex === -1) return items;
 
 			newItems[toIndex] = {
@@ -261,6 +263,16 @@ export const RoomNav = () => {
 		if (!toId || fromId === toId) return items;
 
 		const from = findItem(fromId, newItems);
+
+		if (toId === "end") {
+			if (!from) return items;
+			const [movedItem] = from.parentList.splice(from.index, 1);
+			newItems.push(movedItem);
+			return newItems.filter(
+				(item: any) => !(item.type === "folder" && item.items.length === 0),
+			);
+		}
+
 		const to = findItem(toId, newItems);
 
 		if (!from || !to) return items;
@@ -273,13 +285,13 @@ export const RoomNav = () => {
 
 		const [movedItem] = from.parentList.splice(from.index, 1);
 
-		if (to.item.type === "folder" && movedItem.id) {
+		if (to.item.type === "folder" && position === "inside" && movedItem.id) {
 			to.item.items.push(movedItem);
 		} else if (to.parent) {
-			let insertIndex = to.index + (after ? 1 : 0);
+			let insertIndex = to.index + (position === "after" ? 1 : 0);
 			to.parent.items.splice(insertIndex, 0, movedItem);
 		} else {
-			let insertIndex = to.index + (after ? 1 : 0);
+			let insertIndex = to.index + (position === "after" ? 1 : 0);
 			if (!from.parent && from.index < to.index) {
 				insertIndex--;
 			}
@@ -327,17 +339,30 @@ export const RoomNav = () => {
 		}
 
 		const rect = targetEl.getBoundingClientRect();
-		const after = e.clientY > rect.top + rect.height / 2;
-		if (target()?.id !== id || target()?.after !== after) {
-			setTarget({ id, after });
+		const relY = e.clientY - rect.top;
+		const threshold = toType === "folder" ? 0.25 : 0.5;
+
+		let position: "before" | "after" | "inside";
+		if (id === "end") {
+			position = "after";
+		} else if (relY < rect.height * threshold) {
+			position = "before";
+		} else if (relY > rect.height * (1 - threshold)) {
+			position = "after";
+		} else {
+			position = "inside";
+		}
+
+		if (target()?.id !== id || target()?.position !== position) {
+			setTarget({ id, position });
 		}
 
 		const fromType = dragging()?.type;
 
-		if (fromType === "room" && toType === "room") {
+		if (fromType === "room" && toType === "room" && position === "inside") {
 			if (folderPreview() !== id) {
 				clearTimeout(folderTimer);
-				folderTimer = window.setTimeout(() => setFolderPreview(id), 1000);
+				folderTimer = window.setTimeout(() => setFolderPreview(id), 500);
 			}
 		} else {
 			clearTimeout(folderTimer);
@@ -348,8 +373,15 @@ export const RoomNav = () => {
 	const handleDragLeave = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		clearTimeout(folderTimer);
-		setFolderPreview(null);
+		// Only clear if we're moving outside the element, not into a child
+		const relatedTarget = e.relatedTarget as HTMLElement;
+		if (
+			!e.currentTarget ||
+			!(e.currentTarget as HTMLElement).contains(relatedTarget)
+		) {
+			clearTimeout(folderTimer);
+			setFolderPreview(null);
+		}
 	};
 
 	const handleDrop = (e: DragEvent) => {
@@ -357,7 +389,7 @@ export const RoomNav = () => {
 		e.stopPropagation();
 		const fromId = dragging()?.id;
 		const toId = target()?.id;
-		const after = target()?.after;
+		const position = target()?.position;
 		const creatingFolder = folderPreview();
 
 		clearTimeout(folderTimer);
@@ -422,6 +454,20 @@ export const RoomNav = () => {
 		};
 
 		const from = findItem(fromId);
+
+		if (toId === "end") {
+			if (!from) return;
+			const [movedItem] = from.parent
+				? from.parent.items.splice(from.index, 1)
+				: config.splice(from.index, 1);
+			config.push(movedItem);
+			const finalConfig = config.filter(
+				(item) => !(item.type === "folder" && item.items.length === 0),
+			);
+			updateRoomOrder(finalConfig);
+			return;
+		}
+
 		const to = findItem(toId);
 
 		if (!from || !to) return;
@@ -436,17 +482,20 @@ export const RoomNav = () => {
 			? from.parent.items.splice(from.index, 1)
 			: config.splice(from.index, 1);
 
-		if (to.item.type === "folder" && movedItem.type === "room") {
+		if (
+			to.item.type === "folder" && position === "inside" &&
+			movedItem.type === "room"
+		) {
 			to.item.items.push(movedItem);
 		} else if (to.parent) {
-			const insertIndex = to.index + (after ? 1 : 0);
+			const insertIndex = to.index + (position === "after" ? 1 : 0);
 			to.parent.items.splice(
 				insertIndex,
 				0,
 				movedItem as { type: "room"; room_id: string },
 			);
 		} else {
-			let insertIndex = to.index + (after ? 1 : 0);
+			let insertIndex = to.index + (position === "after" ? 1 : 0);
 			if (!from.parent && from.index < to.index) {
 				insertIndex--;
 			}
@@ -497,8 +546,10 @@ export const RoomNav = () => {
 				}}
 				classList={{
 					dragging: dragging()?.id === props.room.id,
-					"drag-over": target()?.id === props.room.id && !target()?.after,
-					"drag-over-after": target()?.id === props.room.id && target()?.after,
+					"drag-over": target()?.id === props.room.id &&
+						target()?.position === "before",
+					"drag-over-after": target()?.id === props.room.id &&
+						target()?.position === "after",
 					"folder-preview": folderPreview() === props.room.id,
 					"no-icon": !props.room.icon,
 					unread: getRoomUnread(props.room.id),
@@ -541,7 +592,12 @@ export const RoomNav = () => {
 											onDragLeave={handleDragLeave}
 											classList={{
 												dragging: dragging()?.id === folder.id,
-												"drag-over": target()?.id === folder.id,
+												"drag-over": target()?.id === folder.id &&
+													target()?.position === "before",
+												"drag-over-after": target()?.id === folder.id &&
+													target()?.position === "after",
+												"drag-over-inside": target()?.id === folder.id &&
+													target()?.position === "inside",
 												"preview": folderPreview() &&
 													folder.items.some((room) =>
 														room.id === folderPreview()
@@ -596,6 +652,17 @@ export const RoomNav = () => {
 							</Switch>
 						)}
 					</For>
+					<li
+						class="drop-target-end"
+						data-id="end"
+						data-type="root"
+						onDragOver={handleDragOver}
+						onDrop={handleDrop}
+						classList={{
+							"drag-over": target()?.id === "end",
+						}}
+						style={{ height: "40px", "margin-top": "auto" }}
+					/>
 				</ul>
 			</nav>
 		</Show>
