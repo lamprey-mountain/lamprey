@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Connection,
+    application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
     document::{DocumentBranch, DocumentStateVector, DocumentTag, DocumentUpdate},
     presence::Presence,
@@ -149,10 +149,14 @@ pub enum MessagePayload {
     /// successfully connected
     Ready {
         /// current user, null if session is unauthed
-        user: Box<Option<User>>,
+        user: Option<Box<User>>,
 
-        // /// the application this bot user belongs, if the user is a bot
-        // application: Box<Option<Application>>,
+        /// the application that's being used
+        ///
+        /// - if this is a bot, this is the bot application
+        /// - if this is an oauth app, this is the oauth application
+        application: Option<Box<Application>>,
+
         /// current session
         session: Session,
 
@@ -191,31 +195,35 @@ pub enum MessageSync {
     //     /// connection id
     //     conn: String,
     // },
+    /// extra data for the client to function, sent after Ready
+    // NOTE: should this be included for bots?
+    Ambient {
+        /// the user that this Ambient message is for
+        user_id: UserId,
 
-    // /// extra data for the client to function, sent after Ready
-    // ReadySupplemental {
-    //     /// all rooms the user can see
-    //     rooms: Vec<Room>,
+        /// all rooms the user can see
+        rooms: Vec<Room>,
 
-    //     /// all roles in all rooms the user can see
-    //     roles: Vec<Role>,
+        /// all roles in all rooms the user can see
+        roles: Vec<Role>,
 
-    //     /// all channels the user can see
-    //     channels: Vec<Channel>,
+        /// all channels the user can see
+        channels: Vec<Channel>,
 
-    //     /// all threads the user can see
-    //     threads: Vec<Channel>,
+        /// all active (ie. not archived) threads the user can see
+        threads: Vec<Channel>,
 
-    //     /// only contains the auth user's members (one for each room)
-    //     room_members: Vec<RoomMember>,
+        /// the user's room member object for each room the user is in
+        room_members: Vec<RoomMember>,
 
-    //     /// user's global config
-    //     config: UserConfigGlobal,
+        /// user's global preferences
+        config: PreferencesGlobal,
+        // NOTE: maybe i should include even more data
+        // - friends/relationships (including friend requests)
+        // - dms
+        // - emoji
+    },
 
-    //     // unsure about these
-    //     friends: Vec<User>,
-    //     emojis: Vec<CustomEmoji>,
-    // },
     RoomCreate {
         room: Room,
     },

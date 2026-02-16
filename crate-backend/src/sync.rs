@@ -408,9 +408,19 @@ impl Connection {
             None
         };
 
+        let d = self.s.data();
+        let application = if let Some(application_id) = session.app_id {
+            Some(Box::new(d.application_get(application_id).await?))
+        } else if let Some(uid) = session.user_id() {
+            d.application_get((*uid).into()).await.ok().map(Box::new)
+        } else {
+            None
+        };
+
         let msg = MessageEnvelope {
             payload: types::MessagePayload::Ready {
-                user: Box::new(user),
+                user: user.map(Box::new),
+                application,
                 session: session.clone(),
                 conn: self.get_id(),
                 seq: 0,
@@ -673,6 +683,7 @@ impl Connection {
         }
 
         let auth_check = match &*msg {
+            MessageSync::Ambient { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RoomCreate { room } => AuthCheck::Room(room.id),
             MessageSync::RoomUpdate { room } => AuthCheck::Room(room.id),
             MessageSync::RoomDelete { room_id } => AuthCheck::Room(*room_id),

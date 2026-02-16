@@ -43,7 +43,9 @@ where
         let _ = match payload {
             MessagePayload::Sync { data, .. } => self.sync(*data).await,
             MessagePayload::Error { error } => self.error(error).await,
-            MessagePayload::Ready { user, session, .. } => self.ready(*user, session).await,
+            MessagePayload::Ready { user, session, .. } => {
+                self.ready(user.map(|u| *u), session).await
+            }
             _ => return,
         };
     }
