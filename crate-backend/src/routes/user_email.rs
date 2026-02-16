@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::util::Changes;
-use common::v1::types::AuditLogEntryType;
+use common::v1::types::{AuditLogEntryType, MessageSync};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::routes::util::Auth;
@@ -94,6 +94,13 @@ async fn email_add(
             })
             .await?;
 
+            let user = s
+                .services()
+                .users
+                .get(target_user_id, Some(auth.user.id))
+                .await?;
+            s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
+
             Ok(StatusCode::CREATED.into_response())
         }
         Err(Error::EmailAlreadyExists) => Ok(StatusCode::OK.into_response()),
@@ -147,6 +154,13 @@ async fn email_delete(
             .build(),
     })
     .await?;
+
+    let user = s
+        .services()
+        .users
+        .get(target_user_id, Some(auth.user.id))
+        .await?;
+    s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
 }
@@ -240,6 +254,13 @@ async fn email_update(
             .build(),
     })
     .await?;
+
+    let user = s
+        .services()
+        .users
+        .get(target_user_id, Some(auth.user.id))
+        .await?;
+    s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -347,6 +368,13 @@ async fn email_verification_finish(
         changes: Changes::new().change("is_verified", &false, &true).build(),
     })
     .await?;
+
+    let user = s
+        .services()
+        .users
+        .get(target_user_id, Some(auth.user.id))
+        .await?;
+    s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
 }
