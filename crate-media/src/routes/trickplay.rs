@@ -2,29 +2,13 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use common::v1::types::MediaId;
+use common::{v1::types::MediaId, v2::types::media::proxy::TrickplayQuery};
 use http::StatusCode;
 use serde::Deserialize;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{error::Result, AppState};
-
-// NOTE: theres probably a better way to do this
-#[derive(Debug, Deserialize)]
-struct TrickplayQuery {
-    /// number of thumbnails on the y axis
-    pub height: Option<u32>,
-
-    /// number of thumbnails on the x axis
-    pub width: Option<u32>,
-
-    /// height for each thumbnail
-    pub thumb_height: Option<u32>,
-
-    /// width for each thumbnail
-    pub thumb_width: Option<u32>,
-}
 
 /// Fetch trickplay (TODO)
 #[utoipa::path(get, path = "/trickplay/{media_id}")]

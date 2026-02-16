@@ -13,6 +13,8 @@ use crate::v1::types::{
     ChannelId, EmbedId, MediaId, MessageId, MessageVerId, Mime, RoomId, UserId,
 };
 
+pub mod proxy;
+
 /// A reference to a piece of media to be used.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
