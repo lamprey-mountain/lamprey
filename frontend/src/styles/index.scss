@@ -3596,3 +3596,37 @@ input[type="color"] {
 		border-bottom-right-radius: 8px;
 	}
 }
+
+.threads-popout {
+	background: $bg-150;
+	border: solid $sep-300 1px;
+	box-shadow: 0 2px 8px $bg-100;
+	padding: 8px;
+	min-width: 360px;
+	min-height: 360px;
+
+	& .header {
+		display: flex;
+
+		& > input[type="search"] {
+			flex: 1;
+		}
+	}
+
+	.thread-item {
+		border: solid $sep-300 1px;
+		background: $bg-200;
+		padding: 8px;
+		cursor: pointer;
+		margin-top: 8px;
+
+		&:hover {
+			background: $bg-300;
+		}
+	}
+
+	.dim {
+		margin-top: 8px;
+		margin-bottom: -4px;
+	}
+}

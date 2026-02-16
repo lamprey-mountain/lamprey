@@ -82,6 +82,7 @@ import { ChannelNav } from "./ChannelNav.tsx";
 import { useVoice, VoiceProvider } from "./voice-provider.tsx";
 import { Config, ConfigProvider, useConfig } from "./config.tsx";
 import { UserView } from "./User.tsx";
+import { ThreadPopout } from "./ThreadPopout.tsx";
 import { EmojiPicker } from "./EmojiPicker.tsx";
 import { Autocomplete } from "./Autocomplete.tsx";
 import { AutocompleteState } from "./context.ts";
@@ -258,6 +259,9 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	const [popout, setPopout] = createSignal<Popout>({});
 	const [autocomplete, setAutocomplete] = createSignal<AutocompleteState>(null);
 	const [userView, setUserView] = createSignal<UserViewData | null>(null);
+	const [threadsView, setThreadsView] = createSignal<ThreadsViewData | null>(
+		null,
+	);
 
 	const slashCommands = new SlashCommands();
 	registerDefaultSlashCommands(slashCommands);
@@ -296,6 +300,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		setAutocomplete,
 		userView,
 		setUserView,
+		threadsView,
+		setThreadsView,
 		uploads: new ReactiveMap(),
 		recentChannels,
 		setRecentChannels,
@@ -462,6 +468,7 @@ export const Root3 = (props: any) => {
 	const handleClick = (e: MouseEvent) => {
 		props.setMenu(null);
 		ctx.setUserView(null);
+		ctx.setThreadsView(null);
 		if (!e.isTrusted) return;
 		// const target = e.target as HTMLElement;
 		// if (target.matches("a[download]")) {
@@ -661,6 +668,32 @@ function Overlay() {
 		onCleanup(cleanup);
 	});
 
+	const [threadsViewRef, setThreadsViewRef] = createSignal<HTMLElement>();
+	const [threadsViewFloating, setThreadsViewFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
+	});
+
+	createEffect(() => {
+		const reference = ctx.threadsView()?.ref;
+		const floating = threadsViewRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(
+			reference,
+			floating,
+			() => {
+				computePosition(reference, floating, {
+					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+					placement: "bottom-end",
+				}).then(({ x, y, strategy }) => {
+					setThreadsViewFloating({ x, y, strategy });
+				});
+			},
+		);
+		onCleanup(cleanup);
+	});
+
 	const [popoutRef, setPopoutRef] = createSignal<HTMLElement>();
 	const [popoutFloating, setPopoutFloating] = createStore({
 		x: 0,
@@ -805,6 +838,20 @@ function Overlay() {
 						room_member={userViewData()!.room_member() ?? undefined}
 						thread_member={userViewData()!.thread_member() ?? undefined}
 					/>
+				</div>
+			</Show>
+			<Show when={ctx.threadsView()}>
+				<div
+					ref={setThreadsViewRef}
+					style={{
+						position: threadsViewFloating.strategy,
+						top: "0px",
+						left: "0px",
+						translate: `${threadsViewFloating.x}px ${threadsViewFloating.y}px`,
+						"z-index": 100,
+					}}
+				>
+					<ThreadPopout channel_id={ctx.threadsView()!.channel_id} />
 				</div>
 			</Show>
 			<Show when={ctx.autocomplete()}>

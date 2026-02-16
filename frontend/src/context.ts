@@ -154,6 +154,11 @@ export type UserViewData = {
 	source?: "member-list" | "message";
 };
 
+export type ThreadsViewData = {
+	channel_id: string;
+	ref: HTMLElement;
+};
+
 export type Popout = {
 	id?: string;
 	ref?: HTMLElement;
@@ -213,6 +218,8 @@ export type ChatCtx = {
 	setAutocomplete: Setter<AutocompleteState>;
 	userView: Accessor<UserViewData | null>;
 	setUserView: Setter<UserViewData | null>;
+	threadsView: Accessor<ThreadsViewData | null>;
+	setThreadsView: Setter<ThreadsViewData | null>;
 	uploads: ReactiveMap<string, Upload>; // TODO: verify this is unused then remove
 	recentChannels: Accessor<Array<string>>;
 	setRecentChannels: Setter<Array<string>>;

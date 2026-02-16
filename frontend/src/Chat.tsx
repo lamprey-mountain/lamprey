@@ -30,6 +30,7 @@ import { md } from "./markdown.tsx";
 import icPin from "./assets/pin.png";
 import icMembers from "./assets/members.png";
 import icCall from "./assets/call.png";
+import icThreads from "./assets/threads.png";
 import { useChannel } from "./channelctx.tsx";
 import { useRoom } from "./contexts/room.tsx";
 
@@ -478,6 +479,28 @@ export const ChatHeader = (
 							title="Start call"
 						>
 							<img class="icon" src={icCall} />
+						</button>
+					</Show>
+					<Show
+						when={props.channel.type === "Text" ||
+							props.channel.type === "Announcement" ||
+							props.channel.type === "Gdm"}
+					>
+						<button
+							onClick={(e) => {
+								if (!ctx.threadsView()) {
+									const ref = e.currentTarget;
+									queueMicrotask(() => {
+										ctx.setThreadsView({
+											channel_id: props.channel.id,
+											ref,
+										});
+									});
+								}
+							}}
+							title="Threads"
+						>
+							<img class="icon" src={icThreads} />
 						</button>
 					</Show>
 					<button
