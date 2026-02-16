@@ -28,11 +28,12 @@ export class Reactions {
 
 	async add(channel_id: string, message_id: string, key: string) {
 		await this.api.client.http.PUT(
-			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{key}",
+			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
 			{
 				params: {
 					path: {
-						key,
+						user_id: "@self",
+						reaction_key: key,
 						message_id,
 						channel_id,
 					},
@@ -43,11 +44,11 @@ export class Reactions {
 
 	async delete(channel_id: string, message_id: string, key: string) {
 		await this.api.client.http.DELETE(
-			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{key}/{user_id}",
+			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
 			{
 				params: {
 					path: {
-						key,
+						reaction_key: key,
 						message_id,
 						channel_id,
 						user_id: "@self",
@@ -64,11 +65,11 @@ export class Reactions {
 		key: string,
 	) {
 		await this.api.client.http.DELETE(
-			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{key}/{user_id}",
+			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
 			{
 				params: {
 					path: {
-						key,
+						reaction_key: key,
 						message_id,
 						channel_id,
 						user_id,
@@ -80,11 +81,11 @@ export class Reactions {
 
 	async deleteForKey(channel_id: string, message_id: string, key: string) {
 		await this.api.client.http.DELETE(
-			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{key}",
+			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}",
 			{
 				params: {
 					path: {
-						key,
+						reaction_key: key,
 						message_id,
 						channel_id,
 					},
