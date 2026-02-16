@@ -4,12 +4,11 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
     ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message, MessageId,
-    MessageMember, MessageSync, MessageThreadCreated, MessageType, PaginationQuery,
-    PaginationResponse, Permission, RoomId, ThreadMember, ThreadMemberPut, UserId, SERVER_ROOM_ID,
+    MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission,
+    RoomId, ThreadMember, ThreadMemberPut, UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use serde::Serialize;
@@ -17,7 +16,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::types::{DbChannelCreate, DbChannelType, DbMessageCreate, UserIdReq};
+use crate::types::UserIdReq;
 use crate::ServerState;
 
 use super::util::Auth;

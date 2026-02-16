@@ -11,9 +11,8 @@ use common::v1::types::{
     document::serialized::Serdoc,
     document::{
         DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchMerge,
-        DocumentBranchPatch, DocumentBranchState, DocumentCrdtApply, DocumentCrdtDiffParams,
-        DocumentRevisionId, DocumentStateVector, DocumentTagCreate, DocumentTagPatch,
-        DocumentUpdate, SerdocPut,
+        DocumentBranchPatch, DocumentBranchState, DocumentCrdtDiffParams, DocumentRevisionId,
+        DocumentStateVector, DocumentTagCreate, DocumentTagPatch, SerdocPut,
     },
     pagination::{PaginationQuery, PaginationResponse},
     ChannelId, Permission,

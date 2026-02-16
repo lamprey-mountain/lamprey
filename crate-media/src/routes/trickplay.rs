@@ -4,7 +4,6 @@ use axum::{
 };
 use common::{v1::types::MediaId, v2::types::media::proxy::TrickplayQuery};
 use http::StatusCode;
-use serde::Deserialize;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
