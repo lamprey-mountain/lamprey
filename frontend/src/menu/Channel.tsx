@@ -140,6 +140,8 @@ export function ChannelMenu(props: { channel_id: string }) {
 				when={channel() && isThread() && parentChan()?.tags_available}
 			>
 				<Submenu content={"tags"}>
+					{/* TODO: autofocus */}
+					<input type="search" placeholder="search tags..." />
 					<For each={parentChan()!.tags_available}>
 						{(tag) => (
 							<Item
