@@ -39,6 +39,9 @@ use crate::util::{cors, BadgeModifier, NestedTags};
 
 mod util;
 
+#[cfg(feature = "embed-frontend")]
+mod frontend;
+
 // NOTE: the `sync` tag doesn't seem to show up, so i moved its docs to index.md
 #[derive(OpenApi)]
 #[openapi(
@@ -436,62 +439,4 @@ async fn gc_all(state: Arc<ServerState>) -> Result<()> {
     gc_audit_log(state.clone()).await?;
     gc_room_analytics(state).await?;
     Ok(())
-}
-
-#[cfg(feature = "embed-frontend")]
-mod frontend {
-    use axum::{
-        body::Body,
-        http::{header, StatusCode, Uri},
-        response::{IntoResponse, Response},
-    };
-    use rust_embed::RustEmbed;
-
-    #[derive(RustEmbed)]
-    #[folder = "$RUST_EMBED_FRONTEND_PATH"]
-    struct Asset;
-
-    pub async fn frontend_handler(uri: Uri) -> impl IntoResponse {
-        let mut path = uri.path().trim_start_matches('/').to_string();
-        if path.is_empty() {
-            path = "index.html".to_string();
-        }
-
-        match Asset::get(path.as_str()) {
-            Some(content) => {
-                let mime = mime_from_ext(path.as_str());
-                Response::builder()
-                    .header(header::CONTENT_TYPE, mime)
-                    .body(Body::from(content.data))
-                    .unwrap()
-            }
-            None => {
-                if let Some(content) = Asset::get("index.html") {
-                    Response::builder()
-                        .header(header::CONTENT_TYPE, "text/html")
-                        .body(Body::from(content.data))
-                        .unwrap()
-                } else {
-                    Response::builder()
-                        .status(StatusCode::NOT_FOUND)
-                        .body(Body::empty())
-                        .unwrap()
-                }
-            }
-        }
-    }
-
-    fn mime_from_ext(path: &str) -> &'static str {
-        match path.split('.').last() {
-            Some("html") => "text/html",
-            Some("css") => "text/css",
-            Some("js") => "application/javascript",
-            Some("wasm") => "application/wasm",
-            Some("svg") => "image/svg+xml",
-            Some("png") => "image/png",
-            Some("jpg") => "image/jpeg",
-            Some("ico") => "image/x-icon",
-            _ => "application/octet-stream",
-        }
-    }
 }
