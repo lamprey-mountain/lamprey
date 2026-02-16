@@ -4,6 +4,7 @@ import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
+import { DurationInput } from "../DurationInput.tsx";
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
@@ -14,11 +15,24 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	const [editingDescription, setEditingDescription] = createSignal(
 		props.channel.description,
 	);
+	const [editingSlowmodeMessage, setEditingSlowmodeMessage] = createSignal(
+		props.channel.slowmode_message,
+	);
+	const [editingSlowmodeThread, setEditingSlowmodeThread] = createSignal(
+		props.channel.slowmode_thread,
+	);
+	const [editingDefaultSlowmodeMessage, setEditingDefaultSlowmodeMessage] =
+		createSignal(
+			props.channel.default_slowmode_message,
+		);
 
 	const isDirty = () =>
 		editingName() !== props.channel.name ||
 		editingDescription() !== props.channel.description ||
-		editingNsfw() !== props.channel.nsfw;
+		editingNsfw() !== props.channel.nsfw ||
+		editingSlowmodeMessage() !== props.channel.slowmode_message ||
+		editingSlowmodeThread() !== props.channel.slowmode_thread ||
+		editingDefaultSlowmodeMessage() !== props.channel.default_slowmode_message;
 
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
@@ -27,6 +41,9 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				name: editingName(),
 				description: editingDescription(),
 				nsfw: editingNsfw(),
+				slowmode_message: editingSlowmodeMessage(),
+				slowmode_thread: editingSlowmodeThread(),
+				default_slowmode_message: editingDefaultSlowmodeMessage(),
 			},
 		});
 	};
@@ -51,6 +68,9 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		setEditingName(props.channel.name);
 		setEditingDescription(props.channel.description);
 		setEditingNsfw(props.channel.nsfw);
+		setEditingSlowmodeMessage(props.channel.slowmode_message);
+		setEditingSlowmodeThread(props.channel.slowmode_thread);
+		setEditingDefaultSlowmodeMessage(props.channel.default_slowmode_message);
 	};
 
 	return (
@@ -74,6 +94,29 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			<div>
 				channel id: <code class="select-all">{props.channel.id}</code>
 			</div>
+			<div>
+				<div class="dim">slowmode (messages)</div>
+				<DurationInput
+					value={editingSlowmodeMessage()}
+					onInput={setEditingSlowmodeMessage}
+				/>
+			</div>
+			<div>
+				<div class="dim">slowmode (threads)</div>
+				<DurationInput
+					value={editingSlowmodeThread()}
+					onInput={setEditingSlowmodeThread}
+				/>
+			</div>
+			<Show when={api.channels.cache.get(props.channel.id)?.type === "Forum" || api.channels.cache.get(props.channel.id)?.type === "Text"}>
+				<div>
+					<div class="dim">slowmode (messages default for threads)</div>
+					<DurationInput
+						value={editingDefaultSlowmodeMessage()}
+						onInput={setEditingDefaultSlowmodeMessage}
+					/>
+				</div>
+			</Show>
 			<div>
 				<label class="option">
 					<input

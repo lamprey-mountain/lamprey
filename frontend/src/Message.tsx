@@ -42,6 +42,7 @@ import icMemberAdd from "./assets/member-add.png";
 import icMemberRemove from "./assets/member-remove.png";
 import icMemberJoin from "./assets/member-join.png";
 import icPin from "./assets/pin.png";
+import icThread from "./assets/threads.png";
 
 type MessageProps = {
 	message: MessageT;
@@ -791,8 +792,10 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "ThreadCreated") {
-			// TODO: link to thread
-			// TODO: button to view all threads
+			const navigate = useNavigate();
+			const ctx = useCtx();
+			const threadId = () => props.message.source_message_id;
+			
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -805,7 +808,7 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 				>
-					<img class="icon main" src={icMemberJoin} />
+					<img class="icon main" src={icThread} />
 					<div class="content">
 						<div
 							class="body markdown"
@@ -817,7 +820,39 @@ export function MessageView(props: MessageProps) {
 							>
 								<Author message={props.message} thread={thread()} />
 							</span>{" "}
-							created a thread
+							created{" "}
+							<Show 
+								when={threadId()} 
+								fallback={<span>a thread</span>}
+							>
+								<button 
+									class="link"
+									onClick={(e) => {
+										e.stopPropagation();
+										if (threadId()) {
+											navigate(`/thread/${threadId()}`);
+										}
+									}}
+								>
+									a thread
+								</button>
+							</Show>
+							{" "}
+							<button 
+								class="link"
+								onClick={(e) => {
+									e.stopPropagation();
+									const ref = e.currentTarget;
+									queueMicrotask(() => {
+										ctx.setThreadsView({
+											channel_id: props.message.channel_id,
+											ref,
+										});
+									});
+								}}
+							>
+								View all threads
+							</button>
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
