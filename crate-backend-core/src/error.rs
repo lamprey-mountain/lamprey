@@ -4,10 +4,12 @@ use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{ApiError, SyncError};
-use common::v1::types::{MessageEnvelope, MessagePayload, MessageSync};
+use common::v1::types::{MessageEnvelope, MessagePayload};
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
 use tracing::error;
+
+use crate::types::MessageSync;
 
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff

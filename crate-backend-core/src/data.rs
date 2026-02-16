@@ -48,10 +48,8 @@ use common::v2::types::message::{Message as MessageV2, MessageVersion as Message
 
 use uuid::Uuid;
 
-use crate::config::ConfigInternal;
 use crate::error::Result;
-use crate::services::admin::AdminCollectGarbageMode;
-use crate::services::documents::EditContextId;
+use crate::types::admin::AdminCollectGarbageMode;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
     DbSessionCreate, DbUserCreate, DehydratedDocument, DocumentUpdateSummary, EmailPurpose,
@@ -59,6 +57,9 @@ use crate::types::{
     MessageVerId, PushData, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch,
     RoomVerId, Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
+use crate::ConfigInternal;
+
+pub type EditContextId = (ChannelId, DocumentBranchId);
 
 // #[async_trait]
 pub trait Data:
