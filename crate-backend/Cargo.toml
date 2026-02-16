@@ -88,7 +88,7 @@ lamprey-backend-rest = { version = "0.1.1", path = "../crate-backend-rest" }
 lamprey-backend-sync = { version = "0.1.1", path = "../crate-backend-sync" }
 
 [build-dependencies]
-vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
+vergen = { version = "8.3.2", features = ["build", "cargo", "git", "rustc"] }
 
 [features]
 default = []

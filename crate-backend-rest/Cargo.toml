@@ -16,3 +16,6 @@ common = { package = "lamprey-common", version = "0.1.0", path = "../crate-commo
 lamprey-macros = { path = "../crate-macros" }
 utoipa = "5.4.0"
 url = "2.5.8"
+
+[build-dependencies]
+vergen = { version = "8.3.2", features = ["build", "cargo", "git", "rustc"] }

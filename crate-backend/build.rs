@@ -1,4 +1,4 @@
-use vergen_gix::{BuildBuilder, CargoBuilder, Emitter, GixBuilder, RustcBuilder};
+use vergen::EmitBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=migrations");
@@ -12,15 +12,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rustc-env=RUST_EMBED_FRONTEND_PATH={}", frontend_dist);
     }
 
-    let build = BuildBuilder::all_build()?;
-    let cargo = CargoBuilder::all_cargo()?;
-    let rustc = RustcBuilder::all_rustc()?;
-    let git = GixBuilder::all_git()?;
-    Emitter::default()
-        .add_instructions(&build)?
-        .add_instructions(&cargo)?
-        .add_instructions(&rustc)?
-        .add_instructions(&git)?
+    EmitBuilder::builder()
+        .all_build()
+        .all_cargo()
+        .all_git()
+        .all_rustc()
         .emit()?;
     Ok(())
 }
