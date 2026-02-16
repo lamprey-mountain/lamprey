@@ -544,155 +544,16 @@ async fn thread_create_from_message(
     Path((parent_channel_id, source_message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(mut json): Json<ChannelCreate>,
+    Json(json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    json.validate()?;
 
-    let srv = s.services();
-    let data = s.data();
-
-    // 1. Check permissions
-    let perms = srv
-        .perms
-        .for_channel(auth.user.id, parent_channel_id)
-        .await?;
-    perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::ThreadCreatePublic)?;
-
-    // 2. Check if channel is threadable
-    let parent_channel = srv
+    let channel = s
+        .services()
         .channels
-        .get(parent_channel_id, Some(auth.user.id))
+        .create_thread_from_message(&auth, parent_channel_id, source_message_id, json)
         .await?;
-    if !parent_channel.ty.has_public_threads() && !parent_channel.ty.has_forum2_threads() {
-        return Err(Error::BadStatic(
-            "Cannot create a thread in this channel type",
-        ));
-    }
-
-    // 3. Check if message exists and doesn't have a thread already
-    let source_message = srv
-        .messages
-        .get(parent_channel_id, source_message_id, auth.user.id)
-        .await?;
-    if !source_message.latest_version.message_type.is_threadable() {
-        return Err(Error::BadStatic(
-            "Cannot create a thread from this message type",
-        ));
-    }
-
-    let thread_id: ChannelId = (*source_message_id).into();
-    if data.channel_get(thread_id).await.is_ok() {
-        return Err(Error::Conflict);
-    }
-
-    // 4. Create the thread
-    let room_id = parent_channel.room_id;
-
-    // 5. Set auto_archive_duration to parent's default if not provided
-    if json.auto_archive_duration.is_none() {
-        json.auto_archive_duration = parent_channel.default_auto_archive_duration;
-    }
-
-    json.parent_id = Some(parent_channel_id);
-    json.validate()?;
-
-    let create = DbChannelCreate {
-        room_id: room_id.map(|id| id.into_inner()),
-        creator_id: auth.user.id,
-        name: json.name.clone(),
-        description: json.description.clone(),
-        url: json.url.clone(),
-        ty: if parent_channel.ty.has_forum2_threads() {
-            DbChannelType::ThreadForum2
-        } else {
-            DbChannelType::ThreadPublic
-        },
-        nsfw: json.nsfw,
-        bitrate: json.bitrate.map(|b| b as i32),
-        user_limit: json.user_limit.map(|u| u as i32),
-        parent_id: json.parent_id.map(|i| *i),
-        owner_id: None,
-        icon: None,
-        invitable: json.invitable,
-        auto_archive_duration: json.auto_archive_duration.map(|i| i as i64),
-        default_auto_archive_duration: json.default_auto_archive_duration.map(|i| i as i64),
-        slowmode_thread: json.slowmode_thread.map(|d| d as i64),
-        slowmode_message: json.slowmode_message.map(|d| d as i64),
-        default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
-        locked: false,
-        tags: json.tags,
-    };
-
-    data.channel_create_with_id(thread_id, create).await?;
-
-    // 5. Add creator as a member
-    data.thread_member_put(thread_id, auth.user.id, ThreadMemberPut::default())
-        .await?;
-
-    let channel = srv.channels.get(thread_id, Some(auth.user.id)).await?;
-    s.broadcast_channel(
-        parent_channel_id,
-        auth.user.id,
-        MessageSync::ChannelCreate {
-            channel: Box::new(channel.clone()),
-        },
-    )
-    .await?;
-
-    // 6. Conditionally create system message in the original thread
-    let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
-    if source_message.created_at.into_inner() < four_hours_ago {
-        let system_message_id = data
-            .message_create(DbMessageCreate {
-                id: None,
-                channel_id: parent_channel_id,
-                attachment_ids: vec![],
-                author_id: auth.user.id,
-                embeds: vec![],
-                message_type: MessageType::ThreadCreated(MessageThreadCreated {
-                    source_message_id: Some(source_message_id),
-                }),
-                edited_at: None,
-                created_at: None,
-                removed_at: None,
-                mentions: Default::default(),
-            })
-            .await?;
-
-        let system_message = srv
-            .messages
-            .get(parent_channel_id, system_message_id, auth.user.id)
-            .await?;
-        s.broadcast_channel(
-            parent_channel_id,
-            auth.user.id,
-            MessageSync::MessageCreate {
-                message: system_message,
-            },
-        )
-        .await?;
-    }
-
-    if let Some(room_id) = room_id {
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::ChannelCreate {
-            channel_id: thread_id,
-            channel_type: channel.ty,
-            changes: Changes::new()
-                .add("name", &channel.name)
-                .add("description", &channel.description)
-                .add("nsfw", &channel.nsfw)
-                .add("user_limit", &channel.user_limit)
-                .add("bitrate", &channel.bitrate)
-                .add("type", &channel.ty)
-                .add("parent_id", &channel.parent_id)
-                .build(),
-        })
-        .await?;
-    }
-
+    
     Ok((StatusCode::CREATED, Json(channel)))
 }
 

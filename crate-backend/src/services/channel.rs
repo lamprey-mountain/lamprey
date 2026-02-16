@@ -6,19 +6,20 @@ use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
-    MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageSync, MessageType,
-    PaginationQuery, Permission, PermissionOverwrite, RoomId, ThreadMemberPut, User, UserId,
-    SERVER_USER_ID,
+    MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageId, MessageSync,
+    MessageThreadCreated, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId,
+    ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
 use moka::future::Cache;
 use time::OffsetDateTime;
 use tracing::warn;
+use validator::Validate;
 
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
-use crate::types::{DbChannelCreate, DbChannelPrivate, DbMessageCreate};
+use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 use crate::ServerStateInner;
 
 // TODO: split caches more
@@ -588,7 +589,9 @@ impl ServiceThreads {
 
         if let Some(starter_message) = json.starter_message {
             if json.ty.is_thread() {
-                srv.messages.create(channel_id, auth, None, starter_message).await?;
+                srv.messages
+                    .create(channel_id, auth, None, starter_message)
+                    .await?;
             } else {
                 return Err(Error::BadStatic(
                     "starter_message can only be used with thread channels",
@@ -622,6 +625,43 @@ impl ServiceThreads {
                 .await?;
         }
 
+        // send a ThreadCreated message in the parent channel
+        if json.ty.is_thread() {
+            if let Some(parent_id) = json.parent_id {
+                let system_message_id = data
+                    .message_create(DbMessageCreate {
+                        id: None,
+                        channel_id: parent_id,
+                        attachment_ids: vec![],
+                        author_id: auth.user.id,
+                        embeds: vec![],
+                        message_type: MessageType::ThreadCreated(MessageThreadCreated {
+                            source_message_id: None,
+                        }),
+                        edited_at: None,
+                        created_at: None,
+                        removed_at: None,
+                        mentions: Default::default(),
+                    })
+                    .await?;
+
+                let system_message = srv
+                    .messages
+                    .get(parent_id, system_message_id, auth.user.id)
+                    .await?;
+
+                self.state
+                    .broadcast_channel(
+                        parent_id,
+                        auth.user.id,
+                        MessageSync::MessageCreate {
+                            message: system_message,
+                        },
+                    )
+                    .await?;
+            }
+        }
+
         self.state
             .broadcast_channel(
                 channel.id,
@@ -634,6 +674,158 @@ impl ServiceThreads {
                 },
             )
             .await?;
+
+        Ok(channel)
+    }
+
+    pub async fn create_thread_from_message(
+        &self,
+        auth: &Auth,
+        parent_channel_id: ChannelId,
+        source_message_id: MessageId,
+        mut json: ChannelCreate,
+    ) -> Result<Channel> {
+        let srv = self.state.services();
+        let data = self.state.data();
+
+        let perms = srv
+            .perms
+            .for_channel(auth.user.id, parent_channel_id)
+            .await?;
+        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ThreadCreatePublic)?;
+
+        let parent_channel = srv
+            .channels
+            .get(parent_channel_id, Some(auth.user.id))
+            .await?;
+        if !parent_channel.ty.has_public_threads() && !parent_channel.ty.has_forum2_threads() {
+            return Err(Error::BadStatic(
+                "Cannot create a thread in this channel type",
+            ));
+        }
+
+        let source_message = srv
+            .messages
+            .get(parent_channel_id, source_message_id, auth.user.id)
+            .await?;
+        if !source_message.latest_version.message_type.is_threadable() {
+            return Err(Error::BadStatic(
+                "Cannot create a thread from this message type",
+            ));
+        }
+
+        let thread_id: ChannelId = (*source_message_id).into();
+        if data.channel_get(thread_id).await.is_ok() {
+            return Err(Error::Conflict);
+        }
+
+        let room_id = parent_channel.room_id;
+
+        if json.auto_archive_duration.is_none() {
+            json.auto_archive_duration = parent_channel.default_auto_archive_duration;
+        }
+
+        json.parent_id = Some(parent_channel_id);
+        json.validate()?;
+
+        let create = DbChannelCreate {
+            room_id: room_id.map(|id| id.into_inner()),
+            creator_id: auth.user.id,
+            name: json.name.clone(),
+            description: json.description.clone(),
+            url: json.url.clone(),
+            ty: if parent_channel.ty.has_forum2_threads() {
+                DbChannelType::ThreadForum2
+            } else {
+                DbChannelType::ThreadPublic
+            },
+            nsfw: json.nsfw,
+            bitrate: json.bitrate.map(|b| b as i32),
+            user_limit: json.user_limit.map(|u| u as i32),
+            parent_id: json.parent_id.map(|i| *i),
+            owner_id: None,
+            icon: None,
+            invitable: json.invitable,
+            auto_archive_duration: json.auto_archive_duration.map(|i| i as i64),
+            default_auto_archive_duration: json.default_auto_archive_duration.map(|i| i as i64),
+            slowmode_thread: json.slowmode_thread.map(|d| d as i64),
+            slowmode_message: json.slowmode_message.map(|d| d as i64),
+            default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
+            locked: false,
+            tags: json.tags,
+        };
+
+        data.channel_create_with_id(thread_id, create).await?;
+
+        data.thread_member_put(thread_id, auth.user.id, ThreadMemberPut::default())
+            .await?;
+
+        let channel = srv.channels.get(thread_id, Some(auth.user.id)).await?;
+
+        self.state
+            .broadcast_channel(
+                parent_channel_id,
+                auth.user.id,
+                MessageSync::ChannelCreate {
+                    channel: Box::new(channel.clone()),
+                },
+            )
+            .await?;
+
+        let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
+        if source_message.created_at.into_inner() < four_hours_ago {
+            let system_message_id = data
+                .message_create(DbMessageCreate {
+                    id: None,
+                    channel_id: parent_channel_id,
+                    attachment_ids: vec![],
+                    author_id: auth.user.id,
+                    embeds: vec![],
+                    message_type: MessageType::ThreadCreated(MessageThreadCreated {
+                        source_message_id: Some(source_message_id),
+                    }),
+                    edited_at: None,
+                    created_at: None,
+                    removed_at: None,
+                    mentions: Default::default(),
+                })
+                .await?;
+
+            let system_message = srv
+                .messages
+                .get(parent_channel_id, system_message_id, auth.user.id)
+                .await?;
+            self.state
+                .broadcast_channel(
+                    parent_channel_id,
+                    auth.user.id,
+                    MessageSync::MessageCreate {
+                        message: system_message,
+                    },
+                )
+                .await?;
+        }
+
+        if let Some(room_id) = room_id {
+            let al = auth.audit_log2(
+                room_id,
+                common::v1::types::AuditLogEntryType::ChannelCreate {
+                    channel_id: thread_id,
+                    channel_type: channel.ty,
+                    changes: common::v1::types::util::Changes::new()
+                        .add("name", &channel.name)
+                        .add("description", &channel.description)
+                        .add("nsfw", &channel.nsfw)
+                        .add("user_limit", &channel.user_limit)
+                        .add("bitrate", &channel.bitrate)
+                        .add("type", &channel.ty)
+                        .add("parent_id", &channel.parent_id)
+                        .build(),
+                },
+            );
+            al.success();
+        }
 
         Ok(channel)
     }
