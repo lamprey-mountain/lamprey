@@ -1,0 +1,1 @@
+UPDATE permission_overwrite SET type = 'user';

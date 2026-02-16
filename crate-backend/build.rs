@@ -13,9 +13,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let build = BuildBuilder::default().build_timestamp(true).build()?;
-    let cargo = CargoBuilder::default().opt_level(true).build()?;
-    let git = GixBuilder::default().commit_timestamp(true).build()?;
-    let rustc = RustcBuilder::default().semver(true).build()?;
+    let cargo = CargoBuilder::default()
+        .opt_level(true)
+        .debug(true)
+        .target_triple(true)
+        .build()?;
+    let git = GixBuilder::default()
+        .commit_timestamp(true)
+        .sha(true)
+        .build()?;
+    let rustc = RustcBuilder::default()
+        .semver(true)
+        .llvm_version(true)
+        .commit_hash(true)
+        .channel(true)
+        .build()?;
 
     Emitter::default()
         .add_instructions(&build)?

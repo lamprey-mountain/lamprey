@@ -1,7 +1,20 @@
 [workspace]
 resolver = "2"
 members = [
-  "crate-*",
+  "crate-backend",
+  # "crate-backend-core",
+  # "crate-backend-data-postgres",
+  # "crate-backend-rest",
+  # "crate-backend-sync",
+  "crate-bot",
+  "crate-bridge",
+  "crate-common",
+  "crate-hakari",
+  "crate-macros",
+  "crate-media",
+  "crate-sdk",
+  "crate-voice",
+  # "crate-*",
 ]
 
 [workspace.package]

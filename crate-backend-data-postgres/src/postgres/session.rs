@@ -1,0 +1,170 @@
+use async_trait::async_trait;
+use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
+use sqlx::{query, query_as, query_scalar, Acquire};
+use time::PrimitiveDateTime;
+use uuid::Uuid;
+
+use crate::error::Result;
+use crate::gen_paginate;
+use crate::types::{
+    DbSession, DbSessionCreate, DbSessionStatus, PaginationDirection, PaginationQuery,
+    PaginationResponse, Session, SessionId, UserId,
+};
+
+use crate::data::DataSession;
+
+use super::{Pagination, Postgres};
+
+#[async_trait]
+impl DataSession for Postgres {
+    async fn session_create(&self, create: DbSessionCreate) -> Result<Session> {
+        let session_id = Uuid::now_v7();
+        let session = query_as!(
+            DbSession,
+            r#"
+            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at, ip_addr, user_agent)
+            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now(), $7::text::inet, $8)
+            RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at"#,
+            session_id,
+            create.token.0,
+            create.name,
+            create.expires_at.map(PrimitiveDateTime::from),
+            create.ty.to_string(),
+            create.application_id.map(|id| id.into_inner()),
+            create.ip_addr,
+            create.user_agent,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(session.into())
+    }
+
+    async fn session_get(&self, id: SessionId) -> Result<Session> {
+        let session = query_as!(
+            DbSession,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE id = $1"#,
+            *id,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(session.into())
+    }
+
+    async fn session_get_by_token(&self, token: SessionToken) -> Result<Session> {
+        let session = query_as!(
+            DbSession,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE token = $1"#,
+            token.0
+        )
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(session.into())
+    }
+
+    async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()> {
+        let user_id = status.user_id().map(|i| *i);
+        let is_authorized = matches!(
+            status,
+            SessionStatus::Authorized { .. } | SessionStatus::Sudo { .. }
+        );
+        let status_db: DbSessionStatus = status.into();
+        query!(
+            r#"UPDATE session SET
+            status = $2,
+            user_id = $3,
+            authorized_at = (CASE WHEN $4 THEN COALESCE(authorized_at, now()) ELSE authorized_at END),
+            deauthorized_at = (CASE WHEN $4 THEN NULL ELSE COALESCE(deauthorized_at, now()) END)
+            WHERE id = $1"#,
+            *session_id,
+            status_db as _,
+            user_id,
+            is_authorized,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn session_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<SessionId>,
+    ) -> Result<PaginationResponse<Session>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbSession,
+                r#"
+        	SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session
+        	WHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'
+        	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
+        	"#,
+                *user_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                "SELECT count(*) FROM session WHERE user_id = $1 AND status != 'Unauthorized'",
+                *user_id
+            ),
+            |i: &Session| i.id.to_string()
+        )
+    }
+
+    async fn session_delete(&self, session_id: SessionId) -> Result<()> {
+        query!(
+            r#"DELETE FROM session WHERE id = $1"#,
+            session_id.into_inner()
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn session_delete_all(&self, user_id: UserId) -> Result<()> {
+        query!("DELETE FROM session WHERE user_id = $1", *user_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let session = query_as!(
+            DbSession,
+            r#"
+            SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at
+            FROM session
+            WHERE id = $1
+            FOR UPDATE
+            "#,
+            session_id.into_inner()
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        query!(
+            "UPDATE session SET name = $2 WHERE id = $1",
+            *session_id,
+            patch.name.unwrap_or(session.name),
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()> {
+        query!(
+            "UPDATE session SET last_seen_at = now() WHERE id = $1",
+            *session_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE calendar_event ALTER COLUMN end_at DROP NOT NULL;
