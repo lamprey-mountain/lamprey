@@ -11,7 +11,7 @@ use crate::v1::types::tag::Tag;
 use crate::v1::types::user_config::PreferencesChannel;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
-use crate::v1::types::{MediaId, MessageVerId, RoleId, TagId, ThreadMember, User};
+use crate::v1::types::{MediaId, MessageCreate, MessageVerId, RoleId, TagId, ThreadMember, User};
 
 use super::calendar::{Calendar, CalendarPatch};
 use super::document::{Document, DocumentPatch, Wiki, WikiPatch};
@@ -241,7 +241,7 @@ pub enum ChannelType {
     Wiki,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "validator", derive(Validate))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ChannelCreate {
@@ -289,8 +289,7 @@ pub struct ChannelCreate {
 
     // required for threads
     pub parent_id: Option<ChannelId>,
-    // /// the initial message for this thread
-    // pub starter_message: MessageCreate,
+
     #[serde(default)]
     pub permission_overwrites: Vec<PermissionOverwrite>,
 
@@ -307,6 +306,11 @@ pub struct ChannelCreate {
     pub slowmode_message: Option<u64>,
 
     pub default_slowmode_message: Option<u64>,
+
+    /// the initial message for this thread
+    ///
+    /// required for Forum2 threads. cannot be used elsewhere.
+    pub starter_message: Option<MessageCreate>,
 }
 
 // TODO(#874) split out channel create structs
@@ -316,7 +320,8 @@ mod split_channel_types {
     use crate::v1::types::PermissionOverwrite;
     use crate::v1::types::{ChannelType, MediaId, MessageCreate, TagId};
 
-    // channel create room (do i allow creating threads with this endpoint?)
+    /// data needed to create a new channel in a room
+    // NOTE: do i allow creating threads with this endpoint?
     pub struct ChannelCreateRoom {
         pub name: String,
         pub description: Option<String>,
@@ -336,6 +341,7 @@ mod split_channel_types {
     }
 
     // channel create dm
+    /// data needed to create a new dm or gdm
     pub struct ChannelCreateDm {
         pub name: String,
         pub description: Option<String>,
@@ -345,23 +351,27 @@ mod split_channel_types {
         pub recipients: Option<Vec<UserId>>,
     }
 
-    // thread create
+    /// data needed to create a new thread
     // maybe have a separate ThreadCreateForum type too?
     pub struct ThreadCreate {
         pub name: String,
         pub description: Option<String>,
+
         /// must be ThreadPublic or ThreadPrivate. must be ThreadPublic in forums (remove?)
         pub ty: ChannelType,
+
         /// tags to apply, only usable in forums
         pub tags: Option<Vec<TagId>>,
+
         /// the initial message for this thread, required in forums
         pub starter_message: Option<MessageCreate>,
+
         pub invitable: bool,
         pub auto_archive_duration: Option<u64>,
         pub slowmode_message: Option<u64>,
     }
 
-    // thread create from message
+    /// data needed to create a new thread from a mesage
     pub struct ThreadCreateFromMessage {
         pub name: String,
         pub description: Option<String>,

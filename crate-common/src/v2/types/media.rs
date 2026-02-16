@@ -285,17 +285,24 @@ pub struct MediaCreated {
 }
 
 /// describes how this piece of media is linked to another resource
+///
+/// objects can be linked to multiple objects; for example, media linked to
+/// `Message`s also have links to each `MessageVersion` they're referenced in.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MediaLinkType {
     /// this piece of media is linked to a message
     // NOTE: auth checks copy MessageUpdate
     // NOTE: should never exist on its own, always comes with a Message + MessageVersion link
-    Message { message_id: MessageId },
+    Message {
+        channel_id: ChannelId,
+        message_id: MessageId,
+    },
 
     /// this piece of media is linked to a message version
     // NOTE: auth checks copy MessageUpdate
     MessageVersion {
+        channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
     },
@@ -328,6 +335,23 @@ pub enum MediaLinkType {
     /// this piece of media is used as a room banner
     // NOTE: auth checks copy RoomUpdate
     RoomBanner { room_id: RoomId },
+}
+
+// TODO
+pub enum MediaAuthCheck {
+    Message {
+        channel_id: ChannelId,
+        message_id: MessageId,
+    },
+    User {
+        user_id: UserId,
+    },
+    Channel {
+        channel_id: ChannelId,
+    },
+    Room {
+        room_id: RoomId,
+    },
 }
 
 impl MediaCreateSource {

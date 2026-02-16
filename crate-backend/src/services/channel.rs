@@ -473,6 +473,18 @@ impl ServiceThreads {
             ));
         }
 
+        if json.ty == ChannelType::Forum2 && json.starter_message.is_none() {
+            return Err(Error::BadStatic(
+                "starter_message is required for Forum2 threads",
+            ));
+        }
+
+        if json.starter_message.is_some() && !json.ty.is_thread() {
+            return Err(Error::BadStatic(
+                "starter_message can only be used with thread channels",
+            ));
+        }
+
         if let Some(icon) = json.icon {
             let media = data.media_select(icon).await?;
             if !matches!(
@@ -573,6 +585,16 @@ impl ServiceThreads {
         let thread_member = data.thread_member_get(channel_id, auth.user.id).await?;
 
         let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+
+        if let Some(starter_message) = json.starter_message {
+            if json.ty.is_thread() {
+                srv.messages.create(channel_id, auth, None, starter_message).await?;
+            } else {
+                return Err(Error::BadStatic(
+                    "starter_message can only be used with thread channels",
+                ));
+            }
+        }
 
         if let Some(al) = al {
             al.success();
