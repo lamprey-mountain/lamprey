@@ -68,6 +68,16 @@ export const getThumbFromId = (media_id: string, size?: number) => {
 	}
 };
 
+/** get the cdn url for the thumbnail for a custom emoji from its id */
+export const getThumbFromEmojiId = (emoji_id: string, size?: number) => {
+	const config = useConfig();
+	if (size) {
+		return `${config.cdn_url}/emoji/${emoji_id}?size=${size}`;
+	} else {
+		return `${config.cdn_url}/emoji/${emoji_id}`;
+	}
+};
+
 /** get the cdn url for an emoji */
 export const getEmojiUrl = (id: string) => {
 	const config = useConfig();

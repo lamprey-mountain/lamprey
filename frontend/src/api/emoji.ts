@@ -129,4 +129,54 @@ export class Emoji {
 
 		return resource;
 	}
+
+	async search(query: string): Promise<Pagination<EmojiCustom>> {
+		const { data, error } = await this.api.client.http.GET(
+			"/api/v1/emoji/search",
+			{
+				params: {
+					query: { query, limit: 100 },
+				},
+			},
+		);
+
+		if (error) {
+			console.error(error);
+			throw error;
+		}
+
+		batch(() => {
+			for (const item of data.items) {
+				this.cache.set(item.id, item);
+			}
+		});
+
+		return data;
+	}
+
+	async listAllCustom(roomIds: string[]): Promise<EmojiCustom[]> {
+		const all = await Promise.all(roomIds.map(async (room_id) => {
+			try {
+				const { data, error } = await this.api.client.http.GET(
+					"/api/v1/room/{room_id}/emoji",
+					{
+						params: {
+							path: { room_id },
+						},
+					},
+				);
+				if (error) return [];
+				batch(() => {
+					for (const item of data.items) {
+						this.cache.set(item.id, item);
+					}
+				});
+				return data.items;
+			} catch (e) {
+				console.error(e);
+				return [];
+			}
+		}));
+		return all.flat();
+	}
 }

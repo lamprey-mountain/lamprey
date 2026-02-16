@@ -95,5 +95,17 @@
 		&:hover {
 			background: #fff2;
 		}
+
+		.avatar {
+			height: 36px;
+			width: 36px;
+		}
+	}
+
+	// TODO: use emojiwrap
+	.custom-emoji {
+		padding: 4px;
+		height: 40px;
+		width: 40px;
 	}
 }

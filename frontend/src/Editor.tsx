@@ -15,7 +15,7 @@ import {
 
 const turndown = initTurndownService();
 
-const schema = new Schema({
+export const schema = new Schema({
 	nodes: {
 		doc: {
 			content: "block+",
@@ -202,6 +202,7 @@ export const createEditor = (opts: EditorProps) => {
 	};
 
 	return {
+		schema,
 		setState(state?: EditorState) {
 			view?.updateState(state ?? createState());
 		},

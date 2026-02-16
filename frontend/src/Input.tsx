@@ -116,11 +116,23 @@ export function Input(props: InputProps) {
 		return true;
 	};
 
-	const onEmojiPick = (emoji: string) => {
+	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
 		const editorState = ch.editor_state;
 		if (editorState) {
 			const { from, to } = editorState.selection;
-			const tr = editorState.tr.insertText(emoji, from, to);
+			const customMatch = emoji.match(/^<:([^:]+):([^>]+)>$/);
+			let tr;
+			if (customMatch) {
+				const name = customMatch[1];
+				const id = customMatch[2];
+				tr = editorState.tr.replaceWith(
+					from,
+					to,
+					editor.schema.nodes.emoji.create({ id, name }),
+				);
+			} else {
+				tr = editorState.tr.insertText(emoji, from, to);
+			}
 			const newState = editorState.apply(tr);
 			chUpdate("editor_state", newState);
 		}
