@@ -1,14 +1,19 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod error;
+pub mod state;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use common;
+pub use sqlx;
+pub use uuid;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub mod prelude {
+    use std::sync::Arc;
+
+    pub use crate::error::{Error, Result};
+    pub use crate::state::{ServerState, ServerStateInner};
+
+    pub use common;
+    pub use sqlx;
+    pub use uuid;
+
+    pub type SState = Arc<ServerState>;
 }

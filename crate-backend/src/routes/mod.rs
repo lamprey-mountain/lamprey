@@ -50,6 +50,7 @@ pub mod metrics;
 pub mod util;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
+    // TODO: lamprey_backend_rest::router()
     OpenApiRouter::new()
         .merge(ack::routes())
         .merge(admin::routes())

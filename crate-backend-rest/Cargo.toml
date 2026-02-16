@@ -1,11 +1,18 @@
 [package]
-name = "crate-rest"
+name = "lamprey-backend-rest"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
-repository.workspace = true
-keywords.workspace = true
 
 [dependencies]
+axum = { version = "0.8.1", features = ["macros", "multipart"] }
+tower-http = { version = "0.6.2", features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
+serde = { version = "1.0.217", features = ["derive"] }
+tracing = "0.1.41"
+lamprey-backend-core = { path = "../crate-backend-core" }
+common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
+lamprey-macros = { path = "../crate-macros" }
+utoipa = "5.4.0"
+url = "2.5.8"

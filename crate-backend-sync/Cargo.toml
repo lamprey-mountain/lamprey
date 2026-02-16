@@ -1,11 +1,16 @@
 [package]
-name = "crate-sync"
+name = "lamprey-backend-sync"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
-repository.workspace = true
-keywords.workspace = true
 
 [dependencies]
+axum = { version = "0.8.1", features = ["ws"] }
+yrs = { version = "0.25.0", features = ["sync"] }
+tokio = { version = "1.42.0", features = ["rt", "macros"] }
+tracing = "0.1.41"
+lamprey-backend-core = { path = "../crate-backend-core" }
+common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
+lamprey-macros = { path = "../crate-macros" }

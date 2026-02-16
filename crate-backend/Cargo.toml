@@ -83,6 +83,9 @@ jsonwebkey = { version = "0.4.0", features = ["generate"] }
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 p256 = { version = "0.13.2", features = ["pkcs8"] }
 subtle = "2.6.1"
+lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
+lamprey-backend-rest = { version = "0.1.1", path = "../crate-backend-rest" }
+lamprey-backend-sync = { version = "0.1.1", path = "../crate-backend-sync" }
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }

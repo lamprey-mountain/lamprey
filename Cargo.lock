@@ -805,18 +805,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crate-backend-core"
-version = "0.1.1"
-
-[[package]]
-name = "crate-rest"
-version = "0.1.1"
-
-[[package]]
-name = "crate-sync"
-version = "0.1.1"
-
-[[package]]
 name = "crc"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3363,6 +3351,9 @@ dependencies = [
  "ipnet",
  "jsonwebkey",
  "jsonwebtoken",
+ "lamprey-backend-core",
+ "lamprey-backend-rest",
+ "lamprey-backend-sync",
  "lamprey-common",
  "lamprey-hakari",
  "lettre",
@@ -3407,6 +3398,48 @@ dependencies = [
  "validator",
  "vergen-gix",
  "webpage",
+ "yrs",
+]
+
+[[package]]
+name = "lamprey-backend-core"
+version = "0.1.1"
+dependencies = [
+ "figment",
+ "lamprey-common",
+ "lamprey-macros",
+ "serde",
+ "sqlx",
+ "thiserror 2.0.17",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "lamprey-backend-rest"
+version = "0.1.1"
+dependencies = [
+ "axum",
+ "lamprey-backend-core",
+ "lamprey-common",
+ "lamprey-macros",
+ "serde",
+ "tower-http",
+ "tracing",
+ "url",
+ "utoipa",
+]
+
+[[package]]
+name = "lamprey-backend-sync"
+version = "0.1.1"
+dependencies = [
+ "axum",
+ "lamprey-backend-core",
+ "lamprey-common",
+ "lamprey-macros",
+ "tokio",
+ "tracing",
  "yrs",
 ]
 
@@ -3465,6 +3498,7 @@ version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
  "lamprey-hakari",
+ "lamprey-macros",
  "mediatype",
  "pastey",
  "serde",
@@ -3556,6 +3590,16 @@ dependencies = [
  "uuid",
  "winnow",
  "zerocopy",
+]
+
+[[package]]
+name = "lamprey-macros"
+version = "0.1.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.108",
+ "uuid",
 ]
 
 [[package]]
@@ -7427,14 +7471,15 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "url"
-version = "2.5.7"
+version = "2.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08bc136a29a3d1758e07a9cca267be308aeebf5cfd5a10f3f67ab2097683ef5b"
+checksum = "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
 dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
  "serde",
+ "serde_derive",
 ]
 
 [[package]]
