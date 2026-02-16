@@ -38,6 +38,7 @@ export type ChannelState = {
 	selectedMessages: Array<string>;
 	edit_draft?: string;
 	input_focus?: () => void;
+	reply_jump_source?: string;
 };
 
 export function createInitialChannelState(): ChannelState {

@@ -66,21 +66,27 @@ export const ChatMain = (props: ChatProps) => {
 		)
 	);
 
-	const markRead = throttle(
-		() => {
-			const version_id = props.channel.last_version_id;
-			if (version_id) {
-				ctx.dispatch({
-					do: "channel.mark_read",
-					channel_id: props.channel.id,
-					delay: true,
-					version_id,
-					also_local: false,
-				});
-			}
-		},
-		300,
-	);
+	const markReadImmediately = () => {
+		const version_id = props.channel.last_version_id;
+		if (version_id) {
+			ctx.dispatch({
+				do: "channel.mark_read",
+				channel_id: props.channel.id,
+				delay: true,
+				version_id,
+				also_local: false,
+			});
+		}
+	};
+
+	const markRead = throttle(markReadImmediately, 300);
+
+	const jumpToLastRead = () => {
+		const r = read_marker_id();
+		if (r) {
+			setChannelState("anchor", { type: "context", limit: 50, message_id: r });
+		}
+	};
 
 	const autoscroll = () =>
 		!messages()?.has_forward && anchor().type !== "context";
@@ -240,6 +246,14 @@ export const ChatMain = (props: ChatProps) => {
 		on(() => channelState.highlight, scrollAndHighlight),
 	);
 
+	createEffect(on(() => channelState.anchor, (a) => {
+		if (a && a.type === "backwards" && !a.message_id) {
+			setTimeout(() => {
+				list.scrollTo(99999999);
+			});
+		}
+	}));
+
 	createEffect(on(list.scrollPos, setPos));
 
 	const [dragging, setDragging] = createSignal(false);
@@ -320,6 +334,19 @@ export const ChatMain = (props: ChatProps) => {
 				}
 			}}
 		>
+			<Show
+				when={messages()?.has_forward &&
+					(props.channel.last_version_id !== channelState.read_marker_id)}
+			>
+				<div class="new-messages">
+					<button class="jump-read" onClick={jumpToLastRead}>
+						jump to unread
+					</button>
+					<button class="mark-read" onClick={markReadImmediately}>
+						mark as read
+					</button>
+				</div>
+			</Show>
 			<Show when={messages.loading}>
 				<div class="loading">{t("loading")}</div>
 			</Show>

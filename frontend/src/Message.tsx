@@ -665,6 +665,7 @@ export function MessageView(props: MessageProps) {
 							thread_id={props.message.channel_id}
 							reply_id={props.message.reply_id!}
 							arrow_width={arrow_width()}
+							source_id={props.message.id}
 						/>
 					</Show>
 					<Show when={withAvatar}>
@@ -791,6 +792,7 @@ type ReplyProps = {
 	thread_id: string;
 	reply_id: string;
 	arrow_width?: number;
+	source_id: string;
 };
 
 function ReplyView(props: ReplyProps) {
@@ -939,6 +941,7 @@ function ReplyView(props: ReplyProps) {
 
 	const scrollToReply = () => {
 		// if (!props.reply) return;
+		chUpdate("reply_jump_source", props.source_id);
 		chUpdate("anchor", {
 			type: "context",
 			limit: 50, // TODO: calc dynamically

@@ -26,4 +26,5 @@ how lamprey mountain is architectured
 - `docs` very incomplete documentation
 - `frontend` solidjs frontend implementation
 - `scripts` random maintenance scripts (TODO: clean up)
-- `tests` a sad attempt at writing some tests (TODO: actually add some more tests)
+- `tests` a sad attempt at writing some tests (TODO: actually add some more
+  tests)

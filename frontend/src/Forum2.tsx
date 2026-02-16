@@ -962,8 +962,9 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				const time = mins === 0
 					? `slowmode set to ${secs}s`
 					: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
-				return `slowmode set to ${time}${bypassSlowmode() ? " (bypassed)" : ""
-					}`;
+				return `slowmode set to ${time}${
+					bypassSlowmode() ? " (bypassed)" : ""
+				}`;
 			} else return "no slowmode";
 		}
 		const seconds = Math.ceil(remainingMs / 1000);

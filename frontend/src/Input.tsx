@@ -265,6 +265,38 @@ export function Input(props: InputProps) {
 		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
+	const anchor = (): import("./api/messages.ts").MessageListAnchor => {
+		const a = ch.anchor;
+		const r = ch.read_marker_id;
+		if (a) return a;
+		if (r) return { type: "context", limit: 50, message_id: r };
+		return { type: "backwards", limit: 50 };
+	};
+	const messages = api.messages.list(() => props.channel.id, anchor);
+
+	const jumpToLatest = () => {
+		// messages are approx. 20 px high, show 3 pages of messages
+		const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+
+		chUpdate("anchor", {
+			type: "backwards",
+			limit: SLICE_LEN,
+		});
+	};
+
+	const jumpToReplySource = () => {
+		const source = ch.reply_jump_source;
+		if (source) {
+			chUpdate("anchor", {
+				type: "context",
+				limit: 50,
+				message_id: source,
+			});
+			chUpdate("highlight", source);
+			chUpdate("reply_jump_source", undefined);
+		}
+	};
+
 	return (
 		<div
 			class="message-input"
@@ -287,6 +319,20 @@ export function Input(props: InputProps) {
 					</ul>
 				</div>
 			</Show>
+			<Switch>
+				<Match when={messages()?.has_forward}>
+					<button class="jump-to-latest" onClick={jumpToLatest}>
+						you are viewing older messages &bull; click to jump to present
+					</button>
+				</Match>
+				<Match
+					when={ch.reply_jump_source}
+				>
+					<button class="jump-to-latest" onClick={jumpToReplySource}>
+						you are viewing a reply &bull; click to jump to source
+					</button>
+				</Match>
+			</Switch>
 			<Show when={reply()}>
 				<InputReply thread={props.channel} reply={reply()!} />
 			</Show>
