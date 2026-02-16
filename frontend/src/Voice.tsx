@@ -28,6 +28,7 @@ import { useCtx } from "./context.ts";
 import { md } from "./markdown.tsx";
 import { getColor } from "./colors.ts";
 import { useChannel } from "./channelctx.tsx";
+import { AvatarWithStatus } from "./User.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
 	const config = useConfig();
@@ -356,6 +357,7 @@ export const VoiceTray = () => {
 				</div>
 			</Show>
 			<div class="row toolbar">
+				<AvatarWithStatus user={user()!} />
 				<div style="flex:1">
 					<Show when={user()} fallback="loading...">
 						{api.users.cache.get("@self")?.name}
