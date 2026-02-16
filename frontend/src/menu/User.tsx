@@ -74,8 +74,8 @@ export function UserMenu(props: UserMenuProps) {
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(user())));
 
+	const [, modalCtl] = useModals();
 	const kickRoom = () => {
-		const [, modalCtl] = useModals();
 		modalCtl.prompt("kick reason", (reason) => {
 			if (!reason) return;
 			api.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
@@ -107,7 +107,6 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const ban = () => {
-		const [, modalCtl] = useModals();
 		modalCtl.prompt("ban reason", (reason) => {
 			if (!reason) return;
 			api.client.http.PUT("/api/v1/room/{room_id}/ban/{user_id}", {
@@ -126,7 +125,6 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const changeNickname = () => {
-		const [, modalCtl] = useModals();
 		if (user()?.webhook) {
 			modalCtl.prompt("new name", (name) => {
 				if (name === null) return;
@@ -198,7 +196,6 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const suspendUser = () => {
-		const [, modalCtl] = useModals();
 		modalCtl.prompt("suspend reason", (reason) => {
 			if (!reason) return;
 			api.client.http.POST("/api/v1/user/{user_id}/suspend", {
@@ -216,7 +213,6 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const unsuspendUser = () => {
-		const [, modalCtl] = useModals();
 		modalCtl.prompt("unsuspend reason", (reason) => {
 			if (!reason) return;
 			api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
@@ -233,7 +229,6 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const deleteUser = () => {
-		const [, modalCtl] = useModals();
 		modalCtl.confirm(
 			"Are you sure you want to delete this user? This action cannot be undone.",
 			(confirmed) => {
