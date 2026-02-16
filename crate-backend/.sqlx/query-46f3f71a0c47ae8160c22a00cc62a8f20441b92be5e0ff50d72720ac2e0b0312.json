@@ -18,13 +18,17 @@
                 "DefaultMarkdown",
                 "ThreadUpdate",
                 "DefaultTagged",
-                "ThreadRename",
+                "ChannelRename",
                 "MemberAdd",
                 "MemberRemove",
                 "MemberJoin",
                 "MessagePinned",
                 "ChannelIcon",
-                "AutomodExecution"
+                "AutomodExecution",
+                "ChannelMoved",
+                "ChannelPingback",
+                "Call",
+                "ThreadCreated"
               ]
             }
           }

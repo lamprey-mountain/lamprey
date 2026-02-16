@@ -109,7 +109,8 @@
                       "FriendCreate",
                       "RoomJoin",
                       "CallUpdate",
-                      "RoomForceJoin"
+                      "RoomForceJoin",
+                      "RoomCreate"
                     ]
                   }
                 }
@@ -199,7 +200,8 @@
                       "FriendCreate",
                       "RoomJoin",
                       "CallUpdate",
-                      "RoomForceJoin"
+                      "RoomForceJoin",
+                      "RoomCreate"
                     ]
                   }
                 }

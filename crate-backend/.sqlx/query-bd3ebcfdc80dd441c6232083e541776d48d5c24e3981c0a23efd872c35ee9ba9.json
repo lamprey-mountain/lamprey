@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO search_reindex_queue (channel_id, last_message_id) VALUES ($1, $2) ON CONFLICT (channel_id) DO UPDATE SET last_message_id = $2, updated_at = NOW()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bd3ebcfdc80dd441c6232083e541776d48d5c24e3981c0a23efd872c35ee9ba9"
+}

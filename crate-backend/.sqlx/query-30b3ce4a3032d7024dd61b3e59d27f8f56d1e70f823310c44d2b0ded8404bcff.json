@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, name, description, icon, banner, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout\n            FROM room\n            WHERE id = $1\n            FOR UPDATE\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "icon",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "banner",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "archived_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "welcome_channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "quarantined",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "security_require_mfa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "security_require_sudo",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "afk_channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "afk_channel_timeout",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "30b3ce4a3032d7024dd61b3e59d27f8f56d1e70f823310c44d2b0ded8404bcff"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id, version_id, room_id, name, description, allow as \"allow: _\",\n                deny as \"deny: _\", is_mentionable, is_self_applicable, 0 as \"member_count!\", position, hoist\n            FROM role\n            WHERE room_id = $1 AND id = $2\n            FOR UPDATE\n        ",
+  "query": "\n            SELECT\n                r.id, r.version_id, r.room_id, r.name, r.description, r.allow as \"allow: _\",\n                r.deny as \"deny: _\", r.is_mentionable, r.is_self_applicable,\n                coalesce(rm.count, 0) as \"member_count!\",\n                r.position,\n                r.hoist\n            FROM role r\n            LEFT JOIN (\n                SELECT role_id, count(*) as count\n                FROM role_member\n                GROUP BY role_id\n            ) rm ON rm.role_id = r.id\n            WHERE r.room_id = $1 AND r.id = ANY($2)\n        ",
   "describe": {
     "columns": [
       {
@@ -223,7 +223,7 @@
       {
         "ordinal": 9,
         "name": "member_count!",
-        "type_info": "Int4"
+        "type_info": "Int8"
       },
       {
         "ordinal": 10,
@@ -239,7 +239,7 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "UuidArray"
       ]
     },
     "nullable": [
@@ -257,5 +257,5 @@
       false
     ]
   },
-  "hash": "c3e1c1f49a767f5b9c0bce3245e2fa59c97b3ea4923fa44ae8161b58c1f99e83"
+  "hash": "6eafb4e597e3d3293a05b38e60c753133a3a04e3b50828250dd3359ff33309df"
 }
