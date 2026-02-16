@@ -2791,10 +2791,17 @@ article.message.oneline {
 button.link {
 	border: none;
 	background: none;
+	padding: 0;
+	color: $fg-300;
 
 	&:hover {
-		background: #fff2;
+		text-decoration: underline;
+		color: $fg-100;
 	}
+}
+
+.message-dim-content > .content {
+	color: $fg-500;
 }
 
 .search-container {

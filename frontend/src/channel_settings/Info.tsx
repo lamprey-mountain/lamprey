@@ -108,7 +108,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					onInput={setEditingSlowmodeThread}
 				/>
 			</div>
-			<Show when={api.channels.cache.get(props.channel.id)?.type === "Forum" || api.channels.cache.get(props.channel.id)?.type === "Text"}>
+			<Show
+				when={api.channels.cache.get(props.channel.id)?.type === "Forum" ||
+					api.channels.cache.get(props.channel.id)?.type === "Text"}
+			>
 				<div>
 					<div class="dim">slowmode (messages default for threads)</div>
 					<DurationInput

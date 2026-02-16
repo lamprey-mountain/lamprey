@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 
 const units: Record<string, number> = {
 	s: 1,
