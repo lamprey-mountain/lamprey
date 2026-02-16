@@ -782,6 +782,24 @@ impl DataChannel for Postgres {
         tx.commit().await?;
         Ok(())
     }
+
+    async fn channel_ratelimit_delete_all(&self, channel_id: ChannelId) -> Result<()> {
+        query!(
+            "DELETE FROM channel_slowmode_message WHERE channel_id = $1",
+            *channel_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        query!(
+            "DELETE FROM channel_slowmode_thread WHERE channel_id = $1",
+            *channel_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
 }
 
 impl Postgres {

@@ -990,11 +990,9 @@ async fn channel_ratelimit_delete(
     if let Some(room_id) = channel.room_id {
         // FIXME: correct started_at
         let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::RatelimitUpdate {
+        al.commit_success(AuditLogEntryType::RatelimitDelete {
             channel_id,
             user_id,
-            slowmode_thread_expire_at: None,
-            slowmode_message_expire_at: None,
         })
         .await?;
     }
@@ -1042,6 +1040,7 @@ async fn channel_ratelimit_delete_all(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
+    let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
 
     if !perms.has(Permission::ChannelManage)
@@ -1051,7 +1050,19 @@ async fn channel_ratelimit_delete_all(
         return Err(Error::MissingPermissions);
     }
 
-    Ok(Error::Unimplemented)
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+
+    if let Some(room_id) = channel.room_id {
+        let al = auth.audit_log(room_id);
+        data.channel_ratelimit_delete_all(channel_id).await?;
+
+        al.commit_success(AuditLogEntryType::RatelimitDeleteAll { channel_id })
+            .await?;
+    } else {
+        data.channel_ratelimit_delete_all(channel_id).await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Ratelimit update

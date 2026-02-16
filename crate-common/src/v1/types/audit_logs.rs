@@ -537,6 +537,15 @@ pub enum AuditLogEntryType {
         slowmode_message_expire_at: Option<Time>,
     },
 
+    RatelimitDelete {
+        channel_id: ChannelId,
+        user_id: UserId,
+    },
+
+    RatelimitDeleteAll {
+        channel_id: ChannelId,
+    },
+
     AutomodRuleCreate {
         rule_id: AutomodRuleId,
         changes: Vec<AuditLogChange>,

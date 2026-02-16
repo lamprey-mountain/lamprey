@@ -670,6 +670,7 @@ pub trait DataChannel {
         user_id: UserId,
         expires_at: Time,
     ) -> Result<()>;
+    async fn channel_ratelimit_delete_all(&self, channel_id: ChannelId) -> Result<()>;
 
     async fn channel_document_insert(
         &self,
