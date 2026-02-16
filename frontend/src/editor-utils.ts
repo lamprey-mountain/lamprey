@@ -345,15 +345,16 @@ export function base64UrlEncode(bytes: Uint8Array): string {
 }
 
 /**
- * Detects if the current line is part of a list (ordered, unordered, or blockquote)
+ * Detects if the current line is part of a list (ordered, unordered, blockquote, or todo)
  * and returns the list type and prefix if applicable
  */
 export function getListPrefix(
 	line: string,
 ): {
-	type: "ordered" | "unordered" | "blockquote";
+	type: "ordered" | "unordered" | "blockquote" | "todo";
 	prefix: string;
 	number?: number;
+	checked?: boolean;
 } | null {
 	// Check for ordered list: digits followed by a dot and space
 	const orderedMatch = line.match(/^(\s*)(\d+)\.(\s+)/);
@@ -361,6 +362,14 @@ export function getListPrefix(
 		const prefix = orderedMatch[0];
 		const number = parseInt(orderedMatch[2], 10);
 		return { type: "ordered", prefix, number };
+	}
+
+	// Check for todo list: dash/asterisk/plus followed by space, [ ] or [x], and space
+	const todoMatch = line.match(/^(\s*)([-*+])(\s+)\[([ x])\](\s+)/);
+	if (todoMatch) {
+		const prefix = todoMatch[0];
+		const checked = todoMatch[4] === "x";
+		return { type: "todo", prefix, checked };
 	}
 
 	// Check for unordered list: dash, asterisk, or plus followed by space
@@ -465,6 +474,9 @@ export function createListContinueCommand(): Command {
 				// Increment the number for ordered lists
 				const nextNumber = (listPrefix.number || 0) + 1;
 				newPrefix = newPrefix.replace(/(\d+)/, String(nextNumber));
+			} else if (listPrefix.type === "todo") {
+				// Keep the same todo format (unchecked by default for new items)
+				// The prefix already includes the checkbox, e.g., "- [ ] "
 			}
 
 			// Insert newline and the new prefix
