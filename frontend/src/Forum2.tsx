@@ -962,9 +962,8 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				const time = mins === 0
 					? `slowmode set to ${secs}s`
 					: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
-				return `slowmode set to ${time}${
-					bypassSlowmode() ? " (bypassed)" : ""
-				}`;
+				return `slowmode set to ${time}${bypassSlowmode() ? " (bypassed)" : ""
+					}`;
 			} else return "no slowmode";
 		}
 		const seconds = Math.ceil(remainingMs / 1000);
@@ -1122,6 +1121,28 @@ export const Forum2Comments = (
 
 const contentToHtml = new WeakMap();
 
+function highlight(el: Element) {
+	el.animate([
+		{
+			boxShadow: "4px 0 0 -1px inset #cc1856",
+			backgroundColor: "#cc185622",
+			offset: 0,
+		},
+		{
+			boxShadow: "4px 0 0 -1px inset #cc1856",
+			backgroundColor: "#cc185622",
+			offset: .8,
+		},
+		{
+			boxShadow: "none",
+			backgroundColor: "transparent",
+			offset: 1,
+		},
+	], {
+		duration: 1000,
+	});
+}
+
 const Comment = (
 	props: {
 		collapsed: ReactiveSet<string>;
@@ -1133,6 +1154,7 @@ const Comment = (
 	const message = () => props.node.message;
 	const children = () => props.node.children;
 	const api = useApi();
+	const [ch, chUpdate] = useChannel()!;
 
 	const collapsed = () => props.collapsed.has(message().id);
 
@@ -1177,6 +1199,51 @@ const Comment = (
 	createEffect(() => {
 		if (contentEl) {
 			hydrateMentions(contentEl, props.channel);
+		}
+	});
+
+	createEffect(() => {
+		const hl = ch.highlight;
+		if (hl === message().id) {
+			// expand parent comments
+			// props.expand(); // TODO: we need a way to expand parents if they are collapsed
+			// for now we just scroll to it
+			const el = contentEl?.closest(".comment");
+			if (el) {
+				el.scrollIntoView({ block: "center" });
+				highlight(el);
+				chUpdate("highlight", undefined);
+			}
+		}
+	});
+
+	createEffect(() => {
+		const hl = ch.highlight;
+		if (hl === message().id) {
+			// expand parent comments
+			// props.expand(); // TODO: we need a way to expand parents if they are collapsed
+			// for now we just scroll to it
+			const el = contentEl?.closest(".comment");
+			if (el) {
+				el.scrollIntoView({ block: "center" });
+				highlight(el);
+				chUpdate("highlight", undefined);
+			}
+		}
+	});
+
+	createEffect(() => {
+		const hl = ch.highlight;
+		if (hl === message().id) {
+			// expand parent comments
+			// props.expand(); // TODO: we need a way to expand parents if they are collapsed
+			// for now we just scroll to it
+			const el = contentEl?.closest(".comment");
+			if (el) {
+				el.scrollIntoView({ block: "center" });
+				highlight(el);
+				chUpdate("highlight", undefined);
+			}
 		}
 	});
 
