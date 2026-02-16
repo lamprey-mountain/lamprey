@@ -637,6 +637,7 @@ impl ServiceThreads {
                         embeds: vec![],
                         message_type: MessageType::ThreadCreated(MessageThreadCreated {
                             source_message_id: None,
+                            thread_id: Some(channel.id),
                         }),
                         edited_at: None,
                         created_at: None,
@@ -784,6 +785,7 @@ impl ServiceThreads {
                     embeds: vec![],
                     message_type: MessageType::ThreadCreated(MessageThreadCreated {
                         source_message_id: Some(source_message_id),
+                        thread_id: Some(channel.id),
                     }),
                     edited_at: None,
                     created_at: None,

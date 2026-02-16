@@ -482,6 +482,10 @@ pub struct MessageChannelMoved {
 pub struct MessageThreadCreated {
     /// the message this thread was created from
     pub source_message_id: Option<MessageId>,
+
+    /// the id of the thread that was created
+    // FIXME: this shouldn't be an Option
+    pub thread_id: Option<ChannelId>,
 }
 
 /// Information about the pingback
