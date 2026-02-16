@@ -805,6 +805,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "crate-backend-core"
+version = "0.1.1"
+
+[[package]]
+name = "crate-rest"
+version = "0.1.1"
+
+[[package]]
+name = "crate-sync"
+version = "0.1.1"
+
+[[package]]
 name = "crc"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
