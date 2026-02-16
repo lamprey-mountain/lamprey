@@ -8,7 +8,6 @@ use url::Url;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::ServerState;
 use lamprey_backend_core::prelude::*;
 
 #[derive(Debug, Serialize, ToSchema)]

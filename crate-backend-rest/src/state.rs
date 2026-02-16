@@ -6,7 +6,7 @@ use std::{
 use common::v1::types::{MessageSync, MessageType};
 use common::v2::types::message::Message;
 use common::{
-    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, Media, RoomId, UserId},
+    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, ConnectionId, Media, RoomId, UserId},
     v2::types::message::MessageVersion,
 };
 use dashmap::DashMap;
@@ -15,7 +15,13 @@ use sqlx::PgPool;
 use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
 use url::Url;
 
-use crate::{config::Config, data::Data, error::Result, services::Services};
+use crate::{
+    config::Config,
+    data::{postgres::Postgres, Data},
+    services::Services,
+    sync::Connection,
+    Result,
+};
 
 pub struct ServerStateInner {
     pub tokio: TokioHandle,
@@ -35,14 +41,16 @@ pub struct ServerStateInner {
 pub struct ServerState {
     pub inner: Arc<ServerStateInner>,
     pub services: Arc<Services>,
-    // FIXME: store syncers
+
     // TODO: limit number of connections per user, clean up old/unused entries
-    // pub syncers: Arc<DashMap<ConnectionId, Connection>>,
+    pub syncers: Arc<DashMap<ConnectionId, Connection>>,
 }
 
 impl ServerStateInner {
     pub fn data(&self) -> Box<dyn Data> {
-        self.data.clone()
+        Box::new(Postgres {
+            pool: self.pool.clone(),
+        })
     }
 
     pub fn services(&self) -> Arc<Services> {
@@ -179,7 +187,7 @@ impl ServerState {
         services.start_background_tasks().await;
         Self {
             inner: services.state.clone(),
-            // syncers: Arc::new(DashMap::new()),
+            syncers: Arc::new(DashMap::new()),
             // channel_user: Arc::new(DashMap::new()),
             services,
         }
