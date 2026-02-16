@@ -89,6 +89,29 @@ export const RoomNav = () => {
 		return totalMentions;
 	};
 
+	const getRoomUnread = (roomId: string) => {
+		for (const channel of api.channels.cache.values()) {
+			if (
+				channel.room_id === roomId && channel.is_unread &&
+				channel.type !== "Voice"
+			) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	const getFolderUnread = (folder: { items: Room[] }) => {
+		return folder.items.some((room) => getRoomUnread(room.id));
+	};
+
+	const getFolderMentionCount = (folder: { items: Room[] }) => {
+		return folder.items.reduce(
+			(acc, room) => acc + getRoomMentionCount(room.id),
+			0,
+		);
+	};
+
 	const [dragging, setDragging] = createSignal<
 		{
 			id: string;
@@ -478,6 +501,7 @@ export const RoomNav = () => {
 					"drag-over-after": target()?.id === props.room.id && target()?.after,
 					"folder-preview": folderPreview() === props.room.id,
 					"no-icon": !props.room.icon,
+					unread: getRoomUnread(props.room.id),
 				}}
 			>
 				<A draggable="false" href={`/room/${props.room.id}`} class="nav">
@@ -523,6 +547,7 @@ export const RoomNav = () => {
 														room.id === folderPreview()
 													),
 												collapsed: collapsedFolders().has(folder.id),
+												unread: getFolderUnread(folder),
 											}}
 										>
 											<div
