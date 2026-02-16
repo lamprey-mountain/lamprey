@@ -48,7 +48,10 @@ pub enum MediaStatus {
     /// Newly created and is waiting for either
     ///
     /// - the client to begin uploading via `media_upload` route
-    /// - the downlod from `source_url` to complete
+    /// - the download from `source_url` to complete
+    /// - the automatic download for an embed to complete
+    // NOTE: what do i do if an embed has an unexpected type? eg. the service
+    // says it's an image but it's actually a video? or it returns 404?
     Transferring,
 
     /// This media is done being uploaded and is being scanned by the server.

@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    notifications::NotifsRoom,
+    notifications::preferences::NotifsRoom,
     user_config::PreferencesRoom,
     util::{some_option, Diff},
     ChannelId, MediaId, Permission, UserId,
@@ -144,6 +144,7 @@ pub struct RoomPreview {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomPrivate {
     pub notifications: NotifsRoom,
+
     /// resolved notifications for you
     pub permissions: Vec<Permission>,
 }

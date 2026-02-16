@@ -77,7 +77,10 @@ async fn inbox_get(
     }
 
     let res = NotificationPagination {
-        inner: notifications,
+        notifications: notifications.items,
+        total: notifications.total,
+        has_more: notifications.has_more,
+        cursor: notifications.cursor,
         channels,
         messages,
         rooms,

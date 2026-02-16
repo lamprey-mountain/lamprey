@@ -15,7 +15,7 @@ use utoipa::ToSchema;
 
 use crate::v1::types::{
     misc::Time,
-    notifications::{NotifsChannel, NotifsGlobal, NotifsRoom},
+    notifications::preferences::{NotifsChannel, NotifsGlobal, NotifsRoom},
 };
 
 /// preferences for a user

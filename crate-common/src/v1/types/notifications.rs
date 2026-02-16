@@ -4,79 +4,59 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
+use uuid::Uuid;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    util::Time, Channel, ChannelId, MessageId, NotificationId, PaginationResponse, Room, RoomId,
-};
+use crate::v1::types::{util::Time, Channel, ChannelId, MessageId, NotificationId, Room, RoomId};
 use crate::v2::types::message::Message;
 
-/// how to handle an event
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum NotifAction {
-    /// Notifications are sent when this event happens
-    Notify,
+pub mod preferences;
 
-    /// Notifications are added to the inbox when this event happens
-    Watching,
-
-    /// This event is ignored entirely
-    Ignore,
-}
-
-/// notification config for a user (works globally)
+// TODO: use this instead of the current notification type
+/// a notification; a unit of stuff that may show up in your inbox or be pushed to you
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsGlobal {
-    pub mute: Option<Mute>,
-    pub messages: NotifAction,
-    pub mentions: NotifAction,
-    pub threads: NotifAction,
-    pub room_public: NotifAction,
-    pub room_private: NotifAction,
-    pub room_dm: NotifAction,
+pub struct Notification2 {
+    pub id: NotificationId,
+
+    #[serde(flatten)]
+    pub ty: Notification2Type,
+
+    /// when this was added to the inbox
+    pub added_at: Time,
+
+    /// when this was read
+    pub read_at: Option<Time>,
 }
 
-/// notification config for a room
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsRoom {
-    pub mute: Option<Mute>,
-    pub messages: Option<NotifAction>,
-    pub mentions: Option<NotifAction>,
-    pub threads: Option<NotifAction>,
-}
-
-/// notification config for a channel
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsChannel {
-    pub mute: Option<Mute>,
-    pub messages: Option<NotifAction>,
-    pub mentions: Option<NotifAction>,
-    pub threads: Option<NotifAction>,
-}
-
-/// notification config for a message
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsMessage {
-    pub mute: Option<Mute>,
-    pub replies: Option<NotifAction>,
-    // pub edits: Option<NotifAction>,
-    // pub reactions: Option<NotifAction>,
-}
-
-/// how long to mute for
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Mute {
-    pub expires_at: Option<Time>,
+#[serde(tag = "type")]
+pub enum Notification2Type {
+    /// someone sent a message you should look at
+    Message {
+        /// the channel this message was sent in
+        channel_id: ChannelId,
+
+        /// the id of the message that was sent
+        message_id: MessageId,
+    },
+
+    /// someone reacted to a message you sent
+    Reaction {
+        /// the channel this message was sent in
+        channel_id: ChannelId,
+
+        /// the id of the message that was sent
+        message_id: MessageId,
+        // TODO: user id, reaction key
+        // NOTE: i should probably aggregate all notifications into one bundle
+    },
+    // in the future, there'll probably be calendar events, document mentions, broadcast/voice activity, etc
 }
 
+// TODO: remove
 /// a notification; a unit of stuff that may show up in your inbox or be pushed to you
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -99,6 +79,7 @@ pub struct Notification {
     pub read_at: Option<Time>,
 }
 
+// TODO: remove
 // in order of precedence
 /// what caused this notification to be created
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -123,36 +104,7 @@ pub enum NotificationReason {
     // ThreadUnread,
 }
 
-// enum NotificationReasonMessage {
-//     Manual,
-//     Mention,
-//     MentionBulk,
-//     Reply,
-//     Unread,
-// }
-
-// enum NotificationReasonThread {
-//     #[serde(flatten)]
-//     Message(NotificationReasonMessage),
-//     New,
-// }
-
-impl Default for NotifsGlobal {
-    fn default() -> Self {
-        NotifsGlobal {
-            mute: None,
-            messages: NotifAction::Watching,
-            mentions: NotifAction::Notify,
-            threads: NotifAction::Watching,
-            room_public: NotifAction::Watching,
-            room_private: NotifAction::Watching,
-            room_dm: NotifAction::Watching,
-        }
-    }
-}
-
-// new types below; still a work in progress!
-
+/// query your inbox
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -174,6 +126,7 @@ pub struct InboxListParams {
     pub include_read: bool,
 }
 
+/// create a new message reminder notification
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotificationCreate {
@@ -187,6 +140,7 @@ pub struct NotificationCreate {
     pub added_at: Option<Time>,
 }
 
+/// mark some notifications as read (or unread)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -214,6 +168,7 @@ pub struct NotificationMarkRead {
     pub everything: bool,
 }
 
+/// delete some notifications
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -244,154 +199,42 @@ pub struct NotificationFlush {
     pub include_unread: bool,
 }
 
+/// paginate through your notifications
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotificationPagination {
-    #[serde(flatten)]
-    pub inner: PaginationResponse<Notification>,
+    pub notifications: Vec<Notification>,
+    pub total: u64,
+    pub has_more: bool,
+    pub cursor: Option<String>,
+
     pub channels: Vec<Channel>,
     pub messages: Vec<Message>,
     pub rooms: Vec<Room>,
 }
 
-#[cfg(any())]
-mod next {
-    #[cfg(feature = "serde")]
-    use serde::{Deserialize, Serialize};
+// /// serialized notification payload, sent through web push
+// // TODO: implement
+// pub struct NotificationBytes {
+//     // 1 byte: version
+//     // 1 byte: type
+//     // 2 bytes: 0x00 0x00 (unused, use for flags?)
 
-    #[cfg(feature = "utoipa")]
-    use utoipa::{IntoParams, ToSchema};
+//     // 4 bytes: notification id
+//     // 4 bytes: channel id
+//     // 4 bytes: message id
 
-    #[cfg(feature = "validator")]
-    use validator::Validate;
+//     // flags: is edit, author is ignored, channel is muted, what else?
+// }
 
-    use crate::v1::types::{
-        util::Time, Channel, ChannelId, MessageId, NotificationId, PaginationResponse, Room, RoomId,
-    };
-    use crate::v2::types::message::Message;
-
-    /// notification config for a user (works globally)
-    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct NotifsGlobal {
-        pub mute: Option<Mute>,
-        pub messages: NotifsMessages, // default mentions
-        pub threads: NotifsThreads,   // default inbox
-    }
-
-    /// notification config for a room
-    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct NotifsRoom {
-        pub mute: Option<Mute>,
-
-        /// how to handle new messages
-        pub messages: Option<NotifsMessages>,
-
-        /// how to handle new threads
-        pub threads: Option<NotifsThreads>,
-
-        /// whether to receive @everyone and @here mentions
-        pub mention_everyone: bool,
-
-        /// whether to receive all @role mentions
-        pub mention_roles: bool,
-    }
-
-    /// notification config for a channel
-    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct NotifsChannel {
-        pub mute: Option<Mute>,
-
-        /// message notif config
-        ///
-        /// None means inherit from category/room
-        pub messages: Option<NotifsMessages>,
-
-        /// can't be set on voice and thread channels
-        ///
-        /// None means inherit from category/room
-        pub threads: Option<NotifsThreads>,
-    }
-
-    /// how to handle new messages
-    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub enum NotifsMessages {
-        /// notify on every message
-        Everything,
-
-        /// notify on mentions; add all new messages to inbox
-        Watching,
-
-        /// notify on mentions
-        #[default]
-        Mentions,
-
-        /// don't receive any notifications for messages
-        // how does this compare with Mute? maybe make mute *completely* hide
-        // everything (including red mention circles), while this just doesnt notify
-        // you
-        Nothing,
-    }
-
-    /// how to handle new threads
-    #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub enum NotifsThreads {
-        /// notify whenever a new thread is created
-        Notify,
-
-        /// add all new threads to your inbox
-        #[default]
-        Inbox,
-
-        /// ignore new threads
-        Nothing,
-    }
-
-    // only affects private rooms
-    pub enum NotifsVoice {
-        /// when someone starts streaming
-        Streams,
-        /// when anyone connects
-        Voice,
-        Nothing,
-    }
-
-    pub enum NotifsReactions {
-        /// notify for all reactions
-        Always,
-
-        /// reactions in direct messages and private rooms only
-        Restricted,
-
-        /// reactions in direct messages only
-        Dms,
-
-        Nothing,
-    }
-
-    /// don't receive any notifications
-    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct Mute {
-        /// how long to mute for, or forever if None
-        pub expires_at: Option<Time>,
-    }
-
-    /// serialized notification payload, sent through web push
-    // TODO: implement
-    pub struct NotificationBytes {
-        // 1 byte: version
-        // 1 byte: type
-        // 2 bytes: 0x00 0x00 (unused, use for flags?)
-
-        // 4 bytes: notification id
-        // 4 bytes: channel id
-        // 4 bytes: message id
-
-        // flags: is edit, author is ignored, channel is muted, what else?
+impl Notification2 {
+    /// get the tag for this notification
+    ///
+    /// notifications with the same tag will be deduplicated
+    pub fn tag_id(&self) -> Uuid {
+        match &self.ty {
+            Notification2Type::Message { message_id, .. } => **message_id,
+            Notification2Type::Reaction { message_id, .. } => **message_id,
+        }
     }
 }

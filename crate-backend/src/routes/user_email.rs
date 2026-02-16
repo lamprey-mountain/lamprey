@@ -7,6 +7,7 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::util::Changes;
+use common::v1::types::UserId;
 use common::v1::types::{AuditLogEntryType, MessageSync};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
