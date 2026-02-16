@@ -794,12 +794,12 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.type === "ThreadCreated") {
 			const navigate = useNavigate();
 			const ctx = useCtx();
-			const threadId = () => props.message.source_message_id;
-			
+			const threadId = () => props.message.thread_id;
+
 			return (
 				<article
 					ref={messageArticleRef!}
-					class="message menu-message oneline"
+					class="message menu-message oneline message-dim-content"
 					data-message-id={props.message.id}
 					classList={{
 						separate: props.separate,
@@ -821,11 +821,11 @@ export function MessageView(props: MessageProps) {
 								<Author message={props.message} thread={thread()} />
 							</span>{" "}
 							created{" "}
-							<Show 
-								when={threadId()} 
+							<Show
+								when={threadId()}
 								fallback={<span>a thread</span>}
 							>
-								<button 
+								<button
 									class="link"
 									onClick={(e) => {
 										e.stopPropagation();
@@ -837,8 +837,8 @@ export function MessageView(props: MessageProps) {
 									a thread
 								</button>
 							</Show>
-							{" "}
-							<button 
+							{". "}
+							<button
 								class="link"
 								onClick={(e) => {
 									e.stopPropagation();
