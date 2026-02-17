@@ -96,6 +96,11 @@ export const VoiceProvider = (props: ParentProps) => {
 
 				update("threadId", e.state.thread_id);
 
+				update("muted", e.state.self_mute);
+				update("deafened", e.state.self_deaf);
+				update("cameraHidden", !e.state.self_video);
+				update("screenshareEnabled", e.state.self_screen);
+
 				if (!rtcCreated) {
 					rtc.createStream("user");
 					rtc.createStream("screen");

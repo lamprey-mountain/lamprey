@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, untrack } from "solid-js";
 import { useApi } from "./api";
 import { SignallingMessage, TrackMetadata, VoiceState } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -473,7 +473,7 @@ export const createVoiceClient = () => {
 		events,
 		transceivers,
 		updateIndicators(indicators: Indicators) {
-			const existing = api.voiceState();
+			const existing = untrack(() => api.voiceState());
 			if (!existing) return;
 			const unchanged = existing.self_deaf === indicators.self_deaf &&
 				existing.self_mute === indicators.self_mute &&
