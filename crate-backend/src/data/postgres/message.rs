@@ -726,7 +726,24 @@ impl DataMessage for Postgres {
         )
     }
 
-    async fn message_pin_create(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()> {
+    async fn message_pin_create(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<bool> {
+        let pinned: Option<serde_json::Value> = query_scalar!(
+            "select pinned from message where id = $1 and channel_id = $2",
+            *message_id,
+            *channel_id
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .flatten();
+
+        if pinned.is_some() {
+            return Ok(false);
+        }
+
         let pin_count: i64 = query_scalar!(
             "select count(*) from message where channel_id = $1 and pinned is not null",
             *channel_id
@@ -764,7 +781,7 @@ impl DataMessage for Postgres {
 
         tx.commit().await?;
 
-        Ok(())
+        Ok(true)
     }
 
     async fn message_pin_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()> {

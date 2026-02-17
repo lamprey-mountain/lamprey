@@ -766,7 +766,7 @@ async fn message_pin_create(
         return Err(Error::BadStatic("thread is removed"));
     }
 
-    data.message_pin_create(channel_id, message_id).await?;
+    let created = data.message_pin_create(channel_id, message_id).await?;
 
     let message = data
         .message_get(channel_id, message_id, auth.user.id)
@@ -778,6 +778,10 @@ async fn message_pin_create(
         MessageSync::MessageUpdate { message },
     )
     .await?;
+
+    if !created {
+        return Ok(StatusCode::OK);
+    }
 
     let notice_message_id = data
         .message_create(DbMessageCreate {

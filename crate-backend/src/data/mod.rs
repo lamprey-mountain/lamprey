@@ -571,7 +571,11 @@ pub trait DataMessage {
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<MessageV2>>;
-    async fn message_pin_create(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
+    async fn message_pin_create(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<bool>;
     async fn message_pin_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
     async fn message_pin_reorder(&self, channel_id: ChannelId, reorder: PinsReorder) -> Result<()>;
     async fn message_pin_list(
