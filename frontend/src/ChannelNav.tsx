@@ -20,6 +20,7 @@ import icInbox from "./assets/inbox.png";
 import icSettings from "./assets/settings.png";
 import icMemberAdd from "./assets/member-add.png";
 
+// TODO: review llm code here because im lazy and dont like implementing drag and drop
 export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
 	const api = useApi();
@@ -29,12 +30,12 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const nav = useNavigate();
 
 	// track drag ids
-	const [dragging, setDragging] = createSignal<string | null>(null);
+	const [dragging, setDragging] = createSignal<
+		{ type: "channel" | "voice"; id: string; channelId?: string } | null
+	>(null);
 	const [target, setTarget] = createSignal<
-		{ id: string; after: boolean } | null
-	>(
-		null,
-	);
+		{ id: string; mode: "before" | "after" | "inside" } | null
+	>(null);
 
 	// track collapsed categories
 	const [collapsedCategories, setCollapsedCategories] = createSignal<
@@ -168,87 +169,65 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		setCategories(list as any);
 	});
 
-	const previewedCategories = createMemo(() => {
-		const fromId = dragging();
-		const toId = target()?.id;
-		const after = target()?.after;
-		const cats = categories();
-
-		if (!fromId || !toId || fromId === toId) return cats;
-
-		const fromChannel = api.channels.cache.get(fromId);
-		const toChannel = api.channels.cache.get(toId);
-		if (!fromChannel || !toChannel) return cats;
-
-		// Don't preview reorder if dragging a thread
-		if (
-			fromChannel.type === "ThreadPublic" ||
-			fromChannel.type === "ThreadPrivate" ||
-			fromChannel.type === "ThreadForum2"
-		) {
-			return cats;
-		}
-
-		const newCategories = cats.map((c) => ({
-			category: c.category,
-			channels: [...c.channels],
-		}));
-
-		const fromCat = newCategories.find(
-			(c) => (c.category?.id ?? null) === fromChannel.parent_id,
-		);
-		if (!fromCat) return cats;
-		const fromIndex = fromCat.channels.findIndex((c) => c.id === fromId);
-		if (fromIndex === -1) return cats;
-
-		const [moved] = fromCat.channels.splice(fromIndex, 1);
-
-		if (toChannel.type === "Category") {
-			const toCat = newCategories.find((c) => c.category?.id === toId);
-			if (!toCat) return cats;
-			if (after) toCat.channels.push(moved);
-			else toCat.channels.unshift(moved);
-		} else {
-			const toCat = newCategories.find(
-				(c) => (c.category?.id ?? null) === toChannel.parent_id,
-			);
-			if (!toCat) return cats;
-			let toIndex = toCat.channels.findIndex((c) => c.id === toId);
-			if (toIndex === -1) return cats;
-			if (after) toIndex++;
-			toCat.channels.splice(toIndex, 0, moved);
-		}
-
-		return newCategories;
-	});
-
 	// helper to get channel id from the element's data attribute
 	const getChannelId = (e: DragEvent) =>
 		(e.currentTarget as HTMLElement).dataset.channelId;
 
 	const handleDragStart = (e: DragEvent) => {
 		e.stopPropagation();
+		e.dataTransfer!.effectAllowed = "move";
 		const id = getChannelId(e);
-		if (id) setDragging(id);
+		e.dataTransfer!.setData("text/plain", id || "");
+
+		if (id) {
+			setDragging({ type: "channel", id });
+		}
+	};
+
+	const handleVoiceDragStart = (
+		e: DragEvent,
+		userId: string,
+		channelId: string,
+	) => {
+		e.stopPropagation();
+		e.stopImmediatePropagation();
+		e.dataTransfer!.effectAllowed = "move";
+		e.dataTransfer!.setData("text/plain", userId);
+		setDragging({ type: "voice", id: userId, channelId });
 	};
 
 	const handleDragOver = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const id = getChannelId(e);
-		if (!id || id === dragging()) {
+		const dragInfo = dragging();
+		if (!id || dragInfo?.id === id) {
 			return;
 		}
 
-		const draggingId = dragging();
+		// handle voice participant drag
+		if (dragInfo?.type === "voice") {
+			const targetChannel = api.channels.cache.get(id);
+			if (targetChannel?.type === "Voice") {
+				if (target()?.id !== id) {
+					setTarget({ id, mode: "inside" });
+				}
+			}
+			return;
+		}
+
+		const draggingId = dragInfo?.id;
 		if (draggingId) {
 			const draggingChannel = api.channels.cache.get(draggingId);
+			const targetChannel = api.channels.cache.get(id);
+
+			if (!draggingChannel || !targetChannel) return;
+
 			// if dragging a thread
 			if (
-				draggingChannel &&
-				(draggingChannel.type === "ThreadPublic" ||
-					draggingChannel.type === "ThreadPrivate" ||
-					draggingChannel.type === "ThreadForum2")
+				draggingChannel.type === "ThreadPublic" ||
+				draggingChannel.type === "ThreadPrivate" ||
+				draggingChannel.type === "ThreadForum2"
 			) {
 				let validParents: string[] = [];
 				if (
@@ -261,11 +240,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				}
 
 				if (validParents.length > 0) {
-					const targetChannel = api.channels.cache.get(id);
-
 					// if hovering over another thread, check if its parent is a valid target
 					if (
-						targetChannel &&
 						(targetChannel.type === "ThreadPublic" ||
 							targetChannel.type === "ThreadPrivate" ||
 							targetChannel.type === "ThreadForum2") &&
@@ -275,16 +251,16 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						const parent = api.channels.cache.get(targetChannel.parent_id);
 						if (parent && validParents.includes(parent.type)) {
 							if (target()?.id !== parent.id) {
-								setTarget({ id: parent.id, after: false });
+								setTarget({ id: parent.id, mode: "inside" });
 							}
 							return;
 						}
 					}
 
 					// check if target itself is a valid parent
-					if (targetChannel && validParents.includes(targetChannel.type)) {
+					if (validParents.includes(targetChannel.type)) {
 						if (target()?.id !== id) {
-							setTarget({ id, after: false });
+							setTarget({ id, mode: "inside" });
 						}
 						return;
 					}
@@ -292,179 +268,254 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				}
 			}
 
-			if (draggingChannel && draggingChannel.type === "Document") {
-				const targetChannel = api.channels.cache.get(id);
-				if (targetChannel?.type === "Wiki") {
+			// if dragging a document
+			if (draggingChannel.type === "Document") {
+				if (targetChannel.type === "Wiki") {
 					if (target()?.id !== id) {
-						setTarget({ id, after: false });
+						setTarget({ id, mode: "inside" });
 					}
 					return;
 				}
 				// if hovering over another document in a wiki, target the wiki
-				if (targetChannel?.type === "Document" && targetChannel.parent_id) {
+				if (targetChannel.type === "Document" && targetChannel.parent_id) {
 					const p = api.channels.cache.get(targetChannel.parent_id);
 					if (p?.type === "Wiki") {
 						if (target()?.id !== p.id) {
-							setTarget({ id: p.id, after: false });
+							setTarget({ id: p.id, mode: "inside" });
 						}
 						return;
 					}
 				}
 			}
-		}
 
-		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-		const after = e.clientY > rect.top + rect.height / 2;
-		if (target()?.id !== id || target()?.after !== after) {
-			setTarget({ id, after });
+			// if dragging a regular channel (or category)
+			if (draggingChannel.type === "Category") {
+				// Can only reorder categories
+				if (targetChannel.type === "Category") {
+					const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+					const after = e.clientY > rect.top + rect.height / 2;
+					const mode = after ? "after" : "before";
+					if (target()?.id !== id || target()?.mode !== mode) {
+						setTarget({ id, mode });
+					}
+				}
+				return;
+			}
+
+			// Dragging a normal channel
+			if (targetChannel.type === "Category") {
+				// Move into category
+				if (target()?.id !== id || target()?.mode !== "inside") {
+					setTarget({ id, mode: "inside" });
+				}
+				return;
+			} else if (targetChannel.type !== "Category") {
+				// Reorder relative to other channel
+				const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+				const after = e.clientY > rect.top + rect.height / 2;
+				const mode = after ? "after" : "before";
+				if (target()?.id !== id || target()?.mode !== mode) {
+					setTarget({ id, mode });
+				}
+				return;
+			}
 		}
 	};
 
 	const handleDrop = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		const fromId = dragging();
-		const toId = target()?.id;
-		const after = target()?.after;
+		const dragInfo = dragging();
+		const t = target();
+		const toId = t?.id;
+		const mode = t?.mode;
 
 		setDragging(null);
 		setTarget(null);
 
-		if (!fromId || !toId || fromId === toId) return;
+		if (!dragInfo || !toId || dragInfo.id === toId) return;
 
-		const fromChannel = api.channels.cache.get(fromId);
+		// Handle voice participant move
+		if (dragInfo.type === "voice") {
+			const toChannel = api.channels.cache.get(toId);
+			if (!toChannel || toChannel.type !== "Voice") return;
+
+			// Move the user to the target voice channel
+			api.client.http.POST("/api/v1/voice/{channel_id}/member/{user_id}/move", {
+				params: {
+					path: {
+						channel_id: dragInfo.channelId!,
+						user_id: dragInfo.id,
+					},
+				},
+				body: {
+					target_id: toChannel.id,
+				},
+			});
+			return;
+		}
+
+		const fromChannel = api.channels.cache.get(dragInfo.id);
+		if (!fromChannel) return;
 		const toChannel = api.channels.cache.get(toId);
-		if (!fromChannel || !toChannel) return;
+		if (!toChannel) return;
 
-		// Handle thread move
-		if (
-			fromChannel.type === "ThreadPublic" ||
-			fromChannel.type === "ThreadPrivate"
-		) {
+		// Handle thread/doc move (Reparenting)
+		if (mode === "inside") {
 			if (
-				toChannel.type === "Text" ||
-				toChannel.type === "Announcement" ||
-				toChannel.type === "Forum"
+				fromChannel.type === "ThreadPublic" ||
+				fromChannel.type === "ThreadPrivate"
 			) {
-				if (fromChannel.parent_id !== toChannel.id) {
-					api.channels.update(fromChannel.id, { parent_id: toChannel.id });
-				}
-			}
-			return;
-		}
-
-		if (fromChannel.type === "ThreadForum2") {
-			if (toChannel.type === "Forum2") {
-				if (fromChannel.parent_id !== toChannel.id) {
-					api.channels.update(fromChannel.id, { parent_id: toChannel.id });
-				}
-			}
-			return;
-		}
-
-		if (fromChannel.type === "Document") {
-			if (toChannel.type === "Wiki") {
-				if (fromChannel.parent_id !== toChannel.id) {
-					api.channels.update(fromChannel.id, { parent_id: toChannel.id });
-				}
-				return;
-			}
-			const fromParent = fromChannel.parent_id
-				? api.channels.cache.get(fromChannel.parent_id)
-				: undefined;
-			if (fromParent?.type === "Wiki") {
-				// Moving out of Wiki to Top Level
-				let newParentId: string | null | undefined = undefined;
-				let position: number | undefined = undefined;
-
-				if (toChannel.type === "Category") {
-					newParentId = toChannel.id;
-				} else {
-					// Moving to a channel position
-					newParentId = toChannel.parent_id;
-					// We'd ideally calculate position here, but simplest 'move out' is just reparent
-					// If we start calculating position, we need to fetch the category list
-					const toCat = categories().find(
-						(c) => (c.category?.id ?? null) === toChannel.parent_id,
-					);
-					if (toCat) {
-						const idx = toCat.channels.findIndex((c) => c.id === toId);
-						if (idx !== -1) {
-							// Just update parent for now, position handling is complex without full reorder logic reuse
-							// but the generic logic below FAILS for nested documents.
-							// So we must handle it here or adapt generic logic.
-							// Let's just update parent.
-						}
+				if (
+					toChannel.type === "Text" ||
+					toChannel.type === "Announcement" ||
+					toChannel.type === "Forum"
+				) {
+					if (fromChannel.parent_id !== toChannel.id) {
+						api.channels.update(fromChannel.id, { parent_id: toChannel.id });
 					}
 				}
+				return;
+			}
 
-				if (newParentId !== undefined) {
-					api.channels.update(fromChannel.id, { parent_id: newParentId });
+			if (fromChannel.type === "ThreadForum2") {
+				if (toChannel.type === "Forum2") {
+					if (fromChannel.parent_id !== toChannel.id) {
+						api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+					}
 				}
+				return;
+			}
+
+			if (fromChannel.type === "Document") {
+				if (toChannel.type === "Wiki") {
+					if (fromChannel.parent_id !== toChannel.id) {
+						api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+					}
+				}
+				return;
+			}
+
+			// Move channel into category
+			if (toChannel.type === "Category" && fromChannel.type !== "Category") {
+				api.channels.update(fromChannel.id, { parent_id: toChannel.id });
 				return;
 			}
 		}
 
-		const fromCategory = categories().find(
-			(c) => (c.category?.id ?? null) === fromChannel.parent_id,
-		);
-		if (!fromCategory) return;
+		// Handle Reordering
+		// We need to calculate the new order for the affected list.
 
-		const fromIndex = fromCategory.channels.findIndex((c) => c.id === fromId);
-		if (fromIndex === -1) return;
-
-		let toCategory;
-		let toIndex;
-		let newParentId;
-
+		let targetParentId = toChannel.parent_id;
 		if (toChannel.type === "Category") {
-			toCategory = categories().find((c) => c.category?.id === toId);
-			if (!toCategory) return;
-			toIndex = after ? toCategory.channels.length : 0;
-			newParentId = toId;
+			// If we are reordering categories (target is category, from is category)
+			// parent is null
+			if (fromChannel.type === "Category") {
+				targetParentId = null;
+			} else {
+				// Should have been handled by "inside" logic above?
+				// If we dropped "before/after" a category?
+				// That implies moving out of category to top level?
+				// For now, let's assume dropping ON category is inside, dropping near channel is reorder.
+			}
 		} else {
-			toCategory = categories().find(
-				(c) => (c.category?.id ?? null) === toChannel.parent_id,
-			);
-			if (!toCategory) return;
-			toIndex = toCategory.channels.findIndex((c) => c.id === toId);
-			if (toIndex === -1) return;
-			if (after) toIndex++;
-			newParentId = toChannel.parent_id;
+			// Target is a normal channel
+			// If dragging category, can only drop relative to another category (handled above?)
+			// If dragging channel, target is sibling channel.
 		}
 
-		const reordered = [...toCategory.channels];
-		if (fromCategory === toCategory) {
-			if (fromIndex < toIndex) toIndex--;
-			const [moved] = reordered.splice(fromIndex, 1);
-			reordered.splice(toIndex, 0, moved);
+		// Reconstruct the list logic
+		const currentCategories = categories();
+
+		// Find the "list" we are modifying.
+		// It's either the top-level list of categories, OR a specific category's channels.
+
+		let siblings: Channel[] = [];
+		let newParentId: string | null | undefined = undefined;
+
+		if (fromChannel.type === "Category") {
+			// Reordering categories
+			siblings = currentCategories.map((c) => c.category).filter((c) =>
+				c !== null
+			) as Channel[];
+			newParentId = null; // Categories are top level
 		} else {
-			reordered.splice(toIndex, 0, fromChannel);
+			// Reordering channels
+			// Identify target parent
+			if (toChannel.type === "Category") {
+				// If we dropped relative to a category (not inside), that's top level?
+				// But earlier logic says "Category" target means "inside".
+				// So this branch might not be reached for Category targets unless we support before/after.
+				// Let's assume toChannel is NOT Category here.
+				return;
+			} else {
+				// toChannel is a sibling
+				// Find its category
+				const cat = currentCategories.find(
+					(c) => (c.category?.id ?? null) === toChannel.parent_id,
+				);
+				if (cat) {
+					siblings = [...cat.channels];
+					newParentId = toChannel.parent_id;
+				}
+			}
 		}
 
-		if (
-			fromCategory === toCategory &&
-			JSON.stringify(fromCategory.channels.map((c) => c.id)) ===
-				JSON.stringify(reordered.map((c) => c.id))
-		) {
+		// Remove from old list?
+		// Actually, we can just build the new list based on the target parent.
+		// If we are moving between categories, `siblings` above is the TARGET list.
+		// We need to insert `fromChannel` into `siblings`.
+
+		// Remove `fromChannel` from `siblings` if it's there (same category reorder)
+		const fromIndex = siblings.findIndex((c) => c.id === fromChannel.id);
+		if (fromIndex !== -1) {
+			siblings.splice(fromIndex, 1);
+		} else {
+			// Moving from another category?
+			// Nothing to remove from `siblings`
+		}
+
+		// Find insertion index
+		let toIndex = siblings.findIndex((c) => c.id === toId);
+		if (toIndex === -1) {
+			// Should not happen
 			return;
 		}
 
-		const body = reordered.map((c, i) => ({
+		if (mode === "after") {
+			toIndex++;
+		}
+
+		siblings.splice(toIndex, 0, fromChannel);
+
+		// Send update
+		const body = siblings.map((c, i) => ({
 			id: c.id,
 			parent_id: newParentId,
 			position: i,
 		}));
 
-		if (fromCategory !== toCategory) {
-			const sourceBody = fromCategory.channels
-				.filter((c) => c.id !== fromId)
-				.map((c, i) => ({
+		// If we moved FROM another category, we should also update the old category to close gaps?
+		// The backend `ChannelReorder` updates positions for provided channels.
+		// If we don't provide the old category channels, their positions remain.
+		// It's polite to reorder the old category too.
+
+		if (
+			fromChannel.parent_id !== newParentId && fromChannel.type !== "Category"
+		) {
+			const oldCat = currentCategories.find(
+				(c) => (c.category?.id ?? null) === fromChannel.parent_id,
+			);
+			if (oldCat) {
+				const oldSiblings = oldCat.channels.filter((c) =>
+					c.id !== fromChannel.id
+				);
+				body.push(...oldSiblings.map((c, i) => ({
 					id: c.id,
 					parent_id: fromChannel.parent_id,
 					position: i,
-				}));
-			body.push(...sourceBody);
+				})));
+			}
 		}
 
 		api.client.http.PATCH("/api/v1/room/{room_id}/channel", {
@@ -527,7 +578,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					</Show>
 				</Show>
 
-				<For each={previewedCategories()}>
+				<For each={categories()}>
 					{({ category, channels }) => (
 						<>
 							<Show when={category}>
@@ -566,9 +617,19 @@ export const ChannelNav = (props: { room_id?: string }) => {
 										});
 									}}
 									classList={{
-										dragging: dragging() === category!.id,
+										dragging: dragging()?.type === "channel" &&
+											dragging()?.id === category!.id,
 										collapsed: collapsedCategories().has(category!.id),
 										category: true,
+										"drop-before": dragging()?.type === "channel" &&
+											target()?.id === category!.id &&
+											target()?.mode === "before",
+										"drop-after": dragging()?.type === "channel" &&
+											target()?.id === category!.id &&
+											target()?.mode === "after",
+										"drop-inside": dragging()?.type === "channel" &&
+											target()?.id === category!.id &&
+											target()?.mode === "inside",
 									}}
 								>
 									<span class="category-toggle">
@@ -601,32 +662,22 @@ export const ChannelNav = (props: { room_id?: string }) => {
 											}}
 											class="toplevel"
 											classList={{
-												dragging: dragging() === channel.id,
+												dragging: dragging()?.type === "channel" &&
+													dragging()?.id === channel.id,
 												unread: channel.type !== "Voice" && !!channel.is_unread,
-												"channel-reorder-target": (() => {
-													const dragId = dragging();
-													if (!dragId) return false;
-													const dragChannel = api.channels.cache.get(dragId);
-													if (!dragChannel) return false;
-
-													if (target()?.id !== channel.id) return false;
-
-													if (
-														dragChannel.type === "ThreadPublic" ||
-														dragChannel.type === "ThreadPrivate"
-													) {
-														return (
-															channel.type === "Text" ||
-															channel.type === "Announcement" ||
-															channel.type === "Forum"
-														);
-													}
-													if (dragChannel.type === "ThreadForum2") {
-														return channel.type === "Forum2";
-													}
-
-													return false;
-												})(),
+												"voice-channel-target": dragging()?.type === "voice" &&
+													target()?.id === channel.id &&
+													target()?.mode === "inside",
+												"channel-reorder-target":
+													dragging()?.type === "channel" &&
+													target()?.id === channel.id &&
+													target()?.mode === "inside",
+												"drop-before": dragging()?.type === "channel" &&
+													target()?.id === channel.id &&
+													target()?.mode === "before",
+												"drop-after": dragging()?.type === "channel" &&
+													target()?.id === channel.id &&
+													target()?.mode === "after",
 											}}
 										>
 											<ItemChannel channel={channel} />
@@ -673,10 +724,6 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													const name = () =>
 														room_member()?.override_name || user()?.name ||
 														"unknown user";
-													// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
-													// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
-													// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
-													// </svg>
 													return (
 														<div
 															class="voice-participant menu-user"
@@ -688,6 +735,17 @@ export const ChannelNav = (props: { room_id?: string }) => {
 															}}
 															data-channel-id={s.channel_id}
 															data-user-id={s.user_id}
+															draggable={true}
+															onDragStart={(e) =>
+																handleVoiceDragStart(
+																	e,
+																	s.user_id,
+																	s.channel_id,
+																)}
+															onDragEnd={() => {
+																setDragging(null);
+																setTarget(null);
+															}}
 														>
 															<Avatar user={user()} />
 															{name()}
@@ -770,7 +828,7 @@ export const ItemChannel = (props: { channel: Channel }) => {
 				<div class="mentions">{props.channel.mention_count}</div>
 			</Show>
 			<Show when={true}>
-				<button onClick={() => {/* TODO: show invite modal */}}>
+				<button onClick={() => {/* TODO: show invite modal */ }}>
 					<img class="icon" src={icMemberAdd} />
 				</button>
 				<button

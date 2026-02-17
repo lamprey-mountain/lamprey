@@ -3,3 +3,4 @@ export * from "./Video.tsx";
 export * from "./Audio.tsx";
 export * from "./File.tsx";
 export * from "./Text.tsx";
+export * from "./Three.tsx";

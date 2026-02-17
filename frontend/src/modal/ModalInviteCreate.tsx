@@ -36,6 +36,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 						]}
 					/>
 				</div>
+				{/* TODO: selecting roles */}
 				<div style="margin-top:8px;display:flex;max-width:100%">
 					<input type="text" placeholder="click to copy" />
 					<button class="primary">create</button>
