@@ -3392,7 +3392,6 @@ version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
  "lamprey-hakari",
- "lamprey-macros",
  "mediatype",
  "pastey",
  "serde",
@@ -3488,17 +3487,6 @@ dependencies = [
  "winnow",
  "zerocopy",
  "zeroize",
-]
-
-[[package]]
-name = "lamprey-macros"
-version = "0.1.1"
-dependencies = [
- "lamprey-hakari",
- "proc-macro2",
- "quote",
- "syn 2.0.108",
- "uuid",
 ]
 
 [[package]]
