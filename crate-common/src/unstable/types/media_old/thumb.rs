@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -7,7 +8,8 @@ use utoipa::ToSchema;
 use super::{Image, Mime};
 
 /// a thumbnail/image preview
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Thumb {
     /// Where this file can be downloaded from
@@ -20,11 +22,12 @@ pub struct Thumb {
     pub mime: Mime,
 
     /// image metadata
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub image: Image,
 }
 
 /// multiple sized thumbs. always has at least one thumbnail.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Thumbs(pub Vec<Thumb>);

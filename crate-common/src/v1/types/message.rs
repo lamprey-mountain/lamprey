@@ -12,9 +12,12 @@ use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 #[cfg(feature = "feat_interaction_reaction")]
 use crate::v1::types::reaction::ReactionKey;
-use crate::v1::types::util::{some_option, Diff, Time};
+use crate::v1::types::util::{Diff, Time};
 use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
 use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 use crate::v2::types::message::Message as MessageV2;
 
@@ -137,7 +140,7 @@ pub struct Pinned {
 pub struct PinsReorder {
     /// the messages to reorder
     #[cfg_attr(feature = "serde", serde(default))]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub messages: Vec<PinsReorderItem>,
 }
 

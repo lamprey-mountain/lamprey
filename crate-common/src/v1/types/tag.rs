@@ -7,11 +7,10 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    misc::Color,
-    util::{default_false_opt, some_option},
-    TagId,
-};
+use crate::v1::types::{misc::Color, TagId};
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::{default_false_opt, some_option};
 
 /// a tag that can be applied to a thread
 #[derive(Debug, Clone, PartialEq, Eq)]

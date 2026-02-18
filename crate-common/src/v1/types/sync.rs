@@ -825,6 +825,7 @@ pub enum SyncVersion {
     V1 = 1,
 }
 
+#[cfg(feature = "serde")]
 impl Serialize for SyncVersion {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -834,6 +835,7 @@ impl Serialize for SyncVersion {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for SyncVersion {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

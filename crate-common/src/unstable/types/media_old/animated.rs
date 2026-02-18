@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -9,19 +10,20 @@ use utoipa::ToSchema;
 use super::{File, Image, Video};
 
 /// a animated image (usually gif) or muted looping video (gifv)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Animated {
     /// an animated image (usually gif)
     Image {
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         image: File<Image>,
     },
 
     /// muted looping video (aka gifv)
     Video {
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         video: File<Video>,
     },
 }

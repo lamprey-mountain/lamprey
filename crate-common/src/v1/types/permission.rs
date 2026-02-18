@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+#[cfg(feature = "serde")]
 use crate::v1::types::util::deserialize_sorted;
 
 pub mod defaults;

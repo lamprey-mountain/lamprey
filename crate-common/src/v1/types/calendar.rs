@@ -13,9 +13,11 @@ use crate::v1::types::{
     error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
     misc::Color,
     pagination::PaginationDirection,
-    util::some_option,
     CalendarEventId, ChannelId, RoomMember, User, UserId,
 };
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 use super::util::{Diff, Time};
 

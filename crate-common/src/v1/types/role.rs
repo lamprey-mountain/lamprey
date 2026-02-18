@@ -7,10 +7,10 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    util::{deserialize_sorted, deserialize_sorted_option, some_option, Diff},
-    UserId,
-};
+use crate::v1::types::{util::Diff, UserId};
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some_option};
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
@@ -146,12 +146,12 @@ pub struct RolePatch {
 pub struct RoleMemberBulkPatch {
     /// add this role to these users
     #[cfg_attr(feature = "serde", serde(default))]
-    #[validate(length(min = 1, max = 256))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub apply: Vec<UserId>,
 
     /// remove this role from these users
     #[cfg_attr(feature = "serde", serde(default))]
-    #[validate(length(min = 1, max = 256))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub remove: Vec<UserId>,
 }
 
@@ -163,7 +163,7 @@ pub struct RoleMemberBulkPatch {
 pub struct RoleReorder {
     /// the roles to reorder
     #[cfg_attr(feature = "serde", serde(default))]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub roles: Vec<RoleReorderItem>,
 }
 

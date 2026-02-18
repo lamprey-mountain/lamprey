@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -6,14 +7,15 @@ use utoipa::ToSchema;
 /// an oauth scope
 ///
 /// WORK IN PROGRESS!!! SUBJECT TO CHANGE!!!
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
 pub enum Scope {
     /// basic user profle information
     ///
     /// affects user_get and oauth_userinfo
-    #[serde(alias = "openid")]
+    #[cfg_attr(feature = "serde", serde(alias = "openid"))]
     Identify,
 
     /// access email addresses
@@ -52,7 +54,7 @@ pub enum Scope {
     /// includes these endpoints:
     ///
     /// - friend_list, block_list
-    #[serde(rename = "relations.read")]
+    #[cfg_attr(feature = "serde", serde(rename = "relations.read"))]
     RelationsRead,
 
     /// access to user relationships
@@ -60,7 +62,7 @@ pub enum Scope {
     /// includes these endpoints:
     ///
     /// - friend_add, friend_remove, block_add, block_remove
-    #[serde(rename = "relations.write")]
+    #[cfg_attr(feature = "serde", serde(rename = "relations.write"))]
     RelationsWrite,
 
     /// Read/write access to /auth

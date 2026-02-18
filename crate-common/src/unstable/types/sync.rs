@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -44,9 +45,10 @@ use crate::v1::types::SessionToken;
 
 /// how to receive events
 // i should probably add some way to shard; see twitch's conduit system
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum SyncTransport {
     Webhook {
         url: String,
@@ -75,9 +77,10 @@ pub enum SyncTransport {
 // use this for both client syncing and voice server syncing
 
 /// an event from the server for the client
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "op")]
+#[cfg_attr(feature = "serde", serde(tag = "op"))]
 pub enum Event<R, T> {
     /// heartbeat
     Ping,
@@ -88,7 +91,7 @@ pub enum Event<R, T> {
     /// successfully connected
     Ready {
         /// ready data
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         data: R,
 
         /// connection id
@@ -112,9 +115,10 @@ pub enum Event<R, T> {
 }
 
 /// a command from the client to the server
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "op")]
+#[cfg_attr(feature = "serde", serde(tag = "op"))]
 pub enum Command<R, T> {
     /// initial message
     Hello {
@@ -122,7 +126,7 @@ pub enum Command<R, T> {
         token: SessionToken,
 
         /// extra data for hello
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         data: R,
     },
 
@@ -143,7 +147,7 @@ pub enum Command<R, T> {
 
     /// send some data to the server
     Dispatch {
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         data: T,
     },
 }

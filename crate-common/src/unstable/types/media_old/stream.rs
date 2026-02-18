@@ -1,5 +1,6 @@
 //! streamable media
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -11,7 +12,8 @@ use crate::v1::types::Mime;
 use super::{Audio, Image, TimedText, Video};
 
 /// a piece of media which can be streamed
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Streamable {
     /// available tracks
@@ -21,14 +23,16 @@ pub struct Streamable {
 
 /// metadata about the current media
 // TODO: strongly type (title, artist, album, etc)
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Metadata(pub serde_json::Value);
 
 /// a track
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Track {
     /// lots of thumbnails, used for scrubbing through media
     Trickplay {
@@ -69,7 +73,8 @@ pub enum Track {
 }
 
 /// an entire video or audio stream
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Playlist {
     pub duration: u32,
@@ -77,7 +82,8 @@ pub struct Playlist {
 }
 
 /// a single fragment of a video or audio stream
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Segment {
     pub duration: u32,
@@ -87,9 +93,10 @@ pub struct Segment {
 
 // TODO: make sure this does what i think it does
 /// a codec
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum Codec {
     /// video
     H263V2,

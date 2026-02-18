@@ -1,5 +1,6 @@
 //! media schema v3
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -23,7 +24,8 @@ pub use stream::Streamable;
 pub use thumb::{Thumb, Thumbs};
 
 /// a piece of media. becomes immutable after being linked to something.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Media<T: MediaType> {
@@ -60,9 +62,10 @@ pub struct Media<T: MediaType> {
 }
 
 /// what object a piece of media is linked to
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MediaLink {
     /// linked to a message
     Message {
@@ -131,9 +134,10 @@ impl_media_type!(Embed);
 impl_media_type!(Animated);
 
 /// Any file
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MediaFile {
     Image(Media<FileImage>),
     Video(Media<FileVideo>),
@@ -145,9 +149,10 @@ pub enum MediaFile {
 }
 
 /// Any piece of media whatsoever
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MediaAny {
     Image(Media<FileImage>),
     Video(Media<FileVideo>),
@@ -159,9 +164,10 @@ pub enum MediaAny {
 }
 
 /// a message attachment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub struct Attachment {
     pub media: MediaAny,
 

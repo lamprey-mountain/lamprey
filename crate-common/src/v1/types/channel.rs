@@ -9,9 +9,12 @@ use validator::Validate;
 
 use crate::v1::types::tag::Tag;
 use crate::v1::types::user_config::PreferencesChannel;
-use crate::v1::types::util::{some_option, Time};
+use crate::v1::types::util::Time;
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
 use crate::v1::types::{MediaId, MessageCreate, MessageVerId, RoleId, TagId, ThreadMember, User};
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 use super::calendar::{Calendar, CalendarPatch};
 use super::document::{Document, DocumentPatch, Wiki, WikiPatch};
@@ -531,7 +534,7 @@ pub struct Locked {
 pub struct ChannelReorder {
     /// the channels to reorder
     #[cfg_attr(feature = "serde", serde(default))]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub channels: Vec<ChannelReorderItem>,
 }
 

@@ -10,9 +10,12 @@ use validator::Validate;
 use crate::v1::types::{
     ids::{DocumentBranchId, DocumentTagId},
     misc::Time,
-    util::{some_option, Diff},
+    util::Diff,
     ChannelId, RoomMember, ThreadMember, User, UserId,
 };
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 pub mod crdt;
 pub mod serialized;

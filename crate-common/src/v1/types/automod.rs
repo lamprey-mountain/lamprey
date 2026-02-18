@@ -16,7 +16,7 @@ use validator::Validate;
 pub struct AutomodRule {
     pub id: AutomodRuleId,
     pub room_id: RoomId,
-    #[schema(max_length = 64)]
+    #[cfg_attr(feature = "utoipa", schema(max_length = 64))]
     pub name: String,
     pub enabled: bool,
 

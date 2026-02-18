@@ -10,9 +10,12 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    util::{some_option, Diff, Time},
+    util::{Diff, Time},
     ApplicationId,
 };
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 use super::{ids::SessionId, UserId};
 

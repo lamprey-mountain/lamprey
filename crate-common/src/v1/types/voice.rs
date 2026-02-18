@@ -11,10 +11,10 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    util::{some_option, Time},
-    ConnectionId, MediaId, RoomId, SessionId, SfuId, UserId,
-};
+use crate::v1::types::{util::Time, ConnectionId, MediaId, RoomId, SessionId, SfuId, UserId};
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 use super::ChannelId;
 

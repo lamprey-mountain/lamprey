@@ -10,9 +10,12 @@ use validator::Validate;
 use super::{RoleId, RoomId, User, UserId};
 
 use crate::v1::types::{
-    util::{some_option, Diff, Time},
+    util::{Diff, Time},
     InviteCode,
 };
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 fn bool_true() -> bool {
     true
@@ -211,7 +214,7 @@ pub enum RoomMemberOrigin {
 pub struct RoomBanBulkCreate {
     /// who to ban
     #[cfg_attr(feature = "serde", serde(default))]
-    #[validate(length(min = 1, max = 256))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub target_ids: Vec<UserId>,
 
     /// when the ban expires

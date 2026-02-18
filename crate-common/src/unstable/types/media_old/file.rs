@@ -1,5 +1,6 @@
 //! files
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -14,7 +15,8 @@ use crate::v1::types::{text::Language, Mime};
 use super::thumb::Thumbs;
 
 /// Represents metadata about a single file
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct File<T> {
@@ -39,19 +41,21 @@ pub struct File<T> {
     pub thumbs: Option<Thumbs>,
 
     /// metadata about this file
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub meta: T,
 }
 
 /// metadata for text
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Text {
     pub language: Option<Language>,
 }
 
 /// metadata for captions/subtitles
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TimedText {
     pub duration: u64,
@@ -59,7 +63,8 @@ pub struct TimedText {
 }
 
 /// metadata for videos
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Video {
     pub height: u64,
@@ -68,14 +73,16 @@ pub struct Video {
 }
 
 /// metadata for audio
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Audio {
     pub duration: u64,
 }
 
 /// metadata for images
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Image {
     pub height: u64,
@@ -83,7 +90,8 @@ pub struct Image {
 }
 
 /// a generic file
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Generic {
     // (intentionally left blank)

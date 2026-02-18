@@ -116,14 +116,20 @@ pub enum NotificationReason {
 pub struct InboxListParams {
     /// only include notifications from these rooms
     #[cfg_attr(feature = "serde", serde(default))]
-    #[schema(required = false, min_length = 1, max_length = 32)]
-    #[validate(length(min = 1, max = 32))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 32)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
     pub room_id: Vec<RoomId>,
 
     /// only include notifications from these channels
     #[cfg_attr(feature = "serde", serde(default))]
-    #[schema(required = false, min_length = 1, max_length = 32)]
-    #[validate(length(min = 1, max = 32))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 32)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
     pub channel_id: Vec<ChannelId>,
 
     /// include messages marked as read too
@@ -154,20 +160,29 @@ pub struct NotificationCreate {
 pub struct NotificationMarkRead {
     /// mark these messages as read
     #[cfg_attr(feature = "serde", serde(default))]
-    #[schema(required = false, min_length = 1, max_length = 1024)]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 1024)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub message_ids: Vec<MessageId>,
 
     /// mark everything in these threads as read
     #[cfg_attr(feature = "serde", serde(default))]
-    #[schema(required = false, min_length = 1, max_length = 1024)]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 1024)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub channel_ids: Vec<ChannelId>,
 
     /// mark everything in these rooms as read
     #[cfg_attr(feature = "serde", serde(default))]
-    #[schema(required = false, min_length = 1, max_length = 1024)]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 1024)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub room_ids: Vec<RoomId>,
 
     /// mark everything as read
@@ -188,18 +203,27 @@ pub struct NotificationFlush {
     pub after: Option<MessageId>,
 
     /// restrict to just these messages
-    #[schema(required = false, min_length = 1, max_length = 1024)]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 1024)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub message_ids: Option<Vec<MessageId>>,
 
     /// restrict to just these channels
-    #[schema(required = false, min_length = 1, max_length = 1024)]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 1024)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub channel_ids: Option<Vec<ChannelId>>,
 
     /// restrict to just these rooms
-    #[schema(required = false, min_length = 1, max_length = 1024)]
-    #[validate(length(min = 1, max = 1024))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 1024)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
     pub room_ids: Option<Vec<RoomId>>,
 
     /// also include unread notifications

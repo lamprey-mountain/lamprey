@@ -1,5 +1,6 @@
 //! url embeds/link previews
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -14,7 +15,8 @@ use super::super::{misc::Color, util::truncate::truncate_with_ellipsis, EmbedId}
 use super::{MediaFile, MediaImage, Thumbs};
 
 /// base for all embeds
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmbedBase {
@@ -75,11 +77,12 @@ pub struct EmbedBase {
 // }
 
 /// a preview of some remote content at a url
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmbedUrl {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub base: EmbedBase,
 
     /// the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
@@ -93,17 +96,19 @@ pub struct EmbedUrl {
 }
 
 /// a custom embed
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmbedCustom {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub base: EmbedBase,
     // any custom embed specific fields?
 }
 
 /// a remote file embed
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmbedFile {
@@ -117,7 +122,8 @@ pub struct EmbedFile {
 }
 
 /// a preview of some remote content
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Embed {
     /// a generic website embed
@@ -147,7 +153,8 @@ pub enum Embed {
 }
 
 /// who created this thing
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Author {
@@ -163,7 +170,8 @@ pub struct Author {
 }
 
 /// information about the website this url is for
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Website {

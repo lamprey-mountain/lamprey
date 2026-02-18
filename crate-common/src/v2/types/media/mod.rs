@@ -16,9 +16,10 @@ use crate::v1::types::{
 pub mod proxy;
 
 /// A reference to a piece of media to be used.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum MediaReference {
     /// Use this piece of uploaded media. Prefer using this whenever possible.
     Media { media_id: MediaId },
@@ -31,18 +32,20 @@ pub enum MediaReference {
 }
 
 /// request body for `media_done`
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct MediaDoneParams {
     /// Whether to process this media asynchronously.
     ///
     /// If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing.
-    #[serde(default, rename = "async")]
+    #[cfg_attr(feature = "serde", serde(default, rename = "async"))]
     pub process_async: bool,
 }
 
 /// The status for this media
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MediaStatus {
     /// Newly created and is waiting for either
@@ -65,7 +68,8 @@ pub enum MediaStatus {
 }
 
 /// A piece of media.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Media {
@@ -91,22 +95,22 @@ pub struct Media {
     pub content_type: Mime,
 
     /// Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub source_url: Option<Url>,
 
     /// Additional filetype-specific metadata for the file
     pub metadata: MediaMetadata,
 
     /// The user who uploaded this media. Only exists for admins or if you uploaded this media
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub user_id: Option<UserId>,
 
     /// If this media was deleted, when it was deleted. Only exists for admins.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub deleted_at: Option<Time>,
 
     /// If this media is quarantined, this contains information about the quarantine. Only exists for admins.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub quarantine: Option<MediaQuarantine>,
 
     /// The results of automated scans.
@@ -120,17 +124,18 @@ pub struct Media {
 
     // TODO: skip serde if is empty
     /// what this piece of media is linked to (admin only)
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub links: Vec<MediaLinkType>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub room_id: Option<RoomId>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub channel_id: Option<ChannelId>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaQuarantine {
@@ -142,7 +147,8 @@ pub struct MediaQuarantine {
 }
 
 /// An automated scan result
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaScan {
@@ -158,9 +164,10 @@ pub struct MediaScan {
 
 /// Filetype-specific metadata
 // TODO: consider using NonZeroU64 if i am sure its valid, eg. double check no image format allows image height/width zero.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MediaMetadata {
     /// An image file
     Image {
@@ -197,7 +204,8 @@ pub enum MediaMetadata {
 }
 
 /// An update to a piece of media
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaPatch {
@@ -217,17 +225,18 @@ pub struct MediaPatch {
     /// Whether to strip sensitive exif info, like location or camera make and model.
     ///
     /// This can only be changed if the media status is not `Consumed`.
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub strip_exif: Option<bool>,
 }
 
 /// a request body for `media_create`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaCreate {
     /// Whether to strip sensitive exif info, like location or camera make and model.
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub strip_exif: bool,
 
     /// Descriptive alt text, not entirely unlike a caption
@@ -238,15 +247,16 @@ pub struct MediaCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub alt: Option<String>,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     #[cfg_attr(feature = "validator", validate(nested))]
     pub source: MediaCreateSource,
 }
 
 /// What to create this media from
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum MediaCreateSource {
     /// create this file by downloading it
     Download {
@@ -279,7 +289,8 @@ pub enum MediaCreateSource {
 }
 
 /// response body for `media_create`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MediaCreated {
     /// The id of the media that has been created
@@ -293,7 +304,8 @@ pub struct MediaCreated {
 ///
 /// objects can be linked to multiple objects; for example, media linked to
 /// `Message`s also have links to each `MessageVersion` they're referenced in.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MediaLinkType {
     /// this piece of media is linked to a message
@@ -378,6 +390,7 @@ impl MediaCreateSource {
 #[cfg(feature = "validator")]
 mod val {
     use super::MediaCreateSource;
+    #[cfg(feature = "serde")]
     use serde_json::json;
     use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
 

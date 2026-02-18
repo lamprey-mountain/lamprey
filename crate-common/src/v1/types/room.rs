@@ -9,11 +9,12 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    notifications::preferences::NotifsRoom,
-    user_config::PreferencesRoom,
-    util::{some_option, Diff},
-    ChannelId, MediaId, Permission, UserId,
+    notifications::preferences::NotifsRoom, user_config::PreferencesRoom, util::Diff, ChannelId,
+    MediaId, Permission, UserId,
 };
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::some_option;
 
 use super::{ids::RoomId, util::Time};
 

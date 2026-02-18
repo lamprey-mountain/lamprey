@@ -1,8 +1,6 @@
 //! utility stuff
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize};
-#[cfg(feature = "serde")]
 use serde_json::Value;
 
 pub mod truncate;

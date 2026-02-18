@@ -35,7 +35,8 @@ pub trait Marker: private::Sealed {
     fn name() -> &'static str;
 }
 
-#[derive(Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Id<M: Marker> {
     inner: Uuid,
