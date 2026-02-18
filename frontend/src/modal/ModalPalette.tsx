@@ -24,11 +24,6 @@ export const ModalPalette = () => {
 	// try to load all threads
 	const rooms = api.rooms.list();
 	api.dms.list();
-	createEffect(() => {
-		for (const room of rooms()?.items ?? []) {
-			api.channels.list(() => room.id);
-		}
-	});
 
 	type PaletteItem = {
 		type: "room" | "thread" | "link" | "section";

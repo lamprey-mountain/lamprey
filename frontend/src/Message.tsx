@@ -2,7 +2,6 @@ import { type Channel, getTimestampFromUUID, type Message, User } from "sdk";
 import { type MessageT, MessageType } from "./types.ts";
 import {
 	createEffect,
-	createResource,
 	createSignal,
 	For,
 	Match,
@@ -94,11 +93,10 @@ function UserMention(props: { id: string; channel: Channel }) {
 
 function RoleMention(props: { id: string; thread: Channel }) {
 	const api = useApi();
-	const [role] = createResource(() => props.thread.room_id, async (room_id) => {
-		if (!room_id) return null;
-		const roles = api.roles.list(() => room_id)();
-		return roles?.items.find((r) => r.id === props.id) ?? null;
-	});
+	const role = () => {
+		if (!props.thread.room_id) return null;
+		return api.roles.cache.get(props.id) ?? null;
+	};
 	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
 }
 

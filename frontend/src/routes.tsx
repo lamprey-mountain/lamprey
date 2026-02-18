@@ -307,9 +307,6 @@ export const RouteChannel = (p: RouteSectionProps) => {
 		}
 	});
 
-	// fetch channels to populate sidebar
-	api.channels.list(() => channel()?.room_id!);
-
 	const title = () => {
 		const ch = channel();
 		if (!ch) return t("loading");

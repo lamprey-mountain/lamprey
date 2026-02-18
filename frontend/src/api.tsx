@@ -16,6 +16,7 @@ import {
 } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 import type {
+	Channel,
 	Client,
 	ClientState,
 	Media,
@@ -26,6 +27,7 @@ import type {
 	MessageReady,
 	MessageSync,
 	Pagination,
+	Role,
 	RoomMember,
 	Session,
 	ThreadMember,
@@ -185,7 +187,180 @@ export function createApi(
 	const [voiceState, setVoiceState] = createSignal();
 
 	events.on("sync", async ([msg, raw]) => {
-		if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
+		if (msg.type === "Ambient") {
+			batch(() => {
+				for (const room of msg.rooms) {
+					rooms.cache.set(room.id, room);
+				}
+
+				for (const channel of msg.channels) {
+					channels.cache.set(channel.id, channel);
+				}
+
+				for (const thread of msg.threads) {
+					channels.cache.set(thread.id, thread);
+				}
+
+				for (const role of msg.roles) {
+					roles.cache.set(role.id, role);
+				}
+
+				for (const member of msg.room_members) {
+					let roomCache = room_members.cache.get(member.room_id);
+					if (!roomCache) {
+						roomCache = new ReactiveMap();
+						room_members.cache.set(member.room_id, roomCache);
+					}
+					roomCache.set(member.user_id, member);
+				}
+
+				if (!rooms._cachedListing) {
+					rooms._cachedListing = {
+						resource: (() => {}) as unknown as Resource<Pagination<Room>>,
+						refetch: () => {},
+						mutate: () => {},
+						prom: null,
+						pagination: null,
+					};
+				}
+				rooms._cachedListing.pagination = {
+					items: msg.rooms,
+					total: msg.rooms.length,
+					has_more: false,
+					cursor: null,
+				};
+				rooms._cachedListing.mutate = (value: Pagination<Room>) => {
+					rooms._cachedListing!.pagination = value;
+				};
+
+				const channelsByRoom = new Map<string, Channel[]>();
+				const threadsByRoom = new Map<string, Channel[]>();
+				for (const channel of msg.channels) {
+					if (channel.room_id) {
+						const arr = channelsByRoom.get(channel.room_id) ?? [];
+						arr.push(channel);
+						channelsByRoom.set(channel.room_id, arr);
+					}
+				}
+
+				for (const thread of msg.threads) {
+					if (thread.room_id) {
+						const arr = threadsByRoom.get(thread.room_id) ?? [];
+						arr.push(thread);
+						threadsByRoom.set(thread.room_id, arr);
+					}
+				}
+
+				for (const [room_id, channelList] of channelsByRoom) {
+					if (!channels._cachedListings.has(room_id)) {
+						channels._cachedListings.set(room_id, {
+							resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
+							refetch: () => {},
+							mutate: () => {},
+							prom: null,
+							pagination: null,
+						});
+					}
+					const listing = channels._cachedListings.get(room_id)!;
+					listing.pagination = {
+						items: channelList,
+						total: channelList.length,
+						has_more: false,
+						cursor: null,
+					};
+					listing.mutate = (value: Pagination<Channel>) => {
+						listing.pagination = value;
+					};
+				}
+
+				for (const [room_id, threadList] of threadsByRoom) {
+					if (!channels._cachedListingsArchived.has(room_id)) {
+						channels._cachedListingsArchived.set(room_id, {
+							resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
+							refetch: () => {},
+							mutate: () => {},
+							prom: null,
+							pagination: null,
+						});
+					}
+					const listing = channels._cachedListingsArchived.get(room_id)!;
+					listing.pagination = {
+						items: threadList,
+						total: threadList.length,
+						has_more: false,
+						cursor: null,
+					};
+					listing.mutate = (value: Pagination<Channel>) => {
+						listing.pagination = value;
+					};
+				}
+
+				const rolesByRoom = new Map<string, Role[]>();
+				for (const role of msg.roles) {
+					const arr = rolesByRoom.get(role.room_id) ?? [];
+					arr.push(role);
+					rolesByRoom.set(role.room_id, arr);
+				}
+
+				for (const [room_id, roleList] of rolesByRoom) {
+					if (!roles._cachedListings.has(room_id)) {
+						roles._cachedListings.set(room_id, {
+							resource: (() => {}) as unknown as Resource<Pagination<Role>>,
+							refetch: () => {},
+							mutate: () => {},
+							prom: null,
+							pagination: null,
+						});
+					}
+					const listing = roles._cachedListings.get(room_id)!;
+					listing.pagination = {
+						items: roleList,
+						total: roleList.length,
+						has_more: false,
+						cursor: null,
+					};
+					listing.mutate = (value: Pagination<Role>) => {
+						listing.pagination = value;
+					};
+				}
+
+				const membersByRoom = new Map<string, RoomMember[]>();
+				for (const member of msg.room_members) {
+					const arr = membersByRoom.get(member.room_id) ?? [];
+					arr.push(member);
+					membersByRoom.set(member.room_id, arr);
+				}
+
+				for (const [room_id, memberList] of membersByRoom) {
+					if (!room_members._cachedListings.has(room_id)) {
+						room_members._cachedListings.set(room_id, {
+							resource: (() => {}) as unknown as Resource<
+								Pagination<RoomMember>
+							>,
+							refetch: () => {},
+							mutate: () => {},
+							prom: null,
+							pagination: null,
+						});
+					}
+					const listing = room_members._cachedListings.get(room_id)!;
+					listing.pagination = {
+						items: memberList,
+						total: memberList.length,
+						has_more: false,
+						cursor: null,
+					};
+					listing.mutate = (value: Pagination<RoomMember>) => {
+						listing.pagination = value;
+					};
+				}
+
+				setUserConfig({
+					...userConfig(),
+					global: msg.config,
+				});
+			});
+		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
 			if (rooms._cachedListing?.pagination) {

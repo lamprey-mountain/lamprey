@@ -81,9 +81,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	>([]);
 
 	createEffect(() => {
-		if (props.room_id) {
-			api.channels.list(() => props.room_id!);
-		} else {
+		if (!props.room_id) {
 			api.dms.list();
 		}
 	});
