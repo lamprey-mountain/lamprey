@@ -12,7 +12,7 @@ use tantivy::{
     collector::{Count, TopDocs},
     query::{BooleanQuery, Query, QueryParser},
     schema::Value,
-    DocAddress, Index, IndexWriter, TantivyDocument, Term,
+    DocAddress, Index, IndexReader, IndexWriter, TantivyDocument, Term,
 };
 use tracing::{debug, error, trace};
 
@@ -34,6 +34,7 @@ const INDEXING_BUFFER_SIZE: usize = 100_000_000;
 pub struct TantivySearcher {
     pub index: Index,
     pub schema: LampreySchema,
+    pub reader: IndexReader,
 }
 
 #[allow(unused)] // TEMP
@@ -74,8 +75,10 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
             .tokenizers()
             .register("dynamic", DynamicTokenizer::new());
 
+        let reader = index.reader().expect("failed to create index reader");
+
         init_tx
-            .send((index.clone(), sch.clone()))
+            .send((index.clone(), sch.clone(), reader))
             .expect("failed to send init data");
 
         let mut index_writer: IndexWriter = index.writer(INDEXING_BUFFER_SIZE).unwrap();
@@ -271,11 +274,12 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
         let _ = index_writer.commit();
     });
 
-    let (index, schema) = init_rx.recv().expect("failed to recv init data");
+    let (index, schema, reader) = init_rx.recv().expect("failed to recv init data");
 
     let searcher = TantivySearcher {
         index: index.clone(),
         schema: schema.clone(),
+        reader,
     };
 
     TantivyHandle {
@@ -309,10 +313,8 @@ impl TantivySearcher {
         req: MessageSearchRequest,
         visible_channel_ids: &[(ChannelId, bool)],
     ) -> Result<SearchMessagesResponseRaw> {
-        let reader = self.index.reader()?;
-        trace!("obtained index reader");
         let s = &self.schema;
-        let searcher = reader.searcher();
+        let searcher = self.reader.searcher();
 
         let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
 
