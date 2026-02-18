@@ -139,23 +139,28 @@ async fn permission_overwrite(
 
     if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::PermissionOverwriteSet {
-            channel_id,
-            overwrite_id,
-            ty: json.ty,
-            changes: if let Some(existing) = &existing {
-                Changes::new()
-                    .change("allow", &existing.allow, &json.allow)
-                    .change("deny", &existing.deny, &json.deny)
-                    .build()
-            } else {
-                Changes::new()
+        let audit_log_entry = if existing.is_some() {
+            AuditLogEntryType::PermissionOverwriteUpdate {
+                channel_id,
+                overwrite_id,
+                ty: json.ty,
+                changes: Changes::new()
+                    .change("allow", &existing.as_ref().unwrap().allow, &json.allow)
+                    .change("deny", &existing.as_ref().unwrap().deny, &json.deny)
+                    .build(),
+            }
+        } else {
+            AuditLogEntryType::PermissionOverwriteCreate {
+                channel_id,
+                overwrite_id,
+                ty: json.ty,
+                changes: Changes::new()
                     .add("allow", &json.allow)
                     .add("deny", &json.deny)
-                    .build()
-            },
-        })
-        .await?;
+                    .build(),
+            }
+        };
+        al.commit_success(audit_log_entry).await?;
     }
 
     s.broadcast_channel(

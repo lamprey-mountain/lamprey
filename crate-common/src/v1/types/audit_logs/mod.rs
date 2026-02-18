@@ -207,7 +207,24 @@ pub enum AuditLogEntryType {
         changes: Vec<AuditLogChange>,
     },
 
+    #[deprecated = "this has been split into PermissionOverwriteCreate and PermissionOverwriteUpdate"]
     PermissionOverwriteSet {
+        channel_id: ChannelId,
+        overwrite_id: Uuid,
+        #[cfg_attr(feature = "serde", serde(rename = "type"))]
+        ty: PermissionOverwriteType,
+        changes: Vec<AuditLogChange>,
+    },
+
+    PermissionOverwriteCreate {
+        channel_id: ChannelId,
+        overwrite_id: Uuid,
+        #[cfg_attr(feature = "serde", serde(rename = "type"))]
+        ty: PermissionOverwriteType,
+        changes: Vec<AuditLogChange>,
+    },
+
+    PermissionOverwriteUpdate {
         channel_id: ChannelId,
         overwrite_id: Uuid,
         #[cfg_attr(feature = "serde", serde(rename = "type"))]
