@@ -469,6 +469,15 @@ impl ServiceCache {
             }
         }
 
+        // populate private data for all channels
+        let srv = self.state.services();
+        srv.channels
+            .populate_private(&mut all_channels, user_id)
+            .await?;
+        srv.channels
+            .populate_private(&mut all_threads, user_id)
+            .await?;
+
         let config = self.user_config_get(user_id).await?;
 
         Ok(MessageSync::Ambient {

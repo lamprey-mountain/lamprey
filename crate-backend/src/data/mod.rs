@@ -1,5 +1,7 @@
 // TODO: rename foo_select to foo_get
 
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use common::v1::types::ack::AckBulkItem;
 use common::v1::types::application::{Application, Connection, Scopes};
@@ -1019,6 +1021,11 @@ pub trait DataUserConfig {
         user_id: UserId,
         channel_id: ChannelId,
     ) -> Result<PreferencesChannel>;
+    async fn user_config_channel_get_many(
+        &self,
+        user_id: UserId,
+        channel_ids: &[ChannelId],
+    ) -> Result<HashMap<ChannelId, PreferencesChannel>>;
     async fn user_config_user_set(
         &self,
         user_id: UserId,

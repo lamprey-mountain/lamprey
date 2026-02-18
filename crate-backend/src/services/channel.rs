@@ -43,6 +43,7 @@ pub struct ServiceThreads {
 //     pub slowmode_message_expire_at: Option<Time>,
 // }
 
+// TODO: rename to ServiceChannels
 impl ServiceThreads {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
@@ -67,11 +68,60 @@ impl ServiceThreads {
     }
 
     /// add private user data to each channel
-    pub async fn populate_private(
-        &self,
-        _channels: &mut [Channel],
-        _user_id: UserId,
-    ) -> Result<()> {
+    pub async fn populate_private(&self, channels: &mut [Channel], user_id: UserId) -> Result<()> {
+        if channels.is_empty() {
+            return Ok(());
+        }
+
+        let data = self.state.data();
+
+        // collect all channel ids for batch fetching
+        let channel_ids: Vec<_> = channels.iter().map(|c| c.id).collect();
+
+        // fetch user configs for all channels
+        let user_config_map = data
+            .user_config_channel_get_many(user_id, &channel_ids)
+            .await?;
+
+        // fetch thread members for thread channels
+        let thread_channels: Vec<_> = channels
+            .iter()
+            .filter(|c| c.ty.is_thread())
+            .map(|c| c.id)
+            .collect();
+
+        let thread_member_map = if !thread_channels.is_empty() {
+            let mut map = HashMap::new();
+            for thread_id in &thread_channels {
+                if let Ok(member) = data.thread_member_get(*thread_id, user_id).await {
+                    map.insert(*thread_id, member);
+                }
+            }
+            map
+        } else {
+            HashMap::new()
+        };
+
+        // populate each channel with private data
+        for channel in channels {
+            // fetch private data for this channel
+            if let Ok(private) = data.channel_get_private(channel.id, user_id).await {
+                channel.is_unread = Some(private.is_unread);
+                channel.last_read_id = private.last_read_id.map(Into::into);
+                channel.mention_count = Some(private.mention_count as u64);
+            }
+
+            if let Some(config) = user_config_map.get(&channel.id) {
+                channel.user_config = Some(config.clone());
+            }
+
+            if channel.ty.is_thread() {
+                if let Some(member) = thread_member_map.get(&channel.id) {
+                    channel.thread_member = Some(Box::new(member.clone()));
+                }
+            }
+        }
+
         Ok(())
     }
 

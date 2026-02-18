@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use common::v1::types::{
     user_config::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
@@ -114,6 +116,34 @@ impl DataUserConfig for Postgres {
             .and_then(|v| v.ok())
             .unwrap_or_default();
         Ok(conf)
+    }
+
+    async fn user_config_channel_get_many(
+        &self,
+        user_id: UserId,
+        channel_ids: &[ChannelId],
+    ) -> Result<HashMap<ChannelId, PreferencesChannel>> {
+        if channel_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let channel_ids: Vec<_> = channel_ids.iter().map(|id| **id).collect();
+        let rows = query!(
+            "SELECT channel_id, config FROM user_config_channel WHERE user_id = $1 AND channel_id = ANY($2)",
+            *user_id,
+            &channel_ids[..],
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut map = HashMap::with_capacity(channel_ids.len());
+        for row in rows {
+            let channel_id: ChannelId = row.channel_id.into();
+            let config: PreferencesChannel = serde_json::from_value(row.config).unwrap_or_default();
+            map.insert(channel_id, config);
+        }
+
+        Ok(map)
     }
 
     async fn user_config_user_set(
