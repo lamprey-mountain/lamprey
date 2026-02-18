@@ -55,6 +55,7 @@ import { getMessageOverrideName } from "./util";
 import cancelIc from "./assets/x.png";
 import { createTooltip } from "./Tooltip";
 import { leading, throttle } from "@solid-primitives/scheduled";
+import { ChannelIcon } from "./User";
 
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
@@ -696,7 +697,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 									>
 										<header onClick={() => setThreadId(thread.id)}>
 											<div class="top">
-												<div class="icon"></div>
+												<ChannelIcon channel={thread} />
 												<div class="spacer">{thread.name}</div>
 												<div class="time">
 													Created{" "}

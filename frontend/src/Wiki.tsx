@@ -22,6 +22,7 @@ import { ChannelContext, createInitialChannelState } from "./channelctx";
 import { createStore } from "solid-js/store";
 import { Document } from "./Document";
 import { Resizable } from "./Resizable";
+import { ChannelIcon } from "./User";
 
 export const Wiki = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -338,7 +339,7 @@ export const Wiki = (props: { channel: Channel }) => {
 									>
 										<header onClick={() => setDocumentId(doc.id)}>
 											<div class="top">
-												<div class="icon"></div>
+												<ChannelIcon channel={doc} />
 												<div class="spacer">{doc.name}</div>
 												<div class="time">
 													Created <Time date={getTimestampFromUUID(doc.id)} />

@@ -5,7 +5,7 @@ import { useModals } from "./contexts/modal";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import { AvatarWithStatus } from "./User.tsx";
+import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { Time } from "./Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -349,7 +349,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 										>
 											<header onClick={() => nav(`/thread/${thread.id}`)}>
 												<div class="top">
-													<div class="icon"></div>
+													<ChannelIcon channel={thread} />
 													<div class="spacer">{thread.name}</div>
 													<div class="time">
 														Created{" "}

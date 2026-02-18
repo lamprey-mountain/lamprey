@@ -4,6 +4,7 @@ import { useModals } from "./contexts/modal";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
+import { ChannelIcon } from "./User";
 import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
@@ -141,7 +142,7 @@ export const Forum = (props: { channel: Channel }) => {
 							>
 								<header onClick={() => nav(`/thread/${thread.id}`)}>
 									<div class="top">
-										<div class="icon"></div>
+										<ChannelIcon channel={thread} />
 										<div class="spacer">{thread.name}</div>
 										<div class="time">
 											Created <Time date={getTimestampFromUUID(thread.id)} />

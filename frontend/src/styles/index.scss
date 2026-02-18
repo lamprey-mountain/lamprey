@@ -113,13 +113,6 @@ input[type="submit"] {
 			align-items: center;
 			gap: 8px;
 
-			& > .icon {
-				background-color: $bg-400;
-				height: 16px;
-				width: 16px;
-				border-radius: 50%;
-			}
-
 			& > .spacer {
 				@include truncate;
 				flex: 1;
