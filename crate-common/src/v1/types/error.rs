@@ -361,6 +361,7 @@ impl std::error::Error for ApiError {}
 
 // TODO: use StatusCode enum from http crate
 impl ErrorCode {
+    /// get the http status code for this error
     pub fn status(&self) -> u16 {
         match self {
             ErrorCode::InvalidData => 400,
@@ -386,6 +387,21 @@ impl ErrorCode {
             ErrorCode::UnknownDocumentRevision => 404,
             ErrorCode::Automod => 403,
             ErrorCode::MissingPermissions => 403,
+        }
+    }
+}
+
+impl SyncError {
+    /// get the websocket close code for this error
+    pub fn code(&self) -> u16 {
+        match self {
+            SyncError::InvalidData => 1007,
+            SyncError::Unauthorized => 3003,
+            SyncError::Unauthenticated => 3000,
+            SyncError::Timeout => 3008,
+            SyncError::AuthFailure => 4004,
+            SyncError::AlreadyAuthenticated => 4005,
+            SyncError::InvalidSeq => 4007,
         }
     }
 }
