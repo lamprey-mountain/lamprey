@@ -14,6 +14,7 @@ import icX3 from "../assets/x-3.png";
 import icX4 from "../assets/x-4.png";
 import { permissions } from "../permissions.ts";
 import { cyrb53, LCG } from "../rng.ts";
+import { useCtx } from "../context.ts";
 
 const icon = (type: "x" | "slash" | "check", seed: string) => {
 	const rand = LCG(cyrb53(seed));
@@ -34,9 +35,10 @@ const icon = (type: "x" | "slash" | "check", seed: string) => {
 type PermState = "allow" | "deny" | "inherit";
 type PermissionItem = {
 	id: Permission;
-	name: string;
-	description: string;
 	group?: string;
+	overwrite_group?: string;
+	types?: string[];
+	moderator?: boolean;
 };
 
 interface PermissionSelectorProps {
@@ -46,21 +48,31 @@ interface PermissionSelectorProps {
 	onPermChange: (perm: Permission, state: PermState) => void;
 	showDescriptions?: boolean;
 	roomType?: "Default" | "Server";
+	context?: "default" | "overwrite";
 }
 
 export const PermissionSelector: Component<PermissionSelectorProps> = (
 	props,
 ) => {
+	const { t } = useCtx();
 	const [search, setSearch] = createSignal("");
+	const isOverwriteContext = createMemo(() => props.context === "overwrite");
 
 	const filteredPermissions = createMemo(() => {
 		const searchTerm = search().toLowerCase();
 		if (!searchTerm) return props.permissions;
-		return props.permissions.filter((p) =>
-			p.name.toLowerCase().includes(searchTerm) ||
-			p.description.toLowerCase().includes(searchTerm) ||
-			p.id.toLowerCase().includes(searchTerm)
-		);
+		return props.permissions.filter((p) => {
+			const i18nKey = isOverwriteContext()
+				? "permission_overwrites"
+				: "permissions";
+			const name = t(`${i18nKey}.${p.id}.name`) ?? p.id;
+			const description = t(`${i18nKey}.${p.id}.description`) ?? "";
+			return (
+				name.toLowerCase().includes(searchTerm) ||
+				description.toLowerCase().includes(searchTerm) ||
+				p.id.toLowerCase().includes(searchTerm)
+			);
+		});
 	});
 
 	const groupedPermissions = createMemo(() => {
@@ -96,7 +108,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 		});
 
 		for (const perm of filtered) {
-			const group = perm.group;
+			const group = isOverwriteContext() ? perm.overwrite_group : perm.group;
 			if (group && groups.has(group)) {
 				groups.get(group)!.push(perm);
 			}
@@ -126,7 +138,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 					{({ group, perms }) => {
 						return (
 							<div class="permission-group">
-								<h3>{group}</h3>
+								<h3>{t(`permissions_group.${group}`) ?? group}</h3>
 								<ul>
 									<For each={perms}>
 										{(p) => {
@@ -135,19 +147,26 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 											);
 											const [isExpanded, setIsExpanded] = createSignal(false);
 
+											const name = isOverwriteContext()
+												? (t(`permission_overwrites.${p.id}.name`) ?? p.id)
+												: (t(`permissions.${p.id}.name`) ?? p.id);
+											const description = isOverwriteContext()
+												? (t(`permission_overwrites.${p.id}.description`) ?? "")
+												: (t(`permissions.${p.id}.description`) ?? "");
+
 											return (
 												<li class="permission-item">
 													<div class="permission-info">
-														<div class="permission-name">{p.name}</div>
+														<div class="permission-name">{name}</div>
 														{props.showDescriptions && (
 															<div
 																class="permission-description"
 																onClick={() => setIsExpanded(!isExpanded())}
 															>
 																{isExpanded()
-																	? p.description
-																	: p.description.substring(0, 100) +
-																		(p.description.length > 100 ? "..." : "")}
+																	? description
+																	: description.substring(0, 100) +
+																		(description.length > 100 ? "..." : "")}
 															</div>
 														)}
 													</div>

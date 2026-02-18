@@ -17,14 +17,15 @@ import {
 import { createStore, produce } from "solid-js/store";
 import { useApi } from "../api.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
-import { permissionsOverwrites } from "../permissions.ts";
+import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";
 import { Copyable } from "../util.tsx";
+import { useCtx } from "../context.ts";
 
 function filterPermissionsByChannelType(
-	permissions: typeof permissionsOverwrites,
+	permissions: typeof permissions,
 	channelType?: ChannelType,
-): typeof permissionsOverwrites {
+): typeof permissions {
 	if (!channelType) return permissions;
 
 	return permissions.filter((perm) => {
@@ -210,8 +211,9 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		};
 
 		const isEveryone = isEveryoneRole(id, props.channel.room_id);
+		const channelPerms = permissions.filter((p) => p.overwrite_group);
 		const shouldBeRemoved = isEveryone &&
-			isAllInherit(updatedOverwrite, [...permissionsOverwrites]);
+			isAllInherit(updatedOverwrite, channelPerms.map((p) => p.id));
 		const existsInStore = overwrites.some((o) => o.id === id);
 
 		if (shouldBeRemoved) {
@@ -313,8 +315,14 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		});
 	};
 
-	const roleName = (id: string) =>
-		roles()?.items.find((r) => r.id === id)?.name;
+	const { t } = useCtx();
+
+	const roleName = (id: string) => {
+		if (isEveryoneRole(id, props.channel.room_id)) {
+			return "@everyone";
+		}
+		return roles()?.items.find((r) => r.id === id)?.name;
+	};
 
 	const availableRoles = () =>
 		roles()?.items.filter((r) =>
@@ -324,9 +332,9 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 
 	const filteredPermissions = createMemo(() => {
 		return filterPermissionsByChannelType(
-			permissionsOverwrites,
+			permissions,
 			props.channel.type,
-		);
+		).filter((p) => p.overwrite_group);
 	});
 
 	return (
@@ -419,6 +427,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 								onPermChange={setPerm}
 								showDescriptions={true}
 								roomType={room()?.type || "Default"}
+								context="overwrite"
 							/>
 						</div>
 					</Resizable>

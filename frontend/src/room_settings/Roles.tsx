@@ -14,11 +14,7 @@ import type { RoomT } from "../types.ts";
 import type { Pagination, Permission, Role } from "sdk";
 import { Copyable } from "../util.tsx";
 import { createStore, produce } from "solid-js/store";
-import {
-	moderatorPermissions,
-	permissionGroups,
-	permissions,
-} from "../permissions.ts";
+import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";
 import { md } from "../markdown.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
@@ -341,15 +337,18 @@ const RoleList = (
 									<div>
 										<span class="perm-safe">
 											{i.allow.filter(
-												(perm: Permission) =>
-													!(moderatorPermissions as string[]).includes(perm),
+												(perm: Permission) => {
+													const p = permissions.find((x) => x.id === perm);
+													return !p?.moderator;
+												},
 											).length}
 										</span>
 										+
 										<span class="perm-mod">
-											{i.allow.filter((perm) =>
-												(moderatorPermissions as string[]).includes(perm)
-											).length}
+											{i.allow.filter((perm) => {
+												const p = permissions.find((x) => x.id === perm);
+												return p?.moderator;
+											}).length}
 										</span>{" "}
 										permissions
 									</div>
@@ -513,13 +512,25 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 			</div>
 
 			{() => {
+				const { t } = useCtx();
 				const searchQuery = permSearch().toLowerCase();
-				const allPermissions = permissions.filter((perm) =>
-					!searchQuery ||
-					perm.name.toLowerCase().includes(searchQuery) ||
-					perm.description.toLowerCase().includes(searchQuery) ||
-					perm.id.toLowerCase().includes(searchQuery)
-				);
+				const allPermissions = permissions.filter((perm) => {
+					const isServer = props.room.type === "Server";
+					if (isServer) {
+						if (!perm.types?.includes("Server")) return false;
+					} else {
+						if (!perm.types?.includes("Room")) return false;
+					}
+
+					if (!searchQuery) return true;
+					const name = t(`permissions.${perm.id}.name`) ?? perm.id;
+					const description = t(`permissions.${perm.id}.description`) ?? "";
+					return (
+						name.toLowerCase().includes(searchQuery) ||
+						description.toLowerCase().includes(searchQuery) ||
+						perm.id.toLowerCase().includes(searchQuery)
+					);
+				});
 
 				const permStates = allPermissions.reduce((acc, perm) => {
 					const role = props.edit.role;
