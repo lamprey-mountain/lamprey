@@ -4,12 +4,10 @@ use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{ApiError, SyncError};
-use common::v1::types::{MessageEnvelope, MessagePayload};
+use common::v1::types::{MessageEnvelope, MessagePayload, MessageSync};
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
 use tracing::error;
-
-use crate::types::MessageSync;
 
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
@@ -68,6 +66,12 @@ pub enum Error {
     Figment(#[from] figment::Error),
     #[error("url parse error: {0}")]
     UrlParseError(#[from] url::ParseError),
+
+    #[error("compress error: {0}")]
+    Compress(#[from] flate2::CompressError),
+
+    #[error("decompress error: {0}")]
+    Decompress(#[from] flate2::DecompressError),
 
     #[error("unmodified")]
     // HACK: not really an error, but still kind of helpful to have here

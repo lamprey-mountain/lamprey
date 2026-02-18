@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
   "crate-backend",
-  # "crate-backend-core",
+  "crate-backend-core",
   # "crate-backend-data-postgres",
   # "crate-backend-rest",
   # "crate-backend-sync",
