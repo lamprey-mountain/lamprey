@@ -36,11 +36,11 @@ pub trait Marker: private::Sealed {
 }
 
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(transparent)]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Id<M: Marker> {
     inner: Uuid,
 
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     phantom: PhantomData<M>,
 }
 

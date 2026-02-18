@@ -56,7 +56,7 @@ pub struct Channel {
     pub url: Option<String>,
 
     /// type specific data for this channel
-    #[serde(rename = "type")]
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
     pub ty: ChannelType,
 
     /// number of people in this room
@@ -86,7 +86,7 @@ pub struct Channel {
     // /// (un)archiving, etc) by people with the `ThreadLock` permission
     // pub locked: bool,
     /// whether this channel is locked and has restricted permissions
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub locked: Option<Locked>,
 
     /// the channel this channel is in, if any
@@ -125,13 +125,13 @@ pub struct Channel {
     pub mention_count: Option<u64>,
     pub user_config: Option<PreferencesChannel>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub document: Option<Document>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub wiki: Option<Wiki>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub calendar: Option<Calendar>,
 
     /// for dm and gdm channels, this is who the dm is with
@@ -141,11 +141,11 @@ pub struct Channel {
     pub icon: Option<MediaId>,
 
     /// whether users without ThreadManage can add other members to this thread
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub invitable: bool,
 
     /// The user's thread member object, if the channel is a thread and the user is a member.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub thread_member: Option<Box<ThreadMember>>,
 
     /// when to automatically archive this thread due to inactivity, in seconds
@@ -268,7 +268,7 @@ pub struct ChannelCreate {
     pub icon: Option<MediaId>,
 
     /// The type of this channel
-    #[serde(default, rename = "type")]
+    #[cfg_attr(feature = "serde", serde(default, rename = "type"))]
     pub ty: ChannelType,
 
     /// tags to apply to this thread (overwrite, not append)
@@ -276,7 +276,7 @@ pub struct ChannelCreate {
     pub tags: Option<Vec<TagId>>,
 
     /// not safe for work
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub nsfw: bool,
 
     /// the recipient(s) for this dm/gdm
@@ -292,11 +292,11 @@ pub struct ChannelCreate {
     // required for threads
     pub parent_id: Option<ChannelId>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub permission_overwrites: Vec<PermissionOverwrite>,
 
     /// whether users without ThreadManage can add other members to this thread
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub invitable: bool,
 
     pub auto_archive_duration: Option<u64>,
@@ -446,7 +446,7 @@ pub struct ChannelPatch {
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 2048))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
 
     #[cfg_attr(
@@ -454,10 +454,10 @@ pub struct ChannelPatch {
         schema(required = false, format = Uri, max_length = 1, min_length = 2048)
     )]
     #[cfg_attr(feature = "validator", validate(url, length(min = 1, max = 2048)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub url: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub icon: Option<Option<MediaId>>,
 
     /// tags to apply to this thread (overwrite, not append)
@@ -468,41 +468,41 @@ pub struct ChannelPatch {
     pub nsfw: Option<bool>,
 
     #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub bitrate: Option<Option<u64>>,
 
     #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub user_limit: Option<Option<u64>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub owner_id: Option<Option<UserId>>,
 
     pub ty: Option<ChannelType>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub parent_id: Option<Option<ChannelId>>,
 
     pub archived: Option<bool>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub locked: Option<Option<Locked>>,
 
     pub invitable: Option<bool>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub auto_archive_duration: Option<Option<u64>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub default_auto_archive_duration: Option<Option<u64>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub slowmode_thread: Option<Option<u64>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub slowmode_message: Option<Option<u64>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub default_slowmode_message: Option<Option<u64>>,
 
     pub document: Option<DocumentPatch>,
@@ -530,7 +530,7 @@ pub struct Locked {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ChannelReorder {
     /// the channels to reorder
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[validate(length(min = 1, max = 1024))]
     pub channels: Vec<ChannelReorderItem>,
 }
@@ -542,10 +542,10 @@ pub struct ChannelReorder {
 pub struct ChannelReorderItem {
     pub id: ChannelId,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub position: Option<Option<u16>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub parent_id: Option<Option<ChannelId>>,
 }
 

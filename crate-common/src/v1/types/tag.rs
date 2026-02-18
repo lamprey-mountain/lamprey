@@ -61,7 +61,7 @@ pub struct TagCreate {
 
     pub color: Option<Color>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub restricted: bool,
 }
 
@@ -79,10 +79,10 @@ pub struct TagPatch {
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub color: Option<Option<Color>>,
 
     pub archived: Option<bool>,
@@ -94,7 +94,7 @@ pub struct TagPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct TagDeleteQuery {
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub force: bool,
 }
 
@@ -108,7 +108,7 @@ pub struct TagSearchQuery {
     /// deny, allow, require tag to be archived
     ///
     /// default: deny
-    #[serde(default = "default_false_opt")]
+    #[cfg_attr(feature = "serde", serde(default = "default_false_opt"))]
     pub archived: Option<bool>,
 }
 
@@ -120,6 +120,6 @@ pub struct TagListQuery {
     /// deny, allow, require tag to be archived
     ///
     /// default: deny
-    #[serde(default = "default_false_opt")]
+    #[cfg_attr(feature = "serde", serde(default = "default_false_opt"))]
     pub archived: Option<bool>,
 }

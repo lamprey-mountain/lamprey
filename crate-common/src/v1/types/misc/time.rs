@@ -16,9 +16,12 @@ use utoipa::ToSchema;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Time(
-    #[serde(
-        serialize_with = "time::serde::rfc3339::serialize",
-        deserialize_with = "time::serde::rfc3339::deserialize"
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "time::serde::rfc3339::serialize",
+            deserialize_with = "time::serde::rfc3339::deserialize"
+        )
     )]
     OffsetDateTime,
 );

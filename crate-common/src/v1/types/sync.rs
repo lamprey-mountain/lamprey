@@ -37,7 +37,7 @@ use super::{
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MessageClient {
     /// initial message
     Hello {
@@ -45,7 +45,7 @@ pub enum MessageClient {
 
         presence: Option<Presence>,
 
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         resume: Option<SyncResume>,
     },
 
@@ -118,7 +118,7 @@ pub struct SyncResume {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageEnvelope {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub payload: MessagePayload,
 }
 
@@ -126,7 +126,7 @@ pub struct MessageEnvelope {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "op")]
+#[cfg_attr(feature = "serde", serde(tag = "op"))]
 pub enum MessagePayload {
     /// heartbeat
     Ping,
@@ -140,7 +140,7 @@ pub enum MessagePayload {
         seq: u64,
 
         /// the nonce, if this is in response to a request with the `Idempotency-Key` header set
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         nonce: Option<String>,
     },
 
@@ -184,7 +184,7 @@ pub enum MessagePayload {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MessageSync {
     // TODO: move Ready here
     // /// successfully connected
@@ -444,7 +444,7 @@ pub enum MessageSync {
         state: Option<VoiceState>,
 
         // HACK: make it possible to use this for auth checks
-        #[serde(skip)]
+        #[cfg_attr(feature = "serde", serde(skip))]
         old_state: Option<VoiceState>,
     },
 
@@ -570,19 +570,19 @@ pub enum MessageSync {
 
     InboxMarkRead {
         user_id: UserId,
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         params: NotificationMarkRead,
     },
 
     InboxMarkUnread {
         user_id: UserId,
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         params: NotificationMarkRead,
     },
 
     InboxFlush {
         user_id: UserId,
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         params: NotificationFlush,
     },
 
@@ -748,7 +748,7 @@ pub enum MessageSync {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MemberListOp {
     /// replace a range of members
     Sync {
@@ -801,7 +801,7 @@ pub enum MemberListGroupId {
     Offline,
 
     /// hoisted roles
-    #[serde(untagged)]
+    #[cfg_attr(feature = "serde", serde(untagged))]
     Role(RoleId),
 }
 
@@ -811,7 +811,7 @@ pub enum MemberListGroupId {
 pub struct SyncParams {
     pub version: SyncVersion,
     pub compression: Option<SyncCompression>,
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub format: SyncFormat,
 }
 
@@ -861,7 +861,7 @@ pub enum SyncFormat {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SyncCompression {
     /// Deflate compression
-    #[serde(rename = "deflate")]
+    #[cfg_attr(feature = "serde", serde(rename = "deflate"))]
     Deflate,
 }
 

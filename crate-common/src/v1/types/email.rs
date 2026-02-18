@@ -11,7 +11,7 @@ use validator::{Validate, ValidationErrors};
 /// An email address
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[serde(transparent)]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct EmailAddr(String);
 
 #[cfg(feature = "utoipa")]

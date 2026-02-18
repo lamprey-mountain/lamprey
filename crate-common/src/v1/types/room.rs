@@ -56,7 +56,7 @@ pub struct Room {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub banner: Option<MediaId>,
 
-    #[serde(rename = "type")]
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
     pub room_type: RoomType,
 
     /// number of people in this room
@@ -191,12 +191,12 @@ pub struct RoomPatch {
         schema(required = false, min_length = 1, max_length = 8192)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub icon: Option<Option<MediaId>>,
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub banner: Option<Option<MediaId>>,
     pub public: Option<bool>,
 

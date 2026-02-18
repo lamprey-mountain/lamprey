@@ -32,11 +32,17 @@ pub struct Role {
     pub description: Option<String>,
 
     /// the permissions to grant for this role
-    #[serde(deserialize_with = "deserialize_sorted", alias = "permissions")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(deserialize_with = "deserialize_sorted", alias = "permissions")
+    )]
     pub allow: Vec<Permission>,
 
     /// the permissions to deny for this role
-    #[serde(default, deserialize_with = "deserialize_sorted")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_sorted")
+    )]
     pub deny: Vec<Permission>,
 
     pub is_self_applicable: bool,
@@ -65,23 +71,23 @@ pub struct RoleCreate {
         schema(required = false, min_length = 1, max_length = 8192)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub description: Option<String>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub allow: Vec<Permission>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub deny: Vec<Permission>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub is_self_applicable: bool,
 
     /// if this role can be mentioned by members
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub is_mentionable: bool,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub hoist: bool,
     // the main reason this doesn't exist yet is because i've seen in
     // discord how the ui can become extremely unreadable, cluttered, and
@@ -112,13 +118,19 @@ pub struct RolePatch {
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "deserialize_sorted_option")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_sorted_option")
+    )]
     pub allow: Option<Vec<Permission>>,
 
-    #[serde(default, deserialize_with = "deserialize_sorted_option")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_sorted_option")
+    )]
     pub deny: Option<Vec<Permission>>,
 
     pub is_self_applicable: Option<bool>,
@@ -133,12 +145,12 @@ pub struct RolePatch {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoleMemberBulkPatch {
     /// add this role to these users
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[validate(length(min = 1, max = 256))]
     pub apply: Vec<UserId>,
 
     /// remove this role from these users
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[validate(length(min = 1, max = 256))]
     pub remove: Vec<UserId>,
 }
@@ -150,7 +162,7 @@ pub struct RoleMemberBulkPatch {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoleReorder {
     /// the roles to reorder
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[validate(length(min = 1, max = 1024))]
     pub roles: Vec<RoleReorderItem>,
 }

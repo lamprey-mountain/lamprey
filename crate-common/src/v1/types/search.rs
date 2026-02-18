@@ -25,21 +25,21 @@ pub struct MessageSearchRequest {
         schema(required = false, min_length = 1, max_length = 2048)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub query: Option<String>,
 
     /// Only return messages in these rooms. Defaults to all rooms.
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub room_id: Vec<RoomId>,
 
     /// Only return messages in these channels. Defaults to all channels.
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub channel_id: Vec<ChannelId>,
 
     /// Only return messages from these users. Defaults to all users.
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub user_id: Vec<UserId>,
 
@@ -69,17 +69,17 @@ pub struct MessageSearchRequest {
     pub pinned: Option<bool>,
 
     /// Only return messages that have links from these domains
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub link_hostnames: Vec<String>,
 
     /// Only return messages that mention these users
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub mentions_users: Vec<UserId>,
 
     /// Only return messages that mention these roles
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub mentions_roles: Vec<RoleId>,
 
@@ -87,25 +87,26 @@ pub struct MessageSearchRequest {
     pub mentions_everyone: Option<bool>,
 
     /// only include messages ids in this range
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub message_id: FilterRange<MessageId>,
 
     /// sort order (ascending/descending)
-    #[serde(default = "Order::descending")] // return newest by default
+    #[cfg_attr(feature = "serde", serde(default = "Order::descending"))]
+    // return newest by default
     pub sort_order: Order,
 
     /// field to sort by
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub sort_field: MessageSearchOrderField,
 
     /// the maximum number of messages to return
-    #[serde(default = "default_limit")]
+    #[cfg_attr(feature = "serde", serde(default = "default_limit"))]
     #[cfg_attr(feature = "utoipa", schema(default = 100, minimum = 0, maximum = 1024))]
     #[cfg_attr(feature = "validator", validate(range(min = 0, max = 1024)))]
     pub limit: u16,
 
     /// the number of messages to skip before returning
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "utoipa", schema(default = 0, minimum = 0, maximum = 65535))]
     #[cfg_attr(feature = "validator", validate(range(min = 0, max = 65535)))]
     pub offset: u16,
@@ -138,22 +139,22 @@ pub struct ChannelSearchRequest {
         schema(required = false, min_length = 1, max_length = 2048)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub query: Option<String>,
 
     /// Only return threads in these rooms. Defaults to all rooms.
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub room_id: Vec<RoomId>,
 
     /// Only return threads in these channels. Defaults to all channels.
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub parent_id: Vec<ChannelId>,
 
     /// Only return threads with these tags.
     // maybe allow configuring tag matching (any/all)
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub tag_id: Vec<TagId>,
 
@@ -164,30 +165,31 @@ pub struct ChannelSearchRequest {
     pub removed: Option<bool>,
 
     /// only return channels of these types
-    #[serde(default, rename = "type")]
+    #[cfg_attr(feature = "serde", serde(default, rename = "type"))]
     #[cfg_attr(feature = "validator", validate(length(max = 32)))]
     pub ty: Vec<ChannelType>,
 
     /// only include channel ids in this range
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub message_id: FilterRange<MessageId>,
 
     /// sort order (ascending/descending)
-    #[serde(default = "Order::descending")] // return newest by default
+    #[cfg_attr(feature = "serde", serde(default = "Order::descending"))]
+    // return newest by default
     pub sort_order: Order,
 
     /// field to sort by
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub sort_field: ChannelSearchOrderField,
 
     /// the maximum number of channels to return
-    #[serde(default = "default_limit")]
+    #[cfg_attr(feature = "serde", serde(default = "default_limit"))]
     #[cfg_attr(feature = "utoipa", schema(default = 100, minimum = 0, maximum = 1024))]
     #[cfg_attr(feature = "validator", validate(range(min = 0, max = 1024)))]
     pub limit: u16,
 
     /// the number of channels to skip before returning
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "utoipa", schema(default = 0, minimum = 0, maximum = 65535))]
     #[cfg_attr(feature = "validator", validate(range(min = 0, max = 65535)))]
     pub offset: u16,
@@ -232,17 +234,17 @@ pub struct RoomSearchRequest {
         schema(required = false, min_length = 1, max_length = 2048)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub query: Option<String>,
 
     /// only return rooms created in this range
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub created_at: FilterRange<Time>,
 
     /// filter by owner id
     ///
     /// admin only
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     #[cfg_attr(feature = "utoipa", schema(max_items = 128))]
     pub owner_id: Vec<UserId>,
@@ -276,13 +278,13 @@ pub struct RoomSearchRequest {
     pub sort_field: RoomSearchOrderField,
 
     /// the maximum number of messages to return
-    #[serde(default = "default_limit")]
+    #[cfg_attr(feature = "serde", serde(default = "default_limit"))]
     #[cfg_attr(feature = "utoipa", schema(default = 100, minimum = 0, maximum = 1024))]
     #[cfg_attr(feature = "validator", validate(range(min = 0, max = 1024)))]
     pub limit: u16,
 
     /// the number of channels to skip before returning
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "utoipa", schema(default = 0, minimum = 0, maximum = 65535))]
     #[cfg_attr(feature = "validator", validate(range(min = 0, max = 65535)))]
     pub offset: u16,
@@ -359,7 +361,7 @@ pub enum FilterRange<T> {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum Order {
     #[default]
     #[cfg_attr(feature = "serde", serde(rename = "asc"))]

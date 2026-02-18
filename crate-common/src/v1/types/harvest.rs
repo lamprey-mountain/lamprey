@@ -29,14 +29,14 @@ pub struct Harvest {
     pub user_id: UserId,
     pub created_at: Time,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub status: HarvestStatus,
 }
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "status")]
+#[cfg_attr(feature = "serde", serde(tag = "status"))]
 pub enum HarvestStatus {
     /// this is in progress or is running
     Queued,

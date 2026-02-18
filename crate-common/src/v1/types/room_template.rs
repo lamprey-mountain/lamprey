@@ -63,12 +63,12 @@ pub struct RoomTemplate {
 
     // only returned for the creator
     /// the room this template was created from
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub source_room_id: Option<RoomId>,
 
     // only returned for the creator
     /// if the source room and the template have diverged
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub dirty: Option<bool>,
 
     pub snapshot: RoomTemplateSnapshot,
@@ -112,7 +112,7 @@ pub struct RoomTemplatePatch {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomTemplateChannel {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: ChannelCreate,
 
     /// temporary placeholder id, for use in parent_id
@@ -123,7 +123,7 @@ pub struct RoomTemplateChannel {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomTemplateRole {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: RoleCreate,
 
     /// temporary placeholder id, for use in permission overwrites

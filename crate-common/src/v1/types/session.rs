@@ -33,7 +33,7 @@ pub struct SessionToken(pub String);
 pub struct Session {
     pub id: SessionId,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub status: SessionStatus,
 
     /// a human readable name for this session
@@ -41,7 +41,7 @@ pub struct Session {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: Option<String>,
 
-    #[serde(rename = "type")]
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
     pub ty: SessionType,
 
     /// when this token will expire. only set for oauth auth tokens
@@ -84,7 +84,7 @@ pub struct SessionSummary {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct SessionWithToken {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub session: Session,
     pub token: SessionToken,
 }
@@ -108,14 +108,14 @@ pub struct SessionCreate {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct SessionPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub name: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "status")]
+#[cfg_attr(feature = "serde", serde(tag = "status"))]
 pub enum SessionStatus {
     /// The session exists but can't do anything besides authenticate
     Unauthorized,

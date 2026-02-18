@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum Color {
     // Named(ColorNamed),
     // Semantic(ColorSemantic),

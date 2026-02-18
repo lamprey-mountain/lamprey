@@ -21,7 +21,7 @@ pub mod preferences;
 pub struct Notification2 {
     pub id: NotificationId,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub ty: Notification2Type,
 
     /// when this was added to the inbox
@@ -34,7 +34,7 @@ pub struct Notification2 {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum Notification2Type {
     /// someone sent a message you should look at
     Message {
@@ -115,19 +115,19 @@ pub enum NotificationReason {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct InboxListParams {
     /// only include notifications from these rooms
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[schema(required = false, min_length = 1, max_length = 32)]
     #[validate(length(min = 1, max = 32))]
     pub room_id: Vec<RoomId>,
 
     /// only include notifications from these channels
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[schema(required = false, min_length = 1, max_length = 32)]
     #[validate(length(min = 1, max = 32))]
     pub channel_id: Vec<ChannelId>,
 
     /// include messages marked as read too
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub include_read: bool,
 }
 
@@ -153,25 +153,25 @@ pub struct NotificationCreate {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct NotificationMarkRead {
     /// mark these messages as read
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[schema(required = false, min_length = 1, max_length = 1024)]
     #[validate(length(min = 1, max = 1024))]
     pub message_ids: Vec<MessageId>,
 
     /// mark everything in these threads as read
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[schema(required = false, min_length = 1, max_length = 1024)]
     #[validate(length(min = 1, max = 1024))]
     pub channel_ids: Vec<ChannelId>,
 
     /// mark everything in these rooms as read
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[schema(required = false, min_length = 1, max_length = 1024)]
     #[validate(length(min = 1, max = 1024))]
     pub room_ids: Vec<RoomId>,
 
     /// mark everything as read
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub everything: bool,
 }
 
@@ -203,7 +203,7 @@ pub struct NotificationFlush {
     pub room_ids: Option<Vec<RoomId>>,
 
     /// also include unread notifications
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub include_unread: bool,
 }
 

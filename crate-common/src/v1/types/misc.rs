@@ -18,41 +18,41 @@ use super::{ApplicationId, SessionId, UserId};
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum UserIdReq {
-    #[serde(deserialize_with = "const_self")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     UserSelf,
     UserId(UserId),
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum ApplicationIdReq {
-    #[serde(deserialize_with = "const_self")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     AppSelf,
     ApplicationId(ApplicationId),
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum SessionIdReq {
-    #[serde(deserialize_with = "const_self")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     SessionSelf,
     SessionId(SessionId),
 }
 
 // TODO: deserialize as @host and @client
 #[derive(Debug, Deserialize, ToSchema)]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum ServerReq {
     /// the target server
-    #[serde(deserialize_with = "const_host")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "const_host"))]
     ServerHost,
 
     /// the requesting server
     ///
     /// intended to be used with federation. non-server clients cannot use this.
-    #[serde(deserialize_with = "const_client")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "const_client"))]
     ServerClient,
 
     /// references a server by its fully qualified domain name
@@ -66,7 +66,7 @@ where
 {
     #[derive(Deserialize)]
     enum Helper {
-        #[serde(rename = "@self")]
+        #[cfg_attr(feature = "serde", serde(rename = "@self"))]
         Variant,
     }
 
@@ -79,7 +79,7 @@ where
 {
     #[derive(Deserialize)]
     enum Helper {
-        #[serde(rename = "@host")]
+        #[cfg_attr(feature = "serde", serde(rename = "@host"))]
         Variant,
     }
 
@@ -92,7 +92,7 @@ where
 {
     #[derive(Deserialize)]
     enum Helper {
-        #[serde(rename = "@client")]
+        #[cfg_attr(feature = "serde", serde(rename = "@client"))]
         Variant,
     }
 
@@ -105,7 +105,7 @@ where
 // {
 //     #[derive(Deserialize)]
 //     enum Helper {
-//         #[serde(rename = "@all")]
+//         #[cfg_attr(feature = "serde", serde(rename = "@all"))]
 //         Variant,
 //     }
 

@@ -123,7 +123,7 @@ pub struct DocumentBranchListParams {
     /// only include branches with these states
     ///
     /// defaults to only Active
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub state: Vec<DocumentBranchState>,
 }
 
@@ -414,7 +414,7 @@ pub struct Changeset {
     pub stat_removed: u64,
 
     /// the document this changeset applies to
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub document_id: Option<ChannelId>,
 }
 
@@ -503,10 +503,10 @@ pub struct SerdocPut {
 pub struct DocumentPatch {
     pub draft: Option<bool>,
     pub template: Option<bool>,
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub archived: Option<Option<DocumentArchivedPatch>>,
     pub slug: Option<Option<String>>,
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub published: Option<Option<DocumentPublishedPatch>>,
 }
 
@@ -516,7 +516,7 @@ pub struct DocumentPatch {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct DocumentPublishedPatch {
     pub revision: Option<DocumentRevisionId>,
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub unlisted: Option<bool>,
 }
 
@@ -525,7 +525,7 @@ pub struct DocumentPublishedPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct DocumentArchivedPatch {
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub reason: Option<Option<String>>,
 }
 
@@ -579,9 +579,9 @@ impl Diff<Wiki> for WikiPatch {
 pub struct WikiPatch {
     pub allow_indexing: Option<bool>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub page_index: Option<Option<ChannelId>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub page_notfound: Option<Option<ChannelId>>,
 }

@@ -59,7 +59,7 @@ pub struct PasswordSet {
 pub struct PasswordExec {
     pub password: String,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub ident: PasswordExecIdent,
 }
 
@@ -67,7 +67,7 @@ pub struct PasswordExec {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum PasswordExecIdent {
     UserId { user_id: UserId },
     Email { email: EmailAddr },

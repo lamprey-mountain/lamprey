@@ -16,7 +16,7 @@ pub struct Webhook {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
     pub avatar: Option<MediaId>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub token: Option<String>,
 }
 
@@ -38,8 +38,8 @@ pub struct WebhookUpdate {
     pub channel_id: Option<ChannelId>,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: Option<String>,
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub avatar: Option<Option<MediaId>>,
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub rotate_token: bool,
 }

@@ -271,7 +271,7 @@ pub enum Permission {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverwrites {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     inner: Vec<PermissionOverwrite>,
 }
 
@@ -283,15 +283,15 @@ pub struct PermissionOverwrite {
     pub id: Uuid,
 
     /// whether this is for a user or role
-    #[serde(rename = "type")]
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
     pub ty: PermissionOverwriteType,
 
     /// extra permissions allowed here
-    #[serde(deserialize_with = "deserialize_sorted")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
     pub allow: Vec<Permission>,
 
     /// permissions denied here
-    #[serde(deserialize_with = "deserialize_sorted")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
     pub deny: Vec<Permission>,
 }
 
@@ -300,15 +300,15 @@ pub struct PermissionOverwrite {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverwriteSet {
     /// whether this is for a user or role
-    #[serde(rename = "type")]
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
     pub ty: PermissionOverwriteType,
 
     /// extra permissions allowed here
-    #[serde(deserialize_with = "deserialize_sorted")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
     pub allow: Vec<Permission>,
 
     /// permissions denied here
-    #[serde(deserialize_with = "deserialize_sorted")]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
     pub deny: Vec<Permission>,
 }
 

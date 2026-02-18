@@ -38,8 +38,8 @@ pub struct Embed {
     pub id: EmbedId,
 
     /// what kind of thing this is
-    #[serde(rename = "type")]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub ty: EmbedType,
 
     /// the url this embed was requested for

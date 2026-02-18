@@ -16,7 +16,7 @@ use super::Mime;
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MediaTrack {
     /// Extra metadata about this track
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub info: MediaTrackInfo,
 
     /// The blob's length in bytes
@@ -26,7 +26,7 @@ pub struct MediaTrack {
     pub mime: Mime,
 
     /// Where this track came from
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub source: TrackSource,
 }
 
@@ -133,7 +133,7 @@ impl Eq for Location {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MediaTrackInfo {
     /// a video stream
     Video(Video),
@@ -166,7 +166,7 @@ pub enum MediaTrackInfo {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "source")]
+#[cfg_attr(feature = "serde", serde(tag = "source"))]
 pub enum TrackSource {
     /// manually uploaded by the user
     Uploaded,

@@ -37,7 +37,7 @@ pub enum SfuCommand {
 /// emitted by the sfu, handled by backend
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum SfuEvent {
     /// send this message to this user
     VoiceDispatch {

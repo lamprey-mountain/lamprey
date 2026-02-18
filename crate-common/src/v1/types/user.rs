@@ -54,7 +54,7 @@ pub struct User {
     pub presence: Presence,
     pub registered_at: Option<Time>,
     pub deleted_at: Option<Time>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub emails: Option<Vec<EmailInfo>>,
     pub user_config: Option<PreferencesUser>,
     // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 16)))]
@@ -135,7 +135,7 @@ pub struct Puppet {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct UserWithPrivate {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: User,
     pub config: PreferencesGlobal,
 }
@@ -199,13 +199,13 @@ pub struct UserPatch {
         schema(required = false, min_length = 1, max_length = 8192)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub avatar: Option<Option<MediaId>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub banner: Option<Option<MediaId>>,
 }
 
@@ -226,7 +226,7 @@ pub struct Relationship {
     /// your relationship with this other user
     pub relation: Option<RelationshipType>,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub ignore: Option<Ignore>,
 }
 
@@ -234,7 +234,7 @@ pub struct Relationship {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RelationshipWithUserId {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: Relationship,
     pub user_id: UserId,
 }
@@ -243,7 +243,7 @@ pub struct RelationshipWithUserId {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserWithRelationship {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: User,
     pub relationship: Relationship,
 }
@@ -254,11 +254,14 @@ pub struct UserWithRelationship {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RelationshipPatch {
     /// relationship with other user
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub relation: Option<Option<RelationshipType>>,
 
     #[cfg_attr(feature = "utoipa", schema(required = false))]
-    #[serde(default, flatten, deserialize_with = "some_option")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, flatten, deserialize_with = "some_option")
+    )]
     pub ignore: Option<Option<Ignore>>,
 }
 
@@ -320,7 +323,7 @@ impl User {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum UserListFilter {
     Guest,
     Registered,
@@ -331,7 +334,7 @@ pub enum UserListFilter {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub struct UserListParams {
     pub filter: Option<UserListFilter>,
 }

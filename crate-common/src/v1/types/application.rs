@@ -153,19 +153,19 @@ pub struct ApplicationCreate {
     pub description: Option<String>,
 
     /// enables managing Puppet users
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub bridge: Option<Bridge>,
 
     /// if anyone can use this
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub public: bool,
 
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
     #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub oauth_redirect_uris: Vec<String>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub oauth_confidential: Option<bool>,
 }
 
@@ -247,12 +247,12 @@ pub struct Bridge {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
 pub enum Scope {
     /// basic user profle information
     ///
     /// affects user_get and oauth_userinfo
-    #[serde(alias = "openid")]
+    #[cfg_attr(feature = "serde", serde(alias = "openid"))]
     Identify,
 
     /// return email address in user profile
@@ -276,7 +276,7 @@ pub enum Scope {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(transparent)]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Scopes(pub Vec<Scope>);
 
 impl Deref for Scopes {

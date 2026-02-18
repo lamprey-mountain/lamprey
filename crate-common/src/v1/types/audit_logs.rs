@@ -38,7 +38,7 @@ pub struct AuditLogEntry {
     pub reason: Option<String>,
 
     /// type and metadata for this audit log entry
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub ty: AuditLogEntryType,
 
     /// the status of the request
@@ -79,7 +79,7 @@ pub struct AuditLogChange {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type", content = "metadata")]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "metadata"))]
 pub enum AuditLogEntryType {
     RoomCreate {
         changes: Vec<AuditLogChange>,
@@ -138,7 +138,7 @@ pub enum AuditLogEntryType {
     RoleDelete {
         role_id: RoleId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -157,7 +157,7 @@ pub enum AuditLogEntryType {
     InviteDelete {
         code: InviteCode,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -200,14 +200,14 @@ pub enum AuditLogEntryType {
     EmojiDelete {
         emoji_id: EmojiId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
     PermissionOverwriteSet {
         channel_id: ChannelId,
         overwrite_id: Uuid,
-        #[serde(rename = "type")]
+        #[cfg_attr(feature = "serde", serde(rename = "type"))]
         ty: PermissionOverwriteType,
         changes: Vec<AuditLogChange>,
     },
@@ -344,7 +344,7 @@ pub enum AuditLogEntryType {
     SessionDelete {
         session_id: SessionId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -373,7 +373,7 @@ pub enum AuditLogEntryType {
     ApplicationDelete {
         application_id: ApplicationId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -390,7 +390,7 @@ pub enum AuditLogEntryType {
     EmailDelete {
         email: EmailAddr,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -410,7 +410,7 @@ pub enum AuditLogEntryType {
     UserDelete {
         user_id: UserId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -434,7 +434,7 @@ pub enum AuditLogEntryType {
     RoomDelete {
         room_id: RoomId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -479,7 +479,7 @@ pub enum AuditLogEntryType {
     CalendarEventDelete {
         event_id: CalendarEventId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -499,7 +499,7 @@ pub enum AuditLogEntryType {
         event_id: CalendarEventId,
         seq: u64,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -528,7 +528,7 @@ pub enum AuditLogEntryType {
     WebhookDelete {
         webhook_id: WebhookId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -561,7 +561,7 @@ pub enum AuditLogEntryType {
     AutomodRuleDelete {
         rule_id: AutomodRuleId,
 
-        #[serde(default)]
+        #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
@@ -580,18 +580,18 @@ pub enum AuditLogEntryType {
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct AuditLogFilter {
     /// only return audit log entries from these users
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub user_id: Vec<UserId>,
 
     /// only return audit log entries with these types
-    #[serde(default, rename = "type")]
+    #[cfg_attr(feature = "serde", serde(default, rename = "type"))]
     pub ty: Vec<String>,
 
     // TODO: implement
     /// only return audit log entries with these statuses
     ///
     /// defaults to only `Success`
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub status: Vec<AuditLogEntryStatus>,
 }
 

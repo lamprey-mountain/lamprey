@@ -22,31 +22,31 @@ pub struct ApiError {
     pub code: ErrorCode,
 
     /// errors in the request body
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub fields: Vec<ErrorField>,
 
     /// required room permissions
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub required_permissions: Vec<Permission>,
 
     /// required server permissions
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub required_permissions_server: Vec<Permission>,
 
     /// required oauth scopes
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub required_scopes: Vec<Scope>,
 
     /// unacknowledged warnings
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub warnings: Vec<Warning>,
 
     /// moderator-set message for automod
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub automod_message: Option<String>,
 
     /// ratelimit that you ran into
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ratelimit: Option<Ratelimit>,
 }
 
@@ -122,7 +122,7 @@ pub struct ErrorField {
     // re-add { message: String } to ErrorFieldType::Other
     pub message: String,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub ty: ErrorFieldType,
 }
 

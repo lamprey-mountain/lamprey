@@ -173,7 +173,10 @@ pub struct TrackMetadata {
     pub key: TrackKey,
 
     /// simulcasting layers, only applicable for video
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub layers: Vec<TrackLayer>,
 }
 
@@ -229,7 +232,7 @@ pub struct Subscription {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum SignallingMessage {
     /// the allocated sfu is ready to accept voice payloads
     // NOTE: do i get rid of this and have VoiceState be the ready message? ie.
@@ -323,7 +326,7 @@ pub enum MediaKind {
 /// Priority = 1 << 2
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[serde(transparent)]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct SpeakingFlags(pub u8);
 
 impl SpeakingFlags {
@@ -453,7 +456,7 @@ pub struct CallPatch {
     /// only unsuppressed users can change the call topic
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 512)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub topic: Option<Option<String>>,
 }
 

@@ -62,7 +62,7 @@ pub struct InviteWithMetadata {
     pub uses: u64,
 
     /// the invite this metadata is for
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub invite: Invite,
 }
 
@@ -70,7 +70,7 @@ pub struct InviteWithMetadata {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum InviteTarget {
     /// join a room
     Room {
@@ -98,13 +98,16 @@ pub enum InviteTarget {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum InviteTargetId {
     Room {
         room_id: RoomId,
         channel_id: Option<ChannelId>,
 
-        #[serde(default, deserialize_with = "deserialize_sorted")]
+        #[cfg_attr(
+            feature = "serde",
+            serde(default, deserialize_with = "deserialize_sorted")
+        )]
         role_ids: Vec<RoleId>,
     },
 
@@ -156,7 +159,7 @@ pub struct InviteCreate {
     pub max_uses: Option<u16>,
 
     /// which roles to apply when accepting the invite
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub role_ids: Option<Vec<RoleId>>,
 }
 

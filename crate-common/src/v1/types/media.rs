@@ -66,7 +66,7 @@ pub struct Media {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaWithAdmin {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: Media,
 
     /// the user who uploaded this media
@@ -89,7 +89,7 @@ pub struct MediaCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub alt: Option<String>,
 
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     #[cfg_attr(feature = "validator", validate(nested))]
     pub source: MediaCreateSource,
 }
@@ -97,7 +97,7 @@ pub struct MediaCreate {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum MediaCreateSource {
     Upload {
         /// The original filename

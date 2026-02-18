@@ -96,7 +96,7 @@ pub struct RoomMemberPut {
 pub struct RoomMemberPatch {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub override_name: Option<Option<String>>,
 
     // NOTE: maybe i don't want to let moderators update this?
@@ -104,9 +104,9 @@ pub struct RoomMemberPatch {
     // moderators, but idk if it should be here or somewhere else
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub override_description: Option<Option<String>>,
-    // #[serde(default, deserialize_with = "some_option")]
+    // #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     // pub override_avatar: Option<Option<String>>,
     /// whether this user is muted by a moderator
     pub mute: Option<bool>,
@@ -118,7 +118,7 @@ pub struct RoomMemberPatch {
     pub roles: Option<Vec<RoleId>>,
 
     /// temporarily prevent a member from communicating
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub timeout_until: Option<Option<Time>>,
 }
 
@@ -150,7 +150,7 @@ pub struct RoomBanCreate {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum RoomMemberOrigin {
     /// joined via invite
     Invite {
@@ -210,7 +210,7 @@ pub enum RoomMemberOrigin {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomBanBulkCreate {
     /// who to ban
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[validate(length(min = 1, max = 256))]
     pub target_ids: Vec<UserId>,
 
@@ -225,7 +225,7 @@ pub struct RoomBanBulkCreate {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct PruneBegin {
     /// include users with these roles
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub include_roles: Vec<RoleId>,
 
     /// prune users inactive for this many days
@@ -234,11 +234,11 @@ pub struct PruneBegin {
 
     /// whether to return the number of pruned users in the response
     // endpoint 202 accepted if false, 200 ok if true
-    #[serde(default = "bool_true")]
+    #[cfg_attr(feature = "serde", serde(default = "bool_true"))]
     pub calculate_total: bool,
 
     /// whether to actually prune or to
-    #[serde(default = "bool_true")]
+    #[cfg_attr(feature = "serde", serde(default = "bool_true"))]
     pub dry_run: bool,
 }
 
@@ -275,7 +275,7 @@ pub struct RoomMemberSearchAdvanced {
     pub limit: Option<u16>,
 
     /// has all of these roles
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub roles: Vec<RoleId>,
 
     /// joined from this invite

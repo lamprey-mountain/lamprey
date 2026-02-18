@@ -144,20 +144,20 @@ pub struct CalendarEventPatch {
 
     #[cfg_attr(feature = "utoipa", schema(max_length = 4096))]
     #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
 
     #[cfg_attr(feature = "utoipa", schema(max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub location: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub url: Option<Option<Url>>,
 
     pub starts_at: Option<Time>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub ends_at: Option<Option<Time>>,
     // NOTE: undecided features
     // how will moving events between channels work? what happens to rsvps for users who can no longer see an event?
@@ -214,17 +214,17 @@ pub struct CalendarOverwrite {
 
     #[cfg_attr(feature = "utoipa", schema(max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub location: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub url: Option<Option<Url>>,
 
     /// Overwrite the start time for this event
     pub starts_at: Option<Time>,
 
     /// Overwrite the end time for this event
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub ends_at: Option<Option<Time>>,
 
     /// if this event is cancelled
@@ -247,17 +247,17 @@ pub struct CalendarOverwritePut {
 
     #[cfg_attr(feature = "utoipa", schema(max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub location: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub url: Option<Option<Url>>,
 
     /// Overwrite the start time for this event
     pub starts_at: Option<Time>,
 
     /// Overwrite the end time for this event
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub ends_at: Option<Option<Time>>,
 
     /// if this event is cancelled
@@ -286,11 +286,11 @@ pub struct Recurrence {
     pub frequency: RecurrenceFrequency,
 
     /// only repeat on these days of the week
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub by_weekday: Vec<DayOfWeek>,
 
     /// only repeat on these days of the month
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub by_month_day: Vec<u8>,
 
     /// when to end
@@ -303,7 +303,7 @@ pub struct Recurrence {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum RecurrenceRange {
     /// repeat this event forever
     Infinite,
@@ -537,7 +537,7 @@ impl CalendarEvent {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CalendarEventParticipantQuery {
     /// whether to include user and member
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub include_member: bool,
 }
 
@@ -548,17 +548,17 @@ pub struct CalendarEventParticipant {
     pub user_id: UserId,
     pub status: CalendarRsvpStatus,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub user: Option<User>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub member: Option<RoomMember>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum CalendarRsvpStatus {
     Interested,
     Uninterested,
@@ -577,7 +577,7 @@ pub struct CalendarEventParticipantPut {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CalendarPatch {
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub color: Option<Option<Color>>,
     pub default_timezone: Option<Timezone>,
 }

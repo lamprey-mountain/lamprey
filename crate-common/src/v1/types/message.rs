@@ -43,19 +43,19 @@ pub struct Message {
     /// exists if this message is pinned
     pub pinned: Option<Pinned>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub reactions: ReactionCounts,
 
     /// when this message was deleted
     ///
     /// deleted messages can still be viewed by moderators for a period of time, but otherwise cannot be recovered
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub deleted_at: Option<Time>,
 
     /// when this message was removed
     ///
     /// removed messages are hidden for non moderators. they are recoverable by moderators
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub removed_at: Option<Time>,
 
     /// when this message was created
@@ -65,7 +65,7 @@ pub struct Message {
     pub author_id: UserId,
 
     /// the associated thread for this message, if one exists.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub thread: Option<Box<Channel>>,
 }
 
@@ -78,23 +78,23 @@ pub struct MessageVersion {
     pub version_id: MessageVerId,
 
     /// the id of who this edit. if None, this edit was made by the author
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub author_id: Option<UserId>,
 
     /// the type and content of this message
     // NOTE: message type generally shouldn't change, but i don't know how to "hoist" the type field to the top level Message struct?
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub message_type: MessageType,
 
     /// who this message mentioned
-    #[serde(skip_serializing_if = "Mentions::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Mentions::is_empty"))]
     pub mentions: Mentions,
 
     /// when this message version was created, use this as edited_at
     pub created_at: Time,
 
     /// when this message version was deleted
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub deleted_at: Option<Time>,
 }
 
@@ -136,7 +136,7 @@ pub struct Pinned {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct PinsReorder {
     /// the messages to reorder
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[validate(length(min = 1, max = 1024))]
     pub messages: Vec<PinsReorderItem>,
 }
@@ -148,7 +148,7 @@ pub struct PinsReorder {
 pub struct PinsReorderItem {
     pub id: MessageId,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub position: Option<Option<u16>>,
 }
 
@@ -168,7 +168,7 @@ pub struct ParseMentions {
     pub roles: Option<Vec<RoleId>>,
 
     /// whether to parse @everyone mentions from the content
-    #[serde(default = "true_fn")]
+    #[cfg_attr(feature = "serde", serde(default = "true_fn"))]
     pub everyone: bool,
 }
 
@@ -178,24 +178,24 @@ pub struct ParseMentions {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
     /// the users that were mentioned
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub users: Vec<MentionsUser>,
 
     /// the roles that were mentioned
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub roles: Vec<MentionsRole>,
 
     /// the channels that were mentioned
     // NOTE: this may not be necessary; the user should already have all channels. this is only needed for forwards, but in that case do i really want to leak channel names/types?
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub channels: Vec<MentionsChannel>,
 
     /// the custom emojis that were used in this message
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub emojis: Vec<MentionsEmoji>,
 
     /// if this message mentions everyone
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub everyone: bool,
 }
 
@@ -245,7 +245,7 @@ pub struct MentionsChannel {
     pub room_id: Option<RoomId>,
 
     /// the type of this channel
-    #[serde(rename = "type")]
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
     pub ty: ChannelType,
 
     /// the name of this channel
@@ -282,7 +282,7 @@ pub struct MessageCreate {
         schema(required = false, min_length = 0, max_length = 32)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub attachments: Vec<MediaRef>,
 
     /// arbitrary metadata associated with a message
@@ -300,7 +300,7 @@ pub struct MessageCreate {
     /// deprecated: create new puppets for each bridged user instead
     // TODO: remove
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub override_name: Option<String>,
 
     #[cfg_attr(
@@ -308,14 +308,14 @@ pub struct MessageCreate {
         schema(required = false, min_length = 0, max_length = 32)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub embeds: Vec<EmbedCreate>,
 
     /// custom timestamps (timestamp massaging), for bridge bots
     // TODO: remove (use header instead)
     pub created_at: Option<Time>,
 
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     pub mentions: ParseMentions,
 }
 
@@ -327,7 +327,7 @@ pub struct MessagePatch {
     /// the new message content. whether its markdown/new format depends on the target message's format
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub content: Option<Option<String>>,
 
     #[cfg_attr(
@@ -342,11 +342,11 @@ pub struct MessagePatch {
     /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
     // TODO: remove (use header instead)
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub metadata: Option<Option<serde_json::Value>>,
 
     /// the message this message is replying to
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub reply_id: Option<Option<MessageId>>,
 
     /// override the name of this message's sender
@@ -368,7 +368,7 @@ pub struct MessagePatch {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MessageType {
     /// a basic message, using markdown
     // NOTE(v2): rename to Default
@@ -474,10 +474,10 @@ pub struct MessageAutomodExecution {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageChannelRename {
-    #[serde(alias = "new")]
+    #[cfg_attr(feature = "serde", serde(alias = "new"))]
     pub name_new: String,
 
-    #[serde(alias = "old")]
+    #[cfg_attr(feature = "serde", serde(alias = "old"))]
     pub name_old: String,
 }
 
@@ -619,7 +619,7 @@ pub struct MessageDefaultMarkdown {
     // // experimental! don't touch yet.
     // #[cfg(feature = "feat_interaction")]
     // #[cfg_attr(feature = "utoipa", schema(ignore))]
-    // #[serde(default)]
+    // #[cfg_attr(feature = "serde", serde(default))]
     // pub interactions: Interactions,
 }
 
@@ -650,7 +650,7 @@ pub struct Interactions {
 
     // yet another rabbit hole. not worth it for now.
     #[cfg(feature = "feat_interaction_status")]
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub status: Option<InteractionStatus>,
 }
 
@@ -693,7 +693,7 @@ pub enum InteractionStatus {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageMigrate {
     /// which messages to move
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
     pub message_ids: Vec<MessageId>,
 
@@ -707,17 +707,17 @@ pub struct MessageMigrate {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageModerate {
     /// which messages to delete
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub delete: Vec<MessageId>,
 
     /// which messages to remove
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub remove: Vec<MessageId>,
 
     /// which messages to restore
-    #[serde(default)]
+    #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub restore: Vec<MessageId>,
 }
@@ -728,7 +728,7 @@ pub struct MessageModerate {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RepliesQuery {
     /// how deeply to fetch replies
-    #[serde(default = "fn_one")]
+    #[cfg_attr(feature = "serde", serde(default = "fn_one"))]
     #[cfg_attr(feature = "validator", validate(range(min = 1, max = 8)))]
     pub depth: u16,
 
@@ -757,10 +757,10 @@ pub struct ContextQuery {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RatelimitPut {
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub slowmode_thread_expire_at: Option<Option<Time>>,
 
-    #[serde(default, deserialize_with = "some_option")]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub slowmode_message_expire_at: Option<Option<Time>>,
 }
 
