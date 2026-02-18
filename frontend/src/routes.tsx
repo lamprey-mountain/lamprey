@@ -276,6 +276,16 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	const documentCtx = getOrCreateDocumentContext();
 	const channelCtx = getOrCreateChannelContext();
 
+	// store last viewed channel per room
+	createEffect(() => {
+		const ch = channel();
+		const rm = room();
+		if (ch?.room_id && rm) {
+			const key = `last_channel_${rm.id}`;
+			localStorage.setItem(key, ch.id);
+		}
+	});
+
 	// Handle message anchor logic
 	createEffect(() => {
 		const { channel_id, message_id } = p.params;

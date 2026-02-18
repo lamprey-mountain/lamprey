@@ -25,6 +25,17 @@ import icSettings from "./assets/settings.png";
 import icMemberAdd from "./assets/member-add.png";
 
 // TODO: review llm code here because im lazy and dont like implementing drag and drop
+
+function getLastViewedChannel(roomId: string): string | null {
+	const key = `last_channel_${roomId}`;
+	return localStorage.getItem(key);
+}
+
+function setLastViewedChannel(roomId: string, channelId: string): void {
+	const key = `last_channel_${roomId}`;
+	localStorage.setItem(key, channelId);
+}
+
 export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
 	const api = useApi();
@@ -34,6 +45,21 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const nav = useNavigate();
 
 	const currentUserId = () => api.users.cache.get("@self")?.id;
+
+	createEffect(() => {
+		if (!props.room_id) return;
+
+		const lastChannelId = getLastViewedChannel(props.room_id);
+		if (!lastChannelId) return;
+
+		const currentPath = params.channel_id;
+		if (currentPath && currentPath === lastChannelId) return;
+
+		const channel = api.channels.cache.get(lastChannelId);
+		if (!channel) return;
+
+		nav(`/channel/${lastChannelId}`, { replace: true });
+	});
 
 	// track drag ids
 	const [dragging, setDragging] = createSignal<
@@ -713,7 +739,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													target()?.mode === "after",
 											}}
 										>
-											<ItemChannel channel={channel} />
+											<ItemChannel channel={channel} room_id={props.room_id} />
 											<Show when={(channel as any).threads?.length > 0}>
 												<ul class="threads">
 													<For each={(channel as any).threads}>
@@ -733,7 +759,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 																		!!thread.is_unread,
 																}}
 															>
-																<ItemChannel channel={thread} />
+																<ItemChannel
+																	channel={thread}
+																	room_id={props.room_id}
+																/>
 															</li>
 														)}
 													</For>
@@ -799,9 +828,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	);
 };
 
-export const ItemChannel = (props: { channel: Channel }) => {
+export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const api = useApi();
 	const nav = useNavigate();
+
+	const handleClick = (e: MouseEvent) => {
+		if (props.room_id) {
+			setLastViewedChannel(props.room_id, props.channel.id);
+		}
+	};
 
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
@@ -837,6 +872,7 @@ export const ItemChannel = (props: { channel: Channel }) => {
 				muted: isMuted(),
 			}}
 			data-channel-id={props.channel.id}
+			onClick={handleClick}
 		>
 			<ChannelIcon channel={props.channel} />
 			<div style="pointer-events:none;line-height:1;flex:1;overflow:hidden">
