@@ -380,7 +380,6 @@ const RoleList = (
 const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const api = useApi();
 	const ctx = useCtx();
-	const [permSearch, setPermSearch] = createSignal("");
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
 	const [memberSearch, setMemberSearch] = createSignal("");
@@ -563,64 +562,10 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					<h3>permissions</h3>
 				</div>
 
-				{() => {
-					const { t } = useCtx();
-					const searchQuery = permSearch().toLowerCase();
-					const allPermissions = permissions.filter((perm) => {
-						const isServer = props.room.type === "Server";
-						if (isServer) {
-							if (!perm.types?.includes("Server")) return false;
-						} else {
-							if (!perm.types?.includes("Room")) return false;
-						}
-
-						if (!searchQuery) return true;
-						const name = t(`permissions.${perm.id}.name`) ?? perm.id;
-						const description = t(`permissions.${perm.id}.description`) ?? "";
-						return (
-							name.toLowerCase().includes(searchQuery) ||
-							description.toLowerCase().includes(searchQuery) ||
-							perm.id.toLowerCase().includes(searchQuery)
-						);
-					});
-
-					const permStates = allPermissions.reduce((acc, perm) => {
-						const role = props.edit.role;
-						if (role.allow?.includes(perm.id)) acc[perm.id] = "allow";
-						else if (role.deny?.includes(perm.id)) acc[perm.id] = "deny";
-						else acc[perm.id] = "inherit";
-						return acc;
-					}, {} as Record<Permission, "allow" | "deny" | "inherit">);
-
-					const handlePermChange = (
-						permId: Permission,
-						newState: "allow" | "deny" | "inherit",
-					) => {
-						props.edit.setRole((prev) => {
-							const newRole = { ...prev };
-							newRole.allow = (newRole.allow || []).filter((p) => p !== permId);
-							newRole.deny = (newRole.deny || []).filter((p) => p !== permId);
-
-							if (newState === "allow") {
-								newRole.allow.push(permId);
-							} else if (newState === "deny") {
-								newRole.deny.push(permId);
-							}
-
-							return newRole;
-						});
-					};
-
-					return (
-						<PermissionSelector
-							permissions={allPermissions}
-							permStates={permStates}
-							onPermChange={handlePermChange}
-							showDescriptions={true}
-							roomType={props.room.type}
-						/>
-					);
-				}}
+				<RolePermissionSelector
+					room={props.room}
+					edit={props.edit}
+				/>
 			</Show>
 			<Show when={activeTab() === "members"}>
 				<div class="members-tab">
@@ -669,3 +614,73 @@ function useRoleEditor(initial: Role | null) {
 
 	return { role, setRole, name, setName, desc, setDesc };
 }
+
+const RolePermissionSelector = (
+	props: { room: RoomT; edit: RoleEditState },
+) => {
+	const { t } = useCtx();
+	const [permSearch, setPermSearch] = createSignal("");
+
+	const allPermissions = createMemo(() => {
+		const searchQuery = permSearch().toLowerCase();
+		return permissions.filter((perm) => {
+			const isServer = props.room.type === "Server";
+			if (isServer) {
+				if (!perm.types?.includes("Server")) return false;
+			} else {
+				if (!perm.types?.includes("Room")) return false;
+			}
+
+			if (!searchQuery) return true;
+			const name = t(`permissions.${perm.id}.name`) ?? perm.id;
+			const description = t(`permissions.${perm.id}.description`) ?? "";
+			return (
+				name.toLowerCase().includes(searchQuery) ||
+				description.toLowerCase().includes(searchQuery) ||
+				perm.id.toLowerCase().includes(searchQuery)
+			);
+		});
+	});
+
+	const permStates = createMemo(() => {
+		return allPermissions().reduce((acc, perm) => {
+			const role = props.edit.role;
+			if (role.allow?.includes(perm.id)) acc[perm.id] = "allow";
+			else if (role.deny?.includes(perm.id)) acc[perm.id] = "deny";
+			else acc[perm.id] = "inherit";
+			return acc;
+		}, {} as Record<Permission, "allow" | "deny" | "inherit">);
+	});
+
+	const handlePermChange = (
+		permId: Permission,
+		newState: "allow" | "deny" | "inherit",
+	) => {
+		props.edit.setRole((prev) => {
+			const newRole = { ...prev };
+			newRole.allow = (newRole.allow || []).filter((p) => p !== permId);
+			newRole.deny = (newRole.deny || []).filter((p) => p !== permId);
+
+			if (newState === "allow") {
+				newRole.allow.push(permId);
+			} else if (newState === "deny") {
+				newRole.deny.push(permId);
+			}
+
+			return newRole;
+		});
+	};
+
+	return (
+		<PermissionSelector
+			search={permSearch()}
+			onSearch={setPermSearch}
+			seed={props.edit.role.id!}
+			permissions={allPermissions()}
+			permStates={permStates()}
+			onPermChange={handlePermChange}
+			showDescriptions={true}
+			roomType={props.room.type}
+		/>
+	);
+};

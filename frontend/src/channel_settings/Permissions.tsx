@@ -104,6 +104,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const [editingId, setEditingId] = createSignal<string>(
 		props.channel.room_id!,
 	);
+	const [permSearch, setPermSearch] = createSignal("");
 
 	const resetChangeTracking = () => {
 		setDirtyOverwrites({});
@@ -415,6 +416,8 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 								</Show>
 							</div>
 							<PermissionSelector
+								search={permSearch()}
+								onSearch={setPermSearch}
 								seed={props.channel.id + overwrite.id}
 								permissions={filteredPermissions()}
 								permStates={filteredPermissions().reduce((acc, p) => {

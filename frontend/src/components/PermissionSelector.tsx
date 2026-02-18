@@ -49,13 +49,16 @@ interface PermissionSelectorProps {
 	showDescriptions?: boolean;
 	roomType?: "Default" | "Server";
 	context?: "default" | "overwrite";
+	search?: string;
+	onSearch?: (search: string) => void;
 }
 
 export const PermissionSelector: Component<PermissionSelectorProps> = (
 	props,
 ) => {
 	const { t } = useCtx();
-	const [search, setSearch] = createSignal("");
+	const [internalSearch, setInternalSearch] = createSignal("");
+	const search = () => props.search ?? internalSearch();
 	const isOverwriteContext = createMemo(() => props.context === "overwrite");
 
 	const filteredPermissions = createMemo(() => {
@@ -130,7 +133,10 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 				type="search"
 				placeholder="Search permissions..."
 				value={search()}
-				onInput={(e) => setSearch(e.currentTarget.value)}
+				onInput={(e) => {
+					if (props.onSearch) props.onSearch(e.currentTarget.value);
+					else setInternalSearch(e.currentTarget.value);
+				}}
 				class="permission-search-input"
 			/>
 			<div class="permission-selector-list">
