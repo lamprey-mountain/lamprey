@@ -563,4 +563,17 @@ export default {
 		threads: "Threads",
 		other: "Other",
 	},
+	message_content: {
+		thread_created: (
+			author: any,
+			Link: (text: string) => any,
+			ViewAll: (text: string) => any,
+		) => [
+			author,
+			" created ",
+			Link("a thread"),
+			". ",
+			ViewAll("View all threads"),
+		],
+	},
 };

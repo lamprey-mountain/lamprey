@@ -10,6 +10,8 @@ export type Invite = components["schemas"]["Invite"];
 export type InviteWithMetadata = components["schemas"]["InviteWithMetadata"];
 export type Session = components["schemas"]["Session"];
 export type RoomMember = components["schemas"]["RoomMember"];
+export type RoomMemberSearchResponse =
+	components["schemas"]["RoomMemberSearchResponse"];
 export type ThreadMember = components["schemas"]["ThreadMember"];
 export type Media = components["schemas"]["Media"];
 export type MediaTrack = components["schemas"]["MediaTrack"];

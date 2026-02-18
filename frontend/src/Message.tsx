@@ -794,7 +794,54 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.type === "ThreadCreated") {
 			const navigate = useNavigate();
 			const ctx = useCtx();
+			const { t } = ctx;
 			const threadId = () => props.message.thread_id;
+
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
+
+			const link = (text: string) => (
+				<Show
+					when={threadId()}
+					fallback={<span>{text}</span>}
+				>
+					<button
+						class="link"
+						onClick={(e) => {
+							e.stopPropagation();
+							if (threadId()) {
+								navigate(`/thread/${threadId()}`);
+							}
+						}}
+					>
+						{text}
+					</button>
+				</Show>
+			);
+
+			const viewAll = (text: string) => (
+				<button
+					class="link"
+					onClick={(e) => {
+						e.stopPropagation();
+						const ref = e.currentTarget;
+						queueMicrotask(() => {
+							ctx.setThreadsView({
+								channel_id: props.message.channel_id,
+								ref,
+							});
+						});
+					}}
+				>
+					{text}
+				</button>
+			);
 
 			return (
 				<article
@@ -814,45 +861,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							created{" "}
-							<Show
-								when={threadId()}
-								fallback={<span>a thread</span>}
-							>
-								<button
-									class="link"
-									onClick={(e) => {
-										e.stopPropagation();
-										if (threadId()) {
-											navigate(`/thread/${threadId()}`);
-										}
-									}}
-								>
-									a thread
-								</button>
-							</Show>
-							{". "}
-							<button
-								class="link"
-								onClick={(e) => {
-									e.stopPropagation();
-									const ref = e.currentTarget;
-									queueMicrotask(() => {
-										ctx.setThreadsView({
-											channel_id: props.message.channel_id,
-											ref,
-										});
-									});
-								}}
-							>
-								View all threads
-							</button>
+							{/* @ts-ignore */}
+							{t("message_content.thread_created", author, link, viewAll)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
