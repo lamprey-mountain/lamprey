@@ -16,7 +16,7 @@ import { Time } from "../Time.tsx";
 import { useFloating } from "solid-floating-ui";
 import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../hooks/usePermissions.ts";
-import { getTimestampFromUUID, type Webhook } from "sdk";
+import { createUpload, getTimestampFromUUID, type Webhook } from "sdk";
 import { Dropdown } from "../Dropdown.tsx";
 import { useConfig } from "../config.tsx";
 import { useModals } from "../contexts/modal";
@@ -104,11 +104,12 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 						{(i) => {
 							const creator = api.users.fetch(() => i.creator_id);
 							const [name, setName] = createSignal(i.name);
+							const [avatar, setAvatar] = createSignal(i.avatar);
 
 							const webhookUser = () => ({
 								id: i.id,
 								name: i.name,
-								avatar: i.avatar,
+								avatar: avatar(),
 								banner: null,
 								description: null,
 								flags: 0,
@@ -141,6 +142,42 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 								navigator.clipboard.writeText(webhookUrl);
 							};
 
+							const setAvatarFile = async (f: File) => {
+								await createUpload({
+									client: api.client,
+									file: f,
+									onComplete(media) {
+										setAvatar(media.id);
+										api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
+											params: { path: { webhook_id: i.id } },
+											body: {
+												avatar: media.id,
+											},
+										});
+									},
+									onFail(_error) {},
+									onPause() {},
+									onResume() {},
+									onProgress(_progress) {},
+								});
+							};
+
+							const removeAvatar = async () => {
+								setAvatar(null);
+								await api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
+									params: { path: { webhook_id: i.id } },
+									body: {
+										avatar: null,
+									},
+								});
+							};
+
+							let avatarInputEl!: HTMLInputElement;
+
+							const openAvatarPicker = () => {
+								avatarInputEl?.click();
+							};
+
 							return (
 								<li>
 									<details>
@@ -159,8 +196,32 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 										</summary>
 										<div class="info">
 											<div style="display: flex; align-items: center; gap: 8px;">
-												{/* TODO: click to upload custom avatar */}
-												<Avatar user={webhookUser()} />
+												<div class="avatar-uploader" onClick={openAvatarPicker}>
+													<div class="avatar-inner">
+														<Avatar user={webhookUser()} />
+														<div class="overlay">upload avatar</div>
+													</div>
+													<Show when={webhookUser().avatar}>
+														<button
+															class="remove"
+															onClick={(e) => {
+																e.stopPropagation();
+																removeAvatar();
+															}}
+														>
+															remove
+														</button>
+													</Show>
+													<input
+														style="display:none"
+														ref={avatarInputEl}
+														type="file"
+														onInput={(e) => {
+															const f = e.target.files?.[0];
+															if (f) setAvatarFile(f);
+														}}
+													/>
+												</div>
 												<div>
 													<div style="display: flex;flex: 1; gap: 8px">
 														<div style="flex: 1;">
