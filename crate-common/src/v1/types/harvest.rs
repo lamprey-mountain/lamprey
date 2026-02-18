@@ -10,7 +10,8 @@ use crate::v1::types::{misc::Time, HarvestId, UserId};
 /// how to create a harvest
 ///
 /// including extra data will make the export slower
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct HarvestCreate {
     /// include all messages you have sent
@@ -20,7 +21,8 @@ pub struct HarvestCreate {
     pub include_reactions: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Harvest {
     pub id: HarvestId,
@@ -31,7 +33,8 @@ pub struct Harvest {
     pub status: HarvestStatus,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "status")]
 pub enum HarvestStatus {

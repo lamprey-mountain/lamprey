@@ -43,7 +43,8 @@ impl PaginationKey for RoomTemplateCode {
 }
 
 /// A template for creating rooms.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomTemplate {
     /// unique identifier for this template
@@ -74,7 +75,8 @@ pub struct RoomTemplate {
 }
 
 /// a snapshot of a room
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomTemplateSnapshot {
     pub channels: Vec<RoomTemplateChannel>,
@@ -82,7 +84,8 @@ pub struct RoomTemplateSnapshot {
     pub welcome_channel_id: Option<ChannelId>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomTemplateCreate {
@@ -94,7 +97,8 @@ pub struct RoomTemplateCreate {
     pub description: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomTemplatePatch {
@@ -104,7 +108,8 @@ pub struct RoomTemplatePatch {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomTemplateChannel {
     #[serde(flatten)]
@@ -114,7 +119,8 @@ pub struct RoomTemplateChannel {
     pub id: Uuid,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomTemplateRole {
     #[serde(flatten)]

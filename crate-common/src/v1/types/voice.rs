@@ -226,7 +226,8 @@ pub struct Subscription {
 }
 
 /// messages that either the sfu or client can send to each other
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum SignallingMessage {

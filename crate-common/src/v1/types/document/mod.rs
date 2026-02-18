@@ -98,7 +98,8 @@ pub struct DocumentBranch {
     // pub merged_into: Option<DocumentBranchId>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum DocumentBranchState {
     /// currently being edited
@@ -115,7 +116,8 @@ pub enum DocumentBranchState {
     Merged,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct DocumentBranchListParams {
     /// only include branches with these states
@@ -162,14 +164,16 @@ pub struct DocumentBranchMerge {
 }
 
 // NOTE: not useful; may be removed later?
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct DocumentBranchMergeResult {
     pub status: DocumentBranchMergeResultStatus,
 }
 
 // NOTE: not useful; may be removed later?
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum DocumentBranchMergeResultStatus {
     /// no existing changes! the cleanest merge
@@ -359,7 +363,8 @@ pub struct DocumentTagPatch {
     pub description: Option<Option<String>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
 pub struct HistoryParams {
     /// split group whenever author changes
@@ -389,7 +394,8 @@ pub struct HistoryParams {
 }
 
 /// a set of changes made to a document
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Changeset {
     /// the created_at time of the first change
@@ -412,7 +418,8 @@ pub struct Changeset {
     pub document_id: Option<ChannelId>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct HistoryPagination {
     /// the resulting changesets, ordered oldest to newest
@@ -432,14 +439,16 @@ pub struct HistoryPagination {
 }
 
 /// parameters for getting a crdt
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct DocumentCrdtDiffParams {
     pub sv: Option<DocumentStateVector>,
 }
 
 /// parameters for updating a crdt
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct DocumentCrdtApply {
     pub update: DocumentUpdate,
@@ -480,13 +489,15 @@ pub struct DocumentPublished {
 }
 
 /// update a serdoc
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SerdocPut {
     pub root: serialized::SerdocRoot,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct DocumentPatch {
@@ -499,7 +510,8 @@ pub struct DocumentPatch {
     pub published: Option<Option<DocumentPublishedPatch>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct DocumentPublishedPatch {
@@ -508,7 +520,8 @@ pub struct DocumentPublishedPatch {
     pub unlisted: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct DocumentArchivedPatch {
@@ -559,7 +572,8 @@ impl Diff<Wiki> for WikiPatch {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct WikiPatch {

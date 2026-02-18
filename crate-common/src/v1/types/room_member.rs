@@ -56,7 +56,8 @@ pub struct RoomMember {
     pub quarantined: bool,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberPut {
@@ -88,7 +89,8 @@ pub struct RoomMemberPut {
     pub timeout_until: Option<Time>,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberPatch {
@@ -121,7 +123,8 @@ pub struct RoomMemberPatch {
 }
 
 /// represents a restriction on who can join the room
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomBan {
     /// the user who is banned
@@ -137,19 +140,17 @@ pub struct RoomBan {
     pub expires_at: Option<Time>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomBanCreate {
     pub expires_at: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(
-    feature = "utoipa",
-    derive(Serialize, Deserialize),
-    serde(tag = "type")
-)]
+#[serde(tag = "type")]
 pub enum RoomMemberOrigin {
     /// joined via invite
     Invite {
@@ -203,7 +204,8 @@ pub enum RoomMemberOrigin {
 // }
 
 /// create many bans at once
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomBanBulkCreate {
@@ -217,7 +219,8 @@ pub struct RoomBanBulkCreate {
 }
 
 /// Room member prune
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct PruneBegin {
@@ -240,14 +243,16 @@ pub struct PruneBegin {
 }
 
 /// response for PruneBegin
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PruneResponse {
     /// number of pruned users
     pub pruned: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams, ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberSearch {
@@ -256,7 +261,8 @@ pub struct RoomMemberSearch {
     pub limit: Option<u16>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberSearchAdvanced {
@@ -303,7 +309,8 @@ pub struct RoomMemberSearchAdvanced {
     pub create_after: Option<Time>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomMemberSearchResponse {
     pub room_members: Vec<RoomMember>,

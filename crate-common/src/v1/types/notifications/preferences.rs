@@ -9,7 +9,8 @@ use utoipa::ToSchema;
 use crate::v1::types::util::Time;
 
 /// notification config for a user (works globally)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotifsGlobal {
     pub mute: Option<Mute>,
@@ -19,7 +20,8 @@ pub struct NotifsGlobal {
 }
 
 /// notification config for a room
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotifsRoom {
     pub mute: Option<Mute>,
@@ -38,7 +40,8 @@ pub struct NotifsRoom {
 }
 
 /// notification config for a channel
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotifsChannel {
     pub mute: Option<Mute>,
@@ -55,7 +58,8 @@ pub struct NotifsChannel {
 }
 
 /// how to handle new messages
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum NotifsMessages {
     /// notify on every message
@@ -76,7 +80,8 @@ pub enum NotifsMessages {
 }
 
 /// how to handle new threads
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum NotifsThreads {
     /// notify whenever a new thread is created
@@ -92,7 +97,8 @@ pub enum NotifsThreads {
 
 // only affects private rooms
 // TODO: implement
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum NotifsVoice {
     /// when someone starts streaming
@@ -106,7 +112,8 @@ pub enum NotifsVoice {
 }
 
 /// what notifications to send for reactions
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum NotifsReactions {
     /// notify for all reactions
@@ -123,7 +130,8 @@ pub enum NotifsReactions {
 }
 
 /// how long to mute notifications for
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mute {
     /// how long to mute for, or forever if None

@@ -38,7 +38,8 @@ pub struct Report {
 }
 
 /// who the report is sent to
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ReportDestination {
     /// send to room moderators
@@ -51,7 +52,8 @@ pub enum ReportDestination {
 // these reasons are more or less copied from revolt.chat for now
 // (theres quite a lot considering ui design, it looks like they're meant to be nested inside subcategories?)
 // i should probably reduce it down to maybe 4 to 8 preset reasons
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ReportReason {
     /// generally illegal
@@ -110,7 +112,8 @@ pub enum ReportReason {
     Other,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ReportCreate {

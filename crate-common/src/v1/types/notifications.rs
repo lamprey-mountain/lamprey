@@ -15,7 +15,8 @@ pub mod preferences;
 
 // TODO: use this instead of the current notification type
 /// a notification; a unit of stuff that may show up in your inbox or be pushed to you
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Notification2 {
     pub id: NotificationId,
@@ -30,7 +31,8 @@ pub struct Notification2 {
     pub read_at: Option<Time>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum Notification2Type {
@@ -58,7 +60,8 @@ pub enum Notification2Type {
 
 // TODO: remove
 /// a notification; a unit of stuff that may show up in your inbox or be pushed to you
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Notification {
     pub id: NotificationId,
@@ -82,7 +85,8 @@ pub struct Notification {
 // TODO: remove
 // in order of precedence
 /// what caused this notification to be created
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum NotificationReason {
     /// user manually added this notification
@@ -105,7 +109,8 @@ pub enum NotificationReason {
 }
 
 /// query your inbox
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct InboxListParams {
@@ -127,7 +132,8 @@ pub struct InboxListParams {
 }
 
 /// create a new message reminder notification
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotificationCreate {
     /// the channel this message was sent in
@@ -141,7 +147,8 @@ pub struct NotificationCreate {
 }
 
 /// mark some notifications as read (or unread)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct NotificationMarkRead {
@@ -169,7 +176,8 @@ pub struct NotificationMarkRead {
 }
 
 /// delete some notifications
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct NotificationFlush {
@@ -200,7 +208,8 @@ pub struct NotificationFlush {
 }
 
 /// paginate through your notifications
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotificationPagination {
     pub notifications: Vec<Notification>,

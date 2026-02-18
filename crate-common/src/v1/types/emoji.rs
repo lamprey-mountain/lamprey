@@ -8,7 +8,8 @@ use crate::v1::types::{util::Diff, EmojiId, MediaId, RoomId, UserId};
 
 // WARN: this is an *extreme* work in progress
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EmojiCustom {
     pub id: EmojiId,
@@ -33,7 +34,8 @@ pub struct EmojiCustom {
     pub media_id: MediaId,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "owner")]
 pub enum EmojiOwner {
@@ -44,7 +46,8 @@ pub enum EmojiOwner {
     User,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EmojiCustomCreate {
     // TODO(#862): enforce emoji naming conventions (ie. no spaces)
@@ -53,7 +56,8 @@ pub struct EmojiCustomCreate {
     pub media_id: MediaId,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EmojiCustomPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false))]

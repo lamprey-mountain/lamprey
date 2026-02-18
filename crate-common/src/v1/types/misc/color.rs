@@ -22,7 +22,8 @@ pub enum Color {
 /// a color that changes depending on theme
 ///
 /// COLOR NAMES CURRENTLY UNSTABLE AND MAY CHANGE
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ColorThemed {
     /// default text color
@@ -48,7 +49,8 @@ pub enum ColorThemed {
 }
 
 /// color with semantic meaning
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ColorSemantic {
     /// something worth pointing out

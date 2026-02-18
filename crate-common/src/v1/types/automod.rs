@@ -87,7 +87,8 @@ pub struct AutomodRuleUpdate {
 }
 
 /// minimal version of AutomodRule to prevent leaking the rule trigger
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AutomodRuleStripped {
     pub id: AutomodRuleId,

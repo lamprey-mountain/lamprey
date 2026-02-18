@@ -28,7 +28,9 @@ pub struct ReactionCount {
     pub self_reacted: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ReactionListItem {
     pub user_id: UserId,
     pub created_at: Time,

@@ -28,7 +28,8 @@ pub struct Autoconfig {
 }
 
 /// user info response for openid connect
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Userinfo {
     /// oauth issuer
@@ -56,7 +57,8 @@ pub struct Userinfo {
     pub picture: Option<Url>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthAuthorizeInfo {
     pub application: Application,
@@ -65,7 +67,8 @@ pub struct OauthAuthorizeInfo {
     pub authorized: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct OauthAuthorizeParams {
     pub response_type: String,
@@ -81,13 +84,15 @@ pub struct OauthAuthorizeParams {
     pub code_challenge_method: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthAuthorizeResponse {
     pub redirect_uri: Url,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthTokenRequest {
     pub grant_type: String,
@@ -99,7 +104,8 @@ pub struct OauthTokenRequest {
     pub code_verifier: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthTokenResponse {
     pub access_token: String,
@@ -109,7 +115,8 @@ pub struct OauthTokenResponse {
     pub scope: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthIntrospectResponse {
     pub active: bool,

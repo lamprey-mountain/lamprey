@@ -29,7 +29,8 @@ use std::fmt;
 pub mod components;
 
 /// a message
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Message {
     pub id: MessageId,
@@ -70,7 +71,8 @@ pub struct Message {
 
 /// a message's content at a point in time
 // TODO: add error "latest message version cannot be deleted"
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageVersion {
     pub version_id: MessageVerId,
@@ -116,7 +118,8 @@ impl MessageVersion {
 }
 
 /// information about a pinned message
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Pinned {
     /// when this was pinned
@@ -127,7 +130,8 @@ pub struct Pinned {
 }
 
 /// reorder pinned messages
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct PinsReorder {
@@ -137,7 +141,8 @@ pub struct PinsReorder {
     pub messages: Vec<PinsReorderItem>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct PinsReorderItem {
@@ -152,7 +157,8 @@ fn true_fn() -> bool {
 }
 
 /// what mentions to parse from the message content. mentions will only be parsed if the message content actually contains a mention pattern.
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ParseMentions {
     /// only parse mentions for these users. an empty vec disables all mentions, while None allows all mentions.
@@ -167,7 +173,8 @@ pub struct ParseMentions {
 }
 
 /// who/what this message notified on send
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
     /// the users that were mentioned
@@ -260,7 +267,8 @@ pub struct MentionsEmoji {
     pub animated: bool,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageCreate {
@@ -311,7 +319,8 @@ pub struct MessageCreate {
     pub mentions: ParseMentions,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessagePatch {
@@ -356,7 +365,8 @@ pub struct MessagePatch {
 }
 
 // NOTE: utoipa doesnt seem to like #[deprecated] here
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageType {
@@ -417,14 +427,16 @@ pub enum MessageType {
 }
 
 /// Information about a message being pinned
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagePin {
     pub pinned_message_id: MessageId,
 }
 
 /// Information about an auto moderation execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageAutomodExecution {
     /// the rules that were triggered
@@ -458,7 +470,8 @@ pub struct MessageAutomodExecution {
 // }
 
 /// Information about a thread being renamed
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageChannelRename {
     #[serde(alias = "new")]
@@ -469,7 +482,8 @@ pub struct MessageChannelRename {
 }
 
 /// Information about a thread being moved
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageChannelMoved {
     pub parent_id_old: Option<ChannelId>,
@@ -477,7 +491,8 @@ pub struct MessageChannelMoved {
 }
 
 /// Information about a thread being created
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageThreadCreated {
     /// the message this thread was created from
@@ -489,7 +504,8 @@ pub struct MessageThreadCreated {
 }
 
 /// Information about the pingback
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageChannelPingback {
     pub source_room_id: RoomId,
@@ -498,7 +514,8 @@ pub struct MessageChannelPingback {
 }
 
 /// Information about a channel icon change
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageChannelIcon {
     pub icon_id_old: Option<MediaId>,
@@ -509,7 +526,8 @@ pub struct MessageChannelIcon {
 /// Information about one or more messages being moved between threads
 /// probably want this being sent in both the source and target threads, maybe
 /// with a bit of different styling depending on whether its source/target
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagesMoved {
     // do messages keep their ids when being moved?
@@ -521,14 +539,16 @@ pub struct MessagesMoved {
 }
 
 /// Information about a member being added or removed from a thread
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageMember {
     pub target_user_id: UserId,
 }
 
 /// Following a room and will receive announcement posts from it
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageRoomFollowed {
     pub thread_id: ChannelId,
@@ -537,21 +557,24 @@ pub struct MessageRoomFollowed {
 
 // TODO: remove
 /// audit log entries as a message (builtin moderation logging?)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationLog {
     pub audit_log_entry: AuditLogEntry,
 }
 
 /// a report that moderators should look at
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationReport {
     pub report: Report,
 }
 
 /// a bot command
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageBotCommand {
     pub command_id: String,
@@ -560,7 +583,8 @@ pub struct MessageBotCommand {
 /// a basic message, written using markdown
 ///
 /// NOTE: new message features won't be backported here!
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageDefaultMarkdown {
@@ -599,7 +623,8 @@ pub struct MessageDefaultMarkdown {
     // pub interactions: Interactions,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageCall {
@@ -612,7 +637,8 @@ pub struct MessageCall {
 
 // TODO: remove
 /// ways to interact with a message
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Interactions {
@@ -630,7 +656,8 @@ pub struct Interactions {
 
 /// the current status
 #[cfg(feature = "feat_interaction_reaction")]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum InteractionStatus {
     /// This message is still loading, or the action it represents is in progress
@@ -660,7 +687,8 @@ pub enum InteractionStatus {
 //     Ratelimit,
 // }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageMigrate {
@@ -673,7 +701,8 @@ pub struct MessageMigrate {
     pub target_id: ChannelId,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageModerate {
@@ -693,7 +722,8 @@ pub struct MessageModerate {
     pub restore: Vec<MessageId>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RepliesQuery {
@@ -714,7 +744,8 @@ fn fn_one() -> u16 {
     1
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct ContextQuery {
     pub to_start: Option<MessageId>,
@@ -722,7 +753,8 @@ pub struct ContextQuery {
     pub limit: Option<u16>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RatelimitPut {
     #[serde(default, deserialize_with = "some_option")]
@@ -732,7 +764,8 @@ pub struct RatelimitPut {
     pub slowmode_message_expire_at: Option<Option<Time>>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ContextResponse {
     pub items: Vec<MessageV2>,

@@ -64,7 +64,8 @@ pub struct AuditLogEntry {
     pub application_id: Option<ApplicationId>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuditLogChange {
     pub new: Value,
@@ -75,7 +76,8 @@ pub struct AuditLogChange {
 // NOTE: maybe i want to also have Channel{Remove,Restore}?
 // NOTE: maybe i want to also have Thread{Create,Update,Etc}?
 // NOTE: maybe i should hoist changes to the top level...?
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type", content = "metadata")]
 pub enum AuditLogEntryType {
@@ -573,7 +575,8 @@ pub enum AuditLogEntryType {
     },
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct AuditLogFilter {
     /// only return audit log entries from these users
@@ -593,7 +596,8 @@ pub struct AuditLogFilter {
 }
 
 /// the status of an audit log event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AuditLogEntryStatus {
     /// the operation was successful

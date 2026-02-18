@@ -38,7 +38,8 @@ pub struct File {
 }
 
 /// metadata for videos
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Video {
     pub height: u64,
@@ -49,7 +50,8 @@ pub struct Video {
 }
 
 /// metadata for audio
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Audio {
     pub duration: u64,
@@ -58,7 +60,8 @@ pub struct Audio {
 }
 
 /// metadata for images
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Image {
     pub height: u64,
@@ -67,7 +70,8 @@ pub struct Image {
 }
 
 /// metadata for captions/subtitles
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TimedText {
     pub duration: u64,
@@ -75,14 +79,16 @@ pub struct TimedText {
 }
 
 /// metadata for text
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Text {
     pub language: Option<Language>,
 }
 
 /// multiple pieces of metadata mixed together
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mixed {
     pub height: Option<u64>,
@@ -91,11 +97,11 @@ pub struct Mixed {
     pub language: Option<Language>,
 }
 
-// TODO: strip exif location metadata by default?
 /// a place, somewhere.
 ///
 /// all measurements are in reference to WGS-84
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Location {
     /// in degrees
@@ -124,7 +130,8 @@ impl PartialEq for Location {
 impl Eq for Location {}
 
 /// metadata about a particular track
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MediaTrackInfo {
@@ -156,7 +163,8 @@ pub enum MediaTrackInfo {
 }
 
 /// Where this track came from.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "source")]
 pub enum TrackSource {
