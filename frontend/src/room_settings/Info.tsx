@@ -6,42 +6,45 @@ import { createUpload } from "sdk";
 import { useApi } from "../api.tsx";
 import { Checkbox } from "../icons";
 import { useModals } from "../contexts/modal";
+import { RoomIcon } from "../User.tsx";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 	const [, modalCtl] = useModals();
 
 	let avatarInputEl!: HTMLInputElement;
-	const openAvatarPicker = () => {
-		avatarInputEl?.click();
-	};
 
 	const api = useApi();
-	const setAvatar = async (f: File) => {
-		if (f) {
-			await createUpload({
-				client: api.client,
-				file: f,
-				onComplete(media) {
-					api.client.http.PATCH("/api/v1/room/{room_id}", {
-						params: { path: { room_id: props.room.id } },
-						body: { icon: media.id },
-					});
-				},
-				onFail(_error) {},
-				onPause() {},
-				onResume() {},
-				onProgress(_progress) {},
-			});
-		} else {
-			modalCtl.confirm("remove avatar?", (conf) => {
-				if (!conf) return;
-				ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+	const [roomIcon, setRoomIcon] = createSignal(props.room.icon);
+
+	const setAvatarFile = async (f: File) => {
+		await createUpload({
+			client: api.client,
+			file: f,
+			onComplete(media) {
+				setRoomIcon(media.id);
+				api.client.http.PATCH("/api/v1/room/{room_id}", {
 					params: { path: { room_id: props.room.id } },
-					body: { icon: null },
+					body: { icon: media.id },
 				});
-			});
-		}
+			},
+			onFail(_error) {},
+			onPause() {},
+			onResume() {},
+			onProgress(_progress) {},
+		});
+	};
+
+	const removeAvatar = async () => {
+		setRoomIcon(null);
+		await api.client.http.PATCH("/api/v1/room/{room_id}", {
+			params: { path: { room_id: props.room.id } },
+			body: { icon: null },
+		});
+	};
+
+	const openAvatarPicker = () => {
+		avatarInputEl?.click();
 	};
 
 	const [editingName, setEditingName] = createSignal(props.room.name);
@@ -115,32 +118,32 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				</div>
 			)}
 			<div>
-				room avatar (click to upload):
-				<Show
-					when={props.room.icon}
-					fallback={
-						<div
-							onClick={openAvatarPicker}
-							class="avatar"
+				<div class="avatar-uploader" onClick={openAvatarPicker}>
+					<div class="avatar-inner">
+						<RoomIcon room={props.room} />
+						<div class="overlay">upload avatar</div>
+					</div>
+					<Show when={roomIcon()}>
+						<button
+							class="remove"
+							onClick={(e) => {
+								e.stopPropagation();
+								removeAvatar();
+							}}
 						>
-						</div>
-					}
-				>
-					<img
-						onClick={openAvatarPicker}
-						src={getThumbFromId(props.room.icon!, 64)}
-						class="avatar"
+							remove
+						</button>
+					</Show>
+					<input
+						style="display:none"
+						ref={avatarInputEl}
+						type="file"
+						onInput={(e) => {
+							const f = e.target.files?.[0];
+							if (f) setAvatarFile(f);
+						}}
 					/>
-				</Show>
-				<input
-					style="display:none"
-					ref={avatarInputEl}
-					type="file"
-					onInput={(e) => {
-						const f = e.target.files?.[0];
-						if (f) setAvatar(f);
-					}}
-				/>
+				</div>
 			</div>
 			<ul style="list-style: disc inside">
 				<li>

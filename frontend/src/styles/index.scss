@@ -3037,48 +3037,6 @@ button.link {
 			margin-right: 4px;
 		}
 	}
-
-	.avatar-uploader {
-		// HACK: center overlay because avatar is h
-		.avatar-inner {
-			position: relative;
-			padding: 4px;
-		}
-
-		.overlay {
-			opacity: 0;
-			transition: opacity 0.2s;
-			pointer-events: none;
-			position: absolute;
-			background: #111a;
-			top: 0;
-			left: 0;
-			height: 100%;
-			width: 100%;
-			display: grid;
-			place-items: center;
-			text-align: center;
-		}
-
-		.avatar-inner:hover .overlay {
-			opacity: 1;
-		}
-
-		.remove {
-			color: $color-red;
-			border: none;
-			background: none;
-			font-size: 0.8rem;
-			text-align: center;
-			width: 100%;
-			display: block;
-			margin-top: -4px;
-
-			&:hover {
-				text-decoration: underline;
-			}
-		}
-	}
 }
 
 .autocomplete {
@@ -3690,5 +3648,53 @@ input[type="color"] {
 	.dim {
 		margin-top: 8px;
 		margin-bottom: -4px;
+	}
+}
+
+.avatar-uploader {
+	display: inline-block;
+
+	// HACK: center overlay because avatar is h
+	.avatar-inner {
+		position: relative;
+		padding: 4px;
+	}
+
+	.overlay {
+		opacity: 0;
+		transition: opacity 0.2s;
+		pointer-events: none;
+		position: absolute;
+		background: #111a;
+		top: 0;
+		left: 0;
+		height: 100%;
+		width: 100%;
+		display: grid;
+		place-items: center;
+		text-align: center;
+	}
+
+	.avatar-inner:hover .overlay {
+		opacity: 1;
+	}
+
+	.remove {
+		color: $color-red;
+		border: none;
+		background: none;
+		font-size: 0.8rem;
+		text-align: center;
+		width: 100%;
+		display: block;
+		margin-top: -4px;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+
+	.avatar {
+		height: 64px;
 	}
 }
