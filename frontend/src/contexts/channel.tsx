@@ -36,7 +36,6 @@ export type ChannelState = {
 	};
 	selectMode: boolean;
 	selectedMessages: Array<string>;
-	edit_draft?: string;
 	input_focus?: () => void;
 	reply_jump_source?: string;
 };

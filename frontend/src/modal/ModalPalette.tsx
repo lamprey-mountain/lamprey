@@ -31,7 +31,7 @@ export const ModalPalette = () => {
 	});
 
 	type PaletteItem = {
-		type: "room" | "thread" | "link";
+		type: "room" | "thread" | "link" | "section";
 		id: string;
 		name: string;
 		action: () => void;
@@ -100,11 +100,139 @@ export const ModalPalette = () => {
 			}));
 	});
 
+	const channelsWithMentions = createMemo(() => {
+		return [...api.channels.cache.values()]
+			.filter((channel) => channel.mention_count && channel.mention_count > 0)
+			.sort((a, b) => {
+				if (b.mention_count !== a.mention_count) {
+					return b.mention_count! - a.mention_count!;
+				}
+				return b.version_id.localeCompare(a.version_id);
+			})
+			.map((channel) => ({
+				type: "thread" as const,
+				id: channel.id,
+				name: channel.name,
+				action: () => navigate(`/channel/${channel.id}`),
+				channel: channel,
+			}));
+	});
+
+	const channelsWithDrafts = createMemo(() => {
+		const draftChannels: Array<{
+			channel: any;
+			draftTimestamp: number;
+		}> = [];
+
+		for (const channel of api.channels.cache.values()) {
+			// Check localStorage drafts (Forum2)
+			const draftKey = `editor_draft_${channel.id}`;
+			const draft = localStorage.getItem(draftKey);
+			if (draft && draft.trim()) {
+				try {
+					const parsed = JSON.parse(draft);
+					const timestamp = parsed.timestamp ?? 0;
+					draftChannels.push({
+						channel: channel,
+						draftTimestamp: timestamp,
+					});
+				} catch {
+					draftChannels.push({
+						channel: channel,
+						draftTimestamp: 0,
+					});
+				}
+			}
+
+			// Check in-memory drafts from channel contexts (Input.tsx)
+			const chCtx = ctx.channel_contexts.get(channel.id);
+			if (chCtx) {
+				const [chState] = chCtx;
+				const editorState = chState.editor_state;
+				if (editorState && editorState.doc.textContent.trim()) {
+					draftChannels.push({
+						channel,
+						draftTimestamp: 0,
+					});
+				}
+			}
+		}
+
+		return draftChannels
+			.sort((a, b) => b.draftTimestamp - a.draftTimestamp)
+			.map(({ channel }) => ({
+				type: "thread" as const,
+				id: channel.id,
+				name: channel.name,
+				action: () => navigate(`/channel/${channel.id}`),
+				channel: channel,
+			}));
+	});
+
 	const filteredItems = createMemo(() => {
 		const q = query().toLowerCase();
 		if (!q) {
-			return recentChannels();
+			const mentions = channelsWithMentions();
+			const drafts = channelsWithDrafts();
+			const recent = recentChannels();
+
+			const seen = new Set<string>();
+			const items: PaletteItem[] = [];
+
+			const mentionItems: PaletteItem[] = [];
+			for (const item of mentions) {
+				if (!seen.has(item.id)) {
+					seen.add(item.id);
+					mentionItems.push(item);
+				}
+			}
+			if (mentionItems.length > 0) {
+				items.push({
+					type: "section" as const,
+					id: "section-mentions",
+					name: "recent mentions",
+					action: () => {},
+				});
+				items.push(...mentionItems);
+			}
+
+			const draftItems: PaletteItem[] = [];
+			for (const item of drafts) {
+				if (!seen.has(item.id)) {
+					seen.add(item.id);
+					draftItems.push(item);
+				}
+			}
+			if (draftItems.length > 0) {
+				items.push({
+					type: "section" as const,
+					id: "section-drafts",
+					name: "has draft",
+					action: () => {},
+				});
+				items.push(...draftItems);
+			}
+
+			const recentItems: PaletteItem[] = [];
+			for (const item of recent) {
+				if (!seen.has(item.id)) {
+					seen.add(item.id);
+					recentItems.push(item);
+				}
+			}
+			if (recentItems.length > 0) {
+				items.push({
+					type: "section" as const,
+					id: "section-recent",
+					name: "recent channels",
+					action: () => {},
+				});
+				items.push(...recentItems);
+			}
+
+			return items;
 		}
+
 		return allItems().filter((item) =>
 			item.name && item.name.toLowerCase().includes(q)
 		);
@@ -115,7 +243,9 @@ export const ModalPalette = () => {
 	});
 
 	const handleKeyDown = (e: KeyboardEvent) => {
-		const len = filteredItems().length;
+		const items = filteredItems();
+		const navigableItems = items.filter((item) => item.type !== "section");
+		const len = navigableItems.length;
 		if (len === 0) return;
 
 		if (e.key === "ArrowDown") {
@@ -126,7 +256,7 @@ export const ModalPalette = () => {
 			setSelectedIndex((i) => (i - 1 + len) % len);
 		} else if (e.key === "Enter") {
 			e.preventDefault();
-			const item = filteredItems()[selectedIndex()];
+			const item = navigableItems[selectedIndex()];
 			if (item) {
 				item.action();
 				modalCtl.close();
@@ -136,6 +266,17 @@ export const ModalPalette = () => {
 
 	const close = () => {
 		modalCtl.close();
+	};
+
+	const getNavigableIndex = (index: number) => {
+		const items = filteredItems();
+		let navigableIndex = 0;
+		for (let i = 0; i < index; i++) {
+			if (items[i]?.type !== "section") {
+				navigableIndex++;
+			}
+		}
+		return navigableIndex;
 	};
 
 	return (
@@ -153,55 +294,64 @@ export const ModalPalette = () => {
 				<div class="items">
 					<For each={filteredItems().slice(0, 10)}>
 						{(item, i) => (
-							<div
-								class="item"
-								classList={{ selected: i() === selectedIndex() }}
-								onClick={() => {
-									item.action();
-									close();
-								}}
-								onMouseEnter={() => setSelectedIndex(i())}
+							<Show
+								when={item.type !== "section"}
+								fallback={
+									<div class="item section-header dim">{item.name}</div>
+								}
 							>
-								<Show when={item.type === "thread" && item.channel} keyed>
-									<div class="item-icon">
-										<ChannelIcon channel={item.channel!} />
-									</div>
-								</Show>
-								<Show when={item.type === "room" && item.room} keyed>
-									<div class="item-icon">
-										<Show
-											when={item.room!.icon}
-											fallback={
-												<div class="avatar fake">
-													{item.room!.name.substring(0, 2)}
-												</div>
-											}
-										>
+								<div
+									class="item"
+									classList={{
+										selected: getNavigableIndex(i()) === selectedIndex(),
+									}}
+									onClick={() => {
+										item.action();
+										close();
+									}}
+									onMouseEnter={() => setSelectedIndex(getNavigableIndex(i()))}
+								>
+									<Show when={item.type === "thread" && item.channel} keyed>
+										<div class="item-icon">
+											<ChannelIcon channel={item.channel!} />
+										</div>
+									</Show>
+									<Show when={item.type === "room" && item.room} keyed>
+										<div class="item-icon">
+											<Show
+												when={item.room!.icon}
+												fallback={
+													<div class="avatar fake">
+														{item.room!.name.substring(0, 2)}
+													</div>
+												}
+											>
+												<img
+													src={getThumbFromId(item.room!.icon!, 64)}
+													class="avatar"
+												/>
+											</Show>
+										</div>
+									</Show>
+									<Show when={item.type === "link"} keyed>
+										<div class="item-icon">
 											<img
-												src={getThumbFromId(item.room!.icon!, 64)}
-												class="avatar"
+												src={item.id === "home"
+													? icHome
+													: item.id === "inbox"
+													? icInbox
+													: item.id === "settings"
+													? icSettings
+													: item.id === "friends"
+													? icMembers
+													: ""}
+												class="icon"
 											/>
-										</Show>
-									</div>
-								</Show>
-								<Show when={item.type === "link"} keyed>
-									<div class="item-icon">
-										<img
-											src={item.id === "home"
-												? icHome
-												: item.id === "inbox"
-												? icInbox
-												: item.id === "settings"
-												? icSettings
-												: item.id === "friends"
-												? icMembers
-												: ""}
-											class="icon"
-										/>
-									</div>
-								</Show>
-								<span>{item.name}</span>
-							</div>
+										</div>
+									</Show>
+									<span>{item.name}</span>
+								</div>
+							</Show>
 						)}
 					</For>
 				</div>

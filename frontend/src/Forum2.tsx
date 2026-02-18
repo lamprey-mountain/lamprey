@@ -864,7 +864,16 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	};
 
 	const editor = createEditor({
-		initialContent: localStorage.getItem(storageKey()) ?? "",
+		initialContent: (() => {
+			const draft = localStorage.getItem(storageKey());
+			if (!draft) return "";
+			try {
+				const parsed = JSON.parse(draft);
+				return parsed.content ?? draft;
+			} catch {
+				return draft;
+			}
+		})(),
 		mentionRenderer: (node, userId) => {
 			render(() => <EditorUserMention id={userId} />, node);
 		},
@@ -876,7 +885,13 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const onChange = (state: EditorState) => {
 		chUpdate("editor_state", state);
 		const content = state.doc.textContent;
-		localStorage.setItem(storageKey(), content);
+		localStorage.setItem(
+			storageKey(),
+			JSON.stringify({
+				content,
+				timestamp: Date.now(),
+			}),
+		);
 		if (content.trim().length > 0) {
 			sendTyping();
 		} else {

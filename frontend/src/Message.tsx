@@ -360,7 +360,6 @@ function MessageEditor(
 				onChange={(state) => {
 					const text = state.doc.textContent;
 					setDraft(text);
-					chUpdate("edit_draft", text);
 				}}
 			/>
 			<div class="edit-info dim">
