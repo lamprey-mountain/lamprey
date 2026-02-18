@@ -3081,6 +3081,53 @@ button.link {
 			margin-right: 4px;
 		}
 	}
+
+	.tag-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+
+		.tag-item {
+			position: relative;
+			background: $bg-150;
+			border: solid $sep-300 1px;
+			padding: 8px;
+			border-radius: 4px;
+
+			&:hover > .message-toolbar {
+				visibility: visible;
+			}
+
+			.tag-content {
+				display: flex;
+				gap: 8px;
+				align-items: flex-start;
+
+				.tag-color-indicator {
+					width: 24px;
+					height: 24px;
+					border-radius: 4px;
+					flex-shrink: 0;
+				}
+
+				.tag-info {
+					flex: 1;
+					min-width: 0;
+
+					.name {
+						margin: 0 0 4px 0;
+						font-size: 1rem;
+					}
+
+					.description {
+						color: $fg-500;
+						font-size: 0.9rem;
+						margin-bottom: 4px;
+					}
+				}
+			}
+		}
+	}
 }
 
 .autocomplete {

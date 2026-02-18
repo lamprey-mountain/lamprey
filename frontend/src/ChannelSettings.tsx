@@ -6,6 +6,7 @@ import {
 	Info,
 	Invites,
 	Permissions,
+	Tags,
 	Webhooks,
 } from "./channel_settings/mod.tsx";
 import { useCtx } from "./context.ts";
@@ -41,7 +42,7 @@ const tabs: Array<{
 	{
 		name: "tags",
 		path: "tags",
-		component: () => "todo: manage tags",
+		component: Tags,
 		permissionCheck: (p) => p.has("TagManage"),
 		channelTypes: ["Forum", "Forum2"],
 		// permissionCheck: (p) => p.has("TagManage") || p.has("ChannelManage"),
