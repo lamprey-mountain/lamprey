@@ -54,6 +54,7 @@ import { Reactions } from "./api/reactions.ts";
 import { Dms } from "./api/dms.ts";
 import { Auth } from "./api/auth.ts";
 import { Sessions } from "./api/sessions.ts";
+import { Tags } from "./api/tags.ts";
 import { notificationPermission } from "./notification.ts";
 import {
 	stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal,
@@ -179,6 +180,7 @@ export function createApi(
 	const sessions = new Sessions();
 	const push = new Push();
 	const inbox = new Inbox();
+	const tags = new Tags();
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
 
@@ -1162,6 +1164,7 @@ export function createApi(
 		media,
 		session,
 		typing,
+		tags,
 		audit_logs,
 		tempCreateSession,
 		client,
@@ -1207,6 +1210,7 @@ export function createApi(
 	sessions.api = api;
 	push.api = api;
 	inbox.api = api;
+	tags.api = api;
 
 	console.log("provider created", api);
 	return api;
@@ -1238,6 +1242,7 @@ export type Api = {
 	media: Media;
 	emoji: Emoji;
 	reactions: Reactions;
+	tags: Tags;
 	session: Accessor<Session | null>;
 	typing: ReactiveMap<string, Set<string>>;
 	voiceState: Accessor<VoiceState | null>;

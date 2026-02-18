@@ -1,4 +1,5 @@
 import {
+	createEffect,
 	createSignal,
 	createUniqueId,
 	type JSX,
@@ -27,7 +28,11 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 
 export function Submenu(
 	props: ParentProps<
-		{ content: JSX.Element; onClick?: (e: MouseEvent) => void }
+		{
+			content: JSX.Element;
+			onClick?: (e: MouseEvent) => void;
+			onOpen?: () => void;
+		}
 	>,
 ) {
 	const ctx = useCtx();
@@ -66,6 +71,12 @@ export function Submenu(
 	}
 
 	const visible = () => hovered() || ctx.data.cursor.preview === menuId;
+
+	createEffect(() => {
+		if (visible()) {
+			props.onOpen?.();
+		}
+	});
 
 	return (
 		<li

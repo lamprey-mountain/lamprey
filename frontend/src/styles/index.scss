@@ -3789,3 +3789,9 @@ input[type="color"] {
 		height: 64px;
 	}
 }
+
+input[type="search"].tags-search {
+	margin: 4px;
+	padding: 2px 4px;
+	background: $bg-150;
+}

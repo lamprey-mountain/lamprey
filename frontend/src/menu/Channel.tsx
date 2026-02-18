@@ -3,9 +3,17 @@ import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
-import { For, Match, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	For,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
 import { timeAgo } from "../Time.tsx";
-import { Channel } from "sdk";
+import { Channel, Tag } from "sdk";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons.tsx";
 
@@ -116,6 +124,58 @@ export function ChannelMenu(props: { channel_id: string }) {
 		}
 	};
 
+	const [tagsResource] = createResource(() => {
+		const c = channel();
+		const p = parentChan();
+		if (!c || !p || !c.room_id) return null;
+		if (!p.type.includes("Forum")) return null;
+		return p.id;
+	}, async (forumId) => {
+		if (!forumId) return [];
+		try {
+			const result = await api.tags.list(forumId, false);
+			return result.items;
+		} catch (e) {
+			console.error("Failed to fetch tags:", e);
+			return [];
+		}
+	});
+
+	const [tagSearchQuery, setTagSearchQuery] = createSignal("");
+	const [tagsSearchResource] = createResource(
+		() => ({
+			forumId: tagsResource.state === "ready" ? parentChan()?.id : null,
+			query: tagSearchQuery(),
+		}),
+		async ({ forumId, query }) => {
+			if (!forumId) return [];
+			if (!query.trim()) {
+				return tagsResource.latest ?? [];
+			}
+			try {
+				// FIXME: throttle
+				const result = await api.tags.search(forumId, query, false);
+				return result.items;
+			} catch (e) {
+				console.error("Failed to search tags:", e);
+				return [];
+			}
+		},
+	);
+
+	const displayedTags = () => {
+		if (tagSearchQuery().trim()) {
+			return tagsSearchResource.latest ?? [];
+		}
+		return tagsResource.latest ?? [];
+	};
+
+	const canApplyRestrictedTags = () => {
+		return hasPermission("ThreadEdit") || hasPermission("ThreadManage");
+	};
+
+	let tagSearchInputRef: HTMLInputElement | undefined;
+
 	return (
 		<Menu>
 			{/* TODO: recursively mark as read for categories */}
@@ -137,34 +197,64 @@ export function ChannelMenu(props: { channel_id: string }) {
 				<Item onClick={settings("/webhooks")}>webhooks</Item>
 			</Submenu>
 			<Show
-				when={channel() && isThread() && parentChan()?.tags_available}
+				when={channel() && isThread() &&
+					(parentChan()?.type === "Forum" || parentChan()?.type === "Forum2")}
 			>
-				<Submenu content={"tags"}>
-					{/* TODO: autofocus */}
-					<input type="search" placeholder="search tags..." />
-					<For each={parentChan()!.tags_available}>
-						{(tag) => (
-							<Item
-								onClick={(e) => {
-									e.stopPropagation();
-									toggleTag(tag.id);
-								}}
-							>
-								<div style="display: flex; align-items: start; gap: 8px">
-									<Checkbox checked={channel()?.tags?.includes(tag.id)} />
-									<div style="margin: 2px 0">
-										<div classList={{ has: channel()?.tags?.includes(tag.id) }}>
-											{tag.name}
+				<Submenu content={"tags"} onOpen={() => tagSearchInputRef?.focus()}>
+					<input
+						ref={tagSearchInputRef}
+						class="tags-search"
+						type="search"
+						placeholder="search tags..."
+						value={tagSearchQuery()}
+						onInput={(e) => setTagSearchQuery(e.currentTarget.value)}
+						onClick={(e) => e.stopPropagation()}
+					/>
+					<Show when={tagsResource.loading}>
+						<Item disabled>loading tags...</Item>
+					</Show>
+					<For each={displayedTags()}>
+						{(tag) => {
+							const isRestricted = tag.restricted ?? false;
+							const isDisabled = isRestricted && !canApplyRestrictedTags();
+							const isChecked = channel()?.tags?.includes(tag.id) ?? false;
+							return (
+								<Item
+									disabled={isDisabled}
+									onClick={(e) => {
+										e.stopPropagation();
+										if (!isDisabled) {
+											toggleTag(tag.id);
+										}
+									}}
+								>
+									<div style="display: flex; align-items: start; gap: 8px">
+										<Checkbox checked={isChecked} />
+										<div style="margin: 2px 0">
+											<div classList={{ has: isChecked }}>
+												{tag.name}
+												{isRestricted && (
+													<span
+														class="dim"
+														style="margin-left: 4px; font-size: 0.8em;"
+													>
+														(restricted)
+													</span>
+												)}
+											</div>
+											<Show when={tag.description}>
+												<div class="dim">{tag.description}</div>
+											</Show>
 										</div>
-										<Show when={tag.description}>
-											<div class="dim">{tag.description}</div>
-										</Show>
 									</div>
-								</div>
-							</Item>
-						)}
+								</Item>
+							);
+						}}
 					</For>
-					<Show when={!parentChan()?.tags_available?.length}>
+					<Show
+						when={tagsResource.state === "ready" &&
+							displayedTags().length === 0}
+					>
 						<Item disabled>no tags available</Item>
 					</Show>
 				</Submenu>
