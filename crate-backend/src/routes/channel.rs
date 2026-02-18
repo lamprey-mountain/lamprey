@@ -9,8 +9,8 @@ use axum::{
 use common::v1::types::{
     ack::{AckReq, AckRes},
     util::Changes,
-    AuditLogEntryType, ChannelReorder, ChannelType, RatelimitPut, Room, RoomCreate,
-    RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
+    AuditLogEntryType, ChannelReorder, ChannelType, RatelimitPut, RelationshipType, Room,
+    RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -136,6 +136,21 @@ async fn channel_create_dm(
 
             if recipients.len() as u32 > crate::consts::MAX_GDM_MEMBERS {
                 return Err(Error::BadStatic("group dm has too many members"));
+            }
+
+            // creator must be friends to add recipients
+            for recipient_id in recipients.iter().filter(|id| **id != auth.user.id) {
+                let relationship = data
+                    .user_relationship_get(auth.user.id, *recipient_id)
+                    .await?;
+
+                let are_friends = relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
+
+                if !are_friends {
+                    return Err(Error::BadStatic(
+                        "you must be friends with all recipients to create a group dm",
+                    ));
+                }
             }
         }
         _ => {

@@ -8,7 +8,7 @@ use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
     ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message, MessageId,
     MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission,
-    RoomId, ThreadMember, ThreadMemberPut, UserId, SERVER_ROOM_ID,
+    RelationshipType, RoomId, ThreadMember, ThreadMemberPut, UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use serde::Serialize;
@@ -144,6 +144,20 @@ async fn thread_member_add(
             let count = d.thread_member_list_all(thread_id).await?.len() as u32;
             if count >= crate::consts::MAX_GDM_MEMBERS {
                 return Err(Error::BadStatic("group dm is full"));
+            }
+
+            // inviter must be friends to add recipients
+            let relationship = data
+                .user_relationship_get(auth.user.id, *recipient_id)
+                .await?;
+
+            let are_friends =
+                relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
+
+            if !are_friends {
+                return Err(Error::BadStatic(
+                    "you must be friends with this user to add them to a group dm",
+                ));
             }
         }
     }
