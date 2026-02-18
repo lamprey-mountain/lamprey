@@ -11,10 +11,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
-    util::Time, webhook::Webhook, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId,
-    Channel, ChannelId, ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId,
-    MessageVerId, PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, TagId, User,
-    UserId, WebhookId,
+    tag::Tag, util::Time, webhook::Webhook, ApplicationId, AuditLogEntryId, AutomodRuleId,
+    CalendarEventId, Channel, ChannelId, ChannelReorderItem, ChannelType, EmojiId, HarvestId,
+    InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, RoomMember,
+    SessionId, TagId, User, UserId, WebhookId,
 };
 
 pub mod resolve;
