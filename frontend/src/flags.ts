@@ -44,6 +44,7 @@ export const allFlags = [
 	{ id: "channel_calendar" },
 	{ id: "channel_documents" },
 	{ id: "automod" },
+	{ id: "auto_redirect_last_channel" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
