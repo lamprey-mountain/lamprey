@@ -43,6 +43,8 @@ export type TagCreate = components["schemas"]["TagCreate"];
 export type TagPatch = components["schemas"]["TagPatch"];
 export type PushCreate = components["schemas"]["PushCreate"];
 export type PushInfo = components["schemas"]["PushInfo"];
+export type AutomodRule = components["schemas"]["AutomodRule"];
+export type AutomodRuleCreate = components["schemas"]["AutomodRuleCreate"];
 
 export type OauthInfo = {
 	application: Application;
