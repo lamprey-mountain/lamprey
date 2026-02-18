@@ -4,6 +4,7 @@ import { useApi } from "../api";
 import {
 	calculatePermissions,
 	type PermissionContext,
+	type ResolvedPermissions,
 } from "../permission-calculator";
 
 export function usePermissions(
@@ -15,8 +16,16 @@ export function usePermissions(
 
 	console.log("[perms] hook used");
 
-	const permissions = createMemo(() => {
-		if (!user_id()) return { permissions: new Set(), rank: 0 };
+	const permissions = createMemo<ResolvedPermissions>(() => {
+		if (!user_id()) {
+			return {
+				permissions: new Set(),
+				rank: 0,
+				timedOut: false,
+				quarantined: false,
+				lurker: false,
+			};
+		}
 
 		const user = api.users.fetch(() => user_id()!)();
 		if (user?.webhook) {
@@ -24,7 +33,13 @@ export function usePermissions(
 				"MessageCreate",
 				"MessageEmbeds",
 			]);
-			return { permissions: webhookPermissions, rank: 0 };
+			return {
+				permissions: webhookPermissions,
+				rank: 0,
+				timedOut: false,
+				quarantined: false,
+				lurker: false,
+			};
 		}
 
 		const permissionContext: PermissionContext = {

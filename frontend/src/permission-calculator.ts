@@ -17,6 +17,70 @@ export interface PermissionContext {
 export interface ResolvedPermissions {
 	permissions: Set<Permission>;
 	rank: number;
+	timedOut: boolean;
+	quarantined: boolean;
+	lurker: boolean;
+}
+
+/**
+ * Check if a permission is allowed for timed out users
+ */
+function isAllowedForTimedOut(perm: Permission): boolean {
+	return perm === "ViewChannel" || perm === "ViewAuditLog";
+}
+
+/**
+ * Check if a permission is allowed for quarantined users
+ */
+function isAllowedForQuarantined(perm: Permission): boolean {
+	return perm === "ViewChannel" || perm === "ViewAuditLog" ||
+		perm === "MemberNickname";
+}
+
+/**
+ * Check if a permission is allowed for lurkers (non-members in public rooms)
+ */
+function isAllowedForLurker(perm: Permission): boolean {
+	return perm === "ViewChannel" || perm === "ViewAuditLog";
+}
+
+/**
+ * Apply timeout restrictions to permissions
+ */
+function applyTimedOutRestrictions(perms: Set<Permission>): Set<Permission> {
+	const restricted = new Set<Permission>();
+	for (const perm of perms) {
+		if (isAllowedForTimedOut(perm)) {
+			restricted.add(perm);
+		}
+	}
+	return restricted;
+}
+
+/**
+ * Apply quarantine restrictions to permissions
+ */
+function applyQuarantinedRestrictions(perms: Set<Permission>): Set<Permission> {
+	const restricted = new Set<Permission>();
+	for (const perm of perms) {
+		if (isAllowedForQuarantined(perm)) {
+			restricted.add(perm);
+		}
+	}
+	return restricted;
+}
+
+/**
+ * Apply lurker restrictions to permissions
+ */
+function applyLurkerRestrictions(perms: Set<Permission>): Set<Permission> {
+	const restricted = new Set<Permission>();
+	for (const perm of perms) {
+		if (isAllowedForLurker(perm)) {
+			restricted.add(perm);
+		}
+	}
+	return restricted;
 }
 
 /**
@@ -77,14 +141,36 @@ export function calculatePermissions(
 				for (const p of everyoneRole.deny) {
 					perms.delete(p);
 				}
-				return { permissions: perms, rank: 0 };
+				// Apply lurker restrictions for non-members
+				const restricted = applyLurkerRestrictions(perms);
+				return {
+					permissions: restricted,
+					rank: 0,
+					timedOut: false,
+					quarantined: false,
+					lurker: true,
+				};
 			}
 		}
-		return { permissions: new Set(), rank: 0 };
+		return {
+			permissions: new Set(),
+			rank: 0,
+			timedOut: false,
+			quarantined: false,
+			lurker: false,
+		};
 	}
 
 	const roles = rolesResource()?.items;
-	if (!roles) return { permissions: new Set(), rank: 0 };
+	if (!roles) {
+		return {
+			permissions: new Set(),
+			rank: 0,
+			timedOut: false,
+			quarantined: false,
+			lurker: false,
+		};
+	}
 
 	const allowed: Permission[] = [];
 	const denied: Permission[] = [];
@@ -105,23 +191,47 @@ export function calculatePermissions(
 	}
 
 	if (perms.has("Admin")) {
-		return { permissions: perms, rank: calculateRank(roles, member.roles) };
+		const rank = calculateRank(roles, member.roles);
+		return {
+			permissions: perms,
+			rank,
+			timedOut: false,
+			quarantined: false,
+			lurker: false,
+		};
 	}
 
 	for (const p of denied) {
 		perms.delete(p);
 	}
 
-	if (member.timeout_until) {
-		const timeoutUntil = new Date(member.timeout_until).getTime();
-		const now = Date.now();
-		if (timeoutUntil > now) {
-			// TODO: handle timed out permissions
-		}
+	// Check if user is timed out
+	const isTimedOut = member.timeout_until
+		? new Date(member.timeout_until).getTime() > Date.now()
+		: false;
+
+	// Apply timeout restrictions
+	if (isTimedOut) {
+		const restricted = applyTimedOutRestrictions(perms);
+		return {
+			permissions: restricted,
+			rank: calculateRank(roles, member.roles),
+			timedOut: true,
+			quarantined: false,
+			lurker: false,
+		};
 	}
 
+	// Apply quarantine restrictions
 	if (member.quarantined) {
-		// TODO: handle quarantined permissions
+		const restricted = applyQuarantinedRestrictions(perms);
+		return {
+			permissions: restricted,
+			rank: calculateRank(roles, member.roles),
+			timedOut: false,
+			quarantined: true,
+			lurker: false,
+		};
 	}
 
 	if (ctx.channel_id) {
@@ -130,7 +240,13 @@ export function calculatePermissions(
 
 	const rank = calculateRank(roles, member.roles);
 
-	return { permissions: perms, rank };
+	return {
+		permissions: perms,
+		rank,
+		timedOut: false,
+		quarantined: false,
+		lurker: false,
+	};
 }
 
 /**
@@ -178,9 +294,26 @@ function applyChannelOverwrites(
 	member: RoomMember,
 	room_id: string,
 ) {
-	if (typeof channel.locked === "boolean" && channel.locked) {
+	// handle locked channels/threads
+	if (channel.locked && typeof channel.locked === "object") {
+		const locked = channel.locked;
+		const isExpired = locked.until
+			? new Date(locked.until).getTime() <= Date.now()
+			: false;
+
+		if (!isExpired) {
+			// Channel is locked, check if user can bypass
+			const canBypass = locked.allow_roles?.some((roleId) =>
+				member.roles.includes(roleId)
+			);
+
+			if (canBypass) {
+				perms.add("LockedBypass" as Permission);
+			}
+		}
+	} else if (typeof channel.locked === "boolean" && channel.locked) {
+		// Legacy boolean locked state
 		perms.add("ChannelLocked" as Permission);
-		// TODO: handle locked until, allow_rules
 	}
 
 	if (
@@ -327,4 +460,18 @@ export function canUseCommand(
 		default:
 			return true;
 	}
+}
+
+/**
+ * Check if a user can bypass channel locks
+ */
+export function canUseLockedChannel(
+	ctx: PermissionContext,
+	user_id: string,
+): boolean {
+	const checker = createPermissionChecker(ctx, user_id);
+	return checker.has("ThreadManage") ||
+		checker.has("ChannelManage") ||
+		checker.has("ThreadLock") ||
+		checker.permissions.has("LockedBypass" as Permission);
 }
