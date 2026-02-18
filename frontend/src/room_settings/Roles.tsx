@@ -431,7 +431,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				>
 					save
 				</button>
-				<button onClick={deleteRole(props.edit.role.id!)}>delete role</button>
+				<button class="danger" onClick={deleteRole(props.edit.role.id!)}>delete role</button>
 			</div>
 			<div>
 				id <Copyable>{props.edit.role.id!}</Copyable>

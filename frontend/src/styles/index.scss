@@ -1266,6 +1266,15 @@ summary {
 			align-items: start;
 			gap: 4px;
 		}
+
+		button.danger {
+			border: solid #e8374f 1px;
+			background: #ba2f42;
+
+			&:hover {
+				background: darken($color: #ba2f42, $amount: 10);
+			}
+		}
 	}
 }
 
