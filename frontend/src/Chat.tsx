@@ -349,7 +349,7 @@ export const ChatMain = (props: ChatProps) => {
 				</div>
 			</Show>
 			<Show
-				when={messages.loading && true}
+				when={messages.loading}
 				fallback={
 					<list.List>
 						{(item) => renderTimelineItem(props.channel, item)}
