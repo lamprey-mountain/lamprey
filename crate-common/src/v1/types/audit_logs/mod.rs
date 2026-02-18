@@ -11,9 +11,9 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
-    util::Time, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, Channel, ChannelId,
-    ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId, MessageVerId,
-    PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, User, UserId, Webhook,
+    util::Time, webhook::Webhook, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId,
+    Channel, ChannelId, ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId,
+    MessageVerId, PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, User, UserId,
     WebhookId,
 };
 
@@ -661,10 +661,9 @@ impl AuditLogEntry {
     ///
     /// this is the time elapsed between `started_at` and `ended_at`
     pub fn duration(&self) -> Duration {
-        self.ended_at
-            .signed_duration_since(self.started_at)
-            .to_std()
-            .unwrap_or(Duration::ZERO)
+        (self.ended_at - self.started_at)
+            .try_into()
+            .unwrap_or_default()
     }
 }
 
@@ -673,7 +672,73 @@ impl AuditLogEntryType {
     ///
     /// for example: RoomUpdate, Role events, Channel events, etc
     pub fn is_room(&self) -> bool {
-        todo!()
+        use AuditLogEntryType::*;
+        matches!(
+            self,
+            RoomCreate { .. }
+                | RoomUpdate { .. }
+                | RoomDelete { .. }
+                | RoomUndelete { .. }
+                | RoomQuarantine { .. }
+                | RoomUnquarantine { .. }
+                | ChannelCreate { .. }
+                | ChannelUpdate { .. }
+                | ChannelReorder { .. }
+                | ChannelReindex { .. }
+                | MessageDelete { .. }
+                | MessageVersionDelete { .. }
+                | MessageDeleteBulk { .. }
+                | MessageRemove { .. }
+                | MessageRestore { .. }
+                | RoleCreate { .. }
+                | RoleUpdate { .. }
+                | RoleDelete { .. }
+                | RoleReorder { .. }
+                | InviteCreate { .. }
+                | InviteUpdate { .. }
+                | InviteDelete { .. }
+                | ReactionPurge { .. }
+                | ReactionDeleteAll { .. }
+                | ReactionDeleteKey { .. }
+                | ReactionDeleteUser { .. }
+                | EmojiCreate { .. }
+                | EmojiUpdate { .. }
+                | EmojiDelete { .. }
+                | PermissionOverwriteSet { .. }
+                | PermissionOverwriteDelete { .. }
+                | MemberKick { .. }
+                | MemberBan { .. }
+                | MemberUnban { .. }
+                | MemberPrune { .. }
+                | MemberUpdate { .. }
+                | MemberDisconnect { .. }
+                | MemberDisconnectAll { .. }
+                | MemberMove { .. }
+                | RoleApply { .. }
+                | RoleUnapply { .. }
+                | BotAdd { .. }
+                | ThreadMemberAdd { .. }
+                | ThreadMemberRemove { .. }
+                | MessagePin { .. }
+                | MessageUnpin { .. }
+                | MessagePinReorder { .. }
+                | CalendarEventCreate { .. }
+                | CalendarEventUpdate { .. }
+                | CalendarEventDelete { .. }
+                | CalendarOverwriteCreate { .. }
+                | CalendarOverwriteUpdate { .. }
+                | CalendarOverwriteDelete { .. }
+                | CalendarRsvpDelete { .. }
+                | WebhookCreate { .. }
+                | WebhookUpdate { .. }
+                | WebhookDelete { .. }
+                | RatelimitUpdate { .. }
+                | RatelimitDelete { .. }
+                | RatelimitDeleteAll { .. }
+                | AutomodRuleCreate { .. }
+                | AutomodRuleUpdate { .. }
+                | AutomodRuleDelete { .. }
+        )
     }
 
     /// if this is a server event
@@ -682,20 +747,56 @@ impl AuditLogEntryType {
     ///
     /// does not include room events for the server room
     pub fn is_server(&self) -> bool {
-        todo!()
+        use AuditLogEntryType::*;
+        matches!(
+            self,
+            AdminWhisper { .. } | AdminBroadcast { .. } | ServerUpdate { .. }
+        )
     }
 
     /// if this is a user event
     ///
     /// for example: UserUpdate, Session events, etc
     pub fn is_user(&self) -> bool {
-        todo!()
+        use AuditLogEntryType::*;
+        matches!(
+            self,
+            UserUpdate { .. }
+                | UserSuspend { .. }
+                | UserUnsuspend { .. }
+                | UserRegistered { .. }
+                | UserDelete { .. }
+                | UserUndelete { .. }
+                | FriendRequest { .. }
+                | FriendAccept { .. }
+                | FriendDelete { .. }
+                | BlockCreate { .. }
+                | BlockDelete { .. }
+                | IgnoreAdd { .. }
+                | IgnoreRemove { .. }
+                | SessionLogin { .. }
+                | SessionUpdate { .. }
+                | SessionDelete { .. }
+                | SessionDeleteAll
+                | AuthUpdate { .. }
+                | AuthSudo { .. }
+                | EmailCreate { .. }
+                | EmailUpdate { .. }
+                | EmailDelete { .. }
+                | ConnectionCreate { .. }
+                | ConnectionDelete { .. }
+                | HarvestCreate { .. }
+        )
     }
 
     /// if this is a application event
     ///
     /// for example: ApplicationUpdate, Emoji events, etc
     pub fn is_application(&self) -> bool {
-        todo!()
+        use AuditLogEntryType::*;
+        matches!(
+            self,
+            ApplicationCreate { .. } | ApplicationUpdate { .. } | ApplicationDelete { .. }
+        )
     }
 }

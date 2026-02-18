@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     application::Integration, search::RoomSearchRequest, util::Changes, ApplicationId,
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, AuditLogFilter, AuditLogPaginationResponse,
+    AuditLogEntryId, AuditLogEntryType, AuditLogFilter, AuditLogPaginationResponse,
     RoomSecurityUpdate, RoomType, TransferOwnership, SERVER_ROOM_ID,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -164,7 +164,7 @@ async fn room_search(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.perm.RoomManage", "badge.room-sudo", "badge.room-mfa"],
+    tags = ["room", "badge.perm.RoomManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoomUpdate"],
     responses(
         (status = OK, description = "edit success"),
         (status = NOT_MODIFIED, description = "no change"),

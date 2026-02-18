@@ -66,16 +66,33 @@ impl ServiceUsers {
         Ok(usr)
     }
 
-    // TODO: cache
     pub async fn get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>> {
         if user_ids.is_empty() {
             return Ok(vec![]);
         }
-        let mut users = self.state.data().user_get_many(user_ids).await?;
-        for user in &mut users {
-            user.presence = self.state.services().presence.get(user.id);
+
+        let srv = self.state.services();
+        let mut out = Vec::with_capacity(user_ids.len());
+        let mut missing = Vec::new();
+
+        for user_id in user_ids {
+            if let Some(user) = srv.cache.users.get(user_id).await {
+                out.push(user);
+            } else {
+                missing.push(*user_id);
+            }
         }
-        Ok(users)
+
+        if !missing.is_empty() {
+            let mut users = self.state.data().user_get_many(&missing).await?;
+            for user in &mut users {
+                user.presence = srv.presence.get(user.id);
+                srv.cache.users.insert(user.id, user.clone()).await;
+                out.push(user.clone());
+            }
+        }
+
+        Ok(out)
     }
 
     pub async fn invalidate(&self, user_id: UserId) {

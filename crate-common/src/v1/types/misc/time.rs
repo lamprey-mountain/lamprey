@@ -89,3 +89,11 @@ impl Sub<Duration> for Time {
         Time::from(self.0 - rhs)
     }
 }
+
+impl Sub<Time> for Time {
+    type Output = time::Duration;
+
+    fn sub(self, rhs: Time) -> Self::Output {
+        self.0 - rhs.0
+    }
+}

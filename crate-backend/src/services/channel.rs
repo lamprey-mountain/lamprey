@@ -178,7 +178,27 @@ impl ServiceThreads {
             return Ok(vec![]);
         }
 
-        let mut channels = self.state.data().channel_get_many(channel_ids).await?;
+        let mut out = Vec::with_capacity(channel_ids.len());
+        let mut missing = Vec::new();
+
+        for id in channel_ids {
+            if let Some(chan) = self.cache_thread.get(id).await {
+                out.push(chan);
+            } else {
+                missing.push(*id);
+            }
+        }
+
+        if !missing.is_empty() {
+            let more_channels = self.state.data().channel_get_many(&missing).await?;
+            for chan in more_channels {
+                self.cache_thread.insert(chan.id, chan.clone()).await;
+                out.push(chan);
+            }
+        }
+
+        let mut channels = out;
+
         if let Some(user_id) = user_id {
             for channel in &mut channels {
                 let channel_id = channel.id;

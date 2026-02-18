@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use common::v1::types::{
-    audit_logs::resolve::AuditLogResolve, AuditLogEntry, AuditLogEntryId, AuditLogFilter,
-    AuditLogPaginationResponse, Channel, PaginationQuery, RoomId, RoomMember, User, Webhook,
+    audit_logs::resolve::AuditLogResolve, AuditLogEntryId, AuditLogFilter,
+    AuditLogPaginationResponse, PaginationQuery, RoomId,
 };
 
 use crate::{error::Result, ServerStateInner};
@@ -34,27 +34,37 @@ impl ServiceAuditLogs {
             resolve.add(entry);
         }
 
-        // TODO: use get_many
+        let srv = self.state.services();
+        let cached_room = srv.cache.load_room(room_id).await?;
+
         let mut threads = Vec::new();
+        let mut missing_threads = Vec::new();
+
         for thread_id in &resolve.threads {
-            if let Ok(thread) = data.channel_get(*thread_id).await {
-                threads.push(thread);
+            if let Some(chan) = cached_room.channels.get(thread_id) {
+                threads.push(chan.clone());
+            } else if let Some(thread) = cached_room.threads.get(thread_id) {
+                threads.push(thread.thread.read().await.clone());
+            } else {
+                missing_threads.push(*thread_id);
             }
         }
 
-        let mut users = Vec::new();
-        for user_id in &resolve.users {
-            if let Ok(user) = data.user_get(*user_id).await {
-                users.push(user);
-            }
+        if !missing_threads.is_empty() {
+            let mut more_threads = srv.channels.get_many(&missing_threads, None).await?;
+            threads.append(&mut more_threads);
         }
+
+        // NOTE: will this always remove everything?
+        threads.retain(|chan| chan.archived_at.is_none() || chan.ty.is_thread());
+
+        let user_ids: Vec<_> = resolve.users.iter().cloned().collect();
+        let users = srv.users.get_many(&user_ids).await?;
 
         let mut room_members = Vec::new();
-        if let Ok(room_id) = room_id.try_into() {
-            for user_id in &resolve.users {
-                if let Ok(member) = data.room_member_get(room_id, *user_id).await {
-                    room_members.push(member);
-                }
+        for user_id in &resolve.users {
+            if let Some(member) = cached_room.members.get(user_id) {
+                room_members.push(member.member.clone());
             }
         }
 
