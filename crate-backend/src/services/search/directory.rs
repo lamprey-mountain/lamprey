@@ -1,5 +1,5 @@
 use std::{
-    io::{BufWriter, Error as IoError, Result as IoResult, Write},
+    io::{BufWriter, Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write},
     ops::Range,
     path::{Path, PathBuf},
     sync::Arc,
@@ -57,7 +57,7 @@ struct ObjectFile {
 
 /// a handle to write to a file on object storage and local cache
 struct ObjectFileWrite {
-    file: std::fs::File,
+    file: Option<std::fs::File>,
     writer: opendal::Writer,
     rt: TokioHandle,
     path: PathBuf,
@@ -196,14 +196,21 @@ impl Directory for ObjectDirectory {
             })?;
         }
 
-        let temp_path = cache_file_path.with_extension("tmp");
+        let temp_path = cache_file_path.with_file_name(format!(
+            "{}.{}.tmp",
+            cache_file_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(""),
+            uuid::Uuid::new_v4()
+        ));
         let file = std::fs::File::create(&temp_path).map_err(|err| OpenWriteError::IoError {
             io_error: Arc::new(err),
             filepath: path.to_path_buf(),
         })?;
 
         Ok(BufWriter::new(Box::new(ObjectFileWrite {
-            file,
+            file: Some(file),
             writer,
             rt: self.rt.clone(),
             path: path.to_path_buf(),
@@ -241,7 +248,14 @@ impl Directory for ObjectDirectory {
 
     fn atomic_write(&self, path: &Path, data: &[u8]) -> IoResult<()> {
         let cache_file_path = self.cache_path.join(path);
-        let temp_path = cache_file_path.with_extension("tmp");
+        let temp_path = cache_file_path.with_file_name(format!(
+            "{}.{}.tmp",
+            cache_file_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(""),
+            uuid::Uuid::new_v4()
+        ));
 
         // write to temp file
         std::fs::write(&temp_path, data)?;
@@ -273,6 +287,19 @@ const SMALL_FILE: usize = 512;
 
 impl FileHandle for ObjectFile {
     fn read_bytes(&self, range: Range<usize>) -> IoResult<OwnedBytes> {
+        match std::fs::File::open(&self.cache_path) {
+            Ok(mut file) => {
+                file.seek(SeekFrom::Start(range.start as u64))?;
+                let mut buf = vec![0u8; range.end - range.start];
+                file.read_exact(&mut buf)?;
+                return Ok(OwnedBytes::new(buf));
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // file not in cache, fall through to download from object store
+            }
+            Err(e) => return Err(e),
+        }
+
         let range_len = range.end - range.start;
 
         // if the file is small enough, download the whole file and cache it
@@ -331,7 +358,9 @@ impl HasLen for ObjectFile {
 
 impl Write for ObjectFileWrite {
     fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        self.file.write_all(buf)?;
+        if let Some(file) = &mut self.file {
+            file.write_all(buf)?;
+        }
         self.rt
             .block_on(self.writer.write(buf.to_vec()))
             .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
@@ -340,14 +369,18 @@ impl Write for ObjectFileWrite {
     }
 
     fn flush(&mut self) -> IoResult<()> {
-        self.file.flush()?;
+        if let Some(file) = &mut self.file {
+            file.flush()?;
+        }
         Ok(())
     }
 }
 
 impl TerminatingWrite for ObjectFileWrite {
     fn terminate_ref(&mut self, _: tantivy::directory::AntiCallToken) -> std::io::Result<()> {
-        self.file.flush()?;
+        if let Some(mut file) = self.file.take() {
+            file.flush()?;
+        }
         self.rt
             .block_on(self.writer.close())
             .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
