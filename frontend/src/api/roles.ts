@@ -1,4 +1,4 @@
-import type { Pagination, Role } from "sdk";
+import type { Pagination, Role, RoomMember } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
@@ -14,6 +14,7 @@ export class Roles {
 	cache = new ReactiveMap<string, Role>();
 	_requests = new Map<string, Promise<Role>>();
 	_cachedListings = new Map<string, Listing<Role>>();
+	_memberListings = new Map<string, Listing<RoomMember>>();
 
 	fetch(room_id: () => string, role_id: () => string): Resource<Role> {
 		const query = () => ({
@@ -130,5 +131,117 @@ export class Roles {
 		l2.mutate = mutate;
 
 		return resource;
+	}
+
+	memberList(
+		room_id_sig: () => string,
+		role_id_sig: () => string,
+	): Resource<Pagination<RoomMember>> {
+		const paginate = async (pagination?: Pagination<RoomMember>) => {
+			if (pagination && !pagination.has_more) return pagination;
+
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/room/{room_id}/role/{role_id}/member",
+				{
+					params: {
+						path: { room_id: room_id_sig(), role_id: role_id_sig() },
+						query: {
+							dir: "f",
+							limit: 1024,
+							from: pagination?.items.at(-1)?.user_id,
+						},
+					},
+				},
+			);
+
+			if (error) {
+				console.error(error);
+				throw error;
+			}
+
+			batch(() => {
+				for (const item of data.items) {
+					this.api.room_members.cache.set(
+						`${room_id_sig()}:${item.user_id}`,
+						item,
+					);
+				}
+			});
+
+			return {
+				...data,
+				items: [...pagination?.items ?? [], ...data.items],
+			};
+		};
+
+		const key = `${room_id_sig()}:${role_id_sig()}`;
+		const l = this._memberListings.get(key);
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		const l2 = {
+			resource: (() => {}) as unknown as Resource<Pagination<RoomMember>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+		this._memberListings.set(key, l2);
+
+		const [resource, { refetch, mutate }] = createResource(
+			() => ({ room_id: room_id_sig(), role_id: role_id_sig() }),
+			async ({ room_id, role_id }) => {
+				const l = this._memberListings.get(`${room_id}:${role_id}`)!;
+				if (l?.prom) {
+					await l.prom;
+					return l.pagination!;
+				}
+
+				const prom = l.pagination ? paginate(l.pagination) : paginate();
+				l.prom = prom;
+				const res = await prom;
+				l!.pagination = res;
+				l!.prom = null;
+				return res!;
+			},
+		);
+
+		l2.resource = resource;
+		l2.refetch = refetch;
+		l2.mutate = mutate;
+
+		return resource;
+	}
+
+	async addMember(
+		room_id: string,
+		role_id: string,
+		user_id: string,
+	): Promise<RoomMember> {
+		const { data, error } = await this.api.client.http.PUT(
+			"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
+			{
+				params: { path: { room_id, role_id, user_id } },
+			},
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	async removeMember(
+		room_id: string,
+		role_id: string,
+		user_id: string,
+	): Promise<RoomMember> {
+		const { data, error } = await this.api.client.http.DELETE(
+			"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
+			{
+				params: { path: { room_id, role_id, user_id } },
+			},
+		);
+		if (error) throw error;
+		return data;
 	}
 }

@@ -1269,6 +1269,34 @@ summary {
 			}
 		}
 	}
+
+	.members-list {
+		.member-item {
+			display: flex;
+			padding: 2px;
+			gap: 8px;
+			align-items: center;
+
+			&:hover {
+				background: #fff1;
+			}
+
+			.avatar {
+				height: 24px;
+				width: 24px;
+				margin: 4px;
+			}
+
+			button {
+				visibility: hidden;
+				justify-self: end;
+			}
+
+			&:hover button {
+				visibility: visible;
+			}
+		}
+	}
 }
 
 /* FIXME: text alignment with uuids */

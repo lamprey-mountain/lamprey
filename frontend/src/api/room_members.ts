@@ -179,4 +179,34 @@ export class RoomMembers {
 
 		return resource;
 	}
+
+	async search(room_id: string, query: string, limit = 10) {
+		const { data } = await this.api.client.http.GET(
+			"/api/v1/room/{room_id}/member/search",
+			{
+				params: {
+					path: { room_id },
+					query: { query, limit },
+				},
+			},
+		);
+
+		// TODO: better error handling
+		if (!data) throw new Error("failed to fetch");
+
+		// cache members and users
+		const cache = this.cache.get(room_id) || new ReactiveMap();
+		if (!this.cache.has(room_id)) this.cache.set(room_id, cache);
+
+		batch(() => {
+			for (const member of data.room_members) {
+				cache.set(member.user_id, member);
+			}
+			for (const user of data.users) {
+				this.api.users.cache.set(user.id, user);
+			}
+		});
+
+		return data;
+	}
 }

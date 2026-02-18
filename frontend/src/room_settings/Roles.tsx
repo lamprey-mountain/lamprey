@@ -11,7 +11,7 @@ import {
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
-import type { Pagination, Permission, Role } from "sdk";
+import type { Pagination, Permission, Role, RoomMember, User } from "sdk";
 import { Copyable } from "../util.tsx";
 import { createStore, produce } from "solid-js/store";
 import { permissions } from "../permissions.ts";
@@ -20,6 +20,8 @@ import { md } from "../markdown.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons.tsx";
+import { A } from "@solidjs/router";
+import { Avatar } from "../User.tsx";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));
@@ -380,6 +382,36 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const ctx = useCtx();
 	const [permSearch, setPermSearch] = createSignal("");
 	const [, modalCtl] = useModals();
+	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
+	const [memberSearch, setMemberSearch] = createSignal("");
+
+	const members = api.roles.memberList(
+		() => props.room.id,
+		() => props.edit.role.id!,
+	);
+
+	const filteredMembers = createMemo(() => {
+		const search = memberSearch().toLowerCase();
+		const allMembers = members()?.items ?? [];
+		if (!search) return allMembers;
+		return allMembers.filter((m) => {
+			const user = api.users.cache.get(m.user_id);
+			const name = user?.name ?? m.user_id;
+			return name.toLowerCase().includes(search);
+		});
+	});
+
+	const addMember = () => {
+		// TODO: make this modal nicer
+		modalCtl.prompt("user id to add", (user_id) => {
+			if (!user_id) return;
+			api.roles.addMember(props.room.id, props.edit.role.id!, user_id);
+		});
+	};
+
+	const removeMember = (user_id: string) => {
+		api.roles.removeMember(props.room.id, props.edit.role.id!, user_id);
+	};
 
 	const deleteRole = (role_id: string) => () => {
 		modalCtl.confirm("are you sure?", (confirmed) => {
@@ -435,145 +467,193 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					delete role
 				</button>
 			</div>
-			<div>
-				id <Copyable>{props.edit.role.id!}</Copyable>
+			<div class="tabs">
+				<button
+					classList={{ active: activeTab() === "role" }}
+					onClick={() => setActiveTab("role")}
+				>
+					role
+				</button>
+				<button
+					classList={{ active: activeTab() === "members" }}
+					onClick={() => setActiveTab("members")}
+				>
+					members
+				</button>
 			</div>
-			<h3>name</h3>
-			<input
-				type="text"
-				value={props.edit.name()}
-				onInput={(e) => {
-					props.edit.setRole((r) => ({
-						...r,
-						name: (e.target as HTMLInputElement).value,
-					}));
-				}}
-			/>
-			<h3>description</h3>
-			<textarea
-				onInput={(e) => {
-					props.edit.setRole((r) => ({
-						...r,
-						description: (e.target as HTMLTextAreaElement).value || null,
-					}));
-				}}
-			>
-				{props.edit.desc()}
-			</textarea>
-			<br />
-			<br />
-			<For
-				each={[
-					{
-						key: "is_mentionable",
-						name: "Mentionable",
-						description: "Anyone can mention this role",
-					},
-					{
-						key: "is_self_applicable",
-						name: "Self applicable",
-						description: "Anyone can apply this role to themselves",
-					},
-					{
-						key: "hoist",
-						name: "Hoisted",
-						description: "Display this role separately from other members",
-					},
-				] as const}
-			>
-				{(i) => (
-					<label class="option">
-						<input
-							type="checkbox"
-							checked={(props.edit.role as Role)[i.key]}
-							onInput={(e) => {
-								props.edit.setRole((r) => ({
-									...r,
-									[i.key]: (e.target as HTMLInputElement).checked,
-								}));
-							}}
-							style="display: none;"
-						/>
-						<Checkbox
-							checked={(props.edit.role as Role)[i.key]}
-						/>
-						<div>
-							<div class="name">
-								{i.name}
-							</div>
-							<div
-								class="description"
-								innerHTML={md.parseInline(
-									i.description ?? "",
-								) as string}
+			<Show when={activeTab() === "role"}>
+				<div>
+					id <Copyable>{props.edit.role.id!}</Copyable>
+				</div>
+				<h3>name</h3>
+				<input
+					type="text"
+					value={props.edit.name()}
+					onInput={(e) => {
+						props.edit.setRole((r) => ({
+							...r,
+							name: (e.target as HTMLInputElement).value,
+						}));
+					}}
+				/>
+				<h3>description</h3>
+				<textarea
+					onInput={(e) => {
+						props.edit.setRole((r) => ({
+							...r,
+							description: (e.target as HTMLTextAreaElement).value || null,
+						}));
+					}}
+				>
+					{props.edit.desc()}
+				</textarea>
+				<br />
+				<br />
+				<For
+					each={[
+						{
+							key: "is_mentionable",
+							name: "Mentionable",
+							description: "Anyone can mention this role",
+						},
+						{
+							key: "is_self_applicable",
+							name: "Self applicable",
+							description: "Anyone can apply this role to themselves",
+						},
+						{
+							key: "hoist",
+							name: "Hoisted",
+							description: "Display this role separately from other members",
+						},
+					] as const}
+				>
+					{(i) => (
+						<label class="option">
+							<input
+								type="checkbox"
+								checked={(props.edit.role as Role)[i.key]}
+								onInput={(e) => {
+									props.edit.setRole((r) => ({
+										...r,
+										[i.key]: (e.target as HTMLInputElement).checked,
+									}));
+								}}
+								style="display: none;"
 							/>
-						</div>
-					</label>
-				)}
-			</For>
+							<Checkbox
+								checked={(props.edit.role as Role)[i.key]}
+							/>
+							<div>
+								<div class="name">
+									{i.name}
+								</div>
+								<div
+									class="description"
+									innerHTML={md.parseInline(
+										i.description ?? "",
+									) as string}
+								/>
+							</div>
+						</label>
+					)}
+				</For>
 
-			<div class="perm-search-container">
-				<h3>permissions</h3>
-			</div>
+				<div class="perm-search-container">
+					<h3>permissions</h3>
+				</div>
 
-			{() => {
-				const { t } = useCtx();
-				const searchQuery = permSearch().toLowerCase();
-				const allPermissions = permissions.filter((perm) => {
-					const isServer = props.room.type === "Server";
-					if (isServer) {
-						if (!perm.types?.includes("Server")) return false;
-					} else {
-						if (!perm.types?.includes("Room")) return false;
-					}
-
-					if (!searchQuery) return true;
-					const name = t(`permissions.${perm.id}.name`) ?? perm.id;
-					const description = t(`permissions.${perm.id}.description`) ?? "";
-					return (
-						name.toLowerCase().includes(searchQuery) ||
-						description.toLowerCase().includes(searchQuery) ||
-						perm.id.toLowerCase().includes(searchQuery)
-					);
-				});
-
-				const permStates = allPermissions.reduce((acc, perm) => {
-					const role = props.edit.role;
-					if (role.allow?.includes(perm.id)) acc[perm.id] = "allow";
-					else if (role.deny?.includes(perm.id)) acc[perm.id] = "deny";
-					else acc[perm.id] = "inherit";
-					return acc;
-				}, {} as Record<Permission, "allow" | "deny" | "inherit">);
-
-				const handlePermChange = (
-					permId: Permission,
-					newState: "allow" | "deny" | "inherit",
-				) => {
-					props.edit.setRole((prev) => {
-						const newRole = { ...prev };
-						newRole.allow = (newRole.allow || []).filter((p) => p !== permId);
-						newRole.deny = (newRole.deny || []).filter((p) => p !== permId);
-
-						if (newState === "allow") {
-							newRole.allow.push(permId);
-						} else if (newState === "deny") {
-							newRole.deny.push(permId);
+				{() => {
+					const { t } = useCtx();
+					const searchQuery = permSearch().toLowerCase();
+					const allPermissions = permissions.filter((perm) => {
+						const isServer = props.room.type === "Server";
+						if (isServer) {
+							if (!perm.types?.includes("Server")) return false;
+						} else {
+							if (!perm.types?.includes("Room")) return false;
 						}
 
-						return newRole;
+						if (!searchQuery) return true;
+						const name = t(`permissions.${perm.id}.name`) ?? perm.id;
+						const description = t(`permissions.${perm.id}.description`) ?? "";
+						return (
+							name.toLowerCase().includes(searchQuery) ||
+							description.toLowerCase().includes(searchQuery) ||
+							perm.id.toLowerCase().includes(searchQuery)
+						);
 					});
-				};
 
-				return (
-					<PermissionSelector
-						permissions={allPermissions}
-						permStates={permStates}
-						onPermChange={handlePermChange}
-						showDescriptions={true}
-						roomType={props.room.type}
-					/>
-				);
-			}}
+					const permStates = allPermissions.reduce((acc, perm) => {
+						const role = props.edit.role;
+						if (role.allow?.includes(perm.id)) acc[perm.id] = "allow";
+						else if (role.deny?.includes(perm.id)) acc[perm.id] = "deny";
+						else acc[perm.id] = "inherit";
+						return acc;
+					}, {} as Record<Permission, "allow" | "deny" | "inherit">);
+
+					const handlePermChange = (
+						permId: Permission,
+						newState: "allow" | "deny" | "inherit",
+					) => {
+						props.edit.setRole((prev) => {
+							const newRole = { ...prev };
+							newRole.allow = (newRole.allow || []).filter((p) => p !== permId);
+							newRole.deny = (newRole.deny || []).filter((p) => p !== permId);
+
+							if (newState === "allow") {
+								newRole.allow.push(permId);
+							} else if (newState === "deny") {
+								newRole.deny.push(permId);
+							}
+
+							return newRole;
+						});
+					};
+
+					return (
+						<PermissionSelector
+							permissions={allPermissions}
+							permStates={permStates}
+							onPermChange={handlePermChange}
+							showDescriptions={true}
+							roomType={props.room.type}
+						/>
+					);
+				}}
+			</Show>
+			<Show when={activeTab() === "members"}>
+				<div class="members-tab">
+					<div class="members-header">
+						<input
+							type="search"
+							placeholder="search members..."
+							value={memberSearch()}
+							onInput={(e) => setMemberSearch(e.currentTarget.value)}
+						/>
+						<button onClick={addMember}>add member</button>
+					</div>
+					<ul class="members-list">
+						<For each={filteredMembers()}>
+							{(member) => {
+								const user = api.users.fetch(() => member.user_id);
+								return (
+									<li class="member-item">
+										<Avatar user={user()} pad={4} />
+										<A href={`/user/${member.user_id}`}>
+											{user()?.name ?? member.user_id}
+										</A>
+										<div style="flex:1"></div>
+										<button onClick={() => removeMember(member.user_id)}>
+											remove
+										</button>
+									</li>
+								);
+							}}
+						</For>
+					</ul>
+				</div>
+			</Show>
 		</div>
 	);
 };
