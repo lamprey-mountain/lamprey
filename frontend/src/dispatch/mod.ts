@@ -5,6 +5,7 @@ import type { ChatCtx } from "../context.ts";
 import type { SetStoreFunction } from "solid-js/store";
 import { Action, Data, Middleware } from "./types";
 import { threadMarkRead } from "./middleware/threadMarkRead";
+import { categoryMarkRead } from "./middleware/categoryMarkRead";
 import { serverInitSession } from "./middleware/serverInitSession";
 
 function combine(
@@ -45,6 +46,7 @@ export function createDispatcher(
 		ctx.data,
 		update,
 		[
+			categoryMarkRead,
 			threadMarkRead,
 			serverInitSession,
 		],

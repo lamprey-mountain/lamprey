@@ -381,6 +381,35 @@ export class Channels {
 		}
 	}
 
+	async ackBulk(
+		acks: Array<
+			{
+				channel_id: string;
+				message_id?: string;
+				version_id: string;
+				mention_count?: number;
+			}
+		>,
+	) {
+		await fetchWithRetry(() =>
+			this.api.client.http.POST("/api/v1/ack", {
+				body: { acks },
+			})
+		);
+
+		for (const ack of acks) {
+			const t = this.cache.get(ack.channel_id);
+			if (t) {
+				this.cache.set(ack.channel_id, {
+					...t,
+					last_read_id: ack.version_id,
+					mention_count: ack.mention_count ?? 0,
+					is_unread: ack.version_id < (t.last_version_id ?? ""),
+				});
+			}
+		}
+	}
+
 	async lock(channel_id: string) {
 		await fetchWithRetry(() =>
 			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {

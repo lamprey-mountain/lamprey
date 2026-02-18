@@ -41,6 +41,7 @@ export type Modal = {
 export type Action =
 	| ServerAction
 	| ThreadAction
+	| CategoryAction
 	| UploadAction
 	| WindowAction
 	| { do: "menu.preview"; id: string | null };
@@ -59,6 +60,11 @@ export type ThreadAction =
 		also_local: boolean;
 	}
 	| { do: "thread.send"; thread_id: string; text: string };
+
+export type CategoryAction = {
+	do: "category.mark_read";
+	category_id: string;
+};
 
 export type WindowAction = { do: "window.mouse_move"; e: MouseEvent };
 

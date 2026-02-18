@@ -44,16 +44,24 @@ export function ChannelMenu(props: { channel_id: string }) {
 		self_id,
 	);
 	const copyId = () => navigator.clipboard.writeText(props.channel_id);
-	const markRead = () => {
+	const markRead = async () => {
 		const channel = api.channels.cache.get(props.channel_id)!;
-		const version_id = channel.last_version_id;
-		if (!version_id) return;
-		ctx.dispatch({
-			do: "thread.mark_read",
-			thread_id: props.channel_id,
-			also_local: true,
-			version_id,
-		});
+
+		if (channel.type === "Category") {
+			ctx.dispatch({
+				do: "category.mark_read",
+				category_id: props.channel_id,
+			});
+		} else {
+			const version_id = channel.last_version_id;
+			if (!version_id) return;
+			ctx.dispatch({
+				do: "thread.mark_read",
+				thread_id: props.channel_id,
+				also_local: true,
+				version_id,
+			});
+		}
 	};
 
 	const removeChannel = () => {
@@ -177,7 +185,6 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 	return (
 		<Menu>
-			{/* TODO: recursively mark as read for categories */}
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<Show when={channel()}>

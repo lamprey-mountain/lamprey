@@ -33,8 +33,12 @@ async (action) => {
 			await api.channels.ack(thread_id, undefined, version_id);
 		} else {
 			const c = api.channels.cache.get(thread_id);
-			if (!c) throw new Error("could not find channel " + thread_id);
-			await api.channels.ack(thread_id, undefined, c.last_version_id!);
+			if (c) {
+				if (also_local) {
+					update("channels", thread_id, "read_marker_id", c.last_version_id!);
+				}
+				await api.channels.ack(thread_id, undefined, c.last_version_id!);
+			}
 		}
 	} else {
 		next(action);
