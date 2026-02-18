@@ -13,6 +13,7 @@ use http::StatusCode;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use super::util::Auth;
 use crate::error::{Error, Result};
@@ -46,6 +47,8 @@ async fn emoji_create(
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::EmojiManage)?;
+
+    json.validate()?;
 
     let data = s.data();
     let media = data.media_select(json.media_id).await?;

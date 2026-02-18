@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{util::Diff, EmojiId, MediaId, RoomId, UserId};
+#[cfg(feature = "validator")]
+use validator::Validate;
 
-// WARN: this is an *extreme* work in progress
+use crate::v1::types::{util::Diff, EmojiId, MediaId, RoomId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -49,18 +50,47 @@ pub enum EmojiOwner {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmojiCustomCreate {
-    // TODO(#862): enforce emoji naming conventions (ie. no spaces)
+    #[cfg_attr(
+        feature = "validator",
+        validate(length(min = 2, max = 32), custom(function = "validate_emoji_name"))
+    )]
     pub name: String,
     pub animated: bool,
     pub media_id: MediaId,
 }
 
+/// validate a custom emoji name
+#[cfg(feature = "validator")]
+fn validate_emoji_name(name: &str) -> Result<(), validator::ValidationError> {
+    if name.contains(' ') {
+        let mut err = validator::ValidationError::new("invalid_emoji_name");
+        err.add_param("message".into(), &"emoji name cannot contain spaces");
+        return Err(err);
+    }
+
+    if !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        let mut err = validator::ValidationError::new("invalid_emoji_name");
+        err.add_param(
+            "message".into(),
+            &"emoji name can only contain alphanumeric characters and underscores",
+        );
+        return Err(err);
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmojiCustomPatch {
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    #[cfg_attr(
+        feature = "validator",
+        validate(length(min = 2, max = 32), custom(function = "validate_emoji_name"))
+    )]
     pub name: Option<String>,
 }
 

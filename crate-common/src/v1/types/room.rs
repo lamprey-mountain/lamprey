@@ -70,8 +70,6 @@ pub struct Room {
     pub channel_count: u64,
 
     /// number of emojis in room
-    // will be needed for virtual scrolling with unlimited emoji
-    // TODO(#956): implement
     pub emoji_count: u64,
 
     // rooms can't be outright deleted, but some people might want to "clean up"
