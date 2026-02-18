@@ -4,6 +4,7 @@ use common::v1::types::{
     ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, ThreadMember,
     ThreadMemberPut, UserId,
 };
+use lamprey_backend_core::Error;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;

@@ -3,6 +3,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::{Media as MediaV1, MediaPatch as MediaPatchV1, MediaTrack as MediaTrackV1};
 use common::v2::types::media::Media as MediaV2;
+use lamprey_backend_core::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use time::PrimitiveDateTime;
