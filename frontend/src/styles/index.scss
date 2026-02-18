@@ -3795,3 +3795,12 @@ input[type="search"].tags-search {
 	padding: 2px 4px;
 	background: $bg-150;
 }
+
+.contextmenu button[disabled] {
+	cursor: not-allowed;
+	color: $fg-600;
+
+	&:hover {
+		background: none;
+	}
+}

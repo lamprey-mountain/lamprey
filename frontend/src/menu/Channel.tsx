@@ -170,9 +170,8 @@ export function ChannelMenu(props: { channel_id: string }) {
 		return tagsResource.latest ?? [];
 	};
 
-	const canApplyRestrictedTags = () => {
-		return hasPermission("ThreadEdit") || hasPermission("ThreadManage");
-	};
+	const canApplyRestrictedTags = () =>
+		hasPermission("ThreadEdit") || hasPermission("ThreadManage");
 
 	let tagSearchInputRef: HTMLInputElement | undefined;
 
@@ -201,62 +200,64 @@ export function ChannelMenu(props: { channel_id: string }) {
 					(parentChan()?.type === "Forum" || parentChan()?.type === "Forum2")}
 			>
 				<Submenu content={"tags"} onOpen={() => tagSearchInputRef?.focus()}>
-					<input
-						ref={tagSearchInputRef}
-						class="tags-search"
-						type="search"
-						placeholder="search tags..."
-						value={tagSearchQuery()}
-						onInput={(e) => setTagSearchQuery(e.currentTarget.value)}
-						onClick={(e) => e.stopPropagation()}
-					/>
-					<Show when={tagsResource.loading}>
-						<Item disabled>loading tags...</Item>
-					</Show>
-					<For each={displayedTags()}>
-						{(tag) => {
-							const isRestricted = tag.restricted ?? false;
-							const isDisabled = isRestricted && !canApplyRestrictedTags();
-							const isChecked = channel()?.tags?.includes(tag.id) ?? false;
-							return (
-								<Item
-									disabled={isDisabled}
-									onClick={(e) => {
-										e.stopPropagation();
-										if (!isDisabled) {
-											toggleTag(tag.id);
-										}
-									}}
-								>
-									<div style="display: flex; align-items: start; gap: 8px">
-										<Checkbox checked={isChecked} />
-										<div style="margin: 2px 0">
-											<div classList={{ has: isChecked }}>
-												{tag.name}
-												{isRestricted && (
-													<span
-														class="dim"
-														style="margin-left: 4px; font-size: 0.8em;"
-													>
-														(restricted)
-													</span>
-												)}
+					<div class="tags">
+						<input
+							ref={tagSearchInputRef}
+							class="tags-search"
+							type="search"
+							placeholder="search tags..."
+							value={tagSearchQuery()}
+							onInput={(e) => setTagSearchQuery(e.currentTarget.value)}
+							onClick={(e) => e.stopPropagation()}
+						/>
+						<Show when={tagsResource.loading}>
+							<div>loading tags...</div>
+						</Show>
+						<For each={displayedTags()}>
+							{(tag) => {
+								const isRestricted = tag.restricted ?? false;
+								const isDisabled = isRestricted && !canApplyRestrictedTags();
+								const isChecked = channel()?.tags?.includes(tag.id) ?? false;
+								return (
+									<Item
+										disabled={isDisabled}
+										onClick={(e) => {
+											e.stopPropagation();
+											if (!isDisabled) {
+												toggleTag(tag.id);
+											}
+										}}
+									>
+										<div style="display: flex; align-items: start; gap: 8px">
+											<Checkbox checked={isChecked} />
+											<div style="margin: 2px 0">
+												<div classList={{ has: isChecked }}>
+													{tag.name}
+													{isRestricted && (
+														<span
+															class="dim"
+															style="margin-left: 4px; font-size: 0.8em;"
+														>
+															(restricted)
+														</span>
+													)}
+												</div>
+												<Show when={tag.description}>
+													<div class="dim">{tag.description}</div>
+												</Show>
 											</div>
-											<Show when={tag.description}>
-												<div class="dim">{tag.description}</div>
-											</Show>
 										</div>
-									</div>
-								</Item>
-							);
-						}}
-					</For>
-					<Show
-						when={tagsResource.state === "ready" &&
-							displayedTags().length === 0}
-					>
-						<Item disabled>no tags available</Item>
-					</Show>
+									</Item>
+								);
+							}}
+						</For>
+						<Show
+							when={tagsResource.state === "ready" &&
+								displayedTags().length === 0}
+						>
+							<Item disabled>no tags available</Item>
+						</Show>
+					</div>
 				</Submenu>
 			</Show>
 			<Show when={channel() && isThread()}>
