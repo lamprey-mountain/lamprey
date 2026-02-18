@@ -122,7 +122,6 @@ impl Default for LampreySchema {
     fn default() -> Self {
         let mut sb = SchemaBuilder::new();
 
-        // config for human readable text
         let text_options = TextOptions::default()
             .set_indexing_options(
                 TextFieldIndexing::default()
@@ -147,8 +146,16 @@ impl Default for LampreySchema {
         let name = sb.add_text_field("name", text_options.clone());
         let content = sb.add_text_field("content", text_options.clone());
 
-        let metadata_fast =
-            sb.add_json_field("metadata_fast", JsonObjectOptions::default().set_fast(None));
+        let metadata_fast = sb.add_json_field(
+            "metadata_fast",
+            JsonObjectOptions::default()
+                .set_fast(None)
+                .set_indexing_options(
+                    TextFieldIndexing::default()
+                        .set_tokenizer("raw")
+                        .set_index_option(IndexRecordOption::Basic),
+                ),
+        );
 
         let metadata_text = sb.add_json_field(
             "metadata_text",
