@@ -348,12 +348,18 @@ export const ChatMain = (props: ChatProps) => {
 					</button>
 				</div>
 			</Show>
-			<Show when={messages.loading}>
-				<div class="loading">{t("loading")}</div>
+			<Show
+				when={messages.loading && true}
+				fallback={
+					<list.List>
+						{(item) => renderTimelineItem(props.channel, item)}
+					</list.List>
+				}
+			>
+				<ul class="skeleton-message-list">
+					<MessageSkeleton />
+				</ul>
 			</Show>
-			<list.List>
-				{(item) => renderTimelineItem(props.channel, item)}
-			</list.List>
 			<Input channel={props.channel} />
 			<Portal>
 				<Show when={dragging()}>
@@ -372,6 +378,7 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 import { ChannelIcon } from "./User.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useModals } from "./contexts/modal.tsx";
+import { MessageSkeleton } from "./MessageSkeleton.tsx";
 
 export const ChatHeader = (
 	props: ChatProps & { showMembersButton?: boolean },

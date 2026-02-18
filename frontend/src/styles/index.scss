@@ -1938,6 +1938,112 @@ table {
 	padding: 4px 0;
 }
 
+.skeleton-message {
+	pointer-events: none;
+	display: grid;
+
+	& .skeleton-avatar,
+	& .skeleton-name,
+	& .skeleton-time,
+	& .skeleton-time-compact,
+	& .skeleton-line,
+	& .skeleton-attachment {
+		background: linear-gradient(
+			90deg,
+			$bg-400 0%,
+			oklch(var(--color-bg4) / 0.85) 50%,
+			$bg-400 100%
+		);
+		background-size: 200% 100%;
+		animation: skeleton-loading 1s infinite linear;
+		border-radius: 4px;
+	}
+
+	& .skeleton-avatar {
+		height: 64px;
+		width: 64px;
+	}
+
+	& .skeleton-name {
+		height: 14px;
+		width: 120px;
+		display: inline-block;
+	}
+
+	& .skeleton-time {
+		height: 10px;
+		width: 60px;
+		margin-left: 4px;
+		display: inline-block;
+	}
+
+	& .skeleton-time-compact {
+		height: 10px;
+		width: 60px;
+		position: absolute;
+		right: 8px;
+		top: 8px;
+	}
+
+	& .skeleton-line {
+		height: 12px;
+		margin-right: 4px;
+		margin-top: 2px;
+		display: inline-block;
+
+		&:last-child {
+			width: 70%;
+		}
+	}
+
+	& .skeleton-attachment {
+		margin-top: 4px;
+		height: 200px;
+		width: 300px;
+		border-radius: 4px;
+	}
+
+	// compact mode
+	&:not(.withavatar) {
+		grid-template-columns: 128px 1fr max-content;
+
+		& > .author-wrap {
+			text-align: right;
+			margin-right: 8px;
+
+			& > .author {
+				position: sticky;
+				top: 4px;
+			}
+		}
+	}
+}
+
+.skeleton-message-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+
+	& > .message {
+		padding: 4px 8px;
+
+		&:hover {
+			background-color: transparent;
+		}
+	}
+}
+
+@keyframes skeleton-loading {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
 #root > header {
 	grid-area: header;
 	background: $bg-200;
