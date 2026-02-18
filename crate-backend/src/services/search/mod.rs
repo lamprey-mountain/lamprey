@@ -107,14 +107,20 @@ impl ServiceSearch {
         let mut thread_members = Vec::new();
 
         // fetch threads
-        // TODO: batch fetch, only fetch archived threads
-        let channel_ids: HashSet<ChannelId> = messages.iter().map(|m| m.channel_id).collect();
+        let channel_ids: HashSet<_> = messages.iter().map(|m| m.channel_id).collect();
+        let channel_ids: Vec<_> = channel_ids.into_iter().collect();
         let mut channel_room_map: HashMap<ChannelId, Option<RoomId>> = HashMap::new();
-        for channel_id in channel_ids {
-            let chan = srv.channels.get(channel_id, Some(auth_user_id)).await?;
-            channel_room_map.insert(channel_id, chan.room_id);
-            if chan.ty.is_thread() && chan.archived_at.is_some() {
-                threads.push(chan);
+
+        if !channel_ids.is_empty() {
+            let channels = srv
+                .channels
+                .get_many(&channel_ids, Some(auth_user_id))
+                .await?;
+            for chan in channels {
+                channel_room_map.insert(chan.id, chan.room_id);
+                if chan.ty.is_thread() && chan.archived_at.is_some() {
+                    threads.push(chan);
+                }
             }
         }
 
