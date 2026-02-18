@@ -13,10 +13,13 @@ use crate::v1::types::{
     application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
     util::Time, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, Channel, ChannelId,
     ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId, MessageVerId,
-    PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, User, UserId, WebhookId,
+    PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, User, UserId, Webhook,
+    WebhookId,
 };
 
-// FIXME: bridge events should be logged as the bridge, not puppet
+pub mod resolve;
+
+// FIXME(#981): bridge events should be logged as the bridge, not puppet
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -631,7 +634,10 @@ pub struct AuditLogPaginationResponse {
     /// this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
     pub room_members: Vec<RoomMember>,
 
-    // TODO: include webhooks, calendar events, calendar overwrites, automod rules, integrations
+    /// webhooks referenced in the audit log entries
+    pub webhooks: Vec<Webhook>,
+
+    // TODO: include calendar events, calendar overwrites, automod rules, integrations, etc...
     /// whether there are more audit log events that can be fetched
     pub has_more: bool,
 
@@ -655,7 +661,10 @@ impl AuditLogEntry {
     ///
     /// this is the time elapsed between `started_at` and `ended_at`
     pub fn duration(&self) -> Duration {
-        todo!()
+        self.ended_at
+            .signed_duration_since(self.started_at)
+            .to_std()
+            .unwrap_or(Duration::ZERO)
     }
 }
 
@@ -688,52 +697,5 @@ impl AuditLogEntryType {
     /// for example: ApplicationUpdate, Emoji events, etc
     pub fn is_application(&self) -> bool {
         todo!()
-    }
-}
-
-/// the set of extra data that should be resolved
-pub struct AuditLogResolve {
-    pub threads: std::collections::HashSet<ChannelId>,
-    pub users: std::collections::HashSet<UserId>, // fetch users and room_members for these ids
-    pub applications: std::collections::HashSet<ApplicationId>,
-    // TODO: copy stuff from AuditLogPaginationResponse
-}
-
-impl AuditLogResolve {
-    /// add everything that needs to be resolved from this entry
-    pub fn add(&mut self, entry: &AuditLogEntry) {
-        self.users.insert(entry.user_id);
-
-        if let Some(app_id) = entry.application_id {
-            self.applications.insert(app_id);
-        }
-
-        match &entry.ty {
-            AuditLogEntryType::ChannelCreate {
-                channel_id,
-                channel_type,
-                ..
-            } if channel_type.is_thread() => {
-                self.threads.insert(*channel_id);
-            }
-            AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type,
-                ..
-            } if channel_type.is_thread() => {
-                self.threads.insert(*channel_id);
-            }
-            AuditLogEntryType::MemberKick { user_id, .. } => {
-                self.users.insert(*user_id);
-            }
-            AuditLogEntryType::MemberBan { user_id, .. } => {
-                self.users.insert(*user_id);
-            }
-            AuditLogEntryType::MemberUnban { user_id, .. } => {
-                self.users.insert(*user_id);
-            }
-            // TODO: handle more entries
-            _ => {}
-        }
     }
 }

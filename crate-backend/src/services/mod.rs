@@ -15,15 +15,16 @@ use users::ServiceUsers;
 
 use crate::{
     services::{
-        admin::ServiceAdmin, automod::ServiceAutomod, calendar::ServiceCalendar,
-        documents::ServiceDocuments, http::ServiceHttp, members::ServiceMembers,
-        notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
-        unread::ServiceUnread, voice::ServiceVoice,
+        admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
+        calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
+        members::ServiceMembers, notifications::ServiceNotifications, presence::ServicePresence,
+        search::ServiceSearch, unread::ServiceUnread, voice::ServiceVoice,
     },
     ServerStateInner,
 };
 
 pub mod admin;
+pub mod audit_logs;
 pub mod automod;
 pub mod cache;
 pub mod calendar;
@@ -50,6 +51,7 @@ pub mod voice;
 
 pub struct Services {
     pub admin: ServiceAdmin,
+    pub audit_logs: ServiceAuditLogs,
     pub automod: ServiceAutomod,
     pub cache: ServiceCache,
     pub calendar: ServiceCalendar,
@@ -79,6 +81,7 @@ impl Services {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             admin: ServiceAdmin::new(state.clone()),
+            audit_logs: ServiceAuditLogs::new(state.clone()),
             automod: ServiceAutomod::new(state.clone()),
             cache: ServiceCache::new(state.clone()),
             calendar: ServiceCalendar::new(state.clone()),

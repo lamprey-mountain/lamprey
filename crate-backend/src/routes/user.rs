@@ -13,8 +13,8 @@ use common::v1::types::{
     UserPatch, UserSearch, UserWithRelationship,
 };
 use common::v1::types::{
-    AuditLogEntryStatus, AuditLogFilter, HarvestId, Permission, SuspendRequest, Suspended,
-    UserListParams, SERVER_ROOM_ID,
+    AuditLogEntryStatus, AuditLogFilter, AuditLogPaginationResponse, HarvestId, Permission,
+    SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use tracing::warn;
@@ -337,7 +337,7 @@ async fn user_room_list(
     ),
     tags = ["user"],
     responses(
-        (status = OK, body = PaginationResponse<AuditLogEntry>, description = "success"),
+        (status = OK, body = AuditLogPaginationResponse, description = "success"),
     )
 )]
 async fn user_audit_logs(
@@ -356,9 +356,10 @@ async fn user_audit_logs(
         return Err(Error::NotFound);
     }
 
-    let data = s.data();
-    let logs = data
-        .audit_logs_room_fetch(target_user_id.into_inner().into(), paginate, filter)
+    let logs = s
+        .services()
+        .audit_logs
+        .list(target_user_id.into_inner().into(), paginate, filter)
         .await?;
     Ok(Json(logs))
 }
