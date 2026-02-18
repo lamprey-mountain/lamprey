@@ -1413,6 +1413,22 @@ code {
 	}
 }
 
+.overwrite-dropdown {
+	display: inline-block;
+	width: 100%;
+
+	.dropdown {
+		width: 100%;
+		cursor: text;
+	}
+
+	.prefix {
+		color: $fg-500;
+		font-family: var(--font-mono);
+		margin-right: 4px;
+	}
+}
+
 input[type="range"] {
 	appearance: auto;
 	accent-color: $link-500;

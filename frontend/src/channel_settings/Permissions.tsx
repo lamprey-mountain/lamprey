@@ -17,6 +17,7 @@ import {
 import { createStore, produce } from "solid-js/store";
 import { useApi } from "../api.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
+import { OverwriteDropdown } from "../components/OverwriteDropdown";
 import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";
 import { Copyable } from "../util.tsx";
@@ -307,28 +308,33 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		}
 	};
 
-	const addRole = (roleId: string) => {
-		batch(() => {
-			setOverwrites(overwrites.length, createDefaultOverwrite(roleId));
-			setEditingId(roleId);
-			queueMicrotask(() => updateChangeState(roleId));
-		});
-	};
-
 	const { t } = useCtx();
 
 	const roleName = (id: string) => {
-		if (isEveryoneRole(id, props.channel.room_id)) {
+		if (isEveryoneRole(id, props.channel.room_id!)) {
 			return "@everyone";
 		}
-		return roles()?.items.find((r) => r.id === id)?.name;
+		const role = roles()?.items.find((r) => r.id === id);
+		if (role) return role.name;
+
+		const user = api.users.cache.get(id);
+		if (user) return user.name;
+
+		return null;
 	};
 
-	const availableRoles = () =>
-		roles()?.items.filter((r) =>
-			!isEveryoneRole(r.id, props.channel.room_id) &&
-			!overwrites.some((o) => o.id === r.id)
-		);
+	const addOverwrite = (id: string, type: "Role" | "User") => {
+		batch(() => {
+			setOverwrites(overwrites.length, {
+				id,
+				type,
+				allow: [],
+				deny: [],
+			});
+			setEditingId(id);
+			queueMicrotask(() => updateChangeState(id));
+		});
+	};
 
 	const filteredPermissions = createMemo(() => {
 		return filterPermissionsByChannelType(
@@ -363,20 +369,11 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 							</ul>
 						</div>
 						<div>
-							<Show when={availableRoles()?.length}>
-								<select
-									onChange={(e) => {
-										if (e.currentTarget.value) addRole(e.currentTarget.value);
-										e.currentTarget.value = "";
-									}}
-								>
-									<option value="">Add role...</option>
-									<For each={availableRoles()}>
-										{(r) => <option value={r.id}>{r.name}</option>}
-									</For>
-								</select>
-							</Show>
-							{/* <button onClick={()}>add user</button> */}
+							<OverwriteDropdown
+								room_id={props.channel.room_id!}
+								excludeIds={overwrites.map((o) => o.id)}
+								onSelect={(id, type) => addOverwrite(id, type)}
+							/>
 						</div>
 					</div>
 				</div>
