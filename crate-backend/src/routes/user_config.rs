@@ -27,6 +27,10 @@ async fn user_config_global_put(
     Json(json): Json<PreferencesGlobal>,
 ) -> Result<impl IntoResponse> {
     s.data().user_config_set(auth.user.id, &json).await?;
+    s.services()
+        .cache
+        .user_config_invalidate(auth.user.id)
+        .await;
     s.broadcast(MessageSync::UserConfigGlobal {
         user_id: auth.user.id,
         config: json.clone(),
@@ -51,6 +55,10 @@ async fn user_config_room_put(
     s.data()
         .user_config_room_set(auth.user.id, room_id, &json)
         .await?;
+    s.services()
+        .cache
+        .user_config_room_invalidate(auth.user.id, room_id)
+        .await;
     s.broadcast(MessageSync::UserConfigRoom {
         user_id: auth.user.id,
         room_id,
@@ -76,6 +84,10 @@ async fn user_config_channel_put(
     s.data()
         .user_config_channel_set(auth.user.id, channel_id, &json)
         .await?;
+    s.services()
+        .cache
+        .user_config_channel_invalidate(auth.user.id, channel_id)
+        .await;
     s.broadcast(MessageSync::UserConfigChannel {
         user_id: auth.user.id,
         channel_id,
@@ -101,6 +113,10 @@ async fn user_config_user_put(
     s.data()
         .user_config_user_set(auth.user.id, user_id, &json)
         .await?;
+    s.services()
+        .cache
+        .user_config_user_invalidate(auth.user.id, user_id)
+        .await;
     s.broadcast(MessageSync::UserConfigUser {
         user_id: auth.user.id,
         target_user_id: user_id,
@@ -120,7 +136,7 @@ async fn user_config_global_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let config = s.data().user_config_get(auth.user.id).await?;
+    let config = s.services().cache.user_config_get(auth.user.id).await?;
     Ok(Json(config))
 }
 
@@ -137,7 +153,11 @@ async fn user_config_room_get(
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
 ) -> Result<impl IntoResponse> {
-    let config = s.data().user_config_room_get(auth.user.id, room_id).await?;
+    let config = s
+        .services()
+        .cache
+        .user_config_room_get(auth.user.id, room_id)
+        .await?;
     Ok(Json(config))
 }
 
@@ -155,7 +175,8 @@ async fn user_config_channel_get(
     Path(channel_id): Path<ChannelId>,
 ) -> Result<impl IntoResponse> {
     let config = s
-        .data()
+        .services()
+        .cache
         .user_config_channel_get(auth.user.id, channel_id)
         .await?;
     Ok(Json(config))
@@ -174,7 +195,11 @@ async fn user_config_user_get(
     State(s): State<Arc<ServerState>>,
     Path(user_id): Path<UserId>,
 ) -> Result<impl IntoResponse> {
-    let config = s.data().user_config_user_get(auth.user.id, user_id).await?;
+    let config = s
+        .services()
+        .cache
+        .user_config_user_get(auth.user.id, user_id)
+        .await?;
     Ok(Json(config))
 }
 

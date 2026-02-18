@@ -495,7 +495,7 @@ pub enum MessageSync {
         presence: Presence,
     },
 
-    // TODO: rename these UserConfig -> Config
+    // TODO: rename these UserConfig -> Preferences
     UserConfigGlobal {
         user_id: UserId,
         config: PreferencesGlobal,

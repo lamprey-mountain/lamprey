@@ -45,7 +45,8 @@ impl ServiceUsers {
         if let Some(viewer_id) = viewer_id {
             usr.user_config = Some(
                 self.state
-                    .data()
+                    .services()
+                    .cache
                     .user_config_user_get(viewer_id, user_id)
                     .await?,
             );

@@ -992,6 +992,7 @@ pub trait DataUserRelationship {
     ) -> Result<PaginationResponse<RelationshipWithUserId>>;
 }
 
+// TODO: rename to DataPreferences
 #[async_trait]
 pub trait DataUserConfig {
     async fn user_config_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()>;
