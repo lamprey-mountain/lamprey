@@ -22,6 +22,7 @@ const tabs: Array<{
 	component: any;
 	action?: "remove";
 	permissionCheck?: (p: Set<Permission>) => boolean;
+	channelTypes?: string[];
 }> = [
 	{ name: "info", path: "", component: Info },
 	{
@@ -42,6 +43,7 @@ const tabs: Array<{
 		path: "tags",
 		component: () => "todo: manage tags",
 		permissionCheck: (p) => p.has("TagManage"),
+		channelTypes: ["Forum", "Forum2"],
 		// permissionCheck: (p) => p.has("TagManage") || p.has("ChannelManage"),
 	},
 	{
@@ -109,7 +111,9 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 					<For each={tabs}>
 						{(tab) => (
 							<Show
-								when={!tab.permissionCheck || tab.permissionCheck(perms)}
+								when={(!tab.channelTypes ||
+									tab.channelTypes.includes(props.channel.type)) &&
+									(!tab.permissionCheck || tab.permissionCheck(perms))}
 							>
 								<Switch>
 									<Match when={tab.action}>
