@@ -18,6 +18,9 @@ pub struct AuditLogResolve {
 
     /// fetch webhooks for these ids
     pub webhooks: HashSet<WebhookId>,
+
+    /// fetch tags for these ids
+    pub tags: HashSet<TagId>,
 }
 
 impl AuditLogResolve {
@@ -130,10 +133,17 @@ impl AuditLogResolve {
                     }
                 };
             }
-            AuditLogEntryType::TagCreate { channel_id, .. }
-            | AuditLogEntryType::TagUpdate { channel_id, .. }
-            | AuditLogEntryType::TagDelete { channel_id, .. } => {
+            AuditLogEntryType::TagCreate {
+                channel_id, tag_id, ..
+            }
+            | AuditLogEntryType::TagUpdate {
+                channel_id, tag_id, ..
+            }
+            | AuditLogEntryType::TagDelete {
+                channel_id, tag_id, ..
+            } => {
                 self.threads.insert(*channel_id);
+                self.tags.insert(*tag_id);
             }
             _ => {}
         }

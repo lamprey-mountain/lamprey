@@ -75,12 +75,21 @@ impl ServiceAuditLogs {
             }
         }
 
+        // TODO: batch fetch, include channel_id in query to use index
+        let mut tags = Vec::new();
+        for tag_id in &resolve.tags {
+            if let Ok(tag) = data.tag_get(*tag_id).await {
+                tags.push(tag);
+            }
+        }
+
         Ok(AuditLogPaginationResponse {
             audit_log_entries: entries.items,
             threads,
             users,
             room_members,
             webhooks,
+            tags,
             has_more: entries.has_more,
             cursor: entries.cursor,
         })

@@ -676,6 +676,9 @@ pub struct AuditLogPaginationResponse {
     /// webhooks referenced in the audit log entries
     pub webhooks: Vec<Webhook>,
 
+    /// tags referenced in the audit log entries
+    pub tags: Vec<Tag>,
+
     // TODO: include calendar events, calendar overwrites, automod rules, integrations, etc...
     /// whether there are more audit log events that can be fetched
     pub has_more: bool,
