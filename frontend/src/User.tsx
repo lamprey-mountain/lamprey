@@ -28,6 +28,7 @@ import {
 } from "@floating-ui/dom";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { useNavigate } from "@solidjs/router";
+import { AvatarWithStatus } from "./avatar/UserAvatar.tsx";
 
 type UserProps = {
 	room_member?: RoomMember;
