@@ -349,15 +349,14 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 		<>
 			<Submenu content={"notifications"}>
 				<Item
-					onClick={() =>
-						setNotifs({ messages: undefined, mentions: undefined })}
+					onClick={() => setNotifs({ messages: undefined, threads: undefined })}
 				>
 					<div>default</div>
 					<div class="subtext">
 						Uses the room's default notification setting.
 					</div>
 				</Item>
-				<Item onClick={() => setNotifs({ messages: "Notify" })}>
+				<Item onClick={() => setNotifs({ messages: "Everything" })}>
 					<div>everything</div>
 					<div class="subtext">
 						You will be notified of all new messages in this channel.
@@ -369,11 +368,28 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 						Messages in this channel will show up in your inbox.
 					</div>
 				</Item>
-				<Item
-					onClick={() => setNotifs({ messages: "Ignore", mentions: "Notify" })}
-				>
+				<Item onClick={() => setNotifs({ messages: "Mentions" })}>
 					<div>mentions</div>
 					<div class="subtext">You will only be notified on @mention</div>
+				</Item>
+				<Item onClick={() => setNotifs({ messages: "Nothing" })}>
+					<div>nothing</div>
+					<div class="subtext">You won't be notified for anything.</div>
+				</Item>
+				<Separator />
+				<Item onClick={() => setNotifs({ threads: "Notify" })}>
+					<div>new threads</div>
+					<div class="subtext">
+						You will be notified when a new thread is created.
+					</div>
+				</Item>
+				<Item onClick={() => setNotifs({ threads: "Inbox" })}>
+					<div>threads to inbox</div>
+					<div class="subtext">New threads will show up in your inbox.</div>
+				</Item>
+				<Item onClick={() => setNotifs({ threads: "Nothing" })}>
+					<div>ignore threads</div>
+					<div class="subtext">You won't be notified for new threads.</div>
 				</Item>
 				<Separator />
 				<Item>bookmark</Item>

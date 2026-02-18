@@ -10,7 +10,12 @@ interface ModalNotificationsProps {
 export const ModalNotifications = (props: ModalNotificationsProps) => {
 	const [everyone, setEveryone] = createSignal(true);
 	const [role, setRole] = createSignal(true);
-	const [thread, setThread] = createSignal(true);
+	const [messages, setMessages] = createSignal<
+		"Everything" | "Watching" | "Mentions" | "Nothing"
+	>("Mentions");
+	const [threads, setThreads] = createSignal<"Notify" | "Inbox" | "Nothing">(
+		"Inbox",
+	);
 
 	return (
 		<Modal>
@@ -22,7 +27,7 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 						options={[
 							{ item: "none", label: "unmute" },
 							{ item: "15m", label: "15 minutes" },
-							{ item: "3h", label: "15 minutes" },
+							{ item: "3h", label: "3 hours" },
 							{ item: "8h", label: "8 hours" },
 							{ item: "1d", label: "1 day" },
 							{ item: "1w", label: "1 week" },
@@ -31,20 +36,39 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 					/>
 				</div>
 				<div>
-					<h3 class="dim">default notifications</h3>
+					<h3 class="dim">messages</h3>
 					<Dropdown
+						selected={messages()}
+						onSelect={(value) => value && setMessages(value as typeof messages)}
 						options={[
-							// Uses your default notification setting.
-							{ item: "default", label: "default" },
-
 							// You will be notified for all messages.
-							{ item: "everything", label: "everything" },
+							{ item: "Everything", label: "everything" },
+
+							// You will be notified for mentions only; messages go to inbox.
+							{ item: "Watching", label: "watching" },
 
 							// You will be notified for mentions only.
-							{ item: "mentions", label: "mentions" },
+							{ item: "Mentions", label: "mentions" },
 
 							// You won't be notified for anything.
-							{ item: "nothing", label: "nothing" },
+							{ item: "Nothing", label: "nothing" },
+						]}
+					/>
+				</div>
+				<div>
+					<h3 class="dim">threads</h3>
+					<Dropdown
+						selected={threads()}
+						onSelect={(value) => value && setThreads(value as typeof threads)}
+						options={[
+							// You will be notified whenever a new thread is created.
+							{ item: "Notify", label: "notify" },
+
+							// All new threads will be added to your inbox.
+							{ item: "Inbox", label: "inbox" },
+
+							// Ignore new threads.
+							{ item: "Nothing", label: "nothing" },
 						]}
 					/>
 				</div>
@@ -84,22 +108,6 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 							</div>
 						</label>
 					</div>
-					<div class="option">
-						<input
-							id="opt-thread"
-							type="checkbox"
-							checked={thread()}
-							onInput={(e) => setThread(e.currentTarget.checked)}
-							style="display: none;"
-						/>
-						<Checkbox checked={thread()} />
-						<label for="opt-thread">
-							<div>New threads</div>
-							<div class="dim">
-								You will receive notifications when a new thread is created.
-							</div>
-						</label>
-					</div>
 					{/* TODO: (when impl'd) mobile push notifications */}
 					{/* TODO: (when impl'd) calendar event */}
 				</div>
@@ -114,13 +122,16 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 									{ item: "default", label: "default" },
 
 									// You will be notified for all messages.
-									{ item: "everything", label: "everything" },
+									{ item: "Everything", label: "everything" },
 
 									// You will be notified for mentions only.
-									{ item: "mentions", label: "mentions" },
+									{ item: "Watching", label: "watching" },
+
+									// You will be notified for mentions only.
+									{ item: "Mentions", label: "mentions" },
 
 									// You won't be notified for anything.
-									{ item: "nothing", label: "nothing" },
+									{ item: "Nothing", label: "nothing" },
 								]}
 							/>
 							{/* TODO: show menu to mute this channel */}

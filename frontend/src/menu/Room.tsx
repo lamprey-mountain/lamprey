@@ -1,11 +1,12 @@
 import { useNavigate } from "@solidjs/router";
-import { createResource, Show } from "solid-js";
+import { createResource, createSignal, Show } from "solid-js";
 import { timeAgo } from "../Time.tsx";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
+import { Checkbox } from "../icons.tsx";
 
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
@@ -160,6 +161,11 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 
 	const [, modalctl] = useModals();
 
+	const [everyone, setEveryone] = createSignal(
+		roomConfig()?.mention_everyone ?? true,
+	);
+	const [roles, setRoles] = createSignal(roomConfig()?.mention_roles ?? true);
+
 	return (
 		<>
 			<Submenu
@@ -171,36 +177,84 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 					onClick={() =>
 						setNotifs({
 							messages: undefined,
-							mentions: undefined,
 							threads: undefined,
 						})}
 				>
 					<div>default</div>
 					<div class="subtext">Uses your default notification setting.</div>
 				</Item>
-				<Item onClick={() => setNotifs({ messages: "Notify" })}>
+				<Item onClick={() => setNotifs({ messages: "Everything" })}>
 					<div>everything</div>
 					<div class="subtext">You will be notified for all messages.</div>
 				</Item>
+				<Item onClick={() => setNotifs({ messages: "Watching" })}>
+					<div>watching</div>
+					<div class="subtext">
+						Messages in this room will show up in your inbox.
+					</div>
+				</Item>
+				<Item onClick={() => setNotifs({ messages: "Mentions" })}>
+					<div>mentions</div>
+					<div class="subtext">You will only be notified on @mention</div>
+				</Item>
+				<Item onClick={() => setNotifs({ messages: "Nothing" })}>
+					<div>nothing</div>
+					<div class="subtext">You won't be notified for anything.</div>
+				</Item>
+				<Separator />
 				<Item onClick={() => setNotifs({ threads: "Notify" })}>
 					<div>new threads</div>
 					<div class="subtext">You will be notified for new threads.</div>
 				</Item>
-				<Item
-					onClick={() =>
-						setNotifs({ messages: "Watching", threads: "Watching" })}
-				>
-					<div>watching</div>
-					<div class="subtext">
-						Threads and messages mark this room unread.
-					</div>
+				<Item onClick={() => setNotifs({ threads: "Inbox" })}>
+					<div>threads to inbox</div>
+					<div class="subtext">New threads will show up in your inbox.</div>
 				</Item>
-				<Item
-					onClick={() => setNotifs({ messages: "Ignore", mentions: "Notify" })}
-				>
-					<div>mentions</div>
-					<div class="subtext">You will only be notified on @mention</div>
+				<Item onClick={() => setNotifs({ threads: "Nothing" })}>
+					<div>ignore threads</div>
+					<div class="subtext">You won't be notified for new threads.</div>
 				</Item>
+				<Separator />
+				<div class="option" style="align-items: start; gap: 0;">
+					<input
+						id="room-mention-everyone"
+						type="checkbox"
+						checked={everyone()}
+						onInput={(e) => {
+							setEveryone(e.currentTarget.checked);
+							setNotifs({ mention_everyone: e.currentTarget.checked });
+						}}
+						style="display: none;"
+					/>
+					<Checkbox checked={everyone()} />
+					<label for="room-mention-everyone" style="margin-left: 8px;">
+						<div>Enable @everyone and @here</div>
+						<div class="dim">
+							You will receive notifications when @everyone or @here is
+							mentioned.
+						</div>
+					</label>
+				</div>
+				<div class="option" style="align-items: start; gap: 0;">
+					<input
+						id="room-mention-roles"
+						type="checkbox"
+						checked={roles()}
+						onInput={(e) => {
+							setRoles(e.currentTarget.checked);
+							setNotifs({ mention_roles: e.currentTarget.checked });
+						}}
+						style="display: none;"
+					/>
+					<Checkbox checked={roles()} />
+					<label for="room-mention-roles" style="margin-left: 8px;">
+						<div>Enable all role mentions</div>
+						<div class="dim">
+							You will receive notifications when any @role you have is
+							mentioned.
+						</div>
+					</label>
+				</div>
 			</Submenu>
 			<Show
 				when={isMuted()}

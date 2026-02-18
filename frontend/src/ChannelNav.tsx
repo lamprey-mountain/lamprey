@@ -899,7 +899,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 				<div class="mentions">{props.channel.mention_count}</div>
 			</Show>
 			<Show when={true}>
-				<button onClick={() => {/* TODO: show invite modal */ }}>
+				<button onClick={() => {/* TODO: show invite modal */}}>
 					<img class="icon" src={icMemberAdd} />
 				</button>
 				<button
