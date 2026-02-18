@@ -29,6 +29,10 @@ pub struct Notification2 {
 
     /// when this was read
     pub read_at: Option<Time>,
+
+    /// user defined note for this notification
+    pub note: Option<String>,
+    // maybe include `completed` if this action is "completable"?
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,6 +60,7 @@ pub enum Notification2Type {
         // NOTE: i should probably aggregate all notifications into one bundle
     },
     // in the future, there'll probably be calendar events, document mentions, broadcast/voice activity, etc
+    // also FriendRequestReceived and FriendRequestAccepted (notif lifecycle? like one friend notif that gets updated over time?)
 }
 
 // TODO: remove
@@ -270,4 +275,7 @@ impl Notification2 {
             Notification2Type::Reaction { message_id, .. } => **message_id,
         }
     }
+
+    // pub fn channel_id(&self) -> Option<ChannelId>;
+    // pub fn room_id(&self) -> Option<RoomId>;
 }

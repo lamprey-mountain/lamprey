@@ -17,6 +17,7 @@ pub struct NotifsGlobal {
     pub messages: NotifsMessages,
     pub threads: NotifsThreads,
     pub reactions: NotifsReactions,
+    pub tts: NotifsTts,
 }
 
 /// notification config for a room
@@ -129,6 +130,21 @@ pub enum NotifsReactions {
     Nothing,
 }
 
+/// when to send text to speech notifications
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum NotifsTts {
+    /// read all messages that created a notification
+    Always,
+
+    /// read only mentions
+    Mentions,
+
+    /// never send tts notifications
+    Nothing,
+}
+
 /// how long to mute notifications for
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -145,6 +161,7 @@ impl Default for NotifsGlobal {
             messages: NotifsMessages::Mentions,
             threads: NotifsThreads::Inbox,
             reactions: NotifsReactions::Restricted,
+            tts: NotifsTts::Nothing,
         }
     }
 }
