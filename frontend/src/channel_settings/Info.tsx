@@ -25,6 +25,17 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		createSignal(
 			props.channel.default_slowmode_message,
 		);
+	const [editingUserLimit, setEditingUserLimit] = createSignal(
+		props.channel.user_limit ?? 0,
+	);
+	const [editingBitrate, setEditingBitrate] = createSignal(
+		props.channel.bitrate ?? 65535,
+	);
+
+	const hasVoice = () => {
+		const type = api.channels.cache.get(props.channel.id)?.type;
+		return type === "Voice" || type === "Broadcast";
+	};
 
 	const isDirty = () =>
 		editingName() !== props.channel.name ||
@@ -32,7 +43,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		editingNsfw() !== props.channel.nsfw ||
 		editingSlowmodeMessage() !== props.channel.slowmode_message ||
 		editingSlowmodeThread() !== props.channel.slowmode_thread ||
-		editingDefaultSlowmodeMessage() !== props.channel.default_slowmode_message;
+		editingDefaultSlowmodeMessage() !==
+			props.channel.default_slowmode_message ||
+		(hasVoice() &&
+			(editingUserLimit() !== (props.channel.user_limit ?? 0) ||
+				editingBitrate() !== (props.channel.bitrate ?? 65535)));
 
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
@@ -44,6 +59,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				slowmode_message: editingSlowmodeMessage(),
 				slowmode_thread: editingSlowmodeThread(),
 				default_slowmode_message: editingDefaultSlowmodeMessage(),
+				...(hasVoice() && {
+					user_limit: editingUserLimit() === 0 ? null : editingUserLimit(),
+					bitrate: editingBitrate(),
+				}),
 			},
 		});
 	};
@@ -71,6 +90,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		setEditingSlowmodeMessage(props.channel.slowmode_message);
 		setEditingSlowmodeThread(props.channel.slowmode_thread);
 		setEditingDefaultSlowmodeMessage(props.channel.default_slowmode_message);
+		setEditingUserLimit(props.channel.user_limit ?? 0);
+		setEditingBitrate(props.channel.bitrate ?? 65535);
 	};
 
 	return (
@@ -118,6 +139,52 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						value={editingDefaultSlowmodeMessage()}
 						onInput={setEditingDefaultSlowmodeMessage}
 					/>
+				</div>
+			</Show>
+			<Show when={hasVoice()}>
+				<div style="margin-top: 8px">
+					<div class="dim">user limit</div>
+					<div
+						class="slider-container"
+						style="display: flex; align-items: center; gap: 8px; margin: 8px 0; margin-top: 0"
+					>
+						<input
+							type="range"
+							min="0"
+							max="100"
+							value={editingUserLimit()}
+							onInput={(e) =>
+								setEditingUserLimit(Number(e.currentTarget.value))}
+							style="flex: 1;"
+						/>
+						<span style="min-width: 60px; text-align: right;">
+							{editingUserLimit() === 0 ? "Unlimited" : editingUserLimit()}
+						</span>
+					</div>
+				</div>
+				<div style="margin-top: 8px">
+					<div class="dim">bitrate</div>
+					<div
+						class="slider-container"
+						style="display: flex; align-items: center; gap: 8px; margin: 8px 0; margin-top: 0"
+					>
+						<input
+							type="range"
+							min="0"
+							max="96000"
+							step="1000"
+							value={editingBitrate()}
+							onInput={(e) => setEditingBitrate(Number(e.currentTarget.value))}
+							style="flex: 1;"
+							list="bitrate-detents"
+						/>
+						<datalist id="bitrate-detents">
+							<option value="64000" label="64k" />
+						</datalist>
+						<span style="min-width: 60px; text-align: right;">
+							{Math.round(editingBitrate() / 1000)}k
+						</span>
+					</div>
 				</div>
 			</Show>
 			<div>
