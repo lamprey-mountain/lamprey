@@ -2,6 +2,7 @@ import { type AuditLogChange, type AuditLogEntry } from "sdk";
 import { ChangeObject, diffArrays } from "diff";
 import { JSX, untrack } from "solid-js";
 import { useApi } from "./api";
+import { useCtx } from "./context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -45,11 +46,15 @@ export function mergeAuditLogEntries(
 			if (currentTs - lastTs <= MERGE_WINDOW_MS) {
 				lastMerged.entries.push(entry);
 
-				if ("changes" in entry.metadata && entry.metadata.changes) {
+				if (
+					"metadata" in entry &&
+					"changes" in (entry as any).metadata &&
+					(entry as any).metadata.changes
+				) {
 					if (!lastMerged.changes) {
 						lastMerged.changes = [];
 					}
-					lastMerged.changes.push(...entry.metadata.changes);
+					lastMerged.changes.push(...(entry as any).metadata.changes);
 				}
 
 				if (entry.reason) {
@@ -66,8 +71,11 @@ export function mergeAuditLogEntries(
 			user_id: entry.user_id,
 			type: entry.type,
 			reason: entry.reason,
-			metadata: entry.metadata,
-			changes: "changes" in entry.metadata ? entry.metadata.changes : undefined,
+			metadata: (entry as any).metadata,
+			changes:
+				"metadata" in entry && "changes" in (entry as any).metadata
+					? (entry as any).metadata.changes
+					: undefined,
 		});
 	}
 
@@ -78,109 +86,271 @@ function getTimestampFromUUID(uuid: string): Date {
 	return new Date(parseInt(uuid.substring(0, 8), 16) * 1000);
 }
 
-// TODO: resolve names, ideally without reactivity infinite loops
+const resolveName = (
+	api: ReturnType<typeof useApi>,
+	room_id: string,
+	id: string | undefined,
+	type: "user" | "channel" | "role" | "webhook" | "room",
+	metadataName?: string,
+) => {
+	if (!id) return metadataName ?? "unknown";
+
+	switch (type) {
+		case "user": {
+			const member = api.room_members.cache.get(room_id)?.get(id);
+			if (member?.override_name) return member.override_name;
+			const user = api.users.cache.get(id);
+			if (user) return user.name;
+			return metadataName ?? id;
+		}
+		case "channel": {
+			const chan = api.channels.cache.get(id);
+			return chan?.name ?? metadataName ?? id;
+		}
+		case "role": {
+			const role = api.roles.cache.get(id);
+			return role?.name ?? metadataName ?? id;
+		}
+		case "webhook": {
+			const webhook = api.webhooks.cache.get(id);
+			return webhook?.name ?? metadataName ?? id;
+		}
+		case "room": {
+			const room = api.rooms.cache.get(id);
+			return room?.name ?? metadataName ?? id;
+		}
+	}
+	return id;
+};
+
+function interpolate(template: string, params: Record<string, any>): string {
+	return template.replace(
+		/{{(\w+)}}/g,
+		(_, key) => params[key] ?? `{{${key}}}`,
+	);
+}
+
+export function formatAuditLogEntry(
+	room_id: string,
+	ent: AuditLogEntry | MergedAuditLogEntry,
+): string {
+	const { t } = useCtx();
+	const api = useApi();
+
+	const firstEntry = "entries" in ent ? ent.entries[0] : ent;
+
+	const actor = resolveName(api, room_id, firstEntry.user_id, "user");
+
+	const params: any = {
+		actor,
+		channel_name: resolveName(
+			api,
+			room_id,
+			(ent as any).metadata?.channel_id,
+			"channel",
+			(ent as any).metadata?.channel_name,
+		),
+		role_name: resolveName(
+			api,
+			room_id,
+			(ent as any).metadata?.role_id,
+			"role",
+			(ent as any).metadata?.role_name,
+		),
+		webhook_name: resolveName(
+			api,
+			room_id,
+			(ent as any).metadata?.webhook_id,
+			"webhook",
+			(ent as any).metadata?.webhook_name,
+		),
+		room_name: resolveName(
+			api,
+			room_id,
+			(ent as any).metadata?.room_id,
+			"room",
+			(ent as any).metadata?.room_name,
+		),
+		thread_name: resolveName(
+			api,
+			room_id,
+			(ent as any).metadata?.thread_id,
+			"channel",
+			(ent as any).metadata?.thread_name,
+		),
+		target: resolveName(
+			api,
+			room_id,
+			(ent as any).metadata?.user_id || (ent as any).metadata?.overwrite_id,
+			(ent as any).metadata?.type === "Role" ? "role" : "user",
+			(ent as any).metadata?.target_name,
+		),
+		bot_name: resolveName(
+			api,
+			room_id,
+			(ent as any).metadata?.bot_id,
+			"user",
+			(ent as any).metadata?.bot_name,
+		),
+		invite_code: (ent as any).metadata?.code ?? "unknown",
+		count: (ent as any).metadata?.message_ids?.length ?? 0,
+	};
+
+	const translated = (t as any)(`audit_log.${ent.type}`, params) as
+		| string
+		| undefined;
+	if (!translated) return `${actor} - ${ent.type}`;
+
+	return interpolate(translated, params);
+}
+
 export function formatChanges(
 	room_id: string,
 	ent: AuditLogEntry | MergedAuditLogEntry,
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
-	// const api = useApi();
+	const api = useApi();
 
 	switch (ent.type) {
 		case "MessageDelete":
 		case "MessageVersionDelete":
 		case "ReactionPurge":
-		case "ThreadOverwriteDelete": {
-			// const thread = api.threads.fetch(() => ent.thread_id);
-			// formatted.push(
-			// 	<li>in {thread()?.name ?? <em>unknown thread</em>}</li>,
-			// );
-			formatted.push(<li>in {ent.metadata.thread_id}</li>);
+		case "PermissionOverwriteDelete": {
+			formatted.push(
+				<li>
+					in{" "}
+					{resolveName(
+						api,
+						room_id,
+						(ent as any).metadata?.channel_id,
+						"channel",
+					)}
+				</li>,
+			);
 			break;
 		}
 		case "MessageDeleteBulk": {
-			formatted.push(<li>in {ent.metadata.thread_id}</li>);
 			formatted.push(
-				<li>{ent.metadata.message_ids.length} messages were deleted</li>,
+				<li>
+					in{" "}
+					{resolveName(
+						api,
+						room_id,
+						(ent as any).metadata?.channel_id,
+						"channel",
+					)}
+				</li>,
+			);
+			formatted.push(
+				<li>{(ent as any).metadata?.message_ids?.length} messages were deleted</li>,
 			);
 			break;
 		}
 		case "InviteDelete": {
 			formatted.push(
 				<li>
-					invite <em class="light">{ent.metadata.code}</em> was deleted
+					invite <em class="light">{(ent as any).metadata?.code}</em> was deleted
 				</li>,
 			);
 			break;
 		}
-		case "ThreadOverwriteSet": {
-			// const entityName = () => {
-			// 	if (ent.ty === "Role") {
-			// 		const role = api.roles.fetch(() => room_id, () => ent.id);
-			// 		return role()?.name ?? "unknown role";
-			// 	} else {
-			// 		const room_member = api.room_members.fetch(
-			// 			() => room_id,
-			// 			() => ent.id,
-			// 		);
-			// 		const user = api.users.fetch(() => ent.id);
-			// 		return room_member()?.override_name ?? user()?.name ?? "unknown user";
-			// 	}
-			// };
-
-			// formatted.push(<li>for {ent.ty} {entityName()}</li>);
+		case "PermissionOverwriteSet": {
 			formatted.push(
-				<li>for {ent.metadata.type} {ent.metadata.overwrite_id}</li>,
+				<li>
+					for {(ent as any).metadata?.type}{" "}
+					{resolveName(
+						api,
+						room_id,
+						(ent as any).metadata?.overwrite_id,
+						(ent as any).metadata?.type === "Role" ? "role" : "user",
+					)}
+				</li>,
 			);
 			break;
 		}
 		case "RoleApply": {
-			// const role = api.roles.fetch(() => room_id, () => ent.role_id);
-			// formatted.push(<li>added role {role()?.name ?? "unknown role"}</li>);
-			formatted.push(<li>added role {ent.metadata.role_id}</li>);
+			formatted.push(
+				<li>
+					added role {resolveName(api, room_id, ent.metadata.role_id, "role")}
+				</li>,
+			);
 			break;
 		}
 		case "RoleUnapply": {
-			// const role = api.roles.fetch(() => room_id, () => ent.role_id);
-			// formatted.push(<li>removed role {role()?.name ?? "unknown role"}</li>);
-			formatted.push(<li>removed role {ent.metadata.role_id}</li>);
+			formatted.push(
+				<li>
+					removed role {resolveName(api, room_id, ent.metadata.role_id, "role")}
+				</li>,
+			);
 			break;
 		}
 		case "BotAdd": {
-			// const bot = api.users.fetch(() => ent.bot_id);
-			// formatted.push(<li>bot {bot()?.name ?? "unknown bot"} was added</li>);
-			formatted.push(<li>bot {ent.metadata.bot_id} was added</li>);
+			formatted.push(
+				<li>
+					bot {resolveName(api, room_id, ent.metadata.bot_id, "user")} was added
+				</li>,
+			);
 			break;
 		}
 		case "MemberKick": {
-			formatted.push(<li>kicked user {ent.metadata.user_id}</li>);
+			formatted.push(
+				<li>
+					kicked user {resolveName(api, room_id, ent.metadata.user_id, "user")}
+				</li>,
+			);
 			break;
 		}
 		case "MemberBan": {
-			formatted.push(<li>banned user {ent.metadata.user_id}</li>);
+			formatted.push(
+				<li>
+					banned user {resolveName(api, room_id, ent.metadata.user_id, "user")}
+				</li>,
+			);
 			break;
 		}
 		case "MemberUnban": {
-			formatted.push(<li>unbanned user {ent.metadata.user_id}</li>);
+			formatted.push(
+				<li>
+					unbanned user {resolveName(api, room_id, ent.metadata.user_id, "user")}
+				</li>,
+			);
 			break;
 		}
 		case "ThreadMemberAdd": {
-			formatted.push(<li>added user {ent.metadata.user_id}</li>);
-			formatted.push(<li>to thread {ent.metadata.thread_id}</li>);
+			formatted.push(
+				<li>
+					added user {resolveName(api, room_id, ent.metadata.user_id, "user")}
+				</li>,
+			);
+			formatted.push(
+				<li>
+					to thread{" "}
+					{resolveName(api, room_id, ent.metadata.thread_id, "channel")}
+				</li>,
+			);
 			break;
 		}
 		case "ThreadMemberRemove": {
-			formatted.push(<li>removed user {ent.metadata.user_id}</li>);
-			formatted.push(<li>to thread {ent.metadata.thread_id}</li>);
+			formatted.push(
+				<li>
+					removed user {resolveName(api, room_id, ent.metadata.user_id, "user")}
+				</li>,
+			);
+			formatted.push(
+				<li>
+					to thread{" "}
+					{resolveName(api, room_id, ent.metadata.thread_id, "channel")}
+				</li>,
+			);
 			break;
 		}
 	}
 
 	const changes = "changes" in ent && ent.changes
 		? ent.changes
-		: "changes" in ent.metadata
-		? ent.metadata.changes as AuditLogChange[]
-		: undefined;
+		: "changes" in (ent as any).metadata
+			? ((ent as any).metadata.changes as AuditLogChange[])
+			: undefined;
 
 	if (changes) {
 		for (const c of changes) {
@@ -202,7 +372,7 @@ export function formatChanges(
 						"unset permission",
 					),
 				);
-			} else if (ent.type === "ThreadOverwriteSet" && c.key === "allow") {
+			} else if (ent.type === "PermissionOverwriteSet" && c.key === "allow") {
 				formatted.push(
 					...renderPermissionDiff(
 						(c.old ?? []) as Array<string>,
@@ -211,7 +381,7 @@ export function formatChanges(
 						"unset permission",
 					),
 				);
-			} else if (ent.type === "ThreadOverwriteSet" && c.key === "deny") {
+			} else if (ent.type === "PermissionOverwriteSet" && c.key === "deny") {
 				formatted.push(
 					...renderPermissionDiff(
 						(c.old ?? []) as Array<string>,
@@ -220,16 +390,16 @@ export function formatChanges(
 						"unset permission",
 					),
 				);
-			} else if (ent.type === "ThreadUpdate" && c.key === "deleted_at") {
+			} else if (ent.type === "ChannelUpdate" && c.key === "deleted_at") {
 				formatted.push(
-					<li>{c.new ? "removed the thread" : "restored the thread"}</li>,
+					<li>{c.new ? "removed the channel" : "restored the channel"}</li>,
 				);
-			} else if (ent.type === "ThreadUpdate" && c.key === "archived_at") {
+			} else if (ent.type === "ChannelUpdate" && c.key === "archived_at") {
 				formatted.push(
-					<li>{c.new ? "archived the thread" : "unarchived the thread"}</li>,
+					<li>{c.new ? "archived the channel" : "unarchived the channel"}</li>,
 				);
 			} else if (
-				(ent.type === "ThreadUpdate" || ent.type === "ThreadCreate") &&
+				(ent.type === "ChannelUpdate" || ent.type === "ChannelCreate") &&
 				c.key === "nsfw"
 			) {
 				formatted.push(
@@ -248,13 +418,17 @@ export function formatChanges(
 					(c.old ?? []) as Array<string>,
 					(c.new ?? []) as Array<string>,
 				);
-				const added = diff.flatMap((i) => i.added ? i.value : []);
-				const removed = diff.flatMap((i) => i.removed ? i.value : []);
+				const added = diff.flatMap((i) => (i.added ? i.value : []));
+				const removed = diff.flatMap((i) => (i.removed ? i.value : []));
 				for (const r of added) {
-					formatted.push(<li>added role {r}</li>);
+					formatted.push(
+						<li>added role {resolveName(api, room_id, r, "role")}</li>,
+					);
 				}
 				for (const r of removed) {
-					formatted.push(<li>removed role {r}</li>);
+					formatted.push(
+						<li>removed role {resolveName(api, room_id, r, "role")}</li>,
+					);
 				}
 			} else if (c.new) {
 				formatted.push(

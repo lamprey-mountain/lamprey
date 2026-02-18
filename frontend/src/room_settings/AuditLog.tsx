@@ -8,6 +8,7 @@ import {
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type Room } from "sdk";
 import {
+	formatAuditLogEntry,
 	formatChanges,
 	mergeAuditLogEntries,
 	type MergedAuditLogEntry,
@@ -24,10 +25,10 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 
 	createEffect(() => {
 		const roomMembers = api.room_members.list(() => props.room.id);
-		if (roomMembers()) {
-			const memberList = roomMembers()!.items;
-			const userList = memberList.map((member: any) => {
-				const user = api.users.fetch(() => member.user_id)();
+		const items = roomMembers()?.items;
+		if (items) {
+			const userList = items.map((member) => {
+				const user = api.users.cache.get(member.user_id);
 				return {
 					item: member.user_id,
 					label: member.override_name || user?.name || member.user_id,
@@ -73,16 +74,12 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 					<For each={mergeAuditLogEntries(log()!.items)}>
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];
-							const member = api.room_members.fetch(() => props.room.id, () =>
-								firstEntry.user_id);
-							const user = api.users.fetch(() =>
-								firstEntry.user_id
-							);
-							const m = member.error ? { membership: null } : member();
-							const name =
-								(m?.membership === "Join" ? m.override_name : null) ||
-								user()?.name;
 							const ts = () => getTimestampFromUUID(firstEntry.id);
+							const entryDescription = () =>
+								formatAuditLogEntry(
+									props.room.id,
+									mergedEntry,
+								);
 
 							return (
 								<li data-id={firstEntry.id}>
@@ -94,8 +91,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 												: collapsed.add(firstEntry.id)}
 									>
 										<div style="display:flex;gap:4px">
-											<h3>{mergedEntry.type}</h3>
-											<span>{name}</span>
+											<h3>{entryDescription()}</h3>
 										</div>
 										<Time date={ts()} />
 									</div>

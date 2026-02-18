@@ -1,6 +1,15 @@
-import type { AuditLogEntry, Pagination } from "sdk";
+import type { AuditLogEntry, Channel, Pagination, RoomMember, User } from "sdk";
 import { createEffect, createResource, type Resource, untrack } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+
+interface AuditLogPaginationResponse {
+	audit_log_entries: AuditLogEntry[];
+	threads: Channel[];
+	users: User[];
+	room_members: RoomMember[];
+	has_more: boolean;
+	cursor?: string;
+}
 
 export class AuditLogs {
 	api: Api = null as unknown as Api;
@@ -25,7 +34,7 @@ export class AuditLogs {
 						},
 					},
 				},
-			);
+			) as { data: AuditLogPaginationResponse; error: any };
 
 			if (error) {
 				// TODO: handle unauthenticated
@@ -33,9 +42,32 @@ export class AuditLogs {
 				throw error;
 			}
 
+			for (const thread of data.threads) {
+				this.api.channels.cache.set(thread.id, thread);
+			}
+			for (const user of data.users) {
+				this.api.users.cache.set(user.id, user);
+			}
+			for (const member of data.room_members) {
+				let cache = this.api.room_members.cache.get(member.room_id);
+				if (!cache) {
+					cache = new ReactiveMap();
+					this.api.room_members.cache.set(member.room_id, cache);
+				}
+				cache.set(member.user_id, member);
+			}
+			for (const webhook of data.webhooks) {
+				this.api.webhooks.cache.set(webhook.id, webhook);
+			}
+
 			return {
-				...data,
-				items: [...pagination?.items ?? [], ...data.items.toReversed()],
+				items: [
+					...pagination?.items ?? [],
+					...data.audit_log_entries.toReversed(),
+				],
+				has_more: data.has_more,
+				cursor: data.cursor,
+				total: 0, // unused
 			};
 		};
 

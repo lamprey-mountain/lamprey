@@ -2,6 +2,7 @@ import { For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type Room, SERVER_ROOM_ID } from "sdk";
 import {
+	formatAuditLogEntry,
 	formatChanges,
 	mergeAuditLogEntries,
 	type MergedAuditLogEntry,
@@ -45,11 +46,13 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 				<ul class="room-settings-audit-log">
 					<For each={mergeAuditLogEntries(log()!.items)}>
 						{(mergedEntry) => {
-							// Use the first entry for user info and timestamp
 							const firstEntry = mergedEntry.entries[0];
-							const user = api.users.fetch(() => firstEntry.user_id);
-							const name = user()?.name;
 							const ts = () => getTimestampFromUUID(firstEntry.id);
+							const entryDescription = () =>
+								formatAuditLogEntry(
+									SERVER_ROOM_ID,
+									mergedEntry,
+								);
 
 							return (
 								<li data-id={firstEntry.id}>
@@ -61,8 +64,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 												: collapsed.add(firstEntry.id)}
 									>
 										<div style="display:flex;gap:4px">
-											<h3>{mergedEntry.type}</h3>
-											<span>{name}</span>
+											<h3>{entryDescription()}</h3>
 										</div>
 										<Time date={ts()} />
 									</div>

@@ -2,6 +2,7 @@ import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type User } from "sdk";
 import {
+	formatAuditLogEntry,
 	formatChanges,
 	mergeAuditLogEntries,
 	type MergedAuditLogEntry,
@@ -33,6 +34,11 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];
 							const ts = () => getTimestampFromUUID(firstEntry.id);
+							const entryDescription = () =>
+								formatAuditLogEntry(
+									props.user.id,
+									mergedEntry,
+								);
 
 							return (
 								<li data-id={firstEntry.id}>
@@ -44,7 +50,7 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 												: collapsed.add(firstEntry.id)}
 									>
 										<div style="display:flex;gap:4px">
-											<h3>{mergedEntry.type}</h3>
+											<h3>{entryDescription()}</h3>
 										</div>
 										<Time date={ts()} />
 									</div>
