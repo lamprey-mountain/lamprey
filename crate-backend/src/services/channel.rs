@@ -133,77 +133,8 @@ impl ServiceThreads {
             .map_err(|err| err.fake_clone())?;
 
         if let Some(user_id) = user_id {
-            let private_data = self
-                .cache_thread_private
-                .try_get_with(
-                    (channel_id, user_id),
-                    self.state.data().channel_get_private(channel_id, user_id),
-                )
-                .await
-                .map_err(|err| err.fake_clone())?;
-
-            let state = self.state.clone();
-            let thread_ty = thread.ty;
-            let recipients = self
-                .cache_thread_recipients
-                .try_get_with(channel_id, async move {
-                    if !matches!(thread_ty, ChannelType::Dm | ChannelType::Gdm) {
-                        return Ok(vec![]);
-                    }
-
-                    let members = state
-                        .data()
-                        .thread_member_list(
-                            channel_id,
-                            PaginationQuery {
-                                from: None,
-                                to: None,
-                                dir: None,
-                                limit: Some(1024),
-                            },
-                        )
-                        .await?;
-                    let srv = state.services();
-                    let mut futures = FuturesOrdered::new();
-                    for member in members.items {
-                        futures.push_back(srv.users.get(member.user_id, Some(user_id)));
-                    }
-                    let mut users = vec![];
-                    while let Some(user) = futures.next().await {
-                        users.push(user?);
-                    }
-                    Result::Ok(users)
-                })
-                .await
-                .map_err(|err| err.fake_clone())?;
-            let recipients: Vec<_> = recipients.into_iter().filter(|u| u.id != user_id).collect();
-
-            let user_config = self
-                .state
-                .data()
-                .user_config_channel_get(user_id, channel_id)
+            self.populate_private(std::slice::from_mut(&mut thread), user_id)
                 .await?;
-
-            let thread_member = if thread.ty.is_thread() {
-                self.state
-                    .data()
-                    .thread_member_get(channel_id, user_id)
-                    .await
-                    .ok()
-                    .map(Box::new)
-            } else {
-                None
-            };
-
-            thread = Channel {
-                recipients,
-                is_unread: Some(private_data.is_unread),
-                last_read_id: private_data.last_read_id.map(Into::into),
-                mention_count: Some(private_data.mention_count as u64),
-                user_config: Some(user_config),
-                thread_member,
-                ..thread
-            }
         }
 
         let members = self.state.data().thread_member_list_all(channel_id).await?;
@@ -250,66 +181,7 @@ impl ServiceThreads {
         let mut channels = out;
 
         if let Some(user_id) = user_id {
-            for channel in &mut channels {
-                let channel_id = channel.id;
-                let private_data = self
-                    .cache_thread_private
-                    .try_get_with(
-                        (channel.id, user_id),
-                        self.state.data().channel_get_private(channel_id, user_id),
-                    )
-                    .await
-                    .map_err(|err| err.fake_clone())?;
-
-                let state = self.state.clone();
-                let thread_ty = channel.ty;
-                let recipients = self
-                    .cache_thread_recipients
-                    .try_get_with(channel_id, async move {
-                        if !matches!(thread_ty, ChannelType::Dm | ChannelType::Gdm) {
-                            return Ok(vec![]);
-                        }
-
-                        let members = state
-                            .data()
-                            .thread_member_list(
-                                channel_id,
-                                PaginationQuery {
-                                    from: None,
-                                    to: None,
-                                    dir: None,
-                                    limit: Some(1024),
-                                },
-                            )
-                            .await?;
-                        let srv = state.services();
-                        let mut futures = FuturesOrdered::new();
-                        for member in members.items {
-                            futures.push_back(srv.users.get(member.user_id, Some(user_id)));
-                        }
-                        let mut users = vec![];
-                        while let Some(user) = futures.next().await {
-                            users.push(user?);
-                        }
-                        Result::Ok(users)
-                    })
-                    .await
-                    .map_err(|err| err.fake_clone())?;
-                let recipients: Vec<_> =
-                    recipients.into_iter().filter(|u| u.id != user_id).collect();
-
-                let user_config = self
-                    .state
-                    .data()
-                    .user_config_channel_get(user_id, channel_id)
-                    .await?;
-
-                channel.recipients = recipients;
-                channel.is_unread = Some(private_data.is_unread);
-                channel.last_read_id = private_data.last_read_id.map(Into::into);
-                channel.mention_count = Some(private_data.mention_count as u64);
-                channel.user_config = Some(user_config);
-            }
+            self.populate_private(&mut channels, user_id).await?;
         }
 
         for channel in &mut channels {
