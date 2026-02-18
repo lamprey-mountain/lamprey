@@ -80,8 +80,6 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			currentUserId()!,
 		);
 
-		console.log(permissions);
-
 		return permissions.has("ViewChannel");
 	};
 
