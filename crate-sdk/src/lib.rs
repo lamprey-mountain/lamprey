@@ -6,6 +6,7 @@ mod consts;
 mod handler;
 mod http;
 mod syncer;
+mod messages;
 
 pub use handler::EventHandler;
 pub use http::Http;
