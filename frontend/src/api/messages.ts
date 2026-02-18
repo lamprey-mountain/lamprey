@@ -138,6 +138,32 @@ export class MessageRanges {
 		return null;
 	}
 
+	findNearest(message_id: string): MessageRange | null {
+		const r = this.find(message_id);
+		if (r) return r;
+
+		let best: MessageRange | null = null;
+		for (const range of this.ranges) {
+			if (range.isEmpty()) continue;
+			if (range.start > message_id) {
+				if (!best || range.start < best.start) {
+					best = range;
+				}
+			}
+		}
+
+		if (!best) {
+			for (const range of this.ranges) {
+				if (range.isEmpty()) continue;
+				if (!best || range.end > best.end) {
+					best = range;
+				}
+			}
+		}
+
+		return best;
+	}
+
 	merge(a: MessageRange, b: MessageRange) {
 		// TODO: profile performance
 		const c = new MessageRange(
@@ -249,18 +275,48 @@ export class Messages {
 										limit: 100,
 										from: r.end,
 									});
-									this.mergeAfter(ranges, r, data);
+									const nr = this.mergeAfter(ranges, r, data);
+									nr.has_forward = data.has_more;
 								}
 							} else {
 								throw new Error("unreachable");
 							}
 						} else {
 							console.log("messages fetch initial for forwards");
-							throw new Error("todo");
+							const data = await this.fetchList(thread_id, {
+								dir: "f",
+								limit: 100,
+								from: dir.message_id,
+							});
+							batch(() => {
+								const range = this.mergeAfter(
+									ranges!,
+									new MessageRange(false, true, []),
+									data,
+								);
+								range.has_forward = data.has_more;
+								ranges!.ranges.add(range);
+							});
 						}
 					} else {
 						console.log("messages fetch start for forwards");
-						throw new Error("todo");
+						// find a range that starts at the beginning
+						let r = Array.from(ranges.ranges).find((r) => !r.has_backwards);
+						if (!r) {
+							const data = await this.fetchList(thread_id, {
+								dir: "f",
+								limit: 100,
+							});
+							batch(() => {
+								const range = this.mergeAfter(
+									ranges!,
+									new MessageRange(false, false, []),
+									data,
+								);
+								range.has_forward = data.has_more;
+								ranges!.ranges.add(range);
+							});
+						}
 					}
 				} else if (dir.type === "backwards") {
 					if (dir.message_id) {
@@ -270,21 +326,36 @@ export class Messages {
 							if (idx !== -1) {
 								if (idx >= dir.limit) {
 									console.log("messages reuse range for backwards");
+								} else if (r.has_backwards) {
+									// fetch more
+									const data = await this.fetchList(thread_id, {
+										dir: "b",
+										limit: 100,
+										from: r.start,
+									});
+									const nr = this.mergeBefore(ranges, r, data);
+									nr.has_backwards = data.has_more;
 								}
-
-								// fetch more
-								const data = await this.fetchList(thread_id, {
-									dir: "b",
-									limit: 100,
-									from: r.start,
-								});
-								this.mergeBefore(ranges, r, data);
 							} else {
 								throw new Error("unreachable");
 							}
 						} else {
 							// new range
-							throw new Error("todo");
+							console.log("messages fetch initial for backwards");
+							const data = await this.fetchList(thread_id, {
+								dir: "b",
+								limit: 100,
+								from: dir.message_id,
+							});
+							batch(() => {
+								const range = this.mergeBefore(
+									ranges!,
+									new MessageRange(true, false, []),
+									data,
+								);
+								range.has_backwards = data.has_more;
+								ranges!.ranges.add(range);
+							});
 						}
 					}
 
@@ -294,7 +365,8 @@ export class Messages {
 							dir: "b",
 							limit: 100,
 						});
-						this.mergeBefore(ranges, range, data);
+						const nr = this.mergeBefore(ranges, range, data);
+						nr.has_backwards = data.has_more;
 					} else {
 						// don't need to do anything
 					}
@@ -337,8 +409,25 @@ export class Messages {
 								});
 							}
 						} else {
-							// fetch thread
-							throw new Error("todo");
+							// fetch thread (or hole)
+							console.log("messages fetch context (hole)");
+							const data = await this.fetchContext(
+								thread_id,
+								dir.message_id,
+								dir.limit,
+							);
+							batch(() => {
+								const range = this.mergeAfter(
+									ranges!,
+									new MessageRange(false, false, []),
+									{
+										items: data.items,
+									},
+								);
+								range.has_backwards = data.has_before;
+								range.has_forward = data.has_after;
+								ranges!.ranges.add(range);
+							});
 						}
 					} else {
 						// new range
@@ -351,18 +440,16 @@ export class Messages {
 						console.log("messages done fetching context");
 						batch(() => {
 							const range = this.mergeAfter(
-								ranges,
+								ranges!,
 								new MessageRange(false, false, []),
 								{
 									items: data.items,
-									has_more: data.has_before,
-									total: data.total,
 								},
 							);
 							// TODO: unify these names
 							range.has_backwards = data.has_before;
 							range.has_forward = data.has_after;
-							ranges.ranges.add(range);
+							ranges!.ranges.add(range);
 						});
 					}
 				}
@@ -380,7 +467,11 @@ export class Messages {
 						assertEq(s.start, dir.message_id);
 						return s;
 					} else {
-						throw new Error("todo");
+						let r = Array.from(ranges.ranges).find((r) => !r.has_backwards);
+						if (!r) throw new Error("failed to fetch messages");
+						const start = 0;
+						const end = Math.min(dir.limit, r.len);
+						return r.slice(start, end);
 					}
 				} else if (dir.type === "backwards") {
 					if (dir.message_id) {
@@ -400,11 +491,16 @@ export class Messages {
 						return r.slice(start, end);
 					}
 				} else if (dir.type === "context") {
-					const r = ranges.find(dir.message_id);
+					// fall back to nearest/next message if it doesnt exist
+					const r = ranges.findNearest(dir.message_id);
 					if (!r) throw new Error("failed to fetch messages");
 
-					const idx = r.items.findIndex((i) => i.id === dir.message_id);
+					let idx = r.items.findIndex((i) => i.id === dir.message_id);
+					if (idx === -1) {
+						idx = r.items.findIndex((i) => i.id > dir.message_id);
+					}
 					if (idx === -1) throw new Error("failed to fetch messages");
+
 					const end = Math.min(idx + dir.limit, r.len);
 					const start = Math.max(idx - dir.limit, 0);
 					const s = r.slice(start, end);
@@ -548,7 +644,6 @@ export class Messages {
 		);
 		return {
 			items: maybeConvertMessages(data.items),
-			has_more: data.has_more,
 			total: data.total,
 			has_after: data.has_after,
 			has_before: data.has_before,
@@ -806,7 +901,7 @@ export class Messages {
 	private mergeAfter(
 		ranges: MessageRanges,
 		range: MessageRange,
-		data: PaginationResponseMessage,
+		data: { items: any[]; has_more?: boolean },
 	): MessageRange {
 		let items: Array<Message> = [];
 		for (const item of data.items) {
@@ -825,7 +920,9 @@ export class Messages {
 			}
 		}
 		range.items.push(...items);
-		range.has_forward &&= data.has_more;
+		// NOTE: Timsort (used by V8) is O(N) for nearly sorted arrays, so this is fine.
+		// If performance becomes an issue, we could use a binary-search insertion or merge.
+		range.items.sort((a, b) => a.id > b.id ? 1 : -1);
 		return range;
 	}
 
@@ -833,7 +930,7 @@ export class Messages {
 	private mergeBefore(
 		ranges: MessageRanges,
 		range: MessageRange,
-		data: PaginationResponseMessage,
+		data: { items: any[]; has_more?: boolean },
 	): MessageRange {
 		let items: Array<Message> = [];
 		for (const item of data.items) {
@@ -852,7 +949,7 @@ export class Messages {
 			}
 		}
 		range.items.unshift(...items);
-		range.has_backwards &&= data.has_more;
+		range.items.sort((a, b) => a.id > b.id ? 1 : -1);
 		return range;
 	}
 }
