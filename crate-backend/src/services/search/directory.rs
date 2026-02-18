@@ -15,7 +15,6 @@ use tantivy::{
     Directory, HasLen,
 };
 use tokio::runtime::Handle as TokioHandle;
-use tokio::sync::{mpsc, oneshot};
 use tracing::debug;
 
 use crate::ServerStateInner;
@@ -37,9 +36,6 @@ pub struct ObjectDirectory {
 
     /// cache of object metadata
     cache_metadata: Arc<DashMap<PathBuf, ObjectMetadata>>,
-
-    /// active uploads
-    active_uploads: Arc<DashMap<PathBuf, mpsc::UnboundedSender<WriteOp>>>,
 }
 
 /// metadata for a file
@@ -47,12 +43,6 @@ pub struct ObjectDirectory {
 struct ObjectMetadata {
     /// the length of the file
     len: usize,
-}
-
-/// operation to perform on a file in the background
-enum WriteOp {
-    Write(Vec<u8>),
-    Sync(oneshot::Sender<()>),
 }
 
 /// a file on object storage
@@ -68,9 +58,13 @@ struct ObjectFile {
 /// a handle to write to a file on object storage and local cache
 struct ObjectFileWrite {
     file: std::fs::File,
+    writer: opendal::Writer,
     rt: TokioHandle,
-    tx: Option<mpsc::UnboundedSender<WriteOp>>,
-    handle: Option<tokio::task::JoinHandle<IoResult<()>>>,
+    path: PathBuf,
+    cache_file_path: PathBuf,
+    temp_path: PathBuf,
+    cache_metadata: Arc<DashMap<PathBuf, ObjectMetadata>>,
+    total_len: usize,
 }
 
 impl ObjectDirectory {
@@ -82,7 +76,6 @@ impl ObjectDirectory {
             base_path,
             cache_path,
             cache_metadata: Arc::new(DashMap::new()),
-            active_uploads: Arc::new(DashMap::new()),
         }
     }
 
@@ -202,55 +195,22 @@ impl Directory for ObjectDirectory {
                 filepath: path.to_path_buf(),
             })?;
         }
-        let file =
-            std::fs::File::create(&cache_file_path).map_err(|err| OpenWriteError::IoError {
-                io_error: Arc::new(err),
-                filepath: path.to_path_buf(),
-            })?;
 
-        let (tx, mut rx) = mpsc::unbounded_channel();
-        let mut writer = writer;
-        let path_buf = path.to_path_buf();
-        let cache_metadata = self.cache_metadata.clone();
-        let active_uploads = self.active_uploads.clone();
-
-        let handle = self.rt.spawn(async move {
-            let mut total_len = 0;
-            while let Some(op) = rx.recv().await {
-                match op {
-                    WriteOp::Write(buf) => {
-                        total_len += buf.len();
-                        writer
-                            .write(buf)
-                            .await
-                            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
-                    }
-                    WriteOp::Sync(tx) => {
-                        let _ = tx.send(());
-                    }
-                }
-            }
-            writer
-                .close()
-                .await
-                .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
-
-            // update metadata
-            cache_metadata.insert(path_buf.clone(), ObjectMetadata { len: total_len });
-
-            // remove from active uploads
-            active_uploads.remove(&path_buf);
-
-            Ok(())
-        });
-
-        self.active_uploads.insert(path.to_path_buf(), tx.clone());
+        let temp_path = cache_file_path.with_extension("tmp");
+        let file = std::fs::File::create(&temp_path).map_err(|err| OpenWriteError::IoError {
+            io_error: Arc::new(err),
+            filepath: path.to_path_buf(),
+        })?;
 
         Ok(BufWriter::new(Box::new(ObjectFileWrite {
             file,
+            writer,
             rt: self.rt.clone(),
-            tx: Some(tx),
-            handle: Some(handle),
+            path: path.to_path_buf(),
+            cache_file_path,
+            temp_path,
+            cache_metadata: self.cache_metadata.clone(),
+            total_len: 0,
         })))
     }
 
@@ -280,13 +240,19 @@ impl Directory for ObjectDirectory {
     }
 
     fn atomic_write(&self, path: &Path, data: &[u8]) -> IoResult<()> {
-        // write locally
-        std::fs::write(self.cache_path.join(path), data)?;
+        let cache_file_path = self.cache_path.join(path);
+        let temp_path = cache_file_path.with_extension("tmp");
+
+        // write to temp file
+        std::fs::write(&temp_path, data)?;
 
         // write remotely
         self.rt
             .block_on(self.blobs.write(&self.path_str(path), data.to_vec()))
             .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+
+        // rename temp file to cache file
+        std::fs::rename(&temp_path, &cache_file_path)?;
 
         self.cache_metadata
             .insert(path.to_path_buf(), ObjectMetadata { len: data.len() });
@@ -295,18 +261,6 @@ impl Directory for ObjectDirectory {
     }
 
     fn sync_directory(&self) -> IoResult<()> {
-        let mut sync_receivers = Vec::new();
-        for entry in self.active_uploads.iter() {
-            let (tx, rx) = oneshot::channel();
-            if entry.value().send(WriteOp::Sync(tx)).is_ok() {
-                sync_receivers.push(rx);
-            }
-        }
-
-        for rx in sync_receivers {
-            let _ = self.rt.block_on(rx);
-        }
-
         Ok(())
     }
 
@@ -378,21 +332,15 @@ impl HasLen for ObjectFile {
 impl Write for ObjectFileWrite {
     fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
         self.file.write_all(buf)?;
-        if let Some(tx) = &self.tx {
-            tx.send(WriteOp::Write(buf.to_vec()))
-                .map_err(|_| IoError::new(std::io::ErrorKind::Other, "background task died"))?;
-        }
+        self.rt
+            .block_on(self.writer.write(buf.to_vec()))
+            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+        self.total_len += buf.len();
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> IoResult<()> {
         self.file.flush()?;
-        if let Some(tx) = &self.tx {
-            let (sync_tx, sync_rx) = oneshot::channel();
-            tx.send(WriteOp::Sync(sync_tx))
-                .map_err(|_| IoError::new(std::io::ErrorKind::Other, "background task died"))?;
-            let _ = self.rt.block_on(sync_rx);
-        }
         Ok(())
     }
 }
@@ -400,12 +348,19 @@ impl Write for ObjectFileWrite {
 impl TerminatingWrite for ObjectFileWrite {
     fn terminate_ref(&mut self, _: tantivy::directory::AntiCallToken) -> std::io::Result<()> {
         self.file.flush()?;
-        drop(self.tx.take());
-        if let Some(handle) = self.handle.take() {
-            self.rt
-                .block_on(handle)
-                .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))??;
-        }
+        self.rt
+            .block_on(self.writer.close())
+            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+
+        // rename temp file to cache file
+        std::fs::rename(&self.temp_path, &self.cache_file_path)?;
+
+        self.cache_metadata.insert(
+            self.path.clone(),
+            ObjectMetadata {
+                len: self.total_len,
+            },
+        );
         Ok(())
     }
 }
