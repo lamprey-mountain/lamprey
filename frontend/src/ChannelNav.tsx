@@ -15,6 +15,10 @@ import { flags } from "./flags";
 import { useCtx } from "./context";
 import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
 import { useVoice } from "./voice-provider";
+import {
+	calculatePermissions,
+	type PermissionContext,
+} from "./permission-calculator";
 import icHome from "./assets/home.png";
 import icInbox from "./assets/inbox.png";
 import icSettings from "./assets/settings.png";
@@ -28,6 +32,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const ctx = useCtx();
 	const params = useParams();
 	const nav = useNavigate();
+
+	const currentUserId = () => api.users.cache.get("@self")?.id;
 
 	// track drag ids
 	const [dragging, setDragging] = createSignal<
@@ -58,6 +64,27 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		? api.rooms.fetch(() => props.room_id!)
 		: () => null;
 
+	const canViewChannel = (channel: Channel): boolean => {
+		if (!props.room_id || !currentUserId()) {
+			return true;
+		}
+
+		const permissionContext: PermissionContext = {
+			api,
+			room_id: props.room_id,
+			channel_id: channel.id,
+		};
+
+		const { permissions } = calculatePermissions(
+			permissionContext,
+			currentUserId()!,
+		);
+
+		console.log(permissions);
+
+		return permissions.has("ViewChannel");
+	};
+
 	// update list when room changes
 	createEffect(() => {
 		const allChannels = [...api.channels.cache.values()].filter(
@@ -73,7 +100,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					(c.type === "Document" &&
 						c.parent_id &&
 						api.channels.cache.get(c.parent_id)?.type === "Wiki")) &&
-				!c.archived_at,
+				!c.archived_at &&
+				canViewChannel(c),
 		);
 		const channels = allChannels.filter(
 			(c) =>
@@ -83,7 +111,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					c.type === "Document" &&
 					c.parent_id &&
 					api.channels.cache.get(c.parent_id)?.type === "Wiki"
-				),
+				) &&
+				canViewChannel(c),
 		);
 
 		if (props.room_id) {
@@ -131,8 +160,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		>();
 		for (const c of channelMap.values()) {
 			if (c.type === "Category") {
-				const cat = categories.get(c.id) ?? [];
-				categories.set(c.id, cat);
+				if (canViewChannel(c)) {
+					const cat = categories.get(c.id) ?? [];
+					categories.set(c.id, cat);
+				}
 			} else {
 				const children = categories.get(c.parent_id!) ?? [];
 				children.push(c);
@@ -144,6 +175,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				category: cid ? api.channels.cache.get(cid)! : null,
 				channels: cs,
 			}))
+			.filter(({ channels }) => {
+				// categories and should still be shown if they have visible channels
+				return channels.length > 0;
+			})
 			.sort((a, b) => {
 				// null category comes first
 				if (!a.category) return -1;

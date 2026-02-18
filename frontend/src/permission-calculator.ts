@@ -1,6 +1,12 @@
 import type { Api } from "./api";
-
-export type Permission = string;
+import type {
+	Channel,
+	Permission,
+	PermissionOverwriteType,
+	Role,
+	Room,
+	RoomMember,
+} from "sdk";
 
 export interface PermissionContext {
 	api: Api;
@@ -46,7 +52,9 @@ export function calculatePermissions(
 
 	const room = ctx.api.rooms.fetch(() => ctx.room_id!)();
 	if (room?.owner_id === user_id) {
-		return { permissions: new Set(["Admin"]), rank: Infinity };
+		// owners have full permissions (ViewChannel and Admin)
+		const ownerPerms = new Set<Permission>(["ViewChannel", "Admin"]);
+		return { permissions: ownerPerms, rank: Infinity };
 	}
 
 	const member = ctx.api.room_members.fetch(
@@ -55,75 +63,185 @@ export function calculatePermissions(
 	)();
 	const rolesResource = ctx.api.roles.list(() => ctx.room_id!);
 
-	if (!room || !member || !rolesResource || member.membership !== "Join") {
+	// handle non-members
+	if (!room || !member || !rolesResource) {
+		if (room?.public) {
+			const everyoneRole = rolesResource()?.items.find((r) =>
+				r.id === ctx.room_id
+			);
+			if (everyoneRole) {
+				const perms = new Set<Permission>();
+				for (const p of everyoneRole.allow) {
+					perms.add(p);
+				}
+				for (const p of everyoneRole.deny) {
+					perms.delete(p);
+				}
+				return { permissions: perms, rank: 0 };
+			}
+		}
 		return { permissions: new Set(), rank: 0 };
 	}
 
 	const roles = rolesResource()?.items;
 	if (!roles) return { permissions: new Set(), rank: 0 };
 
-	const finalPermissions = new Set<Permission>();
-	const everyoneRole = roles.find((r) => r.id === ctx.room_id);
-	const memberRoles = roles.filter((role) => member.roles.includes(role.id));
-	if (everyoneRole) {
-		memberRoles.push(everyoneRole);
+	const allowed: Permission[] = [];
+	const denied: Permission[] = [];
+
+	const everyoneRoleId = ctx.room_id;
+
+	for (const role of roles) {
+		if (role.id === everyoneRoleId || member.roles.includes(role.id)) {
+			allowed.push(...role.allow);
+			denied.push(...role.deny);
+		}
 	}
 
-	for (const role of memberRoles) {
-		for (const p of role.allow) {
-			finalPermissions.add(p);
-		}
+	const perms = new Set<Permission>();
 
-		for (const p of role.deny) {
-			finalPermissions.delete(p);
+	for (const p of allowed) {
+		perms.add(p);
+	}
+
+	if (perms.has("Admin")) {
+		return { permissions: perms, rank: calculateRank(roles, member.roles) };
+	}
+
+	for (const p of denied) {
+		perms.delete(p);
+	}
+
+	if (member.timeout_until) {
+		const timeoutUntil = new Date(member.timeout_until).getTime();
+		const now = Date.now();
+		if (timeoutUntil > now) {
+			// TODO: handle timed out permissions
 		}
+	}
+
+	if (member.quarantined) {
+		// TODO: handle quarantined permissions
 	}
 
 	if (ctx.channel_id) {
-		const channel = ctx.api.channels.fetch(() => ctx.channel_id)();
-		if (channel) {
-			const memberRoleIds = new Set(member.roles);
-			if (everyoneRole) memberRoleIds.add(everyoneRole.id);
+		applyChannelPermissions(perms, ctx, member);
+	}
 
-			const applyOverwrites = (overwrites: any[] | undefined) => {
-				if (!overwrites) return;
+	const rank = calculateRank(roles, member.roles);
 
-				const roleOverwrites = overwrites.filter((o: any) =>
-					o.type === "Role" && memberRoleIds.has(o.id)
-				);
+	return { permissions: perms, rank };
+}
 
-				for (const ow of roleOverwrites) {
-					for (const p of ow.allow) finalPermissions.add(p);
-				}
-				for (const ow of roleOverwrites) {
-					for (const p of ow.deny) finalPermissions.delete(p);
-				}
+/**
+ * Calculate the rank (highest role position) for a member
+ */
+function calculateRank(roles: Role[], memberRoleIds: string[]): number {
+	let rank = 0;
+	for (const roleId of memberRoleIds) {
+		const role = roles.find((r) => r.id === roleId);
+		if (role) {
+			rank = Math.max(rank, role.position ?? 0);
+		}
+	}
+	return rank;
+}
 
-				const userOverwrite = overwrites.find((o: any) =>
-					o.type === "User" && o.id === user_id
-				);
-				if (userOverwrite) {
-					for (const p of userOverwrite.allow) finalPermissions.add(p);
-					for (const p of userOverwrite.deny) finalPermissions.delete(p);
-				}
-			};
+/**
+ * Apply channel-specific permission overwrites
+ */
+function applyChannelPermissions(
+	perms: Set<Permission>,
+	ctx: PermissionContext,
+	member: RoomMember,
+) {
+	const channel = ctx.api.channels.fetch(() => ctx.channel_id!)();
+	if (!channel) return;
 
-			if (channel.parent_id) {
-				const parentChannel = ctx.api.channels.fetch(() => channel.parent_id)();
-				applyOverwrites(parentChannel?.permission_overwrites);
-			}
-
-			applyOverwrites(channel.permission_overwrites);
+	if (channel.parent_id) {
+		const parentChannel = ctx.api.channels.fetch(() => channel.parent_id!)();
+		if (parentChannel) {
+			applyChannelOverwrites(perms, parentChannel, member, ctx.room_id!);
 		}
 	}
 
-	const rank = roles.reduce(
-		(max, role) =>
-			member.roles.includes(role.id) ? Math.max(role.position, max) : max,
-		0,
-	);
+	applyChannelOverwrites(perms, channel, member, ctx.room_id!);
+}
 
-	return { permissions: finalPermissions, rank };
+/**
+ * Apply permission overwrites for a single channel
+ * Order: everyone allow, everyone deny, role allow, role deny, user allow, user deny
+ */
+function applyChannelOverwrites(
+	perms: Set<Permission>,
+	channel: Channel,
+	member: RoomMember,
+	room_id: string,
+) {
+	if (typeof channel.locked === "boolean" && channel.locked) {
+		perms.add("ChannelLocked" as Permission);
+		// TODO: handle locked until, allow_rules
+	}
+
+	if (
+		!channel.permission_overwrites || channel.permission_overwrites.length === 0
+	) {
+		return;
+	}
+
+	const memberRoleIds = new Set(member.roles);
+
+	// 1. Apply everyone allows
+	for (const ow of channel.permission_overwrites) {
+		if (ow.id !== room_id || ow.type !== "Role") continue;
+		for (const p of ow.allow) {
+			perms.add(p);
+		}
+	}
+
+	// 2. Apply everyone denies
+	for (const ow of channel.permission_overwrites) {
+		if (ow.id !== room_id || ow.type !== "Role") continue;
+		for (const p of ow.deny) {
+			perms.delete(p);
+		}
+	}
+
+	// 3. Apply role allows
+	for (const ow of channel.permission_overwrites) {
+		if (ow.type !== "Role") continue;
+		if (!memberRoleIds.has(ow.id)) continue;
+		for (const p of ow.allow) {
+			perms.add(p);
+		}
+	}
+
+	// 4. Apply role denies
+	for (const ow of channel.permission_overwrites) {
+		if (ow.type !== "Role") continue;
+		if (!memberRoleIds.has(ow.id)) continue;
+		for (const p of ow.deny) {
+			perms.delete(p);
+		}
+	}
+
+	// 5. Apply user allows
+	for (const ow of channel.permission_overwrites) {
+		if (ow.type !== "User") continue;
+		if (ow.id !== member.user_id) continue;
+		for (const p of ow.allow) {
+			perms.add(p);
+		}
+	}
+
+	// 6. Apply user denies
+	for (const ow of channel.permission_overwrites) {
+		if (ow.type !== "User") continue;
+		if (ow.id !== member.user_id) continue;
+		for (const p of ow.deny) {
+			perms.delete(p);
+		}
+	}
 }
 
 export function hasPermission(
@@ -201,7 +319,7 @@ export function canUseCommand(
 			return checker.has("ThreadLock");
 		case "name-room":
 		case "desc-room":
-			return checker.has("RoomEdit");
+			return checker.has("RoomManage");
 		case "nick":
 			return checker.has("MemberNickname");
 		case "slowmode":
