@@ -3,10 +3,85 @@ import { ChangeObject, diffArrays } from "diff";
 import { JSX, untrack } from "solid-js";
 import { useApi } from "./api";
 
+const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+export interface MergedAuditLogEntry {
+	entries: AuditLogEntry[];
+	user_id: string;
+	type: string;
+	reason?: string | null;
+	metadata: any;
+	changes?: AuditLogChange[];
+}
+
+/**
+ * Merge audit log entries that are:
+ * - Done by the same user
+ * - Are of the same type (only *Update events)
+ * - Are within 5 minutes of each other
+ */
+export function mergeAuditLogEntries(
+	entries: AuditLogEntry[],
+): MergedAuditLogEntry[] {
+	if (entries.length === 0) return [];
+
+	const merged: MergedAuditLogEntry[] = [];
+
+	for (const entry of entries) {
+		const lastMerged = merged[merged.length - 1];
+
+		const canMerge = entry.type.endsWith("Update");
+
+		if (
+			canMerge &&
+			lastMerged &&
+			lastMerged.user_id === entry.user_id &&
+			lastMerged.type === entry.type
+		) {
+			const lastEntry = lastMerged.entries[lastMerged.entries.length - 1];
+			const lastTs = getTimestampFromUUID(lastEntry.id).getTime();
+			const currentTs = getTimestampFromUUID(entry.id).getTime();
+
+			if (currentTs - lastTs <= MERGE_WINDOW_MS) {
+				lastMerged.entries.push(entry);
+
+				if ("changes" in entry.metadata && entry.metadata.changes) {
+					if (!lastMerged.changes) {
+						lastMerged.changes = [];
+					}
+					lastMerged.changes.push(...entry.metadata.changes);
+				}
+
+				if (entry.reason) {
+					// NOTE: should i somehow combine reasons too?
+					lastMerged.reason = entry.reason;
+				}
+
+				continue;
+			}
+		}
+
+		merged.push({
+			entries: [entry],
+			user_id: entry.user_id,
+			type: entry.type,
+			reason: entry.reason,
+			metadata: entry.metadata,
+			changes: "changes" in entry.metadata ? entry.metadata.changes : undefined,
+		});
+	}
+
+	return merged;
+}
+
+function getTimestampFromUUID(uuid: string): Date {
+	return new Date(parseInt(uuid.substring(0, 8), 16) * 1000);
+}
+
 // TODO: resolve names, ideally without reactivity infinite loops
 export function formatChanges(
 	room_id: string,
-	ent: AuditLogEntry,
+	ent: AuditLogEntry | MergedAuditLogEntry,
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
 	// const api = useApi();
@@ -101,8 +176,13 @@ export function formatChanges(
 		}
 	}
 
-	if ("changes" in ent.metadata) {
-		const changes = (ent as any).metadata.changes as AuditLogChange[];
+	const changes = "changes" in ent && ent.changes
+		? ent.changes
+		: "changes" in ent.metadata
+		? ent.metadata.changes as AuditLogChange[]
+		: undefined;
+
+	if (changes) {
 		for (const c of changes) {
 			if (ent.type === "RoleUpdate" && c.key === "allow") {
 				formatted.push(

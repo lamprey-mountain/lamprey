@@ -7,7 +7,11 @@ import {
 } from "solid-js";
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type Room } from "sdk";
-import { formatChanges } from "../audit-log-util.tsx";
+import {
+	formatChanges,
+	mergeAuditLogEntries,
+	type MergedAuditLogEntry,
+} from "../audit-log-util.tsx";
 import { Time } from "../Time.tsx";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Dropdown } from "../Dropdown.tsx";
@@ -66,42 +70,45 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 			</div>
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
-					<For each={log()!.items}>
-						{(entry) => {
+					<For each={mergeAuditLogEntries(log()!.items)}>
+						{(mergedEntry) => {
+							const firstEntry = mergedEntry.entries[0];
 							const member = api.room_members.fetch(() => props.room.id, () =>
-								entry.user_id);
+								firstEntry.user_id);
 							const user = api.users.fetch(() =>
-								entry.user_id
+								firstEntry.user_id
 							);
 							const m = member.error ? { membership: null } : member();
 							const name =
 								(m?.membership === "Join" ? m.override_name : null) ||
 								user()?.name;
-							const ts = () => getTimestampFromUUID(entry.id);
+							const ts = () => getTimestampFromUUID(firstEntry.id);
+
 							return (
-								<li data-id={entry.id}>
+								<li data-id={firstEntry.id}>
 									<div
 										class="info"
 										onClick={() =>
-											collapsed.has(entry.id)
-												? collapsed.delete(entry.id)
-												: collapsed.add(entry.id)}
+											collapsed.has(firstEntry.id)
+												? collapsed.delete(firstEntry.id)
+												: collapsed.add(firstEntry.id)}
 									>
 										<div style="display:flex;gap:4px">
-											<h3>{entry.type}</h3>
+											<h3>{mergedEntry.type}</h3>
 											<span>{name}</span>
 										</div>
 										<Time date={ts()} />
 									</div>
 									<Show
-										when={(formatChanges(props.room.id, entry).length !== 0 ||
-											entry.reason) && !collapsed.has(entry.id)}
+										when={(formatChanges(props.room.id, mergedEntry).length !==
+												0 ||
+											mergedEntry.reason) && !collapsed.has(firstEntry.id)}
 									>
 										<ul class="metadata">
-											<Show when={entry.reason}>
-												<li>reason: {entry.reason}</li>
+											<Show when={mergedEntry.reason}>
+												<li>reason: {mergedEntry.reason}</li>
 											</Show>
-											{formatChanges(props.room.id, entry)}
+											{formatChanges(props.room.id, mergedEntry)}
 										</ul>
 									</Show>
 								</li>
