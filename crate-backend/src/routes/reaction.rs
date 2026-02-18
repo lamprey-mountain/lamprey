@@ -145,7 +145,7 @@ async fn reaction_add(
         ("reaction_key", description = "Reaction key"),
         ("user_id", description = "User id"),
     ),
-    tags = ["reaction", "badge.perm.ReactionPurge"],
+    tags = ["reaction", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteUser"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -236,7 +236,7 @@ async fn reaction_remove(
         ("message_id", description = "Message id"),
         ("reaction_key", description = "Reaction key"),
     ),
-    tags = ["reaction", "badge.perm.ReactionPurge"],
+    tags = ["reaction", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteKey"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -307,7 +307,7 @@ async fn reaction_remove_key(
         ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
     ),
-    tags = ["reaction", "badge.perm.ReactionPurge"],
+    tags = ["reaction", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteAll"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

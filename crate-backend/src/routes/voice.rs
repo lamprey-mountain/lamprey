@@ -63,7 +63,7 @@ async fn voice_state_get(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm-opt.VoiceMute", "badge.perm-opt.VoiceDeafen", "badge.perm-opt.VoiceRequest", "badge.perm-opt.VoiceMove"],
+    tags = ["voice", "badge.perm-opt.VoiceMute", "badge.perm-opt.VoiceDeafen", "badge.perm-opt.VoiceRequest", "badge.perm-opt.VoiceMove", "badge.audit-log.MemberMove", "badge.audit-log.MemberUpdate"],
     responses(
         (status = OK, body = VoiceState, description = "ok"),
     )
@@ -244,7 +244,7 @@ async fn voice_state_patch(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm.VoiceDisconnect"],
+    tags = ["voice", "badge.perm.VoiceDisconnect", "badge.audit-log.MemberDisconnect"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -297,7 +297,7 @@ async fn voice_state_disconnect(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm.VoiceDisconnect"],
+    tags = ["voice", "badge.perm.VoiceDisconnect", "badge.audit-log.MemberDisconnectAll"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -331,7 +331,7 @@ async fn voice_state_disconnect_all(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm.VoiceMove"],
+    tags = ["voice", "badge.perm.VoiceMove", "badge.audit-log.MemberMove"],
     responses(
         (status = OK, body = (), description = "ok"),
     )

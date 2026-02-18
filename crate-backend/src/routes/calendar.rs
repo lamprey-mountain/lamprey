@@ -79,7 +79,7 @@ async fn calendar_event_list(
 #[utoipa::path(
     post,
     path = "/calendar/{channel_id}/event",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.audit-log.CalendarEventCreate"],
     params(("channel_id" = ChannelId, description = "Channel id")),
     request_body = CalendarEventCreate,
     responses((status = CREATED, body = CalendarEvent, description = "Create calendar event success"))
@@ -175,7 +175,7 @@ async fn calendar_event_get(
 #[utoipa::path(
     patch,
     path = "/calendar/{channel_id}/event/{event_id}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.audit-log.CalendarEventUpdate"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id")
@@ -254,7 +254,7 @@ async fn calendar_event_update(
 #[utoipa::path(
     delete,
     path = "/calendar/{channel_id}/event/{event_id}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.audit-log.CalendarEventDelete"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id")
@@ -391,7 +391,7 @@ async fn calendar_overwrite_get(
 #[utoipa::path(
     patch,
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.audit-log.CalendarOverwriteUpdate", "badge.audit-log.CalendarOverwriteCreate"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -487,7 +487,7 @@ async fn calendar_overwrite_update(
 #[utoipa::path(
     delete,
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.audit-log.CalendarOverwriteDelete"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -750,7 +750,7 @@ async fn calendar_event_rsvp_put(
 #[utoipa::path(
     delete,
     path = "/calendar/{channel_id}/event/{event_id}/rsvp/{user_id}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.audit-log.CalendarRsvpDelete"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),

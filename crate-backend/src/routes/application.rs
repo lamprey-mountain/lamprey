@@ -33,7 +33,7 @@ use crate::error::{Error, Result};
 #[utoipa::path(
     post,
     path = "/app",
-    tags = ["application"],
+    tags = ["application", "badge.audit-log.ApplicationCreate"],
     request_body = ApplicationCreate,
     responses(
         (status = CREATED, description = "success", body = Application)
@@ -151,7 +151,7 @@ async fn app_get(
 #[utoipa::path(
     patch,
     path = "/app/{app_id}",
-    tags = ["application"],
+    tags = ["application", "badge.audit-log.ApplicationUpdate"],
     request_body = ApplicationPatch,
     responses(
         (status = OK, description = "success", body = Application)
@@ -224,7 +224,7 @@ async fn app_patch(
 #[utoipa::path(
     delete,
     path = "/app/{app_id}",
-    tags = ["application"],
+    tags = ["application", "badge.audit-log.ApplicationDelete"],
     responses(
         (status = NO_CONTENT, description = "success")
     )
@@ -259,7 +259,7 @@ async fn app_delete(
 #[utoipa::path(
     post,
     path = "/app/{app_id}/session",
-    tags = ["application"],
+    tags = ["application", "badge.audit-log.SessionLogin"],
     request_body = SessionCreate,
     responses(
         (status = CREATED, description = "success", body = SessionWithToken)
@@ -324,7 +324,7 @@ struct AppInviteBot {
 #[utoipa::path(
     post,
     path = "/app/{app_id}/invite",
-    tags = ["application", "badge.perm.BotsAdd"],
+    tags = ["application", "badge.perm.BotsAdd", "badge.audit-log.BotAdd"],
     request_body = AppInviteBot,
     responses(
         (status = NO_CONTENT, description = "success")
@@ -454,7 +454,7 @@ async fn puppet_ensure(
 #[utoipa::path(
     post,
     path = "/app/{app_id}/rotate-secret",
-    tags = ["application"],
+    tags = ["application", "badge.audit-log.ApplicationUpdate"],
     responses(
         (status = OK, description = "success", body = Application)
     )

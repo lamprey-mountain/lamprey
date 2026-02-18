@@ -226,7 +226,7 @@ async fn room_edit(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.sudo"],
+    tags = ["room", "badge.sudo", "badge.audit-log.RoomDelete"],
     responses((status = OK, description = "success")),
 )]
 async fn room_delete(
@@ -283,7 +283,7 @@ async fn room_delete(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.admin_only", "badge.perm.Admin"],
+    tags = ["room", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomUndelete"],
     responses((status = OK, description = "success")),
 )]
 async fn room_undelete(
@@ -471,7 +471,7 @@ async fn room_integration_list(
     post,
     path = "/room/{room_id}/quarantine",
     params(("room_id", description = "Room id")),
-    tags = ["room", "badge.admin_only", "badge.perm.Admin"],
+    tags = ["room", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomQuarantine"],
     responses((status = OK, description = "success"))
 )]
 async fn room_quarantine(
@@ -515,7 +515,7 @@ async fn room_quarantine(
     delete,
     path = "/room/{room_id}/quarantine",
     params(("room_id", description = "Room id")),
-    tags = ["room", "badge.admin_only", "badge.perm.Admin"],
+    tags = ["room", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomUnquarantine"],
     responses((status = OK, description = "success"))
 )]
 async fn room_unquarantine(
@@ -561,7 +561,7 @@ async fn room_unquarantine(
     path = "/room/{room_id}/security",
     params(("room_id", description = "Room id")),
     request_body = RoomSecurityUpdate,
-    tags = ["room", "badge.sudo"],
+    tags = ["room", "badge.sudo", "badge.audit-log.RoomUpdate"],
     responses(
         (status = OK, description = "success", body = Room),
     )

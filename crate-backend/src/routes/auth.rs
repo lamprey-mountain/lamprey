@@ -375,7 +375,7 @@ async fn auth_oauth_redirect(
     delete,
     path = "/auth/oauth/{provider}",
     params(("provider", description = "oauth provider")),
-    tags = ["auth", "badge.sudo"],
+    tags = ["auth", "badge.sudo", "badge.audit-log.AuthUpdate"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn auth_oauth_delete(
@@ -482,7 +482,7 @@ async fn auth_email_reset(
     post,
     path = "/auth/email/{addr}/complete",
     params(("addr", description = "Email address")),
-    tags = ["auth"],
+    tags = ["auth", "badge.audit-log.SessionLogin", "badge.audit-log.AuthSudo"],
     responses((status = ACCEPTED, description = "success")),
 )]
 async fn auth_email_complete(
@@ -589,7 +589,7 @@ async fn auth_totp_init(
     post,
     path = "/auth/totp/complete",
     request_body = TotpVerificationRequest,
-    tags = ["auth", "badge.sudo"],
+    tags = ["auth", "badge.sudo", "badge.audit-log.AuthUpdate"],
     responses((status = OK, body = AuthState, description = "success")),
 )]
 async fn auth_totp_complete(
@@ -647,7 +647,7 @@ async fn auth_totp_complete(
     post,
     path = "/auth/totp",
     request_body = TotpVerificationRequest,
-    tags = ["auth"],
+    tags = ["auth", "badge.audit-log.AuthSudo"],
     responses((status = OK, body = AuthState, description = "success")),
 )]
 async fn auth_totp_exec(
@@ -731,7 +731,7 @@ async fn auth_totp_recovery_get(
 #[utoipa::path(
     post,
     path = "/auth/totp/recovery",
-    tags = ["auth", "badge.sudo"],
+    tags = ["auth", "badge.sudo", "badge.audit-log.AuthUpdate"],
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_rotate(
@@ -774,7 +774,7 @@ async fn auth_totp_recovery_rotate(
 #[utoipa::path(
     delete,
     path = "/auth/totp",
-    tags = ["auth", "badge.sudo"],
+    tags = ["auth", "badge.sudo", "badge.audit-log.AuthUpdate"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_totp_delete(
@@ -811,7 +811,7 @@ async fn auth_totp_delete(
     post,
     path = "/auth/totp/recovery/exec",
     request_body = TotpVerificationRequest,
-    tags = ["auth"],
+    tags = ["auth", "badge.audit-log.AuthSudo"],
     responses((status = OK, body = AuthState, description = "success")),
 )]
 async fn auth_totp_recovery_exec(
@@ -858,7 +858,7 @@ async fn auth_totp_recovery_exec(
 #[utoipa::path(
     put,
     path = "/auth/password",
-    tags = ["auth", "badge.sudo"],
+    tags = ["auth", "badge.sudo", "badge.audit-log.AuthUpdate"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_set(
@@ -898,7 +898,7 @@ async fn auth_password_set(
 #[utoipa::path(
     delete,
     path = "/auth/password",
-    tags = ["auth", "badge.sudo"],
+    tags = ["auth", "badge.sudo", "badge.audit-log.AuthUpdate"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_delete(
@@ -932,7 +932,7 @@ async fn auth_password_delete(
 #[utoipa::path(
     post,
     path = "/auth/password",
-    tags = ["auth"],
+    tags = ["auth", "badge.audit-log.SessionLogin"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_exec(
@@ -1161,7 +1161,7 @@ async fn auth_webauthn_delete(
 #[utoipa::path(
     post,
     path = "/auth/_sudo",
-    tags = ["auth"],
+    tags = ["auth", "badge.audit-log.AuthSudo"],
     responses((status = NO_CONTENT, description = "ok")),
 )]
 async fn auth_sudo_upgrade(

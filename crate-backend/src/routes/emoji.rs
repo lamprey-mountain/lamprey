@@ -27,6 +27,7 @@ use crate::ServerState;
     tags = [
         "emoji",
         "badge.perm.EmojiAdd",
+        "badge.audit-log.EmojiCreate",
     ],
     params(
         ("room_id", description = "Room id"),
@@ -119,6 +120,7 @@ async fn emoji_get(
     tags = [
         "emoji",
         "badge.perm.EmojiAdd",
+        "badge.audit-log.EmojiDelete",
     ],
     responses(
         (status = NO_CONTENT, description = "success"),
@@ -172,7 +174,7 @@ async fn emoji_delete(
         ("room_id", description = "Room id"),
         ("emoji_id", description = "Emoji id"),
     ),
-    tags = ["emoji"],
+    tags = ["emoji", "badge.audit-log.EmojiUpdate"],
     responses(
         (status = NOT_MODIFIED, description = "not modified"),
         (status = OK, body = EmojiCustom, description = "success"),

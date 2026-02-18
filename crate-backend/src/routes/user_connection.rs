@@ -77,7 +77,7 @@ async fn user_connection_update(
         ("user_id", description = "User id"),
         ("app_id", description = "Application id")
     ),
-    tags = ["user_connection"],
+    tags = ["user_connection", "badge.audit-log.ConnectionDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn user_connection_delete(

@@ -50,7 +50,7 @@ async fn automod_rule_list(
     post,
     path = "/room/{room_id}/automod/rule",
     params(("room_id", description = "Room id")),
-    tags = ["automod"],
+    tags = ["automod", "badge.audit-log.AutomodRuleCreate"],
     responses(
         (status = CREATED, body = AutomodRule, description = "Create automod rule success"),
     )
@@ -134,7 +134,7 @@ async fn automod_rule_get(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
     ),
-    tags = ["automod"],
+    tags = ["automod", "badge.audit-log.AutomodRuleUpdate"],
     responses(
         (status = OK, body = AutomodRule, description = "Update automod rule success"),
     )
@@ -197,7 +197,7 @@ async fn automod_rule_update(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
     ),
-    tags = ["automod"],
+    tags = ["automod", "badge.audit-log.AutomodRuleDelete"],
     responses(
         (status = NO_CONTENT, description = "Delete automod rule success"),
     )

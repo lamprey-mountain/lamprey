@@ -60,7 +60,7 @@ async fn ensure_can_still_login_after_email_removal(
         ("user_id", description = "User id"),
         ("addr", description = "email address"),
     ),
-    tags = ["user_email"],
+    tags = ["user_email", "badge.audit-log.EmailCreate"],
     responses(
         (status = CREATED, description = "success"),
         (status = OK, description = "already exists"),
@@ -152,7 +152,7 @@ async fn email_add(
         ("user_id", description = "User id"),
         ("addr", description = "email address"),
     ),
-    tags = ["user_email"],
+    tags = ["user_email", "badge.audit-log.EmailDelete"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_delete(
@@ -239,7 +239,7 @@ async fn email_list(
         ("user_id", description = "User id"),
         ("addr", description = "email address"),
     ),
-    tags = ["user_email"],
+    tags = ["user_email", "badge.audit-log.EmailUpdate"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_update(

@@ -22,7 +22,7 @@ use crate::{error::Result, routes::util::Auth, Error, ServerState};
     post,
     path = "/channel/{channel_id}/tag",
     params(("channel_id", description = "The ID of the forum channel to create the tag in.")),
-    tags = ["tag", "badge.perm.TagManage"],
+    tags = ["tag", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = CREATED, body = Tag, description = "Create tag success"),
     )
@@ -86,7 +86,7 @@ async fn tag_create(
         ("channel_id", description = "The ID of the forum channel the tag belongs to."),
         ("tag_id", description = "The ID of the tag to update.")
     ),
-    tags = ["tag", "badge.perm.TagManage"],
+    tags = ["tag", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = OK, body = Tag, description = "Update tag success"),
     )
@@ -150,7 +150,7 @@ async fn tag_update(
         ("channel_id", description = "The ID of the forum channel the tag belongs to."),
         ("tag_id", description = "The ID of the tag to delete.")
     ),
-    tags = ["tag", "badge.perm.TagManage"],
+    tags = ["tag", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = NO_CONTENT, description = "Delete tag success"),
     )

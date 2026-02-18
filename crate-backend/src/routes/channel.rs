@@ -366,7 +366,7 @@ async fn channel_list_removed(
     patch,
     path = "/room/{room_id}/channel",
     params(("room_id", description = "Room id")),
-    tags = ["channel", "badge.perm.ChannelManage"],
+    tags = ["channel", "badge.perm.ChannelManage", "badge.audit-log.ChannelReorder"],
     responses(
         (status = OK, body = (), description = "Reorder channels success"),
     )
@@ -442,7 +442,7 @@ async fn channel_reorder(
     params(
         ("channel_id", description = "channel id"),
     ),
-    tags = ["channel", "badge.perm-opt.ChannelEdit", "badge.perm-opt.ThreadEdit"],
+    tags = ["channel", "badge.perm-opt.ChannelEdit", "badge.perm-opt.ThreadEdit", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = OK, body = Channel, description = "edit message success"),
         (status = NOT_MODIFIED, body = Channel, description = "no change"),
@@ -538,7 +538,7 @@ async fn channel_ack(
     put,
     path = "/channel/{channel_id}/remove",
     params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa"],
+    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn channel_remove(
@@ -615,7 +615,7 @@ async fn channel_remove(
     delete,
     path = "/channel/{channel_id}/remove",
     params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa"],
+    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn channel_restore(

@@ -93,7 +93,7 @@ async fn thread_member_get(
         ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
-    tags = ["thread", "badge.perm-opt.MemberKick"],
+    tags = ["thread", "badge.perm-opt.MemberKick", "badge.audit-log.ThreadMemberAdd"],
     responses(
         (status = OK, body = ThreadMember, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -224,7 +224,7 @@ async fn thread_member_add(
         ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
-    tags = ["thread", "badge.perm-opt.MemberKick"],
+    tags = ["thread", "badge.perm-opt.MemberKick", "badge.audit-log.ThreadMemberRemove"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

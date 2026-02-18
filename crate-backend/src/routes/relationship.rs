@@ -73,7 +73,7 @@ async fn friend_list_pending(
     put,
     path = "/user/@self/friend/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.audit-log.FriendRequest", "badge.audit-log.FriendAccept"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn friend_add(
@@ -208,7 +208,7 @@ async fn friend_add(
     delete,
     path = "/user/@self/friend/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.audit-log.FriendDelete"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn friend_remove(
@@ -301,7 +301,7 @@ async fn block_list(
     put,
     path = "/user/@self/block/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.audit-log.BlockCreate"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn block_add(
@@ -365,7 +365,7 @@ async fn block_add(
     delete,
     path = "/user/@self/block/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.audit-log.BlockDelete"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn block_remove(
@@ -433,7 +433,7 @@ async fn ignore_list(
     put,
     path = "/user/@self/ignore/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.audit-log.IgnoreAdd"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn ignore_add(
@@ -481,7 +481,7 @@ async fn ignore_add(
     delete,
     path = "/user/@self/ignore/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.audit-log.IgnoreRemove"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn ignore_remove(

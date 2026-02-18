@@ -208,6 +208,7 @@ async fn message_edit(
         "message",
         "badge.perm-opt.MessageDelete",
         "badge.room-mfa-opt",
+        "badge.audit-log.MessageDelete",
     ],
     responses(
         (status = NO_CONTENT, description = "delete message success"),
@@ -360,6 +361,7 @@ async fn message_version_get(
         "message",
         "badge.perm-opt.MessageDelete",
         "badge.room-mfa-opt",
+        "badge.audit-log.MessageVersionDelete",
     ],
     responses(
         (status = NO_CONTENT, description = "delete message version success"),
@@ -478,6 +480,9 @@ async fn message_version_delete(
         "badge.perm-opt.MessageDelete",
         "badge.perm-opt.MessageRemove",
         "badge.room-mfa",
+        "badge.audit-log.MessageDeleteBulk",
+        "badge.audit-log.MessageRemove",
+        "badge.audit-log.MessageRestore",
     ],
     responses((status = OK, description = "success")),
 )]
@@ -725,6 +730,7 @@ async fn message_reply_roots(
     tags = [
         "message",
         "badge.perm.MessagePin",
+        "badge.audit-log.MessagePin",
     ],
     responses(
         (status = OK, description = "success"),
@@ -852,6 +858,7 @@ async fn message_pin_create(
     tags = [
         "message",
         "badge.perm.MessagePin",
+        "badge.audit-log.MessageUnpin",
     ],
     responses(
         (status = OK, description = "success"),
@@ -929,6 +936,7 @@ async fn message_pin_delete(
         "message",
         "badge.perm.MessagePin",
         "badge.room-mfa",
+        "badge.audit-log.MessagePinReorder",
     ],
     responses(
         (status = OK, description = "Reorder pinned messages success"),

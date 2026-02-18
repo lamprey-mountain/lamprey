@@ -36,6 +36,7 @@ impl Modify for BadgeModifier {
                 let mut server_optional_perms = Vec::new();
                 let mut scopes = Vec::new();
                 let mut optional_scopes = Vec::new();
+                let mut audit_log_entry_types = Vec::new();
 
                 if let Some(tags) = &mut op.tags {
                     tags.retain(|tag| {
@@ -74,6 +75,9 @@ impl Modify for BadgeModifier {
                             false
                         } else if let Some(scope) = tag.strip_prefix("badge.scope-opt.") {
                             optional_scopes.push(scope.to_string());
+                            false
+                        } else if let Some(audit_log_type) = tag.strip_prefix("badge.audit-log.") {
+                            audit_log_entry_types.push(audit_log_type.to_string());
                             false
                         } else {
                             true
@@ -133,6 +137,12 @@ impl Modify for BadgeModifier {
                 for scope in optional_scopes {
                     requirements_formatted.push(format!(
                         r#"<div class="markdown-alert-scope-optional">{scope}</div>"#
+                    ));
+                }
+
+                for audit_log_type in audit_log_entry_types {
+                    requirements_formatted.push(format!(
+                        r#"<div class="markdown-alert-audit-log">creates audit log entry of type: {audit_log_type}</div>"#
                     ));
                 }
 

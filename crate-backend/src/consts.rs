@@ -11,6 +11,7 @@ pub const MAX_PERMISSION_OVERWRITES: u32 = 64;
 pub const MAX_UNIQUE_REACTIONS: u32 = 20;
 
 /// the maximum number of custom emoji per room. clients should be able to fetch everything in one request.
+// TODO: remove?
 pub const MAX_CUSTOM_EMOJI: u32 = 1024;
 
 /// the maximum number of pinned messages per channel. clients should be able to fetch everything in one request.

@@ -33,7 +33,7 @@ mod slack;
     post,
     path = "/channel/{channel_id}/webhook",
     params(("channel_id", description = "channel id")),
-    tags = ["webhook"],
+    tags = ["webhook", "badge.audit-log.WebhookCreate"],
     responses(
         (status = CREATED, body = Webhook, description = "Create webhook success"),
     )
@@ -210,7 +210,7 @@ async fn webhook_get_with_token(
     delete,
     path = "/webhook/{webhook_id}",
     params(("webhook_id", description = "Webhook id")),
-    tags = ["webhook"],
+    tags = ["webhook", "badge.audit-log.WebhookDelete"],
     responses(
         (status = NO_CONTENT, description = "Delete webhook success"),
     )
@@ -287,7 +287,7 @@ async fn webhook_delete_with_token(
     patch,
     path = "/webhook/{webhook_id}",
     params(("webhook_id", description = "Webhook id")),
-    tags = ["webhook"],
+    tags = ["webhook", "badge.audit-log.WebhookUpdate"],
     responses(
         (status = OK, body = Webhook, description = "Update webhook success"),
     )

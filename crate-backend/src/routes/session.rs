@@ -82,7 +82,7 @@ pub async fn session_list(
     params(
         ("session_id", description = "Session id"),
     ),
-    tags = ["session"],
+    tags = ["session", "badge.audit-log.SessionUpdate"],
     responses(
         (status = OK, body = Session, description = "success"),
         (status = NOT_MODIFIED, body = Session, description = "not modified"),
@@ -157,7 +157,7 @@ pub async fn session_update(
     params(
         ("session_id", description = "Session id"),
     ),
-    tags = ["session"],
+    tags = ["session", "badge.audit-log.SessionDelete"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -226,7 +226,7 @@ pub async fn session_delete(
 #[utoipa::path(
     delete,
     path = "/session/@all",
-    tags = ["session"],
+    tags = ["session", "badge.audit-log.SessionDeleteAll"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 pub async fn session_delete_all(

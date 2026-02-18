@@ -26,7 +26,7 @@ use crate::error::{Error, Result};
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa"],
+    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleCreate"],
     responses(
         (status = CREATED, body = Role, description = "success"),
     )
@@ -124,7 +124,7 @@ async fn role_create(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa"],
+    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleUpdate"],
     responses(
         (status = OK, body = Role, description = "success"),
         (status = NOT_MODIFIED, description = "success"),
@@ -242,7 +242,7 @@ async fn role_update(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa"],
+    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleDelete"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -392,7 +392,7 @@ async fn role_member_list(
         ("role_id", description = "Role id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["role", "badge.perm.RoleApply", "badge.room-mfa-opt"],
+    tags = ["role", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleApply"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -457,7 +457,7 @@ async fn role_member_add(
         ("role_id", description = "Role id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["role", "badge.perm.RoleApply", "badge.room-mfa-opt"],
+    tags = ["role", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleUnapply"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -525,7 +525,7 @@ async fn role_member_remove(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role", "badge.room-mfa"],
+    tags = ["role", "badge.room-mfa", "badge.audit-log.RoleApply", "badge.audit-log.RoleUnapply"],
     responses(
         (status = NO_CONTENT, body = (), description = "success"),
     )
@@ -625,7 +625,7 @@ async fn role_member_bulk_edit(
     patch,
     path = "/room/{room_id}/role",
     params(("room_id", description = "Room id")),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa"],
+    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleReorder"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

@@ -25,7 +25,7 @@ use common::v1::types::ChannelId;
 #[utoipa::path(
     post,
     path = "/admin/whisper",
-    tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
+    tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.AdminWhisper"],
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_whisper(
@@ -73,7 +73,7 @@ async fn admin_whisper(
 #[utoipa::path(
     post,
     path = "/admin/broadcast",
-    tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
+    tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.AdminBroadcast"],
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_broadcast(
@@ -151,7 +151,7 @@ async fn admin_broadcast(
 #[utoipa::path(
     post,
     path = "/admin/register-user",
-    tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
+    tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.UserRegistered"],
     request_body = AdminRegisterUser,
     responses((status = NO_CONTENT, description = "User registered"))
 )]
@@ -243,7 +243,7 @@ async fn admin_collect_garbage(
 #[utoipa::path(
     post,
     path = "/admin/reindex-channel/{channel_id}",
-    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin", "badge.audit-log.ChannelReindex"],
     params(("channel_id" = String, Path, description = "Channel id to reindex")),
     responses(
         (status = ACCEPTED, description = "Channel reindexing queued"),

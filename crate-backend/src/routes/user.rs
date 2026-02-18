@@ -34,7 +34,7 @@ use crate::error::{Error, Result};
     params(
         ("user_id", description = "User id"),
     ),
-    tags = ["user"],
+    tags = ["user", "badge.audit-log.UserUpdate"],
     responses(
         (status = OK, body = User, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -134,7 +134,7 @@ async fn user_update(
     delete,
     path = "/user/{user_id}",
     params(("user_id", description = "User id")),
-    tags = ["user"],
+    tags = ["user", "badge.audit-log.UserDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn user_delete(
@@ -183,7 +183,7 @@ async fn user_delete(
     post,
     path = "/user/{user_id}/undelete",
     params(("user_id", description = "User id")),
-    tags = ["user"],
+    tags = ["user", "badge.audit-log.UserUndelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn user_undelete(
@@ -438,7 +438,7 @@ async fn guest_create(
     post,
     path = "/user/{user_id}/suspend",
     params(("user_id", description = "User id")),
-    tags = ["user"],
+    tags = ["user", "badge.audit-log.UserSuspend"],
     responses((status = OK, body = User, description = "success")),
 )]
 async fn user_suspend(
@@ -485,7 +485,7 @@ async fn user_suspend(
     delete,
     path = "/user/{user_id}/suspend",
     params(("user_id", description = "User id")),
-    tags = ["user"],
+    tags = ["user", "badge.audit-log.UserUnsuspend"],
     responses((status = OK, body = User, description = "success")),
 )]
 async fn user_unsuspend(

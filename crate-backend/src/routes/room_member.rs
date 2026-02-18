@@ -497,6 +497,7 @@ async fn room_member_add(
         "badge.perm-opt.MemberManage",
         "badge.perm-opt.RoleApply",
         "badge.room-mfa",
+        "badge.audit-log.MemberUpdate",
     ],
     responses(
         (status = OK, body = RoomMember, description = "success"),
@@ -681,7 +682,7 @@ struct LeaveQuery {
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm-opt.MemberKick", "badge.room-mfa-opt"],
+    tags = ["room_member", "badge.perm-opt.MemberKick", "badge.room-mfa-opt", "badge.audit-log.MemberKick"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -962,7 +963,7 @@ async fn room_ban_create(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/ban",
-    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa"],
+    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa", "badge.audit-log.MemberBan"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn room_ban_create_bulk(
@@ -1050,7 +1051,7 @@ async fn room_ban_create_bulk(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa"],
+    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa", "badge.audit-log.MemberUnban"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

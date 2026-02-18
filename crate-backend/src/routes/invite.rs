@@ -30,7 +30,7 @@ use super::util::Auth;
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite", "badge.perm-opt.InviteManage"],
+    tags = ["invite", "badge.perm-opt.InviteManage", "badge.audit-log.InviteDelete"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -214,7 +214,7 @@ async fn invite_resolve(
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.audit-log.UserRegistered"],
     responses(
         (status = OK, description = "success"),
     )
@@ -420,7 +420,7 @@ async fn invite_use(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["invite", "badge.perm.InviteCreate"],
+    tags = ["invite", "badge.perm.InviteCreate", "badge.audit-log.InviteCreate"],
     responses(
         (status = OK, body = Invite, description = "success"),
     )
@@ -569,7 +569,7 @@ async fn invite_room_list(
     params(
         ("channel_id", description = "Channel id"),
     ),
-    tags = ["invite", "badge.perm-opt.InviteCreate"],
+    tags = ["invite", "badge.perm-opt.InviteCreate", "badge.audit-log.InviteCreate"],
     responses(
         (status = OK, body = Invite, description = "success"),
     )
@@ -737,7 +737,7 @@ async fn invite_channel_list(
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite", "badge.perm-opt.InviteManage"],
+    tags = ["invite", "badge.perm-opt.InviteManage", "badge.audit-log.InviteUpdate"],
     responses(
         (status = NOT_MODIFIED, description = "not modified"),
         (status = OK, body = Invite, description = "success"),

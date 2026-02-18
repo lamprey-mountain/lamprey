@@ -77,7 +77,7 @@ async fn oauth_info(
 #[utoipa::path(
     post,
     path = "/oauth/authorize",
-    tags = ["oauth", "badge.scope.identify"],
+    tags = ["oauth", "badge.scope.identify", "badge.audit-log.ConnectionCreate"],
     params(OauthAuthorizeParams),
     responses(
         (status = OK, description = "success", body = OauthAuthorizeResponse)
