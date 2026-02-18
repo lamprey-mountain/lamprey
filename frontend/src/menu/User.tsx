@@ -314,6 +314,43 @@ export function UserMenu(props: UserMenuProps) {
 		</Submenu>
 	);
 
+	const hasRoles = () =>
+		(roles()?.items?.filter((r) => r.id !== r.room_id)?.length ?? 0) > 0;
+	const hasAnyPermission = (checks: Array<() => boolean>) =>
+		checks.some((c) => c());
+
+	const showGeneralActions = () =>
+		!user()?.webhook && !props.admin && (
+			props.thread_id ||
+			user()?.relationship?.relation !== "Block"
+		);
+	const showFriendActions = () =>
+		!user()?.webhook && !props.admin && (
+			user()?.relationship?.relation === null ||
+			user()?.relationship?.relation === "Friend" ||
+			user()?.relationship?.relation === "Incoming" ||
+			user()?.relationship?.relation === "Outgoing"
+		);
+	const showModerationActions = () =>
+		!user()?.webhook && !props.admin && hasAnyPermission([
+			() => hasPermission("MemberNicknameManage"),
+			() => hasPermission("MemberNickname") && props.user_id === self_id(),
+			() => hasPermission("MemberKick") && canModerate(),
+			() => hasPermission("MemberBan") && canModerate(),
+			() => hasPermission("RoleApply") && props.room_id && hasRoles(),
+			() => hasPermission("MemberKick") && props.thread_id,
+		]);
+	const showVoiceActions = () =>
+		!user()?.webhook && !props.admin && (
+			(props.user_id !== self_id() && connectedToVoice()) ||
+			(props.user_id === self_id() && connectedToVoice()) ||
+			hasPermission("VoiceMute") ||
+			hasPermission("VoiceDeafen") ||
+			(hasPermission("VoiceDisconnect") && connectedToVoice()) ||
+			(hasPermission("VoiceMove") && connectedToVoice())
+		);
+	const showAdminActions = () => props.admin;
+
 	return (
 		<Menu>
 			<Switch>
@@ -324,7 +361,7 @@ export function UserMenu(props: UserMenuProps) {
 					</Show>
 				</Match>
 				<Match when={!user()?.webhook}>
-					<Show when={!props.admin}>
+					<Show when={showGeneralActions()}>
 						<Show when={props.thread_id}>
 							<Item>mention</Item>
 						</Show>
@@ -356,6 +393,8 @@ export function UserMenu(props: UserMenuProps) {
 								<Item onClick={removeFriend}>cancel friend request</Item>
 							</Match>
 						</Switch>
+					</Show>
+					<Show when={showModerationActions()}>
 						<Separator />
 						<Show
 							when={hasPermission("MemberNicknameManage") ||
@@ -373,12 +412,16 @@ export function UserMenu(props: UserMenuProps) {
 						<Show when={false}>
 							<Item>timeout</Item>
 						</Show>
-						<Show when={hasPermission("RoleApply") && props.room_id}>
+						<Show
+							when={hasPermission("RoleApply") && props.room_id && hasRoles()}
+						>
 							<RoleSubmenu />
 						</Show>
 						<Show when={hasPermission("MemberKick") && props.thread_id}>
 							<Item onClick={kickThread}>remove from thread</Item>
 						</Show>
+					</Show>
+					<Show when={showVoiceActions()}>
 						<Separator />
 						<Show when={props.user_id !== self_id() && connectedToVoice()}>
 							<li>
@@ -437,7 +480,10 @@ export function UserMenu(props: UserMenuProps) {
 							<Item>move to</Item>
 						</Show>
 					</Show>
-					<Show when={props.admin}>
+					<Show when={showAdminActions()}>
+						<Show when={showGeneralActions()}>
+							<Separator />
+						</Show>
 						<Show when={user()?.relationship?.relation !== "Block"}>
 							<Item onClick={openDm}>dm</Item>
 						</Show>
@@ -452,7 +498,10 @@ export function UserMenu(props: UserMenuProps) {
 						<Show when={false}>
 							<Item>(un)ignore</Item>
 						</Show>
-						<RoleSubmenu />
+						<Show when={hasRoles()}>
+							<Separator />
+							<RoleSubmenu />
+						</Show>
 						<Separator />
 						<Show when={user()?.suspended}>
 							<Item onClick={unsuspendUser}>unsuspend user</Item>

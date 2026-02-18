@@ -1,4 +1,4 @@
-import { Component, For, Match, Show, Switch } from "solid-js";
+import { Component, createMemo, For, Match, Show, Switch } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { Dynamic } from "solid-js/web";
 import {
@@ -23,7 +23,6 @@ import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { flags } from "./flags.ts";
 
-// TODO: hide empty categories
 // TODO: more permission checks
 const tabs: Array<
 	{ category: string } | {
@@ -45,7 +44,12 @@ const tabs: Array<
 > = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Info },
-	{ name: "analytics", path: "analytics", component: Analytics },
+	{
+		name: "analytics",
+		path: "analytics",
+		component: Analytics,
+		permissionCheck: (p) => p.has("ViewAnalytics"),
+	},
 	{ name: "emoji", path: "emoji", component: Emoji },
 	{ category: "integrations" },
 	{ name: "bots", path: "bots", component: Bots },
@@ -170,6 +174,37 @@ const adminTabs: Array<
 	},
 ];
 
+type TabItem = typeof tabs[number];
+type GroupedTab = {
+	category: string;
+	items: Exclude<TabItem, { category: string }>[];
+};
+
+function groupTabsByCategory(
+	tabs: TabItem[],
+	perms: ReturnType<typeof usePermissions>,
+	user_id: () => string | undefined,
+	room: RoomT,
+): GroupedTab[] {
+	const groups: GroupedTab[] = [];
+	let currentGroup: GroupedTab | null = null;
+
+	for (const tab of tabs) {
+		if ("category" in tab) {
+			currentGroup = { category: tab.category, items: [] };
+			groups.push(currentGroup);
+		} else if (currentGroup) {
+			const isVisible = (!tab.permissionCheck || tab.permissionCheck(perms)) &&
+				(!tab.ownerOnly || room.owner_id === user_id());
+			if (isVisible) {
+				currentGroup.items.push(tab);
+			}
+		}
+	}
+
+	return groups.filter((g) => g.items.length > 0);
+}
+
 export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	const ctx = useCtx();
 	const api = useApi();
@@ -183,6 +218,10 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
 		currentTabs().find((i) => i.path === (props.page ?? ""))!;
+
+	const groupedTabs = createMemo(() =>
+		groupTabsByCategory(currentTabs(), perms, user_id, props.room)
+	);
 
 	const handleAction = (action: string) => {
 		switch (action) {
@@ -216,48 +255,49 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 			</header>
 			<nav>
 				<ul>
-					<For each={currentTabs()}>
-						{(tab, idx) => (
-							<Show
-								when={(!tab.permissionCheck || tab.permissionCheck(perms)) &&
-									(!tab.ownerOnly || props.room.owner_id === user_id())}
-							>
-								<Switch>
-									<Match when={tab.category}>
-										<div
-											class="dim"
-											style={{
-												"margin-top": idx() === 0 ? "" : "12px",
-												"margin": "2px 8px",
-											}}
-										>
-											{tab.category}
-										</div>
-									</Match>
-									<Match when={tab.action}>
-										<li>
-											<button
-												class="action"
-												onClick={() => handleAction(tab.action)}
-												style={{
-													color: tab.style === "danger"
-														? "oklch(var(--color-red))"
-														: "inherit",
-												}}
-											>
-												{tab.name}
-											</button>
-										</li>
-									</Match>
-									<Match when={true}>
-										<li>
-											<A href={`/room/${props.room.id}/settings/${tab.path}`}>
-												{tab.name}
-											</A>
-										</li>
-									</Match>
-								</Switch>
-							</Show>
+					<For each={groupedTabs()}>
+						{(group, groupIdx) => (
+							<>
+								<div
+									class="dim"
+									style={{
+										"margin-top": groupIdx() === 0 ? "" : "12px",
+										"margin": "2px 8px",
+									}}
+								>
+									{group.category}
+								</div>
+								<For each={group.items}>
+									{(tab) => (
+										<Switch>
+											<Match when={tab.action}>
+												<li>
+													<button
+														class="action"
+														onClick={() => handleAction(tab.action)}
+														style={{
+															color: tab.style === "danger"
+																? "oklch(var(--color-red))"
+																: "inherit",
+														}}
+													>
+														{tab.name}
+													</button>
+												</li>
+											</Match>
+											<Match when={true}>
+												<li>
+													<A
+														href={`/room/${props.room.id}/settings/${tab.path}`}
+													>
+														{tab.name}
+													</A>
+												</li>
+											</Match>
+										</Switch>
+									)}
+								</For>
+							</>
 						)}
 					</For>
 				</ul>

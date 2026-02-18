@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch } from "solid-js";
+import { createMemo, For, Match, Show, Switch } from "solid-js";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {
@@ -44,8 +44,31 @@ const tabs = [
 	},
 ];
 
+type TabItem = typeof tabs[number];
+type GroupedTab = {
+	category: string;
+	items: Exclude<TabItem, { category: string }>[];
+};
+
+function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
+	const groups: GroupedTab[] = [];
+	let currentGroup: GroupedTab | null = null;
+
+	for (const tab of tabs) {
+		if ("category" in tab) {
+			currentGroup = { category: tab.category, items: [] };
+			groups.push(currentGroup);
+		} else {
+			currentGroup?.items.push(tab);
+		}
+	}
+
+	return groups.filter((g) => g.items.length > 0);
+}
+
 export const UserSettings = (props: { user: User; page: string }) => {
 	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""))!;
+	const groupedTabs = createMemo(() => groupTabsByCategory(tabs));
 
 	return (
 		<div class="settings">
@@ -54,28 +77,28 @@ export const UserSettings = (props: { user: User; page: string }) => {
 			</header>
 			<nav>
 				<ul>
-					<For each={tabs}>
-						{(tab, idx) => (
-							<Switch>
-								<Match when={tab.category}>
-									<div
-										class="dim"
-										style={{
-											"margin-top": idx() === 0 ? "" : "12px",
-											"margin": "2px 8px",
-										}}
-									>
-										{tab.category}
-									</div>
-								</Match>
-								<Match when={tab.name}>
-									<li>
-										<A href={`/settings/${tab.path}`}>
-											{tab.name}
-										</A>
-									</li>
-								</Match>
-							</Switch>
+					<For each={groupedTabs()}>
+						{(group, groupIdx) => (
+							<>
+								<div
+									class="dim"
+									style={{
+										"margin-top": groupIdx() === 0 ? "" : "12px",
+										"margin": "2px 8px",
+									}}
+								>
+									{group.category}
+								</div>
+								<For each={group.items}>
+									{(tab) => (
+										<li>
+											<A href={`/settings/${tab.path}`}>
+												{tab.name}
+											</A>
+										</li>
+									)}
+								</For>
+							</>
 						)}
 					</For>
 				</ul>
