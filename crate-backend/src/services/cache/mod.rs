@@ -299,6 +299,85 @@ impl ServiceCache {
         Ok(self.load_room(room_id).await?.permissions().await)
     }
 
+    /// generate an ambient message for a user containing all their initial state
+    // PERF: fetch in parallel
+    pub async fn generate_ambient_message(&self, user_id: UserId) -> Result<MessageSync> {
+        let data = self.state.data();
+
+        let mut rooms = Vec::new();
+        let mut room_members = Vec::new();
+        let mut all_roles = Vec::new();
+        let mut all_channels = Vec::new();
+        let mut all_threads = Vec::new();
+
+        // fetch rooms with pagination
+        let mut after: Option<RoomId> = None;
+        loop {
+            let page = data
+                .room_list(
+                    user_id,
+                    PaginationQuery {
+                        // TODO: use MAX_ROOM_JOINS
+                        // limit: Some(MAX_ROOM_JOINS.try_into().unwrap()),
+                        limit: Some(1024),
+                        from: after.map(|i| i.into()),
+                        ..Default::default()
+                    },
+                    true,
+                )
+                .await?;
+
+            if page.items.is_empty() {
+                break;
+            }
+
+            after = Some(page.items.last().unwrap().id);
+
+            for room in page.items {
+                let cached_room = self.load_room(room.id).await?;
+
+                if let Ok(member) = data.room_member_get(room.id, user_id).await {
+                    room_members.push(member);
+                }
+
+                let roles = cached_room.roles.clone();
+                for entry in roles.iter() {
+                    all_roles.push(entry.value().clone());
+                }
+
+                let channels = cached_room.channels.clone();
+                for entry in channels.iter() {
+                    let channel = entry.value();
+                    if channel.ty.is_thread() {
+                        if channel.archived_at.is_none() {
+                            all_threads.push(channel.clone());
+                        }
+                    } else {
+                        all_channels.push(channel.clone());
+                    }
+                }
+
+                rooms.push(room);
+            }
+
+            if !page.has_more {
+                break;
+            }
+        }
+
+        let config = data.user_config_get(user_id).await?;
+
+        Ok(MessageSync::Ambient {
+            user_id,
+            rooms,
+            roles: all_roles,
+            channels: all_channels,
+            threads: all_threads,
+            room_members,
+            config,
+        })
+    }
+
     /// update caches from a sync event
     pub async fn handle_sync(&self, event: &MessageSync) {
         match event {

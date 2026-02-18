@@ -3,10 +3,10 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{MessageSync, MessageType};
+use common::v1::types::{MessageSync, MessageType, RoomId};
 use common::v2::types::message::Message;
 use common::{
-    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, ConnectionId, Media, RoomId, UserId},
+    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, ConnectionId, Media, UserId},
     v2::types::message::MessageVersion,
 };
 use dashmap::DashMap;

@@ -432,6 +432,10 @@ impl Connection {
         self.seq_server += 1;
 
         if let Some(user_id) = session.user_id() {
+            // send ambient data (rooms, channels, roles, etc.)
+            let ambient = srv.cache.generate_ambient_message(user_id).await?;
+            self.push_sync(ambient, None);
+
             // send typing states
             let typing_states = srv.channels.typing_list();
             for (channel_id, typing_user_id, until) in typing_states {

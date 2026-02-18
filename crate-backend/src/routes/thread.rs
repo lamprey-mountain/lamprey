@@ -147,8 +147,8 @@ async fn thread_member_add(
             }
 
             // inviter must be friends to add recipients
-            let relationship = data
-                .user_relationship_get(auth.user.id, *recipient_id)
+            let relationship = d
+                .user_relationship_get(auth.user.id, target_user_id)
                 .await?;
 
             let are_friends =

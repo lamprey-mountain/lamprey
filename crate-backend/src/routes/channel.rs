@@ -144,7 +144,8 @@ async fn channel_create_dm(
                     .user_relationship_get(auth.user.id, *recipient_id)
                     .await?;
 
-                let are_friends = relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
+                let are_friends =
+                    relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
 
                 if !are_friends {
                     return Err(Error::BadStatic(
