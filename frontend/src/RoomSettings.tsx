@@ -34,11 +34,13 @@ const tabs: Array<
 		// component: Component,
 		component: any;
 		permissionCheck?: (p: Set<Permission>) => boolean;
+		ownerOnly?: boolean;
 	} | {
 		name: string;
 		action: "delete";
 		style?: "danger";
 		permissionCheck?: (p: Set<Permission>) => boolean;
+		ownerOnly?: boolean;
 	}
 > = [
 	{ category: "overview" },
@@ -91,7 +93,7 @@ const tabs: Array<
 		name: "delete room",
 		action: "delete",
 		style: "danger",
-		// TODO: check owner id for room delete
+		ownerOnly: true,
 	},
 ];
 
@@ -106,6 +108,7 @@ const adminTabs: Array<
 		// component: Component,
 		component: any;
 		permissionCheck?: (p: Set<Permission>) => boolean;
+		ownerOnly?: boolean;
 	}
 > = [
 	{ category: "overview" },
@@ -216,7 +219,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 					<For each={currentTabs()}>
 						{(tab, idx) => (
 							<Show
-								when={!tab.permissionCheck || tab.permissionCheck(perms)}
+								when={(!tab.permissionCheck || tab.permissionCheck(perms)) &&
+									(!tab.ownerOnly || props.room.owner_id === user_id())}
 							>
 								<Switch>
 									<Match when={tab.category}>
