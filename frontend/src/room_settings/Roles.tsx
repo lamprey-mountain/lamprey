@@ -19,6 +19,7 @@ import { Resizable } from "../Resizable";
 import { md } from "../markdown.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
 import { useModals } from "../contexts/modal";
+import { Checkbox } from "../icons.tsx";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));
@@ -479,31 +480,33 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				] as const}
 			>
 				{(i) => (
-					<div>
-						<label>
-							<input
-								type="checkbox"
-								checked={(props.edit.role as Role)[i.key]}
-								onInput={(e) => {
-									props.edit.setRole((r) => ({
-										...r,
-										[i.key]: (e.target as HTMLInputElement).checked,
-									}));
-								}}
-							/>
-							<div>
-								<div class="name">
-									{i.name}
-								</div>
-								<div
-									class="description"
-									innerHTML={md.parseInline(
-										i.description ?? "",
-									) as string}
-								/>
+					<label class="option">
+						<input
+							type="checkbox"
+							checked={(props.edit.role as Role)[i.key]}
+							onInput={(e) => {
+								props.edit.setRole((r) => ({
+									...r,
+									[i.key]: (e.target as HTMLInputElement).checked,
+								}));
+							}}
+							style="display: none;"
+						/>
+						<Checkbox
+							checked={(props.edit.role as Role)[i.key]}
+						/>
+						<div>
+							<div class="name">
+								{i.name}
 							</div>
-						</label>
-					</div>
+							<div
+								class="description"
+								innerHTML={md.parseInline(
+									i.description ?? "",
+								) as string}
+							/>
+						</div>
+					</label>
 				)}
 			</For>
 
