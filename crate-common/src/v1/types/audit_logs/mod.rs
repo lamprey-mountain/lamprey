@@ -13,8 +13,8 @@ use crate::v1::types::{
     application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
     util::Time, webhook::Webhook, ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId,
     Channel, ChannelId, ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId,
-    MessageVerId, PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, User, UserId,
-    WebhookId,
+    MessageVerId, PermissionOverwriteType, RoleId, RoomId, RoomMember, SessionId, TagId, User,
+    UserId, WebhookId,
 };
 
 pub mod resolve;
@@ -595,23 +595,26 @@ pub enum AuditLogEntryType {
         hostname: String,
         changes: Vec<AuditLogChange>,
     },
-    // TagCreate {
-    //     channel_id: ChannelId,
-    //     tag_id: TagId,
-    //     changes: Vec<AuditLogChange>,
-    // },
 
-    // TagUpdate {
-    //     channel_id: ChannelId,
-    //     tag_id: TagId,
-    //     changes: Vec<AuditLogChange>,
-    // },
+    TagCreate {
+        channel_id: ChannelId,
+        tag_id: TagId,
+        changes: Vec<AuditLogChange>,
+    },
 
-    // TagDelete {
-    //     channel_id: ChannelId,
-    //     tag_id: TagId,
-    //     changes: Vec<AuditLogChange>,
-    // },
+    TagUpdate {
+        channel_id: ChannelId,
+        tag_id: TagId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    TagDelete {
+        channel_id: ChannelId,
+        tag_id: TagId,
+
+        #[cfg_attr(feature = "serde", serde(default))]
+        changes: Vec<AuditLogChange>,
+    },
 }
 
 #[derive(Debug, Default, Clone)]
@@ -774,6 +777,9 @@ impl AuditLogEntryType {
                 | AutomodRuleCreate { .. }
                 | AutomodRuleUpdate { .. }
                 | AutomodRuleDelete { .. }
+                | TagCreate { .. }
+                | TagUpdate { .. }
+                | TagDelete { .. }
         )
     }
 

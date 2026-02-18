@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{misc::Color, TagId};
+use crate::v1::types::{misc::Color, ChannelId, TagId};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::{default_false_opt, some_option};
@@ -19,6 +19,8 @@ use crate::v1::types::util::{default_false_opt, some_option};
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Tag {
     pub id: TagId,
+
+    pub channel_id: ChannelId,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]

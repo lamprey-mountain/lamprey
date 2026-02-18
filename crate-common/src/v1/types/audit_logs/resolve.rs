@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::v1::types::{
-    ApplicationId, AuditLogEntry, AuditLogEntryType, ChannelId, PermissionOverwriteType, UserId,
-    WebhookId,
+    ApplicationId, AuditLogEntry, AuditLogEntryType, ChannelId, PermissionOverwriteType, TagId,
+    UserId, WebhookId,
 };
 
 /// the set of extra data that should be resolved
@@ -129,6 +129,11 @@ impl AuditLogResolve {
                         self.users.insert((*overwrite_id).into());
                     }
                 };
+            }
+            AuditLogEntryType::TagCreate { channel_id, .. }
+            | AuditLogEntryType::TagUpdate { channel_id, .. }
+            | AuditLogEntryType::TagDelete { channel_id, .. } => {
+                self.threads.insert(*channel_id);
             }
             _ => {}
         }

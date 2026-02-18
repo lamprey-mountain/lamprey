@@ -18,6 +18,7 @@ use super::{Pagination, Postgres};
 
 struct DbTag {
     id: Uuid,
+    channel_id: Uuid,
     name: String,
     description: Option<String>,
     color: Option<String>,
@@ -31,6 +32,7 @@ impl From<DbTag> for Tag {
     fn from(tag: DbTag) -> Self {
         Self {
             id: tag.id.into(),
+            channel_id: tag.channel_id.into(),
             name: tag.name,
             description: tag.description,
             color: tag.color.map(Color::Srgb),
@@ -56,7 +58,7 @@ impl DataTag for Postgres {
             WITH t AS (
                 INSERT INTO tag (id, version_id, channel_id, name, description, color, is_archived, is_restricted)
                 VALUES ($1, $1, $2, $3, $4, $5, false, $6)
-                RETURNING id, name, description, color, is_archived, is_restricted
+                RETURNING id, channel_id, name, description, color, is_archived, is_restricted
             )
             SELECT t.*, 0 as "active_thread_count!", 0 as "total_thread_count!" FROM t
             "#,
@@ -94,7 +96,7 @@ impl DataTag for Postgres {
                     is_archived = $5,
                     is_restricted = $6
                 WHERE id = $1
-                RETURNING id, name, description, color, is_archived, is_restricted
+                RETURNING id, channel_id, name, description, color, is_archived, is_restricted
             ),
             active_threads AS (
                 SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = $1 AND c.archived_at IS NULL
@@ -137,7 +139,7 @@ impl DataTag for Postgres {
                 SELECT count(*) FROM channel_tag WHERE tag_id = $1
             )
             SELECT
-                t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
                 (SELECT count FROM active_threads) as "active_thread_count!",
                 (SELECT count FROM total_threads) as "total_thread_count!"
             FROM tag t
@@ -177,7 +179,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -208,7 +210,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -239,7 +241,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -282,7 +284,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -311,7 +313,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -340,7 +342,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t

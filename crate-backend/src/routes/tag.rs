@@ -45,23 +45,18 @@ async fn tag_create(
         return Err(Error::BadStatic("channel does not support tags"));
     }
 
-    let chan_old = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     let tag = s.data().tag_create(channel_id, create).await?;
 
-    srv.channels.invalidate(channel_id).await;
-    let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-
-    if let Some(room_id) = chan_new.room_id {
+    if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::ChannelUpdate {
+        al.commit_success(AuditLogEntryType::TagCreate {
             channel_id,
-            channel_type: chan_new.ty,
+            tag_id: tag.id,
             changes: Changes::new()
-                .change(
-                    "tags_available",
-                    &chan_old.tags_available,
-                    &chan_new.tags_available,
-                )
+                .add("name", &tag.name)
+                .add("description", &tag.description)
+                .add("color", &tag.color)
+                .add("restricted", &tag.restricted)
                 .build(),
         })
         .await?;
@@ -70,9 +65,7 @@ async fn tag_create(
     s.broadcast_channel(
         channel_id,
         auth.user.id,
-        MessageSync::ChannelUpdate {
-            channel: Box::new(chan_new),
-        },
+        MessageSync::TagCreate { tag: tag.clone() },
     )
     .await?;
 
@@ -109,23 +102,24 @@ async fn tag_update(
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
     }
 
-    let chan_old = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let tag_old = s.data().tag_get(tag_id).await?;
     let tag = s.data().tag_update(tag_id, patch).await?;
 
-    srv.channels.invalidate(channel_id).await;
-    let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-
-    if let Some(room_id) = chan_new.room_id {
+    let channel = srv
+        .channels
+        .get(tag_old.channel_id, Some(auth.user.id))
+        .await?;
+    if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::ChannelUpdate {
+        al.commit_success(AuditLogEntryType::TagUpdate {
             channel_id,
-            channel_type: chan_new.ty,
+            tag_id,
             changes: Changes::new()
-                .change(
-                    "tags_available",
-                    &chan_old.tags_available,
-                    &chan_new.tags_available,
-                )
+                .change("name", &tag_old.name, &tag.name)
+                .change("description", &tag_old.description, &tag.description)
+                .change("color", &tag_old.color, &tag.color)
+                .change("archived", &tag_old.archived, &tag.archived)
+                .change("restricted", &tag_old.restricted, &tag.restricted)
                 .build(),
         })
         .await?;
@@ -134,9 +128,7 @@ async fn tag_update(
     s.broadcast_channel(
         channel_id,
         auth.user.id,
-        MessageSync::ChannelUpdate {
-            channel: Box::new(chan_new),
-        },
+        MessageSync::TagUpdate { tag: tag.clone() },
     )
     .await?;
 
@@ -178,23 +170,19 @@ async fn tag_delete(
         return Ok(StatusCode::CONFLICT.into_response());
     }
 
-    let chan_old = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     s.data().tag_delete(tag_id).await?;
 
-    srv.channels.invalidate(channel_id).await;
-    let chan_new = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-
-    if let Some(room_id) = chan_new.room_id {
+    if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::ChannelUpdate {
+        al.commit_success(AuditLogEntryType::TagDelete {
             channel_id,
-            channel_type: chan_new.ty,
+            tag_id,
             changes: Changes::new()
-                .change(
-                    "tags_available",
-                    &chan_old.tags_available,
-                    &chan_new.tags_available,
-                )
+                .remove("name", &tag.name)
+                .remove("description", &tag.description)
+                .remove("color", &tag.color)
+                .remove("restricted", &tag.restricted)
                 .build(),
         })
         .await?;
@@ -203,9 +191,7 @@ async fn tag_delete(
     s.broadcast_channel(
         channel_id,
         auth.user.id,
-        MessageSync::ChannelUpdate {
-            channel: Box::new(chan_new),
-        },
+        MessageSync::TagDelete { channel_id, tag_id },
     )
     .await?;
 

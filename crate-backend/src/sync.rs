@@ -901,6 +901,9 @@ impl Connection {
             MessageSync::DocumentBranchCreate { branch } => AuthCheck::Channel(branch.document_id),
             MessageSync::DocumentBranchUpdate { branch } => AuthCheck::Channel(branch.document_id),
             MessageSync::DocumentBranchDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::TagCreate { tag } => AuthCheck::Channel(tag.channel_id),
+            MessageSync::TagUpdate { tag } => AuthCheck::Channel(tag.channel_id),
+            MessageSync::TagDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
         };
         let should_send = auth_check.should_send(&session, &self.s).await?;
         if should_send {

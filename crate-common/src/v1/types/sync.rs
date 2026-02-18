@@ -26,10 +26,11 @@ use super::{
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,
     role::RoleReorderItem,
+    tag::Tag,
     user_config::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     voice::{SignallingMessage, VoiceState},
     Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
-    RoomMember, Session, SessionId, SessionToken, User, UserId,
+    RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
 };
 
 // TODO: encode binary data as base64 for json, binary for msgpack
@@ -437,6 +438,19 @@ pub enum MessageSync {
     EmojiDelete {
         emoji_id: EmojiId,
         room_id: RoomId,
+    },
+
+    TagCreate {
+        tag: Tag,
+    },
+
+    TagUpdate {
+        tag: Tag,
+    },
+
+    TagDelete {
+        channel_id: ChannelId,
+        tag_id: TagId,
     },
 
     /// receive a signalling message from a voice server

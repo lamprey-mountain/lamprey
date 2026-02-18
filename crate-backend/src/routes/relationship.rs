@@ -43,7 +43,7 @@ async fn friend_list(
 
 /// Friend list pending
 ///
-/// List (mutual) friends.
+/// List pending friend requests (both incoming and outgoing).
 #[utoipa::path(
     get,
     path = "/user/{user_id}/friend/pending",
