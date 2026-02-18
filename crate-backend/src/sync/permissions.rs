@@ -12,7 +12,6 @@ pub enum AuthCheck {
     Room(RoomId),
     RoomPerm(RoomId, Permission),
     RoomOrUser(RoomId, UserId),
-    ChannelOrUser(ChannelId, UserId),
     User(UserId),
     UserMutual(UserId),
     Channel(ChannelId),
@@ -83,18 +82,6 @@ impl AuthCheck {
                     .for_channel(user_id, *thread_id_1)
                     .await?;
                 perms0.has(Permission::ViewChannel) || perms1.has(Permission::ViewChannel)
-            }
-            (Some(auth_user_id), AuthCheck::ChannelOrUser(thread_id, target_user_id)) => {
-                if auth_user_id == *target_user_id {
-                    true
-                } else {
-                    let perms = server_state
-                        .services()
-                        .perms
-                        .for_channel(auth_user_id, *thread_id)
-                        .await?;
-                    perms.has(Permission::ViewChannel)
-                }
             }
             (Some(auth_user_id), AuthCheck::User(target_user_id)) => {
                 auth_user_id == *target_user_id

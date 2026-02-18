@@ -78,7 +78,7 @@ async fn server_user_ensure(
 /// Server sync handle (TODO)
 ///
 /// Handle MessageSync events. used to proxy events to connected clients.
-// NOTE: in the future, i probably want to have a local cache of stuff too
+// NOTE: in the future, i probably want to have a local cache of remote data too
 #[utoipa::path(
     post,
     path = "/server/{hostname}/sync",

@@ -448,7 +448,6 @@ pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> Tan
     );
 
     let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
-    let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();
 
     meta_fast.insert("nsfw".to_string(), channel.nsfw.into());
 
@@ -461,7 +460,6 @@ pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> Tan
     }
 
     doc.add_object(s.metadata_fast, meta_fast);
-    doc.add_object(s.metadata_text, meta_text);
 
     doc
 }
