@@ -386,33 +386,38 @@ impl TantivySearcher {
 
         let limit = req.limit as usize;
         let cursor = req.offset as usize;
-        let collector = TopDocs::with_limit(limit).and_offset(cursor);
 
-        let top_docs: Vec<DocAddress> = match (req.sort_field, req.sort_order) {
-            (MessageSearchOrderField::Relevancy, _) => searcher
-                .search(&query, &collector)?
-                .into_iter()
-                .map(|(_, doc)| doc)
-                .collect(),
-            (MessageSearchOrderField::Created, ord) => searcher
-                .search(
+        let (top_docs, total) = match (req.sort_field, req.sort_order) {
+            (MessageSearchOrderField::Relevancy, _) => {
+                let (top_docs, count): (Vec<(f32, DocAddress)>, usize) = searcher.search(
                     &query,
-                    &collector.order_by_fast_field::<tantivy::DateTime>(
-                        "created_at",
-                        match ord {
-                            Order::Ascending => tantivy::Order::Asc,
-                            Order::Descending => tantivy::Order::Desc,
-                        },
-                    ),
-                )?
-                .into_iter()
-                .map(|(_, doc)| doc)
-                .collect(),
+                    &(TopDocs::with_limit(limit).and_offset(cursor), Count),
+                )?;
+                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+                (top_docs, count as u64)
+            }
+            (MessageSearchOrderField::Created, ord) => {
+                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
+                    .search(
+                        &query,
+                        &(
+                            TopDocs::with_limit(limit)
+                                .and_offset(cursor)
+                                .order_by_fast_field::<tantivy::DateTime>(
+                                    "created_at",
+                                    match ord {
+                                        Order::Ascending => tantivy::Order::Asc,
+                                        Order::Descending => tantivy::Order::Desc,
+                                    },
+                                ),
+                            Count,
+                        ),
+                    )?;
+                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+                (top_docs, count as u64)
+            }
         };
-        trace!("got top docs");
-
-        let total = searcher.search(&query, &Count)? as u64;
-        trace!("got count");
+        trace!("got top docs and count in single pass");
 
         let mut items = vec![];
 
