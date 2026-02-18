@@ -319,38 +319,6 @@ export function UserMenu(props: UserMenuProps) {
 	const hasAnyPermission = (checks: Array<() => boolean>) =>
 		checks.some((c) => c());
 
-	const showGeneralActions = () =>
-		!user()?.webhook && !props.admin && (
-			props.thread_id ||
-			user()?.relationship?.relation !== "Block"
-		);
-	const showFriendActions = () =>
-		!user()?.webhook && !props.admin && (
-			user()?.relationship?.relation === null ||
-			user()?.relationship?.relation === "Friend" ||
-			user()?.relationship?.relation === "Incoming" ||
-			user()?.relationship?.relation === "Outgoing"
-		);
-	const showModerationActions = () =>
-		!user()?.webhook && !props.admin && hasAnyPermission([
-			() => hasPermission("MemberNicknameManage"),
-			() => hasPermission("MemberNickname") && props.user_id === self_id(),
-			() => hasPermission("MemberKick") && canModerate(),
-			() => hasPermission("MemberBan") && canModerate(),
-			() => hasPermission("RoleApply") && props.room_id && hasRoles(),
-			() => hasPermission("MemberKick") && props.thread_id,
-		]);
-	const showVoiceActions = () =>
-		!user()?.webhook && !props.admin && (
-			(props.user_id !== self_id() && connectedToVoice()) ||
-			(props.user_id === self_id() && connectedToVoice()) ||
-			hasPermission("VoiceMute") ||
-			hasPermission("VoiceDeafen") ||
-			(hasPermission("VoiceDisconnect") && connectedToVoice()) ||
-			(hasPermission("VoiceMove") && connectedToVoice())
-		);
-	const showAdminActions = () => props.admin;
-
 	return (
 		<Menu>
 			<Switch>
@@ -361,129 +329,120 @@ export function UserMenu(props: UserMenuProps) {
 					</Show>
 				</Match>
 				<Match when={!user()?.webhook}>
-					<Show when={showGeneralActions()}>
-						<Show when={props.thread_id}>
-							<Item>mention</Item>
-						</Show>
-						<Show when={user()?.relationship?.relation !== "Block"}>
-							<Item onClick={openDm}>dm</Item>
-						</Show>
+					<Show when={props.thread_id}>
+						<Item>mention</Item>
+					</Show>
+					<Show when={user()?.relationship?.relation !== "Block"}>
+						<Item onClick={openDm}>dm</Item>
+					</Show>
+					<Item
+						onClick={() =>
+							user()?.relationship?.relation === "Block"
+								? unblockUser()
+								: blockUser()}
+					>
+						{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
+					</Item>
+					<Show when={false}>
+						<Item>(un)ignore</Item>
+					</Show>
+					<Switch>
+						<Match when={user()?.relationship?.relation === null}>
+							<Item onClick={sendFriendRequest}>add friend</Item>
+						</Match>
+						<Match when={user()?.relationship?.relation === "Friend"}>
+							<Item onClick={removeFriend}>remove friend</Item>
+						</Match>
+						<Match when={user()?.relationship?.relation === "Incoming"}>
+							<Item onClick={sendFriendRequest}>accept friend request</Item>
+						</Match>
+						<Match when={user()?.relationship?.relation === "Outgoing"}>
+							<Item onClick={removeFriend}>cancel friend request</Item>
+						</Match>
+					</Switch>
+					<Separator />
+					<Show
+						when={hasPermission("MemberNicknameManage") ||
+							(hasPermission("MemberNickname") &&
+								props.user_id === self_id())}
+					>
+						<Item onClick={changeNickname}>change nickname</Item>
+					</Show>
+					<Show when={hasPermission("MemberKick") && canModerate()}>
+						<Item onClick={kickRoom} color="danger">kick</Item>
+					</Show>
+					<Show when={hasPermission("MemberBan") && canModerate()}>
+						<Item onClick={ban} color="danger">ban</Item>
+					</Show>
+					<Show when={false}>
+						<Item>timeout</Item>
+					</Show>
+					<Show
+						when={hasPermission("RoleApply") && props.room_id && hasRoles()}
+					>
+						<RoleSubmenu />
+					</Show>
+					<Show when={hasPermission("MemberKick") && props.thread_id}>
+						<Item onClick={kickThread}>remove from thread</Item>
+					</Show>
+					<Separator />
+					<Show when={props.user_id !== self_id() && connectedToVoice()}>
+						<li>
+							<label style="display:block;padding:0 8px;padding-top:8px">
+								<div class="dim">volume</div>
+								<input
+									type="range"
+									min="0"
+									max="100"
+									list="volume-detents"
+									value={voice.userConfig.get(props.user_id)?.volume ?? 100}
+									onInput={(e) =>
+										voice.userConfig.set(props.user_id, {
+											...voice.userConfig.get(props.user_id) ??
+												{ mute: false, mute_video: false, volume: 100 },
+											volume: parseFloat(e.target.value),
+										})}
+								/>
+							</label>
+						</li>
 						<Item
-							onClick={() =>
-								user()?.relationship?.relation === "Block"
-									? unblockUser()
-									: blockUser()}
+							onClick={() => {
+								const c = voice.userConfig.get(props.user_id) ??
+									{ mute: false, mute_video: false, volume: 100 };
+								c.mute = !c.mute;
+								voice.userConfig.set(props.user_id, { ...c });
+							}}
 						>
-							{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
+							{voice.userConfig.get(props.user_id)?.mute === true
+								? "unmute"
+								: "mute"}
 						</Item>
-						<Show when={false}>
-							<Item>(un)ignore</Item>
-						</Show>
-						<Switch>
-							<Match when={user()?.relationship?.relation === null}>
-								<Item onClick={sendFriendRequest}>add friend</Item>
-							</Match>
-							<Match when={user()?.relationship?.relation === "Friend"}>
-								<Item onClick={removeFriend}>remove friend</Item>
-							</Match>
-							<Match when={user()?.relationship?.relation === "Incoming"}>
-								<Item onClick={sendFriendRequest}>accept friend request</Item>
-							</Match>
-							<Match when={user()?.relationship?.relation === "Outgoing"}>
-								<Item onClick={removeFriend}>cancel friend request</Item>
-							</Match>
-						</Switch>
 					</Show>
-					<Show when={showModerationActions()}>
-						<Separator />
-						<Show
-							when={hasPermission("MemberNicknameManage") ||
-								(hasPermission("MemberNickname") &&
-									props.user_id === self_id())}
-						>
-							<Item onClick={changeNickname}>change nickname</Item>
-						</Show>
-						<Show when={hasPermission("MemberKick") && canModerate()}>
-							<Item onClick={kickRoom} color="danger">kick</Item>
-						</Show>
-						<Show when={hasPermission("MemberBan") && canModerate()}>
-							<Item onClick={ban} color="danger">ban</Item>
-						</Show>
-						<Show when={false}>
-							<Item>timeout</Item>
-						</Show>
-						<Show
-							when={hasPermission("RoleApply") && props.room_id && hasRoles()}
-						>
-							<RoleSubmenu />
-						</Show>
-						<Show when={hasPermission("MemberKick") && props.thread_id}>
-							<Item onClick={kickThread}>remove from thread</Item>
-						</Show>
+					<Show when={props.user_id === self_id() && connectedToVoice()}>
+						<Item onClick={voiceActions.toggleMic}>
+							{voice.muted ? "unmute" : "mute"}
+						</Item>
+						<Item onClick={voiceActions.toggleDeafened}>
+							{voice.deafened ? "undeafen" : "deafen"}
+						</Item>
 					</Show>
-					<Show when={showVoiceActions()}>
-						<Separator />
-						<Show when={props.user_id !== self_id() && connectedToVoice()}>
-							<li>
-								<label style="display:block;padding:0 8px;padding-top:8px">
-									<div class="dim">volume</div>
-									<input
-										type="range"
-										min="0"
-										max="100"
-										list="volume-detents"
-										value={voice.userConfig.get(props.user_id)?.volume ?? 100}
-										onInput={(e) =>
-											voice.userConfig.set(props.user_id, {
-												...voice.userConfig.get(props.user_id) ??
-													{ mute: false, mute_video: false, volume: 100 },
-												volume: parseFloat(e.target.value),
-											})}
-									/>
-								</label>
-							</li>
-							<Item
-								onClick={() => {
-									const c = voice.userConfig.get(props.user_id) ??
-										{ mute: false, mute_video: false, volume: 100 };
-									c.mute = !c.mute;
-									voice.userConfig.set(props.user_id, { ...c });
-								}}
-							>
-								{voice.userConfig.get(props.user_id)?.mute === true
-									? "unmute"
-									: "mute"}
-							</Item>
-						</Show>
-						<Show when={props.user_id === self_id() && connectedToVoice()}>
-							<Item onClick={voiceActions.toggleMic}>
-								{voice.muted ? "unmute" : "mute"}
-							</Item>
-							<Item onClick={voiceActions.toggleDeafened}>
-								{voice.deafened ? "undeafen" : "deafen"}
-							</Item>
-						</Show>
-						<Show when={hasPermission("VoiceMute")}>
-							<Item onClick={mute}>
-								{room_member()?.mute ? "room unmute" : "room mute"}
-							</Item>
-						</Show>
-						<Show when={hasPermission("VoiceDeafen")}>
-							<Item onClick={deafen}>
-								{room_member()?.deaf ? "room undeafen" : "room deafen"}
-							</Item>
-						</Show>
-						<Show when={hasPermission("VoiceDisconnect") && connectedToVoice()}>
-							<Item onClick={disconnect}>disconnect</Item>
-						</Show>
-						<Show when={hasPermission("VoiceMove") && connectedToVoice()}>
-							<Item>move to</Item>
-						</Show>
+					<Show when={hasPermission("VoiceMute")}>
+						<Item onClick={mute}>
+							{room_member()?.mute ? "room unmute" : "room mute"}
+						</Item>
 					</Show>
-					<Show when={showAdminActions()}>
-						<Show when={showGeneralActions()}>
-							<Separator />
-						</Show>
+					<Show when={hasPermission("VoiceDeafen")}>
+						<Item onClick={deafen}>
+							{room_member()?.deaf ? "room undeafen" : "room deafen"}
+						</Item>
+					</Show>
+					<Show when={hasPermission("VoiceDisconnect") && connectedToVoice()}>
+						<Item onClick={disconnect}>disconnect</Item>
+					</Show>
+					<Show when={hasPermission("VoiceMove") && connectedToVoice()}>
+						<Item>move to</Item>
+					</Show>
+					<Show when={props.admin}>
 						<Show when={user()?.relationship?.relation !== "Block"}>
 							<Item onClick={openDm}>dm</Item>
 						</Show>

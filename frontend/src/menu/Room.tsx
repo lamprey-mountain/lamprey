@@ -179,38 +179,74 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 							messages: undefined,
 							threads: undefined,
 						})}
+					classList={{
+						selected: roomConfig()?.notifs.messages === undefined &&
+							roomConfig()?.notifs.threads === undefined,
+					}}
 				>
 					<div>default</div>
 					<div class="subtext">Uses your default notification setting.</div>
 				</Item>
-				<Item onClick={() => setNotifs({ messages: "Everything" })}>
+				<Item
+					onClick={() => setNotifs({ messages: "Everything" })}
+					classList={{
+						selected: roomConfig()?.notifs.messages === "Everything",
+					}}
+				>
 					<div>everything</div>
 					<div class="subtext">You will be notified for all messages.</div>
 				</Item>
-				<Item onClick={() => setNotifs({ messages: "Watching" })}>
+				<Item
+					onClick={() => setNotifs({ messages: "Watching" })}
+					classList={{ selected: roomConfig()?.notifs.messages === "Watching" }}
+				>
 					<div>watching</div>
 					<div class="subtext">
 						Messages in this room will show up in your inbox.
 					</div>
 				</Item>
-				<Item onClick={() => setNotifs({ messages: "Mentions" })}>
+				<Item
+					onClick={() => setNotifs({ messages: "Mentions" })}
+					classList={{ selected: roomConfig()?.notifs.messages === "Mentions" }}
+				>
 					<div>mentions</div>
 					<div class="subtext">You will only be notified on @mention</div>
 				</Item>
-				<Item onClick={() => setNotifs({ messages: "Nothing" })}>
+				<Item
+					onClick={() => setNotifs({ messages: "Nothing" })}
+					classList={{ selected: roomConfig()?.notifs.messages === "Nothing" }}
+				>
 					<div>nothing</div>
 					<div class="subtext">You won't be notified for anything.</div>
 				</Item>
 				<Separator />
-				<Item onClick={() => setNotifs({ threads: "Notify" })}>
+				<Item
+					onClick={() => setNotifs({ threads: undefined })}
+					classList={{ selected: roomConfig()?.notifs.threads === undefined }}
+				>
+					<div>default</div>
+					<div class="subtext">
+						Uses your default notification setting for threads.
+					</div>
+				</Item>
+				<Item
+					onClick={() => setNotifs({ threads: "Notify" })}
+					classList={{ selected: roomConfig()?.notifs.threads === "Notify" }}
+				>
 					<div>new threads</div>
 					<div class="subtext">You will be notified for new threads.</div>
 				</Item>
-				<Item onClick={() => setNotifs({ threads: "Inbox" })}>
+				<Item
+					onClick={() => setNotifs({ threads: "Inbox" })}
+					classList={{ selected: roomConfig()?.notifs.threads === "Inbox" }}
+				>
 					<div>threads to inbox</div>
 					<div class="subtext">New threads will show up in your inbox.</div>
 				</Item>
-				<Item onClick={() => setNotifs({ threads: "Nothing" })}>
+				<Item
+					onClick={() => setNotifs({ threads: "Nothing" })}
+					classList={{ selected: roomConfig()?.notifs.threads === "Nothing" }}
+				>
 					<div>ignore threads</div>
 					<div class="subtext">You won't be notified for new threads.</div>
 				</Item>

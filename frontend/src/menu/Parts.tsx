@@ -1,4 +1,5 @@
 import {
+	children,
 	createEffect,
 	createSignal,
 	createUniqueId,
@@ -11,17 +12,43 @@ import { autoUpdate, flip } from "@floating-ui/dom";
 import { chatctx, useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
 
+function isSeparator(child: any): boolean {
+	return (child as HTMLElement)?.classList.contains("menu-separator");
+}
+
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 	const ctx = useCtx();
+	const resolved = children(() => props.children);
+
+	const filtered = () => {
+		const flat = resolved.toArray();
+		if (flat.length === 0) return flat;
+
+		const result: any[] = [];
+		let prevWasSeparator = false;
+
+		for (const child of flat) {
+			if (!child) continue;
+			const isSep = isSeparator(child);
+			if (isSep && (result.length === 0 || prevWasSeparator)) continue;
+			result.push(child);
+			prevWasSeparator = isSep;
+		}
+
+		if (result.length > 0 && isSeparator(result[result.length - 1])) {
+			result.pop();
+		}
+
+		return result;
+	};
+
 	return (
 		<menu
 			onMouseDown={(e) => !props.submenu && e.stopPropagation()}
 			onMouseLeave={() => ctx.dispatch({ do: "menu.preview", id: null })}
 			role="menu"
 		>
-			<ul>
-				{props.children}
-			</ul>
+			<ul>{filtered()}</ul>
 		</menu>
 	);
 }
@@ -171,7 +198,7 @@ export function Item(
 
 export function Separator() {
 	return (
-		<li>
+		<li class="menu-separator">
 			<hr />
 		</li>
 	);

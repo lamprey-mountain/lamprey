@@ -628,6 +628,10 @@ em {
 		&.color-danger {
 			color: $color-red;
 		}
+
+		&.selected {
+			background-color: oklch(var(--color-accent) / 0.3);
+		}
 	}
 
 	& .submenu {
