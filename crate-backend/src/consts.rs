@@ -44,7 +44,11 @@ pub const EMPTY_CALL_TIMEOUT: u64 = 300;
 pub const MAX_PUBLIC_CONNECTIONS: usize = 32;
 
 /// the maximum number of active branches a document can have
+// TODO: remove?
 pub const MAX_DOCUMENT_BRANCHES: usize = 64;
+
+/// the maximum number of loaded branches/editing contexts a document can have
+pub const MAX_LOADED_DOCUMENT_BRANCHES: usize = 32;
 
 // TODO: pinning documents to sidebar in ui
 // /// the maximum number of pinned documents per wiki a user can have

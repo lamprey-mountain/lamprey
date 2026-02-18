@@ -300,6 +300,46 @@ pub enum ErrorCode {
     #[error("unknown document revision")]
     UnknownDocumentRevision,
 
+    /// unknown emoji
+    #[error("unknown emoji")]
+    UnknownEmoji,
+
+    /// unknown session
+    #[error("unknown session")]
+    UnknownSession,
+
+    /// unknown role
+    #[error("unknown role")]
+    UnknownRole,
+
+    /// unknown calendar event
+    #[error("unknown calendar event")]
+    UnknownCalendarEvent,
+
+    /// unknown document
+    #[error("unknown document")]
+    UnknownDocument,
+
+    /// unknown wiki
+    #[error("unknown wiki")]
+    UnknownWiki,
+
+    /// unknown tag
+    #[error("unknown tag")]
+    UnknownTag,
+
+    /// unknown notification
+    #[error("unknown notification")]
+    UnknownNotification,
+
+    /// unknown reaction
+    #[error("unknown reaction")]
+    UnknownReaction,
+
+    /// unknown connection
+    #[error("unknown connection")]
+    UnknownConnection,
+
     // calls can only be created in Broadcast channels
     // calls can only be deleted in Broadcast channels
 
@@ -385,6 +425,16 @@ impl ErrorCode {
             ErrorCode::UnknownUserEmail => 404,
             ErrorCode::UnknownDocumentBranch => 404,
             ErrorCode::UnknownDocumentRevision => 404,
+            ErrorCode::UnknownEmoji => 404,
+            ErrorCode::UnknownSession => 404,
+            ErrorCode::UnknownRole => 404,
+            ErrorCode::UnknownCalendarEvent => 404,
+            ErrorCode::UnknownDocument => 404,
+            ErrorCode::UnknownWiki => 404,
+            ErrorCode::UnknownTag => 404,
+            ErrorCode::UnknownNotification => 404,
+            ErrorCode::UnknownReaction => 404,
+            ErrorCode::UnknownConnection => 404,
             ErrorCode::Automod => 403,
             ErrorCode::MissingPermissions => 403,
         }

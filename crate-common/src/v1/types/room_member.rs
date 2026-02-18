@@ -123,6 +123,13 @@ pub struct RoomMemberPatch {
     /// temporarily prevent a member from communicating
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub timeout_until: Option<Option<Time>>,
+    // TODO: room member timeout_for
+    // /// timeout for server time + this in milliseconds
+    // ///
+    // /// does nothing if the member is already timed out for longer than this would time them out for
+    // ///
+    // /// incompatible with timeout_until
+    // pub timeout_for: Option<u64>,
 }
 
 /// represents a restriction on who can join the room

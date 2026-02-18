@@ -152,6 +152,9 @@ pub enum NotifsTts {
 pub struct Mute {
     /// how long to mute for, or forever if None
     pub expires_at: Option<Time>,
+
+    /// the selected duration in seconds in the ui
+    pub duration: Option<u64>,
 }
 
 impl Default for NotifsGlobal {

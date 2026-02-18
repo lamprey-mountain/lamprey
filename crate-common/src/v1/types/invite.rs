@@ -52,6 +52,8 @@ pub struct Invite {
     /// if this invite's code is custom (instead of random)
     // TODO(#263): vanity (custom) invite codes
     pub is_vanity: bool,
+    // TODO: maybe enable/disable invites without revoking them?
+    // pub enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

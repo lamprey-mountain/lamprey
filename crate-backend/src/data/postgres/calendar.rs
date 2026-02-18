@@ -5,9 +5,11 @@ use common::v1::types::{
         CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
         CalendarRsvpStatus, Timezone,
     },
+    error::{ApiError, ErrorCode},
     pagination::{PaginationDirection, PaginationResponse},
     CalendarEventId, ChannelId, PaginationKey, UserId,
 };
+use lamprey_backend_core::Error;
 use std::collections::HashSet;
 
 use sqlx::{query, query_as, query_scalar, Acquire};
@@ -132,7 +134,13 @@ impl DataCalendar for Postgres {
             *event_id
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownCalendarEvent,
+            )),
+            e => Error::Sqlx(e),
+        })?;
 
         Ok(event.into())
     }
@@ -314,7 +322,9 @@ impl DataCalendar for Postgres {
                 member: None,
             })
         } else {
-            Err(crate::error::Error::NotFound)
+            Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownCalendarEvent,
+            )))
         }
     }
 

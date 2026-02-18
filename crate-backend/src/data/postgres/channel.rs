@@ -3,6 +3,7 @@ use common::v1::types::calendar::{Calendar, CalendarPatch, Timezone};
 use common::v1::types::document::{
     Document, DocumentArchived, DocumentPatch, DocumentPublished, Wiki, WikiPatch,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::Color;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{ChannelReorder, RoomVerId};
@@ -105,7 +106,13 @@ impl DataChannel for Postgres {
     async fn channel_get(&self, channel_id: ChannelId) -> Result<Channel> {
         let thread = query_file_as!(DbChannel, "sql/channel_get.sql", channel_id.into_inner())
             .fetch_one(&self.pool)
-            .await?;
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => {
+                    Error::ApiError(ApiError::from_code(ErrorCode::UnknownChannel))
+                }
+                e => Error::Sqlx(e),
+            })?;
         Ok(thread.into())
     }
 

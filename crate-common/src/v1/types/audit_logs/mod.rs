@@ -595,6 +595,23 @@ pub enum AuditLogEntryType {
         hostname: String,
         changes: Vec<AuditLogChange>,
     },
+    // TagCreate {
+    //     channel_id: ChannelId,
+    //     tag_id: TagId,
+    //     changes: Vec<AuditLogChange>,
+    // },
+
+    // TagUpdate {
+    //     channel_id: ChannelId,
+    //     tag_id: TagId,
+    //     changes: Vec<AuditLogChange>,
+    // },
+
+    // TagDelete {
+    //     channel_id: ChannelId,
+    //     tag_id: TagId,
+    //     changes: Vec<AuditLogChange>,
+    // },
 }
 
 #[derive(Debug, Default, Clone)]

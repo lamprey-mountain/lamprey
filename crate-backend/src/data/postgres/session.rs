@@ -1,5 +1,7 @@
 use async_trait::async_trait;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
+use lamprey_backend_core::Error;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
 use uuid::Uuid;
@@ -46,7 +48,13 @@ impl DataSession for Postgres {
             *id,
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownSession,
+            )),
+            e => Error::Sqlx(e),
+        })?;
         Ok(session.into())
     }
 
@@ -57,7 +65,13 @@ impl DataSession for Postgres {
             token.0
         )
             .fetch_one(&self.pool)
-            .await?;
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownSession,
+                )),
+                e => Error::Sqlx(e),
+            })?;
         Ok(session.into())
     }
 

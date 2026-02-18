@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     tag::{Tag, TagCreate, TagDeleteQuery, TagListQuery, TagPatch, TagSearchQuery},
     util::Changes,
@@ -105,7 +106,7 @@ async fn tag_update(
 
     let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
     if channel_id != tag_channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
     }
 
     let chan_old = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -168,7 +169,7 @@ async fn tag_delete(
 
     let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
     if channel_id != tag_channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
     }
 
     let tag = s.data().tag_get(tag_id).await?;

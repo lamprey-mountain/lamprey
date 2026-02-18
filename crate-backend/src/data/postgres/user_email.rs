@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
+use common::v1::types::error::{ApiError, ErrorCode};
 
 use sqlx::{query, query_as, query_scalar};
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
@@ -87,7 +88,9 @@ impl DataUserEmail for Postgres {
         .await?;
 
         if res.rows_affected() == 0 {
-            return Err(Error::NotFound);
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownUserEmail,
+            )));
         }
 
         Ok(())
@@ -224,7 +227,9 @@ impl DataUserEmail for Postgres {
 
         if res.rows_affected() == 0 {
             tx.rollback().await?;
-            return Err(Error::NotFound);
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownUserEmail,
+            )));
         }
 
         tx.commit().await?;
@@ -239,7 +244,7 @@ impl DataUserEmail for Postgres {
         )
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(Error::NotFound)?;
+        .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUserEmail)))?;
         Ok(user_id.into())
     }
 
@@ -273,7 +278,9 @@ impl DataUserEmail for Postgres {
 
         if res.rows_affected() == 0 {
             tx.rollback().await?;
-            return Err(Error::NotFound);
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownUserEmail,
+            )));
         }
 
         tx.commit().await?;

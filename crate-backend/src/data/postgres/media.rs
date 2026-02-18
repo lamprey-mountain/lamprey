@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::{Media as MediaV1, MediaPatch as MediaPatchV1, MediaTrack as MediaTrackV1};
 use common::v2::types::media::Media as MediaV2;
@@ -125,7 +126,13 @@ impl DataMedia for Postgres {
             *media_id,
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => {
+                Error::ApiError(ApiError::from_code(ErrorCode::UnknownMedia))
+            }
+            e => Error::Sqlx(e),
+        })?;
         let parsed: DbMediaData = serde_json::from_value(media.data).unwrap();
         Ok(MediaWithAdmin {
             inner: parsed.into(),
@@ -255,7 +262,9 @@ impl DataMedia for Postgres {
         )
         .fetch_optional(&mut *tx)
         .await?
-        .ok_or(crate::error::Error::NotFound)?; // Ensure media exists
+        .ok_or(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )))?; // Ensure media exists
 
         let links = query_as!(
             MediaLink,

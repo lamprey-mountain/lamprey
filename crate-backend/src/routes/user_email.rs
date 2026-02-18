@@ -6,6 +6,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::UserId;
 use common::v1::types::{AuditLogEntryType, MessageSync};
@@ -176,7 +177,9 @@ async fn email_delete(
     let email_info = emails
         .iter()
         .find(|e| e.email == email)
-        .ok_or(Error::NotFound)?;
+        .ok_or(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownUserEmail,
+        )))?;
 
     if email_info.is_verified && email_info.is_primary {
         ensure_can_still_login_after_email_removal(&s, target_user_id).await?;
@@ -261,7 +264,9 @@ async fn email_update(
     let email_info = emails
         .iter()
         .find(|e| e.email == email_addr)
-        .ok_or(Error::NotFound)?;
+        .ok_or(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownUserEmail,
+        )))?;
 
     // you can only set an email as primary if it's verified.
     if patch.is_primary == Some(true) {
@@ -277,10 +282,13 @@ async fn email_update(
         .await?;
 
     let emails_new = s.data().user_email_list(target_user_id).await?;
-    let email_info_new = emails_new
-        .iter()
-        .find(|e| e.email == email_addr)
-        .ok_or(Error::NotFound)?;
+    let email_info_new =
+        emails_new
+            .iter()
+            .find(|e| e.email == email_addr)
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownUserEmail,
+            )))?;
 
     let al = auth.audit_log(target_user_id.into_inner().into());
     al.commit_success(AuditLogEntryType::EmailUpdate {
@@ -335,7 +343,9 @@ async fn email_verification_resend(
     let email_info = emails
         .into_iter()
         .find(|e| e.email == email_addr)
-        .ok_or(Error::NotFound)?;
+        .ok_or(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownUserEmail,
+        )))?;
 
     if email_info.is_verified {
         return Ok(StatusCode::NO_CONTENT.into_response());

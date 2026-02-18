@@ -8,6 +8,7 @@ use axum::{
 use common::v1::types::automod::{
     AutomodRule, AutomodRuleCreate, AutomodRuleTest, AutomodRuleTestRequest, AutomodRuleUpdate,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -120,7 +121,9 @@ async fn automod_rule_get(
 
     let rule = s.data().automod_rule_get(rule_id).await?;
     if rule.room_id != room_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownAutomodRule,
+        )));
     }
 
     Ok(Json(rule))
@@ -154,7 +157,9 @@ async fn automod_rule_update(
 
     let old = s.data().automod_rule_get(rule_id).await?;
     if old.room_id != room_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownAutomodRule,
+        )));
     }
 
     let rule = s.data().automod_rule_update(rule_id, json.clone()).await?;
@@ -215,7 +220,9 @@ async fn automod_rule_delete(
 
     let rule = s.data().automod_rule_get(rule_id).await?;
     if rule.room_id != room_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownAutomodRule,
+        )));
     }
 
     s.data().automod_rule_delete(rule_id).await?;

@@ -233,6 +233,13 @@ pub enum MessageSync {
         room: Room,
     },
 
+    // RoomCreate2 {
+    //     room: Room,
+    //     roles: Vec<Role>,
+    //     channels: Vec<Channel>,
+    //     threads: Vec<Channel>,
+    //     room_member: Option<RoomMember>,
+    // },
     RoomUpdate {
         room: Room,
     },
@@ -741,6 +748,8 @@ pub enum MessageSync {
     // MediaProcessed {
     //     media: crate::v2::types::media::Media,
     // },
+
+    // TODO: TagCreate, Update, Delete
 }
 
 // TODO: skip sending room_members/thread_members/users if the client already has them

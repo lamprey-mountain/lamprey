@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::error::{ApiError, ErrorCode};
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
@@ -77,7 +78,13 @@ impl DataRoom for Postgres {
             id
         )
         .fetch_one(&mut *conn)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownRoom,
+            )),
+            e => Error::Sqlx(e),
+        })?;
         Ok(room.into())
     }
 

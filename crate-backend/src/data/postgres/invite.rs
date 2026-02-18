@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
 use common::v1::types::{
     ChannelId, InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery,
@@ -129,7 +130,13 @@ impl DataInvite for Postgres {
             code.0
         )
         .fetch_one(&mut *tx)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownInvite,
+            )),
+            e => Error::Sqlx(e),
+        })?;
         let target = match row.target_type.as_str() {
             "room" => {
                 let room_id = RoomId::from(row.target_id.unwrap());
@@ -160,7 +167,9 @@ impl DataInvite for Postgres {
                 let channel = self
                     .channel_get(ChannelId::from(row.target_id.unwrap()))
                     .await?;
-                let room_id = channel.room_id.ok_or_else(|| Error::NotFound)?;
+                let room_id = channel.room_id.ok_or_else(|| {
+                    Error::ApiError(ApiError::from_code(ErrorCode::UnknownChannel))
+                })?;
                 let room = self.room_get(room_id).await?;
                 let role_ids: Vec<RoleId> = row.role_ids.into_iter().map(Into::into).collect();
                 let roles = self.role_get_many(room_id, &role_ids).await?;

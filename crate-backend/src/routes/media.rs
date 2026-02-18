@@ -7,6 +7,7 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::{
     v1::types::{
         media::{MediaClone, MediaSearch},
@@ -129,7 +130,9 @@ async fn media_patch(
     }
     let media = s.data().media_select(media_id).await?;
     if media.deleted_at.is_some() {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )));
     }
     if media.user_id != auth.user.id {
         return Err(Error::MissingPermissions);
@@ -164,11 +167,13 @@ async fn media_done(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let mut up = srv
-        .media
-        .uploads
-        .get_mut(&media_id)
-        .ok_or(Error::NotFound)?;
+    let mut up =
+        srv.media
+            .uploads
+            .get_mut(&media_id)
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMedia,
+            )))?;
     if up.user_id != auth.user.id {
         return Err(Error::NotFound);
     }
@@ -236,11 +241,13 @@ async fn media_upload(
     body: Body,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let mut up = srv
-        .media
-        .uploads
-        .get_mut(&media_id)
-        .ok_or(Error::NotFound)?;
+    let mut up =
+        srv.media
+            .uploads
+            .get_mut(&media_id)
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMedia,
+            )))?;
     if up.user_id != auth.user.id {
         return Err(Error::NotFound);
     }
@@ -346,7 +353,9 @@ async fn media_get(
 ) -> Result<impl IntoResponse> {
     let media = s.data().media_select(media_id).await?;
     if media.deleted_at.is_some() {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )));
     }
     let mut media = media.inner;
     s.presign(&mut media).await?;

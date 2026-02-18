@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     calendar::{
         CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
@@ -165,7 +166,9 @@ async fn calendar_event_get(
     let event = s.data().calendar_event_get(event_id).await?;
 
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     Ok(Json(event))
@@ -201,7 +204,9 @@ async fn calendar_event_update(
 
     let old_event = s.data().calendar_event_get(event_id).await?;
     if old_event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     if old_event.creator_id == Some(auth.user.id) {
@@ -277,7 +282,9 @@ async fn calendar_event_delete(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
     if event.creator_id == Some(auth.user.id) {
         perms.ensure(Permission::CalendarEventCreate)?;
@@ -346,7 +353,9 @@ async fn calendar_overwrite_list(
     }
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let overwrites = s.data().calendar_overwrite_list(event_id).await?;
@@ -380,7 +389,9 @@ async fn calendar_overwrite_get(
     }
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let overwrite = s.data().calendar_overwrite_get(event_id, seq).await?;
@@ -418,7 +429,9 @@ async fn calendar_overwrite_update(
     }
     let event = data.calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let old_overwrite = data.calendar_overwrite_get(event_id, seq).await.ok();
@@ -511,7 +524,9 @@ async fn calendar_overwrite_delete(
     }
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let overwrite = s.data().calendar_overwrite_get(event_id, seq).await?;
@@ -582,7 +597,9 @@ async fn calendar_event_rsvp_list(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let mut participants = s
@@ -648,7 +665,9 @@ async fn calendar_event_rsvp_get(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let rsvp = s.data().calendar_event_rsvp_get(event_id, user_id).await?;
@@ -695,7 +714,9 @@ async fn calendar_event_rsvp_put(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let room_id = srv
@@ -785,7 +806,9 @@ async fn calendar_event_rsvp_delete(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     s.data()
@@ -850,7 +873,9 @@ async fn calendar_overwrite_rsvp_list(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let mut participants = s
@@ -929,7 +954,9 @@ async fn calendar_overwrite_rsvp_put(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     let room_id = srv
@@ -1029,7 +1056,9 @@ async fn calendar_overwrite_rsvp_delete(
 
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownCalendarEvent,
+        )));
     }
 
     s.data()

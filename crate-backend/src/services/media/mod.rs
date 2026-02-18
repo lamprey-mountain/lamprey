@@ -5,6 +5,7 @@ use std::{
 };
 
 use async_tempfile::TempFile;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     self, util::truncate::truncate_filename, Media, MediaCreate, MediaCreateSource, MediaId,
     MediaTrack, MediaTrackInfo, Mime, TrackSource, UserId,
@@ -349,7 +350,12 @@ impl ServiceMedia {
             _ => {}
         }
 
-        let mut up = self.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
+        let mut up =
+            self.uploads
+                .get_mut(&media_id)
+                .ok_or(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownMedia,
+                )))?;
 
         debug!(
             "download media {} from {}, file {:?}",
@@ -420,7 +426,12 @@ impl ServiceMedia {
         let media_id = MediaId::new();
         self.create_upload(media_id, user_id, json.clone()).await?;
 
-        let mut up = self.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
+        let mut up =
+            self.uploads
+                .get_mut(&media_id)
+                .ok_or(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownMedia,
+                )))?;
 
         if let Err(err) = up.write(&bytes).await {
             self.uploads.remove(&media_id);

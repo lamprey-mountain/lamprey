@@ -8,6 +8,7 @@ use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
     DocumentBranchState, DocumentTag, DocumentVersionId,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelId, DocumentBranchId, DocumentTagId, UserId};
@@ -145,7 +146,11 @@ impl DataDocument for Postgres {
 
         let (last_snapshot, start_seq) = match snapshot {
             Some(row) => (row.snapshot, row.seq),
-            None => return Err(Error::NotFound),
+            None => {
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownDocumentBranch,
+                )))
+            }
         };
 
         let updates = query!(
@@ -238,7 +243,11 @@ impl DataDocument for Postgres {
 
         let (snapshot_id, snapshot_seq) = match snapshot {
             Some(row) => (row.id, row.seq),
-            None => return Err(Error::NotFound),
+            None => {
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownDocumentBranch,
+                )))
+            }
         };
 
         // get max update seq
@@ -356,7 +365,9 @@ impl DataDocument for Postgres {
         )
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(Error::NotFound)?;
+        .ok_or_else(|| Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )))?;
 
         Ok(branch.into())
     }

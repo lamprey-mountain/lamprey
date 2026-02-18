@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::EmojiId;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
@@ -116,7 +117,13 @@ impl DataEmoji for Postgres {
             id
         )
         .fetch_one(&mut *conn)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownEmoji,
+            )),
+            e => Error::Sqlx(e),
+        })?;
         Ok(row.into())
     }
 

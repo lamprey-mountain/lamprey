@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
     ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId, WebhookId,
@@ -109,7 +110,13 @@ impl DataWebhook for Postgres {
             *webhook_id
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => {
+                Error::ApiError(ApiError::from_code(ErrorCode::UnknownWebhook))
+            }
+            e => Error::Sqlx(e),
+        })?;
 
         Ok(Webhook {
             id: row.id.into(),
@@ -135,7 +142,13 @@ impl DataWebhook for Postgres {
             token
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => {
+                Error::ApiError(ApiError::from_code(ErrorCode::UnknownWebhook))
+            }
+            e => Error::Sqlx(e),
+        })?;
 
         Ok(Webhook {
             id: row.id.into(),
@@ -273,13 +286,17 @@ impl DataWebhook for Postgres {
             )
             .fetch_optional(&mut *tx)
             .await?
-            .ok_or(Error::NotFound)?;
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownWebhook,
+            )))?;
 
             let new_channel_room =
                 sqlx::query!("SELECT room_id FROM channel WHERE id = $1", *channel_id)
                     .fetch_optional(&mut *tx)
                     .await?
-                    .ok_or(Error::NotFound)?;
+                    .ok_or(Error::ApiError(ApiError::from_code(
+                        ErrorCode::UnknownWebhook,
+                    )))?;
 
             if current_webhook.room_id != new_channel_room.room_id {
                 return Err(Error::BadRequest(
@@ -332,7 +349,11 @@ impl DataWebhook for Postgres {
 
         let original = match res {
             Some(row) => row,
-            None => return Err(Error::NotFound),
+            None => {
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownWebhook,
+                )))
+            }
         };
 
         if let Some(name) = &patch.name {
@@ -444,7 +465,9 @@ impl DataWebhook for Postgres {
         .fetch_optional(&mut *tx)
         .await?;
         if res.is_none() {
-            return Err(Error::NotFound);
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownWebhook,
+            )));
         }
 
         let now = time::OffsetDateTime::now_utc();

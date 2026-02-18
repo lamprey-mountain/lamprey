@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Time;
 use common::v1::types::{
@@ -422,7 +423,13 @@ impl DataMessage for Postgres {
     ) -> Result<MessageV2> {
         let row = query_file_as!(DbMessage, "sql/message_get.sql", *channel_id, *id)
             .fetch_one(&self.pool)
-            .await?;
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => {
+                    Error::ApiError(ApiError::from_code(ErrorCode::UnknownMessage))
+                }
+                e => Error::Sqlx(e),
+            })?;
         Ok(row.into())
     }
 

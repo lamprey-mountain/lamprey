@@ -1,8 +1,10 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    application::Application, ApplicationId, PaginationDirection, PaginationQuery,
-    PaginationResponse, UserId,
+    application::Application,
+    error::{ApiError, ErrorCode},
+    ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
 };
+use lamprey_backend_core::Error;
 use sqlx::{query, query_scalar, Acquire};
 
 use crate::{
@@ -130,7 +132,13 @@ impl DataApplication for Postgres {
             *id
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownApplication,
+            )),
+            e => Error::Sqlx(e),
+        })?;
 
         let bridge = if app.bridge_id.is_some() {
             Some(common::v1::types::application::Bridge {

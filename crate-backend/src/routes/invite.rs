@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::automod::AutomodAction;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
@@ -228,7 +229,9 @@ async fn invite_use(
     let srv = s.services();
     let invite = d.invite_select(code.clone()).await?;
     if invite.is_dead() {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownInvite,
+        )));
     }
     match &invite.invite.target {
         InviteTarget::Room { room, roles, .. } => {
