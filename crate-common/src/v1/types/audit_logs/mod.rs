@@ -235,6 +235,8 @@ pub enum AuditLogEntryType {
     PermissionOverwriteDelete {
         channel_id: ChannelId,
         overwrite_id: Uuid,
+        #[cfg_attr(feature = "serde", serde(rename = "type"))]
+        ty: PermissionOverwriteType,
     },
 
     MemberKick {

@@ -205,7 +205,7 @@ async fn permission_delete(
     }
     perms.ensure_unlocked()?;
 
-    if let Some(existing) = channel
+    let existing = if let Some(existing) = channel
         .permission_overwrites
         .iter()
         .find(|o| o.id == overwrite_id)
@@ -239,9 +239,10 @@ async fn permission_delete(
         for p in &existing.deny {
             perms.ensure(*p)?;
         }
+        existing
     } else {
         return Ok(StatusCode::NO_CONTENT);
-    }
+    };
 
     srv.perms
         .permission_overwrite_delete(channel_id, overwrite_id)
@@ -254,6 +255,7 @@ async fn permission_delete(
         al.commit_success(AuditLogEntryType::PermissionOverwriteDelete {
             channel_id,
             overwrite_id,
+            ty: existing.ty,
         })
         .await?;
     }

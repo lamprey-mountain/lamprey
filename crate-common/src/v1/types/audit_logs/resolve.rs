@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use crate::v1::types::{
-    ApplicationId, AuditLogEntry, AuditLogEntryType, ChannelId, UserId, WebhookId,
+    ApplicationId, AuditLogEntry, AuditLogEntryType, ChannelId, PermissionOverwriteType, UserId,
+    WebhookId,
 };
 
 /// the set of extra data that should be resolved
@@ -93,8 +94,6 @@ impl AuditLogResolve {
             | AuditLogEntryType::ReactionDeleteAll { channel_id, .. }
             | AuditLogEntryType::ReactionDeleteKey { channel_id, .. }
             | AuditLogEntryType::ReactionDeleteUser { channel_id, .. }
-            | AuditLogEntryType::PermissionOverwriteSet { channel_id, .. }
-            | AuditLogEntryType::PermissionOverwriteDelete { channel_id, .. }
             | AuditLogEntryType::MemberDisconnect { channel_id, .. }
             | AuditLogEntryType::MemberDisconnectAll { channel_id }
             | AuditLogEntryType::MessagePin { channel_id, .. }
@@ -104,6 +103,32 @@ impl AuditLogResolve {
             | AuditLogEntryType::RatelimitDelete { channel_id, .. }
             | AuditLogEntryType::RatelimitDeleteAll { channel_id } => {
                 self.threads.insert(*channel_id);
+            }
+            AuditLogEntryType::PermissionOverwriteCreate {
+                channel_id,
+                overwrite_id,
+                ty,
+                ..
+            }
+            | AuditLogEntryType::PermissionOverwriteUpdate {
+                channel_id,
+                overwrite_id,
+                ty,
+                ..
+            }
+            | AuditLogEntryType::PermissionOverwriteDelete {
+                channel_id,
+                overwrite_id,
+                ty,
+                ..
+            } => {
+                self.threads.insert(*channel_id);
+                match ty {
+                    PermissionOverwriteType::Role => {}
+                    PermissionOverwriteType::User => {
+                        self.users.insert((*overwrite_id).into());
+                    }
+                };
             }
             _ => {}
         }

@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +23,9 @@ pub struct Hostname(pub String);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Remote {
+    /// the id of this resource on the origin server
+    pub origin_id: Uuid,
+
     /// the hostname of the server
     pub hostname: String,
 }
