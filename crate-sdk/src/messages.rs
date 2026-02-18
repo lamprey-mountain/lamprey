@@ -100,11 +100,14 @@ impl<'a> MessageRange<'a> {
 impl MessageRanges {
     /// get the live range that new messages get appended to
     pub fn live(&self) -> MessageRange {
-        self.ranges.first().map(|range| MessageRange {
-            items: &range.items,
-            has_forward: range.has_forward,
-            has_backwards: range.has_backwards,
-        }).expect("MessageRanges always has at least one range")
+        self.ranges
+            .first()
+            .map(|range| MessageRange {
+                items: &range.items,
+                has_forward: range.has_forward,
+                has_backwards: range.has_backwards,
+            })
+            .expect("MessageRanges always has at least one range")
     }
 
     /// find which range a message belongs to

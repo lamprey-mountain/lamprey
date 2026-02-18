@@ -5,8 +5,8 @@ use syncer::Syncer;
 mod consts;
 mod handler;
 mod http;
-mod syncer;
 mod messages;
+mod syncer;
 
 pub use handler::EventHandler;
 pub use http::Http;
