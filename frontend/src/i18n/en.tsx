@@ -569,12 +569,12 @@ export default {
 			Link: (text: string) => any,
 			ViewAll: (text: string) => any,
 		) => [
-				author,
-				" created ",
-				Link("a thread"),
-				". ",
-				ViewAll("View all threads"),
-			],
+			author,
+			" created ",
+			Link("a thread"),
+			". ",
+			ViewAll("View all threads"),
+		],
 		member_add: (author: any, target: any) => [
 			author,
 			" added ",
@@ -644,10 +644,72 @@ export default {
 		ThreadMemberAdd: "{{actor}} added {{target}} to thread {{thread_name}}",
 		ThreadMemberRemove:
 			"{{actor}} removed {{target}} from thread {{thread_name}}",
-		PermissionOverwriteSet: "{{actor}} set a permission overwrite for {{target}}",
+		PermissionOverwriteSet:
+			"{{actor}} set a permission overwrite for {{target}}",
 		PermissionOverwriteDelete:
 			"{{actor}} deleted a permission overwrite for {{target}}",
 		RoleApply: "{{actor}} applied role {{role_name}}",
 		RoleUnapply: "{{actor}} removed role {{role_name}}",
+		changes: {
+			in_channel: (channel_name: any) => ["in ", channel_name],
+			messages_deleted: (count: number) => [count, " messages were deleted"],
+			invite_deleted: (invite_code: any) => [
+				"invite ",
+				<em class="light">{invite_code}</em>,
+				" was deleted",
+			],
+			permission_overwrite_for: (type: string, target: any) => [
+				"for ",
+				type,
+				" ",
+				target,
+			],
+			role_added: (role_name: any) => ["added role ", role_name],
+			role_removed: (role_name: any) => ["removed role ", role_name],
+			bot_added: (bot_name: any) => ["bot ", bot_name, " was added"],
+			user_kicked: (user_name: any) => ["kicked user ", user_name],
+			user_banned: (user_name: any) => ["banned user ", user_name],
+			user_unbanned: (user_name: any) => ["unbanned user ", user_name],
+			user_added_to_thread: (user_name: any) => ["added user ", user_name],
+			user_removed_from_thread: (user_name: any) => [
+				"removed user ",
+				user_name,
+			],
+			to_thread: (thread_name: any) => ["to thread ", thread_name],
+			permission_granted: (permission: any) => [
+				"granted permission ",
+				<em class="light">{permission}</em>,
+			],
+			permission_revoked: (permission: any) => [
+				"revoked permission ",
+				<em class="light">{permission}</em>,
+			],
+			permission_denied: (permission: any) => [
+				"denied permission ",
+				<em class="light">{permission}</em>,
+			],
+			permission_unset: (permission: any) => [
+				"unset permission ",
+				<em class="light">{permission}</em>,
+			],
+			channel_removed: "removed the channel",
+			channel_restored: "restored the channel",
+			channel_archived: "archived the channel",
+			channel_unarchived: "unarchived the channel",
+			channel_marked_nsfw: "marked as nsfw",
+			channel_unmarked_nsfw: "unmarked as nsfw",
+			icon_changed: "changed the icon",
+			icon_removed: "removed the icon",
+			icon_added: "added an icon",
+			set_field: (field: any, value: any) => [
+				"set ",
+				<em class="light">{field}</em>,
+				" to ",
+				value,
+			],
+			removed_field: (
+				field: any,
+			) => ["removed ", <em class="light">{field}</em>],
+		},
 	},
 };

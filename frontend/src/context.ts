@@ -18,7 +18,7 @@ import type { Action } from "./dispatch/types";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
-import type en from "./i18n/en.ts";
+import type en from "./i18n/en.tsx";
 import { Placement, ReferenceElement } from "@floating-ui/dom";
 import { SlashCommands } from "./slash-commands.ts";
 

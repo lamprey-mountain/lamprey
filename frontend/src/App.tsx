@@ -50,7 +50,7 @@ import {
 import { Debug } from "./Debug.tsx";
 import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";
-import type en from "./i18n/en.ts";
+import type en from "./i18n/en.tsx";
 import {
 	ChannelMenu,
 	FolderMenu,
@@ -250,7 +250,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	type Lang = "en";
 	const [lang, _setLang] = createSignal<Lang>("en");
 	const [dict] = createResource(lang, async (lang) => {
-		const m = await import(`./i18n/${lang}.ts`);
+		const m = await import(`./i18n/${lang}.tsx`);
 		return i18n.flatten(m.default as typeof en);
 	});
 
