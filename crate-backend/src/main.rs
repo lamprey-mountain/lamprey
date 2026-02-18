@@ -6,6 +6,7 @@ use clap::Parser;
 use common::v1::types::{misc::ApplicationIdReq, util::Time, AuditLogEntry, AuditLogEntryType};
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
+use lamprey_backend_core::types::admin::AdminCollectGarbageMode;
 use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::postgres::PgPoolOptions;
@@ -24,7 +25,6 @@ use crate::config::{ListenComponent, ListenTransport};
 use lamprey_backend::{
     cli, config, error,
     routes::{self},
-    services::admin::AdminCollectGarbageMode,
     types::{
         self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
         RoomCreate, RoomMemberPut, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,

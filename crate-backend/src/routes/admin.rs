@@ -5,51 +5,19 @@ use axum::{extract::State, response::IntoResponse, Json};
 use common::v1::types::PaginationQuery;
 use common::v1::types::{
     util::{Changes, Time},
-    AuditLogEntryType, MessageCreate, MessageSync, Permission, UserId, SERVER_ROOM_ID,
-    SERVER_USER_ID,
+    AuditLogEntryType, MessageSync, Permission, SERVER_ROOM_ID, SERVER_USER_ID,
 };
 use http::StatusCode;
-use serde::Deserialize;
-use utoipa::ToSchema;
+use lamprey_backend_core::types::admin::{
+    AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
+    AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
 
-use crate::{
-    error::Result,
-    services::admin::{
-        AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
-    },
-    ServerState,
-};
+use crate::{error::Result, ServerState};
 use common::v1::types::ChannelId;
-
-// NOTE: do i want to standardize admin apis, ie. move them to common types, or keep this internal?
-
-#[derive(Deserialize, ToSchema)]
-struct AdminWhisper {
-    user_id: UserId,
-    message: MessageCreate,
-}
-
-#[derive(Deserialize, ToSchema)]
-struct AdminBroadcast {
-    message: MessageCreate,
-    // TODO: add these
-    // /// only broadcast to users in these rooms
-    // room_id: Vec<RoomId>,
-
-    // /// only broadcast to these users
-    // user_id: Vec<UserId>,
-
-    // /// only broadcast to these users with these server roles
-    // server_roles: Vec<RoleId>,
-}
-
-#[derive(Deserialize, ToSchema)]
-struct AdminRegisterUser {
-    user_id: UserId,
-}
 
 /// Admin whisper
 ///

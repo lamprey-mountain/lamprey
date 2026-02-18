@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use common::v1::types::{MessageCreate, UserId};
+
+// TODO: move AdminWhisper, AdminBroadcast, AdminRegisterUser here
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminPurgeCache {
     pub targets: Vec<AdminPurgeCacheTarget>,
@@ -55,6 +59,7 @@ pub struct AdminCollectGarbageStat {
 
     /// Number of bytes deleted (or would be deleted); only returned for the `Media` target.
     // TODO: skip serializing if none
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bytes_deleted: Option<u64>,
 }
 
@@ -78,4 +83,29 @@ pub enum AdminCollectGarbageMode {
 
     /// Delete all records with `deleted_at` set. Note that `Mark` will need to be run first to do anything.
     Sweep,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct AdminWhisper {
+    pub user_id: UserId,
+    pub message: MessageCreate,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct AdminBroadcast {
+    pub message: MessageCreate,
+    // TODO: add these
+    // /// only broadcast to users in these rooms
+    // room_id: Vec<RoomId>,
+
+    // /// only broadcast to these users
+    // user_id: Vec<UserId>,
+
+    // /// only broadcast to these users with these server roles
+    // server_roles: Vec<RoleId>,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct AdminRegisterUser {
+    pub user_id: UserId,
 }

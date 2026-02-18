@@ -1,11 +1,10 @@
 use async_trait::async_trait;
+use lamprey_backend_core::types::admin::AdminCollectGarbageMode;
 use sqlx::{query, query_file, query_scalar};
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
-use crate::{
-    data::DataAdmin, error::Result, services::admin::AdminCollectGarbageMode, types::MediaId, Error,
-};
+use crate::{data::DataAdmin, error::Result, types::MediaId, Error};
 
 use super::Postgres;
 
