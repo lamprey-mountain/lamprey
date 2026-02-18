@@ -374,6 +374,7 @@ function MessageEditor(
 export function MessageView(props: MessageProps) {
 	const api = useApi();
 	const ctx = useCtx();
+	const { t } = ctx;
 	const thread = api.channels.fetch(() => props.message.channel_id);
 	const [ch, chUpdate] = useChannel()!;
 	let messageArticleRef: HTMLElement | undefined;
@@ -443,6 +444,27 @@ export function MessageView(props: MessageProps) {
 		);
 		// FIXME: spacing between MessageDefault and oneline is missing
 		if (props.message.type === "MemberAdd") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
+			const target = (
+				<span
+					class="author"
+					data-user-id={props.message.target_user_id}
+				>
+					<Show when={thread()}>
+						<Actor
+							user_id={props.message.target_user_id}
+							thread={thread()!}
+						/>
+					</Show>
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -462,25 +484,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>
-							{" added "}
-							<span
-								class="author"
-								data-user-id={props.message.target_user_id}
-							>
-								<Show when={thread()}>
-									<Actor
-										user_id={props.message.target_user_id}
-										thread={thread()!}
-									/>
-								</Show>
-							</span>{" "}
-							to the thread
+							{/* @ts-ignore */}
+							{t("message_content.member_add", author, target)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -488,6 +493,27 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "MemberRemove") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
+			const target = (
+				<span
+					class="author"
+					data-user-id={props.message.target_user_id}
+				>
+					<Show when={thread()}>
+						<Actor
+							user_id={props.message.target_user_id}
+							thread={thread()!}
+						/>
+					</Show>
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -506,25 +532,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>
-							{" removed "}
-							<span
-								class="author"
-								data-user-id={props.message.target_user_id}
-							>
-								<Show when={thread()}>
-									<Actor
-										user_id={props.message.target_user_id}
-										thread={thread()!}
-									/>
-								</Show>
-							</span>{" "}
-							from the thread
+							{/* @ts-ignore */}
+							{t("message_content.member_remove", author, target)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -532,6 +541,14 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "MemberJoin") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -550,13 +567,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							joined the room
+							{/* @ts-ignore */}
+							{t("message_content.member_join", author)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -564,6 +576,14 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "MessagePinned") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -582,13 +602,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							pinned a message
+							{/* @ts-ignore */}
+							{t("message_content.message_pinned", author)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -596,6 +611,15 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "ChannelRename") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
+			const name_new = <b>{props.message.name_new}</b>;
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -614,13 +638,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							renamed the thread to <b>{props.message.name_new}</b>
+							{/* @ts-ignore */}
+							{t("message_content.channel_rename", author, name_new)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -628,6 +647,14 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "MessagesMoved") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -646,13 +673,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							moved messages to a different channel
+							{/* @ts-ignore */}
+							{t("message_content.messages_moved", author)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -661,6 +683,15 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.type === "Call") {
 			// TODO: say "you missed a call" in dm channels
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
+			const count = props.message.participants.length;
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -679,15 +710,10 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
+							{/* @ts-ignore */}
 							{props.message.ended_at
-								? `call ended with ${props.message.participants.length} participant(s)`
-								: `started a call with ${props.message.participants.length} participant(s)`}
+								? t("message_content.call_ended", author, count)
+								: t("message_content.call_started", author, count)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -695,6 +721,14 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "ChannelPingback") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -713,13 +747,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							mentioned this channel from another channel
+							{/* @ts-ignore */}
+							{t("message_content.channel_pingback", author)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -728,6 +757,14 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.type === "ChannelMoved") {
 			// TODO: show source and target channel names
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -746,13 +783,8 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							moved this thread
+							{/* @ts-ignore */}
+							{t("message_content.channel_moved", author)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />
@@ -760,6 +792,14 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "ChannelIcon") {
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -778,13 +818,45 @@ export function MessageView(props: MessageProps) {
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
 						>
-							<span
-								class="author"
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</span>{" "}
-							changed the channel icon
+							{/* @ts-ignore */}
+							{t("message_content.channel_icon", author)}
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+					<MessageToolbar message={props.message} />
+				</article>
+			);
+		} else if (props.message.type === "AutomodExecution") {
+			// TODO: richer automod exec rendering
+			// TODO: show some buttons for quick actions (eg. delete, timeout, kick, ban, etc)
+			const author = (
+				<span
+					class="author"
+					data-user-id={props.message.author_id}
+				>
+					<Author message={props.message} thread={thread()} />
+				</span>
+			);
+			return (
+				<article
+					ref={messageArticleRef!}
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+						"toolbar-visible": toolbarVisible(),
+					}}
+					onClick={handleClick}
+				>
+					<img class="icon main" src={icMemberRemove} />
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							{/* @ts-ignore */}
+							{t("message_content.automod_execution", author)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />

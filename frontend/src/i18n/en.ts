@@ -575,5 +575,43 @@ export default {
 			". ",
 			ViewAll("View all threads"),
 		],
+		member_add: (author: any, target: any) => [
+			author,
+			" added ",
+			target,
+			" to the thread",
+		],
+		member_remove: (author: any, target: any) => [
+			author,
+			" removed ",
+			target,
+			" from the thread",
+		],
+		member_join: (author: any) => [author, " joined the room"],
+		message_pinned: (author: any) => [author, " pinned a message"],
+		channel_rename: (author: any, name_new: any) => [
+			author,
+			" renamed the thread to ",
+			name_new,
+		],
+		messages_moved: (author: any) => [
+			author,
+			" moved messages to a different channel",
+		],
+		call_started: (author: any, count: number) => [
+			author,
+			` started a call with ${count} participant(s)`,
+		],
+		call_ended: (author: any, count: number) => [
+			author,
+			` call ended with ${count} participant(s)`,
+		],
+		channel_pingback: (author: any) => [
+			author,
+			" mentioned this channel from another channel",
+		],
+		channel_moved: (author: any) => [author, " moved this thread"],
+		channel_icon: (author: any) => [author, " changed the channel icon"],
+		automod_execution: (author: any) => [author, " automod action triggered"],
 	},
 };
