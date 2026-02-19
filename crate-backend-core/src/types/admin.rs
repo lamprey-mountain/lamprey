@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use common::v1::types::{ChannelId, MessageCreate, MessageId, UserId};
+use common::v1::types::{MessageCreate, MessageId, UserId};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminPurgeCache {

@@ -9,6 +9,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::services::embed::ServiceEmbed;
+use crate::state::MessagingService;
 use crate::ServerState;
 
 use super::util::Auth;
@@ -333,11 +334,17 @@ struct CheckHealthResponse {
 struct CheckReadyResponse {
     ok: bool,
 
-    /// is postgres reachable?
-    postgres_ok: bool,
+    /// is the database reachable?
+    database_ok: bool,
 
-    /// is s3 reachable?
-    bucket_ok: bool,
+    /// is the object store reachable?
+    object_store_ok: bool,
+
+    /// is messaging reachable?
+    messaging_ok: bool,
+
+    /// is the queue reachable?
+    queue_ok: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -407,10 +414,35 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
+    let database_ok = sqlx::query_scalar::<_, bool>("SELECT true")
+        .fetch_one(&s.pool)
+        .await
+        .is_ok();
+
+    let object_store_ok = s.blobs.check().await.is_ok();
+
+    let messaging_ok = match &s.messaging {
+        MessagingService::Memory { .. } => true,
+        MessagingService::Nats(client) => {
+            client.connection_state() == async_nats::connection::State::Connected
+        }
+    };
+
+    let queue_ok = match &s.messaging {
+        MessagingService::Memory { .. } => true,
+        MessagingService::Nats(client) => {
+            client.connection_state() == async_nats::connection::State::Connected
+        }
+    };
+
+    let ok = database_ok && object_store_ok && messaging_ok && queue_ok;
+
     Ok(Json(CheckReadyResponse {
-        ok: true,
-        postgres_ok: true,
-        bucket_ok: true,
+        ok,
+        database_ok,
+        object_store_ok,
+        messaging_ok,
+        queue_ok,
     }))
 }
 
