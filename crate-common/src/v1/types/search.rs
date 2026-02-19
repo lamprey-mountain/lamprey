@@ -361,7 +361,6 @@ pub enum FilterRange<T> {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum Order {
     #[default]
     #[cfg_attr(feature = "serde", serde(rename = "asc"))]
