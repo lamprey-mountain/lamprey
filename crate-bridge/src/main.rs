@@ -2,7 +2,7 @@ use ::common::v1::types::{PaginationDirection, PaginationQuery};
 use anyhow::Result;
 use bridge_common::Globals;
 use dashmap::DashMap;
-use data::Data;
+use db::Data;
 use discord::Discord;
 use figment::providers::{Env, Format, Toml};
 use lamprey::Lamprey;
@@ -22,7 +22,7 @@ mod bridge;
 // TODO: rename this to avoid conflicts
 mod bridge_common;
 mod config;
-mod data;
+mod db;
 mod discord;
 mod lamprey;
 mod portal;

@@ -13,7 +13,7 @@ use tokio::sync::{mpsc, oneshot, RwLock};
 
 use crate::bridge::BridgeMessage;
 use crate::config::Config;
-use crate::data::Data;
+use crate::db::Data;
 use crate::lamprey::LampreyHandle;
 use crate::portal::{Portal, PortalMessage};
 use crate::{discord::DiscordMessage, lamprey::LampreyMessage};

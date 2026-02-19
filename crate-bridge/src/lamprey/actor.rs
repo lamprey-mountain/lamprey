@@ -13,12 +13,10 @@ use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
-use crate::{
-    bridge::BridgeMessage,
-    bridge_common::{Globals, GlobalsTrait},
-    data::Data,
-    portal::PortalMessage,
-};
+use crate::bridge::BridgeMessage;
+use crate::bridge_common::{Globals, GlobalsTrait};
+use crate::db::Data;
+use crate::portal::PortalMessage;
 
 pub struct Lamprey {
     recv: mpsc::Receiver<LampreyMessage>,

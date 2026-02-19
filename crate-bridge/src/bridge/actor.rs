@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
 use tokio::sync::mpsc;
 use tracing::{error, info};
 
 use crate::{
+    bridge::messages::BridgeMessage,
     bridge_common::{Globals, PortalConfig},
-    data::Data,
+    db::Data,
     discord,
     portal::Portal,
 };
@@ -15,21 +15,6 @@ use crate::{
 pub struct Bridge {
     globals: Arc<Globals>,
     recv: mpsc::UnboundedReceiver<BridgeMessage>,
-}
-
-#[derive(Debug, Clone)]
-pub enum BridgeMessage {
-    LampreyThreadCreate {
-        thread: common::v1::types::Channel,
-        discord_guild_id: DcGuildId,
-    },
-    DiscordChannelCreate {
-        guild_id: DcGuildId,
-        channel_id: DcChannelId,
-        channel_name: String,
-        channel_type: serenity::all::ChannelType,
-        parent_id: Option<DcChannelId>,
-    },
 }
 
 impl Bridge {

@@ -1,153 +1,19 @@
-use std::fmt::Debug;
-use std::str::FromStr;
-use std::sync::Arc;
-
-use crate::bridge_common::{Globals, PortalConfig};
-use crate::data::{AttachmentMetadata, Data, MessageMetadata, Puppet};
-use crate::discord::DiscordMessage;
-
 use anyhow::Result;
-use common::v1::types::util::Diff;
-use common::v1::types::{self, media::MediaRef, ChannelId, EmbedCreate, MessageId, RoomId};
-use common::v2::types::message::Message;
+use common::v1::types::{self, media::MediaRef, util::Diff, EmbedCreate};
 use reqwest::Url;
 use serenity::all::{
-    ChannelId as DcChannelId, CreateAllowedMentions, CreateAttachment, CreateEmbed,
-    EditAttachments, EditWebhookMessage, ExecuteWebhook, Mentionable, Message as DcMessage,
-    MessageId as DcMessageId, MessageReferenceKind, MessageType as DcMessageType,
-    MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
+    Message as DcMessage, MessageId as DcMessageId, MessageReferenceKind,
+    MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
 };
+use std::str::FromStr;
 use time::OffsetDateTime;
-use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
-pub struct Portal {
-    globals: Arc<Globals>,
-    recv: mpsc::UnboundedReceiver<PortalMessage>,
-    config: PortalConfig,
-}
-
-impl Debug for Portal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Portal ({:?})", self.config)
-    }
-}
-
-/// portal actor message
-#[derive(Debug)]
-pub enum PortalMessage {
-    LampreyMessageCreate {
-        message: Message,
-    },
-    LampreyMessageUpdate {
-        message: Message,
-    },
-    LampreyMessageDelete {
-        message_id: MessageId,
-    },
-    DiscordMessageCreate {
-        message: DcMessage,
-    },
-    DiscordMessageUpdate {
-        update: DcMessageUpdate,
-        new_message: Option<DcMessage>,
-    },
-    DiscordMessageDelete {
-        message_id: DcMessageId,
-    },
-    DiscordReactionAdd {
-        add_reaction: DcReaction,
-    },
-    DiscordReactionRemove {
-        removed_reaction: DcReaction,
-    },
-    DiscordTyping {
-        user_id: serenity::model::id::UserId,
-    },
-}
+use crate::db::{AttachmentMetadata, Data, MessageMetadata, Puppet};
+use crate::portal::Portal;
 
 impl Portal {
-    pub fn summon(
-        globals: Arc<Globals>,
-        config: PortalConfig,
-    ) -> mpsc::UnboundedSender<PortalMessage> {
-        let (send, recv) = mpsc::unbounded_channel();
-        let portal = Self {
-            globals,
-            recv,
-            config,
-        };
-        tokio::spawn(portal.activate());
-        send
-    }
-
-    pub fn channel_id(&self) -> DcChannelId {
-        self.config.discord_channel_id
-    }
-
-    pub fn thread_id(&self) -> ChannelId {
-        self.config.lamprey_thread_id
-    }
-
-    pub fn room_id(&self) -> RoomId {
-        self.config.lamprey_room_id
-    }
-
-    async fn activate(mut self) {
-        while let Some(msg) = self.recv.recv().await {
-            if let Err(err) = self.handle(msg).await {
-                error!(portal = ?self.config, "error handling portal message: {err:?}");
-            }
-        }
-        error!(portal = ?self.config, "portal channel closed, shutting down");
-    }
-
-    #[tracing::instrument(
-        skip(self),
-        fields(
-            lamprey_thread_id = %self.config.lamprey_thread_id,
-            discord_channel_id = %self.config.discord_channel_id,
-        )
-    )]
-    async fn handle(&mut self, msg: PortalMessage) -> Result<()> {
-        match msg {
-            PortalMessage::LampreyMessageCreate { message } => {
-                self.handle_lamprey_message_create(message).await?;
-            }
-            PortalMessage::LampreyMessageUpdate { message } => {
-                self.handle_lamprey_message_create(message).await?;
-            }
-            PortalMessage::LampreyMessageDelete { message_id } => {
-                self.handle_lamprey_message_delete(message_id).await?;
-            }
-            PortalMessage::DiscordMessageCreate { message } => {
-                self.handle_discord_message_create(message).await?;
-            }
-            PortalMessage::DiscordMessageUpdate {
-                update,
-                new_message,
-            } => {
-                self.handle_discord_message_update(update, new_message)
-                    .await?;
-            }
-            PortalMessage::DiscordMessageDelete { message_id } => {
-                self.handle_discord_message_delete(message_id).await?;
-            }
-            PortalMessage::DiscordReactionAdd { add_reaction } => {
-                self.handle_discord_reaction_add(add_reaction).await?;
-            }
-            PortalMessage::DiscordReactionRemove { removed_reaction } => {
-                self.handle_discord_reaction_remove(removed_reaction)
-                    .await?;
-            }
-            PortalMessage::DiscordTyping { user_id } => {
-                self.handle_discord_typing(user_id).await?;
-            }
-        }
-        Ok(())
-    }
-
-    async fn sync_discord_member_nick(
+    pub(super) async fn sync_discord_member_nick(
         &self,
         user_id: serenity::model::id::UserId,
         nick: Option<String>,
@@ -178,223 +44,7 @@ impl Portal {
         Ok(())
     }
 
-    async fn handle_lamprey_message_create(&mut self, message: Message) -> Result<()> {
-        let ly = self.globals.lamprey_handle().await?;
-        let user = ly.user_fetch(message.author_id).await?;
-        if user.puppet.is_some() {
-            debug!("not bridging message from puppet");
-            return Ok(());
-        }
-
-        let existing = self.globals.get_message(message.id).await?;
-        let msg_inner = match message.latest_version.message_type {
-            types::MessageType::DefaultMarkdown(m) => m,
-            _ => {
-                debug!("unknown lamprey message type");
-                return Ok(());
-            }
-        };
-
-        let reply_ids = if let Some(reply_id) = msg_inner.reply_id {
-            self.globals
-                .get_message(reply_id)
-                .await?
-                .map(|i| (i.discord_id, i.chat_id))
-        } else {
-            None
-        };
-        let mut embeds = vec![];
-        let mut content = msg_inner.content.to_owned().unwrap_or_else(|| {
-            if msg_inner.attachments.is_empty() && msg_inner.embeds.is_empty() {
-                "(no content?)".to_owned()
-            } else {
-                "".to_owned()
-            }
-        });
-        if let Some(reply_ids) = reply_ids {
-            let (discord_id, _chat_id) = reply_ids;
-            let (send, recv) = oneshot::channel();
-            self.globals
-                .dc_chan
-                .send(DiscordMessage::MessageGet {
-                    channel_id: self.channel_id(),
-                    message_id: discord_id,
-                    response: send,
-                })
-                .await?;
-            let reply = recv.await?;
-            let reply_content = if !reply.content.is_empty() {
-                reply.content.to_owned()
-            } else if !reply.attachments.is_empty() {
-                let names: Vec<_> = reply
-                    .attachments
-                    .iter()
-                    .map(|a| a.filename.to_owned())
-                    .collect();
-                format!(
-                    "{} attachment(s): {}",
-                    reply.attachments.len(),
-                    names.join(", ")
-                )
-            } else if !reply.embeds.is_empty() {
-                format!("{} embed(s)", reply.embeds.len())
-            } else {
-                "(no content?)".to_owned()
-            };
-            let description = format!(
-                "**[replying to](https://canary.discord.com/channels/{}/{}/{})**\n{}",
-                self.config.discord_guild_id,
-                self.channel_id(),
-                discord_id,
-                reply_content,
-            );
-            content = format!("{} {}", reply.author.mention(), content);
-            embeds.push(CreateEmbed::new().description(description));
-
-            if let Some(att) = reply.attachments.first() {
-                embeds.push(CreateEmbed::new().image(&att.url));
-            }
-        }
-        let (send, recv) = tokio::sync::oneshot::channel();
-        if let Some(edit) = existing {
-            let mut files = EditAttachments::new();
-            for media in &msg_inner.attachments {
-                let existing = self.globals.get_attachment(media.id.to_owned()).await?;
-                if let Some(existing) = existing {
-                    files = files.keep(existing.discord_id);
-                } else {
-                    let url = format!(
-                        "{}/media/{}",
-                        self.globals
-                            .config
-                            .lamprey_cdn_url
-                            .as_deref()
-                            .unwrap_or("https://chat-cdn.celery.eu.org"),
-                        media.id
-                    );
-                    let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
-                    files = files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
-                }
-            }
-            // let files = files.into_iter().map(|i| EditAttachments::new().add()).collect();
-            let mut payload = EditWebhookMessage::new()
-                .content(content)
-                .allowed_mentions(
-                    CreateAllowedMentions::new()
-                        .everyone(false)
-                        .all_roles(false)
-                        .all_users(true),
-                )
-                .embeds(embeds)
-                .attachments(files);
-            if let Some(dc_tid) = self.config.discord_thread_id {
-                payload = payload.in_thread(dc_tid);
-            }
-            self.globals
-                .dc_chan
-                .send(DiscordMessage::WebhookMessageEdit {
-                    url: self.config.discord_webhook.clone(),
-                    payload,
-                    response: send,
-                    message_id: edit.discord_id,
-                })
-                .await?;
-        } else {
-            let mut files = vec![];
-            for media in &msg_inner.attachments {
-                let url = format!(
-                    "{}/media/{}",
-                    self.globals
-                        .config
-                        .lamprey_cdn_url
-                        .as_deref()
-                        .unwrap_or("https://chat-cdn.celery.eu.org"),
-                    media.id
-                );
-                let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
-                files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
-            }
-            let user = ly.user_fetch(message.author_id).await?;
-            let mut payload = ExecuteWebhook::new()
-                .username(msg_inner.override_name.unwrap_or(user.name))
-                .avatar_url("")
-                .content(content)
-                .allowed_mentions(
-                    CreateAllowedMentions::new()
-                        .everyone(false)
-                        .all_roles(false)
-                        .all_users(true),
-                )
-                .add_files(files)
-                .embeds(embeds);
-            if let Some(dc_tid) = self.config.discord_thread_id {
-                payload = payload.in_thread(dc_tid);
-            }
-            if let Some(media_id) = user.avatar {
-                let url = format!(
-                    "{}/thumb/{}",
-                    self.globals
-                        .config
-                        .lamprey_cdn_url
-                        .as_deref()
-                        .unwrap_or("https://chat-cdn.celery.eu.org"),
-                    media_id
-                );
-                payload = payload.avatar_url(url);
-            };
-            self.globals
-                .dc_chan
-                .send(DiscordMessage::WebhookExecute {
-                    url: self.config.discord_webhook.clone(),
-                    payload,
-                    response: send,
-                })
-                .await?;
-        }
-        let res = recv.await?;
-        self.globals
-            .insert_message(MessageMetadata {
-                chat_id: message.id,
-                chat_thread_id: message.channel_id,
-                discord_id: res.id,
-                discord_channel_id: res.channel_id,
-            })
-            .await?;
-
-        for (att, media) in res.attachments.iter().zip(msg_inner.attachments) {
-            self.globals
-                .insert_attachment(AttachmentMetadata {
-                    chat_id: media.id,
-                    discord_id: att.id,
-                })
-                .await?;
-        }
-
-        Ok(())
-    }
-
-    async fn handle_lamprey_message_delete(&mut self, message_id: MessageId) -> Result<()> {
-        let Some(existing) = self.globals.get_message(message_id).await? else {
-            debug!("message doesnt exist or is already deleted");
-            return Ok(());
-        };
-
-        self.globals.delete_message(message_id).await?;
-        let (send, recv) = oneshot::channel();
-        self.globals
-            .dc_chan
-            .send(DiscordMessage::WebhookMessageDelete {
-                url: self.config.discord_webhook.clone(),
-                message_id: existing.discord_id,
-                thread_id: self.config.discord_thread_id,
-                response: send,
-            })
-            .await?;
-        recv.await?;
-        Ok(())
-    }
-
-    async fn handle_discord_message_create(&mut self, message: DcMessage) -> Result<()> {
+    pub(super) async fn handle_discord_message_create(&mut self, message: DcMessage) -> Result<()> {
         if let Some(member) = &message.member {
             self.sync_discord_member_nick(message.author.id, member.nick.clone())
                 .await?;
@@ -628,7 +278,7 @@ impl Portal {
         Ok(())
     }
 
-    async fn handle_discord_message_update(
+    pub(super) async fn handle_discord_message_update(
         &mut self,
         update: DcMessageUpdate,
         new_message: Option<DcMessage>,
@@ -705,7 +355,10 @@ impl Portal {
         Ok(())
     }
 
-    async fn handle_discord_message_delete(&mut self, message_id: DcMessageId) -> Result<()> {
+    pub(super) async fn handle_discord_message_delete(
+        &mut self,
+        message_id: DcMessageId,
+    ) -> Result<()> {
         let ly = self.globals.lamprey_handle().await?;
         let Some(existing) = self.globals.get_message_dc(message_id).await? else {
             debug!("message doesnt exist or is already deleted");
@@ -724,7 +377,10 @@ impl Portal {
         Ok(())
     }
 
-    async fn handle_discord_reaction_add(&mut self, add_reaction: DcReaction) -> Result<()> {
+    pub(super) async fn handle_discord_reaction_add(
+        &mut self,
+        add_reaction: DcReaction,
+    ) -> Result<()> {
         if let (Some(user_id), Some(member)) = (add_reaction.user_id, &add_reaction.member) {
             self.sync_discord_member_nick(user_id, member.nick.clone())
                 .await?;
@@ -768,7 +424,10 @@ impl Portal {
         Ok(())
     }
 
-    async fn handle_discord_reaction_remove(&mut self, removed_reaction: DcReaction) -> Result<()> {
+    pub(super) async fn handle_discord_reaction_remove(
+        &mut self,
+        removed_reaction: DcReaction,
+    ) -> Result<()> {
         if let (Some(user_id), Some(member)) = (removed_reaction.user_id, &removed_reaction.member)
         {
             self.sync_discord_member_nick(user_id, member.nick.clone())
@@ -820,7 +479,10 @@ impl Portal {
         Ok(())
     }
 
-    async fn handle_discord_typing(&mut self, user_id: serenity::model::id::UserId) -> Result<()> {
+    pub(super) async fn handle_discord_typing(
+        &mut self,
+        user_id: serenity::model::id::UserId,
+    ) -> Result<()> {
         let ly = self.globals.lamprey_handle().await?;
         let Some(puppet) = self
             .globals
