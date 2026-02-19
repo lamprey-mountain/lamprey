@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cache::ServiceCache;
-use channel::ServiceThreads;
+use channel::ServiceChannels;
 use email::ServiceEmail;
 use embed::ServiceEmbed;
 use media::ServiceMedia;
@@ -55,7 +55,7 @@ pub struct Services {
     pub automod: ServiceAutomod,
     pub cache: ServiceCache,
     pub calendar: ServiceCalendar,
-    pub channels: ServiceThreads,
+    pub channels: ServiceChannels,
     pub documents: ServiceDocuments,
     pub email: ServiceEmail,
     pub embed: ServiceEmbed,
@@ -85,7 +85,7 @@ impl Services {
             automod: ServiceAutomod::new(state.clone()),
             cache: ServiceCache::new(state.clone()),
             calendar: ServiceCalendar::new(state.clone()),
-            channels: ServiceThreads::new(state.clone()),
+            channels: ServiceChannels::new(state.clone()),
             documents: ServiceDocuments::new(state.clone()),
             email: ServiceEmail::new(state.clone()),
             embed: ServiceEmbed::new(state.clone()),

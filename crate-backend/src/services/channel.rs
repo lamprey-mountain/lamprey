@@ -10,8 +10,6 @@ use common::v1::types::{
     MessageThreadCreated, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId,
     ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
-use futures::stream::FuturesOrdered;
-use futures::StreamExt;
 use moka::future::Cache;
 use time::OffsetDateTime;
 use tracing::warn;
@@ -25,7 +23,7 @@ use crate::ServerStateInner;
 // TODO: split caches more
 // have a cache for public data, per-user data, member counts, etc
 // then only invalidate (or directly update) that one part of the cache at a time
-pub struct ServiceThreads {
+pub struct ServiceChannels {
     state: Arc<ServerStateInner>,
     cache_thread: Cache<ChannelId, Channel>,
     cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
@@ -43,8 +41,7 @@ pub struct ServiceThreads {
 //     pub slowmode_message_expire_at: Option<Time>,
 // }
 
-// TODO: rename to ServiceChannels
-impl ServiceThreads {
+impl ServiceChannels {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
