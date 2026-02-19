@@ -187,13 +187,15 @@
 
 	.voice-participant {
 		display: flex;
-		margin-left: 16px;
+		margin-left: 24px;
 		align-items: center;
 		line-height: 1;
 		margin-top: 4px;
 		margin-bottom: 4px;
 		gap: 8px;
-		padding: 2px 0 2px 16px;
+		padding: 2px 0 2px 8px;
+		cursor: pointer;
+		border-radius: 2px;
 
 		.avatar {
 			height: 20px;
@@ -216,6 +218,10 @@
 		&.speaking img,
 		&.speaking .fallback-avatar {
 			border: solid $color-green 2px;
+		}
+
+		&:hover {
+			background-color: $bg-400;
 		}
 	}
 
