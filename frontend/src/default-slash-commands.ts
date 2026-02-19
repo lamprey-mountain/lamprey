@@ -1,8 +1,7 @@
 import { Channel } from "sdk";
 import type { Api } from "./api";
 import type { ChatCtx } from "./context";
-import { SlashCommands } from "./slash-commands";
-import type { Command } from "./slash-commands";
+import { type Command, SlashCommands } from "./contexts/slash-commands";
 import {
 	createPermissionChecker,
 	hasPermission as checkPermission,

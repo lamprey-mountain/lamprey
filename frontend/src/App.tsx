@@ -30,7 +30,7 @@ import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 import { ModalsProvider, useModals } from "./contexts/modal";
 import { MemberListProvider } from "./contexts/memberlist.tsx";
 import { UploadsProvider } from "./contexts/uploads.tsx";
-import { SlashCommandsContext } from "./slash-commands.ts";
+import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
 import { useApi } from "./api.tsx";
 
 const App: Component = () => {
@@ -108,9 +108,9 @@ export const AppProviders: Component<
 					<ModalsProvider>
 						<UploadsProvider ctx={ctx}>
 							<VoiceProvider>
-								<SlashCommandsContext.Provider value={ctx.slashCommands}>
+								<SlashCommandsProvider value={ctx.slashCommands}>
 									<AppShell>{props.children}</AppShell>
-								</SlashCommandsContext.Provider>
+								</SlashCommandsProvider>
 							</VoiceProvider>
 						</UploadsProvider>
 					</ModalsProvider>

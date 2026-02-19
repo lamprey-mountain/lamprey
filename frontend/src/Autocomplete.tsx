@@ -17,8 +17,7 @@ import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import { Avatar } from "./User";
 import twemoji from "twemoji";
-import { type Command } from "./slash-commands";
-import { useSlashCommands } from "./slash-commands";
+import { type Command, useSlashCommands } from "./contexts/slash-commands";
 
 type Emoji = {
 	group?: number;

@@ -9,7 +9,7 @@ import type en from "../i18n/en.tsx";
 import { createApi } from "../api.tsx";
 import { createDispatcher } from "../dispatch/mod.ts";
 import { useMouseTracking } from "./useMouseTracking.ts";
-import { SlashCommands } from "../slash-commands.ts";
+import { SlashCommands } from "../contexts/slash-commands";
 import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
 import { useLocation } from "@solidjs/router";
 import type { ChatCtx, Data, Events, MediaCtx, Menu } from "../context.ts";

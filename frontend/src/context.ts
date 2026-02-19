@@ -20,7 +20,7 @@ import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.tsx";
 import { Placement, ReferenceElement } from "@floating-ui/dom";
-import { SlashCommands } from "./slash-commands.ts";
+import { SlashCommands } from "./contexts/slash-commands";
 
 export type Slice = {
 	start: number;

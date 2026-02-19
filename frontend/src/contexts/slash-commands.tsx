@@ -1,7 +1,7 @@
 import { Channel } from "sdk";
 import type { Api } from "./api.tsx";
 import type { ChatCtx } from "./context.ts";
-import { createContext, useContext } from "solid-js";
+import { createContext, type ParentProps, useContext } from "solid-js";
 
 export type CommandOption = {
 	name: string;
@@ -52,3 +52,13 @@ export class SlashCommands {
 
 export const SlashCommandsContext = createContext<SlashCommands>();
 export const useSlashCommands = () => useContext(SlashCommandsContext)!;
+
+export function SlashCommandsProvider(
+	props: ParentProps & { value: SlashCommands },
+) {
+	return (
+		<SlashCommandsContext.Provider value={props.value}>
+			{props.children}
+		</SlashCommandsContext.Provider>
+	);
+}
