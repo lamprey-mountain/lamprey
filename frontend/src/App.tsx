@@ -32,6 +32,7 @@ import { MemberListProvider } from "./contexts/memberlist.tsx";
 import { UploadsProvider } from "./contexts/uploads.tsx";
 import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
 import { useApi } from "./api.tsx";
+import { flags } from "./flags.ts";
 
 const App: Component = () => {
 	return (
@@ -100,6 +101,12 @@ export const AppProviders: Component<
 > = (props) => {
 	const config = useConfig();
 	const { client, api, ctx } = useChatClient(config);
+
+	// TEMP: debugging
+	(globalThis as any).ctx = ctx;
+	(globalThis as any).client = client;
+	(globalThis as any).api = api;
+	(globalThis as any).flags = flags;
 
 	return (
 		<api.Provider>
