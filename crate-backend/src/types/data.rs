@@ -547,6 +547,7 @@ impl_perms!(
     RoomCreate,
     RoomManage,
     RoomManageServer,
+    ServerMaintenance,
     ServerMetrics,
     ServerOversee,
     ServerReports,

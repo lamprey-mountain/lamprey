@@ -111,6 +111,9 @@ pub enum Permission {
     // TODO: enforce this permission
     ServerMetrics,
 
+    /// (server) can perform server maintenance tasks
+    ServerMaintenance,
+
     /// (server) can view the server room and all members on the server
     ServerOversee,
 

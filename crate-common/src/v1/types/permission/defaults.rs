@@ -43,6 +43,7 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::RoomCreate,
     Permission::RoomManage,
     Permission::RoomManageServer,
+    Permission::ServerMaintenance,
     Permission::ServerMetrics,
     Permission::ServerOversee,
     Permission::ServerReports,
@@ -236,6 +237,7 @@ pub const MODERATOR: &[Permission] = &[
     Permission::MessageRemove,
     Permission::ReactionPurge,
     Permission::RoleApply, // maybe?
+    Permission::ServerMaintenance,
     Permission::TagApply,
     // Permission::TagManage, // maybe?
     Permission::ThreadManage,
