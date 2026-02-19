@@ -359,7 +359,26 @@ impl ServiceRooms {
     }
 
     /// add private user data to each room
-    pub async fn populate_private(&self, _rooms: &mut [Room], _user_id: UserId) -> Result<()> {
+    pub async fn populate_private(&self, rooms: &mut [Room], user_id: UserId) -> Result<()> {
+        if rooms.is_empty() {
+            return Ok(());
+        }
+
+        let data = self.state.data();
+
+        // collect all room ids for batch fetching
+        let room_ids: Vec<_> = rooms.iter().map(|r| r.id).collect();
+
+        // fetch user configs for all rooms
+        let user_config_map = data.user_config_room_get_many(user_id, &room_ids).await?;
+
+        // populate each room with private data
+        for room in rooms {
+            if let Some(config) = user_config_map.get(&room.id) {
+                room.user_config = Some(config.clone());
+            }
+        }
+
         Ok(())
     }
 }

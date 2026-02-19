@@ -78,6 +78,34 @@ impl DataUserConfig for Postgres {
         Ok(conf)
     }
 
+    async fn user_config_room_get_many(
+        &self,
+        user_id: UserId,
+        room_ids: &[RoomId],
+    ) -> Result<HashMap<RoomId, PreferencesRoom>> {
+        if room_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let room_ids: Vec<_> = room_ids.iter().map(|id| **id).collect();
+        let rows = query!(
+            "SELECT room_id, config FROM user_config_room WHERE user_id = $1 AND room_id = ANY($2)",
+            *user_id,
+            &room_ids[..],
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut map = HashMap::with_capacity(room_ids.len());
+        for row in rows {
+            let room_id: RoomId = row.room_id.into();
+            let config: PreferencesRoom = serde_json::from_value(row.config).unwrap_or_default();
+            map.insert(room_id, config);
+        }
+
+        Ok(map)
+    }
+
     async fn user_config_channel_set(
         &self,
         user_id: UserId,

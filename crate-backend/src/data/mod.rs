@@ -1010,6 +1010,11 @@ pub trait DataUserConfig {
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<PreferencesRoom>;
+    async fn user_config_room_get_many(
+        &self,
+        user_id: UserId,
+        room_ids: &[RoomId],
+    ) -> Result<HashMap<RoomId, PreferencesRoom>>;
     async fn user_config_channel_set(
         &self,
         user_id: UserId,
