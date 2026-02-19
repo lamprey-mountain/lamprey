@@ -1,3 +1,5 @@
+#![allow(dead_code)] // TEMP
+
 use std::collections::HashMap;
 
 use common::v1::types::{ChannelId, Message, MessageCreate, MessageId, MessagePatch, MessageSync};
@@ -76,7 +78,7 @@ impl<'a> MessageRange<'a> {
         })
     }
 
-    pub fn slice(&self, start: usize, end: usize) -> MessageRange {
+    pub fn slice(&self, start: usize, end: usize) -> MessageRange<'_> {
         MessageRange {
             items: &self.items[start..end],
             has_forward: self.has_forward || end < self.items.len(),
@@ -99,7 +101,7 @@ impl<'a> MessageRange<'a> {
 
 impl MessageRanges {
     /// get the live range that new messages get appended to
-    pub fn live(&self) -> MessageRange {
+    pub fn live(&self) -> MessageRange<'_> {
         self.ranges
             .first()
             .map(|range| MessageRange {
@@ -111,7 +113,7 @@ impl MessageRanges {
     }
 
     /// find which range a message belongs to
-    pub fn find(&self, message_id: MessageId) -> Option<MessageRange> {
+    pub fn find(&self, message_id: MessageId) -> Option<MessageRange<'_>> {
         for range in &self.ranges {
             for item in &range.items {
                 let id = match item {
@@ -131,7 +133,7 @@ impl MessageRanges {
     }
 
     // this is probably internal?
-    fn merge(&self, a: MessageRange, b: MessageRange) -> &MessageRange {
+    fn merge(&self, _a: MessageRange, _b: MessageRange) -> &MessageRange<'_> {
         todo!()
     }
 
@@ -141,7 +143,7 @@ impl MessageRanges {
 }
 
 impl Messages {
-    pub fn fetch_backwards(&self, channel_id: ChannelId, message_id: MessageId, limit: usize) {
+    pub fn fetch_backwards(&self, _channel_id: ChannelId, _message_id: MessageId, _limit: usize) {
         // 1. find range message is in, otherwise create new range
         // 2. if there aren't enough messages, fetch more and merge
         // 3. get a slice of the MessageRange
@@ -149,28 +151,28 @@ impl Messages {
     }
 
     // TODO: impl the rest
-    pub fn fetch_forwards(&self, channel_id: ChannelId, message_id: MessageId, limit: usize) {
+    pub fn fetch_forwards(&self, _channel_id: ChannelId, _message_id: MessageId, _limit: usize) {
         todo!()
     }
 
-    pub fn fetch_single(&self, channel_id: ChannelId, message_id: MessageId) {
+    pub fn fetch_single(&self, _channel_id: ChannelId, _message_id: MessageId) {
         todo!()
     }
 
-    pub fn fetch_context(&self, channel_id: ChannelId, message_id: MessageId, limit: usize) {
+    pub fn fetch_context(&self, _channel_id: ChannelId, _message_id: MessageId, _limit: usize) {
         todo!()
     }
 
     // TODO: handle local echos
-    pub fn send(&self, channel_id: ChannelId, body: MessageCreate) {
+    pub fn send(&self, _channel_id: ChannelId, _body: MessageCreate) {
         todo!()
     }
 
-    pub fn edit(&self, channel_id: ChannelId, message_id: MessageId, body: MessagePatch) {
+    pub fn edit(&self, _channel_id: ChannelId, _message_id: MessageId, _body: MessagePatch) {
         todo!()
     }
 
-    pub(crate) fn handle_sync(&self, sync: MessageSync) {
+    pub(crate) fn handle_sync(&self, _sync: MessageSync) {
         todo!()
     }
 
