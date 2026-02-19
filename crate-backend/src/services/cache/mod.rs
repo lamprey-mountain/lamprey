@@ -444,20 +444,19 @@ impl ServiceCache {
                     room_members.push(member);
                 }
 
-                let roles = cached_room.roles.clone();
-                for entry in roles.iter() {
+                for entry in cached_room.roles.iter() {
                     all_roles.push(entry.value().clone());
                 }
 
-                let channels = cached_room.channels.clone();
-                for entry in channels.iter() {
-                    let channel = entry.value();
-                    if channel.ty.is_thread() {
-                        if channel.archived_at.is_none() {
-                            all_threads.push(channel.clone());
-                        }
-                    } else {
-                        all_channels.push(channel.clone());
+                for entry in cached_room.channels.iter() {
+                    all_channels.push(entry.value().clone());
+                }
+
+                for entry in cached_room.threads.iter() {
+                    let thread = entry.value();
+                    let thread_inner = thread.thread.read().await;
+                    if thread_inner.archived_at.is_none() {
+                        all_threads.push(thread_inner.clone());
                     }
                 }
 
