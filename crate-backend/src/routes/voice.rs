@@ -102,7 +102,7 @@ async fn voice_state_patch(
 
         let old_channel_id = old_state.channel_id;
 
-        let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+        let _ = s.broadcast_sfu(SfuCommand::VoiceState {
             user_id: target_user_id,
             state: None,
             permissions: SfuPermissions {
@@ -152,7 +152,7 @@ async fn voice_state_patch(
         };
 
         let perms_user = srv.perms.for_channel(target_user_id, channel_id).await?;
-        let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+        let _ = s.broadcast_sfu(SfuCommand::VoiceState {
             user_id: target_user_id,
             state: Some(state.clone()),
             permissions: SfuPermissions {
@@ -204,7 +204,7 @@ async fn voice_state_patch(
         };
 
         let perms_user = srv.perms.for_channel(target_user_id, channel_id).await?;
-        let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+        let _ = s.broadcast_sfu(SfuCommand::VoiceState {
             user_id: target_user_id,
             state: Some(state.clone()),
             permissions: SfuPermissions {
@@ -268,7 +268,7 @@ async fn voice_state_disconnect(
     let Some(_state) = srv.voice.state_get(target_user_id) else {
         return Ok(StatusCode::NO_CONTENT);
     };
-    let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+    let _ = s.broadcast_sfu(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
         permissions: SfuPermissions {
@@ -371,7 +371,7 @@ async fn voice_state_move(
     };
 
     let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
-    let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+    let _ = s.broadcast_sfu(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
         permissions: SfuPermissions {

@@ -12,6 +12,7 @@ use common::v1::types::{
     ChannelId,
 };
 use common::v1::types::{MessageSync, SfuId};
+use futures::StreamExt;
 use http::HeaderMap;
 use tokio::select;
 use tracing::{debug, error, warn};
@@ -64,7 +65,7 @@ impl SfuConnection {
     async fn spawn(self, mut socket: WebSocket) {
         self.s.services().voice.sfus.insert(self.id, ());
 
-        let mut outbox = self.s.sushi_sfu.subscribe();
+        let mut outbox = self.s.subscribe_sfu().await.unwrap();
 
         if let Err(e) = self
             .handle_command(SfuCommand::Ready { sfu_id: self.id }, &mut socket)
@@ -77,7 +78,7 @@ impl SfuConnection {
 
         loop {
             select! {
-                msg = outbox.recv() => {
+                msg = outbox.next() => {
                     if let Err(e) = self.handle_command(msg.unwrap(), &mut socket).await {
                         error!("Failed to send message to websocket: {:?}", e);
                         break;

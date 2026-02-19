@@ -10,7 +10,9 @@ use common::{
     v2::types::message::MessageVersion,
 };
 use dashmap::DashMap;
-
+use futures::{Stream, StreamExt};
+use lamprey_backend_core::Error;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
 use url::Url;
@@ -23,19 +25,36 @@ use crate::{
     Result,
 };
 
+type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
+
+/// Internal broadcast envelope containing a message and optional nonce
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageBroadcastInner {
+    pub message: MessageSync,
+    pub nonce: Option<String>,
+}
+
 pub struct ServerStateInner {
     pub tokio: TokioHandle,
     pub config: Config,
     pub pool: PgPool,
     pub services: Weak<Services>,
+    pub blobs: opendal::Operator, // TODO: write a wrapper around this?
+    pub messaging: MessagingService,
+}
 
-    // this is fine probably
-    pub sushi: Sender<(MessageSync, Option<String>)>,
-    // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
-    pub sushi_sfu: Sender<SfuCommand>,
+pub enum MessagingService {
+    /// use tokio channels to broadcast events
+    Memory {
+        /// ALL events on the server
+        sushi: Sender<MessageBroadcastInner>,
 
-    // TODO: write a wrapper around this (media is kind of like this?)
-    pub blobs: opendal::Operator,
+        /// ALL events for voice sfus
+        sushi_sfu: Sender<SfuCommand>,
+    },
+
+    /// use nats to broadcast events
+    Nats(async_nats::Client),
 }
 
 pub struct ServerState {
@@ -72,42 +91,139 @@ impl ServerStateInner {
         _user_id: UserId, // TODO: remove
         msg: MessageSync,
     ) -> Result<()> {
-        let _ = self.sushi.send((msg, None));
-        Ok(())
+        self.broadcast_inner(MessageBroadcastInner {
+            message: msg,
+            nonce: None,
+        })
     }
 
     /// emit a message to everyone in a channel
-    // TODO: remove?
     pub async fn broadcast_channel(
         &self,
         _thread_id: ChannelId,
         _user_id: UserId, // TODO: remove
         msg: MessageSync,
     ) -> Result<()> {
-        let _ = self.sushi.send((msg, None));
-        Ok(())
+        self.broadcast_inner(MessageBroadcastInner {
+            message: msg,
+            nonce: None,
+        })
     }
 
-    pub async fn broadcast_channel2(
+    /// emit a message to everyone in a channel with a nonce
+    pub async fn broadcast_channel_with_nonce(
         &self,
-        _channel_id: ChannelId,
+        _thread_id: ChannelId,
+        _user_id: UserId, // TODO: remove
         nonce: Option<&str>,
         msg: MessageSync,
     ) -> Result<()> {
-        let _ = self.sushi.send((msg, nonce.map(|s| s.to_owned())));
-        Ok(())
+        self.broadcast_inner(MessageBroadcastInner {
+            message: msg,
+            nonce: nonce.map(|s| s.to_string()),
+        })
     }
 
     /// emit a message to a user
     pub async fn broadcast_user(&self, _user_id: UserId, msg: MessageSync) -> Result<()> {
-        let _ = self.sushi.send((msg, None));
-        Ok(())
+        self.broadcast_inner(MessageBroadcastInner {
+            message: msg,
+            nonce: None,
+        })
     }
 
     /// emit a message to everyone
     pub fn broadcast(&self, msg: MessageSync) -> Result<()> {
-        let _ = self.sushi.send((msg, None));
+        self.broadcast_inner(MessageBroadcastInner {
+            message: msg,
+            nonce: None,
+        })
+    }
+
+    /// emit a message to everyone
+    fn broadcast_inner(&self, msg: MessageBroadcastInner) -> Result<()> {
+        match &self.messaging {
+            MessagingService::Memory { sushi, .. } => {
+                let _ = sushi.send(msg);
+            }
+            MessagingService::Nats(client) => {
+                let bytes = serde_json::to_vec(&msg)?;
+                let _ = client.publish("sushi", bytes.into());
+            }
+        }
         Ok(())
+    }
+
+    /// emit a sfu command to everyone
+    pub fn broadcast_sfu(&self, cmd: SfuCommand) -> Result<()> {
+        match &self.messaging {
+            MessagingService::Memory { sushi_sfu, .. } => {
+                let _ = sushi_sfu.send(cmd);
+            }
+            MessagingService::Nats(client) => {
+                let bytes = serde_json::to_vec(&cmd)?;
+                let _ = client.publish("sushi_sfu", bytes.into());
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn subscribe_sushi(&self) -> Result<BoxStream<MessageBroadcastInner>> {
+        match &self.messaging {
+            MessagingService::Memory { sushi, .. } => {
+                let stream = tokio_stream::wrappers::BroadcastStream::new(sushi.subscribe());
+                Ok(Box::pin(stream.filter_map(|res| async move { res.ok() })))
+            }
+            MessagingService::Nats(client) => {
+                let client = client.clone();
+                let sub = client
+                    .subscribe("sushi")
+                    .await
+                    .map_err(|e| Error::Internal(format!("NATS subscribe failed: {}", e)))?;
+                let stream = futures::stream::unfold(sub, move |mut sub| async move {
+                    match sub.next().await {
+                        Some(msg) => match serde_json::from_slice(&msg.payload) {
+                            Ok(inner) => Some((inner, sub)),
+                            Err(e) => {
+                                tracing::error!("NATS message deserialize failed: {}", e);
+                                None
+                            }
+                        },
+                        None => None,
+                    }
+                });
+                Ok(Box::pin(stream))
+            }
+        }
+    }
+
+    pub async fn subscribe_sfu(&self) -> Result<BoxStream<SfuCommand>> {
+        match &self.messaging {
+            MessagingService::Memory { sushi_sfu, .. } => {
+                let stream = tokio_stream::wrappers::BroadcastStream::new(sushi_sfu.subscribe());
+                Ok(Box::pin(stream.filter_map(|res| async move { res.ok() })))
+            }
+            MessagingService::Nats(client) => {
+                let client = client.clone();
+                let sub = client
+                    .subscribe("sushi_sfu")
+                    .await
+                    .map_err(|e| Error::Internal(format!("NATS subscribe failed: {}", e)))?;
+                let stream = futures::stream::unfold(sub, move |mut sub| async move {
+                    match sub.next().await {
+                        Some(msg) => match serde_json::from_slice(&msg.payload) {
+                            Ok(cmd) => Some((cmd, sub)),
+                            Err(e) => {
+                                tracing::error!("NATS message deserialize failed: {}", e);
+                                None
+                            }
+                        },
+                        None => None,
+                    }
+                });
+                Ok(Box::pin(stream))
+            }
+        }
     }
 
     pub fn get_s3_url(&self, path: &str) -> Result<Url> {
@@ -167,7 +283,12 @@ impl ServerStateInner {
 }
 
 impl ServerState {
-    pub async fn init(config: Config, pool: PgPool, blobs: opendal::Operator) -> Self {
+    pub async fn init(
+        config: Config,
+        pool: PgPool,
+        blobs: opendal::Operator,
+        nats: Option<async_nats::Client>,
+    ) -> Self {
         // a bit hacky for now since i need to work around the existing ServerState
         // though i probably need some way to access global state/services from within them anyways
         let services = Arc::new_cyclic(|weak| {
@@ -177,10 +298,14 @@ impl ServerState {
                 pool,
                 services: weak.to_owned(),
                 blobs,
-
-                // maybe i should increase the limit at some point? or make it unlimited?
-                sushi: tokio::sync::broadcast::channel(100).0,
-                sushi_sfu: tokio::sync::broadcast::channel(100).0,
+                messaging: match nats {
+                    Some(c) => MessagingService::Nats(c),
+                    None => MessagingService::Memory {
+                        // maybe i should increase the limit at some point? or make it unlimited?
+                        sushi: tokio::sync::broadcast::channel(100).0,
+                        sushi_sfu: tokio::sync::broadcast::channel(100).0,
+                    },
+                },
             });
             Services::new(inner.clone())
         });

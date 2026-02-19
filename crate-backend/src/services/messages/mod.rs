@@ -428,7 +428,7 @@ impl ServiceMessages {
             message: message.clone(),
         };
         srv.channels.invalidate(thread_id).await; // message count
-        s.broadcast_channel2(thread_id, nonce.as_deref(), msg)
+        s.broadcast_channel_with_nonce(thread_id, user_id, nonce.as_deref(), msg)
             .await?;
 
         let s_clone = self.state.clone();

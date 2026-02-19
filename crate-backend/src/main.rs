@@ -131,7 +131,24 @@ async fn main() -> Result<()> {
         .finish();
     blobs.check().await?;
 
-    let state = Arc::new(ServerState::init(config, pool, blobs).await);
+    let nats = if let Some(nats_config) = &config.nats {
+        let mut nats_options = async_nats::ConnectOptions::new();
+        if let Some(credentials_path) = &nats_config.credentials {
+            nats_options = nats_options
+                .credentials_file(credentials_path)
+                .await
+                .map_err(|e| Error::Internal(format!("NATS credentials file failed: {}", e)))?;
+        }
+        Some(
+            async_nats::connect_with_options(&nats_config.addr, nats_options)
+                .await
+                .map_err(|e| Error::Internal(format!("NATS connect failed: {}", e)))?,
+        )
+    } else {
+        None
+    };
+
+    let state = Arc::new(ServerState::init(config, pool, blobs, nats).await);
 
     let srv = state.services();
     let data = state.data();

@@ -7,7 +7,7 @@ use common::v1::types::{
     ChannelId, MessageSync, RoleId, Room, RoomId, User, UserId,
 };
 use dashmap::DashMap;
-use futures::future::BoxFuture;
+use futures::{future::BoxFuture, StreamExt};
 use moka::future::Cache;
 use tokio::sync::RwLock;
 use tracing::warn;
@@ -78,9 +78,9 @@ impl ServiceCache {
     pub fn start_background_tasks(&self) {
         let this = self.clone();
         tokio::spawn(async move {
-            let mut rx = this.state.sushi.subscribe();
-            while let Ok((msg, _)) = rx.recv().await {
-                this.handle_sync(&msg).await;
+            let mut rx = this.state.subscribe_sushi().await.unwrap();
+            while let Some(msg) = rx.next().await {
+                this.handle_sync(&msg.message).await;
             }
         });
     }

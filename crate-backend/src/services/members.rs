@@ -21,6 +21,7 @@ use std::sync::Arc;
 
 use common::v1::types::{MessageSync, UserId};
 use dashmap::DashMap;
+use futures::StreamExt;
 use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
 use tracing::{debug, warn};
 
@@ -108,7 +109,7 @@ impl ServiceMembers {
         self.lists
             .insert(key.clone(), (actor_tx, sync_rx.resubscribe()));
 
-        let mut events = self.s.sushi.subscribe();
+        let mut events = self.s.subscribe_sushi().await.unwrap();
         let s = self.s.clone();
 
         tokio::spawn(async move {
@@ -122,18 +123,8 @@ impl ServiceMembers {
 
             loop {
                 let msg = tokio::select! {
-                    res = events.recv() => {
-                        match res {
-                            Ok((msg, _)) => msg,
-                            Err(broadcast::error::RecvError::Lagged(n)) => {
-                                warn!("member list skipped {} events", n);
-                                continue;
-                            }
-                            Err(broadcast::error::RecvError::Closed) => {
-                                warn!("event bus closed");
-                                break;
-                            }
-                        }
+                    Some(msg) = events.next() => {
+                        msg.message
                     }
                     res = actor_rx.recv() => {
                         match res {

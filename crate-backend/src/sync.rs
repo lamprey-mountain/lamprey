@@ -548,7 +548,7 @@ impl Connection {
                     state.deaf = rm.deaf;
                 }
                 srv.voice.alloc_sfu(state.channel_id).await?;
-                if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
+                if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
                     user_id,
                     state: Some(state),
                     permissions: SfuPermissions {
@@ -562,7 +562,7 @@ impl Connection {
                 return Ok(());
             }
             SignallingMessage::VoiceState { state: None } => {
-                if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
+                if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
                     user_id,
                     state: None,
                     permissions: SfuPermissions {
@@ -588,7 +588,7 @@ impl Connection {
             _ => {}
         }
 
-        if let Err(err) = self.s.sushi_sfu.send(SfuCommand::Signalling {
+        if let Err(err) = self.s.broadcast_sfu(SfuCommand::Signalling {
             user_id,
             inner: payload,
         }) {

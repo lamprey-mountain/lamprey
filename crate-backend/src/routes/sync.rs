@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use axum::routing::any;
 use common::v1::types::error::SyncError;
 use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
-use futures_util::SinkExt;
+use futures_util::{SinkExt, StreamExt};
 use tracing::debug;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -40,7 +40,7 @@ async fn sync(
 #[tracing::instrument(skip(s, ws))]
 async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
     let mut timeout = Timeout::for_ping();
-    let mut sushi = s.inner.sushi.subscribe();
+    let mut sushi = s.inner.subscribe_sushi().await.unwrap();
     let mut conn = Connection::new(s.clone(), params);
 
     loop {
@@ -90,8 +90,8 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                     _ => break,
                 }
             }
-            Ok((msg, nonce)) = sushi.recv() => {
-                if let Err(_err) = conn.queue_message(Box::new(msg), nonce).await {
+            Some(msg) = sushi.next() => {
+                if let Err(_err) = conn.queue_message(Box::new(msg.message), msg.nonce).await {
                     // most of the errors that are returned are auth check failures, which we don't need to log
                     // error!("{err}");
                 }

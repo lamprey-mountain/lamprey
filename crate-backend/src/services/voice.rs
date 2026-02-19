@@ -103,7 +103,7 @@ impl ServiceVoice {
     pub async fn disconnect_everyone(&self, channel_id: ChannelId) -> Result<()> {
         for s in &self.voice_states {
             if s.channel_id == channel_id {
-                let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {
+                let r = self.state.broadcast_sfu(SfuCommand::VoiceState {
                     user_id: s.user_id,
                     state: None,
                     // FIXME: permissions
@@ -143,8 +143,7 @@ impl ServiceVoice {
             self.channel_to_sfu.insert(channel_id, *chosen);
             let channel = self.state.services().channels.get(channel_id, None).await?;
             self.state
-                .sushi_sfu
-                .send(SfuCommand::Channel {
+                .broadcast_sfu(SfuCommand::Channel {
                     channel: channel.into(),
                 })
                 .unwrap();

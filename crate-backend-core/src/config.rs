@@ -58,6 +58,11 @@ pub struct Config {
     /// server. this must be enabled to use the cli interface.
     #[serde(default = "default_true")]
     pub enable_admin_token: bool,
+
+    /// configuration for nats
+    ///
+    /// if None, use in memory channels for events
+    pub nats: Option<ConfigNats>,
 }
 
 fn default_require_server_invite() -> bool {
@@ -118,6 +123,20 @@ pub struct ConfigSmtp {
     pub password: String,
     pub host: String,
     pub from: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigNats {
+    /// the address of the nats server
+    #[serde(default = "default_nats_addr")]
+    pub addr: String,
+
+    /// path to a nats credential file, if authentication is required
+    pub credentials: Option<PathBuf>,
+}
+
+fn default_nats_addr() -> String {
+    "localhost:4222".to_string()
 }
 
 #[derive(Clone, Debug, Deserialize)]
