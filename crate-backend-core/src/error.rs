@@ -143,6 +143,9 @@ pub enum Error {
     #[error("tantivy error: {0}")]
     Tantivy(#[from] tantivy::TantivyError),
 
+    #[error("tantivy query error: {0}")]
+    TantivyQuery(String),
+
     #[error("nats error: {0}")]
     Nats(#[from] async_nats::Error),
 
@@ -197,6 +200,7 @@ impl Error {
             },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             Error::MissingScopes(_) => StatusCode::FORBIDDEN,
+            Error::TantivyQuery(_) => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -230,6 +234,7 @@ impl Error {
             Error::Validation(validation_errors) => Error::Validation(validation_errors.clone()),
             Error::MissingScopes(s) => Error::MissingScopes(s.clone()),
             Error::Tantivy(t) => Error::Tantivy(t.clone()),
+            Error::TantivyQuery(s) => Error::TantivyQuery(s.clone()),
             _ => Error::GenericError(self.to_string()),
         }
     }

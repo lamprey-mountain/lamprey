@@ -22,7 +22,7 @@ use crate::{
         schema::{tantivy_document_from_channel, tantivy_document_from_message, LampreySchema},
         tokenizer::DynamicTokenizer,
     },
-    Result, ServerStateInner,
+    Error, Result, ServerStateInner,
 };
 
 /// buffer size split between indexing threads
@@ -324,7 +324,7 @@ impl TantivySearcher {
                 query_parser.set_field_boost(s.name, 1.5);
                 let q = query_parser
                     .parse_query(q_str)
-                    .map_err(|e| tantivy::TantivyError::from(e))?;
+                    .map_err(|e| Error::TantivyQuery(format!("Invalid query syntax: {}", e)))?;
                 query_clauses.push((tantivy::query::Occur::Must, q));
             }
         }
