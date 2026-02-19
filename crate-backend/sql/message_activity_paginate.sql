@@ -2,6 +2,7 @@ SELECT
     mv.type as "message_type: DbMessageType",
     m.id,
     m.channel_id,
+    c.room_id,
     m.author_id,
     m.created_at,
     m.deleted_at,
@@ -20,6 +21,7 @@ SELECT
 FROM message AS m
 JOIN message_version AS mv ON m.latest_version_id = mv.version_id
 LEFT JOIN att_json ON att_json.version_id = mv.version_id
+JOIN channel AS c ON m.channel_id = c.id
 WHERE m.channel_id = $1 AND m.deleted_at IS NULL
   AND mv.type IN ('MessagePinned', 'MemberAdd', 'MemberRemove', 'ChannelRename', 'ChannelIcon', 'ChannelMoved', 'ChannelPingback', 'ThreadCreated')
   AND m.id > $2 AND m.id < $3

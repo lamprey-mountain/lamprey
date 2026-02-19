@@ -14,6 +14,7 @@ select
     mv.type as "message_type: DbMessageType",
     m.id,
     m.channel_id,
+    channel_viewer.room_id,
     mv.version_id,
     mv.content,
     mv.metadata,

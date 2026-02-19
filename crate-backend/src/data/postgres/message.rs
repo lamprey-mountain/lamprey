@@ -27,6 +27,7 @@ use super::{Pagination, Postgres};
 pub struct DbMessage {
     pub id: MessageId,
     pub channel_id: ChannelId,
+    pub room_id: Option<Uuid>,
     pub author_id: UserId,
     pub created_at: time::PrimitiveDateTime,
     pub deleted_at: Option<time::PrimitiveDateTime>,
@@ -103,6 +104,7 @@ impl From<DbMessage> for MessageV2 {
         MessageV2 {
             id: row.id,
             channel_id: row.channel_id,
+            room_id: row.room_id.map(|i| i.into()),
             author_id: row.author_id,
             created_at: Time::from(row.created_at),
             deleted_at: row.deleted_at.map(Time::from),

@@ -38,6 +38,7 @@ pub mod components;
 pub struct Message {
     pub id: MessageId,
     pub channel_id: ChannelId,
+    pub room_id: Option<RoomId>,
 
     // TODO: rename to something better?
     // this is a bit unwieldy, and incorrect if i fetched an old version

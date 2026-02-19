@@ -14,6 +14,7 @@ SELECT
     mv.type as "message_type: DbMessageType",
     m.id,
     m.channel_id,
+    c.room_id,
     m.author_id,
     m.created_at,
     m.deleted_at,
@@ -33,6 +34,7 @@ FROM message AS m
 JOIN parents p ON m.id = p.id
 JOIN message_version AS mv ON m.latest_version_id = mv.version_id
 LEFT JOIN att_json ON att_json.version_id = mv.version_id
+JOIN channel AS c ON m.channel_id = c.id
 WHERE m.deleted_at IS NULL
   AND m.id != $1
 ORDER BY p.level ASC
