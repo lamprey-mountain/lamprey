@@ -4,6 +4,8 @@ import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
+import { usePermissions } from "../hooks/usePermissions.ts";
+import { Show } from "solid-js";
 
 // should i have a separate one for bulk messages?
 
@@ -22,6 +24,14 @@ export function MessageMenu(props: MessageMenuProps) {
 	);
 	const [ch, chUpdate] = ctx.channel_contexts.get(props.channel_id)!;
 	const [, modalCtl] = useModals();
+
+	const self_id = () => api.users.cache.get("@self")?.id;
+	const channel = api.channels.fetch(() => props.channel_id);
+	const { has: hasPermission } = usePermissions(
+		self_id,
+		() => channel()?.room_id ?? undefined,
+		() => props.channel_id,
+	);
 
 	const copyId = () => navigator.clipboard.writeText(props.message_id);
 
@@ -111,25 +121,50 @@ export function MessageMenu(props: MessageMenuProps) {
 		});
 	};
 
+	const canAddReaction = () => hasPermission("ReactionAdd");
+	const hasReactions = () => {
+		const msg = message();
+		return msg?.reactions && msg.reactions.length > 0;
+	};
+	const canReply = () => hasPermission("MessageCreate");
+	const canEdit = () => {
+		const msg = message();
+		return hasPermission("MessageCreate") && msg?.author_id === self_id();
+	};
+	const canPin = () => hasPermission("MessagePin");
+	const canSelect = () =>
+		hasPermission("MessageDelete") || hasPermission("MessageRemove");
+	const canDelete = () => {
+		const msg = message();
+		return hasPermission("MessageDelete") || msg?.author_id === self_id();
+	};
+
 	return (
 		<Menu>
 			<Item onClick={markUnread}>mark unread</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<Separator />
-			{/* TODO: only show if you have ReactionAdd permission */}
-			<Item onClick={addReaction}>add reaction</Item>
-			{/* TODO: only show if message has reactions */}
-			<Item onClick={viewReactions}>view reactions</Item>
-			{/* TODO: only show if you have MessageCreate permission */}
-			<Item onClick={setReply}>reply</Item>
-			{/* TODO: only show if you have MessageCreate permission AND sent the message */}
-			<Item onClick={edit}>edit</Item>
-			{/* TODO: only show if you have MessagePin permission */}
-			<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
-			{/* TODO: only show if you have MessageDelete OR MessageRemove permission */}
-			<Item onClick={selectMessage}>select</Item>
-			{/* TODO: only show if you have MessageDelete permission OR sent the message */}
-			<Item onClick={deleteMessage} color="danger">delete</Item>
+			<Show when={canAddReaction()}>
+				<Item onClick={addReaction}>add reaction</Item>
+			</Show>
+			<Show when={hasReactions()}>
+				<Item onClick={viewReactions}>view reactions</Item>
+			</Show>
+			<Show when={canReply()}>
+				<Item onClick={setReply}>reply</Item>
+			</Show>
+			<Show when={canEdit()}>
+				<Item onClick={edit}>edit</Item>
+			</Show>
+			<Show when={canPin()}>
+				<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
+			</Show>
+			<Show when={canSelect()}>
+				<Item onClick={selectMessage}>select</Item>
+			</Show>
+			<Show when={canDelete()}>
+				<Item onClick={deleteMessage} color="danger">delete</Item>
+			</Show>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
