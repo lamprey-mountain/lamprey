@@ -214,7 +214,7 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
             match queue_result {
                 Ok(items) => {
                     if let Some((channel_id, last_message_id)) = items.first() {
-                        let limit = 100;
+                        let limit = 1024;
                         debug!(
                             "reindexing channel {} from {:?}",
                             channel_id, last_message_id
