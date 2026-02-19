@@ -142,6 +142,12 @@ pub enum Error {
 
     #[error("tantivy error: {0}")]
     Tantivy(#[from] tantivy::TantivyError),
+
+    #[error("nats error: {0}")]
+    Nats(#[from] async_nats::Error),
+
+    #[error("nats jetstream error: {0}")]
+    NatsJetstream(String),
 }
 
 impl From<sqlx::Error> for Error {

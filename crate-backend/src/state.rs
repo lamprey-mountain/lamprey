@@ -25,6 +25,9 @@ use crate::{
     Result,
 };
 
+#[cfg(any())]
+mod queue;
+
 type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
 
 /// Internal broadcast envelope containing a message and optional nonce

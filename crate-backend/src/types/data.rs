@@ -654,7 +654,7 @@ pub struct DbNotification {
     pub read_at: Option<PrimitiveDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageRef {
     pub message_id: MessageId,
     pub version_id: MessageVerId,
