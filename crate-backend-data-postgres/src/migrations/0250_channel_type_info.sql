@@ -1,1 +1,0 @@
-ALTER TYPE channel_type ADD VALUE 'Info';

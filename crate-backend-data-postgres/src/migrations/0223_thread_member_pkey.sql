@@ -1,3 +1,0 @@
-ALTER TABLE thread_member RENAME CONSTRAINT channel_member_pkey TO thread_member_pkey;
-ALTER TABLE thread_member RENAME CONSTRAINT channel_member_channel_id_fkey TO thread_member_channel_id_fkey;
-ALTER TABLE thread_member RENAME CONSTRAINT channel_member_user_id_fkey TO thread_member_user_id_fkey;

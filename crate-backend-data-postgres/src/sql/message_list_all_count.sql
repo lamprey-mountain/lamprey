@@ -1,1 +1,0 @@
-SELECT COUNT(*) FROM message WHERE channel_id = $1

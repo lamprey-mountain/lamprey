@@ -1,1 +1,0 @@
-ALTER TABLE usr ADD COLUMN banner UUID REFERENCES media(id);

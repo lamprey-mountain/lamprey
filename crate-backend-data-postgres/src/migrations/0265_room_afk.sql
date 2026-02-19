@@ -1,3 +1,0 @@
-ALTER TABLE room ADD COLUMN afk_channel_id UUID REFERENCES channel(id);
-ALTER TABLE room ADD COLUMN afk_channel_timeout BIGINT NOT NULL DEFAULT 300000;
-ALTER TABLE room ALTER COLUMN afk_channel_timeout DROP DEFAULT;
