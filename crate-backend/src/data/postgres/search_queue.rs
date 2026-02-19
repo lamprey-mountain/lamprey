@@ -51,4 +51,14 @@ impl DataSearchQueue for Postgres {
         .await?;
         Ok(())
     }
+
+    async fn search_reindex_queue_get(&self, channel_id: ChannelId) -> Result<Option<MessageId>> {
+        let row = query!(
+            r#"SELECT last_message_id FROM search_reindex_queue WHERE channel_id = $1"#,
+            *channel_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.and_then(|r| r.last_message_id.map(|id| id.into())))
+    }
 }

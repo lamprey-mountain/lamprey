@@ -863,6 +863,10 @@ pub trait DataSearchQueue {
         limit: u32,
     ) -> Result<Vec<(ChannelId, Option<MessageId>)>>;
     async fn search_reindex_queue_delete(&self, channel_id: ChannelId) -> Result<()>;
+    async fn search_reindex_queue_get(
+        &self,
+        channel_id: ChannelId,
+    ) -> Result<Option<MessageId>>;
 }
 
 #[async_trait]

@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use common::v1::types::{MessageCreate, UserId};
-
-// TODO: move AdminWhisper, AdminBroadcast, AdminRegisterUser here
+use common::v1::types::{ChannelId, MessageCreate, MessageId, UserId};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminPurgeCache {
@@ -108,4 +106,14 @@ pub struct AdminBroadcast {
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct AdminRegisterUser {
     pub user_id: UserId,
+}
+
+/// Search index statistics for a channel
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SearchIndexStats {
+    /// Number of documents indexed for this channel
+    pub documents_indexed: u64,
+
+    /// The last message ID that was indexed, if any
+    pub last_message_id: Option<MessageId>,
 }

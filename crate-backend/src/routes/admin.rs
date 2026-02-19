@@ -10,7 +10,7 @@ use common::v1::types::{
 use http::StatusCode;
 use lamprey_backend_core::types::admin::{
     AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
-    AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper,
+    AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, SearchIndexStats,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -270,6 +270,34 @@ async fn admin_reindex_channel(
     Ok(StatusCode::ACCEPTED)
 }
 
+/// Admin channel search index stats
+///
+/// Get search index statistics for a channel
+#[utoipa::path(
+    get,
+    path = "/admin/channel-search-index-stats/{channel_id}",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
+    params(("channel_id" = String, Path, description = "Channel id to get stats for")),
+    responses(
+        (status = OK, body = SearchIndexStats, description = "Search index statistics for the channel"),
+    )
+)]
+async fn admin_channel_search_index_stats(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Path(channel_id): Path<ChannelId>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::Admin)?;
+
+    let stats = srv.search.get_channel_stats(channel_id).await?;
+    Ok(Json(stats))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(admin_whisper))
@@ -278,4 +306,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(admin_purge_cache))
         .routes(routes!(admin_collect_garbage))
         .routes(routes!(admin_reindex_channel))
+        .routes(routes!(admin_channel_search_index_stats))
 }

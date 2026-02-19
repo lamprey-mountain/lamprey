@@ -439,4 +439,17 @@ impl TantivySearcher {
 
         Ok(SearchMessagesResponseRaw { items, total })
     }
+
+    pub fn count_documents_for_channel(&self, channel_id: ChannelId) -> Result<u64> {
+        let s = &self.schema;
+        let searcher = self.reader.searcher();
+
+        let query = tantivy::query::TermQuery::new(
+            Term::from_field_text(s.channel_id, &channel_id.to_string()),
+            tantivy::schema::IndexRecordOption::Basic,
+        );
+
+        let count = searcher.search(&query, &Count)?;
+        Ok(count as u64)
+    }
 }

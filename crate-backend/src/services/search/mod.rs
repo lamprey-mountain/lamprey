@@ -5,9 +5,10 @@ use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
 };
-use common::v1::types::{MessageType, RoomId};
+use common::v1::types::{util::Time, MessageType, RoomId};
 use common::v2::types::message::Message;
 use futures::stream::{FuturesUnordered, StreamExt};
+use lamprey_backend_core::types::admin::SearchIndexStats;
 use tracing::trace;
 
 use crate::Error;
@@ -241,5 +242,23 @@ impl ServiceSearch {
             .send(cmd)
             .map_err(|e| Error::Internal(format!("Failed to send reindex command: {}", e)))?;
         Ok(())
+    }
+
+    pub async fn get_channel_stats(&self, channel_id: ChannelId) -> Result<SearchIndexStats> {
+        let data = self.state.data();
+        let searcher = self.tantivy.searcher();
+
+        let documents_indexed =
+            tokio::task::spawn_blocking(move || searcher.count_documents_for_channel(channel_id))
+                .await
+                .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))?
+                .map_err(|e| Error::Internal(format!("Failed to count documents: {}", e)))?;
+
+        let last_message_id = data.search_reindex_queue_get(channel_id).await?;
+
+        Ok(SearchIndexStats {
+            documents_indexed,
+            last_message_id,
+        })
     }
 }
