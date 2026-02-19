@@ -10,6 +10,8 @@ use common::v1::types::{
     MessageThreadCreated, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId,
     ThreadMemberPut, User, UserId, SERVER_USER_ID,
 };
+use futures::stream::{self, StreamExt};
+use futures::TryStreamExt;
 use moka::future::Cache;
 use time::OffsetDateTime;
 use tracing::warn;
@@ -1302,9 +1304,7 @@ impl ServiceChannels {
     }
 
     /// get all channels a user can see that are in rooms, along with whether the user has the ThreadManage permission. does not include dm channels
-    // PERF: use cache service
     pub async fn list_user_room_channels(&self, user_id: UserId) -> Result<Vec<(ChannelId, bool)>> {
-        // TODO: batch these queries
         let rooms = self
             .state
             .data()
@@ -1319,13 +1319,16 @@ impl ServiceChannels {
                 false,
             )
             .await?;
-        let mut out = vec![];
-        for room in rooms.items {
-            out.extend(
-                self.list_user_room_channels_single(user_id, room.id)
-                    .await?,
-            );
-        }
+
+        let out: Vec<(ChannelId, bool)> = stream::iter(rooms.items)
+            .map(|room| self.list_user_room_channels_single(user_id, room.id))
+            .buffer_unordered(10)
+            .try_collect::<Vec<Vec<(ChannelId, bool)>>>()
+            .await?
+            .into_iter()
+            .flatten()
+            .collect();
+
         Ok(out)
     }
 
@@ -1335,16 +1338,14 @@ impl ServiceChannels {
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<Vec<(ChannelId, bool)>> {
-        let channels = self.state.data().channel_list(room_id).await?;
+        let cached_room = self.state.services().cache.load_room(room_id).await?;
         let mut out = vec![];
 
-        for ch in channels {
-            let p = self
-                .state
-                .services()
-                .perms
-                .for_channel(user_id, ch.id)
-                .await?;
+        let perms_calc = Arc::clone(&cached_room).permissions().await;
+
+        for entry in cached_room.channels.iter() {
+            let ch = entry.value();
+            let p = perms_calc.query(user_id, Some(ch));
             if p.has(Permission::ViewChannel) {
                 out.push((ch.id, p.has(Permission::ThreadManage)));
             }

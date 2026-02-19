@@ -41,7 +41,7 @@ impl ServiceSearch {
         let srv = self.state.services();
 
         let vis = srv.channels.list_user_room_channels(auth_user_id).await?;
-        trace!("visible channels: {:?}", vis);
+        trace!(count = vis.len(), "visible channels");
 
         let offset = req.offset;
 
