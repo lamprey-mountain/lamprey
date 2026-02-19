@@ -1,6 +1,6 @@
 //! notification preference calculator
 
-use common::v1::types::notifications::preferences::{NotifsMessages, NotifsRoom};
+use common::v1::types::notifications::preferences::NotifsMessages;
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
 use common::v1::types::{Channel, ChannelType, Message, Room, UserId};

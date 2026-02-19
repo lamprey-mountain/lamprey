@@ -5,7 +5,7 @@ use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
 };
-use common::v1::types::{util::Time, MessageType, RoomId};
+use common::v1::types::{MessageType, RoomId};
 use common::v2::types::message::Message;
 use futures::stream::{FuturesUnordered, StreamExt};
 use lamprey_backend_core::types::admin::SearchIndexStats;

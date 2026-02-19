@@ -3,7 +3,7 @@ use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead, NotificationType,
 };
 use common::v1::types::{NotificationId, PaginationDirection, PaginationQuery, PaginationResponse};
-use sqlx::{query, query_file, query_file_as, query_file_scalar, query_scalar, Acquire};
+use sqlx::{query, query_file, query_file_as, query_file_scalar, Acquire};
 use uuid::Uuid;
 
 use crate::{
