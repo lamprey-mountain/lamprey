@@ -570,13 +570,11 @@ async fn thread_create_from_message(
     Ok((StatusCode::CREATED, Json(channel)))
 }
 
+// TODO: move to common
 #[derive(Serialize, ToSchema)]
 pub struct ThreadListRoom {
     /// threads in this room
     pub threads: Vec<Channel>,
-
-    /// only your own thread member objects
-    pub thread_members: Vec<ThreadMember>,
 }
 
 /// Thread list room
@@ -594,30 +592,33 @@ async fn thread_list_room(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
     let srv = s.services();
     let user_id = auth.user.id;
 
     // just check if the user is a room member
     let _perms = srv.perms.for_room(user_id, room_id).await?;
 
-    let all_threads = data.thread_all_active_room(room_id).await?;
+    // load room from cache
+    let cached_room = srv.cache.load_room(room_id).await?;
 
-    let thread_ids: Vec<_> = all_threads.iter().map(|t| t.id).collect();
-    let thread_members = data.thread_member_bulk_fetch(user_id, &thread_ids).await?;
-    let thread_members: HashMap<_, _> = thread_members.into_iter().collect();
-
+    // collect thread ids and thread members from cache
     let mut filtered_thread_ids = vec![];
-    for t in all_threads {
-        // this *should* be cached and not too horrible performance wise?
-        let perms = srv.perms.for_channel(auth.user.id, t.id).await?;
-        let can_view = if t.ty == ChannelType::ThreadPublic {
+
+    for entry in cached_room.threads.iter() {
+        let thread = entry.value();
+        let thread_channel = thread.thread.read().await;
+        let thread_id = thread_channel.id;
+
+        // check permissions
+        let perms = srv.perms.for_channel(user_id, thread_id).await?;
+        let can_view = if thread_channel.ty == ChannelType::ThreadPublic {
             perms.has(Permission::ViewChannel)
         } else {
-            perms.has(Permission::ThreadManage) || thread_members.get(&t.id).is_some()
+            perms.has(Permission::ThreadManage) || thread.members.contains_key(&user_id)
         };
+
         if can_view {
-            filtered_thread_ids.push(t.id);
+            filtered_thread_ids.push(thread_id);
         }
     }
 
@@ -626,10 +627,7 @@ async fn thread_list_room(
         .get_many(&filtered_thread_ids, Some(user_id))
         .await?;
 
-    Ok(Json(ThreadListRoom {
-        threads,
-        thread_members: thread_members.into_values().collect(),
-    }))
+    Ok(Json(ThreadListRoom { threads }))
 }
 
 /// Thread activity
