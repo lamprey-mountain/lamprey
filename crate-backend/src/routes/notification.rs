@@ -6,9 +6,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationCreate, NotificationFlush, NotificationMarkRead,
-    NotificationPagination, NotificationReason,
+    NotificationPagination, NotificationType,
 };
-use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission};
+use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission, RoomId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -38,7 +38,9 @@ async fn inbox_get(
 
     let mut channel_ids = std::collections::HashSet::new();
     for notif in &notifications.items {
-        channel_ids.insert(notif.channel_id);
+        if let Some(channel_id) = notif.channel_id() {
+            channel_ids.insert(channel_id);
+        }
     }
 
     let srv = s.services();
@@ -66,13 +68,15 @@ async fn inbox_get(
 
     let mut messages = Vec::new();
     for notif in &notifications.items {
-        if let Ok(mut message) = s
-            .data()
-            .message_get(notif.channel_id, notif.message_id, auth.user.id)
-            .await
-        {
-            s.presign_message(&mut message).await?;
-            messages.push(message);
+        if let (Some(channel_id), Some(message_id)) = (notif.channel_id(), notif.ty.message_id()) {
+            if let Ok(mut message) = s
+                .data()
+                .message_get(channel_id, message_id, auth.user.id)
+                .await
+            {
+                s.presign_message(&mut message).await?;
+                messages.push(message);
+            }
         }
     }
 
@@ -110,13 +114,26 @@ async fn inbox_post(
         .await?;
     perms.ensure(Permission::ViewChannel)?;
 
+    // Get room_id for the channel
+    let room_id = s
+        .services()
+        .channels
+        .get(json.channel_id, Some(auth.user.id))
+        .await
+        .ok()
+        .and_then(|ch| ch.room_id)
+        .unwrap_or_else(RoomId::new);
+
     let notif = Notification {
         id: NotificationId::new(),
-        channel_id: json.channel_id,
-        message_id: json.message_id,
-        reason: NotificationReason::Reminder,
+        ty: NotificationType::Message {
+            room_id,
+            channel_id: json.channel_id,
+            message_id: json.message_id,
+        },
         added_at: json.added_at.unwrap_or_else(Time::now_utc),
         read_at: None,
+        note: None,
     };
 
     s.data()

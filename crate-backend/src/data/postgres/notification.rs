@@ -1,10 +1,8 @@
 use async_trait::async_trait;
-use common::v1::types::{
-    notifications::{
-        InboxListParams, Notification, NotificationFlush, NotificationMarkRead, NotificationReason,
-    },
-    NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
+use common::v1::types::notifications::{
+    InboxListParams, Notification, NotificationFlush, NotificationMarkRead, NotificationType,
 };
+use common::v1::types::{NotificationId, PaginationDirection, PaginationQuery, PaginationResponse};
 use sqlx::{query, query_file, query_file_as, query_file_scalar, query_scalar, Acquire};
 use uuid::Uuid;
 
@@ -12,39 +10,37 @@ use crate::{
     data::DataNotification,
     error::Result,
     gen_paginate,
-    types::{DbNotification, UserId},
+    types::{DbNotification, DbNotificationType, RoomId, UserId},
 };
 
 use super::Postgres;
 
-fn notif_reason_str(r: NotificationReason) -> &'static str {
-    match r {
-        NotificationReason::Mention => "Mention",
-        NotificationReason::MentionBulk => "MentionBulk",
-        NotificationReason::Reply => "Reply",
-        NotificationReason::Reminder => "Reminder",
-    }
-}
-
-fn notif_reason_parse(s: &str) -> NotificationReason {
-    match s {
-        "Mention" => NotificationReason::Mention,
-        "MentionBulk" => NotificationReason::MentionBulk,
-        "Reply" => NotificationReason::Reply,
-        "Reminder" => NotificationReason::Reminder,
-        _ => panic!("invalid data in db"),
-    }
-}
-
 impl From<DbNotification> for Notification {
     fn from(val: DbNotification) -> Self {
+        let ty = match val.ty {
+            DbNotificationType::Message => NotificationType::Message {
+                room_id: val
+                    .room_id
+                    .map(|id| id.into())
+                    .unwrap_or_else(|| RoomId::new()),
+                channel_id: val.channel_id.into(),
+                message_id: val.message_id.into(),
+            },
+            DbNotificationType::Reaction => NotificationType::Reaction {
+                room_id: val
+                    .room_id
+                    .map(|id| id.into())
+                    .unwrap_or_else(|| RoomId::new()),
+                channel_id: val.channel_id.into(),
+                message_id: val.message_id.into(),
+            },
+        };
         Notification {
             id: val.id.into(),
-            channel_id: val.channel_id.into(),
-            message_id: val.message_id.into(),
-            reason: notif_reason_parse(&val.reason),
+            ty,
             added_at: val.added_at.into(),
             read_at: val.read_at.map(|t| t.into()),
+            note: None,
         }
     }
 }
@@ -53,22 +49,39 @@ impl From<DbNotification> for Notification {
 impl DataNotification for Postgres {
     async fn notification_add(&self, user_id: UserId, notif: Notification) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
-        let room_id: Option<Uuid> = query_scalar!(
-            "SELECT room_id FROM channel WHERE id = $1",
-            notif.channel_id.into_inner()
-        )
-        .fetch_one(&mut *conn)
-        .await?;
+
+        let (room_id, channel_id, message_id, ty) = match &notif.ty {
+            NotificationType::Message {
+                room_id,
+                channel_id,
+                message_id,
+            } => (
+                Some(room_id.into_inner()),
+                channel_id.into_inner(),
+                message_id.into_inner(),
+                DbNotificationType::Message,
+            ),
+            NotificationType::Reaction {
+                room_id,
+                channel_id,
+                message_id,
+            } => (
+                Some(room_id.into_inner()),
+                channel_id.into_inner(),
+                message_id.into_inner(),
+                DbNotificationType::Reaction,
+            ),
+        };
 
         let added_at = time::PrimitiveDateTime::new(notif.added_at.date(), notif.added_at.time());
         query!(
-            "INSERT INTO inbox (id, user_id, room_id, channel_id, message_id, reason, added_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            "INSERT INTO inbox (id, user_id, room_id, channel_id, message_id, type, added_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
             notif.id.into_inner(),
             user_id.into_inner(),
             room_id,
-            notif.channel_id.into_inner(),
-            notif.message_id.into_inner(),
-            notif_reason_str(notif.reason),
+            channel_id,
+            message_id,
+            ty as _,
             added_at,
         )
         .execute(&mut *conn)
@@ -261,14 +274,16 @@ impl DataNotification for Postgres {
             .into_iter()
             .map(|r| {
                 let user_id = UserId::from(r.user_id);
-                let notif = Notification {
-                    id: r.id.into(),
-                    channel_id: r.channel_id.into(),
-                    message_id: r.message_id.into(),
-                    reason: notif_reason_parse(&r.reason),
-                    added_at: r.added_at.into(),
-                    read_at: r.read_at.map(|t| t.into()),
-                };
+                let notif: Notification = DbNotification {
+                    id: r.id,
+                    room_id: r.room_id,
+                    channel_id: r.channel_id,
+                    message_id: r.message_id,
+                    ty: r.ty,
+                    added_at: r.added_at,
+                    read_at: r.read_at,
+                }
+                .into();
                 (user_id, notif)
             })
             .collect())

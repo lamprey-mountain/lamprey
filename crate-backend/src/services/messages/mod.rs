@@ -9,7 +9,7 @@ use std::time::Duration;
 use tracing::error;
 
 use common::v1::types::misc::Color;
-use common::v1::types::notifications::{Notification, NotificationReason};
+use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     Channel, ChannelId, ChannelPatch, ContextQuery, ContextResponse, Embed, EmbedCreate, EmbedId,
@@ -488,19 +488,45 @@ impl ServiceMessages {
                     {
                         error!("Failed to increment mention count for user {}: {}", u.id, e);
                     }
+
+                    // Get room_id for the notification
+                    let room_id = s_clone
+                        .services()
+                        .channels
+                        .get(thread_id, Some(u.id))
+                        .await
+                        .ok()
+                        .and_then(|ch| ch.room_id);
+
+                    // Check notification preferences before creating inbox notification
                     let notification = Notification {
                         id: NotificationId::new(),
-                        channel_id: thread_id,
-                        message_id,
-                        reason: NotificationReason::Mention,
+                        ty: NotificationType::Message {
+                            room_id: room_id.unwrap_or_else(RoomId::new),
+                            channel_id: thread_id,
+                            message_id,
+                        },
                         added_at: Time::now_utc(),
                         read_at: None,
+                        note: None,
                     };
-                    if let Err(e) = s_clone.data().notification_add(u.id, notification).await {
-                        error!(
-                            "Failed to add mention notification for user {}: {}",
-                            u.id, e
-                        );
+                    let action = s_clone
+                        .services()
+                        .notifications
+                        .calculator(u.id, &notification)
+                        .action()
+                        .await
+                        .unwrap_or(
+                            crate::services::notifications::preferences::NotificationAction::Push,
+                        ); // Default to allowing notifications on error
+
+                    if action.should_add_to_inbox() {
+                        if let Err(e) = s_clone.data().notification_add(u.id, notification).await {
+                            error!(
+                                "Failed to add mention notification for user {}: {}",
+                                u.id, e
+                            );
+                        }
                     }
                 }
             }
@@ -557,23 +583,47 @@ impl ServiceMessages {
                                         member.user_id, e
                                     );
                                 }
+
+                                // Get room_id for the notification
+                                let room_id_opt = s_clone
+                                    .services()
+                                    .channels
+                                    .get(thread_id, Some(member.user_id))
+                                    .await
+                                    .ok()
+                                    .and_then(|ch| ch.room_id);
+
+                                // Check notification preferences before creating inbox notification
                                 let notification = Notification {
                                     id: NotificationId::new(),
-                                    channel_id: thread_id,
-                                    message_id,
-                                    reason: NotificationReason::Mention,
+                                    ty: NotificationType::Message {
+                                        room_id: room_id_opt.unwrap_or_else(RoomId::new),
+                                        channel_id: thread_id,
+                                        message_id,
+                                    },
                                     added_at: Time::now_utc(),
                                     read_at: None,
+                                    note: None,
                                 };
-                                if let Err(e) = s_clone
-                                    .data()
-                                    .notification_add(member.user_id, notification)
+                                let action = s_clone
+                                    .services()
+                                    .notifications
+                                    .calculator(member.user_id, &notification)
+                                    .action()
                                     .await
-                                {
-                                    error!(
-                                        "Failed to add role mention notification for user {}: {}",
-                                        member.user_id, e
-                                    );
+                                    .unwrap_or(crate::services::notifications::preferences::NotificationAction::Push); // Default to allowing notifications on error
+
+                                if action.should_add_to_inbox() {
+                                    if let Err(e) = s_clone
+                                        .data()
+                                        .notification_add(member.user_id, notification)
+                                        .await
+                                    {
+                                        error!(
+                                            "Failed to add role mention notification for user {}: {}",
+                                            member.user_id, e
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -615,13 +665,24 @@ impl ServiceMessages {
                                 user_id, e
                             );
                         }
+                        let room_id_opt = s_clone
+                            .services()
+                            .channels
+                            .get(thread_id, Some(user_id))
+                            .await
+                            .ok()
+                            .and_then(|ch| ch.room_id);
+
                         let notification = Notification {
                             id: NotificationId::new(),
-                            channel_id: thread_id,
-                            message_id,
-                            reason: NotificationReason::MentionBulk,
+                            ty: NotificationType::Message {
+                                room_id: room_id_opt.unwrap_or_else(RoomId::new),
+                                channel_id: thread_id,
+                                message_id,
+                            },
                             added_at: Time::now_utc(),
                             read_at: None,
+                            note: None,
                         };
                         if let Err(e) = s_clone.data().notification_add(user_id, notification).await
                         {

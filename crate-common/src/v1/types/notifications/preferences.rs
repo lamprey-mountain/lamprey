@@ -31,6 +31,7 @@ pub struct NotifsRoom {
     pub messages: Option<NotifsMessages>,
 
     /// how to handle new threads
+    // TODO: implement
     pub threads: Option<NotifsThreads>,
 
     /// whether to receive @everyone and @here mentions
@@ -55,6 +56,7 @@ pub struct NotifsChannel {
     /// can't be set on voice and thread channels
     ///
     /// None means inherit from category/room
+    // TODO: implement
     pub threads: Option<NotifsThreads>,
 }
 

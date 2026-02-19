@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use common::v1::types::notifications::Notification;
 use common::v1::types::{ChannelId, MessageId, NotificationId, UserId};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use p256::pkcs8::EncodePrivateKey;
@@ -11,11 +12,16 @@ use time::OffsetDateTime;
 use tracing::{error, info};
 
 use crate::error::Error;
+use crate::services::notifications::preferences::NotificationActionCalculator;
 use crate::{Result, ServerStateInner};
+
+pub mod preferences;
 
 pub struct ServiceNotifications {
     state: Arc<ServerStateInner>,
 }
+
+// TODO: review llm generated code (vapid logic)
 
 /// payload sent via web push api
 ///
@@ -201,16 +207,20 @@ impl ServiceNotifications {
 
                     let mut pushed_ids = Vec::new();
                     for (user_id, notif) in notifs {
-                        let payload = NotificationPayload {
-                            id: notif.id,
-                            channel_id: notif.channel_id,
-                            message_id: notif.message_id,
-                        };
+                        if let (Some(channel_id), Some(message_id)) =
+                            (notif.channel_id(), notif.message_id())
+                        {
+                            let payload = NotificationPayload {
+                                id: notif.id,
+                                channel_id,
+                                message_id,
+                            };
 
-                        if let Err(e) = srv.notifications.push(user_id, payload).await {
-                            error!("failed to push notification {}: {}", notif.id, e);
+                            if let Err(e) = srv.notifications.push(user_id, payload).await {
+                                error!("failed to push notification {}: {}", notif.id, e);
+                            }
+                            pushed_ids.push(notif.id);
                         }
-                        pushed_ids.push(notif.id);
                     }
 
                     if let Err(e) = data.notification_set_pushed(&pushed_ids).await {
@@ -222,5 +232,14 @@ impl ServiceNotifications {
                 }
             }
         }
+    }
+
+    /// get a notification calculator for a user
+    pub fn calculator(
+        &self,
+        user_id: UserId,
+        notif: &Notification,
+    ) -> NotificationActionCalculator {
+        NotificationActionCalculator::new(self.state.clone(), user_id, notif.clone())
     }
 }

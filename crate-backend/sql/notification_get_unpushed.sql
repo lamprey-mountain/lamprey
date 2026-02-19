@@ -1,9 +1,10 @@
 SELECT
     id,
     user_id as "user_id!",
+    room_id,
     channel_id as "channel_id!",
     message_id as "message_id!",
-    reason as "reason!",
+    type as "ty!: DbNotificationType",
     added_at as "added_at!",
     read_at
 FROM inbox

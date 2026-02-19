@@ -14,15 +14,16 @@ use crate::v2::types::message::Message;
 pub mod preferences;
 
 // TODO: use this instead of the current notification type
+// TODO: maybe include a `completed` field if this action is "completable"?
 /// a notification; a unit of stuff that may show up in your inbox or be pushed to you
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Notification2 {
+pub struct Notification {
     pub id: NotificationId,
 
     #[cfg_attr(feature = "serde", serde(flatten))]
-    pub ty: Notification2Type,
+    pub ty: NotificationType,
 
     /// when this was added to the inbox
     pub added_at: Time,
@@ -32,16 +33,18 @@ pub struct Notification2 {
 
     /// user defined note for this notification
     pub note: Option<String>,
-    // maybe include `completed` if this action is "completable"?
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
-pub enum Notification2Type {
+pub enum NotificationType {
     /// someone sent a message you should look at
     Message {
+        /// the room this message was sent in
+        room_id: RoomId,
+
         /// the channel this message was sent in
         channel_id: ChannelId,
 
@@ -51,6 +54,9 @@ pub enum Notification2Type {
 
     /// someone reacted to a message you sent
     Reaction {
+        /// the room this message was sent in
+        room_id: RoomId,
+
         /// the channel this message was sent in
         channel_id: ChannelId,
 
@@ -61,56 +67,6 @@ pub enum Notification2Type {
     },
     // in the future, there'll probably be calendar events, document mentions, broadcast/voice activity, etc
     // also FriendRequestReceived and FriendRequestAccepted (notif lifecycle? like one friend notif that gets updated over time?)
-}
-
-// TODO: remove
-/// a notification; a unit of stuff that may show up in your inbox or be pushed to you
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Notification {
-    pub id: NotificationId,
-
-    /// the channel this message was sent in
-    pub channel_id: ChannelId,
-
-    /// the id of the message that was sent
-    pub message_id: MessageId,
-
-    /// why this was created
-    pub reason: NotificationReason,
-
-    /// when this was added to the inbox
-    pub added_at: Time,
-
-    /// when this was read
-    pub read_at: Option<Time>,
-}
-
-// TODO: remove
-// in order of precedence
-/// what caused this notification to be created
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum NotificationReason {
-    /// user manually added this notification
-    Reminder,
-
-    /// this message mentioned you. overrides MentionBulk
-    Mention,
-
-    /// this message mentioned @room, @thread, or roles
-    MentionBulk,
-
-    /// this message replied to one of your own messages
-    Reply,
-    // /// this is a new thread
-    // ThreadNew,
-
-    // /// this thread is unread
-    // /// message_id wont have any meaning, client should fetch context instead
-    // ThreadUnread,
 }
 
 /// query your inbox
@@ -265,17 +221,41 @@ pub struct NotificationPagination {
 //     // flags: is edit, author is ignored, channel is muted, what else?
 // }
 
-impl Notification2 {
+impl NotificationType {
+    pub fn message_id(&self) -> Option<MessageId> {
+        match self {
+            NotificationType::Message { message_id, .. } => Some(*message_id),
+            NotificationType::Reaction { message_id, .. } => Some(*message_id),
+        }
+    }
+}
+
+impl Notification {
     /// get the tag for this notification
     ///
     /// notifications with the same tag will be deduplicated
     pub fn tag_id(&self) -> Uuid {
         match &self.ty {
-            Notification2Type::Message { message_id, .. } => **message_id,
-            Notification2Type::Reaction { message_id, .. } => **message_id,
+            NotificationType::Message { message_id, .. } => **message_id,
+            NotificationType::Reaction { message_id, .. } => **message_id,
         }
     }
 
-    // pub fn channel_id(&self) -> Option<ChannelId>;
-    // pub fn room_id(&self) -> Option<RoomId>;
+    pub fn channel_id(&self) -> Option<ChannelId> {
+        match &self.ty {
+            NotificationType::Message { channel_id, .. } => Some(*channel_id),
+            NotificationType::Reaction { channel_id, .. } => Some(*channel_id),
+        }
+    }
+
+    pub fn room_id(&self) -> Option<RoomId> {
+        match &self.ty {
+            NotificationType::Message { room_id, .. } => Some(*room_id),
+            NotificationType::Reaction { room_id, .. } => Some(*room_id),
+        }
+    }
+
+    pub fn message_id(&self) -> Option<MessageId> {
+        self.ty.message_id()
+    }
 }
