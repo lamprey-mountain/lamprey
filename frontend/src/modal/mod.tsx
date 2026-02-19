@@ -1,4 +1,4 @@
-import { type ParentProps } from "solid-js";
+import { onMount, type ParentProps } from "solid-js";
 import { type Modal as ContextModal, useCtx } from "../context.ts";
 import { ModalResetPassword } from "../user_settings/mod.tsx";
 import { ModalPalette } from "./ModalPalette.tsx";
@@ -14,10 +14,17 @@ import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
 
-export const Modal = (props: ParentProps) => {
+export const Modal = (
+	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },
+) => {
 	const [, modalCtl] = useModals();
 	return (
-		<div class="modal">
+		<div
+			class="modal"
+			onKeyDown={props.onKeyDown}
+			tabindex="-1"
+			autofocus
+		>
 			<div class="bg" onClick={() => modalCtl.close()}></div>
 			<div class="content">
 				<div class="base"></div>
@@ -108,11 +115,19 @@ export function getModal(modal: ContextModal) {
 
 const ModalAlert = (props: { text: string }) => {
 	const [, modalCtl] = useModals();
+	let btn: HTMLButtonElement | undefined;
+	onMount(() => btn?.focus());
 	return (
-		<Modal>
+		<Modal
+			onKeyDown={(e) => {
+				if (e.key === "Escape") {
+					modalCtl.close();
+				}
+			}}
+		>
 			<p>{props.text}</p>
 			<div class="bottom">
-				<button onClick={modalCtl.close}>
+				<button ref={btn} onClick={modalCtl.close}>
 					okay!
 				</button>
 			</div>
@@ -124,8 +139,20 @@ const ModalConfirm = (
 	props: { text: string; cont: (bool: boolean) => void },
 ) => {
 	const [, modalCtl] = useModals();
+	let cancelBtn: HTMLButtonElement | undefined;
+	onMount(() => cancelBtn?.focus());
 	return (
-		<Modal>
+		<Modal
+			onKeyDown={(e) => {
+				if (e.key === "Enter") {
+					props.cont(true);
+					modalCtl.close();
+				} else if (e.key === "Escape") {
+					props.cont(false);
+					modalCtl.close();
+				}
+			}}
+		>
 			<p>{props.text}</p>
 			<div class="bottom">
 				<button
@@ -137,6 +164,7 @@ const ModalConfirm = (
 					okay!
 				</button>
 				<button
+					ref={cancelBtn}
 					onClick={() => {
 						props.cont(false);
 						modalCtl.close();
@@ -153,6 +181,8 @@ const ModalPrompt = (
 	props: { text: string; cont: (s: string | null) => void },
 ) => {
 	const [, modalCtl] = useModals();
+	let input: HTMLInputElement | undefined;
+	onMount(() => input?.focus());
 	return (
 		<Modal>
 			<p>{props.text}</p>
@@ -168,7 +198,7 @@ const ModalPrompt = (
 					modalCtl.close();
 				}}
 			>
-				<input type="text" name="text" autofocus />
+				<input ref={input} type="text" name="text" />
 				<div class="bottom">
 					<input type="submit" value="done!"></input>{" "}
 					<button
