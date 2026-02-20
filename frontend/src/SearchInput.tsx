@@ -868,6 +868,7 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 					"Ctrl-Shift-z": redo,
 					Enter: () => {
 						handleSubmit();
+						setActiveFilter(null);
 						return true;
 					},
 					"Escape": () => {
