@@ -712,89 +712,104 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		};
 		updateSearch(searchState);
 
+		const queryParts: string[] = [];
+
+		if (textQuery) {
+			queryParts.push(textQuery);
+		}
+
+		if (filters.author) {
+			for (const author_id of filters.author) {
+				queryParts.push(`author_id:${author_id}`);
+			}
+		}
+
+		if (props.channel) {
+			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
+				queryParts.push(`channel_id:${props.channel.id}`);
+			} else if (filters.thread) {
+				for (const thread_id of filters.thread) {
+					queryParts.push(`channel_id:${thread_id}`);
+				}
+				if (props.channel.room_id) {
+					queryParts.push(`room_id:${props.channel.room_id}`);
+				}
+			} else if (props.channel.room_id) {
+				queryParts.push(`room_id:${props.channel.room_id}`);
+			} else {
+				queryParts.push(`channel_id:${props.channel.id}`);
+			}
+		} else if (props.room) {
+			queryParts.push(`room_id:${props.room.id}`);
+		}
+
+		if (filters.after?.[0]) {
+			const from_uuid = dateToBoundaryUUID(filters.after[0], "start");
+			if (from_uuid) {
+				queryParts.push(`created_at:[${from_uuid} TO *]`);
+			}
+		}
+		if (filters.before?.[0]) {
+			const to_uuid = dateToBoundaryUUID(filters.before[0], "end");
+			if (to_uuid) {
+				queryParts.push(`created_at:[* TO ${to_uuid}]`);
+			}
+		}
+
+		if (filters.has) {
+			if (filters.has.includes("attachment")) {
+				queryParts.push(`metadata_fast.has_attachment:true`);
+			}
+			if (filters.has.includes("image")) {
+				queryParts.push(`metadata_fast.has_image:true`);
+			}
+			if (filters.has.includes("audio")) {
+				queryParts.push(`metadata_fast.has_audio:true`);
+			}
+			if (filters.has.includes("video")) {
+				queryParts.push(`metadata_fast.has_video:true`);
+			}
+			if (filters.has.includes("link")) {
+				queryParts.push(`metadata_fast.has_link:true`);
+			}
+			if (filters.has.includes("embed")) {
+				queryParts.push(`metadata_fast.has_embed:true`);
+			}
+		}
+
+		if (filters.pinned?.[0]) {
+			queryParts.push(`metadata_fast.pinned:${filters.pinned[0]}`);
+		}
+
+		if (filters.mentions) {
+			for (const mention of filters.mentions) {
+				if (mention.startsWith("user-")) {
+					const user_id = mention.replace("user-", "");
+					queryParts.push(`metadata_fast.mentions_user:${user_id}`);
+				} else if (mention.startsWith("role-")) {
+					const role_id = mention.replace("role-", "");
+					queryParts.push(`metadata_fast.mentions_role:${role_id}`);
+				} else if (
+					mention === "everyone-room" || mention === "everyone-thread"
+				) {
+					queryParts.push(`metadata_fast.mentions_everyone:true`);
+				}
+			}
+		}
+
 		const body: {
 			query?: string;
-			user_id?: string[];
-			channel_id?: string[];
-			room_id?: string[];
-			has_attachment?: boolean;
-			has_image?: boolean;
-			has_audio?: boolean;
-			has_video?: boolean;
-			has_link?: boolean;
-			has_embed?: boolean;
-			pinned?: boolean;
-			mentions_users?: string[];
-			mentions_roles?: string[];
-			mentions_everyone?: boolean;
-			message_id?: { min?: string; max?: string };
 			sort_order?: "asc" | "desc";
 			sort_field?: "Created" | "Relevancy";
 			limit?: number;
 			offset?: number;
 			include_nsfw?: boolean;
-		} = { query: textQuery || undefined, sort_order: "desc", sort_field: "Created", limit: 100 };
-
-		if (filters.author) body.user_id = filters.author;
-
-		if (props.channel) {
-			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
-				body.channel_id = [props.channel.id];
-			} else if (filters.thread) {
-				body.channel_id = filters.thread;
-				if (props.channel.room_id) body.room_id = [props.channel.room_id];
-			} else if (props.channel.room_id) {
-				body.room_id = [props.channel.room_id];
-			} else {
-				body.channel_id = [props.channel.id];
-			}
-		} else if (props.room) {
-			body.room_id = [props.room.id];
-		}
-
-		// Handle before/after filters using message_id range
-		if (filters.before?.[0] || filters.after?.[0]) {
-			body.message_id = {};
-			if (filters.after?.[0]) {
-				const from_uuid = dateToBoundaryUUID(filters.after[0], "start");
-				if (from_uuid) body.message_id.min = from_uuid;
-			}
-			if (filters.before?.[0]) {
-				const to_uuid = dateToBoundaryUUID(filters.before[0], "end");
-				if (to_uuid) body.message_id.max = to_uuid;
-			}
-		}
-
-		if (filters.has) {
-			if (filters.has.includes("attachment")) body.has_attachment = true;
-			if (filters.has.includes("image")) body.has_image = true;
-			if (filters.has.includes("audio")) body.has_audio = true;
-			if (filters.has.includes("video")) body.has_video = true;
-			if (filters.has.includes("link")) body.has_link = true;
-			if (filters.has.includes("embed")) body.has_embed = true;
-		}
-
-		if (filters.pinned?.[0]) {
-			body.pinned = filters.pinned[0] === "true";
-		}
-
-		if (filters.mentions) {
-			const mentions_users: string[] = [];
-			const mentions_roles: string[] = [];
-			for (const mention of filters.mentions) {
-				if (mention.startsWith("user-")) {
-					mentions_users.push(mention.replace("user-", ""));
-				} else if (mention.startsWith("role-")) {
-					mentions_roles.push(mention.replace("role-", ""));
-				} else if (mention === "everyone-room") {
-					body.mentions_everyone = true;
-				} else if (mention === "everyone-thread") {
-					body.mentions_everyone = true;
-				}
-			}
-			if (mentions_users.length > 0) body.mentions_users = mentions_users;
-			if (mentions_roles.length > 0) body.mentions_roles = mentions_roles;
-		}
+		} = {
+			query: queryParts.join(" ") || undefined,
+			sort_order: "desc",
+			sort_field: "Created",
+			limit: 100,
+		};
 
 		const res = await api.messages.search(body);
 		if (res) {

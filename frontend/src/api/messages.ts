@@ -803,9 +803,46 @@ export class Messages {
 				},
 			)
 		);
+
+		const { users, threads, room_members, thread_members, messages } = data;
+
+		if (users) {
+			for (const user of users) {
+				this.api.users.cache.set(user.id, user);
+			}
+		}
+
+		if (threads) {
+			for (const thread of threads) {
+				this.api.channels.cache.set(thread.id, thread);
+			}
+		}
+
+		if (room_members) {
+			for (const member of room_members) {
+				let roomCache = this.api.room_members.cache.get(member.room_id);
+				if (!roomCache) {
+					roomCache = new ReactiveMap();
+					this.api.room_members.cache.set(member.room_id, roomCache);
+				}
+				roomCache.set(member.user_id, member);
+			}
+		}
+
+		if (thread_members) {
+			for (const member of thread_members) {
+				let threadCache = this.api.thread_members.cache.get(member.thread_id);
+				if (!threadCache) {
+					threadCache = new ReactiveMap();
+					this.api.thread_members.cache.set(member.thread_id, threadCache);
+				}
+				threadCache.set(member.user_id, member);
+			}
+		}
+
 		return {
 			...data,
-			messages: data.messages.map(maybeConvertMessage),
+			messages: messages.map(maybeConvertMessage),
 		};
 	}
 
