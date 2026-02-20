@@ -1,4 +1,5 @@
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
@@ -948,6 +949,16 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 					return false;
 				},
 			},
+		});
+
+		createEffect(() => {
+			if (!currentSearch()) {
+				const { state } = view;
+				if (state.doc.textContent.length > 0) {
+					const tr = state.tr.delete(0, state.doc.content.size);
+					view.dispatch(tr);
+				}
+			}
 		});
 
 		onCleanup(() => {
