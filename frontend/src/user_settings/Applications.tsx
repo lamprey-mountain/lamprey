@@ -439,7 +439,7 @@ const AppEditor = (
 	};
 
 	return (
-		<div class="role-edit">
+		<div class="role-edit appplication-edit">
 			<div class="toolbar">
 				<button
 					onClick={() => {

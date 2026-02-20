@@ -367,3 +367,12 @@
 		}
 	}
 }
+
+.appplication-edit .avatar-uploader .remove {
+	border: none;
+	background: none;
+
+	&:hover {
+		background: none;
+	}
+}
