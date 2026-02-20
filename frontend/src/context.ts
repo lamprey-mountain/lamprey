@@ -138,7 +138,7 @@ export type AttachmentCreateT = {
 
 export type ChannelSearch = {
 	query: string;
-	results: Pagination<Message> | null;
+	results: import("sdk").MessageSearch | null;
 	loading: boolean;
 	author?: string[];
 	before?: string;

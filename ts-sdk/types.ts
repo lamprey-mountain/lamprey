@@ -48,6 +48,18 @@ export type PushInfo = components["schemas"]["PushInfo"];
 export type AutomodRule = components["schemas"]["AutomodRule"];
 export type AutomodRuleCreate = components["schemas"]["AutomodRuleCreate"];
 
+// TODO: use openai schema
+export type MessageSearch = {
+	results: Array<string>; // MessageId[]
+	messages: Array<Message>;
+	users: Array<User>;
+	threads: Array<Channel>;
+	room_members: Array<RoomMember>;
+	thread_members: Array<ThreadMember>;
+	has_more: boolean;
+	approximate_total: number;
+};
+
 export type OauthInfo = {
 	application: Application;
 	bot_user: User;

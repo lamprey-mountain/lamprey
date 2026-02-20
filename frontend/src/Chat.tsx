@@ -636,7 +636,7 @@ export const SearchResults = (props: {
 		<aside class="search-results">
 			<header>
 				<Show when={!props.search.loading} fallback={<>Searching...</>}>
-					{props.search.results?.total ?? 0} results
+					{props.search.results?.approximate_total ?? 0} results
 				</Show>
 				<button
 					onClick={() => {
@@ -651,11 +651,11 @@ export const SearchResults = (props: {
 			</header>
 			<Show when={!props.search.loading}>
 				<ul>
-					<For each={props.search.results?.items}>
+					<For each={props.search.results?.messages}>
 						{(message, index) => {
 							const prev = () => {
 								const i = index();
-								if (i > 0) return props.search.results!.items[i - 1];
+								if (i > 0) return props.search.results!.messages[i - 1];
 								return undefined;
 							};
 							return (

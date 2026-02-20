@@ -244,10 +244,14 @@ function MessageEditor(
 ) {
 	const ctx = useCtx();
 	const api = useApi();
-	const [ch, chUpdate] = useChannel()!;
+	const [ch, chUpdate] = useChannel() ?? [null, null];
 
 	// TODO: save edit draft per message?
 	const [draft, setDraft] = createSignal(props.message.content ?? "");
+
+	if (!ch || !chUpdate) {
+		return <div class="message-editor">Error: No channel context</div>;
+	}
 
 	const editor = createEditor({
 		initialContent: draft(),
@@ -373,7 +377,7 @@ export function MessageView(props: MessageProps) {
 	const ctx = useCtx();
 	const { t } = ctx;
 	const thread = api.channels.fetch(() => props.message.channel_id);
-	const [ch, chUpdate] = useChannel()!;
+	const [ch, chUpdate] = useChannel() ?? [null, null];
 	let messageArticleRef: HTMLElement | undefined;
 
 	const isMenuOpen = () => {
@@ -391,7 +395,7 @@ export function MessageView(props: MessageProps) {
 	};
 	const toolbarVisible = () => isMenuOpen() || isReactionPickerOpen();
 
-	const inSelectMode = () => ch.selectMode;
+	const inSelectMode = () => ch?.selectMode ?? false;
 
 	const onMouseDown = (e: MouseEvent) => {
 		if (inSelectMode() && e.shiftKey) {
@@ -400,7 +404,7 @@ export function MessageView(props: MessageProps) {
 	};
 
 	const handleClick = (e: MouseEvent) => {
-		if (!inSelectMode()) return;
+		if (!inSelectMode() || !ch || !chUpdate) return;
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -983,9 +987,9 @@ export function MessageView(props: MessageProps) {
 				});
 			};
 			const ctx = useCtx();
-			const [ch] = useChannel()!;
+			const [ch] = useChannel() ?? [null];
 			const isEditing = () => {
-				return ch.editingMessage?.message_id ===
+				return ch?.editingMessage?.message_id ===
 					props.message.id;
 			};
 			const messageStyle = ctx.userConfig().frontend["message_style"] || "cozy";
@@ -1146,7 +1150,7 @@ function ReplyView(props: ReplyProps) {
 	const api = useApi();
 	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
 	const thread = api.channels.fetch(() => props.thread_id);
-	const [ch, chUpdate] = useChannel()!;
+	const [ch, chUpdate] = useChannel() ?? [null, null];
 
 	const content = () => {
 		const r = reply();
@@ -1287,6 +1291,7 @@ function ReplyView(props: ReplyProps) {
 
 	const scrollToReply = () => {
 		// if (!props.reply) return;
+		if (!chUpdate) return;
 		chUpdate("reply_jump_source", props.source_id);
 		chUpdate("anchor", {
 			type: "context",
@@ -1525,19 +1530,19 @@ const MessageToolbar = (props: { message: Message }) => {
 		setShowReactionPicker(!showReactionPicker());
 	};
 
-	const [ch, chUpdate] = useChannel()!;
+	const [ch, chUpdate] = useChannel() ?? [null, null];
 
 	const handleReply = () => {
+		if (!ch || !chUpdate) return;
 		chUpdate("reply_id", props.message.id);
 	};
 
 	const handleEdit = () => {
-		if (canEditMessage()) {
-			chUpdate("editingMessage", {
-				message_id: props.message.id,
-				selection: "end",
-			});
-		}
+		if (!canEditMessage() || !chUpdate) return;
+		chUpdate("editingMessage", {
+			message_id: props.message.id,
+			selection: "end",
+		});
 	};
 
 	const handleContextMenu = (e: MouseEvent) => {

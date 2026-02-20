@@ -794,19 +794,18 @@ export class Messages {
 		);
 	}
 
-	async search(body: any, params: any): Promise<Pagination<Message>> {
+	async search(body: any): Promise<import("sdk").MessageSearch> {
 		const data = await fetchWithRetry(() =>
 			this.api.client.http.POST(
-				"/api/v1/search/message",
+				"/api/v1/search/message2",
 				{
 					body,
-					params,
 				},
 			)
 		);
 		return {
 			...data,
-			items: data.items.map(maybeConvertMessage),
+			messages: data.messages.map(maybeConvertMessage),
 		};
 	}
 

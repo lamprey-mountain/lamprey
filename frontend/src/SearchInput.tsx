@@ -726,13 +726,14 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			pinned?: boolean;
 			mentions_users?: string[];
 			mentions_roles?: string[];
-			mentions_everyone_room?: boolean;
-			mentions_everyone_thread?: boolean;
-			order: string;
-		} = { query: textQuery || undefined, order: "Newest" };
-		const params: { query: { limit: number; from?: string; to?: string } } = {
-			query: { limit: 100 },
-		};
+			mentions_everyone?: boolean;
+			message_id?: { min?: string; max?: string };
+			sort_order?: "asc" | "desc";
+			sort_field?: "Created" | "Relevancy";
+			limit?: number;
+			offset?: number;
+			include_nsfw?: boolean;
+		} = { query: textQuery || undefined, sort_order: "desc", sort_field: "Created", limit: 100 };
 
 		if (filters.author) body.user_id = filters.author;
 
@@ -751,13 +752,17 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			body.room_id = [props.room.id];
 		}
 
-		if (filters.before?.[0]) {
-			const to_uuid = dateToBoundaryUUID(filters.before[0], "end");
-			if (to_uuid) params.query.to = to_uuid;
-		}
-		if (filters.after?.[0]) {
-			const from_uuid = dateToBoundaryUUID(filters.after[0], "start");
-			if (from_uuid) params.query.from = from_uuid;
+		// Handle before/after filters using message_id range
+		if (filters.before?.[0] || filters.after?.[0]) {
+			body.message_id = {};
+			if (filters.after?.[0]) {
+				const from_uuid = dateToBoundaryUUID(filters.after[0], "start");
+				if (from_uuid) body.message_id.min = from_uuid;
+			}
+			if (filters.before?.[0]) {
+				const to_uuid = dateToBoundaryUUID(filters.before[0], "end");
+				if (to_uuid) body.message_id.max = to_uuid;
+			}
 		}
 
 		if (filters.has) {
@@ -782,16 +787,16 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 				} else if (mention.startsWith("role-")) {
 					mentions_roles.push(mention.replace("role-", ""));
 				} else if (mention === "everyone-room") {
-					body.mentions_everyone_room = true;
+					body.mentions_everyone = true;
 				} else if (mention === "everyone-thread") {
-					body.mentions_everyone_thread = true;
+					body.mentions_everyone = true;
 				}
 			}
 			if (mentions_users.length > 0) body.mentions_users = mentions_users;
 			if (mentions_roles.length > 0) body.mentions_roles = mentions_roles;
 		}
 
-		const res = await api.messages.search(body, params);
+		const res = await api.messages.search(body);
 		if (res) {
 			updateSearch({
 				...searchState,
