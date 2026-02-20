@@ -806,6 +806,11 @@ export class Messages {
 
 		const { users, threads, room_members, thread_members, messages } = data;
 
+		const convertedMessages = messages.map(maybeConvertMessage);
+		for (const message of convertedMessages) {
+			this.cache.set(message.id, message);
+		}
+
 		if (users) {
 			for (const user of users) {
 				this.api.users.cache.set(user.id, user);
@@ -842,7 +847,7 @@ export class Messages {
 
 		return {
 			...data,
-			messages: messages.map(maybeConvertMessage),
+			messages: convertedMessages,
 		};
 	}
 
