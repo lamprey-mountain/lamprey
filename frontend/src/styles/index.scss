@@ -1228,6 +1228,17 @@ summary {
 			gap: 8px;
 		}
 
+		& .tabs {
+			display: flex;
+			gap: 4px;
+			margin-bottom: 8px;
+			padding-bottom: 4px;
+
+			& button.active {
+				background: $bg-400;
+			}
+		}
+
 		& textarea,
 		input[type="text"] {
 			border: solid $sep-500 1px;

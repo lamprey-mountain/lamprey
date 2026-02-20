@@ -298,9 +298,10 @@
 }
 
 .user-settings-applications {
-	padding-right: calc(100% - 60ch);
-	padding-left: 0.25rem;
-	padding-top: 0.25rem;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 
 	.applications-header {
 		display: flex;
@@ -316,49 +317,42 @@
 	.applications-list {
 		display: flex;
 		flex-direction: column;
-		margin-bottom: 6rem;
+		gap: 4px;
+		overflow-y: auto;
+		flex: 1;
 
-		& .oauth {
-			border: solid #444 1px;
-			padding: 4px;
-			margin: 4px;
+		& li {
+			padding: 8px;
+			background: $bg-150;
+			border: solid $sep-300 1px;
+			cursor: pointer;
+
+			&:hover {
+				background: $bg-100;
+			}
 		}
 
-		& .sessions {
-			border: solid #444 1px;
-			margin: 4px;
-			padding: 4px;
+		& .info {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+
+			.avatar {
+				height: 48px;
+				width: 48px;
+				align-self: start;
+			}
+
+			.name {
+				font-weight: bold;
+				line-height: 1;
+			}
+
+			.description {
+				color: $fg-500;
+				font-size: 0.9em;
+			}
 		}
-
-		& .invite {
-			border: solid #444 1px;
-			margin: 4px;
-			padding: 4px;
-		}
-	}
-
-	details {
-		background: $bg-150;
-		border: solid $sep-300 1px;
-		margin-bottom: 8px;
-	}
-
-	summary {
-		padding: 8px;
-
-		&:hover {
-			background: $bg-100;
-		}
-	}
-
-	.inner {
-		padding: 8px;
-		background: $bg-150;
-	}
-
-	details[open] > summary {
-		border-bottom: solid $sep-300 1px;
-		margin-bottom: 8px;
 	}
 
 	.option {

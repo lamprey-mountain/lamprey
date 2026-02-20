@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { type Application, type User } from "sdk";
+import { type Application, createUpload, type User } from "sdk";
 import { useApi } from "../api.tsx";
 import { Copyable } from "../util.tsx";
 import { createStore, reconcile } from "solid-js/store";
@@ -17,10 +17,11 @@ import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
+import { Resizable } from "../Resizable";
+import { getThumbFromId } from "../media/util";
+import { Avatar } from "../User.tsx";
 
 // TODO: in create session and rotate oauth token, make the secret Copyable
-// TODO: show bot avatar
-// TODO: allow changing avatar
 
 const SessionList = (props: { appId: string }) => {
 	const api = useApi();
@@ -90,6 +91,21 @@ const SessionList = (props: { appId: string }) => {
 		</div>
 	);
 };
+
+type AppEditState = ReturnType<typeof useAppEditor>;
+
+function useAppEditor(initial: Application | null) {
+	const [app, setApp] = createStore(
+		initial ?? { id: null } as unknown as Application,
+	);
+	const [name, setName] = createSignal(initial?.name ?? "");
+	const [desc, setDesc] = createSignal(initial?.description ?? undefined);
+	const [avatar, setAvatar] = createSignal<string | null>(
+		initial?.avatar ?? null,
+	);
+
+	return { app, setApp, name, setName, desc, setDesc, avatar, setAvatar };
+}
 
 export function Applications(_props: VoidProps<{ user: User }>) {
 	const api = useApi();
@@ -207,201 +223,100 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 		setApps(index, field, value);
 	};
 
+	const edit = useAppEditor(null);
+
 	return (
 		<div class="user-settings-applications">
-			<h2>applications</h2>
-			<header class="applications-header">
-				<input
-					type="search"
-					placeholder="search"
-					aria-label="search"
-					onInput={(e) => setSearch(e.target.value)}
-				/>
-				<button type="button" class="primary big" onClick={create}>
-					create
-				</button>
-			</header>
-			<ul class="applications-list">
-				<For each={apps.filter((i) => i.name.includes(search()))}>
-					{(app, index) => {
-						return (
-							<li>
-								<details>
-									<summary>{app.name}</summary>
-									<div class="inner">
-										<h3 class="dim">name</h3>
-										<input
-											type="text"
-											value={app.name}
-											onInput={(e) =>
-												updateApp(index(), "name", e.currentTarget.value)}
-										/>
-										<div style="height: 8px" />
-										<h3 class="dim">description</h3>
-										<textarea
-											onInput={(e) =>
-												updateApp(
-													index(),
-													"description",
-													e.currentTarget.value,
-												)}
-										>
-											{app.description ?? ""}
-										</textarea>
-										<div style="height: 8px" />
-										<h3 class="dim">id (click to copy)</h3>
-										<Copyable>{app.id}</Copyable>
-										<div style="height: 8px" />
-										<label class="option">
-											<input
-												type="checkbox"
-												checked={app.bridge}
-												onInput={(e) =>
-													updateApp(index(), "bridge", e.currentTarget.checked)}
-												style="display: none;"
-											/>
-											<Checkbox checked={app.bridge} />
-											<div>
-												<div>bridge</div>
-												<div class="dim">can create puppets</div>
-											</div>
-										</label>
-										<label class="option">
-											<input
-												type="checkbox"
-												checked={app.public}
-												onInput={(e) =>
-													updateApp(index(), "public", e.currentTarget.checked)}
-												style="display: none;"
-											/>
-											<Checkbox checked={app.public} />
-											<div>
-												<div>public</div>
-												<div class="dim">anyone can add and use this bot</div>
-											</div>
-										</label>
-										<button
-											style="margin-left:4px"
-											onClick={(e) => {
-												e.stopImmediatePropagation();
-												setInviteApp({
-													app,
-													x: e.clientX,
-													y: e.clientY,
-												});
-											}}
-										>
-											add to room
-										</button>
-										<br />
-										<div class="oauth">
-											<b>oauth settings</b>
-											<br />
-											<label class="option">
-												<input
-													type="checkbox"
-													checked={app.oauth_confidential}
-													onInput={(e) =>
-														updateApp(
-															index(),
-															"oauth_confidential",
-															e.currentTarget.checked,
-														)}
-													style="display: none;"
-												/>
-												<Checkbox checked={app.oauth_confidential} />
-												<div>
-													<div>confidential</div>
-													<div class="dim">can keep secrets</div>
-												</div>
-											</label>
-											<h3 class="dim">redirect uris</h3>
-											<ul>
-												<For each={app.oauth_redirect_uris}>
-													{(uri, uriIndex) => (
-														<li>
-															<input
-																type="text"
-																value={uri}
-																onInput={(e) => {
-																	const newUris = [
-																		...app.oauth_redirect_uris ?? [],
-																	];
-																	newUris[uriIndex()] = e.currentTarget.value;
-																	updateApp(
-																		index(),
-																		"oauth_redirect_uris",
-																		newUris,
-																	);
-																}}
-															/>
-															<button
-																onClick={() => {
-																	const newUris = [
-																		...app.oauth_redirect_uris ?? [],
-																	];
-																	newUris.splice(uriIndex(), 1);
-																	updateApp(
-																		index(),
-																		"oauth_redirect_uris",
-																		newUris,
-																	);
-																}}
-															>
-																remove
-															</button>
-														</li>
-													)}
-												</For>
-												<li>
-													<button
-														onClick={() => {
-															const newUris = [
-																...app.oauth_redirect_uris ?? [],
-																"",
-															];
-															updateApp(
-																index(),
-																"oauth_redirect_uris",
-																newUris,
-															);
-														}}
-													>
-														add uri
-													</button>
-												</li>
-											</ul>
-											<br />
-											<button onClick={() => rotateSecret(app.id)}>
-												rotate secret
-											</button>
-										</div>
-										<div class="sessions">
-											<button onClick={() => createSession(app.id)}>
-												create session
-											</button>
-											<SessionList appId={app.id} />
-										</div>
-									</div>
-								</details>
-							</li>
-						);
-					}}
-				</For>
-			</ul>
-			<Show when={hasUnsavedChanges()}>
-				<div class="savebar">
-					<div class="inner">
-						<div class="warning">you have unsaved changes</div>
-						<button class="reset" onClick={cancelChanges}>
-							cancel
+			<div class="room-settings-roles">
+				<div class="role-main">
+					<h2>applications</h2>
+					<header class="applications-header">
+						<input
+							type="search"
+							placeholder="search"
+							aria-label="search"
+							onInput={(e) => setSearch(e.target.value)}
+						/>
+						<button type="button" class="primary big" onClick={create}>
+							create
 						</button>
-						<button class="save" onClick={saveChanges}>
-							save
-						</button>
-					</div>
+					</header>
+					<ul class="applications-list">
+						<For each={apps.filter((i) => i.name.includes(search()))}>
+							{(app, index) => {
+								const appWithAvatar = () => ({
+									id: app.id,
+									name: app.name,
+									avatar: app.avatar ?? null,
+									banner: null,
+									description: null,
+									flags: 0,
+									presence: { status: "Offline" as const, activities: [] },
+									relationship: null,
+									user_config: null,
+								});
+
+								return (
+									<li
+										onClick={() => {
+											if (edit.app.id === app.id) {
+												edit.setApp({ id: null } as unknown as Application);
+											} else {
+												edit.setApp(JSON.parse(JSON.stringify(app)));
+												edit.setName(app.name);
+												edit.setDesc(app.description || undefined);
+												edit.setAvatar(app.avatar ?? null);
+											}
+										}}
+									>
+										<div class="info">
+											<Avatar user={appWithAvatar()} pad={4} />
+											<div style="display: flex; flex-direction:column;">
+												<h3 class="name">{app.name}</h3>
+												<Show when={app.description}>
+													<div class="description">{app.description}</div>
+												</Show>
+											</div>
+										</div>
+									</li>
+								);
+							}}
+						</For>
+					</ul>
+					<Show when={hasUnsavedChanges()}>
+						<div class="savebar">
+							<div class="inner">
+								<div class="warning">you have unsaved changes</div>
+								<button class="reset" onClick={cancelChanges}>
+									cancel
+								</button>
+								<button class="save" onClick={saveChanges}>
+									save
+								</button>
+							</div>
+						</div>
+					</Show>
 				</div>
-			</Show>
+				<Show when={edit.app.id !== null}>
+					<Resizable
+						storageKey="app-editor-width"
+						initialWidth={400}
+						minWidth={300}
+						maxWidth={800}
+						classList={{ "role-edit-resizable": true }}
+					>
+						<AppEditor
+							edit={edit}
+							updateApp={updateApp}
+							apps={apps}
+							rotateSecret={rotateSecret}
+							createSession={createSession}
+							setInviteApp={setInviteApp}
+							refetch={refetch}
+						/>
+					</Resizable>
+				</Show>
+			</div>
 			<Show when={inviteApp()}>
 				{(app) => (
 					<InviteToRoom
@@ -414,6 +329,338 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 		</div>
 	);
 }
+
+const AppEditor = (
+	props: {
+		edit: AppEditState;
+		updateApp: (index: number, field: keyof Application, value: any) => void;
+		apps: Application[];
+		rotateSecret: (app_id: string) => Promise<void>;
+		createSession: (app_id: string) => Promise<void>;
+		setInviteApp: (
+			app: { app: Application; x: number; y: number } | undefined,
+		) => void;
+		refetch: () => void;
+	},
+) => {
+	const api = useApi();
+	const [, modalCtl] = useModals();
+	const [activeTab, setActiveTab] = createSignal<
+		"overview" | "oauth" | "sessions"
+	>("overview");
+
+	const appIndex = () =>
+		props.apps.findIndex((a) => a.id === props.edit.app.id);
+
+	const deleteApp = (app_id: string) => () => {
+		modalCtl.confirm("are you sure?", (confirmed) => {
+			if (!confirmed) return;
+			api.client.http.DELETE("/api/v1/app/{app_id}", {
+				params: { path: { app_id } },
+			});
+			props.edit.setApp({ id: null } as unknown as Application);
+			props.refetch();
+		});
+	};
+
+	const saveApp = () => {
+		const index = appIndex();
+		if (index === -1) return;
+
+		const app = props.edit.app;
+		const originalApp = props.apps[index];
+
+		if (JSON.stringify(app) !== JSON.stringify(originalApp)) {
+			api.client.http.PATCH("/api/v1/app/{app_id}", {
+				params: { path: { app_id: app.id } },
+				body: {
+					name: props.edit.name(),
+					description: props.edit.desc() ?? null,
+					bridge: app.bridge,
+					public: app.public,
+					oauth_confidential: app.oauth_confidential,
+					oauth_redirect_uris: app.oauth_redirect_uris,
+					avatar: props.edit.avatar(),
+				},
+			}).then(() => {
+				props.refetch();
+			});
+		}
+	};
+
+	const setAvatarFile = async (f: File) => {
+		await createUpload({
+			client: api.client,
+			file: f,
+			onComplete(media) {
+				props.edit.setAvatar(media.id);
+				props.edit.setApp("avatar", media.id);
+			},
+			onFail(_error) {},
+			onPause() {},
+			onResume() {},
+			onProgress(_progress) {},
+		});
+	};
+
+	const removeAvatar = async () => {
+		props.edit.setAvatar(null);
+		props.edit.setApp("avatar", null);
+	};
+
+	let avatarInputEl!: HTMLInputElement;
+
+	const openAvatarPicker = () => {
+		avatarInputEl?.click();
+	};
+
+	const appWithAvatar = () => ({
+		id: props.edit.app.id,
+		name: props.edit.name(),
+		avatar: props.edit.avatar(),
+		banner: null,
+		description: null,
+		flags: 0,
+		presence: { status: "Offline" as const, activities: [] },
+		relationship: null,
+		user_config: null,
+	});
+
+	const isDirty = () => {
+		const index = appIndex();
+		if (index === -1) return false;
+		const originalApp = props.apps[index];
+		return (
+			JSON.stringify(props.edit.app) !== JSON.stringify(originalApp) ||
+			props.edit.name() !== originalApp.name ||
+			props.edit.desc() !== (originalApp.description ?? undefined) ||
+			props.edit.avatar() !== (originalApp.avatar ?? null)
+		);
+	};
+
+	return (
+		<div class="role-edit">
+			<div class="toolbar">
+				<button
+					onClick={() => {
+						props.edit.setApp({ id: null } as unknown as Application);
+					}}
+				>
+					close
+				</button>
+				<button
+					disabled={!isDirty()}
+					onClick={saveApp}
+				>
+					save
+				</button>
+				<button class="danger" onClick={deleteApp(props.edit.app.id!)}>
+					delete app
+				</button>
+			</div>
+			<div class="tabs">
+				<button
+					classList={{ active: activeTab() === "overview" }}
+					onClick={() => setActiveTab("overview")}
+				>
+					overview
+				</button>
+				<button
+					classList={{ active: activeTab() === "oauth" }}
+					onClick={() => setActiveTab("oauth")}
+				>
+					oauth
+				</button>
+				<button
+					classList={{ active: activeTab() === "sessions" }}
+					onClick={() => setActiveTab("sessions")}
+				>
+					sessions
+				</button>
+			</div>
+			<Show when={activeTab() === "overview"}>
+				<div class="avatar-uploader" onClick={openAvatarPicker}>
+					<div class="avatar-inner">
+						<Avatar user={appWithAvatar()} />
+						<div class="overlay">upload avatar</div>
+					</div>
+					<Show when={props.edit.avatar()}>
+						<button
+							class="remove"
+							onClick={(e) => {
+								e.stopPropagation();
+								removeAvatar();
+							}}
+						>
+							remove
+						</button>
+					</Show>
+					<input
+						style="display:none"
+						ref={avatarInputEl}
+						type="file"
+						onInput={(e) => {
+							const f = e.target.files?.[0];
+							if (f) setAvatarFile(f);
+						}}
+					/>
+				</div>
+				<div>
+					id <Copyable>{props.edit.app.id!}</Copyable>
+				</div>
+				<h3>name</h3>
+				<input
+					type="text"
+					value={props.edit.name()}
+					onInput={(e) => {
+						props.edit.setApp("name", e.currentTarget.value);
+						props.edit.setName(e.currentTarget.value);
+					}}
+				/>
+				<div style="height: 8px" />
+				<h3>description</h3>
+				<textarea
+					onInput={(e) => {
+						props.edit.setApp("description", e.currentTarget.value || null);
+						props.edit.setDesc(e.currentTarget.value || undefined);
+					}}
+				>
+					{props.edit.desc() ?? ""}
+				</textarea>
+				<div style="height: 8px" />
+				<label class="option">
+					<input
+						type="checkbox"
+						checked={props.edit.app.bridge}
+						onInput={(e) => {
+							props.edit.setApp("bridge", e.currentTarget.checked);
+						}}
+						style="display: none;"
+					/>
+					<Checkbox checked={props.edit.app.bridge} />
+					<div>
+						<div>bridge</div>
+						<div class="dim">can create puppets</div>
+					</div>
+				</label>
+				<label class="option">
+					<input
+						type="checkbox"
+						checked={props.edit.app.public}
+						onInput={(e) => {
+							props.edit.setApp("public", e.currentTarget.checked);
+						}}
+						style="display: none;"
+					/>
+					<Checkbox checked={props.edit.app.public} />
+					<div>
+						<div>public</div>
+						<div class="dim">anyone can add and use this bot</div>
+					</div>
+				</label>
+				<button
+					style="margin-left:4px"
+					onClick={(e) => {
+						e.stopImmediatePropagation();
+						props.setInviteApp({
+							app: props.edit.app,
+							x: e.clientX,
+							y: e.clientY,
+						});
+					}}
+				>
+					add to room
+				</button>
+			</Show>
+			<Show when={activeTab() === "oauth"}>
+				<div class="oauth">
+					<label class="option">
+						<input
+							type="checkbox"
+							checked={props.edit.app.oauth_confidential}
+							onInput={(e) =>
+								props.edit.setApp(
+									"oauth_confidential",
+									e.currentTarget.checked,
+								)}
+							style="display: none;"
+						/>
+						<Checkbox checked={props.edit.app.oauth_confidential} />
+						<div>
+							<div>confidential</div>
+							<div class="dim">can keep secrets</div>
+						</div>
+					</label>
+					<h3 class="dim">redirect uris</h3>
+					<ul>
+						<For each={props.edit.app.oauth_redirect_uris}>
+							{(uri, uriIndex) => (
+								<li>
+									<input
+										type="text"
+										value={uri}
+										onInput={(e) => {
+											const newUris = [
+												...props.edit.app.oauth_redirect_uris ?? [],
+											];
+											newUris[uriIndex()] = e.currentTarget.value;
+											props.edit.setApp(
+												"oauth_redirect_uris",
+												newUris,
+											);
+										}}
+									/>
+									<button
+										onClick={() => {
+											const newUris = [
+												...props.edit.app.oauth_redirect_uris ?? [],
+											];
+											newUris.splice(uriIndex(), 1);
+											props.edit.setApp(
+												"oauth_redirect_uris",
+												newUris,
+											);
+										}}
+									>
+										remove
+									</button>
+								</li>
+							)}
+						</For>
+						<li>
+							<button
+								onClick={() => {
+									const newUris = [
+										...props.edit.app.oauth_redirect_uris ?? [],
+										"",
+									];
+									props.edit.setApp(
+										"oauth_redirect_uris",
+										newUris,
+									);
+								}}
+							>
+								add uri
+							</button>
+						</li>
+					</ul>
+					<br />
+					<button onClick={() => props.rotateSecret(props.edit.app.id!)}>
+						rotate secret
+					</button>
+				</div>
+			</Show>
+			<Show when={activeTab() === "sessions"}>
+				<div class="sessions">
+					<button onClick={() => props.createSession(props.edit.app.id!)}>
+						create session
+					</button>
+					<SessionList appId={props.edit.app.id!} />
+				</div>
+			</Show>
+		</div>
+	);
+};
 
 // TODO: make this an actual context menu?
 const InviteToRoom = (
