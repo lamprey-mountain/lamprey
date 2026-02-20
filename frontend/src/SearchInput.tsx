@@ -590,6 +590,11 @@ function autocompletePlugin(
 		state: {
 			init: () => null,
 			apply: (tr, value) => {
+				if (tr.getMeta("skipAutocomplete")) {
+					setFilter(null);
+					return null;
+				}
+
 				const { selection } = tr;
 				if (!selection.empty) {
 					setFilter(null);
@@ -886,7 +891,10 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 					},
 				}),
 				syntaxHighlightingPlugin(),
-				autocompletePlugin(setActiveFilter),
+				autocompletePlugin((filter) => {
+					if (filter && view && !view.hasFocus()) return;
+					setActiveFilter(filter);
+				}),
 			],
 		});
 
@@ -956,6 +964,7 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 				const { state } = view;
 				if (state.doc.textContent.length > 0) {
 					const tr = state.tr.delete(0, state.doc.content.size);
+					tr.setMeta("skipAutocomplete", true);
 					view.dispatch(tr);
 				}
 			}
