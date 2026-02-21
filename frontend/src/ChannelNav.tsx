@@ -831,6 +831,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const api = useApi();
 	const nav = useNavigate();
+	const currentUserId = () => api.users.cache.get("@self")?.id;
 
 	const handleClick = (e: MouseEvent) => {
 		if (props.room_id) {
@@ -862,6 +863,25 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 		if (c.notifs.mute.expires_at === null) return true;
 		return Date.parse(c.notifs.mute.expires_at) > Date.now();
 	};
+
+	const canInvite = createMemo(() => {
+		if (!props.room_id || !currentUserId()) {
+			return false;
+		}
+
+		const permissionContext: PermissionContext = {
+			api,
+			room_id: props.room_id,
+			channel_id: props.channel.id,
+		};
+
+		const { permissions } = calculatePermissions(
+			permissionContext,
+			currentUserId()!,
+		);
+
+		return permissions.has("InviteCreate");
+	});
 
 	return (
 		<A
@@ -896,10 +916,12 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 			<Show when={props.channel.mention_count}>
 				<div class="mentions">{props.channel.mention_count}</div>
 			</Show>
-			<Show when={true}>
-				<button onClick={() => {/* TODO: show invite modal */}}>
-					<img class="icon" src={icMemberAdd} />
-				</button>
+			<Show when={props.channel.type !== "Dm"}>
+				<Show when={canInvite()}>
+					<button onClick={() => {/* TODO: show invite modal */}}>
+						<img class="icon" src={icMemberAdd} />
+					</button>
+				</Show>
 				<button
 					onClick={(e) => {
 						nav(`/channel/${props.channel.id}/settings`);
