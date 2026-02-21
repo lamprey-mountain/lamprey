@@ -2,9 +2,9 @@ import { createSignal, Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
 import { useApi } from "../api";
 import { useCtx } from "../context";
-import { getThumbFromId } from "../media/util";
 import { Copyable } from "../util";
 import { useModals } from "../contexts/modal";
+import { Avatar } from "../User.tsx";
 
 // TODO(#753): allow uploading banner
 
@@ -41,25 +41,22 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		setEditingAvatar(props.user.avatar);
 	};
 
-	const setAvatar = async (f: File) => {
-		if (f) {
-			await createUpload({
-				client: api.client,
-				file: f,
-				onComplete(media) {
-					setEditingAvatar(media.id);
-				},
-				onFail(_error) {},
-				onPause() {},
-				onResume() {},
-				onProgress(_progress) {},
-			});
-		} else {
-			modalCtl.confirm("remove avatar?", (conf) => {
-				if (!conf) return;
-				setEditingAvatar(null);
-			});
-		}
+	const setAvatarFile = async (f: File) => {
+		await createUpload({
+			client: api.client,
+			file: f,
+			onComplete(media) {
+				setEditingAvatar(media.id);
+			},
+			onFail(_error) {},
+			onPause() {},
+			onResume() {},
+			onProgress(_progress) {},
+		});
+	};
+
+	const removeAvatar = async () => {
+		setEditingAvatar(null);
 	};
 
 	let avatarInputEl!: HTMLInputElement;
@@ -67,6 +64,18 @@ export function Profile(props: VoidProps<{ user: User }>) {
 	const openAvatarPicker = () => {
 		avatarInputEl?.click();
 	};
+
+	const userWithAvatar = () => ({
+		id: props.user.id,
+		name: props.user.name,
+		avatar: editingAvatar(),
+		banner: null,
+		description: null,
+		flags: 0,
+		presence: { status: "Offline" as const, activities: [] },
+		relationship: null,
+		user_config: null,
+	});
 
 	return (
 		<div class="user-settings-info">
@@ -83,22 +92,32 @@ export function Profile(props: VoidProps<{ user: User }>) {
 					value={editingDescription()}
 					onInput={(e) => setEditingDescription(e.target.value)}
 				/>
-				<Show
-					when={editingAvatar()}
-					fallback={
-						<div
-							onClick={openAvatarPicker}
-							class="avatar"
+				<div class="avatar-uploader" onClick={openAvatarPicker}>
+					<div class="avatar-inner">
+						<Avatar user={userWithAvatar()} />
+						<div class="overlay">upload avatar</div>
+					</div>
+					<Show when={editingAvatar()}>
+						<button
+							class="remove"
+							onClick={(e) => {
+								e.stopPropagation();
+								removeAvatar();
+							}}
 						>
-						</div>
-					}
-				>
-					<img
-						onClick={openAvatarPicker}
-						src={getThumbFromId(editingAvatar()!, 64)}
-						class="avatar"
+							remove
+						</button>
+					</Show>
+					<input
+						style="display:none"
+						ref={avatarInputEl}
+						type="file"
+						onInput={(e) => {
+							const f = e.target.files?.[0];
+							if (f) setAvatarFile(f);
+						}}
 					/>
-				</Show>
+				</div>
 			</div>
 			<div>
 				user id: <Copyable>{props.user.id}</Copyable>
@@ -116,15 +135,6 @@ export function Profile(props: VoidProps<{ user: User }>) {
 					</div>
 				</div>
 			)}
-			<input
-				style="display:none"
-				ref={avatarInputEl}
-				type="file"
-				onInput={(e) => {
-					const f = e.target.files?.[0];
-					if (f) setAvatar(f);
-				}}
-			/>
 		</div>
 	);
 }
