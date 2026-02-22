@@ -465,8 +465,17 @@ export const ChatHeader = (
 							{"  -  "}
 						</span>
 						<span
-							class="markdown"
+							class="markdown channel-topic-clickable"
 							innerHTML={md(props.channel.description ?? "") as string}
+							onClick={() => {
+								if (props.channel.description) {
+									modalctl.open({
+										type: "channel_topic",
+										channel_id: props.channel.id,
+									});
+								}
+							}}
+							title="click to view topic"
 						>
 						</span>
 					</Show>

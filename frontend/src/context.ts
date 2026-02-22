@@ -130,7 +130,11 @@ export type Modal =
 		room_id?: string;
 		channel_id?: string;
 	}
-	| { type: "attachment" };
+	| { type: "attachment" }
+	| {
+		type: "channel_topic";
+		channel_id: string;
+	};
 
 export type AttachmentCreateT = {
 	id: string;

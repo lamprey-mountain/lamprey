@@ -532,6 +532,18 @@ em {
 	}
 }
 
+.channel-topic-clickable {
+	cursor: pointer;
+
+	&:hover {
+		color: $fg-100;
+	}
+}
+
+.modal-channel-topic h3 {
+	margin-bottom: 12px;
+}
+
 .modal {
 	position: fixed;
 	top: 0;

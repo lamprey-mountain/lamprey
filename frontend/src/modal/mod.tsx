@@ -13,6 +13,7 @@ import { ModalNotifications } from "./ModalNotifications.tsx";
 import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
+import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
 
 export const Modal = (
 	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },
@@ -107,6 +108,13 @@ export function getModal(modal: ContextModal) {
 				<ModalInviteCreate
 					channel_id={modal.channel_id}
 					room_id={modal.room_id}
+				/>
+			);
+		}
+		case "channel_topic": {
+			return (
+				<ModalChannelTopic
+					channel_id={modal.channel_id}
 				/>
 			);
 		}
