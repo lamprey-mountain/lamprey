@@ -7,8 +7,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::preferences::PreferencesChannel;
 use crate::v1::types::tag::Tag;
-use crate::v1::types::user_config::PreferencesChannel;
 use crate::v1::types::util::Time;
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
 use crate::v1::types::{MediaId, MessageCreate, MessageVerId, RoleId, TagId, ThreadMember, User};

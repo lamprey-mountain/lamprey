@@ -34,7 +34,7 @@ impl ServiceRooms {
             let user_config = self
                 .state
                 .data()
-                .user_config_room_get(user_id, room_id)
+                .preferences_room_get(user_id, room_id)
                 .await?;
             room.user_config = Some(user_config);
         }
@@ -373,7 +373,7 @@ impl ServiceRooms {
         let room_ids: Vec<_> = rooms.iter().map(|r| r.id).collect();
 
         // fetch user configs for all rooms
-        let user_config_map = data.user_config_room_get_many(user_id, &room_ids).await?;
+        let user_config_map = data.preferences_room_get_many(user_id, &room_ids).await?;
 
         // populate each room with private data
         for room in rooms {

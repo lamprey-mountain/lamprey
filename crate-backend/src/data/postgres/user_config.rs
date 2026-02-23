@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use common::v1::types::{
-    user_config::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
+    preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     ChannelId, RoomId,
 };
 use sqlx::{query, query_scalar};
@@ -10,13 +10,13 @@ use sqlx::{query, query_scalar};
 use crate::error::Result;
 use crate::types::UserId;
 
-use crate::data::DataUserConfig;
+use crate::data::DataPreferences;
 
 use super::Postgres;
 
 #[async_trait]
-impl DataUserConfig for Postgres {
-    async fn user_config_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()> {
+impl DataPreferences for Postgres {
+    async fn preferences_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()> {
         query!(
             "update usr set config = $2 where id = $1",
             *user_id,
@@ -27,7 +27,7 @@ impl DataUserConfig for Postgres {
         Ok(())
     }
 
-    async fn user_config_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
+    async fn preferences_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
         let conf = query_scalar!("select config from usr where id = $1", *user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -38,7 +38,7 @@ impl DataUserConfig for Postgres {
         Ok(conf)
     }
 
-    async fn user_config_room_set(
+    async fn preferences_room_set(
         &self,
         user_id: UserId,
         room_id: RoomId,
@@ -59,7 +59,7 @@ impl DataUserConfig for Postgres {
         Ok(())
     }
 
-    async fn user_config_room_get(
+    async fn preferences_room_get(
         &self,
         user_id: UserId,
         room_id: RoomId,
@@ -78,7 +78,7 @@ impl DataUserConfig for Postgres {
         Ok(conf)
     }
 
-    async fn user_config_room_get_many(
+    async fn preferences_room_get_many(
         &self,
         user_id: UserId,
         room_ids: &[RoomId],
@@ -106,7 +106,7 @@ impl DataUserConfig for Postgres {
         Ok(map)
     }
 
-    async fn user_config_channel_set(
+    async fn preferences_channel_set(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
@@ -127,7 +127,7 @@ impl DataUserConfig for Postgres {
         Ok(())
     }
 
-    async fn user_config_channel_get(
+    async fn preferences_channel_get(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
@@ -146,7 +146,7 @@ impl DataUserConfig for Postgres {
         Ok(conf)
     }
 
-    async fn user_config_channel_get_many(
+    async fn preferences_channel_get_many(
         &self,
         user_id: UserId,
         channel_ids: &[ChannelId],
@@ -174,7 +174,7 @@ impl DataUserConfig for Postgres {
         Ok(map)
     }
 
-    async fn user_config_user_set(
+    async fn preferences_user_set(
         &self,
         user_id: UserId,
         other_id: UserId,
@@ -195,7 +195,7 @@ impl DataUserConfig for Postgres {
         Ok(())
     }
 
-    async fn user_config_user_get(
+    async fn preferences_user_get(
         &self,
         user_id: UserId,
         other_id: UserId,

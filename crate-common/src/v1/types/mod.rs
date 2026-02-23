@@ -1,6 +1,3 @@
-// TEMP: suppress warnings before i remove everything
-// #![allow(deprecated)]
-
 pub mod ack;
 pub mod application;
 pub mod audit_logs;
@@ -25,6 +22,7 @@ pub mod notifications;
 pub mod oauth;
 pub mod pagination;
 pub mod permission;
+pub mod preferences;
 pub mod presence;
 pub mod push;
 pub mod reaction;
@@ -41,7 +39,6 @@ pub mod tag;
 pub mod text;
 pub mod thread_member;
 pub mod user;
-pub mod user_config;
 pub mod user_connection;
 pub mod util;
 pub mod visibility;

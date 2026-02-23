@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use common::v1::types::{
-    user_config::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
+    preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     ChannelId, MessageSync, RoleId, Room, RoomId, User, UserId,
 };
 use dashmap::DashMap;
@@ -324,7 +324,7 @@ impl ServiceCache {
     /// get a user's global config from the cache, loading from the database if not present
     pub async fn user_config_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
         self.user_config_global
-            .try_get_with(user_id, self.state.data().user_config_get(user_id))
+            .try_get_with(user_id, self.state.data().preferences_get(user_id))
             .await
             .map_err(|err| err.fake_clone())
     }
@@ -343,7 +343,7 @@ impl ServiceCache {
         self.user_config_room
             .try_get_with(
                 (user_id, room_id),
-                self.state.data().user_config_room_get(user_id, room_id),
+                self.state.data().preferences_room_get(user_id, room_id),
             )
             .await
             .map_err(|err| err.fake_clone())
@@ -365,7 +365,7 @@ impl ServiceCache {
                 (user_id, channel_id),
                 self.state
                     .data()
-                    .user_config_channel_get(user_id, channel_id),
+                    .preferences_channel_get(user_id, channel_id),
             )
             .await
             .map_err(|err| err.fake_clone())
@@ -387,7 +387,7 @@ impl ServiceCache {
         self.user_config_user
             .try_get_with(
                 (user_id, other_id),
-                self.state.data().user_config_user_get(user_id, other_id),
+                self.state.data().preferences_user_get(user_id, other_id),
             )
             .await
             .map_err(|err| err.fake_clone())

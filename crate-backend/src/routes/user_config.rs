@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::user_config::{
+use common::v1::types::preferences::{
     PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser,
 };
 use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
@@ -26,7 +26,7 @@ async fn user_config_global_put(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PreferencesGlobal>,
 ) -> Result<impl IntoResponse> {
-    s.data().user_config_set(auth.user.id, &json).await?;
+    s.data().preferences_set(auth.user.id, &json).await?;
     s.services()
         .cache
         .user_config_invalidate(auth.user.id)
@@ -53,7 +53,7 @@ async fn user_config_room_put(
     Json(json): Json<PreferencesRoom>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .user_config_room_set(auth.user.id, room_id, &json)
+        .preferences_room_set(auth.user.id, room_id, &json)
         .await?;
     s.services()
         .cache
@@ -82,7 +82,7 @@ async fn user_config_channel_put(
     Json(json): Json<PreferencesChannel>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .user_config_channel_set(auth.user.id, channel_id, &json)
+        .preferences_channel_set(auth.user.id, channel_id, &json)
         .await?;
     s.services()
         .cache
@@ -111,7 +111,7 @@ async fn user_config_user_put(
     Json(json): Json<PreferencesUser>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .user_config_user_set(auth.user.id, user_id, &json)
+        .preferences_user_set(auth.user.id, user_id, &json)
         .await?;
     s.services()
         .cache

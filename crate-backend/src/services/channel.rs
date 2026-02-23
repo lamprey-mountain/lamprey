@@ -79,7 +79,7 @@ impl ServiceChannels {
 
         // fetch user configs for all channels
         let user_config_map = data
-            .user_config_channel_get_many(user_id, &channel_ids)
+            .preferences_channel_get_many(user_id, &channel_ids)
             .await?;
 
         // fetch thread members for thread channels

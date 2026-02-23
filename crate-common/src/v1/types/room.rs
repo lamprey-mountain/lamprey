@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    notifications::preferences::NotifsRoom, user_config::PreferencesRoom, util::Diff, ChannelId,
+    notifications::preferences::NotifsRoom, preferences::PreferencesRoom, util::Diff, ChannelId,
     MediaId, Permission, UserId,
 };
 

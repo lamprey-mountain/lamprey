@@ -21,6 +21,9 @@ use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
+use common::v1::types::preferences::{
+    PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser,
+};
 use common::v1::types::reaction::{ReactionKeyParam, ReactionListItem};
 use common::v1::types::room_analytics::{
     RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
@@ -29,9 +32,6 @@ use common::v1::types::room_analytics::{
 };
 use common::v1::types::search::{ChannelSearchRequest, MessageSearchRequest};
 use common::v1::types::tag::{Tag, TagCreate, TagPatch};
-use common::v1::types::user_config::{
-    PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser,
-};
 use common::v1::types::util::Time;
 use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
 
@@ -86,7 +86,7 @@ pub trait Data:
     + DataThreadMember
     + DataThread
     + DataUserRelationship
-    + DataUserConfig
+    + DataPreferences
     + DataReaction
     + DataApplication
     + DataConnection
@@ -996,50 +996,49 @@ pub trait DataUserRelationship {
     ) -> Result<PaginationResponse<RelationshipWithUserId>>;
 }
 
-// TODO: rename to DataPreferences
 #[async_trait]
-pub trait DataUserConfig {
-    async fn user_config_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()>;
-    async fn user_config_get(&self, user_id: UserId) -> Result<PreferencesGlobal>;
-    async fn user_config_room_set(
+pub trait DataPreferences {
+    async fn preferences_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()>;
+    async fn preferences_get(&self, user_id: UserId) -> Result<PreferencesGlobal>;
+    async fn preferences_room_set(
         &self,
         user_id: UserId,
         room_id: RoomId,
         config: &PreferencesRoom,
     ) -> Result<()>;
-    async fn user_config_room_get(
+    async fn preferences_room_get(
         &self,
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<PreferencesRoom>;
-    async fn user_config_room_get_many(
+    async fn preferences_room_get_many(
         &self,
         user_id: UserId,
         room_ids: &[RoomId],
     ) -> Result<HashMap<RoomId, PreferencesRoom>>;
-    async fn user_config_channel_set(
+    async fn preferences_channel_set(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
         config: &PreferencesChannel,
     ) -> Result<()>;
-    async fn user_config_channel_get(
+    async fn preferences_channel_get(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
     ) -> Result<PreferencesChannel>;
-    async fn user_config_channel_get_many(
+    async fn preferences_channel_get_many(
         &self,
         user_id: UserId,
         channel_ids: &[ChannelId],
     ) -> Result<HashMap<ChannelId, PreferencesChannel>>;
-    async fn user_config_user_set(
+    async fn preferences_user_set(
         &self,
         user_id: UserId,
         other_id: UserId,
         config: &PreferencesUser,
     ) -> Result<()>;
-    async fn user_config_user_get(
+    async fn preferences_user_get(
         &self,
         user_id: UserId,
         other_id: UserId,

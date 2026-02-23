@@ -9,9 +9,9 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::error::{ApiError, ErrorCode};
+use crate::v1::types::preferences::PreferencesUser;
 use crate::v1::types::presence::Presence;
 use crate::v1::types::search::Order;
-use crate::v1::types::user_config::PreferencesUser;
 use crate::v1::types::util::{Diff, Time};
 use crate::v1::types::{MediaId, RoleId};
 
@@ -19,7 +19,7 @@ use crate::v1::types::{MediaId, RoleId};
 use crate::v1::types::util::some_option;
 
 use super::email::EmailInfo;
-use super::user_config::PreferencesGlobal;
+use super::preferences::PreferencesGlobal;
 use super::{ApplicationId, ChannelId, RoomId, UserId, UserVerId};
 
 #[derive(Debug, Clone)]
