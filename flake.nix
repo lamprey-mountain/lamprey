@@ -164,30 +164,105 @@
             };
           };
 
-          scanner-malware-oci = pkgs.dockerTools.streamLayeredImage {
-            name = "scanner-malware";
-            tag = "latest";
-            contents = [
-              pkgs.dockerTools.caCertificates
-              pkgs.clamav
-              (pkgs.writeTextFile {
-                name = "scanner-malware-config";
-                destination = "/scanner-malware.toml";
+          scanner-malware-oci =
+            let
+              clamdConfig = pkgs.writeTextFile {
+                name = "clamd.conf";
+                destination = "/etc/clamav/clamd.conf";
                 text = ''
-                  clamav_path = "${pkgs.clamav}/bin/clamd"
-                  listen = { address = "0.0.0.0", port = 8000 }
+                  Foreground yes
+                  LocalSocket /run/clamav/clamd.sock
+                  LocalSocketMode 666
+                  DatabaseDirectory /var/lib/clamav
+                  PidFile /run/clamav/clamd.pid
+                  User root
+                  LogSyslog no
+                  LogVerbose no
                 '';
-              })
-            ];
-            config = {
-              WorkingDir = "/";
-              Entrypoint = [
-                "${pkgs.tini}/bin/tini"
-                "--"
-                "${scanner-malware}/bin/scanner-malware"
+              };
+
+              freshclamConfig = pkgs.writeTextFile {
+                name = "freshclam.conf";
+                destination = "/etc/clamav/freshclam.conf";
+                text = ''
+                  DatabaseDirectory /var/lib/clamav
+                  UpdateLogFile /var/log/clamav/freshclam.log
+                  LogVerbose no
+                  LogSyslog no
+                  DatabaseMirror database.clamav.net
+                  Checks 12
+                '';
+              };
+
+              scannerMalwareConfig = pkgs.writeTextFile {
+                name = "scanner-malware-config";
+                destination = "/etc/scanner-malware.toml";
+                text = ''
+                  rust_log = "info"
+                  clamav_host = "/run/clamav/clamd.sock"
+                  listen = { address = "0.0.0.0", port = 4101 }
+                '';
+              };
+
+              entrypoint = pkgs.writeShellApplication {
+                name = "scanner-malware-entrypoint";
+                runtimeInputs = [ pkgs.clamav pkgs.coreutils ];
+                text = ''
+                  # Prepare runtime directories
+                  mkdir -p /run/clamav /var/lib/clamav /var/log/clamav
+
+                  # Run freshclam once to ensure the DB is up to date, then keep it running in background
+                  echo "Running freshclam to update virus definitions..."
+                  freshclam --config-file=/etc/clamav/freshclam.conf || true
+
+                  # Start freshclam daemon in background for periodic updates
+                  freshclam --config-file=/etc/clamav/freshclam.conf --daemon &
+
+                  # Start clamd in background
+                  echo "Starting clamd..."
+                  clamd --config-file=/etc/clamav/clamd.conf &
+                  CLAMD_PID=$!
+
+                  # Wait for clamd socket to become available
+                  echo "Waiting for clamd socket..."
+                  for i in $(seq 1 30); do
+                    if [ -S /run/clamav/clamd.sock ]; then
+                      echo "clamd is ready"
+                      break
+                    fi
+                    if [ "$i" -eq 30 ]; then
+                      echo "clamd did not start in time" >&2
+                      exit 1
+                    fi
+                    sleep 1
+                  done
+
+                  # Start the scanner (foreground); if it dies, kill clamd too
+                  trap 'kill $CLAMD_PID 2>/dev/null' EXIT
+                  exec ${scanner-malware}/bin/scanner-malware --config /etc/scanner-malware.toml
+                '';
+              };
+            in
+            pkgs.dockerTools.streamLayeredImage {
+              name = "scanner-malware";
+              tag = "latest";
+              contents = [
+                pkgs.dockerTools.caCertificates
+                pkgs.clamav
+                clamdConfig
+                freshclamConfig
+                scannerMalwareConfig
+                entrypoint
               ];
+              config = {
+                WorkingDir = "/";
+                Entrypoint = [
+                  "${pkgs.tini}/bin/tini"
+                  "--"
+                  "${entrypoint}/bin/scanner-malware-entrypoint"
+                ];
+              };
             };
-          };
 
           scanner-nsfw-oci = pkgs.dockerTools.streamLayeredImage {
             name = "scanner-nsfw";
