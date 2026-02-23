@@ -436,6 +436,22 @@ impl DataRoomMember for Postgres {
     }
 
     async fn room_member_leave(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
+        // Remove non-sticky roles when leaving
+        query!(
+            r#"
+            DELETE FROM role_member
+            WHERE user_id = $1
+            AND room_id = $2
+            AND role_id NOT IN (
+                SELECT id FROM role WHERE room_id = $2 AND sticky = true
+            )
+            "#,
+            *user_id,
+            *room_id,
+        )
+        .execute(&self.pool)
+        .await?;
+
         query!(
             r#"
             UPDATE room_member

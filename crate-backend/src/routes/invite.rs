@@ -252,16 +252,16 @@ async fn invite_use(
                 code: invite.invite.code,
                 inviter: invite.invite.creator_id,
             };
-            let existing = d.room_member_get(room.id, auth.user.id).await;
-            if existing.is_err() {
-                d.room_member_put(
-                    room.id,
-                    auth.user.id,
-                    Some(origin),
-                    RoomMemberPut::default(),
-                )
-                .await?;
-            }
+            // Check if user is already a member (for determining broadcast type)
+            let was_member = d.room_member_get(room.id, auth.user.id).await.is_ok();
+            // Always update membership to Join (handles both new joins and rejoining after leave)
+            d.room_member_put(
+                room.id,
+                auth.user.id,
+                Some(origin),
+                RoomMemberPut::default(),
+            )
+            .await?;
 
             for role in roles {
                 d.role_member_put(room.id, auth.user.id, role.id).await?;
@@ -293,7 +293,7 @@ async fn invite_use(
             srv.perms.invalidate_room(auth.user.id, room.id).await;
             srv.perms.invalidate_is_mutual(auth.user.id);
             let room_id = room.id;
-            if existing.is_err() {
+            if !was_member {
                 // FIXME: don't send RoomCreate to *everyone* when someone joins, just the joining user
                 s.broadcast_room(
                     room_id,

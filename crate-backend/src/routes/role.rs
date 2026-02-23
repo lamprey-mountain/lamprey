@@ -91,6 +91,7 @@ async fn role_create(
                 is_self_applicable: json.is_self_applicable,
                 is_mentionable: json.is_mentionable,
                 hoist: json.hoist,
+                sticky: json.sticky,
             },
             1,
         )
@@ -104,6 +105,7 @@ async fn role_create(
         .add("is_self_applicable", &role.is_self_applicable)
         .add("is_mentionable", &role.is_mentionable)
         .add("hoist", &role.hoist)
+        .add("sticky", &role.sticky)
         .build();
 
     let al = auth.audit_log(room_id);

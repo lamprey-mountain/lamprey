@@ -422,6 +422,7 @@ pub struct DbRoleCreate {
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
     pub hoist: bool,
+    pub sticky: bool,
 }
 
 pub struct DbMessageCreate {

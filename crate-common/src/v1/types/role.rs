@@ -45,6 +45,7 @@ pub struct Role {
     )]
     pub deny: Vec<Permission>,
 
+    // TODO: remove is_
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
 
@@ -53,6 +54,9 @@ pub struct Role {
 
     /// whether members with this role should be displayed separately
     pub hoist: bool,
+
+    /// whether this role should be retained after a user leaves and rejoins the room
+    pub sticky: bool,
 
     pub member_count: u64,
 }
@@ -89,6 +93,9 @@ pub struct RoleCreate {
 
     #[cfg_attr(feature = "serde", serde(default))]
     pub hoist: bool,
+
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub sticky: bool,
     // the main reason this doesn't exist yet is because i've seen in
     // discord how the ui can become extremely unreadable, cluttered, and
     // in general color vomit. plus there's the whole "illegable contrast
@@ -136,6 +143,7 @@ pub struct RolePatch {
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
     pub hoist: Option<bool>,
+    pub sticky: Option<bool>,
 }
 
 /// apply and remove a role to many members at once
@@ -185,6 +193,7 @@ impl Diff<Role> for RolePatch {
             || self.allow.changes(&other.allow)
             || self.deny.changes(&other.deny)
             || self.hoist.changes(&other.hoist)
+            || self.sticky.changes(&other.sticky)
     }
 }
 

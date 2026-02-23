@@ -177,6 +177,7 @@ impl ServiceRooms {
             is_self_applicable: false,
             is_mentionable: false,
             hoist: false,
+            sticky: false,
         };
         let role_moderator = DbRoleCreate {
             id: RoleId::new(),
@@ -188,6 +189,7 @@ impl ServiceRooms {
             is_self_applicable: false,
             is_mentionable: false,
             hoist: false,
+            sticky: false,
         };
         let role_everyone = DbRoleCreate {
             id: RoleId::from(room.id.into_inner()),
@@ -199,6 +201,7 @@ impl ServiceRooms {
             is_self_applicable: false,
             is_mentionable: false,
             hoist: false,
+            sticky: false,
         };
         data.role_create(role_admin, 1).await?;
         data.role_create(role_moderator, 1).await?;

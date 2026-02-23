@@ -29,6 +29,7 @@ pub struct DbRole {
     pub member_count: i64,
     pub position: i64,
     pub hoist: bool,
+    pub sticky: bool,
 }
 
 impl From<DbRole> for Role {
@@ -46,6 +47,7 @@ impl From<DbRole> for Role {
             member_count: row.member_count as u64,
             position: row.position as u64,
             hoist: row.hoist,
+            sticky: row.sticky,
         }
     }
 }
@@ -86,9 +88,9 @@ impl DataRole for Postgres {
         .execute(&mut *tx)
         .await?;
         let role = query_as!(DbRole, r#"
-            INSERT INTO role (id, version_id, room_id, name, description, allow, deny, is_mentionable, is_self_applicable, position, hoist)
-            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id, version_id, room_id, name, description, allow as "allow: _", deny as "deny: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
+            INSERT INTO role (id, version_id, room_id, name, description, allow, deny, is_mentionable, is_self_applicable, position, hoist, sticky)
+            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING id, version_id, room_id, name, description, allow as "allow: _", deny as "deny: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist, sticky
         "#,
             role_id,
             *create.room_id,
@@ -100,6 +102,7 @@ impl DataRole for Postgres {
             create.is_self_applicable,
             position as i64,
             create.hoist,
+            create.sticky,
         )
             .fetch_one(&mut *tx)
         	.await?;
@@ -136,7 +139,8 @@ impl DataRole for Postgres {
             	r.name,
                 coalesce(rm.count, 0) as "member_count!",
                 r.position,
-                r.hoist
+                r.hoist,
+                r.sticky
             FROM role r
             LEFT JOIN (
                 SELECT role_id, count(*) as count
@@ -206,7 +210,8 @@ impl DataRole for Postgres {
                 r.deny as "deny: _", r.is_mentionable, r.is_self_applicable,
                 coalesce(rm.count, 0) as "member_count!",
                 r.position,
-                r.hoist
+                r.hoist,
+                r.sticky
             FROM role r
             LEFT JOIN (
                 SELECT role_id, count(*) as count
@@ -239,7 +244,8 @@ impl DataRole for Postgres {
                 r.deny as "deny: _", r.is_mentionable, r.is_self_applicable,
                 coalesce(rm.count, 0) as "member_count!",
                 r.position,
-                r.hoist
+                r.hoist,
+                r.sticky
             FROM role r
             LEFT JOIN (
                 SELECT role_id, count(*) as count
@@ -281,7 +287,7 @@ impl DataRole for Postgres {
             r#"
             SELECT
                 id, version_id, room_id, name, description, allow as "allow: _",
-                deny as "deny: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist
+                deny as "deny: _", is_mentionable, is_self_applicable, 0 as "member_count!", position, hoist, sticky
             FROM role
             WHERE room_id = $1 AND id = $2
             FOR UPDATE
@@ -302,7 +308,8 @@ impl DataRole for Postgres {
                 deny = $6,
                 is_mentionable = $7,
                 is_self_applicable = $8,
-                hoist = $9
+                hoist = $9,
+                sticky = $10
             WHERE id = $1
         "#,
             *role_id,
@@ -316,6 +323,7 @@ impl DataRole for Postgres {
             patch.is_mentionable.unwrap_or(role.is_mentionable),
             patch.is_self_applicable.unwrap_or(role.is_self_applicable),
             patch.hoist.unwrap_or(role.hoist),
+            patch.sticky.unwrap_or(role.sticky),
         )
         .execute(&mut *tx)
         .await?;
