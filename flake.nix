@@ -94,6 +94,13 @@
             config = {
               Entrypoint =
                 [ "${pkgs.tini}/bin/tini" "--" "${backend}/bin/lamprey" ];
+              Healthcheck = {
+                Test = [ "CMD-SHELL" "curl -f http://localhost:8080/api/v1/health || exit 1" ];
+                Interval = 30000000000; # 30s
+                Timeout = 10000000000; # 10s
+                Retries = 3;
+                StartPeriod = 5000000000; # 5s
+              };
             };
           };
 
