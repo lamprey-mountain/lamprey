@@ -64,4 +64,23 @@
 		margin: 0 2px;
 		border-radius: 2px;
 	}
+
+	& .filter-before,
+	& .filter-after {
+		background: $bg-150;
+		padding: 0 2px;
+		border-radius: 2px;
+	}
+
+	& .filter-has,
+	& .filter-pinned,
+	& .filter-mentions {
+		background: $bg-150;
+		padding: 0 2px;
+		border-radius: 2px;
+	}
+
+	& .filter-prefix {
+		color: $fg-400;
+	}
 }

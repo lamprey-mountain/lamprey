@@ -39,7 +39,8 @@ const schema = new Schema({
 			toDOM: (node) => [
 				"span",
 				{ class: "filter-author", "data-id": node.attrs.id },
-				`author:${node.attrs.name}`,
+				["span", { class: "filter-prefix" }, "author:"],
+				["span", { class: "filter-value" }, node.attrs.name],
 			],
 			parseDOM: [
 				{
@@ -59,7 +60,8 @@ const schema = new Schema({
 			toDOM: (node) => [
 				"span",
 				{ class: "filter-thread", "data-id": node.attrs.id },
-				`thread:${node.attrs.name}`,
+				["span", { class: "filter-prefix" }, "thread:"],
+				["span", { class: "filter-value" }, node.attrs.name],
 			],
 			parseDOM: [
 				{
@@ -79,7 +81,8 @@ const schema = new Schema({
 			toDOM: (node) => [
 				"span",
 				{ class: "filter-before" },
-				`before:${node.attrs.date}`,
+				["span", { class: "filter-prefix" }, "before:"],
+				["span", { class: "filter-value" }, node.attrs.date],
 			],
 			parseDOM: [
 				{
@@ -98,7 +101,8 @@ const schema = new Schema({
 			toDOM: (node) => [
 				"span",
 				{ class: "filter-after" },
-				`after:${node.attrs.date}`,
+				["span", { class: "filter-prefix" }, "after:"],
+				["span", { class: "filter-value" }, node.attrs.date],
 			],
 			parseDOM: [
 				{
@@ -117,7 +121,8 @@ const schema = new Schema({
 			toDOM: (node) => [
 				"span",
 				{ class: "filter-has" },
-				`has:${node.attrs.value}`,
+				["span", { class: "filter-prefix" }, "has:"],
+				["span", { class: "filter-value" }, node.attrs.value],
 			],
 			parseDOM: [
 				{
@@ -136,7 +141,8 @@ const schema = new Schema({
 			toDOM: (node) => [
 				"span",
 				{ class: "filter-pinned" },
-				`pinned:${node.attrs.value}`,
+				["span", { class: "filter-prefix" }, "pinned:"],
+				["span", { class: "filter-value" }, node.attrs.value],
 			],
 			parseDOM: [
 				{
@@ -155,7 +161,8 @@ const schema = new Schema({
 			toDOM: (node) => [
 				"span",
 				{ class: "filter-mentions", "data-id": node.attrs.id },
-				`mentions:${node.attrs.name}`,
+				["span", { class: "filter-prefix" }, "mentions:"],
+				["span", { class: "filter-value" }, node.attrs.name],
 			],
 			parseDOM: [
 				{
