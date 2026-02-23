@@ -17,7 +17,10 @@ export const generateNotificationIcon = async (author: User, room?: Room) => {
 		avatarImg.src = avatarUrl;
 		await new Promise((res, rej) => {
 			avatarImg.onload = res;
-			avatarImg.onerror = rej;
+			avatarImg.onerror = (err) => {
+				console.error("failed to load avatar", err);
+				rej(err);
+			};
 		});
 		ctx.drawImage(avatarImg, 0, 0, 256, 256);
 	} catch (e) {

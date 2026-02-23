@@ -549,8 +549,7 @@ export function createApi(
 			if (
 				is_mentioned &&
 				notificationPermission() === "granted" &&
-				userConfig().frontend["desktop_notifs"] === "yes" &&
-				userConfig().notifs.mentions === "Notify"
+				userConfig().frontend["desktop_notifs"] === "yes"
 			) {
 				const author = users.cache.get(m.author_id);
 				const channel = channels.cache.get(m.channel_id);
@@ -591,6 +590,32 @@ export function createApi(
 						};
 					}
 				})();
+			}
+
+			// TTS notifications
+			const ttsEnabled = userConfig().frontend["tts_notifs"] === "yes";
+			const ttsMode = userConfig().notifs.tts;
+			const shouldSpeak = ttsEnabled && ttsMode !== "Nothing" &&
+				(ttsMode === "Always" || (ttsMode === "Mentions" && is_mentioned));
+			const isOwnMessage = m.author_id === users.cache.get("@self")?.id;
+
+			if (shouldSpeak && !isOwnMessage && m.type === "DefaultMarkdown") {
+				const author = users.cache.get(m.author_id);
+				const channel = channels.cache.get(m.channel_id);
+				const rawContent = m.content ?? "";
+				const processedContent = await stripMarkdownAndResolveMentions(
+					rawContent,
+					m.channel_id,
+					m.mentions,
+				);
+				const text = processedContent.substring(0, 200);
+
+				const utterance = new SpeechSynthesisUtterance(
+					`${author?.name ?? "Someone"} in #${
+						channel?.name ?? "channel"
+					} says: ${text}`,
+				);
+				window.speechSynthesis.speak(utterance);
 			}
 
 			const r = messages.cacheRanges.get(m.channel_id);

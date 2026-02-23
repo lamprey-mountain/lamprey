@@ -139,7 +139,7 @@ export const ChannelIconGdm = (
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={getThumbFromId(props.icon!, 128, props.animate)!}
+						href={getThumbFromId(props.icon!, 64, props.animate)!}
 					/>
 				</Show>
 			</g>
