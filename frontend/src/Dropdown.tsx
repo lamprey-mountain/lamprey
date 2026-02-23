@@ -65,6 +65,7 @@ export function createDropdown<T>(
 		required?: boolean;
 		onSelect?: (item: T | null) => void;
 		options: () => Array<DropdownItem<T>>;
+		mount?: Element | DocumentFragment | null;
 	},
 ) {
 	const [shown, setShown] = createSignal(false);
@@ -209,7 +210,7 @@ export function createDropdown<T>(
 							? "ArrowUp ArrowDown Tab Shift+Tab Escape Enter"
 							: "Enter"}
 					/>
-					<Portal>
+					<Portal mount={props.mount ?? document.body}>
 						<Show when={shown()}>
 							<menu
 								role="listbox"
@@ -217,6 +218,7 @@ export function createDropdown<T>(
 								id={listboxId}
 								class="dropdown-items floating"
 								style={{
+									"z-index": 999999,
 									position: position.strategy,
 									translate: `${position.x}px ${position.y}px`,
 									width: `${inputEl()?.offsetWidth || 0}px`,
@@ -257,6 +259,7 @@ export function Dropdown<T>(
 		onSelect?: (item: T | null) => void;
 		options: Array<DropdownItem<T>>;
 		style?: string;
+		mount?: Element | DocumentFragment | null;
 	}>,
 ) {
 	const [shown, setShown] = createSignal(false);
@@ -396,7 +399,7 @@ export function Dropdown<T>(
 					: "Enter"}
 				style={props.style}
 			/>
-			<Portal>
+			<Portal mount={props.mount ?? document.body}>
 				<Show when={shown()}>
 					<menu
 						role="listbox"
@@ -404,7 +407,7 @@ export function Dropdown<T>(
 						id={listboxId}
 						class="dropdown-items floating"
 						style={{
-							"z-index": 99999,
+							"z-index": 999999,
 							position: position.strategy,
 							translate: `${position.x}px ${position.y}px`,
 							width: `${inputEl()?.offsetWidth || 0}px`,

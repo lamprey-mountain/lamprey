@@ -21,6 +21,7 @@ import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.tsx";
 import { Placement, ReferenceElement } from "@floating-ui/dom";
 import { SlashCommands } from "./contexts/slash-commands";
+import type { Modal } from "./contexts/modal";
 
 export type Slice = {
 	start: number;
@@ -43,78 +44,6 @@ export type Cursor = {
 	vel: number;
 	pos: Array<[number, number]>;
 };
-
-export type Modal =
-	| { type: "alert"; text: string }
-	| {
-		type: "confirm";
-		text: string;
-		cont: (confirmed: boolean) => void;
-	}
-	| {
-		type: "prompt";
-		text: string;
-		cont: (text: string | null) => void;
-	}
-	| {
-		type: "media";
-		media: Media;
-	}
-	| {
-		type: "message_edits";
-		channel_id: string;
-		message_id: string;
-	}
-	| {
-		type: "reset_password";
-	}
-	| {
-		type: "palette";
-	}
-	| {
-		type: "channel_create";
-		room_id: string;
-		cont: (
-			data: { name: string; type: "Text" | "Voice" | "Category" } | null,
-		) => void;
-	}
-	| {
-		type: "tag_editor";
-		forumChannelId: string;
-		tag?: import("sdk").Tag;
-		onSave?: (tag: import("sdk").Tag) => void;
-		onClose?: () => void;
-	}
-	| {
-		type: "export_data";
-	}
-	| {
-		type: "view_reactions";
-		channel_id: string;
-		message_id: string;
-	}
-	| {
-		type: "privacy";
-		room_id: string;
-	}
-	| {
-		type: "notifications";
-		room_id: string;
-	}
-	| {
-		type: "invite_create";
-		room_id?: string;
-		channel_id?: string;
-	}
-	| { type: "attachment" }
-	| {
-		type: "channel_topic";
-		channel_id: string;
-	}
-	| {
-		type: "link";
-		editor: any;
-	};
 
 export type AttachmentCreateT = {
 	id: string;

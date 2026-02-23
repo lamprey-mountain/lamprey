@@ -15,6 +15,11 @@ import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
 import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
 import { ModalLink } from "./ModalLink.tsx";
+import { ModalKick } from "./ModalKick.tsx";
+import { ModalBan } from "./ModalBan.tsx";
+import { ModalTimeout } from "./ModalTimeout.tsx";
+import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
+import { useApi } from "../api";
 
 export const Modal = (
 	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },
@@ -39,6 +44,7 @@ export const Modal = (
 };
 
 export function getModal(modal: ContextModal) {
+	const api = useApi();
 	switch (modal.type) {
 		case "alert": {
 			return <ModalAlert text={modal.text} />;
@@ -123,6 +129,40 @@ export function getModal(modal: ContextModal) {
 			return (
 				<ModalLink
 					editor={modal.editor}
+				/>
+			);
+		}
+		case "kick": {
+			return (
+				<ModalKick
+					api={api}
+					room_id={modal.room_id}
+					user_id={modal.user_id}
+				/>
+			);
+		}
+		case "ban": {
+			return (
+				<ModalBan
+					api={api}
+					room_id={modal.room_id}
+					user_id={modal.user_id}
+				/>
+			);
+		}
+		case "timeout": {
+			return (
+				<ModalTimeout
+					api={api}
+					room_id={modal.room_id}
+					user_id={modal.user_id}
+				/>
+			);
+		}
+		case "camera_preview": {
+			return (
+				<ModalCameraPreview
+					stream={modal.stream}
 				/>
 			);
 		}

@@ -1,4 +1,5 @@
-import { createEffect, createSignal } from "solid-js";
+import { createEffect, createSignal, onMount, Show } from "solid-js";
+import { createDropdown, Dropdown, type DropdownItem } from "./Dropdown";
 
 const units: Record<string, number> = {
 	s: 1,
@@ -69,47 +70,114 @@ export function formatDuration(seconds: number): string {
 	return parts.join(" ") || `${seconds}s`;
 }
 
+export type DurationPreset = {
+	label: string;
+	seconds: number | "forever";
+};
+
+const defaultPresets: DurationPreset[] = [
+	{ label: "60 seconds", seconds: 60 },
+	{ label: "5 minutes", seconds: 300 },
+	{ label: "10 minutes", seconds: 600 },
+	{ label: "1 hour", seconds: 3600 },
+	{ label: "1 day", seconds: 86400 },
+	{ label: "1 week", seconds: 604800 },
+];
+
 type DurationInputProps = {
-	value?: number | string;
-	onInput: (durationInSeconds: number) => void;
+	value?: number | "forever" | null;
+	onInput: (durationInSeconds: number | "forever") => void;
+	presets?: DurationPreset[];
+	showForever?: boolean;
+	mount?: Element | DocumentFragment | null;
 };
 
 export const DurationInput = (props: DurationInputProps) => {
 	const [text, setText] = createSignal("");
+	const [isForever, setIsForever] = createSignal(false);
+	const presets = () => props.presets ?? defaultPresets;
+	const [customMode, setCustomMode] = createSignal(false);
+	const [mountEl, setMountEl] = createSignal<Element | DocumentFragment | null>(
+		null,
+	);
+
+	onMount(() => {
+		// Try to find the overlay element or use the provided mount
+		const overlay = document.getElementById("overlay");
+		setMountEl(props.mount ?? overlay ?? document.body);
+	});
+
+	const options = (): Array<DropdownItem<number | "forever">> => {
+		const opts = presets().map((p) => ({
+			item: p.seconds,
+			label: p.label,
+		}));
+		if (props.showForever) {
+			opts.push({ item: "forever", label: "forever" });
+		}
+		opts.push({ item: "custom" as any, label: "custom..." });
+		return opts;
+	};
+
+	const dropdown = createDropdown<number | "forever">({
+		selected: isForever() ? "forever" : (props.value ?? undefined),
+		onSelect: (item) => {
+			if (item === "custom") {
+				setCustomMode(true);
+			} else if (item !== null) {
+				setCustomMode(false);
+				setIsForever(item === "forever");
+				setText(item === "forever" ? "" : formatDuration(item as number));
+				props.onInput(item);
+			}
+		},
+		options,
+		mount: mountEl(),
+	});
 
 	createEffect(() => {
 		const v = props.value;
-		if (v === undefined || v === null) {
+		if (v === undefined || v === null || customMode()) {
+			if (!customMode()) setText("");
+			setIsForever(false);
+			return;
+		}
+		if (v === "forever") {
+			setIsForever(true);
 			setText("");
 			return;
 		}
-		const currentSeconds = parseDuration(text());
-		if (typeof v === "number") {
-			if (v !== currentSeconds) {
-				setText(formatDuration(v));
-			}
-		} else {
-			if (v !== text()) {
-				setText(v);
-			}
+		setIsForever(false);
+		if (typeof v === "number" && !customMode()) {
+			setText(formatDuration(v));
 		}
 	});
 
 	return (
 		<div class="duration-input">
-			<input
-				type="text"
-				value={text()}
-				onInput={(e) => {
-					const val = e.currentTarget.value;
-					setText(val);
-					const seconds = parseDuration(val);
-					if (seconds !== null) {
-						props.onInput(seconds);
-					}
-				}}
-				placeholder="eg. 1h 30m, 5s, 10 minutes"
-			/>
+			<Show
+				when={!customMode()}
+				fallback={
+					<input
+						type="text"
+						value={text()}
+						onInput={(e) => {
+							const val = e.currentTarget.value;
+							setText(val);
+							const seconds = parseDuration(val);
+							if (seconds !== null) {
+								setIsForever(false);
+								props.onInput(seconds);
+							}
+						}}
+						onBlur={() => setCustomMode(false)}
+						placeholder="enter duration: eg. 1h 30m, 5s, 10 minutes"
+						style="width: 100%;"
+					/>
+				}
+			>
+				<dropdown.View />
+			</Show>
 		</div>
 	);
 };

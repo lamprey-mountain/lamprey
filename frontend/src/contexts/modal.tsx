@@ -1,6 +1,98 @@
 import { createContext, ParentProps, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { Modal } from "../context";
+import type { Media } from "sdk";
+import type { Tag } from "sdk";
+
+export type Modal =
+	| { type: "alert"; text: string }
+	| {
+		type: "confirm";
+		text: string;
+		cont: (confirmed: boolean) => void;
+	}
+	| {
+		type: "prompt";
+		text: string;
+		cont: (text: string | null) => void;
+	}
+	| {
+		type: "media";
+		media: Media;
+	}
+	| {
+		type: "message_edits";
+		channel_id: string;
+		message_id: string;
+	}
+	| {
+		type: "reset_password";
+	}
+	| {
+		type: "palette";
+	}
+	| {
+		type: "channel_create";
+		room_id: string;
+		cont: (
+			data: { name: string; type: "Text" | "Voice" | "Category" } | null,
+		) => void;
+	}
+	| {
+		type: "tag_editor";
+		forumChannelId: string;
+		tag?: Tag;
+		onSave?: (tag: Tag) => void;
+		onClose?: () => void;
+	}
+	| {
+		type: "export_data";
+	}
+	| {
+		type: "view_reactions";
+		channel_id: string;
+		message_id: string;
+	}
+	| {
+		type: "privacy";
+		room_id: string;
+	}
+	| {
+		type: "notifications";
+		room_id: string;
+	}
+	| {
+		type: "invite_create";
+		room_id?: string;
+		channel_id?: string;
+	}
+	| { type: "attachment" }
+	| {
+		type: "channel_topic";
+		channel_id: string;
+	}
+	| {
+		type: "link";
+		editor: any;
+	}
+	| {
+		type: "kick";
+		room_id: string;
+		user_id: string;
+	}
+	| {
+		type: "ban";
+		room_id: string;
+		user_id?: string;
+	}
+	| {
+		type: "timeout";
+		room_id: string;
+		user_id: string;
+	}
+	| {
+		type: "camera_preview";
+		stream: MediaStream;
+	};
 
 export type ModalsController = {
 	close: () => void;

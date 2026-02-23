@@ -78,19 +78,11 @@ export function UserMenu(props: UserMenuProps) {
 
 	const [, modalCtl] = useModals();
 	const kickRoom = () => {
-		modalCtl.prompt("kick reason", (reason) => {
-			if (!reason) return;
-			api.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
-				params: {
-					path: {
-						room_id: props.room_id!,
-						user_id: props.user_id,
-					},
-				},
-				headers: {
-					"X-Reason": reason,
-				},
-			});
+		if (!props.room_id) return;
+		modalCtl.open({
+			type: "kick",
+			room_id: props.room_id,
+			user_id: props.user_id,
 		});
 	};
 
@@ -108,21 +100,21 @@ export function UserMenu(props: UserMenuProps) {
 		);
 	};
 
-	const ban = () => {
-		modalCtl.prompt("ban reason", (reason) => {
-			if (!reason) return;
-			api.client.http.PUT("/api/v1/room/{room_id}/ban/{user_id}", {
-				params: {
-					path: {
-						room_id: props.room_id!,
-						user_id: props.user_id,
-					},
-				},
-				headers: {
-					"X-Reason": reason,
-				},
-				body: {},
-			});
+	const banRoom = () => {
+		if (!props.room_id) return;
+		modalCtl.open({
+			type: "ban",
+			room_id: props.room_id,
+			user_id: props.user_id,
+		});
+	};
+
+	const timeoutRoom = () => {
+		if (!props.room_id) return;
+		modalCtl.open({
+			type: "timeout",
+			room_id: props.room_id,
+			user_id: props.user_id,
 		});
 	};
 
@@ -293,7 +285,10 @@ export function UserMenu(props: UserMenuProps) {
 									checked={room_member()?.roles.includes(role.id)}
 									style="display: none;"
 								/>
-								<Checkbox checked={room_member()?.roles.includes(role.id)} />
+								<Checkbox
+									checked={room_member()?.roles.includes(role.id)}
+									seed={`menu-user-${props.user.id}-room-${room_member()?.room_id}-role-${role.id}`}
+								/>
 								<div style="margin: 2px 0">
 									<div
 										classList={{ has: room_member()?.roles.includes(role.id) }}
@@ -374,10 +369,10 @@ export function UserMenu(props: UserMenuProps) {
 						<Item onClick={kickRoom} color="danger">kick</Item>
 					</Show>
 					<Show when={hasPermission("MemberBan") && canModerate()}>
-						<Item onClick={ban} color="danger">ban</Item>
+						<Item onClick={banRoom} color="danger">ban</Item>
 					</Show>
-					<Show when={false}>
-						<Item>timeout</Item>
+					<Show when={hasPermission("MemberTimeout") && canModerate()}>
+						<Item onClick={timeoutRoom} color="danger">timeout</Item>
 					</Show>
 					<Show
 						when={hasPermission("RoleApply") && props.room_id && hasRoles()}

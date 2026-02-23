@@ -625,6 +625,15 @@ em {
 			padding: 2px 4px;
 			border: solid $sep-500 1px;
 		}
+
+		button.danger {
+			border: solid #e8374f 1px;
+			background: #ba2f42;
+
+			&:hover {
+				background: darken($color: #ba2f42, $amount: 10);
+			}
+		}
 	}
 }
 
@@ -934,7 +943,7 @@ article.message {
 
 #overlay {
 	position: fixed;
-	z-index: 1;
+	z-index: 100000;
 }
 
 .user-profile {
