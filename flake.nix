@@ -80,9 +80,29 @@
             mv dist $out
           '';
         });
+
+        python-deps = ps: with ps; [
+          fastapi
+          uvicorn
+          python-multipart
+          torch
+          transformers
+          pillow
+        ];
+
+        python-env = pkgs.python3.withPackages python-deps;
       in {
         packages = rec {
           inherit backend bridge voice media frontend;
+
+          scanner-nsfw = pkgs.writeShellApplication {
+            name = "run-scanner-nsfw";
+            runtimeInputs = [ python-env ];
+            text = ''
+              cd ${./scanner-nsfw}
+              uvicorn app:app --host 0.0.0.0 --port 8000
+            '';
+          };
 
           cargo-deps = cargoArtifacts;
 
@@ -140,6 +160,24 @@
                 "--"
                 "${media}/bin/media"
               ];
+            };
+          };
+
+          scanner-nsfw-oci = pkgs.dockerTools.streamLayeredImage {
+            name = "scanner-nsfw";
+            tag = "latest";
+            contents = [
+              pkgs.cacert
+              python-env
+            ];
+            config = {
+              WorkingDir = "/scanner-nsfw";
+              Entrypoint = [
+                "${pkgs.tini}/bin/tini"
+                "--"
+                "${python-env}/bin/uvicorn"
+              ];
+              Cmd = [ "app:app" "--host" "0.0.0.0" "--port" "8000" ];
             };
           };
         };

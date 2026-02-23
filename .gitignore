@@ -40,3 +40,7 @@ bot.toml
 
 # Build artifacts
 /result
+
+# python
+scanner-nsfw/__pycache__/
+scanner-nsfw/*.pyc
