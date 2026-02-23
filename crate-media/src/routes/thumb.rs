@@ -7,7 +7,7 @@ use common::v2::types::media::proxy::ThumbQuery;
 use futures_util::StreamExt;
 use http::{HeaderMap, StatusCode};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::{error, span, Instrument, Level};
+use tracing::error;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 

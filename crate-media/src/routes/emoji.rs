@@ -2,14 +2,14 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use common::v1::types::EmojiId;
+use common::{v1::types::EmojiId, v2::types::media::proxy::ThumbQuery};
 use http::HeaderMap;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{
     error::Result,
-    routes::thumb::{get_thumb, head_thumb, ThumbQuery},
+    routes::thumb::{get_thumb, head_thumb},
     AppState,
 };
 
