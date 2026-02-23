@@ -327,4 +327,58 @@ impl DataUserRelationship for Postgres {
             |i: &RelationshipWithUserId| i.user_id.to_string()
         )
     }
+
+    async fn user_shares_room(&self, user_a: UserId, user_b: UserId) -> Result<bool> {
+        let exists = query_scalar!(
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM room_member rm1
+                JOIN room_member rm2 ON rm1.room_id = rm2.room_id
+                WHERE rm1.user_id = $1 AND rm2.user_id = $2
+                AND rm1.membership = 'Join' AND rm2.membership = 'Join'
+            )
+            "#,
+            user_a.into_inner(),
+            user_b.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(exists.unwrap_or(false))
+    }
+
+    async fn user_shared_rooms(&self, user_a: UserId, user_b: UserId) -> Result<Vec<RoomId>> {
+        use crate::data::postgres::types::RoomIdDb;
+        let rooms = query_scalar!(
+            r#"
+            SELECT rm1.room_id AS "room_id: RoomIdDb"
+            FROM room_member rm1
+            JOIN room_member rm2 ON rm1.room_id = rm2.room_id
+            WHERE rm1.user_id = $1 AND rm2.user_id = $2
+            AND rm1.membership = 'Join' AND rm2.membership = 'Join'
+            "#,
+            user_a.into_inner(),
+            user_b.into_inner()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rooms.into_iter().map(RoomIdDb::into_inner).collect())
+    }
+
+    async fn user_has_mutual_friend(&self, user_a: UserId, user_b: UserId) -> Result<bool> {
+        let exists = query_scalar!(
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM user_relationship r1
+                JOIN user_relationship r2 ON r1.other_id = r2.other_id
+                WHERE r1.user_id = $1 AND r2.user_id = $2
+                AND r1.rel = 'Friend' AND r2.rel = 'Friend'
+            )
+            "#,
+            user_a.into_inner(),
+            user_b.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(exists.unwrap_or(false))
+    }
 }

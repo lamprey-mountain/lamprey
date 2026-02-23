@@ -1,3 +1,5 @@
+// TODO: remove?
+
 // TODO: add method to calculate affinity from one person to another
 
 #![allow(unused)] // TEMP: suppress warnings here for now

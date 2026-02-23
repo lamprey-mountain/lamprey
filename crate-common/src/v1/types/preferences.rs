@@ -129,12 +129,27 @@ impl Default for VoiceConfig {
     }
 }
 
-/// user privacy settings for friends
+/// who can send friend requests
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PreferencesGlobalFriends {
-    pub filter: FriendsFilter,
+    /// pause all friend requests
+    ///
+    /// overrides everything else
+    pub pause_until: Option<Time>,
+
+    /// allow everyone to send you a friend request
+    ///
+    /// overrides everything except pause_until
+    pub allow_everyone: bool,
+
+    /// allow everyone who shares a room with you send you a friend request
+    /// requires the room to have allow_dms set
+    pub allow_mutual_room: bool,
+
+    /// allow everyone who shares a friend with you send you a friend request
+    pub allow_mutual_friend: bool,
 }
 
 /// user privacy settings globally
@@ -144,10 +159,20 @@ pub struct PreferencesGlobalFriends {
 pub struct PreferencesGlobalPrivacy {
     pub friends: PreferencesGlobalFriends,
 
-    /// default room privacy setings
+    /// default dms config for new rooms
     ///
     /// copied, not inherited
-    pub rooms_default: PreferencesRoomPrivacy,
+    pub dms: bool,
+
+    /// default rpc config for new rooms
+    ///
+    /// copied, not inherited
+    pub rpc: bool,
+
+    /// default exif config for new rooms
+    ///
+    /// copied, not inherited
+    pub exif: bool,
 }
 
 /// user privacy settings for a room
@@ -170,27 +195,4 @@ pub struct PreferencesRoomPrivacy {
     ///
     /// setting to false will strip sensitive exif data
     pub exif: bool,
-}
-
-/// who can send friend requests
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct FriendsFilter {
-    /// pause all friend requests
-    ///
-    /// overrides everything else
-    pub pause_until: Option<Time>,
-
-    /// allow everyone to send you a friend request
-    ///
-    /// overrides everything except pause_until
-    pub allow_everyone: bool,
-
-    /// allow everyone who shares a room with you send you a friend request
-    /// requires the room to have allow_dms set
-    pub allow_mutual_room: bool,
-
-    /// allow everyone who shares a friend with you send you a friend request
-    pub allow_mutual_friend: bool,
 }

@@ -187,6 +187,7 @@
                 text = ''
                   DatabaseDirectory /var/lib/clamav
                   UpdateLogFile /var/log/clamav/freshclam.log
+                  DatabaseOwner root
                   LogVerbose no
                   LogSyslog no
                   DatabaseMirror database.clamav.net

@@ -576,6 +576,12 @@ pub trait DataUserRelationship {
         user_id: UserId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RelationshipWithUserId>>;
+
+    /// check if two users share a room (both are members)
+    async fn user_shares_room(&self, user_a: UserId, user_b: UserId) -> Result<bool>;
+
+    /// check if two users have at least one mutual friend
+    async fn user_has_mutual_friend(&self, user_a: UserId, user_b: UserId) -> Result<bool>;
 }
 
 #[async_trait]

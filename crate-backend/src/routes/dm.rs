@@ -5,7 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
 use common::v1::types::{
-    Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Permission, UserId,
+    Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Permission,
+    RelationshipType, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -38,18 +39,59 @@ async fn dm_init(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
+    let data = s.data();
+
     srv.perms
         .for_server(auth.user.id)
         .await?
         .ensure(Permission::DmCreate)?;
-    let target_user = s.data().user_get(target_user_id).await?;
+
+    let target_user = data.user_get(target_user_id).await?;
     if !target_user.can_dm() {
         return Err(Error::BadStatic("cannot dm this user"));
     }
+
+    // a dm can be started with the target user iff
+    // 1. dms are enabled globally, OR
+    // 2. dms enabled in any shared room
+    let target_prefs = srv.cache.user_config_get(target_user_id).await?;
+    let target_allows_dms = if target_prefs.privacy.dms {
+        true
+    } else {
+        // check shared rooms
+        // PERF: optimize this into a single query (add to DataPermission)
+        let shared_rooms = data.user_shared_rooms(auth.user.id, target_user_id).await?;
+        let mut room_allows_dms = false;
+        for room_id in &shared_rooms {
+            let room_prefs = srv
+                .cache
+                .user_config_room_get(target_user_id, *room_id)
+                .await?;
+            if room_prefs.privacy.dms {
+                room_allows_dms = true;
+                break;
+            }
+        }
+        room_allows_dms
+    };
+
+    if !target_allows_dms {
+        // friends can always DM
+        let is_friend = data
+            .user_relationship_get(auth.user.id, target_user_id)
+            .await?
+            .is_some_and(|r| r.relation == Some(RelationshipType::Friend));
+
+        if !is_friend {
+            return Err(Error::BadStatic("DMs not allowed from this user"));
+        }
+    }
+
     let (thread, is_new) = srv
         .users
         .init_dm(auth.user.id, target_user_id, false)
         .await?;
+
     s.broadcast(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
     })?;

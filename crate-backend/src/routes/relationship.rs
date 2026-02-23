@@ -5,6 +5,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
 use common::v1::types::user::Ignore;
+use common::v1::types::util::Time;
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
     RelationshipPatch, RelationshipType, RelationshipWithUserId, UserId,
@@ -88,6 +89,7 @@ async fn friend_add(
     auth.user.ensure_unsuspended()?;
 
     let data = s.data();
+    let srv = s.services();
 
     let target_user = data.user_get(target_user_id).await?;
     if !target_user.can_friend() {
@@ -134,7 +136,61 @@ async fn friend_add(
         }
         (_, Some(RelationshipType::Block)) => return Err(Error::Blocked),
         (None, None) => {
-            let srv = s.services();
+            let target_prefs = srv.cache.user_config_get(target_user_id).await?;
+            let friends_prefs = &target_prefs.privacy.friends;
+
+            if let Some(pause_until) = &friends_prefs.pause_until {
+                if pause_until > &Time::now_utc() {
+                    // NOTE: do i want to return a more generic error message here?
+                    return Err(Error::BadStatic("friend requests are currently paused"));
+                }
+            }
+
+            // a friend request can be started with the target user iff
+            // 1. friend requests are enabled globally, OR
+            // 2. mutual rooms are allowed and friend requests are enabled in any shared room OR
+            // 3. mutual friends are allowed and both users have a mutual friend
+            let allowed = if friends_prefs.allow_everyone {
+                true
+            } else {
+                let mutual_room_allowed = if friends_prefs.allow_mutual_room {
+                    // check shared rooms
+                    // PERF: optimize this into a single query (add to DataPermission)
+                    let shared_rooms = data.user_shared_rooms(auth.user.id, target_user_id).await?;
+                    if shared_rooms.is_empty() {
+                        false
+                    } else {
+                        let mut allowed = false;
+                        for room_id in &shared_rooms {
+                            let room_prefs = srv
+                                .cache
+                                .user_config_room_get(target_user_id, *room_id)
+                                .await?;
+                            if room_prefs.privacy.friends {
+                                allowed = true;
+                                break;
+                            }
+                        }
+                        allowed
+                    }
+                } else {
+                    false
+                };
+
+                let mutual_friend_allowed = friends_prefs.allow_mutual_friend
+                    && data
+                        .user_has_mutual_friend(auth.user.id, target_user_id)
+                        .await?;
+
+                mutual_room_allowed || mutual_friend_allowed
+            };
+
+            if !allowed {
+                return Err(Error::BadStatic(
+                    "friend requests not allowed from this user",
+                ));
+            }
+
             srv.perms
                 .for_server(auth.user.id)
                 .await?
