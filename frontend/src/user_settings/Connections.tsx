@@ -1,4 +1,9 @@
-import { createResource, For } from "solid-js";
+import {
+	createResource,
+	createSignal,
+	For,
+	onCleanup,
+} from "solid-js";
 import { useApi } from "../api";
 import { Time } from "../Time";
 import { Copyable } from "../util";
@@ -6,8 +11,9 @@ import type { Scope } from "sdk";
 
 export function Connections() {
 	const api = useApi();
+	const [connecting, setConnecting] = createSignal(false);
 
-	const [connections] = createResource(async () => {
+	const [connections, { refetch }] = createResource(async () => {
 		const { data } = await api.client.http.GET(
 			"/api/v1/user/{user_id}/connection",
 			{ params: { path: { user_id: "@self" } } },
@@ -15,17 +21,37 @@ export function Connections() {
 		return data;
 	});
 
-	const deauthorize = (id: string) => {
-		api.client.http.DELETE("/api/v1/user/{user_id}/connection/{app_id}", {
+	const deauthorize = async (id: string) => {
+		await api.client.http.DELETE("/api/v1/user/{user_id}/connection/{app_id}", {
 			params: {
 				path: { app_id: id, user_id: "@self" },
 			},
 		});
+		refetch();
 	};
 
+	let removed = false;
+
+	const handleMessage = (event: MessageEvent) => {
+		if (event.origin !== window.location.origin) return;
+		if (event.data?.type === "oauth_success") {
+			refetch();
+			removed = true;
+			window.removeEventListener("message", handleMessage);
+		}
+	};
+
+	if (typeof window !== "undefined") {
+		window.addEventListener("message", handleMessage);
+		onCleanup(() => {
+			if (!removed) {
+				console.warn("connection listener wasn't removed");
+				window.removeEventListener("message", handleMessage);
+			}
+		});
+	}
+
 	// TODO: search authorized apps
-	// TODO: handle ConnectionCreate in api sync
-	// TODO: handle ConnectionDelete in api sync
 
 	return (
 		<div class="user-settings-connections">
@@ -68,6 +94,21 @@ export function Connections() {
 					</article>
 				)}
 			</For>
+			<div class="add-connection">
+				<button
+					onClick={() => {
+						setConnecting(true);
+						// TODO: show list of available applications to connect
+						// For now, just refetch to show any new connections
+						setTimeout(() => {
+							refetch();
+							setConnecting(false);
+						}, 1000);
+					}}
+				>
+					add connection
+				</button>
+			</div>
 		</div>
 	);
 }

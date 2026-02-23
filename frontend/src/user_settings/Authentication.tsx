@@ -2,6 +2,7 @@ import {
 	createResource,
 	createSignal,
 	For,
+	onCleanup,
 	Show,
 	type VoidProps,
 } from "solid-js";
@@ -158,9 +159,38 @@ function Oauth() {
 
 	const connectOauth = async (id: string) => {
 		const url = await api.auth.oauthUrl(id);
-		globalThis.open(url);
-		// FIXME(#751): auth state update sync event
-		// refetchOauthProviders();
+		const popup = globalThis.open(url, "oauth_popup");
+		// NOTE: do i want to open as a window?
+		// const popup = globalThis.open(url, "oauth_popup", "width=600,height=800");
+
+		let removed = false;
+
+		const handleMessage = (event: MessageEvent) => {
+			if (event.origin !== window.location.origin) return;
+			if (event.data?.type === "oauth_success") {
+				refetchOauthProviders();
+				window.removeEventListener("message", handleMessage);
+				removed = true;
+			}
+		};
+		window.addEventListener("message", handleMessage);
+
+		const checkPopupClosed = setInterval(() => {
+			if (popup?.closed) {
+				clearInterval(checkPopupClosed);
+				refetchOauthProviders();
+				window.removeEventListener("message", handleMessage);
+				removed = true;
+			}
+		}, 500);
+
+		// just in case, make sure event listeners are cleaned up
+		onCleanup(() => {
+			if (!removed) {
+				console.warn("oauth listener wasn't removed");
+				window.removeEventListener("message", handleMessage);
+			}
+		});
 	};
 
 	const disconnectOauth = async (id: string) => {

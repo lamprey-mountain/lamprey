@@ -8,6 +8,12 @@
 	<body>
 		<pre>Success! You can now close this tab/window.</pre>
 		<script>
+			if (window.opener && !window.opener.closed) {
+				window.opener.postMessage(
+					{ type: "oauth_success" },
+					window.location.origin,
+				);
+			}
 			window.close();
 		</script>
 	</body>
