@@ -203,17 +203,16 @@ export function decorate(state: EditorState, placeholderText?: string) {
 				// does this work with indented code blocks?
 				const firstEnd = ast.raw.indexOf("\n");
 				return [
-					{ attrs: { class: "syn" }, start: 0, end: firstEnd },
+					{
+						attrs: { class: "syn" },
+						start: 0,
+						end: firstEnd === -1 ? ast.raw.length : firstEnd,
+					},
 					// { attrs: { nodeName: "pre" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
 					// { attrs: { class: "font-mono" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
 					{
 						attrs: { nodeName: "code" },
-						start: firstEnd + 1,
-						end: ast.text.length + firstEnd + 1,
-					},
-					{
-						attrs: { class: "syn" },
-						start: ast.text.length + firstEnd + 2,
+						start: firstEnd === -1 ? 0 : firstEnd + 1,
 						end: ast.raw.length,
 					},
 				];
@@ -233,58 +232,54 @@ export function decorate(state: EditorState, placeholderText?: string) {
 					},
 				];
 			}
-			// case "blockquote": {
-			// 	// // FIXME: breaks on multiline blockquotes "> foo\n> bar"
-			// 	// const synLen = ast.raw.length - ast.text.length;
-			// 	// decorations.push(Decoration.inline(pos, pos + synLen, { class: "syn" }));
-			// 	// pos += synLen;
-			// 	// ast.tokens?.forEach(walk);
-
-			// 	// FIXME: format recursively using ast.tokens trickery or a better library
-			// 	// console.log({ ast })
-			// 	for (const line of ast.raw.split("\n")) {
-			// 		// console.log({ pos, line })
-			// 		if (line.startsWith(">")) {
-			// 			decorations.push(
-			// 				Decoration.inline(pos + 1, pos + 2, { class: "syn" }),
-			// 			);
-			// 		}
-			// 		pos += line.length + 1;
-			// 		// ast.tokens?.forEach(walk);
-			// 	}
-			// 	return;
-			// }
-			// case "list": {
-			// 	ast.items.forEach(walk);
-			// 	return;
-			// }
-			// case "list_item": {
-			// 	const endLen = ast.raw.match(/\n+$/)?.[0].length ?? 0;
-			// 	const startLen = ast.raw.length - ast.text.length - endLen;
-			// 	decorations.push(
-			// 		Decoration.inline(pos, pos + startLen, { class: "syn" }),
-			// 	);
-			// 	pos += startLen;
-			// 	ast.tokens?.forEach(walk);
-			// 	pos += endLen;
-			// 	return;
-			// }
+			case "blockquote": {
+				const decorations = [];
+				const lines = ast.raw.split("\n");
+				let currentPos = 0;
+				for (const line of lines) {
+					const match = line.match(/^(\s*>+)/);
+					if (match) {
+						decorations.push({
+							attrs: { class: "syn" },
+							start: currentPos,
+							end: currentPos + match[1].length,
+						});
+					}
+					currentPos += line.length + 1;
+				}
+				return decorations;
+			}
+			case "list_item": {
+				const match = ast.raw.match(/^(\s*([-*+]|\d+\.)\s+)/);
+				if (match) {
+					return [{
+						attrs: { class: "syn" },
+						start: 0,
+						end: match[1].length,
+					}];
+				}
+				return [];
+			}
 			default: {
 				return [];
 			}
 		}
 	}
 
-	function getOffset(ty: string) {
-		switch (ty) {
+	function getOffset(ast: Token) {
+		switch (ast.type) {
 			case "strong":
 				return 2;
-			case "spoiler":
+			case "spoiler" as any:
 				return 2;
 			case "em":
 				return 1;
 			case "codespan":
 				return 1;
+			case "list_item": {
+				const match = ast.raw.match(/^(\s*([-*+]|\d+\.)\s+)/);
+				return match ? match[1].length : 0;
+			}
 			default:
 				return 0;
 		}
@@ -297,9 +292,15 @@ export function decorate(state: EditorState, placeholderText?: string) {
 	): { len: number; decorations: Array<A> } {
 		const decorations = [];
 		decorations.push(...extraDecorations(ast));
-		if ("tokens" in ast) {
+		if ("tokens" in ast && ast.type !== "blockquote") {
 			decorations.push(
-				...reduceDecorations(ast.tokens!, getOffset(ast.type))
+				...reduceDecorations(ast.tokens!, getOffset(ast))
+					.decorations,
+			);
+		}
+		if ("items" in ast) {
+			decorations.push(
+				...reduceDecorations((ast as any).items, 0)
 					.decorations,
 			);
 		}
