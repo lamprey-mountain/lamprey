@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::error::SyncError;
 use common::v1::types::{MessagePayload, MessageSync, Session, User};
 use std::future::{ready, Future};
 
@@ -14,7 +15,11 @@ pub trait EventHandler: Send {
         ready(Ok(()))
     }
 
-    fn error(&mut self, err: String) -> impl Future<Output = Result<(), Self::Error>> + Send {
+    fn error(
+        &mut self,
+        err: String,
+        code: Option<SyncError>,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         ready(Ok(()))
     }
 
@@ -42,7 +47,7 @@ where
     async fn handle(&mut self, payload: MessagePayload) {
         let _ = match payload {
             MessagePayload::Sync { data, .. } => self.sync(*data).await,
-            MessagePayload::Error { error } => self.error(error).await,
+            MessagePayload::Error { error, code } => self.error(error, code).await,
             MessagePayload::Ready { user, session, .. } => {
                 self.ready(user.map(|u| *u), session).await
             }

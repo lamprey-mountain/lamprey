@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
+use crate::v1::types::error::SyncError;
+
 use crate::v1::types::{
     application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
@@ -148,7 +150,7 @@ pub enum MessagePayload {
     /// some kind of error
     Error {
         error: String,
-        // TODO(#918): code: SyncError,
+        code: Option<SyncError>,
     },
 
     /// successfully connected

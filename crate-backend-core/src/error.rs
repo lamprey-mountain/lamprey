@@ -266,14 +266,26 @@ impl IntoResponse for Error {
 
 impl From<Error> for Message {
     fn from(val: Error) -> Self {
-        Message::text(
-            serde_json::to_string(&MessageEnvelope {
-                payload: MessagePayload::Error {
-                    error: val.to_string(),
-                },
-            })
-            .expect("error should always be able to be serialized"),
-        )
+        if let Error::SyncError(sync_err) = &val {
+            Message::Close(Some(axum::extract::ws::CloseFrame {
+                code: sync_err.code(),
+                reason: val.to_string().into(),
+            }))
+        } else {
+            let code = match &val {
+                Error::SyncError(sync_err) => Some(sync_err.clone()),
+                _ => None,
+            };
+            Message::text(
+                serde_json::to_string(&MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: val.to_string(),
+                        code,
+                    },
+                })
+                .expect("error should always be able to be serialized"),
+            )
+        }
     }
 }
 

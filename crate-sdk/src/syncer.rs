@@ -76,8 +76,12 @@ impl Syncer {
                                             )?))
                                             .await?;
                                     }
-                                    MessagePayload::Error { error } => {
-                                        error!("{error}");
+                                    MessagePayload::Error { error, code } => {
+                                        if let Some(code) = code {
+                                            error!("sync error [{code:?}]: {error}");
+                                        } else {
+                                            error!("sync error: {error}");
+                                        }
                                     }
                                     MessagePayload::Ready { conn, seq, .. } => {
                                         resume = Some(SyncResume {
@@ -123,8 +127,12 @@ impl Syncer {
                                     )?))
                                     .await?;
                             }
-                            MessagePayload::Error { error } => {
-                                error!("{error}");
+                            MessagePayload::Error { error, code } => {
+                                if let Some(code) = code {
+                                    error!("sync error [{code:?}]: {error}");
+                                } else {
+                                    error!("sync error: {error}");
+                                }
                             }
                             MessagePayload::Ready { conn, seq, .. } => {
                                 resume = Some(SyncResume {

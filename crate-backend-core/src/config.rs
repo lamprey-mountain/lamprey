@@ -212,8 +212,11 @@ fn default_port() -> u16 {
 /// A method to scan media
 #[derive(Debug, Deserialize)]
 pub struct ConfigMediaScanner {
-    /// The url to post media to
+    /// The url to post paths to
     pub scan_url: Url,
+
+    /// The url to GET for health checks
+    pub health_url: Url,
 
     /// The unique name of the media scanner (eg. `nsfw`, `malware`)
     pub key: String,
