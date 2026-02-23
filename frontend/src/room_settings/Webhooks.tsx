@@ -20,6 +20,7 @@ import { createUpload, getTimestampFromUUID, type Webhook } from "sdk";
 import { Dropdown } from "../Dropdown.tsx";
 import { useConfig } from "../config.tsx";
 import { useModals } from "../contexts/modal";
+import fuzzysort from "fuzzysort";
 
 // TODO(#750): group webhooks by channel
 
@@ -65,7 +66,16 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 	});
 
 	const [search, setSearch] = createSignal("");
-	// TODO: use fuzzysort here
+
+	const filteredWebhooks = () => {
+		const query = search();
+		if (!query) return webhooks()!.items;
+		const results = fuzzysort.go(query, webhooks()!.items, {
+			key: "name",
+			threshold: -10000,
+		});
+		return results.map((r) => r.obj);
+	};
 
 	const create = () => {
 		modalCtl.prompt("New webhook name?", async (name) => {
@@ -96,11 +106,7 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 			</header>
 			<Show when={webhooks()}>
 				<ul>
-					<For
-						each={webhooks()!.items.filter((i) =>
-							i.name.toLowerCase().includes(search().toLowerCase())
-						)}
-					>
+					<For each={filteredWebhooks()}>
 						{(i) => {
 							const creator = api.users.fetch(() => i.creator_id);
 							const [name, setName] = createSignal(i.name);

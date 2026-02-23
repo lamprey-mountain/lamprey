@@ -19,6 +19,7 @@ import {
 	getTimestampFromUUID,
 } from "sdk";
 import { useModals } from "../contexts/modal";
+import fuzzysort from "fuzzysort";
 
 export function Automod(props: VoidProps<{ room: Room }>) {
 	const ctx = useCtx();
@@ -61,7 +62,16 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 	});
 
 	const [search, setSearch] = createSignal("");
-	// TODO: use fuzzysort here
+
+	const filteredRules = () => {
+		const query = search();
+		if (!query) return rules()!;
+		const results = fuzzysort.go(query, rules()!, {
+			key: "name",
+			threshold: -10000,
+		});
+		return results.map((r) => r.obj);
+	};
 
 	const create = () => {
 		// TODO: show a automod rule "skeleton" ui, make user enter in name, triggers, actions, etc
@@ -88,11 +98,7 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 			</Show>
 			<Show when={rules()}>
 				<ul>
-					<For
-						each={rules()!.filter((i) =>
-							i.name.toLowerCase().includes(search().toLowerCase())
-						)}
-					>
+					<For each={filteredRules()}>
 						{(i) => {
 							const [name, setName] = createSignal(i.name);
 							const [enabled, setEnabled] = createSignal(i.enabled);

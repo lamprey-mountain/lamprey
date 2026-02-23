@@ -20,6 +20,7 @@ import { Checkbox } from "../icons";
 import { Resizable } from "../Resizable";
 import { getThumbFromId } from "../media/util";
 import { Avatar } from "../User.tsx";
+import fuzzysort from "fuzzysort";
 
 // TODO: in create session and rotate oauth token, make the secret Copyable
 
@@ -217,7 +218,16 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 	};
 
 	const [search, setSearch] = createSignal("");
-	// TODO: use fuzzysort here
+
+	const filteredApps = () => {
+		const query = search();
+		if (!query) return apps;
+		const results = fuzzysort.go(query, apps, {
+			key: "name",
+			threshold: -10000,
+		});
+		return results.map((r) => r.obj);
+	};
 
 	const updateApp = (index: number, field: keyof Application, value: any) => {
 		setApps(index, field, value);
@@ -242,7 +252,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 						</button>
 					</header>
 					<ul class="applications-list">
-						<For each={apps.filter((i) => i.name.includes(search()))}>
+						<For each={filteredApps()}>
 							{(app, index) => {
 								const appWithAvatar = () => ({
 									id: app.id,
