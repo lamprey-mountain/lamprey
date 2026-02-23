@@ -38,6 +38,11 @@
 	caret-color: $fg-400;
 	padding: 2px 4px;
 
+	.editor {
+		border: none;
+		padding: 0;
+	}
+
 	& .placeholder {
 		position: absolute;
 		color: $fg-400;

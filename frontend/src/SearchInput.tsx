@@ -1,12 +1,4 @@
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	onCleanup,
-	onMount,
-	Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useApi } from "./api";
 import { useCtx } from "./context";
 import type { RoomT, ThreadT } from "./types";
@@ -14,7 +6,7 @@ import type { ChannelSearch } from "./context";
 import { User } from "sdk";
 import { UUID } from "uuidv7";
 import { EditorState, Plugin } from "prosemirror-state";
-import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
+import { Decoration, DecorationSet } from "prosemirror-view";
 import { Node, Schema } from "prosemirror-model";
 import { keymap } from "prosemirror-keymap";
 import { history, redo, undo } from "prosemirror-history";
@@ -24,6 +16,7 @@ import { useFloating } from "solid-floating-ui";
 import icSearch from "./assets/search.png";
 import { useChannel } from "./channelctx";
 import { RoomSearch, useRoom } from "./contexts/room";
+import { createEditor as createBaseEditor } from "./editor/mod.tsx";
 
 const schema = new Schema({
 	nodes: {
@@ -509,6 +502,7 @@ const AutocompleteDropdown = (props: {
 								const user = api.users.cache.get(user_id);
 								return (
 									<li
+										class="autocomplete-item"
 										onMouseDown={(e) => {
 											e.preventDefault();
 											onAuthorSelect(user_id);
@@ -527,6 +521,7 @@ const AutocompleteDropdown = (props: {
 						<For each={threadSuggestions()}>
 							{(thread) => (
 								<li
+									class="autocomplete-item"
 									onMouseDown={(e) => {
 										e.preventDefault();
 										onThreadSelect(thread);
@@ -544,6 +539,7 @@ const AutocompleteDropdown = (props: {
 						<For each={hasFilterSuggestions()}>
 							{(value) => (
 								<li
+									class="autocomplete-item"
 									onMouseDown={(e) => {
 										e.preventDefault();
 										onHasSelect(value);
@@ -560,6 +556,7 @@ const AutocompleteDropdown = (props: {
 						<For each={pinnedSuggestions()}>
 							{(value) => (
 								<li
+									class="autocomplete-item"
 									onMouseDown={(e) => {
 										e.preventDefault();
 										onPinnedSelect(value);
@@ -576,6 +573,7 @@ const AutocompleteDropdown = (props: {
 						<For each={mentionsSuggestions()}>
 							{(mentionable) => (
 								<li
+									class="autocomplete-item"
 									onMouseDown={(e) => {
 										e.preventDefault();
 										onMentionsSelect(mentionable);
@@ -593,6 +591,7 @@ const AutocompleteDropdown = (props: {
 						<For each={filterSuggestions()}>
 							{(filter) => (
 								<li
+									class="autocomplete-item"
 									onMouseDown={(e) => {
 										e.preventDefault();
 										props.onSelectFilter(filter);
@@ -612,6 +611,7 @@ const AutocompleteDropdown = (props: {
 							<For each={recentSearches()}>
 								{(search) => (
 									<li
+										class="autocomplete-item"
 										onMouseDown={(e) => {
 											e.preventDefault();
 											props.onSelectFilter(search);
@@ -686,10 +686,7 @@ function autocompletePlugin(
 
 export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 	const api = useApi();
-	const ctx = useCtx();
-	let editorRef: HTMLDivElement | undefined;
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
-	let view: EditorView;
 	const [activeFilter, setActiveFilter] = createSignal<
 		{
 			type: string;
@@ -697,8 +694,10 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		} | null
 	>(null);
 
+	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
+
 	const position = useFloating(
-		() => editorRef,
+		editorRef,
 		dropdownRef,
 		{
 			whileElementsMounted: autoUpdate,
@@ -725,7 +724,8 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 	};
 
 	const handleSubmit = async () => {
-		const queryString = serializeToQuery(view.state);
+		if (!editor.view) return;
+		const queryString = serializeToQuery(editor.view.state);
 		if (!queryString) {
 			updateSearch(undefined);
 			return;
@@ -882,151 +882,142 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 	};
 
 	const insertNode = (node: Node) => {
-		const { from } = view.state.selection;
-		const textBefore = view.state.doc.textBetween(0, from, "\0");
+		if (!editor.view) return;
+		const { from } = editor.view.state.selection;
+		const textBefore = editor.view.state.doc.textBetween(0, from, "\0");
 		const filterMatch = textBefore.match(
 			/\b(author|thread|has|pinned|mentions):(\S*)$/,
 		);
 		if (filterMatch) {
 			const matchText = filterMatch[0];
 			const start = from - matchText.length;
-			const tr = view.state.tr.replaceWith(start, from, node);
-			view.dispatch(tr);
-			view.focus();
+			const tr = editor.view.state.tr.replaceWith(start, from, node);
+			editor.view.dispatch(tr);
+			editor.view.focus();
 		}
 	};
 
 	const insertFilter = (text: string) => {
-		const { from } = view.state.selection;
-		const textBefore = view.state.doc.textBetween(0, from, " ");
+		if (!editor.view) return;
+		const { from } = editor.view.state.selection;
+		const textBefore = editor.view.state.doc.textBetween(0, from, " ");
 		const wordMatch = textBefore.match(/(\S+)$/);
 		const start = wordMatch ? from - wordMatch[0].length : from;
-		const tr = view.state.tr.insertText(text, start, from);
-		view.dispatch(tr);
-		view.focus();
+		const tr = editor.view.state.tr.insertText(text, start, from);
+		editor.view.dispatch(tr);
+		editor.view.focus();
 	};
 
-	onMount(() => {
-		const state = EditorState.create({
-			schema,
-			plugins: [
-				history(),
-				keymap({
-					"Ctrl-z": undo,
-					"Ctrl-Shift-z": redo,
-					Enter: () => {
-						handleSubmit();
-						setActiveFilter(null);
-						return true;
-					},
-					"Escape": () => {
-						const { state } = view;
-						if (state.doc.textContent.length > 0) {
-							const tr = state.tr.delete(0, state.doc.content.size);
-							view.dispatch(tr);
-							handleSubmit();
+	const editor = createBaseEditor({
+		schema,
+		createState: (schema) =>
+			EditorState.create({
+				schema,
+				plugins: [
+					history(),
+					keymap({
+						"Ctrl-z": undo,
+						"Ctrl-Shift-z": redo,
+						"Escape": () => {
+							if (!editor.view) return false;
+							const { state } = editor.view;
+							if (state.doc.textContent.length > 0) {
+								const tr = state.tr.delete(0, state.doc.content.size);
+								editor.view.dispatch(tr);
+								handleSubmit();
+								return true;
+							}
+
+							if (currentSearch()) {
+								updateSearch(undefined);
+							} else {
+								const chatInput = document.querySelector(
+									".chat .ProseMirror",
+								) as HTMLInputElement | null;
+								chatInput?.focus();
+							}
 							return true;
-						}
-
-						if (currentSearch()) {
-							updateSearch(undefined);
-						} else {
-							const chatInput = document.querySelector(
-								".chat .ProseMirror",
-							) as HTMLInputElement | null;
-							chatInput?.focus();
-						}
-						return true;
-					},
-				}),
-				syntaxHighlightingPlugin(),
-				autocompletePlugin((filter) => {
-					if (filter && view && !view.hasFocus()) return;
-					setActiveFilter(filter);
-				}),
-			],
-		});
-
-		view = new EditorView(editorRef!, {
-			state,
-			decorations(state) {
-				if (state.doc.firstChild!.firstChild === null) {
-					const placeholder = (
-						<div class="placeholder" role="presentation">
-							search
-						</div>
-					) as HTMLDivElement;
-					return DecorationSet.create(state.doc, [
-						Decoration.widget(0, placeholder),
-					]);
-				}
-				return DecorationSet.empty;
-			},
-			handleDOMEvents: {
-				focus: (view) => {
-					const { state } = view;
-					const { selection } = state;
-					if (!selection.empty) {
-						return false;
-					}
-
-					const text = state.doc.textContent;
-					const cursorPos = selection.from;
-					const textBeforeCursor = text.slice(0, cursorPos);
-
-					const filterMatch = textBeforeCursor.match(
-						/\b(author|thread|has|pinned|mentions):(\S*)$/,
-					);
-					if (filterMatch) {
-						setActiveFilter({ type: filterMatch[1], query: filterMatch[2] });
-						return false;
-					}
-
-					// Only suggest at the end of a word/input
-					if (text.slice(cursorPos).match(/^\S/)) {
-						return false;
-					}
-
-					const wordMatch = textBeforeCursor.match(/(\S+)$/);
-					if (wordMatch) {
-						const word = wordMatch[1];
-						if (word.includes(":")) {
-							return false;
-						}
-						setActiveFilter({ type: "filter", query: word });
-					} else {
-						// Empty or ends with space
-						setActiveFilter({ type: "filter", query: "" });
-					}
-					return false;
-				},
-				blur: () => {
-					// Use a small delay to allow click events on the dropdown to register
-					setTimeout(() => setActiveFilter(null), 150);
-					return false;
-				},
-			},
-		});
-
-		createEffect(() => {
-			if (!currentSearch()) {
-				const { state } = view;
-				if (state.doc.textContent.length > 0) {
-					const tr = state.tr.delete(0, state.doc.content.size);
-					tr.setMeta("skipAutocomplete", true);
-					view.dispatch(tr);
-				}
+						},
+					}),
+					syntaxHighlightingPlugin(),
+					autocompletePlugin((filter) => {
+						if (filter && editor.view && !editor.view.hasFocus()) return;
+						setActiveFilter(filter);
+					}),
+				],
+			}),
+		handleKeyDown: (view, event) => {
+			if (event.key === "Enter" && !event.shiftKey) {
+				handleSubmit();
+				setActiveFilter(null);
+				return true;
 			}
-		});
+			return false;
+		},
+		handleDOMEvents: {
+			focus: (view) => {
+				const { state } = view;
+				const { selection } = state;
+				if (!selection.empty) {
+					return false;
+				}
 
-		onCleanup(() => {
-			view.destroy();
-		});
+				const text = state.doc.textContent;
+				const cursorPos = selection.from;
+				const textBeforeCursor = text.slice(0, cursorPos);
+
+				const filterMatch = textBeforeCursor.match(
+					/\b(author|thread|has|pinned|mentions):(\S*)$/,
+				);
+				if (filterMatch) {
+					setActiveFilter({ type: filterMatch[1], query: filterMatch[2] });
+					return false;
+				}
+
+				// Only suggest at the end of a word/input
+				if (text.slice(cursorPos).match(/^\S/)) {
+					return false;
+				}
+
+				const wordMatch = textBeforeCursor.match(/(\S+)$/);
+				if (wordMatch) {
+					const word = wordMatch[1];
+					if (word.includes(":")) {
+						return false;
+					}
+					setActiveFilter({ type: "filter", query: word });
+				} else {
+					// Empty or ends with space
+					setActiveFilter({ type: "filter", query: "" });
+				}
+				return false;
+			},
+			blur: () => {
+				// Use a small delay to allow click events on the dropdown to register
+				setTimeout(() => setActiveFilter(null), 150);
+				return false;
+			},
+		},
+	});
+
+	createEffect(() => {
+		if (!currentSearch()) {
+			if (editor.view && editor.view.state.doc.textContent.length > 0) {
+				const tr = editor.view.state.tr.delete(
+					0,
+					editor.view.state.doc.content.size,
+				);
+				tr.setMeta("skipAutocomplete", true);
+				editor.view.dispatch(tr);
+			}
+		}
 	});
 
 	return (
 		<div class="search-container">
-			<div class="search-input" ref={editorRef!}></div>
+			<div class="search-input" ref={setEditorRef}>
+				<editor.View placeholder="search" />
+			</div>
 			<Portal>
 				<Show when={activeFilter()}>
 					<div
@@ -1036,7 +1027,7 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 							position: position.strategy,
 							top: `${position.y ?? 0}px`,
 							left: `${position.x ?? 0}px`,
-							width: `${editorRef?.offsetWidth || 0}px`,
+							width: `${(editorRef()?.offsetWidth || 0)}px`,
 						}}
 					>
 						<AutocompleteDropdown
