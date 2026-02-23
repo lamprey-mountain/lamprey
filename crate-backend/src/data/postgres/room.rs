@@ -441,4 +441,19 @@ impl DataRoom for Postgres {
         tx.commit().await?;
         Ok(version_id)
     }
+
+    async fn user_owns_room_requiring_mfa(&self, user_id: UserId) -> Result<bool> {
+        let result = sqlx::query_scalar!(
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM room
+                WHERE owner_id = $1 AND security_require_mfa = true
+            ) AS "exists!"
+            "#,
+            user_id.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(result)
+    }
 }

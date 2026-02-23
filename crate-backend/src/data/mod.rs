@@ -192,6 +192,7 @@ pub trait DataRoom {
         require_mfa: Option<bool>,
         require_sudo: Option<bool>,
     ) -> Result<RoomVerId>;
+    async fn user_owns_room_requiring_mfa(&self, user_id: UserId) -> Result<bool>;
 }
 
 #[async_trait]

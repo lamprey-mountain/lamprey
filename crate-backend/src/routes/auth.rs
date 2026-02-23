@@ -796,6 +796,12 @@ async fn auth_totp_delete(
         return Ok(StatusCode::NO_CONTENT);
     }
 
+    if s.data().user_owns_room_requiring_mfa(auth.user.id).await? {
+        return Err(Error::BadStatic(
+            "cannot remove MFA while owning a room that requires MFA",
+        ));
+    }
+
     s.data().auth_totp_set(auth.user.id, None, false).await?;
 
     let al = auth.audit_log(auth.user.id.into_inner().into());
