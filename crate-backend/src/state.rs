@@ -15,6 +15,7 @@ use lamprey_backend_core::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
+use tracing::info;
 use url::Url;
 
 use crate::{
