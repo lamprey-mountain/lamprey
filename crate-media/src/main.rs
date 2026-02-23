@@ -37,7 +37,7 @@ struct AppState {
     // NOTE: be careful about allowing emoji/media editing! i'd need to invalidate these caches
     cache_emoji: Cache<EmojiId, MediaId>,
     cache_media: Cache<MediaId, Media>,
-    pending_thumbnails: Cache<(MediaId, u32, u32), Vec<u8>>,
+    pending_thumbnails: Cache<(MediaId, u32, u32, bool), Vec<u8>>,
     pending_gifv: Cache<MediaId, Arc<async_tempfile::TempFile>>,
 }
 

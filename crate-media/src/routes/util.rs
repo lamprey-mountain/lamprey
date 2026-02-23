@@ -50,6 +50,7 @@ pub enum ContentInfo<'a> {
     Thumb {
         media: &'a Media,
         content_length: Option<u64>,
+        animated: bool,
     },
     Gifv {
         media: &'a Media,
@@ -61,7 +62,13 @@ impl<'a> ContentInfo<'a> {
     fn content_type(&self) -> headers::ContentType {
         match self {
             ContentInfo::Media(media) => media.source.mime.to_string().parse().unwrap(),
-            ContentInfo::Thumb { .. } => "image/avif".parse().unwrap(),
+            ContentInfo::Thumb { animated, .. } => {
+                if *animated {
+                    "image/webp".parse().unwrap()
+                } else {
+                    "image/avif".parse().unwrap()
+                }
+            }
             ContentInfo::Gifv { .. } => "video/webm".parse().unwrap(),
         }
     }
@@ -69,7 +76,13 @@ impl<'a> ContentInfo<'a> {
     fn filename(&self) -> String {
         match self {
             ContentInfo::Media(media) => media.filename.clone(),
-            ContentInfo::Thumb { .. } => "thumbnail.avif".to_string(),
+            ContentInfo::Thumb { animated, .. } => {
+                if *animated {
+                    "thumbnail.webp".to_string()
+                } else {
+                    "thumbnail.avif".to_string()
+                }
+            }
             ContentInfo::Gifv { media, .. } => {
                 let mut f = media.filename.clone();
                 if let Some(p) = f.rsplit_once('.') {
@@ -200,8 +213,11 @@ pub fn build_headers<'a>(
 
 pub fn probably_can_thumbnail(media: &Media) -> bool {
     match &media.source.info {
-        MediaTrackInfo::Image(_) | MediaTrackInfo::Thumbnail(_) => true,
-        MediaTrackInfo::Mixed(m) if media.source.mime.starts_with("image/") => {
+        MediaTrackInfo::Image(_) | MediaTrackInfo::Thumbnail(_) | MediaTrackInfo::Video(_) => true,
+        MediaTrackInfo::Mixed(m)
+            if media.source.mime.starts_with("image/")
+                || media.source.mime.starts_with("video/") =>
+        {
             match (m.width, m.height) {
                 (Some(_), Some(_)) => true,
                 _ => false,

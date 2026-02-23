@@ -3,10 +3,10 @@ use axum::{
     extract::{Path, Query, State},
 };
 use common::v1::types::MediaId;
+use futures_util::StreamExt;
 use http::{HeaderMap, StatusCode};
-use image::codecs::avif::AvifEncoder;
 use serde::Deserialize;
-use std::io::Cursor;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{error, span, Instrument, Level};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -20,15 +20,24 @@ use crate::{
     AppState,
 };
 
-#[derive(Deserialize)]
+// TODO: move to common
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub struct ThumbQuery {
     /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
     pub size: Option<u32>,
+    /// whether to allow animated thumbnails
+    #[serde(default = "default_true")]
+    pub animate: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 // TODO: maybe allow generating png, jpeg, or webp thumbnails?
 // NOTE: caniuse says avif has ~93% support
 // NOTE: this may take up some extra space, should i impl thumbnail garbage collection? nah, probably not worth it
+#[async_recursion::async_recursion]
 async fn thumb_response(
     s: AppState,
     media_id: MediaId,
@@ -36,6 +45,7 @@ async fn thumb_response(
     headers: HeaderMap,
     with_body: bool,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    let animate = query.animate;
     if let Some(size) = query.size {
         if !s.config.thumb_sizes.contains(&size) {
             return Err(Error::BadRequest);
@@ -47,6 +57,7 @@ async fn thumb_response(
             &ContentInfo::Thumb {
                 media: &media,
                 content_length: None,
+                animated: animate,
             },
         )?;
 
@@ -58,7 +69,9 @@ async fn thumb_response(
             ));
         }
 
-        let thumb_path = format!("/media/{media_id}/thumb/{size}x{size}.avif");
+        let ext = if animate { "webp" } else { "avif" };
+        let suffix = if animate { "" } else { "_static" };
+        let thumb_path = format!("/media/{media_id}/thumb/{size}x{size}{suffix}.{ext}");
 
         if s.s3.exists(&thumb_path).await? {
             let meta = s.s3.stat(&thumb_path).await?;
@@ -68,6 +81,7 @@ async fn thumb_response(
                 &ContentInfo::Thumb {
                     media: &media,
                     content_length: Some(content_length),
+                    animated: animate,
                 },
             )?;
 
@@ -94,7 +108,7 @@ async fn thumb_response(
         let m = media.clone();
         let thumb_data = s
             .pending_thumbnails
-            .try_get_with((media_id, size, size), async move {
+            .try_get_with((media_id, size, size, animate), async move {
                 let poster_path = format!("/media/{media_id}/poster");
                 let source_path = if s.s3.exists(&poster_path).await? {
                     poster_path
@@ -104,30 +118,33 @@ async fn thumb_response(
                     return Err(Error::NotFound);
                 };
 
-                let image_data =
-                    s.s3.read(&source_path)
-                        .instrument(span!(Level::INFO, "read source media from s3"))
-                        .await?
-                        .to_bytes();
-                let thumb_data = async {
-                    let image = image::load_from_memory(&image_data)?;
-                    let mut out = Cursor::new(Vec::new());
-                    let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
-                    let thumb = image.thumbnail(size, size);
-                    thumb.write_with_encoder(enc)?;
-                    Result::Ok(out.into_inner())
+                let temp_in = async_tempfile::TempFile::new().await?;
+                let temp_out = async_tempfile::TempFile::new().await?;
+
+                let reader = s.s3.reader(&source_path).await?;
+                let mut writer = temp_in.open_rw().await?;
+                let mut bytes_reader = reader.into_bytes_stream(..).await?;
+                while let Some(chunk) = bytes_reader.next().await {
+                    writer.write_all(&chunk?).await?;
                 }
-                .instrument(span!(Level::INFO, "generate thumbnail"))
+                writer.flush().await?;
+
+                crate::ffmpeg::generate_thumbnail(
+                    temp_in.file_path(),
+                    temp_out.file_path(),
+                    size,
+                    animate,
+                )
                 .await?;
+
+                let mut out_reader = temp_out.open_ro().await?;
+                let mut thumb_data = Vec::new();
+                out_reader.read_to_end(&mut thumb_data).await?;
 
                 let s_clone = s.s3.clone();
                 let data_clone = thumb_data.clone();
                 tokio::spawn(async move {
-                    if let Err(err) = s_clone
-                        .write(&thumb_path, data_clone)
-                        .instrument(span!(Level::INFO, "upload thumbnail to s3"))
-                        .await
-                    {
+                    if let Err(err) = s_clone.write(&thumb_path, data_clone).await {
                         error!("error while uploading thumb: {err}")
                     }
                 });
@@ -140,6 +157,7 @@ async fn thumb_response(
             &ContentInfo::Thumb {
                 media: &media,
                 content_length: Some(thumb_data.len() as u64),
+                animated: animate,
             },
         )?;
 
@@ -174,6 +192,26 @@ async fn thumb_response(
         Ok((status, final_headers.headers, body))
     } else {
         let media = s.lookup_media(media_id).await?;
+
+        let is_animated = media.source.mime.as_str() == "image/gif"
+            || media.source.mime.as_str().starts_with("video/");
+
+        if !animate && is_animated {
+            // Force static thumbnail if animate=false is requested for an animated source
+            let size = s.config.thumb_sizes.first().copied().unwrap_or(128);
+            return thumb_response(
+                s,
+                media_id,
+                ThumbQuery {
+                    size: Some(size),
+                    animate: false,
+                },
+                headers,
+                with_body,
+            )
+            .await;
+        }
+
         let poster_path = format!("/media/{media_id}/poster");
 
         if s.s3.exists(&poster_path).await? {
@@ -184,6 +222,7 @@ async fn thumb_response(
                 &ContentInfo::Thumb {
                     media: &media,
                     content_length: Some(content_length),
+                    animated: false,
                 },
             )?;
 
@@ -207,7 +246,7 @@ async fn thumb_response(
             return Ok((status, final_headers.headers, body));
         }
 
-        if media.source.mime.starts_with("image/") {
+        if media.source.mime.as_str().starts_with("image/") {
             if with_body {
                 return get_media(State(s.clone()), Path(media_id), headers).await;
             } else {
