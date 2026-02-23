@@ -174,7 +174,7 @@
                 name = "scanner-malware-config";
                 destination = "/scanner-malware.toml";
                 text = ''
-                  clamav_path = "${pkgs.clamav}/bin/clamscan"
+                  clamav_path = "${pkgs.clamav}/bin/clamd"
                   listen = { address = "0.0.0.0", port = 8000 }
                 '';
               })
