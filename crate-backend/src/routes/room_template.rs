@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::room_template::{
     RoomTemplate, RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch,
 };
@@ -25,7 +26,7 @@ use super::util::Auth;
 #[utoipa::path(
     post,
     path = "/room-template",
-    tags = ["room_template"],
+    tags = ["room_template", "badge.scope.full"],
     request_body = RoomTemplateCreate,
     responses(
         (status = 201, description = "Template created", body = RoomTemplate),
@@ -36,6 +37,7 @@ async fn room_template_create(
     State(_s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplateCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     json.validate()?;
 
@@ -48,7 +50,7 @@ async fn room_template_create(
 #[utoipa::path(
     get,
     path = "/room-template",
-    tags = ["room_template"],
+    tags = ["room_template", "badge.scope.full"],
     params(PaginationQuery<RoomTemplateCode>),
     responses(
         (status = 200, description = "Paginate templates", body = PaginationResponse<RoomTemplate>),
@@ -59,6 +61,7 @@ async fn room_template_list(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)
@@ -68,7 +71,7 @@ async fn room_template_list(
 #[utoipa::path(
     get,
     path = "/room-template/{code}",
-    tags = ["room_template"],
+    tags = ["room_template", "badge.scope.full"],
     params(("code" = RoomTemplateCode, Path, description = "Template code")),
     responses(
         (status = 200, description = "Get template success", body = RoomTemplate),
@@ -79,6 +82,7 @@ async fn room_template_get(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)
@@ -88,7 +92,7 @@ async fn room_template_get(
 #[utoipa::path(
     patch,
     path = "/room-template/{code}",
-    tags = ["room_template"],
+    tags = ["room_template", "badge.scope.full"],
     params(("code" = RoomTemplateCode, Path, description = "Template code")),
     request_body = RoomTemplatePatch,
     responses(
@@ -101,6 +105,7 @@ async fn room_template_edit(
     State(_s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplatePatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     json.validate()?;
 
@@ -111,7 +116,7 @@ async fn room_template_edit(
 #[utoipa::path(
     delete,
     path = "/room-template/{code}",
-    tags = ["room_template"],
+    tags = ["room_template", "badge.scope.full"],
     params(("code" = RoomTemplateCode, Path, description = "Template code")),
     responses(
         (status = 204, description = "Delete template success"),
@@ -122,6 +127,7 @@ async fn room_template_delete(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)
@@ -131,7 +137,7 @@ async fn room_template_delete(
 #[utoipa::path(
     post,
     path = "/room-template/{code}/sync",
-    tags = ["room_template"],
+    tags = ["room_template", "badge.scope.full"],
     params(("code" = RoomTemplateCode, Path, description = "Template code")),
     responses(
         (status = 200, description = "Sync template success", body = RoomTemplate),
@@ -142,6 +148,7 @@ async fn room_template_sync(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
 }

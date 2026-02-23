@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::{
     room_analytics::{
         RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
@@ -26,7 +27,7 @@ use super::util::Auth;
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/members-count",
-    tags = ["room_analytics"],
+    tags = ["room_analytics", "badge.scope.full"],
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersCount>)),
 )]
 async fn room_analytics_members_count(
@@ -35,6 +36,7 @@ async fn room_analytics_members_count(
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -51,7 +53,7 @@ async fn room_analytics_members_count(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/members-join",
-    tags = ["room_analytics"],
+    tags = ["room_analytics", "badge.scope.full"],
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersJoin>)),
 )]
 async fn room_analytics_members_join(
@@ -60,6 +62,7 @@ async fn room_analytics_members_join(
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
@@ -71,7 +74,7 @@ async fn room_analytics_members_join(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/members-leave",
-    tags = ["room_analytics"],
+    tags = ["room_analytics", "badge.scope.full"],
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersLeave>)),
 )]
 async fn room_analytics_members_leave(
@@ -80,6 +83,7 @@ async fn room_analytics_members_leave(
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
@@ -91,7 +95,7 @@ async fn room_analytics_members_leave(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/channels",
-    tags = ["room_analytics"],
+    tags = ["room_analytics", "badge.scope.full"],
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsChannel>)),
 )]
 async fn room_analytics_channels(
@@ -101,6 +105,7 @@ async fn room_analytics_channels(
     Query(q2): Query<RoomAnalyticsChannelParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
@@ -114,7 +119,7 @@ async fn room_analytics_channels(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/overview",
-    tags = ["room_analytics"],
+    tags = ["room_analytics", "badge.scope.full"],
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsOverview>)),
 )]
 async fn room_analytics_overview(
@@ -123,6 +128,7 @@ async fn room_analytics_overview(
     Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAnalytics)?;
@@ -134,7 +140,7 @@ async fn room_analytics_overview(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/analytics/invites",
-    tags = ["room_analytics"],
+    tags = ["room_analytics", "badge.scope.full"],
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsInvites>)),
 )]
 async fn room_analytics_invites(
@@ -143,6 +149,7 @@ async fn room_analytics_invites(
     Query(_q): Query<RoomAnalyticsParams>,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     Ok(Error::Unimplemented)

@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::{
     misc::UserIdReq,
     util::{Changes, Time},
@@ -30,7 +31,7 @@ use crate::{Error, ServerState};
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = OK, body = VoiceState, description = "ok"),
     )
@@ -40,6 +41,7 @@ async fn voice_state_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -63,7 +65,7 @@ async fn voice_state_get(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm-opt.VoiceMute", "badge.perm-opt.VoiceDeafen", "badge.perm-opt.VoiceRequest", "badge.perm-opt.VoiceMove", "badge.audit-log.MemberMove", "badge.audit-log.MemberUpdate"],
+    tags = ["voice", "badge.scope.full", "badge.perm-opt.VoiceMute", "badge.perm-opt.VoiceDeafen", "badge.perm-opt.VoiceRequest", "badge.perm-opt.VoiceMove", "badge.audit-log.MemberMove", "badge.audit-log.MemberUpdate"],
     responses(
         (status = OK, body = VoiceState, description = "ok"),
     )
@@ -74,6 +76,7 @@ async fn voice_state_patch(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<VoiceStatePatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -244,7 +247,7 @@ async fn voice_state_patch(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm.VoiceDisconnect", "badge.audit-log.MemberDisconnect"],
+    tags = ["voice", "badge.scope.full", "badge.perm.VoiceDisconnect", "badge.audit-log.MemberDisconnect"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -254,6 +257,7 @@ async fn voice_state_disconnect(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let target_user_id = match target_user_id {
@@ -297,7 +301,7 @@ async fn voice_state_disconnect(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm.VoiceDisconnect", "badge.audit-log.MemberDisconnectAll"],
+    tags = ["voice", "badge.scope.full", "badge.perm.VoiceDisconnect", "badge.audit-log.MemberDisconnectAll"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -307,6 +311,7 @@ async fn voice_state_disconnect_all(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -331,7 +336,7 @@ async fn voice_state_disconnect_all(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice", "badge.perm.VoiceMove", "badge.audit-log.MemberMove"],
+    tags = ["voice", "badge.scope.full", "badge.perm.VoiceMove", "badge.audit-log.MemberMove"],
     responses(
         (status = OK, body = (), description = "ok"),
     )
@@ -342,6 +347,7 @@ async fn voice_state_move(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<VoiceStateMove>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let target_user_id = match target_user_id {
@@ -402,7 +408,7 @@ async fn voice_state_move(
     post,
     path = "/voice/{channel_id}/move",
     params(("channel_id", description = "Channel id")),
-    tags = ["voice", "badge.perm.VoiceMove"],
+    tags = ["voice", "badge.scope.full", "badge.perm.VoiceMove"],
     responses(
         (status = OK, body = (), description = "ok"),
     )
@@ -413,6 +419,7 @@ async fn voice_state_move_bulk(
     State(s): State<Arc<ServerState>>,
     Json(_json): Json<VoiceStateMoveBulk>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -431,7 +438,7 @@ async fn voice_state_move_bulk(
         ("channel_id", description = "Channel id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses((status = OK, description = "ok"))
 )]
 async fn voice_state_list(
@@ -439,6 +446,7 @@ async fn voice_state_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -463,7 +471,7 @@ async fn voice_state_list(
 #[utoipa::path(
     post,
     path = "/voice",
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -473,6 +481,7 @@ async fn voice_call_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CallCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s
         .services()
@@ -495,7 +504,7 @@ async fn voice_call_create(
     delete,
     path = "/voice/{channel_id}",
     params(("channel_id", description = "Channel id")),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -506,6 +515,7 @@ async fn voice_call_delete(
     State(s): State<Arc<ServerState>>,
     Query(params): Query<CallDeleteParams>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s
         .services()
@@ -534,7 +544,7 @@ async fn voice_call_delete(
     get,
     path = "/voice/{channel_id}",
     params(("channel_id", description = "Channel id")),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = OK, body = (), description = "ok"),
     )
@@ -544,6 +554,7 @@ async fn voice_call_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s
         .services()
@@ -561,7 +572,7 @@ async fn voice_call_get(
     patch,
     path = "/voice/{channel_id}",
     params(("channel_id", description = "Channel id")),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = OK, body = (), description = "ok"),
     )
@@ -572,6 +583,7 @@ async fn voice_call_update(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CallPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s
         .services()
@@ -588,7 +600,7 @@ async fn voice_call_update(
     get,
     path = "/voice/{channel_id}/ring",
     params(("channel_id", description = "Channel id")),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = OK, body = RingEligibility, description = "ok"),
     )
@@ -598,6 +610,7 @@ async fn voice_ring_check(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s
         .services()
@@ -619,7 +632,7 @@ async fn voice_ring_check(
     post,
     path = "/voice/{channel_id}/ring",
     params(("channel_id", description = "Channel id")),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -630,6 +643,7 @@ async fn voice_ring_start(
     State(_s): State<Arc<ServerState>>,
     _json: Json<RingStart>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
 }
@@ -639,7 +653,7 @@ async fn voice_ring_start(
     post,
     path = "/voice/{channel_id}/ring/ack",
     params(("channel_id", description = "Channel id")),
-    tags = ["voice"],
+    tags = ["voice", "badge.scope.full"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -650,6 +664,7 @@ async fn voice_ring_stop(
     State(_s): State<Arc<ServerState>>,
     _json: Json<RingStop>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     Ok(Error::Unimplemented)
 }

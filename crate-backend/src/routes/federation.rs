@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::{
     federation::{ServerKeys, ServerUserCreate, ServerUserCreateRequest},
     misc::ServerReq,
@@ -23,7 +24,7 @@ use crate::{Error, ServerState};
     post,
     path = "/server/{hostname}",
     params(("hostname", description = "Server hostname")),
-    tags = ["federation"],
+    tags = ["federation", "badge.scope.full"],
     responses(
         (status = OK, body = ServerKeys, description = "ok"),
     )
@@ -33,6 +34,7 @@ async fn server_keys_get(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let _hostname = match hostname {
@@ -51,7 +53,7 @@ async fn server_keys_get(
     post,
     path = "/server/{hostname}/user",
     params(("hostname", description = "Server hostname")),
-    tags = ["federation"],
+    tags = ["federation", "badge.scope.full"],
     responses(
         (status = OK, body = ServerUserCreate, description = "ok"),
     )
@@ -62,6 +64,7 @@ async fn server_user_ensure(
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<ServerUserCreateRequest>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let _hostname: String = match hostname {
@@ -83,7 +86,7 @@ async fn server_user_ensure(
     post,
     path = "/server/{hostname}/sync",
     params(("hostname", description = "Server hostname")),
-    tags = ["federation"],
+    tags = ["federation", "badge.scope.full"],
     responses((status = ACCEPTED, description = "ok")),
 )]
 async fn server_sync_handle(
@@ -92,6 +95,7 @@ async fn server_sync_handle(
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<ServerUserCreateRequest>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let _hostname: String = match hostname {

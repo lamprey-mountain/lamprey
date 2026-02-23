@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::automod::AutomodAction;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
@@ -39,7 +40,7 @@ pub struct RoomBanSearchQuery {
         PaginationQuery<UserId>,
         ("room_id" = RoomId, description = "Room id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
@@ -50,6 +51,7 @@ async fn room_member_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
 
@@ -70,7 +72,7 @@ async fn room_member_list(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.scope.full"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -80,6 +82,7 @@ async fn room_member_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
@@ -105,6 +108,7 @@ async fn room_member_get(
     ),
     tags = [
         "room_member",
+        "badge.scope.full",
         "badge.perm.MemberBridge",
         "badge.perm-opt.VoiceMute",
         "badge.perm-opt.VoiceDeafen",
@@ -123,6 +127,7 @@ async fn room_member_add(
     State(s): State<Arc<ServerState>>,
     Json(mut json): Json<RoomMemberPut>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let al = auth.audit_log(room_id);
     let srv = s.services();
@@ -492,6 +497,7 @@ async fn room_member_add(
     ),
     tags = [
         "room_member",
+        "badge.scope.full",
         "badge.perm-opt.VoiceMute",
         "badge.perm-opt.VoiceDeafen",
         "badge.perm-opt.MemberManage",
@@ -510,6 +516,7 @@ async fn room_member_update(
     State(s): State<Arc<ServerState>>,
     Json(mut json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let al = auth.audit_log(room_id);
     json.validate()?;
@@ -682,7 +689,7 @@ struct LeaveQuery {
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm-opt.MemberKick", "badge.room-mfa-opt", "badge.audit-log.MemberKick"],
+    tags = ["room_member", "badge.scope.full", "badge.perm-opt.MemberKick", "badge.room-mfa-opt", "badge.audit-log.MemberKick"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -693,6 +700,7 @@ async fn room_member_delete(
     Query(_q): Query<LeaveQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -766,7 +774,7 @@ async fn room_member_delete(
         RoomMemberSearch,
         ("room_id" = RoomId, description = "Room id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.scope.full"],
     responses(
         (status = OK, body = RoomMemberSearchResponse, description = "success"),
     )
@@ -777,6 +785,7 @@ async fn room_member_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
 
@@ -804,7 +813,7 @@ async fn room_member_search(
     post,
     path = "/room/{room_id}/member/search",
     request_body = RoomMemberSearchAdvanced,
-    tags = ["room_member"],
+    tags = ["room_member", "badge.scope.full"],
     responses(
         (status = OK, body = RoomMemberSearchResponse, description = "success"),
     )
@@ -815,6 +824,7 @@ async fn room_member_search_advanced(
     State(s): State<Arc<ServerState>>,
     Json(search): Json<RoomMemberSearchAdvanced>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     search.validate()?;
     let d = s.data();
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
@@ -836,7 +846,7 @@ async fn room_member_search_advanced(
     post,
     path = "/room/{room_id}/prune",
     request_body = PruneBegin,
-    tags = ["room_member", "badge.perm.MemberKick", "badge.perm.RoomManage", "badge.room-mfa"],
+    tags = ["room_member", "badge.scope.full", "badge.perm.MemberKick", "badge.perm.RoomManage", "badge.room-mfa"],
     responses(
         (status = OK, body = PruneResponse, description = "success"),
         (status = ACCEPTED, description = "prune started"),
@@ -848,6 +858,7 @@ async fn room_member_prune(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PruneBegin>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     json.validate()?;
     let srv = s.services();
@@ -877,7 +888,7 @@ async fn room_member_prune(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa"],
+    tags = ["room_member", "badge.scope.full", "badge.perm.MemberBan", "badge.room-mfa"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -889,6 +900,7 @@ async fn room_ban_create(
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -963,7 +975,7 @@ async fn room_ban_create(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/ban",
-    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa", "badge.audit-log.MemberBan"],
+    tags = ["room_member", "badge.scope.full", "badge.perm.MemberBan", "badge.room-mfa", "badge.audit-log.MemberBan"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn room_ban_create_bulk(
@@ -973,6 +985,7 @@ async fn room_ban_create_bulk(
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanBulkCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     create.validate()?;
     let srv = s.services();
@@ -1051,7 +1064,7 @@ async fn room_ban_create_bulk(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan", "badge.room-mfa", "badge.audit-log.MemberUnban"],
+    tags = ["room_member", "badge.scope.full", "badge.perm.MemberBan", "badge.room-mfa", "badge.audit-log.MemberUnban"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -1061,6 +1074,7 @@ async fn room_ban_remove(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -1113,7 +1127,7 @@ async fn room_ban_remove(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan"],
+    tags = ["room_member", "badge.scope.full", "badge.perm.MemberBan"],
     responses(
         (status = OK, body = RoomBan, description = "success"),
     )
@@ -1123,6 +1137,7 @@ async fn room_ban_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
@@ -1142,7 +1157,7 @@ async fn room_ban_get(
         PaginationQuery<UserId>,
         ("room_id" = RoomId, description = "Room id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan"],
+    tags = ["room_member", "badge.scope.full", "badge.perm.MemberBan"],
     responses(
         (status = OK, body = PaginationResponse<RoomBan>, description = "success"),
     )
@@ -1153,6 +1168,7 @@ async fn room_ban_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
@@ -1176,7 +1192,7 @@ async fn room_ban_list(
         PaginationQuery<UserId>,
         ("room_id" = RoomId, description = "Room id"),
     ),
-    tags = ["room_member", "badge.perm.MemberBan"],
+    tags = ["room_member", "badge.scope.full", "badge.perm.MemberBan"],
     responses(
         (status = OK, body = PaginationResponse<RoomBan>, description = "success"),
     )
@@ -1188,6 +1204,7 @@ async fn room_ban_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;

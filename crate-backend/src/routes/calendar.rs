@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     calendar::{
@@ -34,15 +35,16 @@ use common::v1::types::{util::Changes, AuditLogEntryType};
 #[utoipa::path(
     get,
     path = "/calendar/event",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(CalendarEventListQuery),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_event_list_user(
     Query(_query): Query<CalendarEventListQuery>,
-    _auth: Auth,
+    auth: Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     Ok(Error::Unimplemented)
 }
 
@@ -50,7 +52,7 @@ async fn calendar_event_list_user(
 #[utoipa::path(
     get,
     path = "/calendar/{channel_id}/event",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(("channel_id" = ChannelId, description = "Channel id")),
     responses((status = OK, description = "ok"))
 )]
@@ -60,6 +62,7 @@ async fn calendar_event_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     query.validate()?;
 
     let srv = s.services();
@@ -80,7 +83,7 @@ async fn calendar_event_list(
 #[utoipa::path(
     post,
     path = "/calendar/{channel_id}/event",
-    tags = ["calendar", "badge.audit-log.CalendarEventCreate"],
+    tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarEventCreate"],
     params(("channel_id" = ChannelId, description = "Channel id")),
     request_body = CalendarEventCreate,
     responses((status = CREATED, body = CalendarEvent, description = "Create calendar event success"))
@@ -91,6 +94,7 @@ async fn calendar_event_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarEventCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -142,7 +146,7 @@ async fn calendar_event_create(
 #[utoipa::path(
     get,
     path = "/calendar/{channel_id}/event/{event_id}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id")
@@ -154,6 +158,7 @@ async fn calendar_event_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -178,7 +183,7 @@ async fn calendar_event_get(
 #[utoipa::path(
     patch,
     path = "/calendar/{channel_id}/event/{event_id}",
-    tags = ["calendar", "badge.audit-log.CalendarEventUpdate"],
+    tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarEventUpdate"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id")
@@ -192,6 +197,7 @@ async fn calendar_event_update(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarEventPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -259,7 +265,7 @@ async fn calendar_event_update(
 #[utoipa::path(
     delete,
     path = "/calendar/{channel_id}/event/{event_id}",
-    tags = ["calendar", "badge.audit-log.CalendarEventDelete"],
+    tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarEventDelete"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id")
@@ -271,6 +277,7 @@ async fn calendar_event_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -331,7 +338,7 @@ async fn calendar_event_delete(
 #[utoipa::path(
     get,
     path = "/calendar/{channel_id}/event/{event_id}/overwrite",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id")
@@ -343,6 +350,7 @@ async fn calendar_overwrite_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -366,7 +374,7 @@ async fn calendar_overwrite_list(
 #[utoipa::path(
     get,
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -379,6 +387,7 @@ async fn calendar_overwrite_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -402,7 +411,7 @@ async fn calendar_overwrite_get(
 #[utoipa::path(
     patch,
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
-    tags = ["calendar", "badge.audit-log.CalendarOverwriteUpdate", "badge.audit-log.CalendarOverwriteCreate"],
+    tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarOverwriteUpdate", "badge.audit-log.CalendarOverwriteCreate"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -417,6 +426,7 @@ async fn calendar_overwrite_update(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarOverwritePut>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -500,7 +510,7 @@ async fn calendar_overwrite_update(
 #[utoipa::path(
     delete,
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
-    tags = ["calendar", "badge.audit-log.CalendarOverwriteDelete"],
+    tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarOverwriteDelete"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -513,6 +523,7 @@ async fn calendar_overwrite_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -572,7 +583,7 @@ use std::collections::HashMap;
 #[utoipa::path(
     get,
     path = "/calendar/{channel_id}/event/{event_id}/rsvp",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -586,6 +597,7 @@ async fn calendar_event_rsvp_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -636,7 +648,7 @@ async fn calendar_event_rsvp_list(
 #[utoipa::path(
     get,
     path = "/calendar/{channel_id}/event/{event_id}/rsvp/{user_id}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -649,6 +661,7 @@ async fn calendar_event_rsvp_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let user_id = match user_id_req {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
@@ -678,7 +691,7 @@ async fn calendar_event_rsvp_get(
 #[utoipa::path(
     put,
     path = "/calendar/{channel_id}/event/{event_id}/rsvp/{user_id}",
-    tags = ["calendar"],
+    tags = ["calendar", "badge.scope.full"],
     params(
         ("channel_id" = ChannelId, description = "Channel id"),
         ("event_id" = CalendarEventId, description = "Calendar event id"),
@@ -693,6 +706,7 @@ async fn calendar_event_rsvp_put(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<CalendarEventParticipantPut>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let user_id = match user_id_req {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,

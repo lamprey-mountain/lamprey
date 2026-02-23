@@ -4,6 +4,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::ack::AckBulk;
+use common::v1::types::application::Scope;
 use common::v1::types::{MessageSync, Permission};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -17,7 +18,7 @@ use crate::error::Result;
 #[utoipa::path(
     post,
     path = "/ack",
-    tags = ["ack"],
+    tags = ["ack", "badge.scope.full"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -27,6 +28,7 @@ async fn ack_bulk(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckBulk>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
 
     let data = s.data();

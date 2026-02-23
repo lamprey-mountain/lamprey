@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::util::Diff;
 use common::v1::types::{
@@ -27,6 +28,7 @@ use crate::ServerState;
     path = "/room/{room_id}/emoji",
     tags = [
         "emoji",
+        "badge.scope.full",
         "badge.perm.EmojiAdd",
         "badge.audit-log.EmojiCreate",
     ],
@@ -44,6 +46,7 @@ async fn emoji_create(
     Json(json): Json<EmojiCustomCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::EmojiManage)?;
@@ -95,16 +98,17 @@ async fn emoji_create(
         ("room_id", description = "Room id"),
         ("emoji_id", description = "Emoji id"),
     ),
-    tags = ["emoji"],
+    tags = ["emoji", "badge.scope.full"],
     responses(
         (status = OK,  body = EmojiCustom, description = "success"),
     )
 )]
 async fn emoji_get(
     Path((_room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    _auth: Auth,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let emoji = data.emoji_get(emoji_id).await?;
     Ok(Json(emoji))
@@ -122,6 +126,7 @@ async fn emoji_get(
     ),
     tags = [
         "emoji",
+        "badge.scope.full",
         "badge.perm.EmojiAdd",
         "badge.audit-log.EmojiDelete",
     ],
@@ -135,6 +140,7 @@ async fn emoji_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
     let emoji = data.emoji_get(emoji_id).await?;
@@ -177,7 +183,7 @@ async fn emoji_delete(
         ("room_id", description = "Room id"),
         ("emoji_id", description = "Emoji id"),
     ),
-    tags = ["emoji", "badge.audit-log.EmojiUpdate"],
+    tags = ["emoji", "badge.scope.full", "badge.audit-log.EmojiUpdate"],
     responses(
         (status = NOT_MODIFIED, description = "not modified"),
         (status = OK, body = EmojiCustom, description = "success"),
@@ -190,6 +196,7 @@ async fn emoji_update(
     Json(patch): Json<EmojiCustomPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let data = s.data();
@@ -235,7 +242,7 @@ async fn emoji_update(
         PaginationQuery<EmojiId>,
         ("room_id", description = "Room id"),
     ),
-    tags = ["emoji"],
+    tags = ["emoji", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
     )
@@ -246,6 +253,7 @@ async fn emoji_list(
     Query(q): Query<PaginationQuery<EmojiId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -261,7 +269,7 @@ async fn emoji_list(
     get,
     path = "/emoji/{emoji_id}",
     params(("emoji_id", description = "Emoji id")),
-    tags = ["emoji"],
+    tags = ["emoji", "badge.scope.full"],
     responses(
         (status = OK, body = EmojiCustom, description = "success"),
     )
@@ -271,6 +279,7 @@ async fn emoji_lookup(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let mut emoji = data.emoji_get(emoji_id).await?;
 
@@ -312,7 +321,7 @@ pub struct EmojiSearchQuery {
     get,
     path = "/emoji/search",
     params(EmojiSearchQuery, PaginationQuery<EmojiId>),
-    tags = ["emoji"],
+    tags = ["emoji", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
     )
@@ -323,6 +332,7 @@ async fn emoji_search(
     Query(pagination): Query<PaginationQuery<EmojiId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let emojis = data.emoji_search(auth.user.id, q.query, pagination).await?;
     Ok(Json(emojis))

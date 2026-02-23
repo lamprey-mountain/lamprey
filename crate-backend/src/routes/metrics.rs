@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse};
+use common::v1::types::application::Scope;
 use prometheus::{Encoder, TextEncoder};
 
 use crate::{
@@ -20,6 +21,7 @@ pub async fn get_metrics(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let perms = s
         .services()
         .perms

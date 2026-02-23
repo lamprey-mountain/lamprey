@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     tag::{Tag, TagCreate, TagDeleteQuery, TagListQuery, TagPatch, TagSearchQuery},
@@ -23,7 +24,7 @@ use crate::{error::Result, routes::util::Auth, Error, ServerState};
     post,
     path = "/channel/{channel_id}/tag",
     params(("channel_id", description = "The ID of the forum channel to create the tag in.")),
-    tags = ["tag", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
+    tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = CREATED, body = Tag, description = "Create tag success"),
     )
@@ -34,6 +35,7 @@ async fn tag_create(
     auth: Auth,
     Json(create): Json<TagCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     create.validate()?;
     let srv = s.services();
@@ -80,7 +82,7 @@ async fn tag_create(
         ("channel_id", description = "The ID of the forum channel the tag belongs to."),
         ("tag_id", description = "The ID of the tag to update.")
     ),
-    tags = ["tag", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
+    tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = OK, body = Tag, description = "Update tag success"),
     )
@@ -91,6 +93,7 @@ async fn tag_update(
     auth: Auth,
     Json(patch): Json<TagPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     patch.validate()?;
     let srv = s.services();
@@ -143,7 +146,7 @@ async fn tag_update(
         ("channel_id", description = "The ID of the forum channel the tag belongs to."),
         ("tag_id", description = "The ID of the tag to delete.")
     ),
-    tags = ["tag", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
+    tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = NO_CONTENT, description = "Delete tag success"),
     )
@@ -154,6 +157,7 @@ async fn tag_delete(
     State(s): State<Arc<ServerState>>,
     auth: Auth,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -209,7 +213,7 @@ async fn tag_delete(
         TagSearchQuery,
         PaginationQuery<TagId>,
     ),
-    tags = ["tag"],
+    tags = ["tag", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Tag>, description = "success"),
     )
@@ -221,6 +225,7 @@ async fn tag_search(
     Query(pagination): Query<PaginationQuery<TagId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -249,7 +254,7 @@ async fn tag_search(
         TagListQuery,
         PaginationQuery<TagId>,
     ),
-    tags = ["tag"],
+    tags = ["tag", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Tag>, description = "success"),
     )
@@ -261,6 +266,7 @@ async fn tag_list(
     Query(pagination): Query<PaginationQuery<TagId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;

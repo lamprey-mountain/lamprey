@@ -7,6 +7,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     document::serialized::Serdoc,
@@ -44,7 +45,7 @@ use crate::{Error, ServerState};
         ("channel_id", description = "Channel id"),
         HistoryParams
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = HistoryPagination),
     )
@@ -55,6 +56,7 @@ async fn wiki_history(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -93,7 +95,7 @@ async fn wiki_history(
         DocumentBranchListParams,
         PaginationQuery<DocumentBranchId>
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = PaginationResponse<DocumentBranch>),
     )
@@ -105,6 +107,7 @@ async fn document_branch_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -126,7 +129,7 @@ async fn document_branch_list(
         ("channel_id", description = "Channel id"),
         ("branch_id", description = "Branch id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = DocumentBranch),
     )
@@ -136,6 +139,7 @@ async fn document_branch_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -161,7 +165,7 @@ async fn document_branch_get(
         ("channel_id", description = "Channel id"),
         ("branch_id", description = "Branch id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = DocumentBranch),
     )
@@ -172,6 +176,7 @@ async fn document_branch_update(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<DocumentBranchPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -211,7 +216,7 @@ async fn document_branch_update(
         ("channel_id", description = "Channel id"),
         ("branch_id", description = "Branch id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = DocumentBranch),
     )
@@ -221,6 +226,7 @@ async fn document_branch_close(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -262,7 +268,7 @@ async fn document_branch_close(
     post,
     path = "/document/{channel_id}/branch/{parent_id}/fork",
     params(("channel_id", description = "Channel id"), ("parent_id", description = "Parent branch id")),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -273,6 +279,7 @@ async fn document_branch_fork(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<DocumentBranchCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -318,7 +325,7 @@ async fn document_branch_fork(
         ("channel_id", description = "Channel id"),
         ("branch_id", description = "Branch id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -329,6 +336,7 @@ async fn document_branch_merge(
     State(s): State<Arc<ServerState>>,
     _json: Json<DocumentBranchMerge>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -400,7 +408,7 @@ async fn document_branch_merge(
     post,
     path = "/document/{channel_id}/tag",
     params(("channel_id", description = "Channel id")),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -411,6 +419,7 @@ async fn document_tag_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<DocumentTagCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let user_id = auth.user.id;
@@ -463,7 +472,7 @@ async fn document_tag_create(
     get,
     path = "/document/{channel_id}/tag",
     params(("channel_id", description = "Channel id")),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -473,6 +482,7 @@ async fn document_tag_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let user_id = auth.user.id;
     let data = s.data();
     let srv = s.services();
@@ -494,7 +504,7 @@ async fn document_tag_list(
         ("channel_id", description = "Channel id"),
         ("tag_id", description = "Tag id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -504,6 +514,7 @@ async fn document_tag_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let user_id = auth.user.id;
     let srv = s.services();
 
@@ -531,7 +542,7 @@ async fn document_tag_get(
         ("channel_id", description = "Channel id"),
         ("tag_id", description = "Tag id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -542,6 +553,7 @@ async fn document_tag_update(
     State(s): State<Arc<ServerState>>,
     json: Json<DocumentTagPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let user_id = auth.user.id;
@@ -590,7 +602,7 @@ async fn document_tag_update(
         ("channel_id", description = "Channel id"),
         ("tag_id", description = "Tag id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -600,6 +612,7 @@ async fn document_tag_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let user_id = auth.user.id;
@@ -646,7 +659,7 @@ async fn document_tag_delete(
         ("branch_id", description = "Branch id"),
         HistoryParams
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = HistoryPagination),
     )
@@ -657,6 +670,7 @@ async fn document_history(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -707,7 +721,7 @@ async fn document_history(
         ("branch_id", description = "Branch id"),
         DocumentCrdtDiffParams,
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = Vec<u8>),
     )
@@ -718,6 +732,7 @@ async fn document_crdt_diff(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -750,7 +765,7 @@ async fn document_crdt_diff(
         ("branch_id", description = "Branch id"),
     ),
     request_body(content = Vec<u8>, content_type = "application/octet-stream"),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -761,6 +776,7 @@ async fn document_crdt_apply(
     State(s): State<Arc<ServerState>>,
     body: Bytes,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
@@ -792,7 +808,7 @@ async fn document_crdt_apply(
         ("channel_id", description = "Channel id"),
         ("revision_id", description = "Revision id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok", body = Serdoc),
     )
@@ -802,6 +818,7 @@ async fn document_content_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -833,7 +850,7 @@ async fn document_content_get(
         ("channel_id", description = "Channel id"),
         ("branch_id", description = "Branch id"),
     ),
-    tags = ["document"],
+    tags = ["document", "badge.scope.full"],
     responses(
         (status = OK, description = "ok"),
     )
@@ -844,6 +861,7 @@ async fn document_content_put(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<SerdocPut>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();

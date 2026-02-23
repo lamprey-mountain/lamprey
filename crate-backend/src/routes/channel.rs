@@ -8,6 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     ack::{AckReq, AckRes},
+    application::Scope,
     util::Changes,
     AuditLogEntryType, ChannelReorder, ChannelType, RatelimitPut, RelationshipType, Room,
     RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
@@ -39,6 +40,7 @@ use crate::error::Result;
     params(("room_id", description = "Room id")),
     tags = [
         "channel",
+        "badge.scope.full",
         "badge.perm-opt.ChannelManage",
         "badge.perm-opt.ThreadCreatePublic",
         "badge.perm-opt.ThreadCreatePrivate",
@@ -54,6 +56,7 @@ async fn channel_create_room(
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     if json.ty.is_thread() {
         if let Some(parent_id) = json.parent_id {
@@ -86,7 +89,7 @@ async fn channel_create_room(
 #[utoipa::path(
     post,
     path = "/channel",
-    tags = ["channel"],
+    tags = ["channel", "badge.scope.full"],
     responses(
         (status = CREATED, body = Channel, description = "Create thread success"),
     )
@@ -97,6 +100,7 @@ async fn channel_create_dm(
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     let srv = s.services();
     let data = s.data();
@@ -248,7 +252,7 @@ async fn channel_create_dm(
     get,
     path = "/channel/{channel_id}",
     params(("channel_id", description = "channel id")),
-    tags = ["channel"],
+    tags = ["channel", "badge.scope.full"],
     responses(
         (status = OK, body = Channel, description = "Get thread success"),
     )
@@ -258,6 +262,7 @@ async fn channel_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let perms = s
         .services()
         .perms
@@ -285,7 +290,7 @@ struct ChannelListQuery {
         ("room_id", description = "Room id"),
         PaginationQuery<channelId>
     ),
-    tags = ["channel"],
+    tags = ["channel", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Channel>, description = "List room channels success"),
     )
@@ -296,6 +301,7 @@ async fn channel_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -327,7 +333,7 @@ async fn channel_list(
         ChannelListQuery,
         PaginationQuery<channelId>
     ),
-    tags = ["channel"],
+    tags = ["channel", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Channel>, description = "List removed room threads success"),
     )
@@ -339,6 +345,7 @@ async fn channel_list_removed(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -382,7 +389,7 @@ async fn channel_list_removed(
     patch,
     path = "/room/{room_id}/channel",
     params(("room_id", description = "Room id")),
-    tags = ["channel", "badge.perm.ChannelManage", "badge.audit-log.ChannelReorder"],
+    tags = ["channel", "badge.scope.full", "badge.perm.ChannelManage", "badge.audit-log.ChannelReorder"],
     responses(
         (status = OK, body = (), description = "Reorder channels success"),
     )
@@ -394,6 +401,7 @@ async fn channel_reorder(
     Json(json): Json<ChannelReorder>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -458,7 +466,7 @@ async fn channel_reorder(
     params(
         ("channel_id", description = "channel id"),
     ),
-    tags = ["channel", "badge.perm-opt.ChannelEdit", "badge.perm-opt.ThreadEdit", "badge.audit-log.ChannelUpdate"],
+    tags = ["channel", "badge.scope.full", "badge.perm-opt.ChannelEdit", "badge.perm-opt.ThreadEdit", "badge.audit-log.ChannelUpdate"],
     responses(
         (status = OK, body = Channel, description = "edit message success"),
         (status = NOT_MODIFIED, body = Channel, description = "no change"),
@@ -471,6 +479,7 @@ async fn channel_update(
     Json(json): Json<ChannelPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     if json.owner_id.is_some() {
         return Err(Error::BadStatic(
@@ -506,7 +515,7 @@ async fn channel_update(
     params(
         ("channel_id", description = "channel id"),
     ),
-    tags = ["channel"],
+    tags = ["channel", "badge.scope.full"],
     responses(
         (status = OK, description = "success"),
     )
@@ -517,6 +526,7 @@ async fn channel_ack(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -554,7 +564,7 @@ async fn channel_ack(
     put,
     path = "/channel/{channel_id}/remove",
     params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
+    tags = ["channel", "badge.scope.full", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn channel_remove(
@@ -563,6 +573,7 @@ async fn channel_remove(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
 
@@ -631,7 +642,7 @@ async fn channel_remove(
     delete,
     path = "/channel/{channel_id}/remove",
     params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
+    tags = ["channel", "badge.scope.full", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn channel_restore(
@@ -640,6 +651,7 @@ async fn channel_restore(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -715,7 +727,7 @@ async fn channel_restore(
     params(
         ("channel_id", description = "channel id"),
     ),
-    tags = ["channel", "badge.perm.MessageCreate"],
+    tags = ["channel", "badge.scope.full", "badge.perm.MessageCreate"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -726,6 +738,7 @@ async fn channel_typing(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -762,7 +775,7 @@ async fn channel_typing(
     post,
     path = "/channel/{channel_id}/upgrade",
     params(("channel_id", description = "channel id")),
-    tags = ["channel"],
+    tags = ["channel", "badge.scope.full"],
     responses((status = OK, body = Room, description = "success")),
 )]
 async fn channel_upgrade(
@@ -771,6 +784,7 @@ async fn channel_upgrade(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -903,7 +917,7 @@ struct TransferOwnership {
     post,
     path = "/channel/{channel_id}/transfer-ownership",
     params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.sudo"],
+    tags = ["channel", "badge.scope.full", "badge.sudo"],
     responses((status = OK, description = "success"))
 )]
 async fn channel_transfer_ownership(
@@ -913,6 +927,7 @@ async fn channel_transfer_ownership(
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.ensure_sudo()?;
 
     let srv = s.services();
@@ -961,6 +976,7 @@ async fn channel_transfer_ownership(
     ),
     tags = [
         "channel",
+        "badge.scope.full",
         "badge.perm-opt.ChannelManage",
         "badge.perm-opt.ThreadManage",
         "badge.perm-opt.MemberTimeout",
@@ -975,6 +991,7 @@ async fn channel_ratelimit_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -1040,6 +1057,7 @@ async fn channel_ratelimit_delete(
     ),
     tags = [
         "channel",
+        "badge.scope.full",
         "badge.perm-opt.ChannelManage",
         "badge.perm-opt.ThreadManage",
         "badge.perm-opt.MemberTimeout",
@@ -1054,6 +1072,7 @@ async fn channel_ratelimit_delete_all(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let data = s.data();
@@ -1095,6 +1114,7 @@ async fn channel_ratelimit_delete_all(
     request_body = RatelimitPut,
     tags = [
         "channel",
+        "badge.scope.full",
         "badge.perm-opt.ChannelManage",
         "badge.perm-opt.ThreadManage",
         "badge.perm-opt.MemberTimeout",
@@ -1110,6 +1130,7 @@ async fn channel_ratelimit_update(
     Json(json): Json<RatelimitPut>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;

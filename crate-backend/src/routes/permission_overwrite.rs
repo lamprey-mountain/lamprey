@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::{
     util::Changes, AuditLogEntryType, ChannelId, MessageSync, Permission, PermissionOverwriteSet,
     PermissionOverwriteType,
@@ -25,7 +26,7 @@ use crate::ServerState;
         ("channel_id", description = "channel id"),
         ("overwrite_id", description = "Role or user id"),
     ),
-    tags = ["channel", "badge.perm.RoleManage"],
+    tags = ["channel", "badge.scope.full", "badge.perm.RoleManage"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_overwrite(
@@ -34,6 +35,7 @@ async fn permission_overwrite(
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let allow_set: HashSet<_> = json.allow.iter().collect();
@@ -182,7 +184,7 @@ async fn permission_overwrite(
         ("channel_id", description = "channel id"),
         ("overwrite_id", description = "Role or user id"),
     ),
-    tags = ["channel", "badge.perm.RoleManage"],
+    tags = ["channel", "badge.scope.full", "badge.perm.RoleManage"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_delete(
@@ -190,6 +192,7 @@ async fn permission_delete(
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;

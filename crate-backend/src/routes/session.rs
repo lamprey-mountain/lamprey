@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate,
@@ -59,7 +60,7 @@ pub async fn session_create(
 #[utoipa::path(
     get,
     path = "/session",
-    tags = ["session"],
+    tags = ["session", "badge.scope.full"],
     params(PaginationQuery<SessionId>),
     responses(
         (status = OK, description = "List session success", body = PaginationResponse<Session>),
@@ -70,6 +71,7 @@ pub async fn session_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let res = data.session_list(auth.user.id, q).await?;
     Ok(Json(res))
@@ -82,7 +84,7 @@ pub async fn session_list(
     params(
         ("session_id", description = "Session id"),
     ),
-    tags = ["session", "badge.audit-log.SessionUpdate"],
+    tags = ["session", "badge.scope.full", "badge.audit-log.SessionUpdate"],
     responses(
         (status = OK, body = Session, description = "success"),
         (status = NOT_MODIFIED, body = Session, description = "not modified"),
@@ -94,6 +96,7 @@ pub async fn session_update(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<SessionPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     let target_session_id = match target_session_id {
         SessionIdReq::SessionSelf => auth.session.id,
@@ -157,7 +160,7 @@ pub async fn session_update(
     params(
         ("session_id", description = "Session id"),
     ),
-    tags = ["session", "badge.audit-log.SessionDelete"],
+    tags = ["session", "badge.scope.full", "badge.audit-log.SessionDelete"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -167,6 +170,7 @@ pub async fn session_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_session_id = match target_session_id {
         SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(target_session_id) => target_session_id,
@@ -226,13 +230,14 @@ pub async fn session_delete(
 #[utoipa::path(
     delete,
     path = "/session/@all",
-    tags = ["session", "badge.audit-log.SessionDeleteAll"],
+    tags = ["session", "badge.scope.full", "badge.audit-log.SessionDeleteAll"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 pub async fn session_delete_all(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let Some(user_id) = auth.session.user_id() else {
         return Err(Error::UnauthSession);
     };
@@ -258,7 +263,7 @@ pub async fn session_delete_all(
     params(
         ("session_id", description = "Session id"),
     ),
-    tags = ["session"],
+    tags = ["session", "badge.scope.full"],
     responses(
         (status = OK, body = Session, description = "success"),
     )
@@ -268,6 +273,7 @@ pub async fn session_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let session_id = match session_id {
         SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(session_id) => session_id,

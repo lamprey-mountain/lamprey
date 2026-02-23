@@ -7,6 +7,7 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::{
     v1::types::{
@@ -35,7 +36,7 @@ use super::util::Auth;
 #[utoipa::path(
     post,
     path = "/media",
-    tags = ["media"],
+    tags = ["media", "badge.scope.full"],
     responses(
         (status = StatusCode::CREATED, description = "Create media success", body = MediaCreated)
     )
@@ -46,6 +47,7 @@ async fn media_create(
     Json(json): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     match &json.source {
         MediaCreateSource::Upload { size, .. } => {
@@ -95,7 +97,7 @@ async fn media_create(
 #[utoipa::path(
     patch,
     path = "/media/{media_id}",
-    tags = ["media"],
+    tags = ["media", "badge.scope.full"],
     params(("media_id", description = "Media id")),
     responses(
         (status = NOT_MODIFIED, description = "Not modified"),
@@ -109,6 +111,7 @@ async fn media_patch(
     Json(json): Json<MediaPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     if let Some(mut up) = s.services().media.uploads.get_mut(&media_id) {
         if up.user_id == auth.user.id {
@@ -153,7 +156,7 @@ async fn media_patch(
 #[utoipa::path(
     put,
     path = "/media/{media_id}/done",
-    tags = ["media"],
+    tags = ["media", "badge.scope.full"],
     params(("media_id", description = "Media id")),
     request_body = MediaDoneParams,
     responses(
@@ -166,6 +169,7 @@ async fn media_done(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let mut up =
         srv.media
@@ -340,7 +344,7 @@ async fn media_upload(
 #[utoipa::path(
     get,
     path = "/media/{media_id}",
-    tags = ["media"],
+    tags = ["media", "badge.scope.full"],
     params(("media_id", description = "Media id")),
     responses(
         (status = OK, body = Media, description = "Success"),
@@ -348,9 +352,10 @@ async fn media_upload(
 )]
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
-    _auth: Auth,
+    auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let media = s.data().media_select(media_id).await?;
     if media.deleted_at.is_some() {
         return Err(Error::ApiError(ApiError::from_code(
@@ -408,7 +413,7 @@ async fn media_check(
 #[utoipa::path(
     delete,
     path = "/media/{media_id}",
-    tags = ["media"],
+    tags = ["media", "badge.scope.full"],
     params(("media_id", description = "Media id")),
     responses(
         (status = NO_CONTENT, description = "no content"),
@@ -421,6 +426,7 @@ async fn media_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
         if up.user_id == auth.user.id {
             s.services().media.uploads.remove(&media_id);
@@ -443,7 +449,7 @@ async fn media_delete(
 #[utoipa::path(
     post,
     path = "/media/{media_id}/clone",
-    tags = ["media"],
+    tags = ["media", "badge.scope.full"],
     params(("media_id", description = "Media id")),
     responses(
         (status = OK, description = "success"),
@@ -456,6 +462,7 @@ async fn media_clone(
     Json(_json): Json<MediaClone>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     Ok(Error::Unimplemented)
 }
@@ -464,7 +471,7 @@ async fn media_clone(
 #[utoipa::path(
     post,
     path = "/media/search",
-    tags = ["media", "badge.admin_only"],
+    tags = ["media", "badge.scope.full", "badge.admin_only"],
     responses((status = OK, description = "success")),
 )]
 async fn media_search(
@@ -472,6 +479,7 @@ async fn media_search(
     State(s): State<Arc<ServerState>>,
     Json(_json): Json<MediaSearch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
@@ -485,7 +493,7 @@ async fn media_search(
 #[utoipa::path(
     post,
     path = "/media/direct",
-    tags = ["media"],
+    tags = ["media", "badge.scope.full"],
     responses((status = CREATED, description = "success")),
 )]
 async fn media_upload_direct(
@@ -494,6 +502,7 @@ async fn media_upload_direct(
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let media_id = MediaId::new();

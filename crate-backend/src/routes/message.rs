@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate, MessageModerate, MessagePin,
-    MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
+    application::Scope, AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate,
+    MessageModerate, MessagePin, MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
 };
 use common::v2::types::message::Message;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -35,6 +35,7 @@ use crate::error::Result;
     params(("channel_id", description = "Channel id")),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm.MessageCreate",
         "badge.perm-opt.MessageAttachments",
         "badge.perm-opt.MessageEmbeds",
@@ -52,6 +53,7 @@ async fn message_create(
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -75,7 +77,7 @@ async fn message_create(
         ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id"),
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = ContextResponse, description = "List thread messages success"),
     )
@@ -86,6 +88,7 @@ async fn message_context(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -105,7 +108,7 @@ async fn message_context(
     get,
     path = "/channel/{channel_id}/message",
     params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
     )
@@ -116,6 +119,7 @@ async fn message_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -131,7 +135,7 @@ async fn message_list(
         ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = Message, description = "List thread messages success"),
     )
@@ -141,6 +145,7 @@ async fn message_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -159,7 +164,7 @@ async fn message_get(
         ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = Message, description = "edit message success"),
         (status = NOT_MODIFIED, description = "no change"),
@@ -172,6 +177,7 @@ async fn message_edit(
     Json(json): Json<MessagePatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
@@ -206,6 +212,7 @@ async fn message_edit(
     ),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm-opt.MessageDelete",
         "badge.room-mfa-opt",
         "badge.audit-log.MessageDelete",
@@ -220,6 +227,7 @@ async fn message_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
 
@@ -295,7 +303,7 @@ async fn message_delete(
         ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "success"),
     )
@@ -306,6 +314,7 @@ async fn message_version_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -325,7 +334,7 @@ async fn message_version_list(
         ("message_id", description = "Message id"),
         ("version_id", description = "Version id"),
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = Message, description = "success"),
     )
@@ -335,6 +344,7 @@ async fn message_version_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -359,6 +369,7 @@ async fn message_version_get(
     ),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm-opt.MessageDelete",
         "badge.room-mfa-opt",
         "badge.audit-log.MessageVersionDelete",
@@ -373,6 +384,7 @@ async fn message_version_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
 
@@ -477,6 +489,7 @@ async fn message_version_delete(
     params(("channel_id", description = "Channel id")),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm-opt.MessageDelete",
         "badge.perm-opt.MessageRemove",
         "badge.room-mfa",
@@ -493,6 +506,7 @@ async fn message_moderate(
     Json(json): Json<MessageModerate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
 
     if json.delete.is_empty() && json.remove.is_empty() && json.restore.is_empty() {
@@ -636,6 +650,7 @@ async fn message_moderate(
     params(("channel_id", description = "Channel id")),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm.MessageMove",
     ],
     responses((status = NO_CONTENT, description = "move success")),
@@ -660,7 +675,7 @@ async fn message_move(
         ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id"),
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
     ),
@@ -673,6 +688,7 @@ async fn message_reply_query(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -693,7 +709,7 @@ async fn message_reply_query(
         RepliesQuery,
         ("channel_id", description = "Channel id"),
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
     ),
@@ -706,6 +722,7 @@ async fn message_reply_roots(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -729,6 +746,7 @@ async fn message_reply_roots(
     ),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm.MessagePin",
         "badge.audit-log.MessagePin",
     ],
@@ -742,6 +760,7 @@ async fn message_pin_create(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -857,6 +876,7 @@ async fn message_pin_create(
     ),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm.MessagePin",
         "badge.audit-log.MessageUnpin",
     ],
@@ -870,6 +890,7 @@ async fn message_pin_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
@@ -934,6 +955,7 @@ async fn message_pin_delete(
     ),
     tags = [
         "message",
+        "badge.scope.full",
         "badge.perm.MessagePin",
         "badge.room-mfa",
         "badge.audit-log.MessagePinReorder",
@@ -949,6 +971,7 @@ async fn message_pin_reorder(
     Json(json): Json<PinsReorder>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     let srv = s.services();
     let data = s.data();
@@ -1014,7 +1037,7 @@ async fn message_pin_reorder(
         PaginationQuery<MessageId>,
         ("channel_id", description = "Channel id"),
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "List pinned messages success"),
     ),
@@ -1025,6 +1048,7 @@ async fn message_pin_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
@@ -1039,7 +1063,7 @@ async fn message_pin_list(
     get,
     path = "/channel/{channel_id}/message/deleted",
     params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
-    tags = ["message", "badge.perm-opt.MessageDelete"],
+    tags = ["message", "badge.scope.full", "badge.perm-opt.MessageDelete"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "success"),
     )
@@ -1050,6 +1074,7 @@ async fn message_list_deleted(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessageDelete)?;
@@ -1067,7 +1092,7 @@ async fn message_list_deleted(
     get,
     path = "/channel/{channel_id}/message/removed",
     params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
-    tags = ["message", "badge.perm-opt.MessageRemove"],
+    tags = ["message", "badge.scope.full", "badge.perm-opt.MessageRemove"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "success"),
     )
@@ -1078,6 +1103,7 @@ async fn message_list_removed(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessageRemove)?;
@@ -1098,7 +1124,7 @@ async fn message_list_removed(
         ("channel_id", description = "Channel id"),
         PaginationQuery<ChannelId>
     ),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
 )]
 pub async fn message_list_atom(
     Path(_channel_id): Path<ChannelId>,
@@ -1116,7 +1142,7 @@ pub async fn message_list_atom(
     post,
     path = "/channel/{channel_id}/nudge",
     params(("channel_id", description = "Channel id")),
-    tags = ["message"],
+    tags = ["message", "badge.scope.full"],
 )]
 pub async fn message_nudge(
     Path(_channel_id): Path<ChannelId>,

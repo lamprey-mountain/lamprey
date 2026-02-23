@@ -4,6 +4,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::types::application::Scope;
 use common::v1::types::push::{PushCreate, PushInfo};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -20,7 +21,7 @@ use super::util::Auth;
     post,
     path = "/push",
     request_body = PushCreate,
-    tags = ["push"],
+    tags = ["push", "badge.scope.full"],
     responses((status = OK, body = PushInfo, description = "ok"))
 )]
 async fn push_register(
@@ -28,6 +29,7 @@ async fn push_register(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PushCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let data = s.data();
 
@@ -58,10 +60,11 @@ async fn push_register(
 #[utoipa::path(
     delete,
     path = "/push",
-    tags = ["push"],
+    tags = ["push", "badge.scope.full"],
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn push_delete(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     s.data().push_delete(auth.session.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -72,10 +75,11 @@ async fn push_delete(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
 #[utoipa::path(
     get,
     path = "/push",
-    tags = ["push"],
+    tags = ["push", "badge.scope.full"],
     responses((status = OK, body = PushInfo, description = "ok"))
 )]
 async fn push_get(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let push = data.push_get(auth.session.id).await?;
     let config_internal = data

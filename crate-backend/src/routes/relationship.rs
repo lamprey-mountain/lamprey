@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::user::Ignore;
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
@@ -26,7 +27,7 @@ use crate::error::{Error, Result};
         PaginationQuery<UserId>,
         ("user_id", description = "User id to list friends from"),
     ),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -36,6 +37,7 @@ async fn friend_list(
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let rels = data.user_relationship_list_friends(auth.user.id, q).await?;
     Ok(Json(rels))
@@ -51,7 +53,7 @@ async fn friend_list(
         PaginationQuery<UserId>,
         ("user_id", description = "User id to list friends from"),
     ),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -61,6 +63,7 @@ async fn friend_list_pending(
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let rels = data.user_relationship_list_pending(auth.user.id, q).await?;
     Ok(Json(rels))
@@ -73,7 +76,7 @@ async fn friend_list_pending(
     put,
     path = "/user/@self/friend/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship", "badge.audit-log.FriendRequest", "badge.audit-log.FriendAccept"],
+    tags = ["relationship", "badge.scope.full", "badge.audit-log.FriendRequest", "badge.audit-log.FriendAccept"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn friend_add(
@@ -81,6 +84,7 @@ async fn friend_add(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let data = s.data();
@@ -208,7 +212,7 @@ async fn friend_add(
     delete,
     path = "/user/@self/friend/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship", "badge.audit-log.FriendDelete"],
+    tags = ["relationship", "badge.scope.full", "badge.audit-log.FriendDelete"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn friend_remove(
@@ -216,6 +220,7 @@ async fn friend_remove(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let data = s.data();
@@ -279,7 +284,7 @@ async fn friend_remove(
         PaginationQuery<UserId>,
         ("user_id", description = "User id to list blocks from"),
     ),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -289,6 +294,7 @@ async fn block_list(
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let rels = data.user_relationship_list_blocked(auth.user.id, q).await?;
     Ok(Json(rels))
@@ -301,7 +307,7 @@ async fn block_list(
     put,
     path = "/user/@self/block/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship", "badge.audit-log.BlockCreate"],
+    tags = ["relationship", "badge.scope.full", "badge.audit-log.BlockCreate"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn block_add(
@@ -309,6 +315,7 @@ async fn block_add(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     data.user_relationship_edit(
@@ -365,7 +372,7 @@ async fn block_add(
     delete,
     path = "/user/@self/block/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship", "badge.audit-log.BlockDelete"],
+    tags = ["relationship", "badge.scope.full", "badge.audit-log.BlockDelete"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn block_remove(
@@ -373,6 +380,7 @@ async fn block_remove(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     let existing = data
@@ -411,7 +419,7 @@ async fn block_remove(
         PaginationQuery<UserId>,
         ("user_id", description = "User id to list ignored users from"),
     ),
-    tags = ["relationship"],
+    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -421,6 +429,7 @@ async fn ignore_list(
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let rels = data.user_relationship_list_ignored(auth.user.id, q).await?;
     Ok(Json(rels))
@@ -433,7 +442,7 @@ async fn ignore_list(
     put,
     path = "/user/@self/ignore/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship", "badge.audit-log.IgnoreAdd"],
+    tags = ["relationship", "badge.scope.full", "badge.audit-log.IgnoreAdd"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn ignore_add(
@@ -442,6 +451,7 @@ async fn ignore_add(
     State(s): State<Arc<ServerState>>,
     Json(ignore): Json<Ignore>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     data.user_relationship_edit(
@@ -481,7 +491,7 @@ async fn ignore_add(
     delete,
     path = "/user/@self/ignore/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["relationship", "badge.audit-log.IgnoreRemove"],
+    tags = ["relationship", "badge.scope.full", "badge.audit-log.IgnoreRemove"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn ignore_remove(
@@ -489,6 +499,7 @@ async fn ignore_remove(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     let existing = data

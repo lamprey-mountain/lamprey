@@ -5,6 +5,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::types::application::Scope;
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
@@ -61,7 +62,7 @@ async fn ensure_can_still_login_after_email_removal(
         ("user_id", description = "User id"),
         ("addr", description = "email address"),
     ),
-    tags = ["user_email", "badge.audit-log.EmailCreate"],
+    tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailCreate"],
     responses(
         (status = CREATED, description = "success"),
         (status = OK, description = "already exists"),
@@ -72,6 +73,7 @@ async fn email_add(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
@@ -153,7 +155,7 @@ async fn email_add(
         ("user_id", description = "User id"),
         ("addr", description = "email address"),
     ),
-    tags = ["user_email", "badge.audit-log.EmailDelete"],
+    tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailDelete"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_delete(
@@ -162,6 +164,7 @@ async fn email_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     // we need to keep email addresses in case we need to tell the suspended user anything
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let email: EmailAddr = email.try_into()?;
@@ -213,7 +216,7 @@ async fn email_delete(
     get,
     path = "/user/{user_id}/email",
     params(("user_id", description = "User id")),
-    tags = ["user_email"],
+    tags = ["user_email", "badge.scope.full"],
     responses((status = OK, body = Vec<EmailInfo>, description = "success"))
 )]
 async fn email_list(
@@ -221,6 +224,7 @@ async fn email_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -242,7 +246,7 @@ async fn email_list(
         ("user_id", description = "User id"),
         ("addr", description = "email address"),
     ),
-    tags = ["user_email", "badge.audit-log.EmailUpdate"],
+    tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailUpdate"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_update(
@@ -251,6 +255,7 @@ async fn email_update(
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<EmailInfoPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth.user.id,
@@ -321,7 +326,7 @@ async fn email_update(
         ("user_id", description = "User id"),
         ("addr", description = "email address"),
     ),
-    tags = ["user_email"],
+    tags = ["user_email", "badge.scope.full"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_verification_resend(
@@ -329,6 +334,7 @@ async fn email_verification_resend(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
@@ -390,7 +396,7 @@ async fn email_verification_resend(
         ("addr", description = "email address"),
         ("code", description = "Verification code"),
     ),
-    tags = ["user_email"],
+    tags = ["user_email", "badge.scope.full"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_verification_finish(
@@ -398,6 +404,7 @@ async fn email_verification_finish(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {

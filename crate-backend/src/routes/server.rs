@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::types::application::Scope;
 use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
     ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu, ServerWebPush,
@@ -19,7 +20,7 @@ use super::util::Auth;
 #[utoipa::path(
     get,
     path = "/server/@self",
-    tags = ["server"],
+    tags = ["server", "badge.scope.full"],
     responses(
         (status = OK, body = ServerInfo, description = "Get server info success"),
     )
@@ -69,7 +70,7 @@ async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespo
 #[utoipa::path(
     get,
     path = "/server/@self/moderation",
-    tags = ["server"],
+    tags = ["server", "badge.scope.full"],
     responses(
         (status = OK, body = ServerModeration, description = "Get server moderation capabilities success"),
     )
@@ -90,12 +91,13 @@ async fn server_moderation(
 #[utoipa::path(
     get,
     path = "/server/@self/voice",
-    tags = ["server", "badge.server-perm.Admin"],
+    tags = ["server", "badge.scope.full", "badge.server-perm.Admin"],
     responses(
         (status = OK, body = Vec<ServerVoiceSfu>, description = "Get server voice sfus success"),
     )
 )]
 async fn server_voice(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure_server(Permission::Admin)?;

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission, Role,
@@ -26,7 +27,7 @@ use crate::error::{Error, Result};
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleCreate"],
+    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleCreate"],
     responses(
         (status = CREATED, body = Role, description = "success"),
     )
@@ -37,6 +38,7 @@ async fn role_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoleCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     json.validate()?;
 
@@ -126,7 +128,7 @@ async fn role_create(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleUpdate"],
+    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleUpdate"],
     responses(
         (status = OK, body = Role, description = "success"),
         (status = NOT_MODIFIED, description = "success"),
@@ -138,6 +140,7 @@ async fn role_update(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RolePatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     json.validate()?;
     let d = s.data();
@@ -244,7 +247,7 @@ async fn role_update(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleDelete"],
+    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleDelete"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -255,6 +258,7 @@ async fn role_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     if room_id.into_inner() == role_id.into_inner() {
         return Err(Error::BadStatic("cannot delete the default role"));
@@ -319,7 +323,7 @@ async fn role_delete(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.scope.full"],
     responses(
         (status = OK, body = Role, description = "success"),
     )
@@ -329,6 +333,7 @@ async fn role_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let role = d.role_select(room_id, role_id).await?;
@@ -343,7 +348,7 @@ async fn role_get(
         PaginationQuery<RoleId>,
         ("room_id", description = "Room id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Role>, description = "success"),
     )
@@ -354,6 +359,7 @@ async fn role_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let res = d.role_list(room_id, paginate).await?;
@@ -368,7 +374,7 @@ async fn role_list(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
@@ -379,6 +385,7 @@ async fn role_member_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     let res = d.role_member_list(role_id, paginate).await?;
@@ -394,7 +401,7 @@ async fn role_member_list(
         ("role_id", description = "Role id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["role", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleApply"],
+    tags = ["role", "badge.scope.full", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleApply"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -404,6 +411,7 @@ async fn role_member_add(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     if room_id.into_inner() == role_id.into_inner() {
         return Err(Error::BadStatic("cannot manually apply the @everyone role"));
@@ -459,7 +467,7 @@ async fn role_member_add(
         ("role_id", description = "Role id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["role", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleUnapply"],
+    tags = ["role", "badge.scope.full", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleUnapply"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -469,6 +477,7 @@ async fn role_member_remove(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     if room_id.into_inner() == role_id.into_inner() {
         return Err(Error::BadStatic(
@@ -527,7 +536,7 @@ async fn role_member_remove(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role", "badge.room-mfa", "badge.audit-log.RoleApply", "badge.audit-log.RoleUnapply"],
+    tags = ["role", "badge.scope.full", "badge.room-mfa", "badge.audit-log.RoleApply", "badge.audit-log.RoleUnapply"],
     responses(
         (status = NO_CONTENT, body = (), description = "success"),
     )
@@ -538,6 +547,7 @@ async fn role_member_bulk_edit(
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleMemberBulkPatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     body.validate()?;
 
@@ -627,7 +637,7 @@ async fn role_member_bulk_edit(
     patch,
     path = "/room/{room_id}/role",
     params(("room_id", description = "Room id")),
-    tags = ["role", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleReorder"],
+    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleReorder"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -638,6 +648,7 @@ async fn role_reorder(
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleReorder>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     body.validate()?;
 

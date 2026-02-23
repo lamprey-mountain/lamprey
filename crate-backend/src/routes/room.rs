@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    application::Integration, search::RoomSearchRequest, util::Changes, ApplicationId,
-    AuditLogEntryId, AuditLogEntryType, AuditLogFilter, AuditLogPaginationResponse,
+    application::Integration, application::Scope, search::RoomSearchRequest, util::Changes,
+    ApplicationId, AuditLogEntryId, AuditLogEntryType, AuditLogFilter, AuditLogPaginationResponse,
     RoomSecurityUpdate, RoomType, TransferOwnership, SERVER_ROOM_ID,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -30,7 +30,7 @@ use super::util::Auth;
 #[utoipa::path(
     post,
     path = "/room",
-    tags = ["room"],
+    tags = ["room", "badge.scope.full"],
 )]
 async fn room_create(
     auth: Auth,
@@ -38,6 +38,7 @@ async fn room_create(
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
 
     let srv = s.services();
@@ -78,7 +79,7 @@ async fn room_create(
 #[utoipa::path(
     get,
     path = "/room/{room_id}",
-    tags = ["room"],
+    tags = ["room", "badge.scope.rooms"],
     params(("room_id", description = "Room id")),
     responses(
         (status = OK, description = "Get room success", body = Room),
@@ -91,6 +92,7 @@ async fn room_get(
     cache: HeaderCache,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Rooms])?;
     let srv = s.services();
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -104,7 +106,7 @@ async fn room_get(
 #[utoipa::path(
     get,
     path = "/room",
-    tags = ["room"],
+    tags = ["room", "badge.scope.rooms"],
     params(PaginationQuery<RoomId>),
     responses(
         (status = 200, description = "Paginate room success", body = PaginationResponse<Room>),
@@ -115,6 +117,7 @@ async fn room_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Rooms])?;
     let data = s.data();
     let srv = s.services();
     let is_admin = srv
@@ -142,7 +145,7 @@ async fn room_list(
 #[utoipa::path(
     post,
     path = "/room/search",
-    tags = ["room", "badge.admin_only"],
+    tags = ["room", "badge.scope.full", "badge.admin_only"],
     responses((status = OK, description = "success")),
 )]
 async fn room_search(
@@ -150,6 +153,7 @@ async fn room_search(
     State(s): State<Arc<ServerState>>,
     Json(_json): Json<RoomSearchRequest>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::RoomManageServer)?;
@@ -164,7 +168,7 @@ async fn room_search(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.perm.RoomManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoomUpdate"],
+    tags = ["room", "badge.scope.full", "badge.perm.RoomManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoomUpdate"],
     responses(
         (status = OK, description = "edit success"),
         (status = NOT_MODIFIED, description = "no change"),
@@ -177,6 +181,7 @@ async fn room_edit(
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoomManage)?;
@@ -235,7 +240,7 @@ async fn room_edit(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.sudo", "badge.audit-log.RoomDelete"],
+    tags = ["room", "badge.scope.full", "badge.sudo", "badge.audit-log.RoomDelete"],
     responses((status = OK, description = "success")),
 )]
 async fn room_delete(
@@ -244,6 +249,7 @@ async fn room_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let data = s.data();
@@ -292,7 +298,7 @@ async fn room_delete(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomUndelete"],
+    tags = ["room", "badge.scope.full", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomUndelete"],
     responses((status = OK, description = "success")),
 )]
 async fn room_undelete(
@@ -301,6 +307,7 @@ async fn room_undelete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let data = s.data();
@@ -336,7 +343,7 @@ async fn room_undelete(
         AuditLogFilter,
         ("room_id", description = "Room id"),
     ),
-    tags = ["room", "badge.perm.ViewAuditLog"],
+    tags = ["room", "badge.scope.rooms", "badge.perm.ViewAuditLog"],
     responses(
         (status = 200, description = "fetch audit logs success", body = AuditLogPaginationResponse),
     )
@@ -348,6 +355,7 @@ async fn room_audit_logs(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Rooms])?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::ViewAuditLog)?;
     let logs = s
@@ -367,7 +375,7 @@ async fn room_audit_logs(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room"],
+    tags = ["room", "badge.scope.rooms"],
     responses(
         (status = OK, description = "success"),
     )
@@ -377,6 +385,7 @@ async fn room_ack(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
+    auth.ensure_scopes(&[Scope::Rooms])?;
     let data = s.data();
     let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
 
@@ -399,7 +408,7 @@ async fn room_ack(
     post,
     path = "/room/{room_id}/transfer-ownership",
     params(("room_id", description = "Room id")),
-    tags = ["room", "badge.sudo"],
+    tags = ["room", "badge.scope.full", "badge.sudo"],
     responses((status = OK, description = "success"))
 )]
 async fn room_transfer_ownership(
@@ -409,6 +418,7 @@ async fn room_transfer_ownership(
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.ensure_sudo()?;
 
     let srv = s.services();
@@ -441,7 +451,7 @@ async fn room_transfer_ownership(
     get,
     path = "/room/{room_id}/integration",
     params(("room_id", description = "Room id")),
-    tags = ["room"],
+    tags = ["room", "badge.scope.rooms"],
     responses((status = OK, description = "success", body = PaginationResponse<Integration>))
 )]
 async fn room_integration_list(
@@ -450,6 +460,7 @@ async fn room_integration_list(
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<ApplicationId>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Rooms])?;
     let srv = s.services();
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let data = s.data();
@@ -480,7 +491,7 @@ async fn room_integration_list(
     post,
     path = "/room/{room_id}/quarantine",
     params(("room_id", description = "Room id")),
-    tags = ["room", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomQuarantine"],
+    tags = ["room", "badge.scope.full", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomQuarantine"],
     responses((status = OK, description = "success"))
 )]
 async fn room_quarantine(
@@ -489,6 +500,7 @@ async fn room_quarantine(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let data = s.data();
@@ -524,7 +536,7 @@ async fn room_quarantine(
     delete,
     path = "/room/{room_id}/quarantine",
     params(("room_id", description = "Room id")),
-    tags = ["room", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomUnquarantine"],
+    tags = ["room", "badge.scope.full", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.RoomUnquarantine"],
     responses((status = OK, description = "success"))
 )]
 async fn room_unquarantine(
@@ -533,6 +545,7 @@ async fn room_unquarantine(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let data = s.data();
@@ -570,7 +583,7 @@ async fn room_unquarantine(
     path = "/room/{room_id}/security",
     params(("room_id", description = "Room id")),
     request_body = RoomSecurityUpdate,
-    tags = ["room", "badge.sudo", "badge.audit-log.RoomUpdate"],
+    tags = ["room", "badge.scope.full", "badge.sudo", "badge.audit-log.RoomUpdate"],
     responses(
         (status = OK, description = "success", body = Room),
     )
@@ -582,6 +595,7 @@ async fn room_security_set(
     Json(json): Json<RoomSecurityUpdate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.ensure_sudo()?;
 
     let srv = s.services();

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::reaction::{ReactionKey, ReactionKeyParam, ReactionListItem};
 use common::v1::types::{
@@ -28,7 +29,7 @@ use crate::{Error, ServerState};
         ("message_id", description = "Message id"),
         ("reaction_key", description = "Reaction key"),
     ),
-    tags = ["reaction"],
+    tags = ["reaction", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<ReactionListItem>, description = "success"),
     )
@@ -39,6 +40,7 @@ async fn reaction_list(
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -61,7 +63,7 @@ async fn reaction_list(
         ("reaction_key", description = "Reaction key"),
         ("user_id", description = "User id"),
     ),
-    tags = ["reaction", "badge.perm.ReactionAdd"],
+    tags = ["reaction", "badge.scope.full", "badge.perm.ReactionAdd"],
     responses(
         (status = CREATED, description = "new reaction created"),
         (status = OK, description = "already exists"),
@@ -83,6 +85,7 @@ async fn reaction_add(
     };
 
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -145,7 +148,7 @@ async fn reaction_add(
         ("reaction_key", description = "Reaction key"),
         ("user_id", description = "User id"),
     ),
-    tags = ["reaction", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteUser"],
+    tags = ["reaction", "badge.scope.full", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteUser"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -160,6 +163,7 @@ async fn reaction_remove(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let user_id = match user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
@@ -236,7 +240,7 @@ async fn reaction_remove(
         ("message_id", description = "Message id"),
         ("reaction_key", description = "Reaction key"),
     ),
-    tags = ["reaction", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteKey"],
+    tags = ["reaction", "badge.scope.full", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteKey"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -247,6 +251,7 @@ async fn reaction_remove_key(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -307,7 +312,7 @@ async fn reaction_remove_key(
         ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
     ),
-    tags = ["reaction", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteAll"],
+    tags = ["reaction", "badge.scope.full", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteAll"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -318,6 +323,7 @@ async fn reaction_remove_all(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;

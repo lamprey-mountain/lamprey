@@ -4,6 +4,7 @@ use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationCreate, NotificationFlush, NotificationMarkRead,
     NotificationPagination, NotificationType,
@@ -22,7 +23,7 @@ use crate::ServerState;
     get,
     path = "/inbox",
     params(PaginationQuery<NotificationId>, InboxListParams),
-    tags = ["inbox"],
+    tags = ["inbox", "badge.scope.full"],
     responses((status = OK, body = NotificationPagination, description = "success"))
 )]
 async fn inbox_get(
@@ -31,6 +32,7 @@ async fn inbox_get(
     Query(params): Query<InboxListParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let notifications = s
         .data()
         .notification_list(auth.user.id, pagination, params)
@@ -99,7 +101,7 @@ async fn inbox_get(
 #[utoipa::path(
     post,
     path = "/inbox",
-    tags = ["inbox"],
+    tags = ["inbox", "badge.scope.full"],
     responses((status = CREATED, body = Notification, description = "success"))
 )]
 async fn inbox_post(
@@ -107,6 +109,7 @@ async fn inbox_post(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let perms = s
         .services()
         .perms
@@ -147,7 +150,7 @@ async fn inbox_post(
 #[utoipa::path(
     post,
     path = "/inbox/mark-read",
-    tags = ["inbox"],
+    tags = ["inbox", "badge.scope.full"],
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_read(
@@ -155,6 +158,7 @@ async fn inbox_mark_read(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     s.data().notification_mark_read(auth.user.id, json).await?;
     Ok(StatusCode::OK)
 }
@@ -163,7 +167,7 @@ async fn inbox_mark_read(
 #[utoipa::path(
     post,
     path = "/inbox/mark-unread",
-    tags = ["inbox"],
+    tags = ["inbox", "badge.scope.full"],
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_unread(
@@ -171,6 +175,7 @@ async fn inbox_mark_unread(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     s.data()
         .notification_mark_unread(auth.user.id, json)
         .await?;
@@ -183,7 +188,7 @@ async fn inbox_mark_unread(
 #[utoipa::path(
     post,
     path = "/inbox/flush",
-    tags = ["inbox"],
+    tags = ["inbox", "badge.scope.full"],
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_flush(
@@ -191,6 +196,7 @@ async fn inbox_flush(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<NotificationFlush>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     s.data().notification_flush(auth.user.id, json).await?;
     Ok(StatusCode::OK)
 }

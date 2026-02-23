@@ -34,7 +34,7 @@ use crate::error::{Error, Result};
     params(
         ("user_id", description = "User id"),
     ),
-    tags = ["user", "badge.audit-log.UserUpdate"],
+    tags = ["user", "badge.scope.full", "badge.audit-log.UserUpdate"],
     responses(
         (status = OK, body = User, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -47,6 +47,7 @@ async fn user_update(
     Json(patch): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,

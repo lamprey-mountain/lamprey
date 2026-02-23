@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::automod::AutomodAction;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::UserIdReq;
@@ -31,7 +32,7 @@ use super::util::Auth;
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite", "badge.perm-opt.InviteManage", "badge.audit-log.InviteDelete"],
+    tags = ["invite", "badge.scope.full", "badge.perm-opt.InviteManage", "badge.audit-log.InviteDelete"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -42,6 +43,7 @@ async fn invite_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let invite = d.invite_select(code.clone()).await?;
     let (has_perm, id_target) = match &invite.invite.target {
@@ -160,7 +162,7 @@ async fn invite_delete(
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.scope.full"],
     responses(
         (status = OK, body = Invite, description = "success"),
         (status = OK, body = InviteWithMetadata, description = "success with metadata"),
@@ -171,6 +173,7 @@ async fn invite_resolve(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let s = s.services();
     let invite = d.invite_select(code).await?;
@@ -215,7 +218,7 @@ async fn invite_resolve(
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite", "badge.audit-log.UserRegistered"],
+    tags = ["invite", "badge.scope.full", "badge.audit-log.UserRegistered"],
     responses(
         (status = OK, description = "success"),
     )
@@ -225,6 +228,7 @@ async fn invite_use(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let srv = s.services();
     let invite = d.invite_select(code.clone()).await?;
@@ -423,7 +427,7 @@ async fn invite_use(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["invite", "badge.perm.InviteCreate", "badge.audit-log.InviteCreate"],
+    tags = ["invite", "badge.scope.full", "badge.perm.InviteCreate", "badge.audit-log.InviteCreate"],
     responses(
         (status = OK, body = Invite, description = "success"),
     )
@@ -435,6 +439,7 @@ async fn invite_room_create(
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let d = s.data();
     let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
@@ -522,7 +527,7 @@ enum InviteWithPotentialMetadata {
         PaginationQuery<InviteCode>,
         ("room_id", description = "Room id"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
     )
@@ -533,6 +538,7 @@ async fn invite_room_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
 
@@ -572,7 +578,7 @@ async fn invite_room_list(
     params(
         ("channel_id", description = "Channel id"),
     ),
-    tags = ["invite", "badge.perm-opt.InviteCreate", "badge.audit-log.InviteCreate"],
+    tags = ["invite", "badge.scope.full", "badge.perm-opt.InviteCreate", "badge.audit-log.InviteCreate"],
     responses(
         (status = OK, body = Invite, description = "success"),
     )
@@ -584,6 +590,7 @@ async fn invite_channel_create(
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let d = s.data();
     let channel = d.channel_get(channel_id).await?;
@@ -678,7 +685,7 @@ async fn invite_channel_create(
         PaginationQuery<InviteCode>,
         ("channel_id", description = "Channel id"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
     )
@@ -689,6 +696,7 @@ async fn invite_channel_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let channel = d.channel_get(channel_id).await?;
 
@@ -740,7 +748,7 @@ async fn invite_channel_list(
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite", "badge.perm-opt.InviteManage", "badge.audit-log.InviteUpdate"],
+    tags = ["invite", "badge.scope.full", "badge.perm-opt.InviteManage", "badge.audit-log.InviteUpdate"],
     responses(
         (status = NOT_MODIFIED, description = "not modified"),
         (status = OK, body = Invite, description = "success"),
@@ -752,6 +760,7 @@ async fn invite_patch(
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<InvitePatch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let start_invite = d.invite_select(code.clone()).await?;
 
@@ -885,7 +894,7 @@ async fn invite_patch(
 #[utoipa::path(
     post,
     path = "/server/invite",
-    tags = ["invite", "badge.perm.InviteCreate"],
+    tags = ["invite", "badge.scope.full", "badge.perm.InviteCreate"],
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_server_create(
@@ -894,6 +903,7 @@ async fn invite_server_create(
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let d = s.data();
     let srv = s.services();
@@ -945,7 +955,7 @@ async fn invite_server_create(
     params(
         PaginationQuery<InviteCode>,
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
     )
@@ -955,6 +965,7 @@ async fn invite_server_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let d = s.data();
     let user = srv.users.get(auth.user.id, None).await?;
@@ -978,7 +989,7 @@ async fn invite_server_list(
     post,
     path = "/user/{user_id}/invite",
     params(("user_id", description = "User id")),
-    tags = ["invite"],
+    tags = ["invite", "badge.scope.full"],
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_user_create(
@@ -988,6 +999,7 @@ async fn invite_user_create(
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
@@ -1040,7 +1052,7 @@ async fn invite_user_create(
         PaginationQuery<InviteCode>,
         ("user_id", description = "User id"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
     ),
@@ -1051,6 +1063,7 @@ async fn invite_user_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::{
     Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Permission, UserId,
 };
@@ -23,7 +24,7 @@ use crate::error::{Error, Result};
     post,
     path = "/user/@self/dm/{target_id}",
     params(("target_id", description = "Target user's id")),
-    tags = ["dm"],
+    tags = ["dm", "badge.scope.full"],
     responses(
         (status = CREATED, description = "new dm created"),
         (status = OK, description = "already exists"),
@@ -35,6 +36,7 @@ async fn dm_init(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     srv.perms
         .for_server(auth.user.id)
@@ -68,7 +70,7 @@ async fn dm_init(
     params(
         ("target_id", description = "Target user's id"),
     ),
-    tags = ["dm"],
+    tags = ["dm", "badge.scope.full"],
     responses(
         (status = OK, description = "success"),
     )
@@ -78,6 +80,7 @@ async fn dm_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let Some(thread_id) = data.dm_get(auth.user.id, target_user_id).await? else {
         return Err(Error::NotFound);
@@ -100,7 +103,7 @@ async fn dm_get(
         PaginationQuery<MessageVerId>,
         ("user_id", description = "user id"),
     ),
-    tags = ["dm"],
+    tags = ["dm", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Channel>, description = "success"),
     )
@@ -111,6 +114,7 @@ async fn dm_list(
     Query(q): Query<PaginationQuery<MessageVerId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,

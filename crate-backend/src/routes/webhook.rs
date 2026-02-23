@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::{
     audit_logs::{AuditLogChange, AuditLogEntryType},
     pagination::{PaginationQuery, PaginationResponse},
@@ -33,7 +34,7 @@ mod slack;
     post,
     path = "/channel/{channel_id}/webhook",
     params(("channel_id", description = "channel id")),
-    tags = ["webhook", "badge.audit-log.WebhookCreate"],
+    tags = ["webhook", "badge.scope.full", "badge.audit-log.WebhookCreate"],
     responses(
         (status = CREATED, body = Webhook, description = "Create webhook success"),
     )
@@ -44,6 +45,7 @@ async fn webhook_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<WebhookCreate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -89,7 +91,7 @@ async fn webhook_create(
         ("channel_id", description = "channel id"),
         PaginationQuery<WebhookId>
     ),
-    tags = ["webhook"],
+    tags = ["webhook", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
     )
@@ -100,6 +102,7 @@ async fn webhook_list_channel(
     State(s): State<Arc<ServerState>>,
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -130,7 +133,7 @@ async fn webhook_list_channel(
         ("room_id", description = "Room id"),
         PaginationQuery<WebhookId>
     ),
-    tags = ["webhook"],
+    tags = ["webhook", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
     )
@@ -141,6 +144,7 @@ async fn webhook_list_room(
     State(s): State<Arc<ServerState>>,
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
@@ -154,7 +158,7 @@ async fn webhook_list_room(
     get,
     path = "/webhook/{webhook_id}",
     params(("webhook_id", description = "Webhook id")),
-    tags = ["webhook"],
+    tags = ["webhook", "badge.scope.full"],
     responses(
         (status = OK, body = Webhook, description = "Get webhook success"),
     )
@@ -164,6 +168,7 @@ async fn webhook_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let webhook = s.data().webhook_get(webhook_id).await?;
 
     let srv = s.services();
@@ -210,7 +215,7 @@ async fn webhook_get_with_token(
     delete,
     path = "/webhook/{webhook_id}",
     params(("webhook_id", description = "Webhook id")),
-    tags = ["webhook", "badge.audit-log.WebhookDelete"],
+    tags = ["webhook", "badge.scope.full", "badge.audit-log.WebhookDelete"],
     responses(
         (status = NO_CONTENT, description = "Delete webhook success"),
     )
@@ -220,6 +225,7 @@ async fn webhook_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
@@ -287,7 +293,7 @@ async fn webhook_delete_with_token(
     patch,
     path = "/webhook/{webhook_id}",
     params(("webhook_id", description = "Webhook id")),
-    tags = ["webhook", "badge.audit-log.WebhookUpdate"],
+    tags = ["webhook", "badge.scope.full", "badge.audit-log.WebhookUpdate"],
     responses(
         (status = OK, body = Webhook, description = "Update webhook success"),
     )
@@ -298,6 +304,7 @@ async fn webhook_update(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<WebhookUpdate>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let before_webhook = s.data().webhook_get(webhook_id).await?;
     let room_id = before_webhook
         .room_id

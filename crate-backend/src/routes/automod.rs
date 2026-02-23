@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::application::Scope;
 use common::v1::types::automod::{
     AutomodRule, AutomodRuleCreate, AutomodRuleTest, AutomodRuleTestRequest, AutomodRuleUpdate,
 };
@@ -28,7 +29,7 @@ use common::v1::types::{AuditLogEntryType, MessageSync, Permission};
     get,
     path = "/room/{room_id}/automod/rule",
     params(("room_id", description = "Room id")),
-    tags = ["automod"],
+    tags = ["automod", "badge.scope.full"],
     responses(
         (status = OK, body = Vec<AutomodRule>, description = "List automod rules success"),
     )
@@ -38,6 +39,7 @@ async fn automod_rule_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoomManage)?;
@@ -51,7 +53,7 @@ async fn automod_rule_list(
     post,
     path = "/room/{room_id}/automod/rule",
     params(("room_id", description = "Room id")),
-    tags = ["automod", "badge.audit-log.AutomodRuleCreate"],
+    tags = ["automod", "badge.scope.full", "badge.audit-log.AutomodRuleCreate"],
     responses(
         (status = CREATED, body = AutomodRule, description = "Create automod rule success"),
     )
@@ -63,6 +65,7 @@ async fn automod_rule_create(
     Json(json): Json<AutomodRuleCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
 
     let srv = s.services();
@@ -105,7 +108,7 @@ async fn automod_rule_create(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
     ),
-    tags = ["automod"],
+    tags = ["automod", "badge.scope.full"],
     responses(
         (status = OK, body = AutomodRule, description = "Get automod rule success"),
     )
@@ -115,6 +118,7 @@ async fn automod_rule_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoomManage)?;
@@ -137,7 +141,7 @@ async fn automod_rule_get(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
     ),
-    tags = ["automod", "badge.audit-log.AutomodRuleUpdate"],
+    tags = ["automod", "badge.scope.full", "badge.audit-log.AutomodRuleUpdate"],
     responses(
         (status = OK, body = AutomodRule, description = "Update automod rule success"),
     )
@@ -149,6 +153,7 @@ async fn automod_rule_update(
     Json(json): Json<AutomodRuleUpdate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
 
     let srv = s.services();
@@ -202,7 +207,7 @@ async fn automod_rule_update(
         ("room_id", description = "Room id"),
         ("rule_id", description = "Rule id")
     ),
-    tags = ["automod", "badge.audit-log.AutomodRuleDelete"],
+    tags = ["automod", "badge.scope.full", "badge.audit-log.AutomodRuleDelete"],
     responses(
         (status = NO_CONTENT, description = "Delete automod rule success"),
     )
@@ -213,6 +218,7 @@ async fn automod_rule_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -260,7 +266,7 @@ async fn automod_rule_delete(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["automod"],
+    tags = ["automod", "badge.scope.full"],
     request_body = AutomodRuleTestRequest,
     responses(
         (status = OK, body = AutomodRuleTest, description = "Test automod rules success"),
@@ -272,6 +278,7 @@ async fn automod_rule_test(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AutomodRuleTestRequest>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoomManage)?;

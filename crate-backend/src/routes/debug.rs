@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::application::Scope;
 use common::v1::types::{ChannelId, EmbedRequest, Permission, RoomId, UserId};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -245,7 +246,7 @@ async fn debug_version() -> Result<impl IntoResponse> {
 #[utoipa::path(
     post,
     path = "/debug/embed-url",
-    tags = ["debug"],
+    tags = ["debug", "badge.scope.full"],
     responses(
         (status = ACCEPTED, description = "success"),
     )
@@ -255,6 +256,7 @@ async fn debug_embed_url(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let mut embed = ServiceEmbed::generate_inner(&s.inner, auth.user.id, json.url).await?;
     if let Some(m) = &mut embed.media {
@@ -286,7 +288,7 @@ async fn debug_panic() {
 #[utoipa::path(
     post,
     path = "/debug/test-permissions",
-    tags = ["debug"],
+    tags = ["debug", "badge.scope.full"],
     responses((status = OK, body = TestPermissionsResponse, description = "success")),
 )]
 async fn debug_test_permissions(
@@ -294,6 +296,7 @@ async fn debug_test_permissions(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TestPermissionsRequest>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     // check that the user has permissions for the room
@@ -404,12 +407,13 @@ async fn debug_health() -> Result<impl IntoResponse> {
 #[utoipa::path(
     get,
     path = "/ready",
-    tags = ["debug", "badge.admin_only"],
+    tags = ["debug", "badge.admin_only", "badge.scope.auth"],
     responses(
         (status = OK, description = "server is ready"),
     )
 )]
 async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Auth])?;
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
@@ -452,12 +456,13 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
 #[utoipa::path(
     get,
     path = "/doctor",
-    tags = ["debug", "badge.admin_only"],
+    tags = ["debug", "badge.admin_only", "badge.scope.auth"],
     responses(
         (status = OK, description = "diagnostic information"),
     )
 )]
 async fn debug_doctor(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Auth])?;
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
