@@ -181,6 +181,15 @@ async fn room_edit(
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::RoomManage)?;
 
+    let room = s.services().rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.security.require_mfa {
+        let data = s.data();
+        let totp = data.auth_totp_get(auth.user.id).await?;
+        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+            return Err(Error::BadStatic("mfa required for this action"));
+        }
+    }
+
     if let Some(Some(media_id)) = json.icon {
         let data = s.data();
         let media = data.media_select(media_id).await?;
