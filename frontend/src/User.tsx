@@ -284,7 +284,7 @@ export function UserView(props: UserProps) {
 				}}
 			/>
 			<div class="header">
-				<AvatarWithStatus user={props.user} />
+				<AvatarWithStatus user={props.user} animate={true} />
 				<div class="name-area">
 					<div class="name">
 						{name()}

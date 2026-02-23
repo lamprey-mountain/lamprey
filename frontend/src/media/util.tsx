@@ -59,13 +59,18 @@ export const getThumb = (media: Media, size?: number) => {
 };
 
 /** get the cdn url for the thumbnail for a piece of media from its id */
-export const getThumbFromId = (media_id: string, size?: number) => {
+export const getThumbFromId = (
+	media_id: string,
+	size?: number,
+	animate?: boolean,
+) => {
 	const config = useConfig();
-	if (size) {
-		return `${config.cdn_url}/thumb/${media_id}?size=${size}`;
-	} else {
-		return `${config.cdn_url}/thumb/${media_id}`;
+	const url = new URL(`${config.cdn_url}/thumb/${media_id}`);
+	if (size) url.searchParams.set("size", size.toString());
+	if (animate !== undefined) {
+		url.searchParams.set("animate", animate.toString());
 	}
+	return url.toString();
 };
 
 /** get the cdn url for the thumbnail for a custom emoji from its id */

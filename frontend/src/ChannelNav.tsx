@@ -834,6 +834,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const api = useApi();
 	const nav = useNavigate();
 	const currentUserId = () => api.users.cache.get("@self")?.id;
+	const [hovered, setHovered] = createSignal(false);
 
 	const handleClick = (e: MouseEvent) => {
 		if (props.room_id) {
@@ -895,8 +896,10 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 			}}
 			data-channel-id={props.channel.id}
 			onClick={handleClick}
+			onMouseEnter={() => setHovered(true)}
+			onMouseLeave={() => setHovered(false)}
 		>
-			<ChannelIcon channel={props.channel} />
+			<ChannelIcon channel={props.channel} animate={hovered()} />
 			<div style="pointer-events:none;line-height:1;flex:1;overflow:hidden">
 				<div
 					style={{

@@ -6,6 +6,7 @@ import { User } from "sdk";
 type AvatarProps = {
 	user?: User;
 	pad?: number;
+	animate?: boolean;
 	// room_member?: RoomMember,
 	// thread_member?: ThreadMember,
 };
@@ -75,7 +76,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={getThumbFromId(props.user!.avatar!)!}
+						href={getThumbFromId(props.user!.avatar!, 64, props.animate)!}
 					/>
 				</Show>
 			</g>
@@ -145,7 +146,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={getThumbFromId(props.user!.avatar!)!}
+						href={getThumbFromId(props.user!.avatar!, 64, props.animate)!}
 					/>
 				</Show>
 			</g>

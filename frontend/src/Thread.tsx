@@ -80,6 +80,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 									: () => null;
 								const ctx = useCtx();
 								const { userView, setUserView } = useUserPopout();
+								const [hovered, setHovered] = createSignal(false);
 
 								function name() {
 									let name: string | undefined | null = null;
@@ -110,8 +111,10 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 												});
 											}
 										}}
+										onMouseEnter={() => setHovered(true)}
+										onMouseLeave={() => setHovered(false)}
 									>
-										<AvatarWithStatus user={user()} />
+										<AvatarWithStatus user={user()} animate={hovered()} />
 										<span class="text">
 											<span class="name">{name()}</span>
 										</span>

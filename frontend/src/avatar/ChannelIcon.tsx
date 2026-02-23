@@ -18,7 +18,7 @@ import { cyrb53, LCG } from "../rng";
 import { AvatarWithStatus } from "./UserAvatar";
 
 export const ChannelIcon = (
-	props: { channel: Channel },
+	props: { channel: Channel; animate?: boolean },
 ) => {
 	const api = useApi();
 
@@ -55,10 +55,14 @@ export const ChannelIcon = (
 	return (
 		<Switch>
 			<Match when={props.channel.type === "Dm" && otherUser()}>
-				<AvatarWithStatus user={otherUser()} />
+				<AvatarWithStatus user={otherUser()} animate={props.animate} />
 			</Match>
 			<Match when={props.channel.type === "Gdm"}>
-				<ChannelIconGdm id={props.channel.id} icon={props.channel.icon} />
+				<ChannelIconGdm
+					id={props.channel.id}
+					icon={props.channel.icon}
+					animate={props.animate}
+				/>
 			</Match>
 			<Match
 				when={["Text", "Voice", "Forum", "Calendar", "Document", "Wiki"]
@@ -98,7 +102,7 @@ export const ChannelIcon = (
 };
 
 export const ChannelIconGdm = (
-	props: { id: string; icon?: string | null; pad?: number },
+	props: { id: string; icon?: string | null; pad?: number; animate?: boolean },
 ) => {
 	const pad = () => props.pad ?? 4;
 	const size = 64;
@@ -135,7 +139,7 @@ export const ChannelIconGdm = (
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={getThumbFromId(props.icon!, 64)!}
+						href={getThumbFromId(props.icon!, 128, props.animate)!}
 					/>
 				</Show>
 			</g>

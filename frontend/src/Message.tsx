@@ -383,6 +383,7 @@ export function MessageView(props: MessageProps) {
 	const thread = api.channels.fetch(() => props.message.channel_id);
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 	let messageArticleRef: HTMLElement | undefined;
+	const [hovered, setHovered] = createSignal(false);
 
 	const isMenuOpen = () => {
 		const m = menu();
@@ -482,6 +483,8 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 					onMouseDown={onMouseDown}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icMemberAdd} />
 					<div class="content">
@@ -530,6 +533,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icMemberRemove} />
 					<div class="content">
@@ -565,6 +570,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icMemberJoin} />
 					<div class="content">
@@ -617,6 +624,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icPin} />
 					<div class="content">
@@ -653,6 +662,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icEdit} />
 					<div class="content">
@@ -688,6 +699,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icEdit} />
 					<div class="content">
@@ -725,6 +738,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icMemberJoin} />
 					<div class="content">
@@ -762,6 +777,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icReply} />
 					<div class="content">
@@ -798,6 +815,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icEdit} />
 					<div class="content">
@@ -833,6 +852,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icEdit} />
 					<div class="content">
@@ -870,6 +891,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icMemberRemove} />
 					<div class="content">
@@ -948,6 +971,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icThread} />
 					<div class="content">
@@ -977,6 +1002,8 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<img class="icon main" src={icMemberRemove} />
 					<div class="content">
@@ -1030,6 +1057,8 @@ export function MessageView(props: MessageProps) {
 					}}
 					onClick={handleClick}
 					onMouseDown={onMouseDown}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					<Show when={props.message.reply_id}>
 						<ReplyView
@@ -1060,7 +1089,7 @@ export function MessageView(props: MessageProps) {
 									}
 								}}
 							>
-								<Avatar user={user()} />
+								<Avatar user={user()} animate={hovered()} />
 							</div>
 							<div
 								class="author"
@@ -1148,6 +1177,8 @@ export function MessageView(props: MessageProps) {
 					data-message-id={props.message.id}
 					classList={{ "toolbar-visible": toolbarVisible() }}
 					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
 				>
 					unknown message: {props.message.type}
 					<MessageToolbar message={props.message} />

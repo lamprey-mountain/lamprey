@@ -387,6 +387,7 @@ export const ChatHeader = (
 	const api = useApi();
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
+	const [hovered, setHovered] = createSignal(false);
 
 	const selected = () => channelState.selectedMessages;
 	const inSelectMode = () => channelState.selectMode;
@@ -457,8 +458,13 @@ export const ChatHeader = (
 		<Show
 			when={inSelectMode()}
 			fallback={
-				<header class="chat-header" style="display:flex">
-					<ChannelIcon channel={props.channel} />
+				<header
+					class="chat-header"
+					style="display:flex"
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
+				>
+					<ChannelIcon channel={props.channel} animate={hovered()} />
 					<b>{name()}</b>
 					<Show when={props.channel.description}>
 						<span class="dim" style="white-space:pre;font-size:1em">

@@ -82,6 +82,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 
 								const ctx = useCtx();
 								const { userView, setUserView } = useUserPopout();
+								const [hovered, setHovered] = createSignal(false);
 								function name() {
 									let name: string | undefined | null = null;
 									if (member()?.membership === "Join") {
@@ -109,8 +110,10 @@ export const RoomMembers = (props: { room: RoomT }) => {
 												});
 											}
 										}}
+										onMouseEnter={() => setHovered(true)}
+										onMouseLeave={() => setHovered(false)}
 									>
-										<AvatarWithStatus user={user()} />
+										<AvatarWithStatus user={user()} animate={hovered()} />
 										<span class="text">
 											<span class="name">{name()}</span>
 										</span>
