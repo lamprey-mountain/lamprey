@@ -1,10 +1,5 @@
-use std::fmt;
-use std::ops::Deref;
-use std::str::FromStr;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -12,11 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    error::{ApiError, ErrorCode},
-    util::Time,
-    RoomMember, User,
-};
+use crate::v1::types::{util::Time, RoomMember, User};
 
 use super::{util::Diff, ApplicationId, UserId};
 
@@ -240,125 +231,8 @@ pub struct Bridge {
     pub platform_description: Option<String>,
 }
 
-// TODO: move to oauth
-/// an oauth scope
-///
-/// WORK IN PROGRESS!!! SUBJECT TO CHANGE!!!
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
-pub enum Scope {
-    /// basic user profle information
-    ///
-    /// affects user_get and oauth_userinfo
-    #[cfg_attr(feature = "serde", serde(alias = "openid"))]
-    Identify,
-
-    /// return email address in user profile
-    ///
-    /// implies `identify`
-    Email,
-
-    /// full read/write access to the user's account (except auth)
-    ///
-    /// in the future, this will be split into separate scopes
-    ///
-    /// implies `email` and `identify`
-    Full,
-
-    /// full read/write access to /auth. implies `full`. very dangerous, will be reworked later!
-    ///
-    /// implies `full`
-    Auth,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(transparent))]
-pub struct Scopes(pub Vec<Scope>);
-
-impl Deref for Scopes {
-    type Target = Vec<Scope>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl IntoIterator for Scopes {
-    type Item = Scope;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl<'a> IntoIterator for &'a Scopes {
-    type Item = &'a Scope;
-    type IntoIter = std::slice::Iter<'a, Scope>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
-    }
-}
-
-impl Scopes {
-    /// check if this set of scopes contains a scope
-    pub fn has(&self, scope: &Scope) -> bool {
-        self.0.iter().any(|s| s.implies(scope))
-    }
-
-    /// check that this set of scopes contains a required scope, returning an error if it is missing
-    pub fn ensure(&self, scope: &Scope) -> Result<(), ApiError> {
-        if self.has(scope) {
-            Ok(())
-        } else {
-            Err(ApiError {
-                required_scopes: vec![scope.clone()],
-                ..ApiError::from_code(ErrorCode::MissingScopes)
-            })
-        }
-    }
-
-    /// check that this set of scopes contains all required scopes, returning an error if any are missing
-    pub fn ensure_all(&self, scopes: &[Scope]) -> Result<(), ApiError> {
-        let mut missing = vec![];
-
-        for required_scope in scopes {
-            if !self.has(required_scope) {
-                missing.push(*required_scope);
-            }
-        }
-
-        if missing.is_empty() {
-            Ok(())
-        } else {
-            Err(ApiError {
-                required_scopes: missing.clone(),
-                ..ApiError::from_code(ErrorCode::MissingScopes)
-            })
-        }
-    }
-}
-
-impl Scope {
-    /// check if this scope implies another scope
-    pub fn implies(&self, other: &Scope) -> bool {
-        if self == other {
-            return true;
-        }
-
-        match self {
-            Scope::Auth => true,
-            Scope::Full => matches!(other, Scope::Email | Scope::Identify),
-            Scope::Email => *other == Scope::Identify,
-            Scope::Identify => false,
-        }
-    }
-}
+// TEMP: compatability
+pub use super::oauth::{Scope, Scopes};
 
 impl Diff<Application> for ApplicationPatch {
     fn changes(&self, other: &Application) -> bool {
@@ -368,31 +242,5 @@ impl Diff<Application> for ApplicationPatch {
             || self.public.changes(&other.public)
             || self.oauth_redirect_uris.changes(&other.oauth_redirect_uris)
             || self.oauth_confidential.changes(&other.oauth_confidential)
-    }
-}
-
-impl fmt::Display for Scope {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Scope::Identify => "identify",
-            Scope::Email => "email",
-            Scope::Full => "full",
-            Scope::Auth => "auth",
-        };
-        f.write_str(s)
-    }
-}
-
-impl FromStr for Scope {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "identify" | "openid" => Ok(Scope::Identify),
-            "email" => Ok(Scope::Email),
-            "full" => Ok(Scope::Full),
-            "auth" => Ok(Scope::Auth),
-            _ => Err(()),
-        }
     }
 }
