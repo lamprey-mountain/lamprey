@@ -22,6 +22,7 @@ import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";
 import { Copyable } from "../util.tsx";
 import { useCtx } from "../context.ts";
+import { Savebar } from "../atoms/Savebar";
 
 function filterPermissionsByChannelType(
 	permissions: typeof permissions,
@@ -378,15 +379,13 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 						</div>
 					</div>
 				</div>
-				<Show when={isAnyDirty()}>
-					<div class="savebar">
-						<div class="inner">
-							<div class="warning">you have unsaved changes</div>
-							<button class="reset" onClick={cancelAll}>Cancel</button>
-							<button class="save" onClick={saveAll}>Save All</button>
-						</div>
-					</div>
-				</Show>
+				<Savebar
+					show={isAnyDirty()}
+					onCancel={cancelAll}
+					onSave={saveAll}
+					cancelText="Cancel"
+					saveText="Save All"
+				/>
 			</div>
 			<Show when={editingOverwrite()} keyed>
 				{(overwrite) => (

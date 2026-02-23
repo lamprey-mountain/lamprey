@@ -5,6 +5,7 @@ import { useCtx } from "../context";
 import { Copyable } from "../util";
 import { useModals } from "../contexts/modal";
 import { Avatar } from "../User.tsx";
+import { Savebar } from "../atoms/Savebar";
 
 // TODO(#753): allow uploading banner
 
@@ -122,19 +123,11 @@ export function Profile(props: VoidProps<{ user: User }>) {
 			<div>
 				user id: <Copyable>{props.user.id}</Copyable>
 			</div>
-			{isDirty() && (
-				<div class="savebar">
-					<div class="inner">
-						<div class="warning">you have unsaved changes</div>
-						<button class="reset" onClick={reset}>
-							cancel
-						</button>
-						<button class="save" onClick={save}>
-							save
-						</button>
-					</div>
-				</div>
-			)}
+			<Savebar
+				show={isDirty()}
+				onCancel={reset}
+				onSave={save}
+			/>
 		</div>
 	);
 }

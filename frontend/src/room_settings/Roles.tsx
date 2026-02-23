@@ -22,6 +22,7 @@ import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons.tsx";
 import { A } from "@solidjs/router";
 import { Avatar } from "../User.tsx";
+import { Savebar } from "../atoms/Savebar";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));

@@ -7,6 +7,7 @@ import { useApi } from "../api.tsx";
 import { Checkbox } from "../icons";
 import { useModals } from "../contexts/modal";
 import { RoomIcon } from "../User.tsx";
+import { Savebar } from "../atoms/Savebar";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -104,19 +105,11 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			/>
 			<br />
 			<br />
-			{isDirty() && (
-				<div class="savebar">
-					<div class="inner">
-						<div class="warning">you have unsaved changes</div>
-						<button class="reset" onClick={reset}>
-							cancel
-						</button>
-						<button class="save" onClick={save}>
-							save
-						</button>
-					</div>
-				</div>
-			)}
+			<Savebar
+				show={isDirty()}
+				onCancel={reset}
+				onSave={save}
+			/>
 			<div>
 				<div class="avatar-uploader" onClick={openAvatarPicker}>
 					<div class="avatar-inner">

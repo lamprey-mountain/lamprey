@@ -7,6 +7,7 @@ import { Checkbox } from "../icons";
 import { DurationInput } from "../DurationInput.tsx";
 import { createUpload } from "sdk";
 import { ChannelIconGdm } from "../User.tsx";
+import { Savebar } from "../atoms/Savebar";
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
@@ -316,19 +317,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			</Show>
 			{/* TODO: add/remove tags from thread channels */}
 			{/* TODO: archive all threads in this channel (text, forum) */}
-			{isDirty() && (
-				<div class="savebar">
-					<div class="inner">
-						<div class="warning">you have unsaved changes</div>
-						<button class="reset" onClick={reset}>
-							cancel
-						</button>
-						<button class="save" onClick={save}>
-							save
-						</button>
-					</div>
-				</div>
-			)}
+			<Savebar
+				show={isDirty()}
+				onCancel={reset}
+				onSave={save}
+			/>
 		</div>
 	);
 }

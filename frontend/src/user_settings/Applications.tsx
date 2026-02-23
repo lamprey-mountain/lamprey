@@ -20,6 +20,7 @@ import { Checkbox } from "../icons";
 import { Resizable } from "../Resizable";
 import { getThumbFromId } from "../media/util";
 import { Avatar } from "../User.tsx";
+import { Savebar } from "../atoms/Savebar";
 import fuzzysort from "fuzzysort";
 
 // TODO: in create session and rotate oauth token, make the secret Copyable
@@ -293,19 +294,11 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 							}}
 						</For>
 					</ul>
-					<Show when={hasUnsavedChanges()}>
-						<div class="savebar">
-							<div class="inner">
-								<div class="warning">you have unsaved changes</div>
-								<button class="reset" onClick={cancelChanges}>
-									cancel
-								</button>
-								<button class="save" onClick={saveChanges}>
-									save
-								</button>
-							</div>
-						</div>
-					</Show>
+					<Savebar
+						show={hasUnsavedChanges()}
+						onCancel={cancelChanges}
+						onSave={saveChanges}
+					/>
 				</div>
 				<Show when={edit.app.id !== null}>
 					<Resizable
