@@ -25,8 +25,18 @@ static EMOJI_MENTION_RE: Lazy<Regex> = Lazy::new(|| {
     .unwrap()
 });
 static EVERYONE_MENTION_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"@everyone").unwrap());
+static CODE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s)```[\s\S]*?```|`[^`\n]+`").unwrap());
 
 pub fn parse(content: &str, options: &ParseMentions) -> MentionsIds {
+    let sanitized_owned;
+    let content = if content.contains('`') {
+        sanitized_owned =
+            CODE_RE.replace_all(content, |caps: &regex::Captures| " ".repeat(caps[0].len()));
+        &*sanitized_owned
+    } else {
+        content
+    };
+
     let users = options
         .users
         .as_ref()
@@ -107,9 +117,17 @@ pub fn parse(content: &str, options: &ParseMentions) -> MentionsIds {
 }
 
 pub fn strip_emoji(content: &str, allowed_emoji: &[EmojiId]) -> String {
-    EMOJI_MENTION_RE
+    static STRIP_RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"(?s)(```[\s\S]*?```|`[^`\n]+`)|(<a?:(\w+):([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})>)").unwrap()
+    });
+
+    STRIP_RE
         .replace_all(content, |caps: &regex::Captures| {
-            let emoji_id = Uuid::parse_str(&caps[1]).ok().map(EmojiId::from);
+            if let Some(code) = caps.get(1) {
+                return code.as_str().to_string();
+            }
+
+            let emoji_id = Uuid::parse_str(&caps[4]).ok().map(EmojiId::from);
             match emoji_id {
                 Some(id) if allowed_emoji.contains(&id) => caps
                     .get(0)
@@ -117,7 +135,7 @@ pub fn strip_emoji(content: &str, allowed_emoji: &[EmojiId]) -> String {
                     .as_str()
                     .to_string(),
                 _ => {
-                    let name = caps.get(1).expect("this should always exist").as_str();
+                    let name = caps.get(3).expect("this should always exist").as_str();
                     format!(":{}:", name)
                 }
             }
