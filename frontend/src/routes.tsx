@@ -4,7 +4,14 @@ import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ChannelNav } from "./ChannelNav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import { createEffect, createResource, Match, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ChannelSettings } from "./ChannelSettings.tsx";
 import { ChatHeader, ChatMain, RoomHeader, SearchResults } from "./Chat.tsx";
@@ -273,8 +280,8 @@ export const RouteChannel = (p: RouteSectionProps) => {
 		return ctx.document_contexts.get(channelId)!;
 	};
 
-	const documentCtx = getOrCreateDocumentContext();
-	const channelCtx = getOrCreateChannelContext();
+	const documentCtx = createMemo(() => getOrCreateDocumentContext());
+	const channelCtx = createMemo(() => getOrCreateChannelContext());
 
 	// store last viewed channel per room
 	createEffect(() => {
@@ -289,9 +296,10 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	// Handle message anchor logic
 	createEffect(() => {
 		const { channel_id, message_id } = p.params;
-		if (!channelCtx) return;
+		const c = channelCtx();
+		if (!c) return;
 
-		const [, setChannelState] = channelCtx;
+		const [, setChannelState] = c;
 
 		if (channel_id && message_id) {
 			setChannelState("anchor", {
@@ -301,7 +309,7 @@ export const RouteChannel = (p: RouteSectionProps) => {
 			});
 			setChannelState("highlight", message_id);
 		} else if (channel_id) {
-			if (channelCtx[0].anchor?.type === "context") {
+			if (c[0].anchor?.type === "context") {
 				setChannelState("anchor", undefined);
 			}
 		}
@@ -320,9 +328,9 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	};
 
 	return (
-		<Show when={channelCtx} fallback={<div>Loading channel...</div>}>
-			<ChannelContext.Provider value={channelCtx}>
-				<DocumentContext.Provider value={documentCtx}>
+		<Show when={channelCtx()} fallback={<div>Loading channel...</div>}>
+			<ChannelContext.Provider value={channelCtx()!}>
+				<DocumentContext.Provider value={documentCtx()!}>
 					<LayoutDefault
 						title={title()}
 						showChannelNav={true}
