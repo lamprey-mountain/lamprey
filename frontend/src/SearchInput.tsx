@@ -203,9 +203,9 @@ function serializeToQuery(state: EditorState): string {
 			if (inlineNode.isText) {
 				query += inlineNode.text;
 			} else if (inlineNode.type.name === "author") {
-				query += ` author:${inlineNode.attrs.name} `;
+				query += ` author:${inlineNode.attrs.id} `;
 			} else if (inlineNode.type.name === "thread") {
-				query += ` thread:${inlineNode.attrs.name} `;
+				query += ` thread:${inlineNode.attrs.id} `;
 			} else if (inlineNode.type.name === "before") {
 				query += ` before:${inlineNode.attrs.date} `;
 			} else if (inlineNode.type.name === "after") {
@@ -215,7 +215,7 @@ function serializeToQuery(state: EditorState): string {
 			} else if (inlineNode.type.name === "pinned") {
 				query += ` pinned:${inlineNode.attrs.value} `;
 			} else if (inlineNode.type.name === "mentions") {
-				query += ` mentions:${inlineNode.attrs.name} `;
+				query += ` mentions:${inlineNode.attrs.id} `;
 			}
 		});
 	});
@@ -688,7 +688,9 @@ function autocompletePlugin(
 	});
 }
 
-export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
+export const SearchInput = (
+	props: { channel?: ThreadT; room?: RoomT; autofocus?: boolean },
+) => {
 	const api = useApi();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
 	const [activeFilter, setActiveFilter] = createSignal<
@@ -712,6 +714,10 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 
 	const channelCtx = useChannel();
 	const roomCtx = useRoom();
+
+	const roomThreads = api.channels.list(() =>
+		props.channel?.room_id ?? props.room?.id ?? ""
+	);
 
 	const currentSearch = () => {
 		if (props.channel) return channelCtx?.[0].search;
@@ -928,6 +934,38 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		const textBefore = editor.view.state.doc.textBetween(0, from, " ");
 		const wordMatch = textBefore.match(/(\S+)$/);
 		const start = wordMatch ? from - wordMatch[0].length : from;
+
+		// Check if this is a filter with ID (from search history)
+		const filterMatch = text.match(/^(author|thread|mentions):(\S+)$/);
+		if (filterMatch) {
+			const [, type, id] = filterMatch;
+			let node: Node | null = null;
+			if (type === "author") {
+				const user = api.users.cache.get(id);
+				if (user) {
+					node = schema.nodes.author.create({ id: user.id, name: user.name });
+				}
+			} else if (type === "thread") {
+				const threads = roomThreads()?.items ?? [];
+				const thread = threads.find((t) => t.id === id);
+				if (thread) {
+					node = schema.nodes.thread.create({
+						id: thread.id,
+						name: thread.name,
+					});
+				}
+			} else if (type === "mentions") {
+				// mentions can be user-{id}, role-{id}, or special
+				node = schema.nodes.mentions.create({ id, name: id });
+			}
+			if (node) {
+				const tr = editor.view.state.tr.replaceWith(start, from, node);
+				editor.view.dispatch(tr);
+				editor.view.focus();
+				return;
+			}
+		}
+
 		const tr = editor.view.state.tr.insertText(text, start, from);
 		editor.view.dispatch(tr);
 		editor.view.focus();
@@ -1023,6 +1061,7 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 				return false;
 			},
 		},
+		autofocus: props.autofocus ?? !!currentSearch(),
 	});
 
 	createEffect(() => {

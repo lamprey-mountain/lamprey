@@ -847,6 +847,7 @@ export class Messages {
 
 		return {
 			...data,
+			approximate_total: data.total,
 			messages: convertedMessages,
 		};
 	}

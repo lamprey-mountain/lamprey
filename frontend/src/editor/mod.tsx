@@ -20,6 +20,7 @@ export type EditorOptions = {
 	nodeViews?: (view: EditorView) => Record<string, NodeViewConstructor>;
 	handleKeyDown?: (view: EditorView, event: KeyboardEvent) => boolean;
 	handleDOMEvents?: ProsemirrorEditorProps["handleDOMEvents"];
+	autofocus?: boolean;
 };
 
 export type EditorViewProps = {
@@ -171,7 +172,9 @@ export const createEditor = (opts: EditorOptions) => {
 					},
 				});
 
-				view.focus();
+				if (opts.autofocus ?? true) {
+					view.focus();
+				}
 			});
 
 			onCleanup(() => {
