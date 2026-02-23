@@ -152,7 +152,12 @@ impl ServerStateInner {
             }
             MessagingService::Nats(client) => {
                 let bytes = serde_json::to_vec(&msg)?;
-                let _ = client.publish("sushi", bytes.into());
+                let client = client.clone();
+                self.tokio.spawn(async move {
+                    if let Err(e) = client.publish("sushi".to_string(), bytes.into()).await {
+                        tracing::error!("NATS publish failed: {}", e);
+                    }
+                });
             }
         }
         Ok(())
@@ -166,7 +171,12 @@ impl ServerStateInner {
             }
             MessagingService::Nats(client) => {
                 let bytes = serde_json::to_vec(&cmd)?;
-                let _ = client.publish("sushi_sfu", bytes.into());
+                let client = client.clone();
+                self.tokio.spawn(async move {
+                    if let Err(e) = client.publish("sushi_sfu".to_string(), bytes.into()).await {
+                        tracing::error!("NATS publish failed: {}", e);
+                    }
+                });
             }
         }
         Ok(())
@@ -185,15 +195,17 @@ impl ServerStateInner {
                     .await
                     .map_err(|e| Error::Internal(format!("NATS subscribe failed: {}", e)))?;
                 let stream = futures::stream::unfold(sub, move |mut sub| async move {
-                    match sub.next().await {
-                        Some(msg) => match serde_json::from_slice(&msg.payload) {
-                            Ok(inner) => Some((inner, sub)),
-                            Err(e) => {
-                                tracing::error!("NATS message deserialize failed: {}", e);
-                                None
-                            }
-                        },
-                        None => None,
+                    loop {
+                        match sub.next().await {
+                            Some(msg) => match serde_json::from_slice(&msg.payload) {
+                                Ok(inner) => return Some((inner, sub)),
+                                Err(e) => {
+                                    tracing::error!("NATS message deserialize failed: {}", e);
+                                    continue;
+                                }
+                            },
+                            None => return None,
+                        }
                     }
                 });
                 Ok(Box::pin(stream))
@@ -214,15 +226,17 @@ impl ServerStateInner {
                     .await
                     .map_err(|e| Error::Internal(format!("NATS subscribe failed: {}", e)))?;
                 let stream = futures::stream::unfold(sub, move |mut sub| async move {
-                    match sub.next().await {
-                        Some(msg) => match serde_json::from_slice(&msg.payload) {
-                            Ok(cmd) => Some((cmd, sub)),
-                            Err(e) => {
-                                tracing::error!("NATS message deserialize failed: {}", e);
-                                None
-                            }
-                        },
-                        None => None,
+                    loop {
+                        match sub.next().await {
+                            Some(msg) => match serde_json::from_slice(&msg.payload) {
+                                Ok(cmd) => return Some((cmd, sub)),
+                                Err(e) => {
+                                    tracing::error!("NATS message deserialize failed: {}", e);
+                                    continue;
+                                }
+                            },
+                            None => return None,
+                        }
                     }
                 });
                 Ok(Box::pin(stream))
