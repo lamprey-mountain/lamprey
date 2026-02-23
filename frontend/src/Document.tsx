@@ -11,6 +11,11 @@ import icBranchFork from "./assets/edit.png";
 import icBranch from "./assets/edit.png";
 import icMergeFull from "./assets/edit.png";
 import icMergeCherrypick from "./assets/edit.png";
+import icFormatBold from "./assets/format-bold.png";
+import icFormatItalic from "./assets/format-italic.png";
+import icFormatCode from "./assets/format-code.png";
+import icFormatStrikethrough from "./assets/format-strikethrough.png";
+import icFormatUrl from "./assets/format-url.png";
 import { useDocument } from "./contexts/document.tsx";
 
 type DocumentProps = {
@@ -32,7 +37,7 @@ export const Document = (props: DocumentProps) => {
 const DocumentHeader = (props: DocumentProps) => {
 	const [doc, update] = useDocument();
 	const [active, setActive] = createSignal<
-		"branches" | "merge" | "export" | "insert" | null
+		"branches" | "merge" | "export" | "insert" | "format" | null
 	>(null);
 
 	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
@@ -62,6 +67,14 @@ const DocumentHeader = (props: DocumentProps) => {
 	const [insertBtn, setInsertBtn] = createSignal<HTMLElement>();
 	const [insertMenu, setInsertMenu] = createSignal<HTMLElement>();
 	const insertPos = useFloating(insertBtn, insertMenu, {
+		whileElementsMounted: autoUpdate,
+		placement: "bottom-start",
+		middleware: [offset(4), flip(), shift()],
+	});
+
+	const [formatBtn, setFormatBtn] = createSignal<HTMLElement>();
+	const [formatMenu, setFormatMenu] = createSignal<HTMLElement>();
+	const formatPos = useFloating(formatBtn, formatMenu, {
 		whileElementsMounted: autoUpdate,
 		placement: "bottom-start",
 		middleware: [offset(4), flip(), shift()],
@@ -119,6 +132,16 @@ const DocumentHeader = (props: DocumentProps) => {
 					classList={{ active: active() === "insert" }}
 				>
 					insert
+				</button>
+				<button
+					ref={setFormatBtn}
+					onClick={(e) => {
+						e.stopPropagation();
+						setActive(active() === "format" ? null : "format");
+					}}
+					classList={{ active: active() === "format" }}
+				>
+					format
 				</button>
 			</div>
 			<Show when={active() === "branches"}>
@@ -362,6 +385,69 @@ const DocumentHeader = (props: DocumentProps) => {
 									<div class="info">
 										<div>time</div>
 										<div class="dim">insert current date and time</div>
+									</div>
+								</button>
+							</li>
+						</ul>
+					</menu>
+				</Portal>
+			</Show>
+			<Show when={active() === "format"}>
+				<Portal>
+					<menu
+						class="format-menu document-menu"
+						ref={setFormatMenu}
+						style={{
+							position: formatPos.strategy,
+							top: `${formatPos.y ?? 0}px`,
+							left: `${formatPos.x ?? 0}px`,
+							"z-index": 100,
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<ul>
+							<li>
+								<button>
+									<img class="icon" src={icFormatBold} />
+									<div class="info">
+										<div>bold</div>
+										<div class="dim">make text bold</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button>
+									<img class="icon" src={icFormatItalic} />
+									<div class="info">
+										<div>italic</div>
+										<div class="dim">make text italic</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button>
+									<img class="icon" src={icFormatStrikethrough} />
+									<div class="info">
+										<div>strikethrough</div>
+										<div class="dim">add strikethrough to text</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button>
+									<img class="icon" src={icFormatCode} />
+									<div class="info">
+										<div>inline code</div>
+										<div class="dim">format text as code</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button>
+									<img class="icon" src={icFormatUrl} />
+									<div class="info">
+										<div>link</div>
+										<div class="dim">insert or edit a link</div>
 									</div>
 								</button>
 							</li>
