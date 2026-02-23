@@ -1,7 +1,8 @@
 use async_trait::async_trait;
+use lamprey_backend_core::data::InstanceMetrics;
 use sqlx::query_as;
 
-use crate::data::{DataMetrics, InstanceMetrics};
+use crate::data::DataMetrics;
 use crate::error::Result;
 
 use super::Postgres;
