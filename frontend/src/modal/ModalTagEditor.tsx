@@ -111,7 +111,10 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 							onInput={(e) => setRestricted(e.currentTarget.checked)}
 							style="display: none;"
 						/>
-						<Checkbox checked={restricted()} />
+						<Checkbox
+							checked={restricted()}
+							seed={`modal-tag-editor-${props.forumChannelId}-restricted`}
+						/>
 						<div>
 							<div>Restricted</div>
 							<div class="dim">

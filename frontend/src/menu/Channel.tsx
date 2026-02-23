@@ -236,7 +236,10 @@ export function ChannelMenu(props: { channel_id: string }) {
 										}}
 									>
 										<div style="display: flex; align-items: start; gap: 8px">
-											<Checkbox checked={isChecked} />
+											<Checkbox
+												checked={isChecked}
+												seed={`menu-channel-${props.channel.id}-tag-${tag.id}`}
+											/>
 											<div style="margin: 2px 0">
 												<div classList={{ has: isChecked }}>
 													{tag.name}

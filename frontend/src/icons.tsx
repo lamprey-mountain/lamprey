@@ -1,4 +1,9 @@
 import { Show } from "solid-js";
+import icCheck1 from "./assets/check-1.png";
+import icCheck2 from "./assets/check-2.png";
+import icCheck3 from "./assets/check-3.png";
+import icCheck4 from "./assets/check-4.png";
+import { cyrb53, LCG } from "./rng";
 
 export const RadioDot = (props: { checked?: boolean }) => {
 	return (
@@ -23,7 +28,14 @@ export const RadioDot = (props: { checked?: boolean }) => {
 	);
 };
 
-export const Checkbox = (props: { checked?: boolean }) => {
+export const Checkbox = (props: { checked?: boolean; seed?: string }) => {
+	const icon = () => {
+		if (!props.checked || !props.seed) return null;
+		const rand = LCG(cyrb53(props.seed));
+		const checks = [icCheck1, icCheck2, icCheck3, icCheck4];
+		return checks[Math.floor(rand() * checks.length)];
+	};
+
 	return (
 		<svg
 			class="radio"
@@ -41,14 +53,15 @@ export const Checkbox = (props: { checked?: boolean }) => {
 				stroke={props.checked ? "oklch(var(--color-link-200))" : "currentColor"}
 				stroke-width="1"
 			/>
-			<Show when={props.checked}>
-				<path
-					d="M4.5 8.5L7 11l4.5-5.5"
-					fill="none"
-					stroke="oklch(var(--color-fg1))"
-					stroke-width="1.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
+			<Show when={icon()}>
+				<image
+					class="icon"
+					href={icon()!}
+					style="height:12px;width:12px"
+					height="12"
+					width="12"
+					x="2"
+					y="2"
 				/>
 			</Show>
 		</svg>

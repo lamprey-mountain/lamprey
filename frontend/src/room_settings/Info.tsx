@@ -154,7 +154,10 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					onChange={(e) => setEditingPublic(e.target.checked)}
 					style="display: none;"
 				/>
-				<Checkbox checked={editingPublic()} />
+				<Checkbox
+					checked={editingPublic()}
+					seed={`room-${props.room.id}-public`}
+				/>
 				<span>Make this room public (anyone can join and view)</span>
 			</label>
 			<br />

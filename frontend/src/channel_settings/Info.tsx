@@ -269,7 +269,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						onInput={(e) => setEditingNsfw(e.currentTarget.checked)}
 						style="display: none;"
 					/>
-					<Checkbox checked={editingNsfw()} />
+					<Checkbox
+						checked={editingNsfw()}
+						seed={`channel-${props.channel.id}-nsfw`}
+					/>
 					<div>
 						<b>nsfw</b>
 						<div>mark this channel as not safe for work</div>

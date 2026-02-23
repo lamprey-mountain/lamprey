@@ -262,7 +262,10 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 						}}
 						style="display: none;"
 					/>
-					<Checkbox checked={everyone()} />
+					<Checkbox
+						checked={everyone()}
+						seed={`menu-room-${props.room.id}-everyone`}
+					/>
 					<label for="room-mention-everyone" style="margin-left: 8px;">
 						<div>Enable @everyone and @here</div>
 						<div class="dim">
@@ -282,7 +285,10 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 						}}
 						style="display: none;"
 					/>
-					<Checkbox checked={roles()} />
+					<Checkbox
+						checked={roles()}
+						seed={`menu-room-${props.room.id}-roles`}
+					/>
 					<label for="room-mention-roles" style="margin-left: 8px;">
 						<div>Enable all role mentions</div>
 						<div class="dim">

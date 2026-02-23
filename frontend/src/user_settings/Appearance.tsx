@@ -93,6 +93,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["underline_links"] === "yes"}
+						seed={`user-${ctx.user?.id ?? "@self"}-underline-links`}
 					/>
 					<span>{t("user_settings.underline_links")}</span>
 				</label>
@@ -105,6 +106,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
+						seed={`user-${ctx.user?.id ?? "@self"}-show-send-button`}
 					/>
 					<span>{t("user_settings.show_send_button")}</span>
 				</label>
@@ -256,6 +258,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["reduced_motion"] === "yes"}
+						seed={`user-${ctx.user?.id ?? "@self"}-reduced-motion`}
 					/>
 					<span>{t("user_settings.reduced_motion")}</span>
 				</label>
@@ -270,6 +273,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig().frontend["reduced_motion_sync"] ===
 							"yes"}
+						seed={`user-${ctx.user?.id ?? "@self"}-reduced-motion-sync`}
 					/>
 					<span>{t("user_settings.reduced_motion_sync")}</span>
 				</label>
@@ -282,6 +286,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["autoplay_gifs"] === "yes"}
+						seed={`user-${ctx.user?.id ?? "@self"}-autoplay-gifs`}
 					/>
 					<span>{t("user_settings.autoplay_gifs")}</span>
 				</label>
@@ -294,6 +299,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["autoplay_emoji"] === "yes"}
+						seed={`user-${ctx.user?.id ?? "@self"}-autoplay-emoji`}
 					/>
 					<span>{t("user_settings.autoplay_emoji")}</span>
 				</label>

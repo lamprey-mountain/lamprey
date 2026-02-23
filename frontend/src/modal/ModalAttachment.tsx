@@ -64,7 +64,7 @@ export const ModalAttachment = (_props: ModalAttachmentProps) => {
 						onInput={(e) => setSpoiler(e.currentTarget.checked)}
 						style="display:none"
 					/>
-					<Checkbox checked={spoiler()} />
+					<Checkbox checked={spoiler()} seed="modal-attachment-spoiler" />
 					<label for="opt-spoiler">
 						<div>Mark as spoiler</div>
 						<div class="dim">
@@ -80,7 +80,7 @@ export const ModalAttachment = (_props: ModalAttachmentProps) => {
 						onInput={(e) => setExif(e.currentTarget.checked)}
 						style="display:none"
 					/>
-					<Checkbox checked={exif()} />
+					<Checkbox checked={exif()} seed="modal-attachment-exif" />
 					<label for="opt-exif">
 						<div>Include metadata</div>
 						<div class="dim">

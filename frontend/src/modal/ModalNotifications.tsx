@@ -82,7 +82,10 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 							onInput={(e) => setEveryone(e.currentTarget.checked)}
 							style="display: none;"
 						/>
-						<Checkbox checked={everyone()} />
+						<Checkbox
+							checked={everyone()}
+							seed={`modal-notifications-${props.room_id}-everyone`}
+						/>
 						<label for="opt-everyone">
 							<div>Enable @everyone and @here</div>
 							<div class="dim">
@@ -99,7 +102,10 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 							onInput={(e) => setRole(e.currentTarget.checked)}
 							style="display: none;"
 						/>
-						<Checkbox checked={role()} />
+						<Checkbox
+							checked={role()}
+							seed={`modal-notifications-${props.room_id}-role`}
+						/>
 						<label for="opt-role">
 							<div>Enable all role mentions</div>
 							<div class="dim">

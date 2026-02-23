@@ -133,6 +133,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<Checkbox
 					checked={ctx.userConfig().frontend["voice_echo_cancellation"] ===
 						"yes"}
+					seed={`user-${ctx.user?.id ?? "@self"}-voice-echo-cancellation`}
 				/>
 				<span>Enable echo cancellation</span>
 			</label>
@@ -147,6 +148,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<Checkbox
 					checked={ctx.userConfig().frontend["voice_noise_suppression"] ===
 						"yes"}
+					seed={`user-${ctx.user?.id ?? "@self"}-voice-noise-suppression`}
 				/>
 				<span>Enable noise suppression</span>
 			</label>

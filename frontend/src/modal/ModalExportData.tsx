@@ -34,7 +34,10 @@ export const ModalExportData = () => {
 							onInput={(e) => setIncludeMessages(e.currentTarget.checked)}
 							style="display: none;"
 						/>
-						<Checkbox checked={includeMessages()} />
+						<Checkbox
+							checked={includeMessages()}
+							seed="modal-export-data-include-messages"
+						/>
 						<div>
 							<div>Include messages</div>
 						</div>

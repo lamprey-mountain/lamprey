@@ -540,7 +540,10 @@ const AppEditor = (
 						}}
 						style="display: none;"
 					/>
-					<Checkbox checked={props.edit.app.bridge} />
+					<Checkbox
+						checked={props.edit.app.bridge}
+						seed={`app-${props.edit.app.id}-bridge`}
+					/>
 					<div>
 						<div>bridge</div>
 						<div class="dim">can create puppets</div>
@@ -555,7 +558,10 @@ const AppEditor = (
 						}}
 						style="display: none;"
 					/>
-					<Checkbox checked={props.edit.app.public} />
+					<Checkbox
+						checked={props.edit.app.public}
+						seed={`app-${props.edit.app.id}-public`}
+					/>
 					<div>
 						<div>public</div>
 						<div class="dim">anyone can add and use this bot</div>
@@ -588,7 +594,10 @@ const AppEditor = (
 								)}
 							style="display: none;"
 						/>
-						<Checkbox checked={props.edit.app.oauth_confidential} />
+						<Checkbox
+							checked={props.edit.app.oauth_confidential}
+							seed={`app-${props.edit.app.id}-oauth-confidential`}
+						/>
 						<div>
 							<div>confidential</div>
 							<div class="dim">can keep secrets</div>

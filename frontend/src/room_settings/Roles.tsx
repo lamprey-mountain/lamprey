@@ -543,6 +543,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 							/>
 							<Checkbox
 								checked={(props.edit.role as Role)[i.key]}
+								seed={`role-${props.edit.role.id}-${i.key}`}
 							/>
 							<div>
 								<div class="name">

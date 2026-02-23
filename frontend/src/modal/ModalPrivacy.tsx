@@ -24,7 +24,10 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 						onInput={(e) => setDms(e.currentTarget.checked)}
 						style="display: none;"
 					/>
-					<Checkbox checked={dms()} />
+					<Checkbox
+						checked={dms()}
+						seed={`modal-privacy-${props.room_id}-dms`}
+					/>
 					<label for="opt-dms">
 						<div>Allow direct messages</div>
 						<div class="dim">
@@ -41,7 +44,10 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 						onInput={(e) => setFriends(e.currentTarget.checked)}
 						style="display: none;"
 					/>
-					<Checkbox checked={friends()} />
+					<Checkbox
+						checked={friends()}
+						seed={`modal-privacy-${props.room_id}-friends`}
+					/>
 					<label for="opt-friends">
 						<div>Allow friend requests</div>
 						<div class="dim">
@@ -57,7 +63,10 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 						onInput={(e) => setRpc(e.currentTarget.checked)}
 						style="display: none;"
 					/>
-					<Checkbox checked={rpc()} />
+					<Checkbox
+						checked={rpc()}
+						seed={`modal-privacy-${props.room_id}-rpc`}
+					/>
 					<label for="opt-rpc">
 						<div>Share rich presence</div>
 						<div class="dim">
@@ -74,7 +83,10 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 						onInput={(e) => setExif(e.currentTarget.checked)}
 						style="display: none;"
 					/>
-					<Checkbox checked={exif()} />
+					<Checkbox
+						checked={exif()}
+						seed={`modal-privacy-${props.room_id}-exif`}
+					/>
 					<label for="opt-exif">
 						<div>Strip exif metadata</div>
 						<div class="dim">

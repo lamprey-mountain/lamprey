@@ -4,7 +4,7 @@ import { Checkbox } from "../icons";
 import { useCtx } from "../context.ts";
 import { Dropdown } from "../Dropdown.tsx";
 
-export function Chat(_props: VoidProps<{ user: User }>) {
+export function Chat(props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
 	const { t } = useCtx();
 
@@ -34,6 +34,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["preview_attachments"] === "yes"}
+						seed={`user-${props.user.id}-preview-attachments`}
 					/>
 					<span>{t("user_settings.preview_attachments")}</span>
 				</label>
@@ -48,6 +49,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					<Checkbox
 						checked={ctx.userConfig()
 							.frontend["preview_attachments_descriptions"] === "yes"}
+						seed={`user-${props.user.id}-preview-attachments-descriptions`}
 					/>
 					<span>{t("user_settings.preview_attachments_descriptions")}</span>
 				</label>
@@ -60,6 +62,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["link_previews"] === "yes"}
+						seed={`user-${props.user.id}-link-previews`}
 					/>
 					<span>{t("user_settings.link_previews")}</span>
 				</label>
@@ -73,6 +76,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
+						seed={`user-${props.user.id}-show-send-button`}
 					/>
 					<span>{t("user_settings.show_send_button")}</span>
 				</label>
@@ -85,6 +89,7 @@ export function Chat(_props: VoidProps<{ user: User }>) {
 					/>
 					<Checkbox
 						checked={ctx.userConfig().frontend["typing_indicators"] === "yes"}
+						seed={`user-${props.user.id}-typing-indicators`}
 					/>
 					<span>{t("user_settings.typing_indicators")}</span>
 				</label>
