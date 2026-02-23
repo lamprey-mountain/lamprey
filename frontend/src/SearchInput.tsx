@@ -203,9 +203,9 @@ function serializeToQuery(state: EditorState): string {
 			if (inlineNode.isText) {
 				query += inlineNode.text;
 			} else if (inlineNode.type.name === "author") {
-				query += ` author:${inlineNode.attrs.id} `;
+				query += ` author:${inlineNode.attrs.name} `;
 			} else if (inlineNode.type.name === "thread") {
-				query += ` thread:${inlineNode.attrs.id} `;
+				query += ` thread:${inlineNode.attrs.name} `;
 			} else if (inlineNode.type.name === "before") {
 				query += ` before:${inlineNode.attrs.date} `;
 			} else if (inlineNode.type.name === "after") {
@@ -215,7 +215,7 @@ function serializeToQuery(state: EditorState): string {
 			} else if (inlineNode.type.name === "pinned") {
 				query += ` pinned:${inlineNode.attrs.value} `;
 			} else if (inlineNode.type.name === "mentions") {
-				query += ` mentions:${inlineNode.attrs.id} `;
+				query += ` mentions:${inlineNode.attrs.name} `;
 			}
 		});
 	});
@@ -516,7 +516,6 @@ const AutocompleteDropdown = (props: {
 										}}
 									>
 										<b>{user?.name}</b>
-										<span class="dim">({user_id})</span>
 									</li>
 								);
 							}}
@@ -535,7 +534,6 @@ const AutocompleteDropdown = (props: {
 									}}
 								>
 									<b>{thread.name}</b>
-									<span class="dim">({thread.id})</span>
 								</li>
 							)}
 						</For>
@@ -587,7 +585,6 @@ const AutocompleteDropdown = (props: {
 									}}
 								>
 									<b>{mentionable.name}</b>
-									<span class="dim">({mentionable.type})</span>
 								</li>
 							)}
 						</For>
@@ -740,25 +737,46 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 
 		addRecentSearch(queryString);
 
-		const parts = queryString.split(/\s+/);
-		const textQueryParts: string[] = [];
-		const filters: Record<string, string[]> = {};
-		const filterRegex =
-			/^(author|thread|before|after|has|pinned|mentions):(.+)$/;
+		// Extract filters directly from editor state using node IDs
+		const filters: {
+			author_ids?: string[];
+			thread_ids?: string[];
+			before?: string;
+			after?: string;
+			has?: string[];
+			pinned?: string;
+			mentions_ids?: string[];
+			mentions_everyone?: boolean;
+		} = {};
 
-		for (const part of parts) {
-			const match = part.match(filterRegex);
-			if (match && match[2]) {
-				const key = match[1];
-				const value = match[2];
-				if (!filters[key]) {
-					filters[key] = [];
+		const textQueryParts: string[] = [];
+
+		editor.view.state.doc.forEach((node) => {
+			node.forEach((inlineNode) => {
+				if (inlineNode.isText) {
+					textQueryParts.push(inlineNode.text!);
+				} else if (inlineNode.type.name === "author") {
+					if (!filters.author_ids) filters.author_ids = [];
+					filters.author_ids.push(inlineNode.attrs.id);
+				} else if (inlineNode.type.name === "thread") {
+					if (!filters.thread_ids) filters.thread_ids = [];
+					filters.thread_ids.push(inlineNode.attrs.id);
+				} else if (inlineNode.type.name === "before") {
+					filters.before = inlineNode.attrs.date;
+				} else if (inlineNode.type.name === "after") {
+					filters.after = inlineNode.attrs.date;
+				} else if (inlineNode.type.name === "has") {
+					if (!filters.has) filters.has = [];
+					filters.has.push(inlineNode.attrs.value);
+				} else if (inlineNode.type.name === "pinned") {
+					filters.pinned = inlineNode.attrs.value;
+				} else if (inlineNode.type.name === "mentions") {
+					if (!filters.mentions_ids) filters.mentions_ids = [];
+					filters.mentions_ids.push(inlineNode.attrs.id);
 				}
-				filters[key].push(value);
-			} else {
-				textQueryParts.push(part);
-			}
-		}
+			});
+		});
+
 		const textQuery = textQueryParts.join(" ");
 
 		const existing = currentSearch();
@@ -766,10 +784,10 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			query: queryString,
 			results: existing?.results ?? null,
 			loading: true,
-			author: filters.author,
-			before: filters.before?.[0],
-			after: filters.after?.[0],
-			channel: filters.channel,
+			author: filters.author_ids,
+			before: filters.before,
+			after: filters.after,
+			channel: filters.thread_ids,
 		};
 		updateSearch(searchState);
 
@@ -779,8 +797,8 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			queryParts.push(textQuery);
 		}
 
-		if (filters.author) {
-			for (const author_id of filters.author) {
+		if (filters.author_ids) {
+			for (const author_id of filters.author_ids) {
 				queryParts.push(`author_id:${author_id}`);
 			}
 		}
@@ -788,8 +806,8 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 		if (props.channel) {
 			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
 				queryParts.push(`channel_id:${props.channel.id}`);
-			} else if (filters.thread) {
-				for (const thread_id of filters.thread) {
+			} else if (filters.thread_ids) {
+				for (const thread_id of filters.thread_ids) {
 					queryParts.push(`channel_id:${thread_id}`);
 				}
 				if (props.channel.room_id) {
@@ -804,14 +822,14 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			queryParts.push(`room_id:${props.room.id}`);
 		}
 
-		if (filters.after?.[0]) {
-			const from_uuid = dateToBoundaryUUID(filters.after[0], "start");
+		if (filters.after) {
+			const from_uuid = dateToBoundaryUUID(filters.after, "start");
 			if (from_uuid) {
 				queryParts.push(`created_at:[${from_uuid} TO *]`);
 			}
 		}
-		if (filters.before?.[0]) {
-			const to_uuid = dateToBoundaryUUID(filters.before[0], "end");
+		if (filters.before) {
+			const to_uuid = dateToBoundaryUUID(filters.before, "end");
 			if (to_uuid) {
 				queryParts.push(`created_at:[* TO ${to_uuid}]`);
 			}
@@ -838,20 +856,20 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			}
 		}
 
-		if (filters.pinned?.[0]) {
-			queryParts.push(`metadata_fast.pinned:${filters.pinned[0]}`);
+		if (filters.pinned) {
+			queryParts.push(`metadata_fast.pinned:${filters.pinned}`);
 		}
 
-		if (filters.mentions) {
-			for (const mention of filters.mentions) {
-				if (mention.startsWith("user-")) {
-					const user_id = mention.replace("user-", "");
+		if (filters.mentions_ids) {
+			for (const mentionId of filters.mentions_ids) {
+				if (mentionId.startsWith("user-")) {
+					const user_id = mentionId.replace("user-", "");
 					queryParts.push(`metadata_fast.mentions_user:${user_id}`);
-				} else if (mention.startsWith("role-")) {
-					const role_id = mention.replace("role-", "");
+				} else if (mentionId.startsWith("role-")) {
+					const role_id = mentionId.replace("role-", "");
 					queryParts.push(`metadata_fast.mentions_role:${role_id}`);
 				} else if (
-					mention === "everyone-room" || mention === "everyone-thread"
+					mentionId === "everyone-room" || mentionId === "everyone-thread"
 				) {
 					queryParts.push(`metadata_fast.mentions_everyone:true`);
 				}
