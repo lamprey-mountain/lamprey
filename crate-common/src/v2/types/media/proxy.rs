@@ -6,6 +6,22 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct ThumbQuery {
+    /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
+    pub size: Option<u32>,
+    /// whether to allow animated thumbnails
+    #[cfg_attr(feature = "serde", serde(default = "default_true"))]
+    pub animate: bool,
+}
+
+#[cfg(feature = "serde")]
+fn default_true() -> bool {
+    true
+}
+
 // NOTE: theres probably a better way to define this struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

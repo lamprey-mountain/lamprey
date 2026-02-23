@@ -3,9 +3,9 @@ use axum::{
     extract::{Path, Query, State},
 };
 use common::v1::types::MediaId;
+use common::v2::types::media::proxy::ThumbQuery;
 use futures_util::StreamExt;
 use http::{HeaderMap, StatusCode};
-use serde::Deserialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{error, span, Instrument, Level};
 use utoipa_axum::router::OpenApiRouter;
@@ -19,20 +19,6 @@ use crate::{
     },
     AppState,
 };
-
-// TODO: move to common
-#[derive(Deserialize, Debug, Clone, Copy)]
-pub struct ThumbQuery {
-    /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
-    pub size: Option<u32>,
-    /// whether to allow animated thumbnails
-    #[serde(default = "default_true")]
-    pub animate: bool,
-}
-
-fn default_true() -> bool {
-    true
-}
 
 // TODO: maybe allow generating png, jpeg, or webp thumbnails?
 // NOTE: caniuse says avif has ~93% support
