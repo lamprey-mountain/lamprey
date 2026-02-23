@@ -166,6 +166,18 @@
 
           scanner-malware-oci =
             let
+              etcGroup = pkgs.writeTextFile {
+                name = "etc-group";
+                destination = "/etc/group";
+                text = "clamav:x:1000:";
+              };
+
+              etcPasswd = pkgs.writeTextFile {
+                name = "etc-passwd";
+                destination = "/etc/passwd";
+                text = "clamav:x:1000:1000:ClamAV:/var/lib/clamav:/usr/sbin/nologin";
+              };
+
               clamdConfig = pkgs.writeTextFile {
                 name = "clamd.conf";
                 destination = "/etc/clamav/clamd.conf";
@@ -175,7 +187,6 @@
                   LocalSocketMode 666
                   DatabaseDirectory /var/lib/clamav
                   PidFile /run/clamav/clamd.pid
-                  User root
                   LogSyslog no
                   LogVerbose no
                 '';
@@ -187,7 +198,6 @@
                 text = ''
                   DatabaseDirectory /var/lib/clamav
                   UpdateLogFile /var/log/clamav/freshclam.log
-                  DatabaseOwner root
                   LogVerbose no
                   LogSyslog no
                   DatabaseMirror database.clamav.net
@@ -211,6 +221,7 @@
                 text = ''
                   # Prepare runtime directories
                   mkdir -p /run/clamav /var/lib/clamav /var/log/clamav
+                  chown -R clamav:clamav /var/lib/clamav /var/log/clamav /run/clamav
 
                   # Run freshclam once to ensure the DB is up to date, then keep it running in background
                   echo "Running freshclam to update virus definitions..."
@@ -250,6 +261,8 @@
               contents = [
                 pkgs.dockerTools.caCertificates
                 pkgs.clamav
+                etcGroup
+                etcPasswd
                 clamdConfig
                 freshclamConfig
                 scannerMalwareConfig
