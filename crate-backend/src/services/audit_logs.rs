@@ -35,19 +35,24 @@ impl ServiceAuditLogs {
         }
 
         let srv = self.state.services();
-        let cached_room = srv.cache.load_room(room_id).await?;
+        let cached_room = srv.cache.load_room(room_id).await.ok();
 
         let mut threads = Vec::new();
         let mut missing_threads = Vec::new();
 
-        for thread_id in &resolve.threads {
-            if let Some(chan) = cached_room.channels.get(thread_id) {
-                threads.push(chan.clone());
-            } else if let Some(thread) = cached_room.threads.get(thread_id) {
-                threads.push(thread.thread.read().await.clone());
-            } else {
-                missing_threads.push(*thread_id);
+        if let Some(cached_room) = &cached_room {
+            for thread_id in &resolve.threads {
+                if let Some(chan) = cached_room.channels.get(thread_id) {
+                    threads.push(chan.clone());
+                } else if let Some(thread) = cached_room.threads.get(thread_id) {
+                    threads.push(thread.thread.read().await.clone());
+                } else {
+                    missing_threads.push(*thread_id);
+                }
             }
+        } else {
+            // no cached room (e.g., user audit logs), treat all threads as missing
+            missing_threads.extend(resolve.threads.iter().cloned());
         }
 
         if !missing_threads.is_empty() {
@@ -62,9 +67,11 @@ impl ServiceAuditLogs {
         let users = srv.users.get_many(&user_ids).await?;
 
         let mut room_members = Vec::new();
-        for user_id in &resolve.users {
-            if let Some(member) = cached_room.members.get(user_id) {
-                room_members.push(member.member.clone());
+        if let Some(cached_room) = &cached_room {
+            for user_id in &resolve.users {
+                if let Some(member) = cached_room.members.get(user_id) {
+                    room_members.push(member.member.clone());
+                }
             }
         }
 
