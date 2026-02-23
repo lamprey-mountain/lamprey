@@ -17,8 +17,9 @@ use crate::{
     services::{
         admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
         calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
-        members::ServiceMembers, notifications::ServiceNotifications, presence::ServicePresence,
-        search::ServiceSearch, unread::ServiceUnread, voice::ServiceVoice,
+        member_lists::ServiceMemberLists, members::ServiceMembers,
+        notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
+        unread::ServiceUnread, voice::ServiceVoice,
     },
     ServerStateInner,
 };
@@ -61,6 +62,7 @@ pub struct Services {
     pub embed: ServiceEmbed,
     pub http: ServiceHttp,
     pub media: ServiceMedia,
+    pub member_lists: ServiceMemberLists,
     pub members: ServiceMembers,
     pub messages: ServiceMessages,
     pub notifications: ServiceNotifications,
@@ -91,6 +93,7 @@ impl Services {
             embed: ServiceEmbed::new(state.clone()),
             http: ServiceHttp::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
+            member_lists: ServiceMemberLists::new(state.clone()),
             members: ServiceMembers::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),
             notifications: ServiceNotifications::new(state.clone()),

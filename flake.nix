@@ -166,92 +166,19 @@
 
           scanner-malware-oci =
             let
-              etcGroup = pkgs.writeTextFile {
-                name = "etc-group";
-                destination = "/etc/group";
-                text = "clamav:x:1000:";
-              };
-
-              etcPasswd = pkgs.writeTextFile {
-                name = "etc-passwd";
-                destination = "/etc/passwd";
-                text = "clamav:x:1000:1000:ClamAV:/var/lib/clamav:/usr/sbin/nologin";
-              };
-
-              clamdConfig = pkgs.writeTextFile {
-                name = "clamd.conf";
-                destination = "/etc/clamav/clamd.conf";
-                text = ''
-                  Foreground yes
-                  LocalSocket /run/clamav/clamd.sock
-                  LocalSocketMode 666
-                  DatabaseDirectory /var/lib/clamav
-                  PidFile /run/clamav/clamd.pid
-                  LogSyslog no
-                  LogVerbose no
-                '';
-              };
-
-              freshclamConfig = pkgs.writeTextFile {
-                name = "freshclam.conf";
-                destination = "/etc/clamav/freshclam.conf";
-                text = ''
-                  DatabaseDirectory /var/lib/clamav
-                  UpdateLogFile /var/log/clamav/freshclam.log
-                  LogVerbose no
-                  LogSyslog no
-                  DatabaseMirror database.clamav.net
-                  Checks 12
-                '';
-              };
-
               scannerMalwareConfig = pkgs.writeTextFile {
                 name = "scanner-malware-config";
                 destination = "/etc/scanner-malware.toml";
                 text = ''
                   rust_log = "info"
-                  clamav_host = "/run/clamav/clamd.sock"
                   listen = { address = "0.0.0.0", port = 4101 }
-                '';
-              };
 
-              entrypoint = pkgs.writeShellApplication {
-                name = "scanner-malware-entrypoint";
-                runtimeInputs = [ pkgs.clamav pkgs.coreutils ];
-                text = ''
-                  # Prepare runtime directories
-                  mkdir -p /run/clamav /var/lib/clamav /var/log/clamav
-                  chown -R clamav:clamav /var/lib/clamav /var/log/clamav /run/clamav
-
-                  # Run freshclam once to ensure the DB is up to date, then keep it running in background
-                  echo "Running freshclam to update virus definitions..."
-                  freshclam --config-file=/etc/clamav/freshclam.conf || true
-
-                  # Start freshclam daemon in background for periodic updates
-                  freshclam --config-file=/etc/clamav/freshclam.conf --daemon &
-
-                  # Start clamd in background
-                  echo "Starting clamd..."
-                  clamd --config-file=/etc/clamav/clamd.conf &
-                  CLAMD_PID=$!
-
-                  # Wait for clamd socket to become available
-                  echo "Waiting for clamd socket..."
-                  for i in $(seq 1 30); do
-                    if [ -S /run/clamav/clamd.sock ]; then
-                      echo "clamd is ready"
-                      break
-                    fi
-                    if [ "$i" -eq 30 ]; then
-                      echo "clamd did not start in time" >&2
-                      exit 1
-                    fi
-                    sleep 1
-                  done
-
-                  # Start the scanner (foreground); if it dies, kill clamd too
-                  trap 'kill $CLAMD_PID 2>/dev/null' EXIT
-                  exec ${scanner-malware}/bin/scanner-malware --config /etc/scanner-malware.toml
+                  [clamav]
+                  type = "local"
+                  socket = "/run/clamav/clamd.sock"
+                  pid_file = "/run/clamav/clamd.pid"
+                  database_directory = "/var/lib/clamav"
+                  database_mirror = "database.clamav.net"
                 '';
               };
             in
@@ -261,20 +188,24 @@
               contents = [
                 pkgs.dockerTools.caCertificates
                 pkgs.clamav
-                etcGroup
-                etcPasswd
-                clamdConfig
-                freshclamConfig
                 scannerMalwareConfig
-                entrypoint
               ];
               config = {
                 WorkingDir = "/";
                 Entrypoint = [
                   "${pkgs.tini}/bin/tini"
                   "--"
-                  "${entrypoint}/bin/scanner-malware-entrypoint"
+                  "${scanner-malware}/bin/scanner-malware"
+                  "--config"
+                  "/etc/scanner-malware.toml"
                 ];
+                Healthcheck = {
+                  Test = [ "CMD-SHELL" "curl -f http://localhost:4101/health || exit 1" ];
+                  Interval = 30000000000; # 30s
+                  Timeout = 10000000000; # 10s
+                  Retries = 3;
+                  StartPeriod = 5000000000; # 5s
+                };
               };
             };
 

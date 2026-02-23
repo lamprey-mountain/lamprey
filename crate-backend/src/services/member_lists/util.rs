@@ -1,79 +1,76 @@
 use std::sync::Arc;
 
-use common::v1::types::{ChannelId, RoleId, RoomId, UserId};
+use common::v1::types::{ChannelId, MemberListGroupId, RoleId, RoomId, UserId};
 
 use crate::services::member_lists::visibility::MemberListVisibility;
-use crate::Result;
 
-/// a member list identifier from the api
+/// A member list identifier from the API
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MemberListKey1 {
     Room(RoomId),
-    // could be a thread
     RoomChannel(RoomId, ChannelId),
     DmChannel(ChannelId),
 }
 
-/// a deduplicated member list for the server
+/// A deduplicated member list key for the server
 ///
-/// used to deduplicate member lists with identical members
+/// Used to deduplicate member lists with identical members
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum MemberListKey {
-    /// the entire member list of a room
+    /// The entire member list of a room
     Room(RoomId),
 
-    /// a channel in a room
+    /// A channel in a room
     RoomChannel(RoomId, MemberListVisibility),
 
-    /// a thread in a room's channel
+    /// A thread in a room's channel
     RoomThread(RoomId, MemberListVisibility, ChannelId),
 
-    // // alternative structure
-    // RoomChannel {
-    //     room_id: RoomId,
-    //     visibility: MemberListVisibility,
-    //     is_thread: bool,
-    //     channel_id: ChannelId,
-    // },
-    /// a dm channel
-    ///
-    /// (maybe remove later?)
+    /// A DM channel
     Dm(ChannelId),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Member group classification
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MemberGroupInfo {
+    Hoisted { role_position: u64, role_id: RoleId },
     Online,
     Offline,
-    Hoisted(RoleId),
 }
 
 #[derive(Debug)]
+/// Member group data with users
 pub struct MemberListGroupData {
-    info: MemberGroupInfo,
-    users: Vec<UserId>,
+    pub info: MemberGroupInfo,
+    pub users: Vec<UserId>,
 }
 
-// may be removed..? its only useful if i use the btreemap idea
-#[derive(Debug, PartialEq, Eq)]
+/// Unique key for sorting members
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemberKey {
-    /// role position, -1 used for online, -2 used for offline
-    role_pos: i64,
-
+    pub group: MemberGroupInfo,
     /// either the override_name or user name
-    name: Arc<str>,
+    pub name: Arc<str>,
+    pub user_id: UserId,
 }
 
 impl MemberListKey1 {
-    pub fn new(room_id: Option<RoomId>, channel_id: Option<ChannelId>) -> Result<Self> {
-        todo!()
-    }
-
+    /// Get the room ID if applicable
     pub fn room_id(&self) -> Option<RoomId> {
-        todo!()
+        match self {
+            Self::Room(id) => Some(*id),
+            Self::RoomChannel(id, _) => Some(*id),
+            Self::DmChannel(_) => None,
+        }
     }
 
+    /// Get the channel ID if applicable
     pub fn channel_id(&self) -> Option<ChannelId> {
-        todo!()
+        match self {
+            Self::Room(_) => None,
+            Self::RoomChannel(_, id) => Some(*id),
+            Self::DmChannel(id) => Some(*id),
+        }
     }
 }
 
@@ -85,11 +82,26 @@ impl PartialOrd for MemberKey {
 
 impl Ord for MemberKey {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match self.role_pos.cmp(&other.role_pos) {
+        match self.group.cmp(&other.group) {
             std::cmp::Ordering::Equal => {}
             ord => return ord,
         }
 
-        self.name.cmp(&other.name)
+        match self.name.cmp(&other.name) {
+            std::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+
+        self.user_id.cmp(&other.user_id)
+    }
+}
+
+impl From<MemberGroupInfo> for MemberListGroupId {
+    fn from(value: MemberGroupInfo) -> Self {
+        match value {
+            MemberGroupInfo::Hoisted { role_id, .. } => MemberListGroupId::Role(role_id),
+            MemberGroupInfo::Online => MemberListGroupId::Online,
+            MemberGroupInfo::Offline => MemberListGroupId::Offline,
+        }
     }
 }

@@ -1,31 +1,31 @@
 use common::v1::types::{
-    Permission, PermissionOverwrite, PermissionOverwriteType, RoomId, RoomMember, UserId,
+    Permission, PermissionOverwrite, PermissionOverwriteType, RoomId, RoomMember,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
 
-/// minimal calculated permissions for who can see this list
+/// Minimal calculated visibility for member lists
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MemberListVisibility {
     /// flat list of minimal permission overwrites in application order
     overwrites: Vec<VisibilityPermission>,
 }
 
-/// minimal version of PermissionOverwrite that only cares about the `ViewChannel` permission
+/// Minimal permission overwrite for ViewChannel
 #[derive(Debug, Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct VisibilityPermission {
-    /// id of role or user
+    /// ID of role or user
     pub id: Uuid,
 
-    /// whether this is for a user or role
+    /// Whether this is for a user or role
     pub ty: PermissionOverwriteType,
 
-    /// true if allowed, false if denied
+    /// True if ViewChannel is allowed, false if ViewChannel is denied
     pub allowed: bool,
 }
 
 impl MemberListVisibility {
-    /// create a minimal visibility set from full overwrites
+    /// Create visibility from permission overwrites
     pub fn from_overwrites(room_id: RoomId, levels: Vec<Vec<PermissionOverwrite>>) -> Self {
         let mut sequence = Vec::new();
         for ow_set in levels {
@@ -123,7 +123,7 @@ impl MemberListVisibility {
         Self { overwrites: result }
     }
 
-    /// check if this member can view a channel with this set of overwrites. has_base is if the member can view all channels by default.
+    /// Check if a member can see the list
     pub fn visible_to(&self, member: &RoomMember, has_base: bool) -> bool {
         let mut has_view = has_base;
 

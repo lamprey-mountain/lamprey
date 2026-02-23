@@ -12,24 +12,23 @@ use moka::future::Cache;
 use tokio::sync::RwLock;
 use tracing::warn;
 
-use crate::{
-    error::Result,
-    services::cache::room::{CachedRoom, CachedRoomMember, CachedThread},
-    types::PaginationQuery,
-    ServerStateInner,
-};
+use crate::{error::Result, types::PaginationQuery, ServerStateInner};
 
-mod permissions;
-mod room;
-mod user;
+pub mod permissions;
+pub mod room;
+pub mod user;
 
-use permissions::PermissionsCalculator;
+pub use permissions::PermissionsCalculator;
+pub use room::{CachedRoom, CachedRoomMember, CachedThread};
+pub use user::CachedUser;
 
 /// service for caching all in-memory data used by the server
 #[derive(Clone)]
 pub struct ServiceCache {
     state: Arc<ServerStateInner>,
-    rooms: Cache<RoomId, Arc<CachedRoom>>,
+
+    // TODO: make not pub?
+    pub(crate) rooms: Cache<RoomId, Arc<CachedRoom>>,
 
     // TODO: make not pub?
     pub(crate) users: Cache<UserId, User>,
