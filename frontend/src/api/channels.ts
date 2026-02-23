@@ -174,6 +174,22 @@ export class Channels {
 		);
 	}
 
+	async createThreadFromMessage(
+		channel_id: string,
+		message_id: string,
+		body: { name: string; type?: string },
+	): Promise<Channel> {
+		return await fetchWithRetry(() =>
+			this.api.client.http.POST(
+				"/api/v1/channel/{channel_id}/message/{message_id}/thread",
+				{
+					params: { path: { channel_id, message_id } },
+					body: body,
+				},
+			)
+		);
+	}
+
 	async update(
 		channel_id: string,
 		body: ChannelPatch,

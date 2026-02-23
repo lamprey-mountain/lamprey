@@ -138,6 +138,30 @@ export function MessageMenu(props: MessageMenuProps) {
 		const msg = message();
 		return hasPermission("MessageDelete") || msg?.author_id === self_id();
 	};
+	const canCreateThread = () => {
+		const msg = message();
+		const parentChannel = channel();
+		// can create threads in text channels, forums, and similar
+		const parentThreadable = parentChannel && [
+			"Text",
+			"Announcement",
+			"Forum",
+			"Forum2",
+		].includes(parentChannel.type);
+		return hasPermission("ThreadCreatePublic") && parentThreadable &&
+			!msg?.thread;
+	};
+
+	const createThread = () => {
+		modalCtl.prompt("thread name?", (name) => {
+			if (!name) return;
+			api.channels.createThreadFromMessage(
+				props.channel_id,
+				props.message_id,
+				{ name, type: "ThreadPublic" },
+			);
+		});
+	};
 
 	return (
 		<Menu>
@@ -152,6 +176,9 @@ export function MessageMenu(props: MessageMenuProps) {
 			</Show>
 			<Show when={canReply()}>
 				<Item onClick={setReply}>reply</Item>
+			</Show>
+			<Show when={canCreateThread()}>
+				<Item onClick={createThread}>create thread</Item>
 			</Show>
 			<Show when={canEdit()}>
 				<Item onClick={edit}>edit</Item>
