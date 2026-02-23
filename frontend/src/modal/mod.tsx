@@ -14,6 +14,7 @@ import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
 import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
+import { ModalLink } from "./ModalLink.tsx";
 
 export const Modal = (
 	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },
@@ -115,6 +116,13 @@ export function getModal(modal: ContextModal) {
 			return (
 				<ModalChannelTopic
 					channel_id={modal.channel_id}
+				/>
+			);
+		}
+		case "link": {
+			return (
+				<ModalLink
+					editor={modal.editor}
 				/>
 			);
 		}

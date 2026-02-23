@@ -17,6 +17,8 @@ import icFormatCode from "./assets/format-code.png";
 import icFormatStrikethrough from "./assets/format-strikethrough.png";
 import icFormatUrl from "./assets/format-url.png";
 import { useDocument } from "./contexts/document.tsx";
+import { useModals } from "./contexts/modal.tsx";
+import { TextSelection } from "prosemirror-state";
 
 type DocumentProps = {
 	channel: Channel;
@@ -24,21 +26,57 @@ type DocumentProps = {
 
 export const Document = (props: DocumentProps) => {
 	const [branchId, setBranchId] = createSignal(props.channel.id);
+	const [editor, setEditor] = createSignal<any>(null);
 	// setup ydoc here, pass to DocumentMain?
 
 	return (
 		<div class="document">
-			<DocumentHeader channel={props.channel} />
-			<DocumentMain channel={props.channel} />
+			<DocumentHeader channel={props.channel} editor={editor()} />
+			<DocumentMain channel={props.channel} setEditor={setEditor} />
 		</div>
 	);
 };
 
-const DocumentHeader = (props: DocumentProps) => {
+const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 	const [doc, update] = useDocument();
+	const [, modalCtl] = useModals();
 	const [active, setActive] = createSignal<
 		"branches" | "merge" | "export" | "insert" | "format" | null
 	>(null);
+
+	const applyFormat = (wrap: string) => {
+		const view = props.editor?.view;
+		if (!view) return;
+
+		const { from, to } = view.state.selection;
+		if (from === to) return;
+
+		const len = wrap.length;
+		const tr = view.state.tr;
+
+		const textBefore = tr.doc.textBetween(from - len, from);
+		const textAfter = tr.doc.textBetween(to, to + len);
+		const isWrapped = textBefore === wrap && textAfter === wrap;
+
+		if (isWrapped) {
+			tr.delete(to, to + len);
+			tr.delete(from - len, from);
+		} else {
+			tr.insertText(wrap, to);
+			tr.insertText(wrap, from);
+			tr.setSelection(TextSelection.create(tr.doc, from + len, to + len));
+		}
+
+		view.dispatch(tr);
+		view.focus();
+	};
+
+	const openLinkModal = () => {
+		if (props.editor) {
+			modalCtl.open({ type: "link", editor: props.editor });
+			setActive(null);
+		}
+	};
 
 	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
 	const [branchMenu, setBranchMenu] = createSignal<HTMLElement>();
@@ -407,7 +445,12 @@ const DocumentHeader = (props: DocumentProps) => {
 					>
 						<ul>
 							<li>
-								<button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										applyFormat("**");
+									}}
+								>
 									<img class="icon" src={icFormatBold} />
 									<div class="info">
 										<div>bold</div>
@@ -416,7 +459,12 @@ const DocumentHeader = (props: DocumentProps) => {
 								</button>
 							</li>
 							<li>
-								<button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										applyFormat("*");
+									}}
+								>
 									<img class="icon" src={icFormatItalic} />
 									<div class="info">
 										<div>italic</div>
@@ -425,7 +473,12 @@ const DocumentHeader = (props: DocumentProps) => {
 								</button>
 							</li>
 							<li>
-								<button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										applyFormat("~~");
+									}}
+								>
 									<img class="icon" src={icFormatStrikethrough} />
 									<div class="info">
 										<div>strikethrough</div>
@@ -434,7 +487,12 @@ const DocumentHeader = (props: DocumentProps) => {
 								</button>
 							</li>
 							<li>
-								<button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										applyFormat("`");
+									}}
+								>
 									<img class="icon" src={icFormatCode} />
 									<div class="info">
 										<div>inline code</div>
@@ -443,7 +501,12 @@ const DocumentHeader = (props: DocumentProps) => {
 								</button>
 							</li>
 							<li>
-								<button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										openLinkModal();
+									}}
+								>
 									<img class="icon" src={icFormatUrl} />
 									<div class="info">
 										<div>link</div>
@@ -459,8 +522,18 @@ const DocumentHeader = (props: DocumentProps) => {
 	);
 };
 
-const DocumentMain = (props: DocumentProps) => {
+const DocumentMain = (
+	props: DocumentProps & { setEditor: (editor: any) => void },
+) => {
 	const editor = createEditor({}, props.channel.id, props.channel.id);
+
+	onMount(() => {
+		props.setEditor(editor);
+	});
+
+	onCleanup(() => {
+		props.setEditor(null);
+	});
 
 	return (
 		<main>

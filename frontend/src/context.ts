@@ -110,6 +110,10 @@ export type Modal =
 	| {
 		type: "channel_topic";
 		channel_id: string;
+	}
+	| {
+		type: "link";
+		editor: any;
 	};
 
 export type AttachmentCreateT = {

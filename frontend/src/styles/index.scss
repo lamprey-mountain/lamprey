@@ -2664,7 +2664,8 @@ details[open] > summary {
 	}
 }
 
-button.primary {
+button.primary,
+input[type="submit"].primary {
 	border: solid $link-300 1px;
 	background: $link-300;
 	color: $fg-100;
