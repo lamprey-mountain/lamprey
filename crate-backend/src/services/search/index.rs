@@ -337,7 +337,8 @@ impl TantivySearcher {
 
         if let Some(q_str) = &req.query {
             if !q_str.is_empty() {
-                let mut query_parser = QueryParser::for_index(&self.index, vec![s.content, s.name]);
+                let mut query_parser =
+                    QueryParser::for_index(&self.index, vec![s.content, s.name, s.id]);
                 query_parser.set_field_boost(s.name, 1.5);
                 let q = query_parser
                     .parse_query(q_str)
@@ -474,7 +475,8 @@ impl TantivySearcher {
 
         if let Some(q_str) = &req.query {
             if !q_str.is_empty() {
-                let mut query_parser = QueryParser::for_index(&self.index, vec![s.content, s.name]);
+                let mut query_parser =
+                    QueryParser::for_index(&self.index, vec![s.content, s.name, s.id]);
                 query_parser.set_field_boost(s.name, 1.5);
                 let q = query_parser
                     .parse_query(q_str)
