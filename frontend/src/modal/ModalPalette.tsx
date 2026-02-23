@@ -42,13 +42,15 @@ export const ModalPalette = () => {
 			action: () => navigate(`/room/${room.id}`),
 			room: room,
 		}));
-		const threads = [...api.channels.cache.values()].map((thread) => ({
-			type: "thread" as const,
-			id: thread.id,
-			name: thread.name,
-			action: () => navigate(`/channel/${thread.id}`),
-			channel: thread,
-		}));
+		const threads = [...api.channels.cache.values()]
+			.filter((channel) => channel.type !== "Category")
+			.map((thread) => ({
+				type: "thread" as const,
+				id: thread.id,
+				name: thread.name,
+				action: () => navigate(`/channel/${thread.id}`),
+				channel: thread,
+			}));
 
 		const staticItems: PaletteItem[] = [
 			{
@@ -84,6 +86,7 @@ export const ModalPalette = () => {
 		return ctx.recentChannels().slice(1).map((i: any) =>
 			api.channels.cache.get(i)!
 		)
+			.filter((channel: any) => channel.type !== "Category")
 			.map((
 				thread: any,
 			) => ({
@@ -97,6 +100,7 @@ export const ModalPalette = () => {
 
 	const channelsWithMentions = createMemo(() => {
 		return [...api.channels.cache.values()]
+			.filter((channel) => channel.type !== "Category")
 			.filter((channel) => channel.mention_count && channel.mention_count > 0)
 			.sort((a, b) => {
 				if (b.mention_count !== a.mention_count) {
@@ -120,6 +124,7 @@ export const ModalPalette = () => {
 		}> = [];
 
 		for (const channel of api.channels.cache.values()) {
+			if (channel.type === "Category") continue;
 			// Check localStorage drafts (Forum2)
 			const draftKey = `editor_draft_${channel.id}`;
 			const draft = localStorage.getItem(draftKey);
