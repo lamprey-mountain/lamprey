@@ -5745,6 +5745,7 @@ name = "scanner-malware"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "async-tempfile",
  "axum",
  "deadpool",
  "figment",

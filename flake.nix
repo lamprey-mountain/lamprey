@@ -177,7 +177,7 @@
                   type = "local"
                   socket = "/run/clamav/clamd.sock"
                   pid_file = "/run/clamav/clamd.pid"
-                  database_directory = "/var/lib/clamav"
+                  database_directory = "/clamav-data"
                   database_mirror = "database.clamav.net"
                 '';
               };
@@ -205,6 +205,9 @@
                   Timeout = 10000000000; # 10s
                   Retries = 3;
                   StartPeriod = 5000000000; # 5s
+                };
+                Volumes = {
+                  "/clamav-data" = {};
                 };
               };
             };
