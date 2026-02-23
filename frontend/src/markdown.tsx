@@ -200,22 +200,79 @@ export function decorate(state: EditorState, placeholderText?: string) {
 				];
 			}
 			case "code": {
-				// does this work with indented code blocks?
-				const firstEnd = ast.raw.indexOf("\n");
-				return [
-					{
-						attrs: { class: "syn" },
+				const decorations = [];
+				const isFenced = ast.raw.startsWith("```") || ast.raw.startsWith("~~~");
+
+				if (isFenced) {
+					const firstEnd = ast.raw.indexOf("\n");
+					if (firstEnd === -1) {
+						decorations.push({
+							attrs: { class: "syn" },
+							start: 0,
+							end: ast.raw.length,
+						});
+					} else {
+						// Opening fence
+						decorations.push({
+							attrs: { class: "syn" },
+							start: 0,
+							end: firstEnd,
+						});
+
+						let lastNewline = ast.raw.lastIndexOf("\n");
+						if (lastNewline === ast.raw.length - 1) {
+							lastNewline = ast.raw.lastIndexOf("\n", lastNewline - 1);
+						}
+
+						if (lastNewline > firstEnd) {
+							const lastLine = ast.raw.slice(lastNewline + 1);
+							const fenceChar = ast.raw[0];
+							// Check if last line is actually a closing fence
+							const lastLineTrimmed = lastLine.trim();
+							const hasClosingFence =
+								lastLineTrimmed.startsWith(fenceChar.repeat(3)) &&
+								lastLineTrimmed.slice(3).replace(new RegExp(fenceChar, "g"), "")
+										.trim() === "";
+
+							if (hasClosingFence) {
+								decorations.push({
+									attrs: { nodeName: "pre", class: "font-mono" },
+									start: firstEnd + 1,
+									end: lastNewline,
+								});
+								decorations.push({
+									attrs: { class: "syn" },
+									start: lastNewline + 1,
+									end: ast.raw.length,
+								});
+							} else {
+								decorations.push({
+									attrs: { nodeName: "pre", class: "font-mono" },
+									start: firstEnd + 1,
+									end: ast.raw.length,
+									options: { inclusiveEnd: true },
+								});
+							}
+						} else {
+							decorations.push({
+								attrs: { nodeName: "pre", class: "font-mono" },
+								start: firstEnd + 1,
+								end: ast.raw.length,
+								options: { inclusiveEnd: true },
+							});
+						}
+					}
+				} else {
+					// Indented code block
+					decorations.push({
+						attrs: { nodeName: "pre", class: "font-mono" },
 						start: 0,
-						end: firstEnd === -1 ? ast.raw.length : firstEnd,
-					},
-					// { attrs: { nodeName: "pre" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
-					// { attrs: { class: "font-mono" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
-					{
-						attrs: { nodeName: "code" },
-						start: firstEnd === -1 ? 0 : firstEnd + 1,
 						end: ast.raw.length,
-					},
-				];
+						options: { inclusiveEnd: true },
+					});
+				}
+
+				return decorations;
 			}
 			case "codespan": {
 				return [
@@ -285,7 +342,12 @@ export function decorate(state: EditorState, placeholderText?: string) {
 		}
 	}
 
-	type A = { start: number; end: number; attrs: DecorationAttrs };
+	type A = {
+		start: number;
+		end: number;
+		attrs: DecorationAttrs;
+		options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean };
+	};
 
 	function mapDecorations(
 		ast: Token,
@@ -320,6 +382,7 @@ export function decorate(state: EditorState, placeholderText?: string) {
 						start: j.start + pos,
 						end: j.end + pos,
 						attrs: j.attrs,
+						options: j.options,
 					})),
 				],
 			}), { pos: startPos, decorations: [] as Array<A> });
@@ -340,6 +403,8 @@ export function decorate(state: EditorState, placeholderText?: string) {
 	const reduced = reduceDecorations(md.lexer(state.doc.textContent), 1);
 	return DecorationSet.create(
 		state.doc,
-		reduced.decorations.map((i) => Decoration.inline(i.start, i.end, i.attrs)),
+		reduced.decorations.map((i) =>
+			Decoration.inline(i.start, i.end, i.attrs, i.options)
+		),
 	);
 }

@@ -404,6 +404,23 @@ input[type="submit"] {
 	& .syn {
 		color: $fg-500;
 	}
+
+	& pre,
+	& code {
+		background-color: $bg-200;
+		font-family: var(--font-mono);
+		padding: 0 2px;
+		border-radius: 2px;
+	}
+
+	& pre {
+		display: block;
+		white-space: pre;
+		padding: 4px 8px;
+		margin: 4px 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
 }
 
 h1 {

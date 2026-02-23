@@ -32,6 +32,19 @@ export type EditorViewProps = {
 	submitOnEnter?: boolean;
 };
 
+function isInsideCodeBlock(state: EditorState): boolean {
+	const pos = state.selection.from;
+	const textBefore = state.doc.textBetween(0, pos, "\n");
+	const lines = textBefore.split("\n");
+	let count = 0;
+	for (const line of lines) {
+		if (line.trim().startsWith("```")) {
+			count++;
+		}
+	}
+	return count % 2 === 1;
+}
+
 export const createEditor = (opts: EditorOptions) => {
 	const schema = opts.schema ?? defaultSchema;
 	let editorRef!: HTMLDivElement;
@@ -128,6 +141,10 @@ export const createEditor = (opts: EditorOptions) => {
 						if (opts.handleKeyDown?.(view, event)) return true;
 
 						if (event.key === "Enter" && !event.shiftKey) {
+							if (isInsideCodeBlock(view.state)) {
+								view.dispatch(view.state.tr.insertText("\n"));
+								return true;
+							}
 							if (props.submitOnEnter ?? true) {
 								return submitCommand(view.state, view.dispatch);
 							}
