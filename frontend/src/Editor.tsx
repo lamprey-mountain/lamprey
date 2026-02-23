@@ -7,6 +7,7 @@ import { createEffect, onCleanup, onMount } from "solid-js";
 import { initTurndownService } from "./turndown.ts";
 import { decorate, md } from "./markdown.tsx";
 import { useCtx } from "./context";
+import { useAutocomplete } from "./contexts/mod.tsx";
 import {
 	createListContinueCommand,
 	createWrapCommand,
@@ -217,6 +218,7 @@ export const createEditor = (opts: EditorProps) => {
 
 			onMount(() => {
 				const ctx = useCtx(); // Access context inside mount since we're in a Solid component
+				const autocompleteCtx = useAutocomplete();
 
 				view = new EditorView(editorRef!, {
 					domParser: DOMParser.fromSchema(schema),
@@ -300,6 +302,7 @@ export const createEditor = (opts: EditorProps) => {
 							view,
 							event,
 							ctx,
+							autocompleteCtx,
 							schema,
 							props.channelId || "",
 						);

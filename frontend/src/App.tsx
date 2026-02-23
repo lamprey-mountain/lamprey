@@ -31,6 +31,11 @@ import { ModalsProvider, useModals } from "./contexts/modal";
 import { MemberListProvider } from "./contexts/memberlist.tsx";
 import { UploadsProvider } from "./contexts/uploads.tsx";
 import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
+import {
+	AutocompleteProvider,
+	MenuProvider,
+	UserPopoutProvider,
+} from "./contexts/mod.tsx";
 import { useApi } from "./api.tsx";
 import { flags } from "./flags.ts";
 
@@ -116,7 +121,13 @@ export const AppProviders: Component<
 						<UploadsProvider ctx={ctx}>
 							<VoiceProvider>
 								<SlashCommandsProvider value={ctx.slashCommands}>
-									<AppShell>{props.children}</AppShell>
+									<MenuProvider>
+										<AutocompleteProvider>
+											<UserPopoutProvider>
+												<AppShell>{props.children}</AppShell>
+											</UserPopoutProvider>
+										</AutocompleteProvider>
+									</MenuProvider>
 								</SlashCommandsProvider>
 							</VoiceProvider>
 						</UploadsProvider>
@@ -137,7 +148,7 @@ export const AppShell: Component<RouterParentProps> = (props) => {
 	const state = from(ctx.client.state);
 
 	useFavicon();
-	useGlobalEventHandlers({ setMenu: ctx.setMenu });
+	useGlobalEventHandlers();
 
 	return (
 		<div

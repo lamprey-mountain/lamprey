@@ -16,7 +16,8 @@ import {
 	shift,
 } from "@floating-ui/dom";
 import { Portal } from "solid-js/web";
-import { Menu, useCtx } from "../context.ts";
+import { useCtx } from "../context.ts";
+import { useAutocomplete, useMenu, useUserPopout } from "./mod.tsx";
 import { useApi } from "../api.tsx";
 import {
 	ChannelMenu,
@@ -34,6 +35,9 @@ import { useModals } from "./modal.tsx";
 
 export function OverlayProvider(props: ParentProps) {
 	const ctx = useCtx();
+	const { menu } = useMenu();
+	const { autocomplete } = useAutocomplete();
+	const { userView } = useUserPopout();
 	const api = useApi();
 	const [modals] = useModals();
 
@@ -72,7 +76,7 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	createEffect(() => {
-		const reference = ctx.autocomplete()?.ref;
+		const reference = autocomplete()?.ref;
 		const floating = autocompleteRef();
 		if (!reference || !floating) return;
 		const cleanup = autoUpdate(
@@ -97,7 +101,7 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	createEffect(() => {
-		const reference = ctx.userView()?.ref;
+		const reference = userView()?.ref;
 		const floating = userViewRef();
 		if (!reference || !floating) return;
 		const cleanup = autoUpdate(
@@ -106,7 +110,7 @@ export function OverlayProvider(props: ParentProps) {
 			() => {
 				computePosition(reference, floating, {
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-					placement: ctx.userView()?.source === "message"
+					placement: userView()?.source === "message"
 						? "right-start"
 						: "left-start",
 				}).then(({ x, y, strategy }) => {
@@ -170,19 +174,19 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	createEffect(() => {
-		ctx.menu();
+		menu();
 
 		setMenuParentRef({
 			getBoundingClientRect(): ClientRectObject {
-				const menu = ctx.menu();
-				if (!menu) return {} as ClientRectObject;
+				const m = menu();
+				if (!m) return {} as ClientRectObject;
 				return {
-					x: menu.x,
-					y: menu.y,
-					left: menu.x,
-					top: menu.y,
-					right: menu.x,
-					bottom: menu.y,
+					x: m.x,
+					y: m.y,
+					left: m.x,
+					top: m.y,
+					right: m.x,
+					bottom: m.y,
 					width: 0,
 					height: 0,
 				};
@@ -224,7 +228,7 @@ export function OverlayProvider(props: ParentProps) {
 	}
 
 	const userViewData = createMemo(() => {
-		const uv = ctx.userView();
+		const uv = userView();
 		if (!uv) return null;
 		const user = api.users.fetch(() => uv.user_id);
 		const room_member = uv.room_id
@@ -241,7 +245,7 @@ export function OverlayProvider(props: ParentProps) {
 			{props.children}
 			<Portal mount={document.getElementById("overlay")!}>
 				<For each={modals}>{(modal) => getModal(modal)}</For>
-				<Show when={ctx.menu()}>
+				<Show when={menu()}>
 					<div class="contextmenu">
 						<div
 							ref={setMenuRef}
@@ -253,7 +257,7 @@ export function OverlayProvider(props: ParentProps) {
 								translate: `${menuFloating.x}px ${menuFloating.y}px`,
 							}}
 						>
-							{getMenu(ctx.menu()!)}
+							{getMenu(menu()!)}
 						</div>
 					</div>
 				</Show>
@@ -304,7 +308,7 @@ export function OverlayProvider(props: ParentProps) {
 						<ThreadPopout channel_id={ctx.threadsView()!.channel_id} />
 					</div>
 				</Show>
-				<Show when={ctx.autocomplete()}>
+				<Show when={autocomplete()}>
 					<div
 						ref={setAutocompleteRef}
 						style={{

@@ -14,6 +14,7 @@ import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
+import { useMenu, useUserPopout } from "./contexts/mod.tsx";
 import { useApi } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
@@ -59,6 +60,7 @@ import { ChannelIcon } from "./User";
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
 	const ctx = useCtx();
+	const { userView, setUserView } = useUserPopout();
 	const user = api.users.fetch(() => props.id);
 	return (
 		<span
@@ -66,10 +68,10 @@ function UserMention(props: { id: string; channel: Channel }) {
 			onClick={(e) => {
 				e.stopPropagation();
 				const currentTarget = e.currentTarget as HTMLElement;
-				if (ctx.userView()?.ref === currentTarget) {
-					ctx.setUserView(null);
+				if (userView()?.ref === currentTarget) {
+					setUserView(null);
 				} else {
-					ctx.setUserView({
+					setUserView({
 						user_id: props.id,
 						room_id: props.channel.room_id,
 						thread_id: props.channel.id,
@@ -198,6 +200,7 @@ function hydrateMentions(el: HTMLElement, thread: Channel) {
 
 const MessageToolbar = (props: { message: Message }) => {
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const api = useApi();
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
@@ -293,7 +296,7 @@ const MessageToolbar = (props: { message: Message }) => {
 		const rect = button.getBoundingClientRect();
 
 		queueMicrotask(() => {
-			ctx.setMenu({
+			setMenu({
 				x: rect.left,
 				y: rect.bottom,
 				type: "message",

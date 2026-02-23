@@ -44,30 +44,6 @@ export type Cursor = {
 	pos: Array<[number, number]>;
 };
 
-export type Menu =
-	& {
-		x: number;
-		y: number;
-	}
-	& (
-		| { type: "room"; room_id: string }
-		| { type: "channel"; channel_id: string }
-		| {
-			type: "message";
-			channel_id: string;
-			message_id: string;
-			version_id: string;
-		}
-		| {
-			type: "user";
-			user_id: string;
-			channel_id?: string;
-			room_id?: string;
-			admin: boolean;
-		}
-		| { type: "folder"; folder_id: string }
-	);
-
 export type Modal =
 	| { type: "alert"; text: string }
 	| {
@@ -150,14 +126,6 @@ export type ChannelSearch = {
 	channel?: string[];
 };
 
-export type UserViewData = {
-	user_id: string;
-	room_id?: string;
-	channel_id?: string;
-	ref: HTMLElement;
-	source?: "member-list" | "message";
-};
-
 export type ThreadsViewData = {
 	channel_id: string;
 	ref: HTMLElement;
@@ -169,37 +137,6 @@ export type Popout = {
 	props?: any;
 	placement?: Placement;
 } | {};
-
-export type AutocompleteState =
-	| {
-		type: "mention";
-		query: string;
-		ref: ReferenceElement;
-		onSelect: (userId: string, userName: string) => void;
-		channelId: string;
-	}
-	| {
-		type: "channel";
-		query: string;
-		ref: ReferenceElement;
-		onSelect: (channelId: string, channelName: string) => void;
-		channelId: string;
-	}
-	| {
-		type: "emoji";
-		query: string;
-		ref: ReferenceElement;
-		onSelect: (id: string, name: string, char?: string) => void;
-		channelId: string;
-	}
-	| {
-		type: "command";
-		query: string;
-		ref: ReferenceElement;
-		onSelect: (command: string) => void;
-		channelId: string;
-	}
-	| null;
 
 import type { ChannelContextT } from "./channelctx";
 import type { RoomContextT } from "./contexts/room.tsx";
@@ -213,15 +150,9 @@ export type ChatCtx = {
 
 	t: i18n.NullableTranslator<i18n.Flatten<typeof en>>;
 	events: Emitter<Events>;
-	menu: Accessor<Menu | null>;
-	setMenu: Setter<Menu | null>;
 	popout: Accessor<Popout>;
 	setPopout: Setter<Popout>;
 
-	autocomplete: Accessor<AutocompleteState>;
-	setAutocomplete: Setter<AutocompleteState>;
-	userView: Accessor<UserViewData | null>;
-	setUserView: Setter<UserViewData | null>;
 	threadsView: Accessor<ThreadsViewData | null>;
 	setThreadsView: Setter<ThreadsViewData | null>;
 	uploads: ReactiveMap<string, Upload>; // TODO: verify this is unused then remove

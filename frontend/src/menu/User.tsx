@@ -1,6 +1,7 @@
 import { For, Match, Show, Switch } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
+import { useMenu } from "../contexts/mod.tsx";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { useVoice } from "../voice-provider.tsx";
@@ -20,6 +21,7 @@ type UserMenuProps = {
 // TODO: hide separators when a category has no items
 export function UserMenu(props: UserMenuProps) {
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const api = useApi();
 	const navigate = useNavigate();
 	const user = api.users.fetch(() => props.user_id);
@@ -160,7 +162,7 @@ export function UserMenu(props: UserMenuProps) {
 	const editIntegration = () => {
 		if (props.channel_id) {
 			navigate(`/channel/${props.channel_id}/settings/integrations`);
-			ctx.setMenu(null);
+			setMenu(null);
 		}
 	};
 

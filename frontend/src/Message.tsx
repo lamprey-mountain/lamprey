@@ -12,6 +12,7 @@ import {
 } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
+import { useMenu, useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { useNavigate } from "@solidjs/router";
 import { useChannel } from "./channelctx.tsx";
@@ -61,6 +62,7 @@ const contentToHtml = new WeakMap();
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
 	const ctx = useCtx();
+	const { userView, setUserView } = useUserPopout();
 	const user = api.users.fetch(() => props.id);
 	// FIXME: handle mentions outside of rooms (eg. in dms)
 	const room_member = api.room_members.fetch(
@@ -73,10 +75,10 @@ function UserMention(props: { id: string; channel: Channel }) {
 			onClick={(e) => {
 				e.stopPropagation();
 				const currentTarget = e.currentTarget as HTMLElement;
-				if (ctx.userView()?.ref === currentTarget) {
-					ctx.setUserView(null);
+				if (userView()?.ref === currentTarget) {
+					setUserView(null);
 				} else {
-					ctx.setUserView({
+					setUserView({
 						user_id: props.id,
 						room_id: props.channel.room_id,
 						thread_id: props.channel.id,
@@ -375,15 +377,17 @@ function MessageEditor(
 export function MessageView(props: MessageProps) {
 	const api = useApi();
 	const ctx = useCtx();
+	const { menu } = useMenu();
+	const { userView, setUserView } = useUserPopout();
 	const { t } = ctx;
 	const thread = api.channels.fetch(() => props.message.channel_id);
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 	let messageArticleRef: HTMLElement | undefined;
 
 	const isMenuOpen = () => {
-		const menu = ctx.menu();
-		if (!menu) return false;
-		return menu.type === "message" && menu.message_id === props.message.id;
+		const m = menu();
+		if (!m) return false;
+		return m.type === "message" && m.message_id === props.message.id;
 	};
 
 	const isReactionPickerOpen = () => {
@@ -1026,10 +1030,10 @@ export function MessageView(props: MessageProps) {
 								onClick={(e) => {
 									e.stopPropagation();
 									const currentTarget = e.currentTarget as HTMLElement;
-									if (ctx.userView()?.ref === currentTarget) {
-										ctx.setUserView(null);
+									if (userView()?.ref === currentTarget) {
+										setUserView(null);
 									} else {
-										ctx.setUserView({
+										setUserView({
 											user_id: props.message.author_id,
 											room_id: thread()?.room_id,
 											thread_id: props.message.channel_id,
@@ -1148,6 +1152,7 @@ type ReplyProps = {
 function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const { setUserView } = useUserPopout();
 	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
 	const thread = api.channels.fetch(() => props.thread_id);
 	const [ch, chUpdate] = useChannel() ?? [null, null];
@@ -1219,7 +1224,7 @@ function ReplyView(props: ReplyProps) {
 					mention.addEventListener("click", (e) => {
 						e.stopPropagation();
 						// Open user profile modal or similar
-						ctx.setUserView({
+						setUserView({
 							user_id: userId,
 							room_id: thread()?.room_id,
 							thread_id: props.thread_id,
@@ -1380,6 +1385,7 @@ export function AttachmentView(props: MediaProps) {
 export function Author(props: { message: Message; thread?: Channel }) {
 	const api = useApi();
 	const ctx = useCtx();
+	const { userView, setUserView } = useUserPopout();
 	const room_member = props.thread?.room_id
 		? api.room_members.fetch(
 			() => props.thread!.room_id!,
@@ -1409,10 +1415,10 @@ export function Author(props: { message: Message; thread?: Channel }) {
 			onClick={(e) => {
 				e.stopPropagation();
 				const currentTarget = e.currentTarget as HTMLElement;
-				if (ctx.userView()?.ref === currentTarget) {
-					ctx.setUserView(null);
+				if (userView()?.ref === currentTarget) {
+					setUserView(null);
 				} else {
-					ctx.setUserView({
+					setUserView({
 						user_id: props.message.author_id,
 						room_id: props.thread?.room_id,
 						thread_id: props.message.channel_id,
@@ -1458,6 +1464,7 @@ function Actor(props: { user_id: string; thread: Channel }) {
 
 const MessageToolbar = (props: { message: Message }) => {
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const api = useApi();
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
@@ -1552,7 +1559,7 @@ const MessageToolbar = (props: { message: Message }) => {
 		const rect = button.getBoundingClientRect();
 
 		queueMicrotask(() => {
-			ctx.setMenu({
+			setMenu({
 				x: rect.left,
 				y: rect.bottom,
 				type: "message",

@@ -6,13 +6,12 @@ export * from "./document.tsx";
 export * from "./channel.tsx";
 export * from "./voice.tsx";
 export * from "./slash-commands.tsx";
+export * from "./user-popout.tsx";
+export * from "./menu.tsx";
+export * from "./autocomplete.tsx";
 
 // // TODO: more contexts
 // export * from "./room.tsx";
-// export * from "./message-search.tsx";
-// export * from "./user-popout.tsx";
-// export * from "./menu.tsx";
-// export * from "./autocomplete.tsx";
 // export * from "./palette.tsx";
 // export * from "./media-player.tsx";
 // export * from "./user-config.tsx";

@@ -12,6 +12,7 @@ import { useApi } from "./api";
 import { flags } from "./flags";
 import { getThumbFromId } from "./media/util";
 import { useCtx } from "./context";
+import { useMenu } from "./contexts/mod.tsx";
 import type { Room } from "sdk";
 import icHome from "./assets/home.png";
 import icFolder1 from "./assets/folder-1.png";
@@ -77,6 +78,7 @@ type RoomNavConfig = Array<RoomNavItem>;
 export const RoomNav = () => {
 	const api = useApi();
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const rooms = api.rooms.list();
 
 	const getRoomMentionCount = (roomId: string) => {
@@ -612,7 +614,7 @@ export const RoomNav = () => {
 												onContextMenu={(e) => {
 													e.preventDefault();
 													queueMicrotask(() => {
-														ctx.setMenu({
+														setMenu({
 															x: e.clientX,
 															y: e.clientY,
 															type: "folder",

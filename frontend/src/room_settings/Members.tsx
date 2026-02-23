@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
+import { useMenu } from "../contexts/mod.tsx";
 import type { RoomT } from "../types.ts";
 import { Role, RoomMember, RoomMemberOrigin } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -20,6 +21,7 @@ import { useModals } from "../contexts/modal";
 
 export function Members(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const api = useApi();
 	const members = api.room_members.list(() => props.room.id);
 
@@ -125,7 +127,7 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 									<button
 										onClick={(e) => {
 											queueMicrotask(() => {
-												ctx.setMenu({
+												setMenu({
 													type: "user",
 													room_id: props.room.id,
 													user_id: i.user_id,

@@ -19,6 +19,7 @@ import { Copyable } from "./util";
 import { getThumbFromId } from "./media/util";
 import { createStore } from "solid-js/store";
 import { useCtx } from "./context.ts";
+import { useMenu } from "./contexts/mod.tsx";
 import { md } from "./markdown.tsx";
 import {
 	autoUpdate,
@@ -167,6 +168,7 @@ const EditRoles = (
 export function UserView(props: UserProps) {
 	const api = useApi();
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const nav = useNavigate();
 
 	const self_id = () => api.users.cache.get("@self")?.id;
@@ -188,7 +190,7 @@ export function UserView(props: UserProps) {
 
 	const openUserMenu = (e: MouseEvent) => {
 		queueMicrotask(() => {
-			ctx.setMenu({
+			setMenu({
 				type: "user",
 				user_id: props.user.id,
 				room_id: props.room_member?.room_id,
@@ -271,7 +273,7 @@ export function UserView(props: UserProps) {
 			class="user-profile"
 			onClick={(e) => {
 				e.stopPropagation();
-				ctx.setMenu(null);
+				setMenu(null);
 			}}
 		>
 			<div

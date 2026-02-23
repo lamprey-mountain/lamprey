@@ -2,6 +2,7 @@ import { Command, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { Schema } from "prosemirror-model";
 import type { ChatCtx } from "./context";
+import type { AutocompleteContextT } from "./contexts/mod.tsx";
 
 /** create a command that wraps or unwraps selected text with some characters */
 export function createWrapCommand(wrap: string): Command {
@@ -39,6 +40,7 @@ export function handleAutocomplete(
 	view: EditorView,
 	event: KeyboardEvent,
 	ctx: ChatCtx,
+	autocompleteCtx: AutocompleteContextT,
 	schema: Schema,
 	channelId: string,
 ): boolean {
@@ -64,7 +66,7 @@ export function handleAutocomplete(
 	if (event.key === "/") {
 		const state = view.state;
 		if (state.selection.from === 1) {
-			ctx.setAutocomplete({
+			autocompleteCtx.setAutocomplete({
 				type: "command",
 				query: "",
 				ref: refElement() as any,
@@ -84,7 +86,7 @@ export function handleAutocomplete(
 					);
 
 					view.dispatch(tr);
-					ctx.setAutocomplete(null);
+					autocompleteCtx.setAutocomplete(null);
 				},
 				channelId: channelId || "",
 			});
@@ -94,7 +96,7 @@ export function handleAutocomplete(
 	}
 
 	if (event.key === "@") {
-		ctx.setAutocomplete({
+		autocompleteCtx.setAutocomplete({
 			type: "mention",
 			query: "",
 			ref: refElement() as any,
@@ -129,7 +131,7 @@ export function handleAutocomplete(
 
 				view.dispatch(tr);
 
-				ctx.setAutocomplete(null);
+				autocompleteCtx.setAutocomplete(null);
 			},
 			channelId: channelId || "",
 		});
@@ -138,7 +140,7 @@ export function handleAutocomplete(
 	}
 
 	if (event.key === "#") {
-		ctx.setAutocomplete({
+		autocompleteCtx.setAutocomplete({
 			type: "channel",
 			query: "",
 			ref: refElement() as any,
@@ -173,7 +175,7 @@ export function handleAutocomplete(
 
 				view.dispatch(tr);
 
-				ctx.setAutocomplete(null);
+				autocompleteCtx.setAutocomplete(null);
 			},
 			channelId: channelId || "",
 		});
@@ -182,7 +184,7 @@ export function handleAutocomplete(
 	}
 
 	if (event.key === ":") {
-		ctx.setAutocomplete({
+		autocompleteCtx.setAutocomplete({
 			type: "emoji",
 			query: "",
 			ref: refElement() as any,
@@ -222,7 +224,7 @@ export function handleAutocomplete(
 				);
 
 				view.dispatch(tr);
-				ctx.setAutocomplete(null);
+				autocompleteCtx.setAutocomplete(null);
 			},
 			channelId: channelId || "",
 		});
@@ -230,7 +232,7 @@ export function handleAutocomplete(
 	}
 
 	// autocomplete navigation and selection
-	if (ctx?.autocomplete()) {
+	if (autocompleteCtx?.autocomplete()) {
 		if (
 			event.key === "ArrowUp" || event.key === "ArrowDown" ||
 			event.key === "Enter" || event.key === "Tab" ||
@@ -241,18 +243,18 @@ export function handleAutocomplete(
 		}
 	}
 
-	if (ctx?.autocomplete()) {
+	if (autocompleteCtx?.autocomplete()) {
 		if (event.key === " " || event.key === "Enter") {
-			ctx.setAutocomplete(null);
+			autocompleteCtx.setAutocomplete(null);
 		} else {
 			const state = view.state;
 			const cursorPos = state.selection.from;
 
-			const triggerChar = ctx.autocomplete()!.type === "mention"
+			const triggerChar = autocompleteCtx.autocomplete()!.type === "mention"
 				? "@"
-				: ctx.autocomplete()!.type === "channel"
+				: autocompleteCtx.autocomplete()!.type === "channel"
 				? "#"
-				: ctx.autocomplete()!.type === "command"
+				: autocompleteCtx.autocomplete()!.type === "command"
 				? "/"
 				: ":";
 			let mentionStart = -1;
@@ -267,17 +269,17 @@ export function handleAutocomplete(
 
 				// invalid characters for a mention query
 				if (char === " " || char === "\n" || char === "\t") {
-					ctx.setAutocomplete(null);
+					autocompleteCtx.setAutocomplete(null);
 					return false;
 				}
 			}
 
-			if (!ctx.autocomplete()) {
+			if (!autocompleteCtx.autocomplete()) {
 				return false;
 			}
 
 			if (mentionStart === -1) {
-				ctx.setAutocomplete(null);
+				autocompleteCtx.setAutocomplete(null);
 				return false;
 			}
 
@@ -289,7 +291,7 @@ export function handleAutocomplete(
 			let newQuery;
 			if (event.key === "Backspace") {
 				if (cursorPos <= mentionStart + 1) {
-					ctx.setAutocomplete(null);
+					autocompleteCtx.setAutocomplete(null);
 					return false;
 				}
 				newQuery = currentQuery.slice(0, -1);
@@ -302,8 +304,8 @@ export function handleAutocomplete(
 				return false;
 			}
 
-			ctx.setAutocomplete({
-				...ctx.autocomplete()!,
+			autocompleteCtx.setAutocomplete({
+				...autocompleteCtx.autocomplete()!,
 				query: newQuery,
 				ref: refElement() as any,
 			});

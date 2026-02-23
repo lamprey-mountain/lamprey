@@ -11,6 +11,7 @@ import {
 	Switch,
 } from "solid-js";
 import { useCtx } from "./context";
+import { useAutocomplete } from "./contexts/mod.tsx";
 import { useApi } from "./api";
 import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
@@ -47,6 +48,7 @@ const getTwemoji = (unicode: string) => {
 
 export const Autocomplete = () => {
 	const ctx = useCtx();
+	const { autocomplete, setAutocomplete } = useAutocomplete();
 	const api = useApi();
 
 	const [unicodeEmoji] = createResource(async () => {
@@ -88,7 +90,7 @@ export const Autocomplete = () => {
 	);
 	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
 
-	createEffect(on(ctx.autocomplete, (state) => {
+	createEffect(on(autocomplete, (state) => {
 		if (state?.type === "mention") {
 			const channelId = state.channelId;
 			const channel = api.channels.cache.get(channelId);
@@ -158,7 +160,7 @@ export const Autocomplete = () => {
 	const hovered = () => filtered()[hoveredIndex()]?.obj;
 
 	createEffect(() => {
-		const state = ctx.autocomplete();
+		const state = autocomplete();
 		let results: Fuzzysort.KeyResults<
 			User | Channel | EmojiCustom | UnicodeEmoji | Command
 		>;
@@ -198,7 +200,7 @@ export const Autocomplete = () => {
 	const select = (
 		item: User | Channel | EmojiCustom | UnicodeEmoji | Command,
 	) => {
-		const state = ctx.autocomplete();
+		const state = autocomplete();
 		if (state) {
 			if (state.type === "emoji") {
 				const name = item.name;
@@ -210,12 +212,12 @@ export const Autocomplete = () => {
 			} else {
 				state.onSelect(item.id, item.name);
 			}
-			ctx.setAutocomplete(null);
+			setAutocomplete(null);
 		}
 	};
 
 	const onKeyDown = (e: KeyboardEvent) => {
-		if (!ctx.autocomplete()) return;
+		if (!autocomplete()) return;
 
 		if (e.key === "ArrowUp") {
 			e.preventDefault();
@@ -235,12 +237,12 @@ export const Autocomplete = () => {
 		} else if (e.key === "Escape") {
 			e.preventDefault();
 			e.stopPropagation();
-			ctx.setAutocomplete(null);
+			setAutocomplete(null);
 		}
 	};
 
 	createEffect(() => {
-		if (ctx.autocomplete()) {
+		if (autocomplete()) {
 			document.addEventListener("keydown", onKeyDown, { capture: true });
 			onCleanup(() => {
 				document.removeEventListener("keydown", onKeyDown, { capture: true });
@@ -249,7 +251,7 @@ export const Autocomplete = () => {
 	});
 
 	return (
-		<Show when={ctx.autocomplete() && filtered().length > 0}>
+		<Show when={autocomplete() && filtered().length > 0}>
 			<div class="autocomplete">
 				<For each={filtered()}>
 					{(result, i) => (
@@ -275,7 +277,7 @@ export const Autocomplete = () => {
 										class="emoji-img"
 									/>
 								</Match>
-								<Match when={ctx.autocomplete()?.type === "command"}>
+								<Match when={autocomplete()?.type === "command"}>
 									<div class="command">
 										<div class="name">/{(result.obj as Command).name}</div>
 										<div class="description dim">
@@ -284,7 +286,7 @@ export const Autocomplete = () => {
 									</div>
 								</Match>
 								<Match
-									when={ctx.autocomplete()?.type === "mention" &&
+									when={autocomplete()?.type === "mention" &&
 										"avatar" in result.obj}
 								>
 									<div class="mention-user">

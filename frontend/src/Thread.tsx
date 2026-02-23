@@ -3,6 +3,7 @@ import type { Channel } from "sdk";
 import { useApi } from "./api.tsx";
 import { AvatarWithStatus } from "./User.tsx";
 import { useCtx } from "./context.ts";
+import { useUserPopout } from "./contexts/mod.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useMemberList } from "./contexts/memberlist.tsx";
 
@@ -78,6 +79,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 									)
 									: () => null;
 								const ctx = useCtx();
+								const { userView, setUserView } = useUserPopout();
 
 								function name() {
 									let name: string | undefined | null = null;
@@ -96,10 +98,10 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 										onClick={(e) => {
 											e.stopPropagation();
 											const currentTarget = e.currentTarget as HTMLElement;
-											if (ctx.userView()?.ref === currentTarget) {
-												ctx.setUserView(null);
+											if (userView()?.ref === currentTarget) {
+												setUserView(null);
 											} else {
-												ctx.setUserView({
+												setUserView({
 													user_id: user()!.id,
 													room_id: room_id(),
 													thread_id: thread_id(),

@@ -12,8 +12,7 @@ import { useMouseTracking } from "./useMouseTracking.ts";
 import { SlashCommands } from "../contexts/slash-commands";
 import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
 import { useLocation } from "@solidjs/router";
-import type { ChatCtx, Data, Events, MediaCtx, Menu } from "../context.ts";
-import type { AutocompleteState, UserViewData } from "../context.ts";
+import type { ChatCtx, Data, Events, MediaCtx } from "../context.ts";
 import type { ThreadsViewData } from "../context.ts";
 import type { Config } from "../config.tsx";
 
@@ -80,10 +79,7 @@ export function useChatClient(config: Config) {
 	});
 
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
-	const [menu, setMenu] = createSignal<Menu | null>(null);
 	const [popout, setPopout] = createSignal({});
-	const [autocomplete, setAutocomplete] = createSignal<AutocompleteState>(null);
-	const [userView, setUserView] = createSignal<UserViewData | null>(null);
 	const [threadsView, setThreadsView] = createSignal<ThreadsViewData | null>(
 		null,
 	);
@@ -117,14 +113,8 @@ export function useChatClient(config: Config) {
 
 		t: i18n.translator(() => dict()),
 		events,
-		menu,
-		setMenu,
 		popout,
 		setPopout,
-		autocomplete,
-		setAutocomplete,
-		userView,
-		setUserView,
 		threadsView,
 		setThreadsView,
 		uploads: new ReactiveMap(),

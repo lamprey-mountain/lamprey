@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
+import { useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
@@ -80,6 +81,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 									api.users.cache.get(row.item.user.id) ?? row.item.user;
 
 								const ctx = useCtx();
+								const { userView, setUserView } = useUserPopout();
 								function name() {
 									let name: string | undefined | null = null;
 									if (member()?.membership === "Join") {
@@ -96,10 +98,10 @@ export const RoomMembers = (props: { room: RoomT }) => {
 										onClick={(e) => {
 											e.stopPropagation();
 											const currentTarget = e.currentTarget as HTMLElement;
-											if (ctx.userView()?.ref === currentTarget) {
-												ctx.setUserView(null);
+											if (userView()?.ref === currentTarget) {
+												setUserView(null);
 											} else {
-												ctx.setUserView({
+												setUserView({
 													user_id: user()!.id,
 													room_id: props.room.id,
 													ref: currentTarget,

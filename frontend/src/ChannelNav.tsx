@@ -13,6 +13,7 @@ import { useApi } from "./api";
 import { useConfig } from "./config";
 import { flags } from "./flags";
 import { useCtx } from "./context";
+import { useMenu } from "./contexts/mod.tsx";
 import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
 import { useVoice } from "./voice-provider";
 import {
@@ -41,6 +42,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const api = useApi();
 	const [voice] = useVoice();
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const params = useParams();
 	const nav = useNavigate();
 
@@ -596,7 +598,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					onClick={(e) => {
 						if (props.room_id) {
 							queueMicrotask(() => {
-								ctx.setMenu({
+								setMenu({
 									x: e.clientX,
 									y: e.clientY,
 									type: "room",
@@ -667,7 +669,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 									onContextMenu={(e) => {
 										e.preventDefault();
 										queueMicrotask(() => {
-											ctx.setMenu({
+											setMenu({
 												x: e.clientX,
 												y: e.clientY,
 												type: "channel",

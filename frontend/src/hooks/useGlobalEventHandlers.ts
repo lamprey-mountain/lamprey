@@ -2,19 +2,18 @@ import { onCleanup } from "solid-js";
 import { useModals } from "../contexts/modal";
 import { useCtx } from "../context.ts";
 import { useContextMenu } from "./useContextMenu.ts";
+import { useMenu, useUserPopout } from "../contexts/mod.tsx";
 
-interface UseGlobalEventHandlersOptions {
-	setMenu: (menu: any) => void;
-}
-
-export function useGlobalEventHandlers(options: UseGlobalEventHandlersOptions) {
+export function useGlobalEventHandlers() {
 	const ctx = useCtx();
 	const [modals, modalCtl] = useModals();
-	const { handleContextMenu } = useContextMenu(options.setMenu);
+	const { menu, setMenu } = useMenu();
+	const { setUserView } = useUserPopout();
+	const { handleContextMenu } = useContextMenu(setMenu);
 
 	const handleClick = (e: MouseEvent) => {
-		options.setMenu(null);
-		ctx.setUserView(null);
+		setMenu(null);
+		setUserView(null);
 		ctx.setThreadsView(null);
 		if (!e.isTrusted) return;
 	};
