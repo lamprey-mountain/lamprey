@@ -405,6 +405,16 @@ input[type="submit"] {
 		color: $fg-500;
 	}
 
+	& .code-block {
+		background-color: $bg-200;
+		font-family: var(--font-mono);
+		white-space: pre;
+		display: inline;
+		padding: 2px 0;
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+	}
+
 	& pre,
 	& code {
 		background-color: $bg-200;

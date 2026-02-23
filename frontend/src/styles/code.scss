@@ -25,3 +25,30 @@
 .hljs-variable {
 	color: oklch(var(--color-cyan));
 }
+.hljs-params {
+	color: oklch(var(--color-fg3));
+}
+.hljs-function {
+	color: oklch(var(--color-blue));
+}
+.hljs-type, .hljs-class {
+	color: #e0af68;
+}
+.hljs-operator {
+	color: #89ddff;
+}
+.hljs-property {
+	color: #7dcfff;
+}
+.hljs-regexp {
+	color: #b4f9f8;
+}
+.hljs-meta {
+	color: #7aa2f7;
+}
+.hljs-tag, .hljs-name {
+	color: #f7768e;
+}
+.hljs-bullet, .hljs-symbol {
+	color: #9ece6a;
+}

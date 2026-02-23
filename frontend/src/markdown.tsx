@@ -1,6 +1,7 @@
 import { marked, type Token } from "marked";
 import { EditorState } from "prosemirror-state";
 import { Decoration, DecorationAttrs, DecorationSet } from "prosemirror-view";
+import hljs from "highlight.js";
 
 const mentionExtension = {
 	name: "mention",
@@ -202,6 +203,52 @@ export function decorate(state: EditorState, placeholderText?: string) {
 			case "code": {
 				const decorations = [];
 				const isFenced = ast.raw.startsWith("```") || ast.raw.startsWith("~~~");
+				const lang = (ast as any).lang;
+
+				function getHighlightDecorations(
+					content: string,
+					language: string,
+					offset: number,
+				) {
+					const decos: any[] = [];
+					try {
+						const highlighted = hljs.highlight(content, {
+							language: language || "plaintext",
+						});
+						// hljs 11+ internal token tree traversal
+						let currentPos = offset;
+						const walk = (node: any) => {
+							if (typeof node === "string") {
+								currentPos += node.length;
+							} else if (node.scope) {
+								const start = currentPos;
+								for (const subNode of node.children) {
+									walk(subNode);
+								}
+								decos.push({
+									attrs: {
+										class: `hljs-${node.scope.replace(/\./g, " hljs-")}`,
+									},
+									start,
+									end: currentPos,
+								});
+							} else if (node.children) {
+								for (const subNode of node.children) {
+									walk(subNode);
+								}
+							}
+						};
+
+						// Accessing internal _emitter.root children for hljs 11+
+						const root = (highlighted as any)._emitter.root;
+						for (const node of root.children) {
+							walk(node);
+						}
+					} catch (e) {
+						// Fallback or ignore if language unknown
+					}
+					return decos;
+				}
 
 				if (isFenced) {
 					const firstEnd = ast.raw.indexOf("\n");
@@ -235,41 +282,56 @@ export function decorate(state: EditorState, placeholderText?: string) {
 										.trim() === "";
 
 							if (hasClosingFence) {
+								const content = ast.raw.slice(firstEnd + 1, lastNewline);
 								decorations.push({
-									attrs: { nodeName: "pre", class: "font-mono" },
+									attrs: { class: "code-block font-mono" },
 									start: firstEnd + 1,
 									end: lastNewline,
 								});
+								decorations.push(
+									...getHighlightDecorations(content, lang, firstEnd + 1),
+								);
 								decorations.push({
 									attrs: { class: "syn" },
 									start: lastNewline + 1,
 									end: ast.raw.length,
 								});
 							} else {
+								const content = ast.raw.slice(firstEnd + 1);
 								decorations.push({
-									attrs: { nodeName: "pre", class: "font-mono" },
+									attrs: { class: "code-block font-mono" },
 									start: firstEnd + 1,
 									end: ast.raw.length,
 									options: { inclusiveEnd: true },
 								});
+								decorations.push(
+									...getHighlightDecorations(content, lang, firstEnd + 1),
+								);
 							}
 						} else {
+							const content = ast.raw.slice(firstEnd + 1);
 							decorations.push({
-								attrs: { nodeName: "pre", class: "font-mono" },
+								attrs: { class: "code-block font-mono" },
 								start: firstEnd + 1,
 								end: ast.raw.length,
 								options: { inclusiveEnd: true },
 							});
+							decorations.push(
+								...getHighlightDecorations(content, lang, firstEnd + 1),
+							);
 						}
 					}
 				} else {
 					// Indented code block
 					decorations.push({
-						attrs: { nodeName: "pre", class: "font-mono" },
+						attrs: { class: "code-block font-mono" },
 						start: 0,
 						end: ast.raw.length,
 						options: { inclusiveEnd: true },
 					});
+					decorations.push(
+						...getHighlightDecorations(ast.raw, lang, 0),
+					);
 				}
 
 				return decorations;
