@@ -5705,6 +5705,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "scanner-malware"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "axum",
+ "figment",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "utoipa",
+ "utoipa-axum",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -55,6 +55,7 @@
         bridge = mkCrate "lamprey-bridge";
         voice = mkCrate "lamprey-voice";
         media = mkCrate "lamprey-media";
+        scanner-malware = mkCrate "scanner-malware";
 
         frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
           name = "frontend";
@@ -93,14 +94,14 @@
         python-env = pkgs.python3.withPackages python-deps;
       in {
         packages = rec {
-          inherit backend bridge voice media frontend;
+          inherit backend bridge voice media frontend scanner-malware;
 
           scanner-nsfw = pkgs.writeShellApplication {
             name = "run-scanner-nsfw";
             runtimeInputs = [ python-env ];
             text = ''
               cd ${./scanner-nsfw}
-              uvicorn app:app --host 0.0.0.0 --port 8000
+              uvicorn app:app --host 0.0.0.0 --port 4100
             '';
           };
 
@@ -163,6 +164,31 @@
             };
           };
 
+          scanner-malware-oci = pkgs.dockerTools.streamLayeredImage {
+            name = "scanner-malware";
+            tag = "latest";
+            contents = [
+              pkgs.dockerTools.caCertificates
+              pkgs.clamav
+              (pkgs.writeTextFile {
+                name = "scanner-malware-config";
+                destination = "/scanner-malware.toml";
+                text = ''
+                  clamav_path = "${pkgs.clamav}/bin/clamscan"
+                  listen = { address = "0.0.0.0", port = 8000 }
+                '';
+              })
+            ];
+            config = {
+              WorkingDir = "/";
+              Entrypoint = [
+                "${pkgs.tini}/bin/tini"
+                "--"
+                "${scanner-malware}/bin/scanner-malware"
+              ];
+            };
+          };
+
           scanner-nsfw-oci = pkgs.dockerTools.streamLayeredImage {
             name = "scanner-nsfw";
             tag = "latest";
@@ -177,7 +203,7 @@
                 "--"
                 "${python-env}/bin/uvicorn"
               ];
-              Cmd = [ "app:app" "--host" "0.0.0.0" "--port" "8000" ];
+              Cmd = [ "app:app" "--host" "0.0.0.0" "--port" "4100" ];
             };
           };
         };

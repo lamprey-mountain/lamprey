@@ -33,14 +33,15 @@ config.toml
 sfu.toml
 cdn.toml
 bot.toml
+scanner-malware.toml
+scanner-nsfw.toml
 
 # Added by cargo
-
 /target
 
 # Build artifacts
 /result
 
 # python
-scanner-nsfw/__pycache__/
-scanner-nsfw/*.pyc
+__pycache__
+*.pyc
