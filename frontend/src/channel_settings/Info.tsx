@@ -5,6 +5,8 @@ import { useApi } from "../api.tsx";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
 import { DurationInput } from "../DurationInput.tsx";
+import { createUpload } from "sdk";
+import { ChannelIconGdm } from "../User.tsx";
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
@@ -31,6 +33,41 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	const [editingBitrate, setEditingBitrate] = createSignal(
 		props.channel.bitrate ?? 65535,
 	);
+	const [editingIcon, setEditingIcon] = createSignal(props.channel.icon);
+
+	let iconInputEl!: HTMLInputElement;
+
+	const isGdm = () => props.channel.type === "Gdm";
+
+	const setIconFile = async (f: File) => {
+		await createUpload({
+			client: api.client,
+			file: f,
+			onComplete(media) {
+				setEditingIcon(media.id);
+				api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+					params: { path: { channel_id: props.channel.id } },
+					body: { icon: media.id },
+				});
+			},
+			onFail(_error) {},
+			onPause() {},
+			onResume() {},
+			onProgress(_progress) {},
+		});
+	};
+
+	const removeIcon = async () => {
+		setEditingIcon(null);
+		await api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+			params: { path: { channel_id: props.channel.id } },
+			body: { icon: null },
+		});
+	};
+
+	const openIconPicker = () => {
+		iconInputEl?.click();
+	};
 
 	const hasVoice = () => {
 		const type = api.channels.cache.get(props.channel.id)?.type;
@@ -47,7 +84,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			props.channel.default_slowmode_message ||
 		(hasVoice() &&
 			(editingUserLimit() !== (props.channel.user_limit ?? 0) ||
-				editingBitrate() !== (props.channel.bitrate ?? 65535)));
+				editingBitrate() !== (props.channel.bitrate ?? 65535))) ||
+		(isGdm() && editingIcon() !== props.channel.icon);
 
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
@@ -63,6 +101,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					user_limit: editingUserLimit() === 0 ? null : editingUserLimit(),
 					bitrate: editingBitrate(),
 				}),
+				...(isGdm() && { icon: editingIcon() }),
 			},
 		});
 	};
@@ -92,6 +131,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		setEditingDefaultSlowmodeMessage(props.channel.default_slowmode_message);
 		setEditingUserLimit(props.channel.user_limit ?? 0);
 		setEditingBitrate(props.channel.bitrate ?? 65535);
+		setEditingIcon(props.channel.icon);
 	};
 
 	return (
@@ -112,6 +152,39 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			/>
 			<br />
 			<br />
+			<Show when={isGdm()}>
+				<div>
+					<div class="dim">icon</div>
+					<div class="avatar-uploader" onClick={openIconPicker}>
+						<div class="avatar-inner">
+							<ChannelIconGdm id={props.channel.id} icon={editingIcon()} />
+							<div class="overlay">upload icon</div>
+						</div>
+						<Show when={editingIcon()}>
+							<button
+								class="remove"
+								onClick={(e) => {
+									e.stopPropagation();
+									removeIcon();
+								}}
+							>
+								remove
+							</button>
+						</Show>
+						<input
+							style="display:none"
+							ref={iconInputEl}
+							type="file"
+							onInput={(e) => {
+								const f = e.target.files?.[0];
+								if (f) setIconFile(f);
+							}}
+						/>
+					</div>
+				</div>
+				<br />
+				<br />
+			</Show>
 			<div>
 				channel id: <code class="select-all">{props.channel.id}</code>
 			</div>
