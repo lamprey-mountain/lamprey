@@ -177,7 +177,7 @@
                   type = "local"
                   socket = "/run/clamav/clamd.sock"
                   pid_file = "/run/clamav/clamd.pid"
-                  database_directory = "/clamav-data"
+                  database_directory = "/var/run/clamav"
                   database_mirror = "database.clamav.net"
                 '';
               };
@@ -206,9 +206,10 @@
                   Retries = 3;
                   StartPeriod = 5000000000; # 5s
                 };
-                Volumes = {
-                  "/clamav-data" = {};
-                };
+                # FIXME: the scanner errors if this is enabled?
+                # Volumes = {
+                #   "/var/run/clamav" = {};
+                # };
               };
             };
 
