@@ -74,10 +74,37 @@ const mentionExtension = {
 	},
 };
 
+const spoilerExtension = {
+	name: "spoiler",
+	level: "inline" as const,
+	start(src: string) {
+		return src.indexOf("||");
+	},
+	tokenizer(src: string) {
+		const rule = /^\|\|([\s\S]+?)\|\|/;
+		const match = rule.exec(src);
+		if (match) {
+			const token = {
+				type: "spoiler",
+				raw: match[0],
+				text: match[1],
+				tokens: [] as any[],
+			};
+			(this as any).lexer.inline(token.text, token.tokens);
+			return token;
+		}
+	},
+	renderer(token: any) {
+		return `<span class="spoiler" onclick="this.classList.toggle('shown')">${
+			(this as any).parser.parseInline(token.tokens)
+		}</span>`;
+	},
+};
+
 export const md = marked.use({
 	breaks: true,
 	gfm: true,
-	extensions: [mentionExtension],
+	extensions: [mentionExtension, spoilerExtension],
 	renderer: {
 		del({ tokens }) {
 			return `<s>${this.parser.parseInline(tokens)}</s>`;
@@ -85,9 +112,9 @@ export const md = marked.use({
 	},
 });
 
-// TODO: refactor
 export function decorate(state: EditorState, placeholderText?: string) {
 	if (state.doc.firstChild!.firstChild === null) {
+		// FIXME: reactive placeholder text
 		const placeholder = (
 			<div class="placeholder" role="presentation">
 				{/* @once */ placeholderText}
@@ -102,6 +129,21 @@ export function decorate(state: EditorState, placeholderText?: string) {
 		switch (ast.type) {
 			case "heading": {
 				return [{ attrs: { class: "syn" }, start: 0, end: ast.depth }];
+			}
+			case "spoiler" as any: {
+				return [
+					{ attrs: { class: "syn" }, start: 0, end: 2 },
+					{
+						attrs: { class: "spoiler-preview" },
+						start: 2,
+						end: ast.raw.length - 2,
+					},
+					{
+						attrs: { class: "syn" },
+						start: ast.raw.length - 2,
+						end: ast.raw.length,
+					},
+				];
 			}
 			case "em": {
 				return [
@@ -236,6 +278,8 @@ export function decorate(state: EditorState, placeholderText?: string) {
 	function getOffset(ty: string) {
 		switch (ty) {
 			case "strong":
+				return 2;
+			case "spoiler":
 				return 2;
 			case "em":
 				return 1;

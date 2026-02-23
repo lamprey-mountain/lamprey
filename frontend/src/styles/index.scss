@@ -3887,3 +3887,31 @@ input[type="search"].tags-search {
 		background: none;
 	}
 }
+
+.markdown .spoiler {
+	background-color: $bg-400;
+	color: transparent;
+	border-radius: 3px;
+	padding: 0 2px;
+	cursor: pointer;
+	transition: background-color 0.2s, color 0.2s;
+
+	&.shown {
+		background-color: oklch(var(--color-bg4) / 0.5);
+		color: inherit;
+		cursor: text;
+	}
+
+	& > * {
+		visibility: hidden;
+	}
+
+	&.shown > * {
+		visibility: visible;
+	}
+}
+
+.editor .spoiler-preview {
+	background-color: rgba(255, 255, 255, 0.1);
+	border-radius: 2px;
+}
