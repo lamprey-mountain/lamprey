@@ -302,12 +302,18 @@ impl ServerState {
                 services: weak.to_owned(),
                 blobs,
                 messaging: match nats {
-                    Some(c) => MessagingService::Nats(c),
-                    None => MessagingService::Memory {
-                        // maybe i should increase the limit at some point? or make it unlimited?
-                        sushi: tokio::sync::broadcast::channel(100).0,
-                        sushi_sfu: tokio::sync::broadcast::channel(100).0,
-                    },
+                    Some(c) => {
+                        info!("using NATS for messaging");
+                        MessagingService::Nats(c)
+                    }
+                    None => {
+                        info!("using in-memory messaging");
+                        MessagingService::Memory {
+                            // maybe i should increase the limit at some point? or make it unlimited?
+                            sushi: tokio::sync::broadcast::channel(100).0,
+                            sushi_sfu: tokio::sync::broadcast::channel(100).0,
+                        }
+                    }
                 },
             });
             Services::new(inner.clone())
