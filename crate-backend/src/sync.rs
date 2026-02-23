@@ -264,7 +264,10 @@ impl Connection {
                 let srv = self.s.services();
 
                 let target = if let Some(room_id) = room_id {
-                    let _perms = srv.perms.for_room(user_id, room_id).await?;
+                    let perms = srv.perms.for_room(user_id, room_id).await?;
+                    if room_id == SERVER_ROOM_ID {
+                        perms.ensure(Permission::ServerOversee)?;
+                    }
                     Some(MemberListTarget::Room(room_id))
                 } else if let Some(thread_id) = thread_id {
                     let perms = srv.perms.for_channel(user_id, thread_id).await?;
