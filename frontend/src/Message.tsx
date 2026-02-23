@@ -581,6 +581,7 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else if (props.message.type === "MessagePinned") {
+			const navigate = useNavigate();
 			const author = (
 				<span
 					class="author"
@@ -589,6 +590,22 @@ export function MessageView(props: MessageProps) {
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
+
+			const link = (text: string) => (
+				<button
+					style="color: oklch(var(--color-fg1))"
+					class="link"
+					onClick={(e) => {
+						e.stopPropagation();
+						navigate(
+							`/channel/${props.message.channel_id}/message/${props.message.pinned_message_id}`,
+						);
+					}}
+				>
+					{text}
+				</button>
+			);
+
 			return (
 				<article
 					ref={messageArticleRef!}
@@ -608,7 +625,7 @@ export function MessageView(props: MessageProps) {
 							classList={{ local: props.message.is_local }}
 						>
 							{/* @ts-ignore */}
-							{t("message_content.message_pinned", author)}
+							{t("message_content.message_pinned", author, link)}
 						</div>
 					</div>
 					<Time date={date} animGroup="message-ts" />

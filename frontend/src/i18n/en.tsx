@@ -588,7 +588,11 @@ export default {
 			" from the thread",
 		],
 		member_join: (author: any) => [author, " joined the room"],
-		message_pinned: (author: any) => [author, " pinned a message"],
+		message_pinned: (author: any, Link: (text: string) => any) => [
+			author,
+			" pinned ",
+			Link("a message"),
+		],
 		channel_rename: (author: any, name_new: any) => [
 			author,
 			" renamed the thread to ",
