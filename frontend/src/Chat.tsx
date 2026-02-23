@@ -512,7 +512,7 @@ export const ChatHeader = (
 							onClick={(e) => {
 								if (!ctx.threadsView()) {
 									const ref = e.currentTarget;
-									queueMicrotask(() => {
+									setTimeout(() => {
 										ctx.setThreadsView({
 											channel_id: props.channel.id,
 											ref,
