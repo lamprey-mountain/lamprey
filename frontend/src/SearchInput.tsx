@@ -177,6 +177,25 @@ const schema = new Schema({
 	},
 });
 
+const RECENT_SEARCHES_KEY = "recent_searches";
+
+function getRecentSearches(): string[] {
+	const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+	if (!stored) return [];
+	try {
+		return JSON.parse(stored);
+	} catch (e) {
+		return [];
+	}
+}
+
+function addRecentSearch(query: string) {
+	if (!query.trim()) return;
+	let searches = getRecentSearches();
+	searches = [query, ...searches.filter((s) => s !== query)].slice(0, 10);
+	localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+}
+
 function serializeToQuery(state: EditorState): string {
 	let query = "";
 	state.doc.forEach((node) => {
@@ -451,6 +470,13 @@ const AutocompleteDropdown = (props: {
 		return allFilterSuggestions.filter((f) => f.toLowerCase().includes(query));
 	});
 
+	const recentSearches = createMemo(() => {
+		if (props.filter.type === "filter" && props.filter.query === "") {
+			return getRecentSearches();
+		}
+		return [];
+	});
+
 	const hasSuggestions = createMemo(() => {
 		if (props.filter.type === "author") {
 			return authorSuggestions().length > 0;
@@ -468,7 +494,7 @@ const AutocompleteDropdown = (props: {
 			return mentionsSuggestions().length > 0;
 		}
 		if (props.filter.type === "filter") {
-			return filterSuggestions().length > 0;
+			return filterSuggestions().length > 0 || recentSearches().length > 0;
 		}
 		return false;
 	});
@@ -576,6 +602,26 @@ const AutocompleteDropdown = (props: {
 								</li>
 							)}
 						</For>
+						<Show when={recentSearches().length > 0}>
+							<li
+								class="dim"
+								style="margin-top: 8px; font-size: 0.8em; text-transform: uppercase; font-weight: bold;"
+							>
+								Recent Searches
+							</li>
+							<For each={recentSearches()}>
+								{(search) => (
+									<li
+										onMouseDown={(e) => {
+											e.preventDefault();
+											props.onSelectFilter(search);
+										}}
+									>
+										{search}
+									</li>
+								)}
+							</For>
+						</Show>
 					</ul>
 				</Show>
 			</div>
@@ -684,6 +730,8 @@ export const SearchInput = (props: { channel?: ThreadT; room?: RoomT }) => {
 			updateSearch(undefined);
 			return;
 		}
+
+		addRecentSearch(queryString);
 
 		const parts = queryString.split(/\s+/);
 		const textQueryParts: string[] = [];
