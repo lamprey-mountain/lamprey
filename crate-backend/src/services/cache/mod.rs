@@ -499,6 +499,32 @@ impl ServiceCache {
             MessageSync::RoomDelete { room_id } => {
                 self.unload_room(*room_id).await;
             }
+            MessageSync::MessageCreate { message } => {
+                let Some(room_id) = message.room_id else {
+                    return;
+                };
+                if let Some(cached) = self.rooms.get(&room_id).await {
+                    if let Some(thread) = cached.threads.get(&message.channel_id) {
+                        let mut t = thread.thread.write().await;
+                        t.last_version_id = Some(message.latest_version.version_id);
+                    } else if let Some(mut channel) = cached.channels.get_mut(&message.channel_id) {
+                        channel.last_version_id = Some(message.latest_version.version_id);
+                    }
+                }
+            }
+            MessageSync::MessageUpdate { message } => {
+                let Some(room_id) = message.room_id else {
+                    return;
+                };
+                if let Some(cached) = self.rooms.get(&room_id).await {
+                    if let Some(thread) = cached.threads.get(&message.channel_id) {
+                        let mut t = thread.thread.write().await;
+                        t.last_version_id = Some(message.latest_version.version_id);
+                    } else if let Some(mut channel) = cached.channels.get_mut(&message.channel_id) {
+                        channel.last_version_id = Some(message.latest_version.version_id);
+                    }
+                }
+            }
             MessageSync::ChannelCreate { channel } => {
                 let Some(room_id) = channel.room_id else {
                     return;

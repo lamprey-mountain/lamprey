@@ -14,6 +14,8 @@ use crate::v1::types::{
     ThreadMember, User, UserId,
 };
 
+// TODO: remove irrelevant fields (tantivy filters using query)
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -336,7 +338,10 @@ pub struct MessageSearch {
     pub has_more: bool,
 
     /// approximate count of total results that match this query
-    pub approximate_total: u64,
+    pub total: u64,
+
+    /// current page cursor
+    pub cursor: Option<String>,
 }
 
 // pub struct ChannelSearch {}

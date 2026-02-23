@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use common::v1::types::search::{ChannelSearchOrderField, Order};
 use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId,
@@ -172,7 +173,8 @@ impl ServiceSearch {
             room_members,
             thread_members,
             has_more,
-            approximate_total: raw_result.total,
+            total: raw_result.total,
+            cursor: None,
         })
     }
 
@@ -226,14 +228,88 @@ impl ServiceSearch {
     pub async fn search_channels(
         &self,
         user_id: UserId,
-        json: ChannelSearchRequest,
-        q: PaginationQuery<ChannelId>,
+        req: ChannelSearchRequest,
+        _q: PaginationQuery<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
-        let data = self.state.data();
         let srv = self.state.services();
+
         let vis = srv.channels.list_user_room_channels(user_id).await?;
-        let res = data.search_channel(user_id, json, q, &vis).await?;
-        Ok(res)
+        let vis_ids: HashSet<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
+
+        let searcher = self.tantivy.searcher();
+        let mut req_clone = req.clone();
+
+        // If we are sorting by activity, we want to fetch a larger batch from Tantivy
+        // then resort in memory using the cache for active threads.
+        let is_activity_sort = req.sort_field == ChannelSearchOrderField::Activity;
+
+        if is_activity_sort {
+            // Fetch more results to allow for better resorting.
+            // This is still a bit of a hack, but without updating Tantivy on every message,
+            // we have to resort in memory.
+            req_clone.limit = req.limit.max(500);
+            req_clone.offset = 0;
+        }
+
+        let raw_result =
+            tokio::task::spawn_blocking(move || searcher.search_channels(req_clone, &vis_ids))
+                .await
+                .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+
+        let channel_ids = raw_result.items;
+        let mut channels = srv.channels.get_many(&channel_ids, Some(user_id)).await?;
+
+        if is_activity_sort {
+            // Resort based on cache/real-time activity
+            channels.sort_by(|a, b| {
+                let a_time = a.archived_at.unwrap_or_else(|| {
+                    a.last_version_id
+                        .and_then(|id| id.try_into().ok())
+                        .unwrap_or_else(|| a.id.try_into().unwrap())
+                });
+                let b_time = b.archived_at.unwrap_or_else(|| {
+                    b.last_version_id
+                        .and_then(|id| id.try_into().ok())
+                        .unwrap_or_else(|| b.id.try_into().unwrap())
+                });
+
+                match req.sort_order {
+                    Order::Ascending => a_time.cmp(&b_time),
+                    Order::Descending => b_time.cmp(&a_time),
+                }
+            });
+
+            // Re-apply pagination after resorting
+            let total = channels.len();
+            let start = req.offset as usize;
+            let end = (start + req.limit as usize).min(total);
+
+            if start >= total {
+                return Ok(PaginationResponse {
+                    items: vec![],
+                    has_more: false,
+                    total: raw_result.total,
+                    cursor: None,
+                });
+            }
+
+            let paged_channels = channels[start..end].to_vec();
+            let has_more = end < total || raw_result.total > req.limit as u64;
+
+            Ok(PaginationResponse {
+                items: paged_channels,
+                has_more,
+                total: raw_result.total,
+                cursor: None, // TODO: implement cursors if needed
+            })
+        } else {
+            Ok(PaginationResponse {
+                items: channels,
+                has_more: (req.offset as u64 + channel_ids.len() as u64) < raw_result.total,
+                total: raw_result.total,
+                cursor: None,
+            })
+        }
     }
 
     pub fn send_indexer_command(&self, cmd: IndexerCommand) -> Result<()> {

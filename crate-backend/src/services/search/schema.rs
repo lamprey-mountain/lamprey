@@ -458,6 +458,13 @@ pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> Tan
 
     meta_fast.insert("nsfw".to_string(), channel.nsfw.into());
 
+    if let Some(archived_at) = channel.archived_at {
+        meta_fast.insert(
+            "last_activity_at".to_string(),
+            tantivy::DateTime::from_utc(*archived_at).into(),
+        );
+    }
+
     if let Some(bitrate) = channel.bitrate {
         meta_fast.insert("bitrate".to_string(), bitrate.into());
     }

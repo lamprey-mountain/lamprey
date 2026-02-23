@@ -1,10 +1,14 @@
 use std::{
+    collections::HashSet,
     path::PathBuf,
     sync::{mpsc, Arc},
 };
 
 use common::v1::types::{
-    search::{MessageSearchOrderField, MessageSearchRequest, Order},
+    search::{
+        ChannelSearchOrderField, ChannelSearchRequest, MessageSearchOrderField,
+        MessageSearchRequest, Order,
+    },
     ChannelId, Message, MessageId, MessageSync, PaginationDirection, PaginationQuery,
     SERVER_USER_ID,
 };
@@ -301,6 +305,11 @@ pub struct SearchMessagesResponseRawItem {
     pub channel_id: ChannelId,
 }
 
+pub struct SearchChannelsResponseRaw {
+    pub items: Vec<ChannelId>,
+    pub total: u64,
+}
+
 impl TantivyHandle {
     pub fn searcher(&self) -> TantivySearcher {
         self.searcher.clone()
@@ -308,6 +317,151 @@ impl TantivyHandle {
 }
 
 impl TantivySearcher {
+    pub fn search_channels(
+        &self,
+        req: ChannelSearchRequest,
+        visible_channel_ids: &HashSet<ChannelId>,
+    ) -> Result<SearchChannelsResponseRaw> {
+        let s = &self.schema;
+        let searcher = self.reader.searcher();
+
+        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(tantivy::query::TermQuery::new(
+                Term::from_field_text(s.doctype, "Channel"),
+                tantivy::schema::IndexRecordOption::Basic,
+            )),
+        ));
+
+        if let Some(q_str) = &req.query {
+            if !q_str.is_empty() {
+                let mut query_parser = QueryParser::for_index(&self.index, vec![s.content, s.name]);
+                query_parser.set_field_boost(s.name, 1.5);
+                let q = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::TantivyQuery(format!("Invalid query syntax: {}", e)))?;
+                query_clauses.push((tantivy::query::Occur::Must, q));
+            }
+        }
+
+        // Visibility filter
+        let mut vis_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+        for id in visible_channel_ids {
+            vis_queries.push((
+                tantivy::query::Occur::Should,
+                Box::new(tantivy::query::TermQuery::new(
+                    Term::from_field_text(s.id, &id.to_string()),
+                    tantivy::schema::IndexRecordOption::Basic,
+                )),
+            ));
+        }
+
+        if vis_queries.is_empty() {
+            return Ok(SearchChannelsResponseRaw {
+                items: vec![],
+                total: 0,
+            });
+        }
+
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(BooleanQuery::new(vis_queries)),
+        ));
+
+        let query = BooleanQuery::new(query_clauses);
+
+        let limit = req.limit as usize;
+        let cursor = req.offset as usize;
+
+        // "Activity" sort field requires resorting in memory if threads are active.
+        // For now, we'll just handle Relevancy, Created, and Archived in Tantivy.
+        // Activity will be handled by ServiceSearch by fetching more and resorting.
+
+        let (top_docs, total) = match (req.sort_field, req.sort_order) {
+            (ChannelSearchOrderField::Relevancy, _) => {
+                let (top_docs, count): (Vec<(f32, DocAddress)>, usize) = searcher.search(
+                    &query,
+                    &(TopDocs::with_limit(limit).and_offset(cursor), Count),
+                )?;
+                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+                (top_docs, count as u64)
+            }
+            (ChannelSearchOrderField::Created, ord) => {
+                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
+                    .search(
+                        &query,
+                        &(
+                            TopDocs::with_limit(limit)
+                                .and_offset(cursor)
+                                .order_by_fast_field::<tantivy::DateTime>(
+                                    "created_at",
+                                    match ord {
+                                        Order::Ascending => tantivy::Order::Asc,
+                                        Order::Descending => tantivy::Order::Desc,
+                                    },
+                                ),
+                            Count,
+                        ),
+                    )?;
+                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+                (top_docs, count as u64)
+            }
+            (ChannelSearchOrderField::Archived, ord) => {
+                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
+                    .search(
+                        &query,
+                        &(
+                            TopDocs::with_limit(limit)
+                                .and_offset(cursor)
+                                .order_by_fast_field::<tantivy::DateTime>(
+                                    "archived_at",
+                                    match ord {
+                                        Order::Ascending => tantivy::Order::Asc,
+                                        Order::Descending => tantivy::Order::Desc,
+                                    },
+                                ),
+                            Count,
+                        ),
+                    )?;
+                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+                (top_docs, count as u64)
+            }
+            (ChannelSearchOrderField::Activity, ord) => {
+                // If we are sorting by Activity, we might need to fetch all candidates if we want to resort accurately.
+                // But for now, let's just sort by whatever is in Tantivy's last_activity_at (archived threads).
+                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
+                    .search(
+                        &query,
+                        &(
+                            TopDocs::with_limit(limit)
+                                .and_offset(cursor)
+                                .order_by_fast_field::<tantivy::DateTime>(
+                                    "metadata_fast.last_activity_at",
+                                    match ord {
+                                        Order::Ascending => tantivy::Order::Asc,
+                                        Order::Descending => tantivy::Order::Desc,
+                                    },
+                                ),
+                            Count,
+                        ),
+                    )?;
+                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+                (top_docs, count as u64)
+            }
+        };
+
+        let mut items = vec![];
+        for doc_address in top_docs {
+            let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
+            let id = retrieved_doc.get_first(s.id).unwrap().as_str().unwrap();
+            items.push(id.parse().unwrap());
+        }
+
+        Ok(SearchChannelsResponseRaw { items, total })
+    }
+
     pub fn search_messages(
         &self,
         req: MessageSearchRequest,
