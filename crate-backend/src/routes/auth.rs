@@ -31,7 +31,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use crate::routes::util::Auth;
+use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
 use crate::ServerState;
@@ -61,7 +61,7 @@ pub struct OauthInitResponse {
 )]
 async fn auth_oauth_init(
     Path(provider): Path<String>,
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let url = s.services().oauth.create_url(&provider, auth.session.id)?;
@@ -417,7 +417,7 @@ async fn auth_oauth_delete(
 )]
 async fn auth_email_exec(
     Path(email): Path<EmailAddr>,
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -453,7 +453,7 @@ async fn auth_email_exec(
 )]
 async fn auth_email_reset(
     Path(email): Path<EmailAddr>,
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -487,7 +487,7 @@ async fn auth_email_reset(
 )]
 async fn auth_email_complete(
     Path(email): Path<EmailAddr>,
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AuthEmailComplete>,
 ) -> Result<impl IntoResponse> {
@@ -532,7 +532,18 @@ async fn auth_email_complete(
 
     match purpose {
         EmailPurpose::Authn => {
-            let al = auth.audit_log(user_id.into_inner().into());
+            let srv = s.services();
+            let user = srv.users.get(user_id, None).await?;
+            let al = Auth {
+                user: user.clone(),
+                real_user: None,
+                session: session.clone(),
+                scopes: auth.scopes.clone(),
+                reason: auth.reason.clone(),
+                audit_log_slot: auth.audit_log_slot.clone(),
+                s: auth.s.clone(),
+            }
+            .audit_log(user_id.into_inner().into());
             al.commit_success(AuditLogEntryType::SessionLogin {
                 user_id,
                 session_id: session.id,
@@ -540,7 +551,18 @@ async fn auth_email_complete(
             .await?;
         }
         EmailPurpose::Reset => {
-            let al = auth.audit_log(user_id.into_inner().into());
+            let srv = s.services();
+            let user = srv.users.get(user_id, None).await?;
+            let al = Auth {
+                user: user.clone(),
+                real_user: None,
+                session: session.clone(),
+                scopes: auth.scopes.clone(),
+                reason: auth.reason.clone(),
+                audit_log_slot: auth.audit_log_slot.clone(),
+                s: auth.s.clone(),
+            }
+            .audit_log(user_id.into_inner().into());
             al.commit_success(AuditLogEntryType::AuthSudo {
                 session_id: session.id,
             })
@@ -942,7 +964,7 @@ async fn auth_password_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_exec(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PasswordExec>,
 ) -> Result<impl IntoResponse> {
@@ -964,7 +986,18 @@ async fn auth_password_exec(
             .await?;
         let srv = s.services();
         srv.sessions.invalidate(auth.session.id).await;
-        let al = auth.audit_log(user_id.into_inner().into());
+        let session = srv.sessions.get(auth.session.id).await?;
+        let user = srv.users.get(user_id, None).await?;
+        let al = Auth {
+            user: user.clone(),
+            real_user: None,
+            session: session.clone(),
+            scopes: auth.scopes.clone(),
+            reason: auth.reason.clone(),
+            audit_log_slot: auth.audit_log_slot.clone(),
+            s: auth.s.clone(),
+        }
+        .audit_log(user_id.into_inner().into());
         al.commit_success(AuditLogEntryType::SessionLogin {
             user_id,
             session_id: auth.session.id,
@@ -985,8 +1018,16 @@ async fn auth_password_exec(
     tags = ["auth"],
     responses((status = OK, body = AuthState, description = "success")),
 )]
-async fn auth_state(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
-    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
+async fn auth_state(
+    auth: AuthRelaxed2,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let user_id = auth
+        .user
+        .map(|u| u.id)
+        .or(auth.session.user_id())
+        .unwrap_or_else(UserId::new);
+    let auth_state = fetch_auth_state(&s, user_id).await?;
     Ok(Json(auth_state))
 }
 

@@ -24,7 +24,7 @@ use crate::routes::util::{Auth, HeaderReason};
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
-use super::util::AuthRelaxed;
+use super::util::AuthRelaxed2;
 use crate::error::{Error, Result};
 
 /// User update
@@ -379,10 +379,11 @@ async fn user_audit_logs(
     responses((status = CREATED, body = User, description = "guest account created")),
 )]
 async fn guest_create(
-    AuthRelaxed(session): AuthRelaxed,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     Json(create): Json<UserCreate>,
 ) -> Result<impl IntoResponse> {
+    let session = auth.session;
     let data = s.data();
     let srv = s.services();
 

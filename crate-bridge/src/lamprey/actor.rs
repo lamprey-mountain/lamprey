@@ -45,8 +45,16 @@ impl EventHandler for Handle {
         Ok(())
     }
 
-    async fn error(&mut self, err: String) -> Result<()> {
-        error!("lamprey sync error: {err}");
+    async fn error(
+        &mut self,
+        err: String,
+        code: Option<common::v1::types::error::SyncError>,
+    ) -> Result<()> {
+        if let Some(code) = code {
+            error!("lamprey sync error [{code:?}]: {err}");
+        } else {
+            error!("lamprey sync error: {err}");
+        }
         Ok(())
     }
 

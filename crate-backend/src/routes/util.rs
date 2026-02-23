@@ -45,13 +45,13 @@ pub struct Auth {
     /// the audit log reason for this request
     ///
     /// extracted from HeaderReason
-    reason: Option<String>,
+    pub reason: Option<String>,
 
     /// the audit log slot for this request
     pub audit_log_slot: Option<AuditLogSlot>,
 
     /// a reference to the server state
-    s: Arc<ServerState>,
+    pub s: Arc<ServerState>,
 }
 
 impl Auth {
@@ -78,7 +78,7 @@ impl Auth {
 }
 
 /// extract the client's Session
-// TODO: replace with AuthRelaxed2
+// TODO: remove?
 pub struct AuthRelaxed(pub Session);
 
 pub struct AuthRelaxed2 {
@@ -97,13 +97,13 @@ pub struct AuthRelaxed2 {
     /// the audit log reason for this request
     ///
     /// extracted from HeaderReason
-    reason: Option<String>,
+    pub reason: Option<String>,
 
     /// the audit log slot for this request
     pub audit_log_slot: Option<AuditLogSlot>,
 
     /// a reference to the server state
-    s: Arc<ServerState>,
+    pub s: Arc<ServerState>,
 }
 
 impl AuthRelaxed2 {
@@ -195,7 +195,40 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
             .headers
             .typed_get()
             .ok_or_else(|| Error::MissingAuth)?;
+        let token = auth.token();
         let srv = s.services();
+
+        // check admin token
+        if srv.admin.verify_admin_token(token).await {
+            let user = srv.users.get(SERVER_USER_ID, None).await?;
+            let session = Session {
+                id: SERVER_TOKEN_SESSION_ID,
+                status: SessionStatus::Sudo {
+                    user_id: SERVER_USER_ID,
+                    sudo_expires_at: Time::now_utc() + Duration::from_secs(3600),
+                },
+                name: Some("admin token".to_string()),
+                ty: SessionType::User,
+                expires_at: None,
+                app_id: None,
+                last_seen_at: Time::now_utc(),
+                ip_addr: None,
+                user_agent: None,
+                authorized_at: Some(Time::now_utc()),
+                deauthorized_at: None,
+            };
+
+            return Ok(AuthRelaxed2 {
+                user: Some(user),
+                real_user: None,
+                session,
+                scopes: Scopes(vec![Scope::Full]),
+                reason: HeaderReason::from_request_parts(parts, s).await?.0,
+                audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
+                s: s.clone(),
+            });
+        }
+
         let session = srv
             .sessions
             .get_by_token(SessionToken(auth.token().to_string()))
@@ -211,6 +244,9 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
             s.data().session_set_last_seen_at(session.id).await?;
             srv.sessions.invalidate(session.id).await;
         }
+        if matches!(session.status, SessionStatus::Bound { .. }) {
+            return Err(Error::MissingAuth);
+        }
 
         let reason = HeaderReason::from_request_parts(parts, s).await?;
 
@@ -219,7 +255,8 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
             Some(user_id) => {
                 let real_user = srv.users.get(user_id, None).await?;
 
-                let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
+                let HeaderPuppetId(puppet_id) =
+                    HeaderPuppetId::from_request_parts(parts, s).await?;
 
                 let effective_user = if let Some(puppet_id) = puppet_id {
                     let puppet = srv.users.get(puppet_id, None).await?;
@@ -287,7 +324,14 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
                     }
                 }
 
-                (Some(final_user), if puppet_id.is_some() { Some(real_user) } else { None })
+                (
+                    Some(final_user),
+                    if puppet_id.is_some() {
+                        Some(real_user)
+                    } else {
+                        None
+                    },
+                )
             }
             None => (None, None),
         };
@@ -382,174 +426,8 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
         parts: &mut Parts,
         s: &Arc<ServerState>,
     ) -> Result<Self, Self::Rejection> {
-        // load existing session
-        let auth: Authorization<Bearer> = parts
-            .headers
-            .typed_get()
-            .ok_or_else(|| Error::MissingAuth)?;
-        let token = auth.token();
-        let srv = s.services();
-
-        // check admin token
-        if srv.admin.verify_admin_token(token).await {
-            let user = srv.users.get(SERVER_USER_ID, None).await?;
-            let session = Session {
-                id: SERVER_TOKEN_SESSION_ID,
-                status: SessionStatus::Sudo {
-                    user_id: SERVER_USER_ID,
-                    sudo_expires_at: Time::now_utc() + Duration::from_secs(3600),
-                },
-                name: Some("admin token".to_string()),
-                ty: SessionType::User,
-                expires_at: None,
-                app_id: None,
-                last_seen_at: Time::now_utc(),
-                ip_addr: None,
-                user_agent: None,
-                authorized_at: Some(Time::now_utc()),
-                deauthorized_at: None,
-            };
-
-            return Ok(Auth {
-                user,
-                real_user: None,
-                session,
-                scopes: Scopes(vec![Scope::Full]),
-                reason: HeaderReason::from_request_parts(parts, s).await?.0,
-                audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
-                s: s.clone(),
-            });
-        }
-
-        let reason = HeaderReason::from_request_parts(parts, s).await?;
-        let session = srv
-            .sessions
-            .get_by_token(SessionToken(auth.token().to_string()))
-            .await
-            .map_err(|err| match err {
-                Error::NotFound => Error::MissingAuth,
-                other => other,
-            })?;
-        if session.expires_at.is_some_and(|t| t < Time::now_utc()) {
-            return Err(Error::MissingAuth);
-        }
-        if session.last_seen_at < Time::now_utc() - Duration::from_secs(60) {
-            s.data().session_set_last_seen_at(session.id).await?;
-            srv.sessions.invalidate(session.id).await;
-        }
-        if matches!(session.status, SessionStatus::Bound { .. }) {
-            return Err(Error::MissingAuth);
-        }
-
-        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-
-        let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
-        let real_user = srv.users.get(user_id, None).await?;
-
-        // load the real user if this is for puppeting
-        let mut effective_user = if let Some(puppet_id) = puppet_id {
-            let puppet = srv.users.get(puppet_id, None).await?;
-
-            if puppet.bot {
-                // check if we own this application
-                let app = s
-                    .data()
-                    .application_get(puppet.id.into_inner().into())
-                    .await?;
-                if app.owner_id == real_user.id {
-                    puppet
-                } else {
-                    return Err(Error::BadStatic("not bot owner"));
-                }
-            } else {
-                if !real_user.bot {
-                    return Err(Error::BadStatic("user is not a bot"));
-                }
-
-                // check if we are a bridge
-                let app = s
-                    .data()
-                    .application_get(real_user.id.into_inner().into())
-                    .await?;
-                if app.bridge.is_none() {
-                    return Err(Error::BadStatic("bot is not a bridge"));
-                }
-
-                let Some(p) = &puppet.puppet else {
-                    return Err(Error::BadStatic("can only puppet users of type Puppet"));
-                };
-
-                if p.owner_id.into_inner() != *real_user.id {
-                    return Err(Error::BadStatic("can only puppet your own puppets"));
-                }
-
-                puppet
-            }
-        } else {
-            real_user.clone()
-        };
-
-        // propagate suspension
-        if effective_user.id != real_user.id && real_user.is_suspended() {
-            effective_user.suspended = real_user.suspended.clone();
-        }
-
-        if effective_user.suspended.is_none() {
-            if let Some(puppet) = &effective_user.puppet {
-                let bot_app_id = puppet.owner_id;
-                let bot_user = srv.users.get(bot_app_id.into_inner().into(), None).await?;
-                if bot_user.is_suspended() {
-                    effective_user.suspended = bot_user.suspended.clone();
-                } else if bot_user.bot {
-                    // check the owner of the bot
-                    if let Ok(app) = s.data().application_get(bot_app_id).await {
-                        let owner = srv.users.get(app.owner_id, None).await?;
-                        if owner.is_suspended() {
-                            effective_user.suspended = owner.suspended.clone();
-                        }
-                    }
-                }
-            } else if effective_user.bot {
-                if let Ok(app) = s
-                    .data()
-                    .application_get(effective_user.id.into_inner().into())
-                    .await
-                {
-                    let owner = srv.users.get(app.owner_id, None).await?;
-                    if owner.is_suspended() {
-                        effective_user.suspended = owner.suspended.clone();
-                    }
-                }
-            }
-        }
-
-        let scopes = if session.ty == SessionType::User {
-            Scopes(vec![Scope::Auth])
-        } else if let Some(app_id) = session.app_id {
-            s.data()
-                .connection_get(user_id, app_id)
-                .await
-                .map(|c| c.scopes)
-                .unwrap_or_default()
-        } else {
-            Scopes::default()
-        };
-
-        let audit_log_slot = parts.extensions.get::<AuditLogSlot>().cloned();
-
-        Ok(Auth {
-            user: effective_user,
-            real_user: if puppet_id.is_some() {
-                Some(real_user)
-            } else {
-                None
-            },
-            session,
-            scopes,
-            reason: reason.0,
-            audit_log_slot,
-            s: s.clone(),
-        })
+        let relaxed = AuthRelaxed2::from_request_parts(parts, s).await?;
+        relaxed.upgrade()
     }
 }
 
