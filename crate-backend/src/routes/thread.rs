@@ -178,7 +178,6 @@ async fn thread_member_add(
                 author_id: auth.user.id,
                 embeds: vec![],
                 message_type: MessageType::MemberAdd(MessageMember { target_user_id }).into(),
-                edited_at: None,
                 created_at: None,
                 removed_at: None,
                 mentions: Mentions {
@@ -293,7 +292,6 @@ async fn thread_member_delete(
                 author_id: auth.user.id,
                 embeds: vec![],
                 message_type: MessageType::MemberRemove(MessageMember { target_user_id }).into(),
-                edited_at: None,
                 created_at: None,
                 removed_at: None,
                 mentions: Default::default(),

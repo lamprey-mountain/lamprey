@@ -819,7 +819,6 @@ async fn message_pin_create(
                 pinned_message_id: message_id,
             })
             .into(),
-            edited_at: None,
             created_at: None,
             removed_at: None,
             mentions: Default::default(),

@@ -325,7 +325,6 @@ impl ServiceRooms {
                     author_id: user_id,
                     embeds: vec![],
                     message_type: MessageType::MemberJoin.into(),
-                    edited_at: None,
                     created_at: None,
                     removed_at: None,
                     mentions: Default::default(),

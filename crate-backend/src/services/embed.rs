@@ -19,7 +19,7 @@ use url::Url;
 use webpage::HTML;
 
 use crate::error::Error;
-use crate::types::{DbMessageCreate, MediaLinkType, MessageRef};
+use crate::types::{DbMessageUpdate, MediaLinkType, MessageRef};
 use crate::Result;
 use crate::ServerStateInner;
 
@@ -581,18 +581,12 @@ impl ServiceEmbed {
         data.message_update_in_place(
             mref.thread_id,
             mref.version_id,
-            DbMessageCreate {
-                id: None,
-                channel_id: mref.thread_id,
+            DbMessageUpdate {
                 attachment_ids: attachments,
                 author_id: message.author_id,
                 embeds: embeds.into_iter().map(|e| e.into()).collect(),
                 message_type,
-                // NOTE: edited_at is used to set the version created_at
-                edited_at: Some(message.latest_version.created_at.into()),
-                // NOTE: created_at is ignored
-                created_at: None,
-                removed_at: None,
+                created_at: Some(message.latest_version.created_at.into()),
                 mentions: message.latest_version.mentions,
             },
         )

@@ -578,7 +578,6 @@ impl ServiceChannels {
                             thread_id: Some(channel.id),
                         })
                         .into(),
-                        edited_at: None,
                         created_at: None,
                         removed_at: None,
                         mentions: Default::default(),
@@ -727,7 +726,6 @@ impl ServiceChannels {
                         thread_id: Some(channel.id),
                     })
                     .into(),
-                    edited_at: None,
                     created_at: None,
                     removed_at: None,
                     mentions: Default::default(),
@@ -1188,7 +1186,6 @@ impl ServiceChannels {
                         name_old: chan_old.name,
                     })
                     .into(),
-                    edited_at: None,
                     created_at: None,
                     removed_at: None,
                     mentions: Default::default(),
@@ -1221,7 +1218,6 @@ impl ServiceChannels {
                         icon_id_new: chan_new.icon,
                     })
                     .into(),
-                    edited_at: None,
                     created_at: None,
                     removed_at: None,
                     mentions: Default::default(),
@@ -1255,7 +1251,6 @@ impl ServiceChannels {
                         parent_id_new: chan_new.parent_id,
                     })
                     .into(),
-                    edited_at: None,
                     created_at: None,
                     removed_at: None,
                     mentions: Default::default(),

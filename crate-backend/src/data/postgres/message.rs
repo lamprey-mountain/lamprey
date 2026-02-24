@@ -16,8 +16,8 @@ use crate::consts::MAX_PINNED_MESSAGES;
 use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
-    ChannelId, DbChannelType, DbMessageCreate, DbMessageType, MentionsIds, MessageId, MessageVerId,
-    PaginationDirection, PaginationQuery, PaginationResponse,
+    ChannelId, DbChannelType, DbMessageCreate, DbMessageExtract, DbMessageType, DbMessageUpdate,
+    MentionsIds, MessageId, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
 
 use crate::data::DataMessage;
@@ -250,13 +250,13 @@ impl DataMessage for Postgres {
             message_id,
             create.author_id.into_inner(),
             message_type as _,
-            create.content(),
-            create.metadata(),
-            create.reply_id().map(|i| i.into_inner()),
+            create.message_type.content(),
+            create.message_type.metadata(),
+            create.message_type.reply_id().map(|i| i.into_inner()),
             mentions_json,
             embeds_json,
             created_at,
-            create.override_name(),
+            create.message_type.override_name(),
         )
         .execute(&mut *tx)
         .await?;
@@ -283,18 +283,18 @@ impl DataMessage for Postgres {
         &self,
         _channel_id: ChannelId,
         message_id: MessageId,
-        create: DbMessageCreate,
+        update: DbMessageUpdate,
     ) -> Result<MessageVerId> {
         let ver_id = Uuid::now_v7();
-        let message_type: DbMessageType = create.message_type.clone().into();
+        let message_type: DbMessageType = update.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
 
-        let embeds = create.embeds.clone();
+        let embeds = update.embeds.clone();
         let embeds_json = serde_json::to_value(&embeds)?;
-        let mentions: MentionsIds = create.mentions.clone().into();
+        let mentions: MentionsIds = update.mentions.clone().into();
         let mentions_json = serde_json::to_value(mentions)?;
-        let created_at = create
-            .edited_at
+        let created_at = update
+            .created_at
             .map(|t| t.assume_utc())
             .unwrap_or_else(time::OffsetDateTime::now_utc);
         let created_at = time::PrimitiveDateTime::new(created_at.date(), created_at.time());
@@ -312,20 +312,20 @@ impl DataMessage for Postgres {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
             ver_id,
             *message_id,
-            create.author_id.into_inner(),
+            update.author_id.into_inner(),
             message_type as _,
-            create.content(),
-            create.metadata(),
-            create.reply_id().map(|i| i.into_inner()),
+            update.message_type.content(),
+            update.message_type.metadata(),
+            update.message_type.reply_id().map(|i| i.into_inner()),
             mentions_json,
             embeds_json,
             created_at,
-            create.override_name(),
+            update.message_type.override_name(),
         )
         .execute(&mut *tx)
         .await?;
 
-        for (ord, att) in create.attachment_ids.iter().enumerate() {
+        for (ord, att) in update.attachment_ids.iter().enumerate() {
             query!(
                 r#"
                 INSERT INTO message_attachment (version_id, media_id, ordering)
@@ -343,20 +343,20 @@ impl DataMessage for Postgres {
         Ok(ver_id.into())
     }
 
-    // NOTE: ignores channel_id, attachment_ids in create
+    // NOTE: ignores channel_id, attachment_ids in update
     async fn message_update_in_place(
         &self,
         _channel_id: ChannelId,
         version_id: MessageVerId,
-        create: DbMessageCreate,
+        update: DbMessageUpdate,
     ) -> Result<()> {
-        let message_type: DbMessageType = create.message_type.clone().into();
+        let message_type: DbMessageType = update.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
-        let embeds = create.embeds.clone();
+        let embeds = update.embeds.clone();
         let embeds_json = serde_json::to_value(&embeds)?;
-        let mentions: MentionsIds = create.mentions.clone().into();
+        let mentions: MentionsIds = update.mentions.clone().into();
         let mentions_json = serde_json::to_value(mentions)?;
-        let created_at = create.edited_at.map(|t| t.assume_utc());
+        let created_at = update.created_at.map(|t| t.assume_utc());
         let created_at = created_at.map(|t| time::PrimitiveDateTime::new(t.date(), t.time()));
 
         query!(
@@ -374,12 +374,12 @@ impl DataMessage for Postgres {
             WHERE version_id = $1
         "#,
             *version_id,
-            create.content(),
-            create.metadata(),
-            create.reply_id().map(|i| i.into_inner()),
-            create.author_id.into_inner(),
+            update.message_type.content(),
+            update.message_type.metadata(),
+            update.message_type.reply_id().map(|i| i.into_inner()),
+            update.author_id.into_inner(),
             message_type as _,
-            create.override_name(),
+            update.message_type.override_name(),
             embeds_json,
             mentions_json,
             created_at,

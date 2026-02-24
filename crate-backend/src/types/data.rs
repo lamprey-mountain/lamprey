@@ -464,6 +464,7 @@ pub struct DbRoleCreate {
     pub sticky: bool,
 }
 
+/// for message_create
 pub struct DbMessageCreate {
     pub id: Option<MessageId>,
     pub channel_id: ChannelId,
@@ -471,22 +472,39 @@ pub struct DbMessageCreate {
     pub author_id: UserId,
     pub embeds: Vec<Embed>,
     pub message_type: MessageType,
-    pub edited_at: Option<time::PrimitiveDateTime>,
     pub created_at: Option<time::PrimitiveDateTime>,
     pub removed_at: Option<time::PrimitiveDateTime>,
     pub mentions: Mentions,
 }
 
-impl DbMessageCreate {
-    pub fn content(&self) -> Option<String> {
-        match &self.message_type {
+/// for message_update, message_update_in_place
+pub struct DbMessageUpdate {
+    pub attachment_ids: Vec<MediaId>,
+    pub author_id: UserId,
+    pub embeds: Vec<Embed>,
+    pub message_type: MessageType,
+    pub created_at: Option<time::PrimitiveDateTime>,
+    pub mentions: Mentions,
+}
+
+/// trait for extracting common message data
+pub trait DbMessageExtract {
+    fn content(&self) -> Option<String>;
+    fn metadata(&self) -> Option<serde_json::Value>;
+    fn reply_id(&self) -> Option<MessageId>;
+    fn override_name(&self) -> Option<String>;
+}
+
+impl DbMessageExtract for MessageType {
+    fn content(&self) -> Option<String> {
+        match self {
             MessageType::DefaultMarkdown(msg) => msg.content.clone(),
             _ => None,
         }
     }
 
-    pub fn metadata(&self) -> Option<serde_json::Value> {
-        match &self.message_type {
+    fn metadata(&self) -> Option<serde_json::Value> {
+        match self {
             MessageType::DefaultMarkdown(msg) => msg
                 .metadata
                 .as_ref()
@@ -505,14 +523,14 @@ impl DbMessageCreate {
         }
     }
 
-    pub fn reply_id(&self) -> Option<MessageId> {
-        match &self.message_type {
+    fn reply_id(&self) -> Option<MessageId> {
+        match self {
             MessageType::DefaultMarkdown(msg) => msg.reply_id,
             _ => None,
         }
     }
 
-    pub fn override_name(&self) -> Option<String> {
+    fn override_name(&self) -> Option<String> {
         // v2 messages don't have override_name, return None
         None
     }

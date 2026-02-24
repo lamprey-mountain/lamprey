@@ -34,10 +34,10 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::services::documents::EditContextId;
 use crate::types::{
-    DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
-    DbSessionCreate, DbUserCreate, DehydratedDocument, DocumentUpdateSummary, EmailPurpose,
-    MediaLink, MediaLinkType, MentionsIds, MessageId, MessageRef, MessageVerId, PushData,
-    UrlEmbedQueue, UserPatch, UserVerId,
+    DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbMessageUpdate,
+    DbRoleCreate, DbRoomCreate, DbSessionCreate, DbUserCreate, DehydratedDocument,
+    DocumentUpdateSummary, EmailPurpose, MediaLink, MediaLinkType, MentionsIds, MessageId,
+    MessageRef, MessageVerId, PushData, UrlEmbedQueue, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -152,11 +152,7 @@ pub trait DataRole {
 pub trait DataMedia {
     async fn media_insert(&self, media: Media) -> Result<()>;
     async fn media_select(&self, media_id: MediaId) -> Result<Media>;
-    async fn media_update(
-        &self,
-        media_id: MediaId,
-        patch: MediaPatch,
-    ) -> Result<()>;
+    async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
     async fn media_delete(&self, media_id: MediaId) -> Result<()>;
     async fn media_link_insert(
         &self,
@@ -182,13 +178,13 @@ pub trait DataMessage {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        create: DbMessageCreate,
+        update: DbMessageUpdate,
     ) -> Result<MessageVerId>;
     async fn message_update_in_place(
         &self,
         channel_id: ChannelId,
         version_id: MessageVerId,
-        create: DbMessageCreate,
+        update: DbMessageUpdate,
     ) -> Result<()>;
     async fn message_get(
         &self,

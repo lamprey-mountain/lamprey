@@ -30,7 +30,7 @@ use url::Url;
 use validator::Validate;
 
 use crate::routes::util::Auth;
-use crate::types::{DbMessageCreate, MediaLinkType, MentionsIds, MessageVerId};
+use crate::types::{DbMessageCreate, DbMessageUpdate, MediaLinkType, MentionsIds, MessageVerId};
 use crate::{Error, Result, ServerStateInner};
 
 pub mod mentions;
@@ -401,7 +401,6 @@ impl ServiceMessages {
                 author_id: user_id,
                 embeds: embeds.into_iter().map(|e| e.into()).collect(),
                 message_type: payload,
-                edited_at: None,
                 created_at: None,
                 // created_at: json.created_at.map(|t| t.into()),
                 removed_at: removed_at.map(|t| t.into()),
@@ -840,7 +839,7 @@ impl ServiceMessages {
             embeds = futures_util::future::try_join_all(embed_futs).await?;
         }
 
-        let removed_at = None;
+        // let removed_at = None;
 
         // TODO: update automod to use v2 MessagePatch
         // if let Some(room_id) = thread.room_id {
@@ -878,17 +877,13 @@ impl ServiceMessages {
             .message_update(
                 thread_id,
                 message_id,
-                DbMessageCreate {
-                    id: None,
-                    channel_id: thread_id,
+                DbMessageUpdate {
                     attachment_ids: attachment_ids.clone(),
                     author_id: user_id,
                     embeds: embeds.into_iter().map(|e| e.into()).collect(),
                     message_type: payload,
-                    edited_at: None,
                     // NOTE: this field is ignored
                     created_at: None,
-                    removed_at: removed_at.map(|t: Time| t.into()),
                     mentions: message.latest_version.mentions,
                 },
             )
