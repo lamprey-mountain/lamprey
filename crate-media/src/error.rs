@@ -36,6 +36,9 @@ pub enum Error {
 
     #[error("async tempfile error: {0}")]
     AsyncTempfile(Arc<async_tempfile::Error>),
+
+    #[error("media is still processing")]
+    StillProcessing,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -49,6 +52,7 @@ pub enum ErrorCode {
     Ffmpeg,
     Tempfile,
     AsyncTempfile,
+    StillProcessing,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -71,6 +75,7 @@ impl Error {
             Error::Ffmpeg => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Tempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::AsyncTempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::StillProcessing => StatusCode::CONFLICT,
         }
     }
 
@@ -85,6 +90,7 @@ impl Error {
             Error::Ffmpeg => ErrorCode::Ffmpeg,
             Error::Tempfile(_) => ErrorCode::Tempfile,
             Error::AsyncTempfile(_) => ErrorCode::AsyncTempfile,
+            Error::StillProcessing => ErrorCode::StillProcessing,
         }
     }
 

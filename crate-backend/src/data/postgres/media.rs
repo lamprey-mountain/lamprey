@@ -258,7 +258,8 @@ impl DataMedia for Postgres {
             media_data.strip_exif = strip_exif;
         }
 
-        media.data = serde_json::to_value(media_data).expect("failed to serialize media");
+        media.data =
+            serde_json::to_value(&DbMediaData::V2(media_data)).expect("failed to serialize media");
 
         query!(
             r#"
@@ -313,9 +314,7 @@ impl DataMedia for Postgres {
         link_type: MediaLinkType,
     ) -> Result<()> {
         let media = self.media_select(media_id).await?;
-        if media.status != MediaStatus::Uploaded
-            && media.status != MediaStatus::Consumed
-        {
+        if media.status != MediaStatus::Uploaded && media.status != MediaStatus::Consumed {
             return Err(Error::BadStatic("media not uploaded"));
         }
 
@@ -386,8 +385,7 @@ impl DataMedia for Postgres {
             ErrorCode::UnknownMedia,
         )))?; // Ensure media exists
 
-        let media_data: DbMediaData =
-            serde_json::from_value(row.data).expect("invalid data in db");
+        let media_data: DbMediaData = serde_json::from_value(row.data).expect("invalid data in db");
         let media: MediaV2 = media_data.into();
         if media.status != MediaStatus::Uploaded
             // NOTE: strictly speaking, exclusive links shouldn't happen on consumed media usually, but we allow it for consistency

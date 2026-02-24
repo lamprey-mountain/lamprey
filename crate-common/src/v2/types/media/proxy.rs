@@ -9,6 +9,19 @@ use utoipa::{IntoParams, ToSchema};
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct MediaQuery {
+    /// if this media is still being uploaded, downloaded, or processed, block
+    /// until its complete.
+    ///
+    /// otherwise, immediately return a 409 status code. (409 is used so that
+    /// its possible to differentiate between "media doesnt exist" and "media is
+    /// still being processed")
+    pub wait: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct ThumbQuery {
     /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
     pub size: Option<u32>,

@@ -3,9 +3,10 @@ use std::sync::Arc;
 use async_tempfile::TempFile;
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Path, Query, State},
 };
 use common::v1::types::MediaId;
+use common::v2::types::media::proxy::MediaQuery;
 use http::{HeaderMap, StatusCode};
 use tokio::{
     fs::File,
@@ -24,9 +25,11 @@ use crate::{
 async fn gifv_response(
     s: AppState,
     media_id: MediaId,
+    query: MediaQuery,
     headers: HeaderMap,
     with_body: bool,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    s.ensure_media_ready(media_id, query.wait).await?;
     let media = s.lookup_media(media_id).await?;
     if media.source.mime.as_str() != "image/gif" {
         return Err(Error::BadRequest);
@@ -166,9 +169,10 @@ async fn gifv_response(
 pub async fn get_gifv(
     State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
+    Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    gifv_response(s, media_id, headers, true).await
+    gifv_response(s, media_id, query, headers, true).await
 }
 
 /// Head gifv
@@ -178,9 +182,10 @@ pub async fn get_gifv(
 pub async fn head_gifv(
     State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
+    Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    gifv_response(s, media_id, headers, false).await
+    gifv_response(s, media_id, query, headers, false).await
 }
 
 pub fn routes() -> OpenApiRouter<AppState> {

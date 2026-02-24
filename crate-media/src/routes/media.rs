@@ -1,8 +1,9 @@
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Path, Query, State},
 };
 use common::v1::types::MediaId;
+use common::v2::types::media::proxy::MediaQuery;
 use http::{HeaderMap, StatusCode};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -20,8 +21,10 @@ use crate::{
 pub async fn head_media(
     State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
+    Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    s.ensure_media_ready(media_id, query.wait).await?;
     let media = s.lookup_media(media_id).await?;
     let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
 
@@ -45,8 +48,10 @@ pub async fn head_media(
 pub async fn head_media_filename(
     State(s): State<AppState>,
     Path((media_id, filename)): Path<(MediaId, String)>,
+    Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    s.ensure_media_ready(media_id, query.wait).await?;
     let media = s.lookup_media(media_id).await?;
     if media.filename != filename {
         return Err(Error::NotFound);
@@ -74,8 +79,10 @@ pub async fn head_media_filename(
 pub async fn get_media(
     State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
+    Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    s.ensure_media_ready(media_id, query.wait).await?;
     let path = format!("/media/{}/file", media_id);
 
     let media = s.lookup_media(media_id).await?;
@@ -102,8 +109,10 @@ pub async fn get_media(
 pub async fn get_media_filename(
     State(s): State<AppState>,
     Path((media_id, filename)): Path<(MediaId, String)>,
+    Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    s.ensure_media_ready(media_id, query.wait).await?;
     let path = format!("/media/{}/file", media_id);
 
     let media = s.lookup_media(media_id).await?;

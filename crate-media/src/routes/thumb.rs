@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, State},
 };
 use common::v1::types::MediaId;
-use common::v2::types::media::proxy::ThumbQuery;
+use common::v2::types::media::proxy::{MediaQuery, ThumbQuery};
 use futures_util::StreamExt;
 use http::{HeaderMap, StatusCode};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -28,9 +28,11 @@ async fn thumb_response(
     s: AppState,
     media_id: MediaId,
     query: ThumbQuery,
+    media_query: MediaQuery,
     headers: HeaderMap,
     with_body: bool,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    s.ensure_media_ready(media_id, media_query.wait).await?;
     let animate = query.animate;
     if let Some(size) = query.size {
         if !s.config.thumb_sizes.contains(&size) {
@@ -192,6 +194,7 @@ async fn thumb_response(
                     size: Some(size),
                     animate: false,
                 },
+                media_query,
                 headers,
                 with_body,
             )
@@ -234,9 +237,15 @@ async fn thumb_response(
 
         if media.source.mime.as_str().starts_with("image/") {
             if with_body {
-                return get_media(State(s.clone()), Path(media_id), headers).await;
+                return get_media(
+                    State(s.clone()),
+                    Path(media_id),
+                    Query(media_query),
+                    headers,
+                )
+                .await;
             } else {
-                return head_media(State(s), Path(media_id), headers).await;
+                return head_media(State(s), Path(media_id), Query(media_query), headers).await;
             }
         }
 
@@ -252,9 +261,10 @@ pub async fn get_thumb(
     State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
     Query(query): Query<ThumbQuery>,
+    Query(media_query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    thumb_response(s, media_id, query, headers, true).await
+    thumb_response(s, media_id, query, media_query, headers, true).await
 }
 
 /// Head thumbnail
@@ -265,9 +275,10 @@ pub async fn head_thumb(
     State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
     Query(query): Query<ThumbQuery>,
+    Query(media_query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    thumb_response(s, media_id, query, headers, false).await
+    thumb_response(s, media_id, query, media_query, headers, false).await
 }
 
 pub fn routes() -> OpenApiRouter<AppState> {

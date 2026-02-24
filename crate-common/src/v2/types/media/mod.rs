@@ -126,7 +126,7 @@ pub struct Media {
 
     /// Whether this media can be fetched through the `/thumb/{media_id}` cdn route.
     pub has_thumbnail: bool,
-    // TODO: has_thumbnail
+
     /// Whether this media can be fetched through the `/gifv/{media_id}` cdn route.
     pub has_gifv: bool,
 

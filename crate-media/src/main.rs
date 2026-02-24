@@ -1,5 +1,8 @@
 use axum::{response::Html, routing::get, Json};
-use common::v1::types::{EmojiId, Media, MediaId};
+use common::{
+    v1::types::{EmojiId, Media, MediaId},
+    v2::types::media::MediaStatus,
+};
 use error::Result;
 use figment::{
     providers::{Env, Format, Toml},
@@ -20,7 +23,7 @@ use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::config::Config;
+use crate::{config::Config, error::Error};
 
 mod config;
 mod data;
@@ -56,6 +59,24 @@ impl AppState {
             .try_get_with(emoji_id, data::lookup_emoji(&self.db, emoji_id))
             .await?;
         Ok(m)
+    }
+
+    async fn ensure_media_ready(&self, media_id: MediaId, wait: bool) -> Result<()> {
+        loop {
+            let status = data::get_media_status(&self.db, media_id).await?;
+            match status {
+                Some(MediaStatus::Uploaded) | Some(MediaStatus::Consumed) | None => {
+                    return Ok(());
+                }
+                _ => {
+                    if wait {
+                        tokio::time::sleep(Duration::from_secs(2)).await;
+                    } else {
+                        return Err(Error::StillProcessing);
+                    }
+                }
+            }
+        }
     }
 }
 
