@@ -320,7 +320,11 @@ export function MultiDropdown<T>(
 	});
 
 	function select(item: T) {
-		props.onSelect(item);
+		if (props.selected.includes(item)) {
+			props.onRemove(item);
+		} else {
+			props.onSelect(item);
+		}
 		selector.setFilter("");
 		if (inputEl()) inputEl()!.value = "";
 		// keep it open for more selections?
