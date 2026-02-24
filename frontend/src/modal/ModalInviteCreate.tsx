@@ -62,10 +62,6 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 			}));
 	});
 
-	createEffect(() => {
-		console.log("AAA", props.room_id, roles());
-	});
-
 	const handleCreate = async () => {
 		const expires_at = expiry()
 			? new Date(Date.now() + expiry()!).toISOString()
@@ -85,7 +81,10 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 					body,
 				},
 			);
-			if (data) setInviteCode(data.code);
+			if (data) {
+				setInviteCode(data.code);
+				queueMicrotask(() => inputRef()?.select());
+			}
 			if (error) console.error(error);
 		} else if (props.room_id) {
 			const { data, error } = await api.client.http.POST(
@@ -95,7 +94,10 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 					body,
 				},
 			);
-			if (data) setInviteCode(data.code);
+			if (data) {
+				setInviteCode(data.code);
+				queueMicrotask(() => inputRef()?.select());
+			}
 			if (error) console.error(error);
 		}
 	};
@@ -105,6 +107,16 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 
 	const copyToClipboard = () => {
 		navigator.clipboard.writeText(inviteLink());
+	};
+
+	const [inputRef, setInputRef] = createSignal<HTMLInputElement>();
+
+	const selectAndCopy = () => {
+		const input = inputRef();
+		if (input) {
+			input.select();
+			navigator.clipboard.writeText(inviteLink());
+		}
 	};
 
 	return (
@@ -156,6 +168,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 				</Show>
 				<div class="invite-create-input-wrapper">
 					<input
+						ref={setInputRef}
 						type="text"
 						readOnly
 						placeholder="a1b2c3"
@@ -165,7 +178,16 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 							navigator.clipboard.writeText(inviteLink());
 						}}
 					/>
-					<button class="primary" onClick={copyToClipboard}>
+					<button
+						class="primary"
+						onClick={() => {
+							if (inviteCode()) {
+								selectAndCopy();
+							} else {
+								handleCreate();
+							}
+						}}
+					>
 						{inviteCode() ? "copy" : "create"}
 					</button>
 				</div>
