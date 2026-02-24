@@ -1,4 +1,5 @@
 use common::v1::types::{EmojiId, Media, MediaId, MediaTrack};
+use common::v2::types::media::Media as MediaV2;
 use serde::Deserialize;
 use sqlx::{query_scalar, types::JsonValue, Executor, Postgres};
 
@@ -25,7 +26,7 @@ where
     #[serde(tag = "v")]
     pub enum DbMediaData {
         V1(Media),
-        // V2(common::v2::types::media::Media),
+        V2(MediaV2),
         #[serde(untagged)]
         Raw(DbMediaRaw),
     }
@@ -42,7 +43,7 @@ where
         fn from(value: DbMediaData) -> Self {
             match value {
                 DbMediaData::V1(media) => media,
-                // DbMediaData::V2(media) => media,
+                DbMediaData::V2(media) => media.into(),
                 DbMediaData::Raw(db_media_raw) => db_media_raw.into(),
             }
         }
@@ -80,8 +81,5 @@ where
     .fetch_one(exec)
     .await?;
     let media: DbMediaData = serde_json::from_value(media).unwrap();
-    Ok(match media {
-        DbMediaData::V1(media) => media,
-        DbMediaData::Raw(m) => m.into(),
-    })
+    Ok(media.into())
 }
