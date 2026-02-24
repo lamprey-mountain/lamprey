@@ -1,8 +1,18 @@
-import { createEffect, createResource, createSignal, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+	Show,
+} from "solid-js";
 import { Dropdown, MultiDropdown } from "../Dropdown";
 import { Modal } from "./mod";
 import { useApi } from "../api";
 import { Time } from "sdk";
+import {
+	calculatePermissions,
+	type PermissionContext,
+} from "../permission-calculator";
 
 interface ModalInviteCreateProps {
 	room_id?: string;
@@ -17,6 +27,40 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [inviteCode, setInviteCode] = createSignal<string>("");
 
 	const roles = api.roles.list(() => props.room_id!);
+
+	const currentUserId = () => api.users.cache.get("@self")?.id;
+
+	const canApplyRoles = createMemo(() => {
+		if (!props.room_id || !currentUserId()) return false;
+		const permissionContext: PermissionContext = {
+			api,
+			room_id: props.room_id,
+			channel_id: props.channel_id,
+		};
+		const { permissions, rank } = calculatePermissions(
+			permissionContext,
+			currentUserId(),
+		);
+		const hasRoleApply = permissions.has("RoleApply") ||
+			permissions.has("Admin");
+		const room = api.rooms.fetch(() => props.room_id!)();
+		const isOwner = room?.owner_id === currentUserId();
+		return { canApply: hasRoleApply, rank, isOwner };
+	});
+
+	const availableRoles = createMemo(() => {
+		const roleItems = roles()?.items;
+		if (!roleItems || !props.room_id) return [];
+		const { canApply, rank, isOwner } = canApplyRoles();
+		if (!canApply) return [];
+		return roleItems
+			.filter((r) => r.id !== props.room_id)
+			.filter((r) => isOwner || rank > r.position)
+			.map((r) => ({
+				item: r.id,
+				label: r.name,
+			}));
+	});
 
 	createEffect(() => {
 		console.log("AAA", props.room_id, roles());
@@ -96,7 +140,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 						]}
 					/>
 				</div>
-				<Show when={props.room_id && (roles()?.items?.length ?? 0) > 0}>
+				<Show when={availableRoles().length > 0}>
 					<div style="margin-top:8px">
 						<h3 class="dim">grant roles</h3>
 						<MultiDropdown
@@ -104,12 +148,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 							onSelect={(id) => setSelectedRoleIds([...selectedRoleIds(), id])}
 							onRemove={(id) =>
 								setSelectedRoleIds(selectedRoleIds().filter((i) => i !== id))}
-							options={roles()?.items
-								?.filter((r) => r.id !== props.room_id)
-								.map((r) => ({
-									item: r.id,
-									label: r.name,
-								})) ?? []}
+							options={availableRoles()}
 							placeholder="select roles..."
 							style="width:min-content"
 						/>
