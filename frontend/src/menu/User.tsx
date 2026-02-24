@@ -287,7 +287,7 @@ export function UserMenu(props: UserMenuProps) {
 								/>
 								<Checkbox
 									checked={room_member()?.roles.includes(role.id)}
-									seed={`menu-user-${props.user.id}-room-${room_member()?.room_id}-role-${role.id}`}
+									seed={`menu-user-${props.user_id}-room-${room_member()?.room_id}-role-${role.id}`}
 								/>
 								<div style="margin: 2px 0">
 									<div
