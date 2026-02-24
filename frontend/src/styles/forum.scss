@@ -208,3 +208,22 @@
 		background: $sep-500;
 	}
 }
+
+.comment-editor {
+	padding: 8px;
+
+	.text {
+		display: flex;
+		background: $bg-300;
+		border: solid $bg-400 1px;
+		border-radius: 4px;
+		overflow: hidden;
+		align-items: center;
+		margin-bottom: 4px;
+
+		.editor {
+			flex: 1;
+			border: none;
+		}
+	}
+}

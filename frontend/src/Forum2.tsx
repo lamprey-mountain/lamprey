@@ -8,6 +8,7 @@ import {
 	createUniqueId,
 	For,
 	onCleanup,
+	onMount,
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -1229,6 +1230,103 @@ function highlight(el: Element) {
 	});
 }
 
+function CommentEditor(
+	props: { message: Message; channel: Channel },
+) {
+	const ctx = useCtx();
+	const api = useApi();
+	const [ch, chUpdate] = useChannel()!;
+	const [draft, setDraft] = createSignal(props.message.content ?? "");
+
+	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
+		const editorState = ch.editor_state;
+		if (editorState) {
+			const { from, to } = editorState.selection;
+			const customMatch = emoji.match(/^<:([^:]+):([^>]+)>$/);
+			let tr;
+			if (customMatch) {
+				const name = customMatch[1];
+				const id = customMatch[2];
+				tr = editorState.tr.replaceWith(
+					from,
+					to,
+					editor.schema.nodes.emoji.create({ id, name }),
+				);
+			} else {
+				tr = editorState.tr.insertText(emoji, from, to);
+			}
+			const newState = editorState.apply(tr);
+			chUpdate("editor_state", newState);
+		}
+	};
+
+	const editor = createEditor({
+		initialContent: draft(),
+		initialSelection: "end",
+	});
+
+	const save = async (content: string) => {
+		if (content.trim() === (props.message.content ?? "").trim()) {
+			chUpdate("editingMessage", undefined);
+			return;
+		}
+		if (content.trim().length === 0) {
+			chUpdate("editingMessage", undefined);
+			return;
+		}
+		try {
+			await api.messages.edit(
+				props.message.channel_id,
+				props.message.id,
+				content,
+			);
+		} catch (e) {
+			console.error("failed to edit comment", e);
+		}
+		chUpdate("editingMessage", undefined);
+	};
+
+	const cancel = () => {
+		chUpdate("editingMessage", undefined);
+	};
+
+	let containerRef: HTMLDivElement | undefined;
+	onMount(() => {
+		containerRef?.addEventListener(
+			"keydown",
+			(e) => {
+				if (e.key === "Escape") {
+					e.stopPropagation();
+					cancel();
+				}
+			},
+			{ capture: true },
+		);
+		editor.focus();
+	});
+
+	return (
+		<div class="comment-editor" ref={containerRef}>
+			<div class="text">
+				<editor.View
+					onSubmit={save}
+					onChange={(state) => {
+						const text = state.doc.textContent;
+						setDraft(text);
+					}}
+					channelId={props.channel.id}
+					submitOnEnter={false}
+				/>
+				<EmojiButton picked={onEmojiPick} />
+			</div>
+			<div class="edit-info dim">
+				escape to <button onClick={cancel}>cancel</button> • enter to{" "}
+				<button onClick={() => save(draft())}>save</button>
+			</div>
+		</div>
+	);
+}
+
 const Comment = (
 	props: {
 		collapsed: ReactiveSet<string>;
@@ -1243,6 +1341,18 @@ const Comment = (
 	const [ch, chUpdate] = useChannel()!;
 
 	const collapsed = () => props.collapsed.has(message().id);
+	const isEditing = () => ch.editingMessage?.message_id === message().id;
+
+	const isOwnMessage = () => {
+		const currentUser = api.users.cache.get("@self");
+		return currentUser && currentUser.id === message().author_id;
+	};
+
+	const canEditMessage = () => {
+		return message().type === "DefaultMarkdown" &&
+			!message().is_local &&
+			isOwnMessage();
+	};
 
 	const countAllChildren = (node: CommentNode): number => {
 		return node.children.length +
@@ -1384,21 +1494,32 @@ const Comment = (
 					</Show>
 				</header>
 				<Show when={!collapsed()}>
-					<div class="content markdown" ref={contentEl!} innerHTML={getHtml()}>
-					</div>
-					<div style="padding: 0 8px">
-						<Show when={message().attachments?.length}>
-							<ul class="attachments">
-								<For each={message().attachments}>
-									{(att) => <AttachmentView media={att} />}
-								</For>
-							</ul>
-						</Show>
-						<Show when={message().reactions?.length}>
-							<Reactions message={message()} />
-						</Show>
-					</div>
-					<MessageToolbar message={message()} />
+					<Show
+						when={!isEditing()}
+						fallback={
+							<CommentEditor message={message()} channel={props.channel} />
+						}
+					>
+						<div
+							class="content markdown"
+							ref={contentEl!}
+							innerHTML={getHtml()}
+						>
+						</div>
+						<div style="padding: 0 8px">
+							<Show when={message().attachments?.length}>
+								<ul class="attachments">
+									<For each={message().attachments}>
+										{(att) => <AttachmentView media={att} />}
+									</For>
+								</ul>
+							</Show>
+							<Show when={message().reactions?.length}>
+								<Reactions message={message()} />
+							</Show>
+						</div>
+						<MessageToolbar message={message()} />
+					</Show>
 				</Show>
 			</div>
 			<Show when={!collapsed() && children().length > 0}>
