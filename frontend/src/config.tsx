@@ -1,3 +1,5 @@
+// TODO: move to contexts/config.tsx
+
 import { createContext, useContext } from "solid-js";
 
 export type Config = {

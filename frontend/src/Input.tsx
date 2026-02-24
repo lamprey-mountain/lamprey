@@ -20,9 +20,11 @@ import { createTooltip } from "./Tooltip.tsx";
 import { EmojiButton } from "./atoms/EmojiButton.tsx";
 import { Channel } from "sdk";
 import icDelete from "./assets/delete.png";
+import icEdit from "./assets/edit.png";
 import { useChannel } from "./channelctx.tsx";
 import { handleSubmit } from "./dispatch/submit.ts";
 import { useUploads } from "./contexts/uploads.tsx";
+import { useModals } from "./contexts/modal.tsx";
 
 type InputProps = {
 	channel: Channel;
@@ -397,6 +399,7 @@ export function RenderUploadItem(
 ) {
 	const ctx = useCtx();
 	const uploads = useUploads();
+	const [, modalCtl] = useModals();
 	const thumbUrl = URL.createObjectURL(props.att.file);
 	onCleanup(() => {
 		URL.revokeObjectURL(thumbUrl);
@@ -452,7 +455,7 @@ export function RenderUploadItem(
 								{renderInfo(props.att)}
 							</span>
 						</div>
-						<menu>
+						<menu style="display:flex">
 							<Switch>
 								<Match
 									when={props.att.status === "uploading" && props.att.paused}
@@ -465,6 +468,18 @@ export function RenderUploadItem(
 									<button onClick={pause}>⏸️</button>
 								</Match>
 							</Switch>
+							<Show when={false /* TODO: attachment editing */}>
+								<button
+									onClick={() =>
+										modalCtl.open({
+											type: "attachment",
+											channel_id: props.thread_id,
+											local_id: props.att.local_id,
+										})}
+								>
+									<img class="icon" src={icEdit} />
+								</button>
+							</Show>
 							<button onClick={() => removeAttachment(props.att.local_id)}>
 								<img class="icon" src={icDelete} />
 							</button>

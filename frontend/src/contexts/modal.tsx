@@ -65,7 +65,11 @@ export type Modal =
 		room_id?: string;
 		channel_id?: string;
 	}
-	| { type: "attachment" }
+	| {
+		type: "attachment";
+		channel_id: string;
+		local_id: string;
+	}
 	| {
 		type: "channel_topic";
 		channel_id: string;

@@ -1,59 +1,109 @@
-import { createSignal } from "solid-js";
+import { createSignal, onMount } from "solid-js";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
-// import { useChannel } from "../channelctx";
-// import { useApi } from "../api";
+import { useApi } from "../api";
+import { useConfig } from "../config";
+import { useModals } from "../contexts/modal";
+import { useCtx } from "../context";
+import { getThumbFromId } from "../media/util";
 
 type ModalAttachmentProps = {
 	channel_id: string;
 	local_id: string;
 };
 
-export const ModalAttachment = (_props: ModalAttachmentProps) => {
+export const ModalAttachment = (props: ModalAttachmentProps) => {
+	const api = useApi();
+	const config = useConfig();
+	const [, modalCtl] = useModals();
+	const ctx = useCtx();
+	const [filename, setFilename] = createSignal("");
+	const [alt, setAlt] = createSignal("");
 	const [spoiler, setSpoiler] = createSignal(false);
 	const [exif, setExif] = createSignal(false);
 
-	// // NOTE: this is probably undefined, since i don't have a channel context
-	// // how can i get the actual channel context here? do i need to pass it as a prop?
-	// const [chan, updateChan] = useChannel()!;
-	// const api = useApi();
+	// Get the attachment from the channel context
+	const channelCtx = ctx.channel_contexts.get(props.channel_id);
+	const attachment = () => {
+		if (!channelCtx) return null;
+		const [ch] = channelCtx;
+		return ch.attachments.find((a) => a.local_id === props.local_id);
+	};
 
-	// updateChan("attachments", (atts) => {
-	// 	return atts.map(att => {
-	// 		if (att.local_id === props.local_id) {
-	// 			// TODO: make media patch accept filename, spoiler, exif
-	// 			api.client.http.PATCH("/api/v1/media/{media_id}", {
-	// 				params: { path: { media_id: "00000000-0000-7000-0000-000000000000" } },
-	// 				body: { alt: "alt text" }
-	// 			});
-	// 			return att;
-	// 		} else {
-	// 			return att;
-	// 		}
-	// 	})
-	// })
+	onMount(() => {
+		const att = attachment();
+		if (att) {
+			setFilename(att.file.name);
+			if (att.status === "uploaded") {
+				setAlt(att.media.alt ?? "");
+				setSpoiler(att.media.spoiler ?? false);
+			}
+		}
+	});
+
+	const save = () => {
+		const att = attachment();
+		if (!att || att.status !== "uploaded") return;
+
+		// Update the media metadata via API
+		api.client.http.PATCH("/api/v1/media/{media_id}", {
+			params: { path: { media_id: att.media.id } },
+			body: {
+				alt: alt() || null,
+				spoiler: spoiler() || null,
+			},
+		});
+
+		// Update local state
+		const [ch, chUpdate] = channelCtx!;
+		chUpdate(
+			"attachments",
+			ch.attachments.map((a) => {
+				if (a.local_id === props.local_id && a.status === "uploaded") {
+					return {
+						...a,
+						media: {
+							...a.media,
+							alt: alt() || null,
+							spoiler: spoiler() || null,
+						},
+					};
+				}
+				return a;
+			}),
+		);
+
+		modalCtl.close();
+	};
 
 	return (
 		<Modal>
 			<div style="width:300px">
 				<h2>attachment</h2>
-				{/* TODO: show attachment thumbnail (instead of this div) */}
-				<div style="height:70px;width:100px;background:red;border-radius:4px;margin:8px 0">
+				<div
+					style="height:70px;width:100px;background-size:cover;background-position:center;border-radius:4px;margin:8px 0"
+					style:background-image={attachment()?.status === "uploaded"
+						? `url(${getThumbFromId(attachment()!.media.id, 64)})`
+						: "none"}
+				>
 				</div>
 				<label style="display:block;margin:4px 0">
 					<h3 class="dim">filename</h3>
 					<input
 						type="text"
-						value="original-filename.ext"
-						style="padding:4px"
+						value={filename()}
+						style="padding:4px;width:100%;box-sizing:border-box"
+						disabled
 					/>
 				</label>
 				<label style="display:block;margin:4px 0">
 					<h3 class="dim">alt text</h3>
 					<input
 						type="text"
+						value={alt()}
+						onInput={(e) => setAlt(e.currentTarget.value)}
 						placeholder="add a description"
-						style="padding:4px"
+						style="padding:4px;width:100%;box-sizing:border-box"
 					/>
 				</label>
 				<div class="option">
@@ -68,7 +118,7 @@ export const ModalAttachment = (_props: ModalAttachmentProps) => {
 					<label for="opt-spoiler">
 						<div>Mark as spoiler</div>
 						<div class="dim">
-							Todo write something here idk
+							Hide the attachment behind a clickable overlay
 						</div>
 					</label>
 				</div>
@@ -84,13 +134,13 @@ export const ModalAttachment = (_props: ModalAttachmentProps) => {
 					<label for="opt-exif">
 						<div>Include metadata</div>
 						<div class="dim">
-							Todo write something here idk
+							Preserve EXIF data from the original file
 						</div>
 					</label>
 				</div>
 				<div class="bottom">
-					<button>cancel</button>
-					<button class="primary">save</button>
+					<button onClick={() => modalCtl.close()}>cancel</button>
+					<button class="primary" onClick={save}>save</button>
 				</div>
 			</div>
 		</Modal>

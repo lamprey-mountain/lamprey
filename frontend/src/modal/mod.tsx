@@ -108,7 +108,12 @@ export function getModal(modal: ContextModal) {
 			return <ModalNotifications channel_id={modal.room_id} />;
 		}
 		case "attachment": {
-			return <ModalAttachment />;
+			return (
+				<ModalAttachment
+					channel_id={modal.channel_id}
+					local_id={modal.local_id}
+				/>
+			);
 		}
 		case "invite_create": {
 			return (
