@@ -197,20 +197,23 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 	}
 
 	let highlightEl!: HTMLDivElement;
-	const thread = useApi().channels.fetch(() => props.message.channel_id);
+	const api = useApi();
+	const thread = api.channels.fetch(() => props.message.channel_id);
 	function highlight() {
 		getHtml();
 		import("highlight.js").then(({ default: hljs }) => {
-			// HACK: retain line numbers
-			// FIXME: use language if provided instead of guessing
+			// FIXME: this highlights the same message multiple times, and is pretty hacky in general
+			console.log("[hljs] attempt to highlight again", highlightEl);
+			if (!highlightEl) return;
 			for (const el of [...highlightEl.querySelectorAll("pre")]) {
-				el.dataset.highlighted = "";
-				hljs.highlightElement(el);
+				if (!el.classList.contains("hljs")) {
+					hljs.highlightElement(el);
+				}
 			}
 		});
 	}
 
-	createEffect(highlight);
+	onMount(highlight);
 	createEffect(() => {
 		const t = thread();
 		if (t && highlightEl) {
