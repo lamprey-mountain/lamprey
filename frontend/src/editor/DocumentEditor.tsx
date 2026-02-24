@@ -24,6 +24,7 @@ import {
 	createWrapCommand,
 } from "./editor-utils.ts";
 import { type Api } from "../api.tsx";
+import { Accessor, createEffect, createSignal, on } from "solid-js";
 
 const UserMention = (
 	props: { api: Api; userId: string; channelId: string },
@@ -81,6 +82,8 @@ export const createEditor = (
 ) => {
 	const api = useApi();
 
+	const [isSubscribed, setIsSubscribed] = createSignal(false);
+
 	const ydoc = new Y.Doc();
 	const type = ydoc.get("prosemirror", Y.XmlFragment);
 	const { mapping } = initProseMirrorDoc(type, schema);
@@ -90,6 +93,7 @@ export const createEditor = (
 			if (msg.channel_id === channelId && msg.branch_id === branchId) {
 				const update = base64UrlDecode(msg.update);
 				Y.applyUpdate(ydoc, update, { key: "server" });
+				setIsSubscribed(true);
 			}
 		}
 	};
@@ -97,6 +101,7 @@ export const createEditor = (
 	api.events.on("sync", onSync);
 
 	const subscribe = () => {
+		setIsSubscribed(false);
 		api.client.send({
 			type: "DocumentSubscribe",
 			channel_id: channelId,
@@ -141,7 +146,7 @@ export const createEditor = (
 			schema,
 			plugins: [
 				ySyncPlugin(type, { mapping }),
-				cursorPlugin(api, channelId, branchId),
+				cursorPlugin(api, channelId, branchId, isSubscribed),
 				yUndoPlugin(),
 				keymap({
 					"Ctrl-z": undo,
@@ -179,7 +184,7 @@ export const createEditor = (
 		});
 	};
 
-	return createBaseEditor({
+	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
 		nodeViews: (view) => ({
@@ -272,4 +277,13 @@ export const createEditor = (
 			},
 		}),
 	});
+
+	return {
+		...editor,
+		subscribe(newChannelId: string, newBranchId: string) {
+			channelId = newChannelId;
+			branchId = newBranchId;
+			subscribe();
+		},
+	};
 };

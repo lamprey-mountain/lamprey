@@ -19,12 +19,17 @@ import {
 
 const cursorPluginKey = new PluginKey("cursorPlugin");
 
-export const cursorPlugin = (api: Api, channelId: string, branchId: string) => {
+export const cursorPlugin = (
+	api: Api,
+	channelId: string,
+	branchId: string,
+	isSubscribed: () => boolean,
+) => {
 	return new Plugin({
 		key: cursorPluginKey,
 		state: {
 			init() {
-				return { cursors: new Map() };
+				return { cursors: new Map(), isSubscribed };
 			},
 			apply(tr, value) {
 				const meta = tr.getMeta(cursorPluginKey);
@@ -39,7 +44,7 @@ export const cursorPlugin = (api: Api, channelId: string, branchId: string) => {
 					} else if (meta.type === "remove") {
 						newCursors.delete(meta.userId);
 					}
-					return { cursors: newCursors };
+					return { cursors: newCursors, isSubscribed: value.isSubscribed };
 				}
 				return value;
 			},
@@ -177,6 +182,9 @@ export const cursorPlugin = (api: Api, channelId: string, branchId: string) => {
 				update(view, prevState) {
 					const yState = ySyncPluginKey.getState(view.state);
 					if (!yState || !yState.binding) return;
+
+					const { isSubscribed } = cursorPluginKey.getState(view.state);
+					if (!isSubscribed()) return;
 
 					const sel = view.state.selection;
 					const prevSel = prevState.selection;
