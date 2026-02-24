@@ -42,9 +42,11 @@ import { Friends } from "./Friends.tsx";
 import { Calendar } from "./Calendar.tsx";
 import { Document } from "./editor/Document.tsx";
 import { Wiki } from "./Wiki.tsx";
+import { DocumentHistory } from "./editor/DocumentHistory.tsx";
 import {
 	createInitialDocumentState,
 	DocumentContext,
+	useDocument,
 } from "./contexts/document.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
@@ -205,6 +207,8 @@ export const RouteChannelSettings = (p: RouteSectionProps) => {
 const ChannelSidebar = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
+	const [doc] = useDocument()!;
+	const branchId = doc.branchId;
 	const search = () => ch.search;
 	const showMembers = () =>
 		props.channel.type !== "Voice" &&
@@ -214,9 +218,21 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 	const showVoiceChat = () =>
 		props.channel.type === "Voice" &&
 		ch.voice_chat_sidebar_open;
+	const showHistory = () =>
+		props.channel.type === "Document" &&
+		ch.history_view;
 
 	return (
 		<Switch>
+			<Match when={showHistory()}>
+				<Resizable storageKey="document-history-width" initialWidth={320}>
+					<DocumentHistory
+						channel={props.channel}
+						branchId={branchId}
+						isOpen={ch.history_view}
+					/>
+				</Resizable>
+			</Match>
 			<Match when={showVoiceChat()}>
 				<Resizable storageKey="voice-chat-sidebar-width" initialWidth={320}>
 					<div class="voice-chat-sidebar">

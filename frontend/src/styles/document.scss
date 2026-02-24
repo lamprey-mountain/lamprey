@@ -134,3 +134,65 @@
 		}
 	}
 }
+
+.document-history {
+	width: 100%;
+
+	header {
+		background: $bg-150;
+		padding: 8px 12px;
+		border-bottom: solid $sep-300 1px;
+		display: flex;
+		justify-content: space-between;
+	}
+
+	.history-item {
+		margin: 8px;
+		padding: 8px;
+		border-radius: 4px;
+		background: $bg-150;
+		border: solid $sep-300 1px;
+		cursor: pointer;
+
+		&:hover {
+			background: $bg-100;
+		}
+	}
+
+	.history-item-header {
+		display: flex;
+		font-size: 0.8rem;
+		gap: 8px;
+	}
+
+	.history-item-stat {
+		font-weight: bold;
+	}
+
+	.history-item-stat-added {
+		color: $color-green;
+	}
+
+	.history-item-stat-removed {
+		color: $color-red;
+	}
+
+	.history-item-authors {
+		display: flex;
+		margin-top: 4px;
+		gap: 6px;
+
+		.avatar {
+			height: 24px;
+			width: 24px;
+		}
+
+		.avatar-remaining {
+			display: grid;
+			place-items: center;
+			background: $link-200;
+			border-radius: 4px;
+			color: $fg-100;
+		}
+	}
+}

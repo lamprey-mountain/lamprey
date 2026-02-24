@@ -26,6 +26,7 @@ import icFormatUrl from "../assets/format-url.png";
 import { useDocument } from "../contexts/document.tsx";
 import { useModals } from "../contexts/modal.tsx";
 import { TextSelection } from "prosemirror-state";
+import { useChannel } from "../contexts/channel.tsx";
 
 type DocumentProps = {
 	channel: Channel;
@@ -47,9 +48,14 @@ export const Document = (props: DocumentProps) => {
 const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 	const [doc, update] = useDocument();
 	const [, modalCtl] = useModals();
+	const [ch, setCh] = useChannel()!;
 	const [active, setActive] = createSignal<
 		"branches" | "merge" | "export" | "insert" | null
 	>(null);
+
+	const toggleHistory = () => {
+		setCh("history_view", !ch.history_view);
+	};
 
 	const applyFormat = (wrap: string) => {
 		const view = props.editor?.view;
@@ -152,8 +158,7 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 				<button
 					onClick={(e) => {
 						e.stopPropagation();
-						// TODO
-						// also should this really be in the toolbar?
+						toggleHistory();
 					}}
 				>
 					history
