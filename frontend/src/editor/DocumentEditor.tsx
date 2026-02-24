@@ -24,7 +24,7 @@ import {
 	createWrapCommand,
 } from "./editor-utils.ts";
 import { type Api } from "../api.tsx";
-import { Accessor, createEffect, createSignal, on } from "solid-js";
+import { createSignal } from "solid-js";
 
 const UserMention = (
 	props: { api: Api; userId: string; channelId: string },
@@ -77,22 +77,46 @@ type EditorProps = {
 
 export const createEditor = (
 	opts: EditorProps,
-	channelId: string,
-	branchId: string,
 ) => {
 	const api = useApi();
 
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
+	const [currentChannelId, setCurrentChannelId] = createSignal(
+		"no channel id!",
+	);
+	const [currentBranchId, setCurrentBranchId] = createSignal("no branch id!");
 
-	const ydoc = new Y.Doc();
-	const type = ydoc.get("prosemirror", Y.XmlFragment);
-	const { mapping } = initProseMirrorDoc(type, schema);
+	const createYDoc = () => {
+		const ydoc = new Y.Doc();
+		ydoc.on("update", (update, origin) => {
+			if (origin && origin.key === "server") return;
+
+			api.client.send({
+				type: "DocumentEdit",
+				channel_id: currentChannelId(),
+				branch_id: currentBranchId(),
+				update: base64UrlEncode(update),
+			});
+		});
+		return ydoc;
+	};
+
+	let ydoc = createYDoc();
 
 	const onSync = ([msg]: [MessageSync, unknown]) => {
 		if (msg.type === "DocumentEdit") {
-			if (msg.channel_id === channelId && msg.branch_id === branchId) {
+			if (
+				msg.channel_id === currentChannelId() &&
+				msg.branch_id === currentBranchId()
+			) {
 				const update = base64UrlDecode(msg.update);
 				Y.applyUpdate(ydoc, update, { key: "server" });
+			}
+		} else if (msg.type === "DocumentSubscribed") {
+			if (
+				msg.channel_id === currentChannelId() &&
+				msg.branch_id === currentBranchId()
+			) {
 				setIsSubscribed(true);
 			}
 		}
@@ -100,30 +124,10 @@ export const createEditor = (
 
 	api.events.on("sync", onSync);
 
-	const subscribe = () => {
-		setIsSubscribed(false);
-		api.client.send({
-			type: "DocumentSubscribe",
-			channel_id: channelId,
-			branch_id: branchId,
-			state_vector: base64UrlEncode(Y.encodeStateVector(ydoc)),
-		});
-	};
-
-	subscribe();
-
-	ydoc.on("update", (update, origin) => {
-		if (origin && origin.key === "server") return;
-
-		api.client.send({
-			type: "DocumentEdit",
-			channel_id: channelId,
-			branch_id: branchId,
-			update: base64UrlEncode(update),
-		});
-	});
-
 	const createState = () => {
+		let type = ydoc.get("prosemirror", Y.XmlFragment);
+		let mapping = initProseMirrorDoc(type, schema).mapping;
+
 		let doc;
 		if (opts.initialContent) {
 			const div = document.createElement("div");
@@ -146,7 +150,7 @@ export const createEditor = (
 			schema,
 			plugins: [
 				ySyncPlugin(type, { mapping }),
-				cursorPlugin(api, channelId, branchId, isSubscribed),
+				cursorPlugin(api, currentChannelId(), currentBranchId(), isSubscribed),
 				yUndoPlugin(),
 				keymap({
 					"Ctrl-z": undo,
@@ -163,7 +167,6 @@ export const createEditor = (
 						return true;
 					},
 					"Enter": (state, dispatch) => {
-						// Handled by base but we can keep createListContinueCommand if we want it here
 						return createListContinueCommand()(state, dispatch);
 					},
 					"Backspace": (state, dispatch) => {
@@ -188,19 +191,19 @@ export const createEditor = (
 		schema,
 		createState: () => createState(),
 		nodeViews: (view) => ({
-			mention: (node) => {
+			mention: (node: HTMLElement) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				let dispose: () => void;
 				if (opts.mentionRenderer) {
-					opts.mentionRenderer(dom, node.attrs.user);
+					opts.mentionRenderer(dom, node.getAttribute("user")!);
 				} else {
 					dispose = render(
 						() => (
 							<UserMention
 								api={api}
-								userId={node.attrs.user}
-								channelId={channelId}
+								userId={node.getAttribute("user")!}
+								channelId={currentChannelId()}
 							/>
 						),
 						dom,
@@ -213,18 +216,18 @@ export const createEditor = (
 					},
 				};
 			},
-			mentionChannel: (node) => {
+			mentionChannel: (node: HTMLElement) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				let dispose: () => void;
 				if (opts.mentionChannelRenderer) {
-					opts.mentionChannelRenderer(dom, node.attrs.channel);
+					opts.mentionChannelRenderer(dom, node.getAttribute("channel")!);
 				} else {
 					dispose = render(
 						() => (
 							<ChannelMention
 								api={api}
-								channelId={node.attrs.channel}
+								channelId={node.getAttribute("channel")!}
 							/>
 						),
 						dom,
@@ -237,14 +240,14 @@ export const createEditor = (
 					},
 				};
 			},
-			mentionRole: (node) => {
+			mentionRole: (node: HTMLElement) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				const dispose = render(
 					() => (
 						<RoleMention
 							api={api}
-							roleId={node.attrs.role}
+							roleId={node.getAttribute("role")!}
 						/>
 					),
 					dom,
@@ -256,14 +259,14 @@ export const createEditor = (
 					},
 				};
 			},
-			emoji: (node) => {
+			emoji: (node: HTMLElement) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				const dispose = render(
 					() => (
 						<Emoji
-							id={node.attrs.id}
-							name={node.attrs.name}
+							id={node.getAttribute("id")!}
+							name={node.getAttribute("name")!}
 						/>
 					),
 					dom,
@@ -278,12 +281,35 @@ export const createEditor = (
 		}),
 	});
 
+	const subscribe = (channelId: string, branchId: string) => {
+		console.log("[document] subscribe to", { channelId, branchId });
+
+		// don't resubscribe if nothing changed
+		if (
+			currentChannelId() === channelId &&
+			currentBranchId() === branchId
+		) {
+			return;
+		}
+
+		// reset document state
+		ydoc = createYDoc();
+		editor.setState(createState());
+
+		setCurrentChannelId(channelId);
+		setCurrentBranchId(branchId);
+		setIsSubscribed(false);
+
+		api.client.send({
+			type: "DocumentSubscribe",
+			channel_id: channelId,
+			branch_id: branchId,
+			state_vector: base64UrlEncode(Y.encodeStateVector(ydoc)),
+		});
+	};
+
 	return {
 		...editor,
-		subscribe(newChannelId: string, newBranchId: string) {
-			channelId = newChannelId;
-			branchId = newBranchId;
-			subscribe();
-		},
+		subscribe,
 	};
 };

@@ -1,5 +1,12 @@
 import type { Channel } from "sdk";
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	on,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 import { Portal } from "solid-js/web";
 import { useFloating } from "solid-floating-ui";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
@@ -525,11 +532,13 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 const DocumentMain = (
 	props: DocumentProps & { setEditor: (editor: any) => void },
 ) => {
-	const editor = createEditor({}, props.channel.id, props.channel.id);
+	const editor = createEditor({});
 
-	createEffect(() => {
-		editor.subscribe(props.channel.id, props.channel.id);
-	});
+	createEffect(
+		on(() => props.channel.id, (newChannelId) => {
+			editor.subscribe(newChannelId, newChannelId);
+		}),
+	);
 
 	onMount(() => {
 		props.setEditor(editor);
