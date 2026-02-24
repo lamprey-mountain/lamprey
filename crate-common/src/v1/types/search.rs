@@ -21,7 +21,7 @@ use crate::v1::types::{
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageSearchRequest {
-    /// The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function.
+    /// The full text search query.
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 2048)
@@ -135,7 +135,7 @@ pub enum MessageSearchOrderField {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ChannelSearchRequest {
-    /// The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function.
+    /// The full text search query.
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 2048)

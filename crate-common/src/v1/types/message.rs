@@ -585,8 +585,6 @@ pub struct MessageBotCommand {
 }
 
 /// a basic message, written using markdown
-///
-/// NOTE: new message features won't be backported here!
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

@@ -67,7 +67,7 @@ pub enum Compression {
 }
 
 #[derive(Debug, Clone)]
-enum ConnectionState {
+pub enum ConnectionState {
     Unauthed,
     Authenticated { session: Session },
     Disconnected { session: Session },
@@ -1028,6 +1028,9 @@ impl Connection {
             MessageSync::TagCreate { tag } => AuthCheck::Channel(tag.channel_id),
             MessageSync::TagUpdate { tag } => AuthCheck::Channel(tag.channel_id),
             MessageSync::TagDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::MediaProcessed { media } => {
+                AuthCheck::User(media.user_id.expect("server always has media.user_id"))
+            }
         };
         let should_send = auth_check.should_send(&session, &self.s).await?;
         if should_send {

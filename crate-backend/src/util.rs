@@ -58,6 +58,9 @@ impl Modify for BadgeModifier {
                         } else if let Some(perm) = tag.strip_prefix("badge.perm.") {
                             perms.push(perm.to_string());
                             false
+                        } else if tag == "badge.internal" {
+                            badges.push("internal".to_string());
+                            false
                         } else if let Some(perm) = tag.strip_prefix("badge.perm-opt.") {
                             optional_perms.push(perm.to_string());
                             false

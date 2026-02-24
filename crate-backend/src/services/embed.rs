@@ -4,8 +4,9 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::misc::Color;
 use common::v1::types::{self, MessageSync, MessageType};
-use common::v1::types::{Embed, EmbedId};
-use common::v1::types::{Media, UserId};
+use common::v2::types::embed::{Embed, EmbedId};
+use common::v2::types::media::Media as MediaV2;
+use common::v1::types::UserId;
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::{Deserialize, Serialize};
@@ -292,7 +293,7 @@ impl ServiceEmbed {
                 .and_then(|p| p.last())
                 .map(|s| s.to_owned())
                 .unwrap_or_else(|| "index.html".to_owned());
-            let media = srv
+            let media_v2 = srv
                 .media
                 .import_from_response(
                     user_id,

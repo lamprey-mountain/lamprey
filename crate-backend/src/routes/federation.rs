@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP
+
 use std::sync::Arc;
 
 use axum::{

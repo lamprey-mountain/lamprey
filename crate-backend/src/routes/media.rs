@@ -9,6 +9,7 @@ use axum::{
 };
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::media::Media as MediaV1;
 use common::{
     v1::types::{
         media::{MediaClone, MediaSearch},
@@ -24,7 +25,7 @@ use validator::Validate;
 
 use crate::{
     error::{Error, Result},
-    types::{Media, MediaCreate, MediaCreated, MediaId},
+    types::{MediaCreate, MediaCreated, MediaId},
     ServerState,
 };
 
@@ -80,15 +81,14 @@ async fn media_create(
             }
 
             let srv = s.services();
-            let media = srv.media.import_from_url(auth.user.id, json).await?;
+            let media_v2 = srv.media.import_from_url(auth.user.id, json).await?;
             let mut headers = HeaderMap::new();
-            let size = media.source.size;
-            headers.insert("content-length", size.into());
+            headers.insert("content-length", media_v2.size.into());
             let res = MediaCreated {
-                media_id: media.id,
+                media_id: media_v2.id,
                 upload_url: None,
             };
-            Ok((StatusCode::CREATED, HeaderMap::new(), Json(res)))
+            Ok((StatusCode::CREATED, headers, Json(res)))
         }
     }
 }
@@ -101,7 +101,7 @@ async fn media_create(
     params(("media_id", description = "Media id")),
     responses(
         (status = NOT_MODIFIED, description = "Not modified"),
-        (status = OK, body = Media, description = "Success"),
+        (status = OK, body = MediaV1, description = "Success"),
     )
 )]
 async fn media_patch(
@@ -131,20 +131,27 @@ async fn media_patch(
             return Ok((StatusCode::NO_CONTENT, headers));
         }
     }
-    let media = s.data().media_select(media_id).await?;
-    if media.deleted_at.is_some() {
+    let media_v2 = s.data().media2_select(media_id).await?;
+    if media_v2.deleted_at.is_some() {
         return Err(Error::ApiError(ApiError::from_code(
             ErrorCode::UnknownMedia,
         )));
     }
-    if media.user_id != auth.user.id {
+    if media_v2.user_id != Some(auth.user.id) {
         return Err(Error::MissingPermissions);
     }
-    s.data().media_update(media_id, json).await?;
+    
+    // Convert v1 patch to v2 patch
+    let v2_patch = common::v2::types::media::MediaPatch {
+        alt: json.alt,
+        filename: None,
+        strip_exif: None,
+    };
+    
+    s.data().media2_update(media_id, v2_patch).await?;
     let mut headers = HeaderMap::new();
-    let size = media.inner.source.size;
-    headers.insert("upload-offset", size.into());
-    headers.insert("upload-length", size.into());
+    headers.insert("upload-offset", media_v2.size.into());
+    headers.insert("upload-length", media_v2.size.into());
     Ok((StatusCode::NO_CONTENT, headers))
 }
 
@@ -160,7 +167,7 @@ async fn media_patch(
     params(("media_id", description = "Media id")),
     request_body = MediaDoneParams,
     responses(
-        (status = OK, body = Media, description = "Success"),
+        (status = OK, body = MediaV1, description = "Success"),
         (status = ACCEPTED, description = "Processing in background"),
     ),
 )]
@@ -213,18 +220,18 @@ async fn media_done(
                 MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
                 MediaCreateSource::Download { .. } => panic!("can only patch upload"),
             };
-            let mut media = s
+            let media_v2 = s
                 .services()
                 .media
                 .process_upload(up, media_id, auth.user.id, &filename)
                 .await?;
             debug!("finished processing media");
-            s.presign(&mut media).await?;
+            let media_v1: MediaV1 = media_v2.into();
             let mut headers = HeaderMap::new();
-            let size = media.source.size;
+            let size = media_v1.source.size;
             headers.insert("upload-offset", size.into());
             headers.insert("upload-length", size.into());
-            Ok((StatusCode::OK, headers, Json(Some(media))))
+            Ok((StatusCode::OK, headers, Json(Some(media_v1))))
         }
         Ordering::Less => {
             let mut headers = HeaderMap::new();
@@ -317,18 +324,18 @@ async fn media_upload(
                 MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
                 MediaCreateSource::Download { .. } => panic!("can only patch upload"),
             };
-            let mut media = s
+            let media_v2 = s
                 .services()
                 .media
                 .process_upload(up, media_id, auth.user.id, &filename)
                 .await?;
             debug!("finished processing media");
-            s.presign(&mut media).await?;
+            let media_v1: MediaV1 = media_v2.into();
             let mut headers = HeaderMap::new();
-            let size = media.source.size;
+            let size = media_v1.source.size;
             headers.insert("upload-offset", size.into());
             headers.insert("upload-length", size.into());
-            Ok((StatusCode::OK, headers, Json(Some(media))))
+            Ok((StatusCode::OK, headers, Json(Some(media_v1))))
         }
         Ordering::Less => {
             let mut headers = HeaderMap::new();
@@ -347,7 +354,7 @@ async fn media_upload(
     tags = ["media", "badge.scope.full"],
     params(("media_id", description = "Media id")),
     responses(
-        (status = OK, body = Media, description = "Success"),
+        (status = OK, body = MediaV1, description = "Success"),
     )
 )]
 async fn media_get(
@@ -356,15 +363,9 @@ async fn media_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let media = s.data().media_select(media_id).await?;
-    if media.deleted_at.is_some() {
-        return Err(Error::ApiError(ApiError::from_code(
-            ErrorCode::UnknownMedia,
-        )));
-    }
-    let mut media = media.inner;
-    s.presign(&mut media).await?;
-    Ok(Json(media))
+    let media_v2 = s.data().media2_select(media_id).await?;
+    let media_v1: MediaV1 = media_v2.into();
+    Ok(Json(media_v1))
 }
 
 /// Media check
@@ -399,11 +400,10 @@ async fn media_check(
             return Ok((StatusCode::NO_CONTENT, headers));
         }
     }
-    let media = s.data().media_select(media_id).await?;
+    let media_v2 = s.data().media2_select(media_id).await?;
     let mut headers = HeaderMap::new();
-    let size = media.inner.source.size;
-    headers.insert("upload-offset", size.into());
-    headers.insert("upload-length", size.into());
+    headers.insert("upload-offset", media_v2.size.into());
+    headers.insert("upload-length", media_v2.size.into());
     Ok((StatusCode::NO_CONTENT, headers))
 }
 
@@ -433,9 +433,9 @@ async fn media_delete(
         }
         Ok(StatusCode::NO_CONTENT)
     } else {
-        let links = s.data().media_link_select(media_id).await?;
+        let links = s.data().media2_link_select(media_id).await?;
         if links.is_empty() {
-            s.data().media_delete(media_id).await?;
+            s.data().media2_delete(media_id).await?;
             Ok(StatusCode::NO_CONTENT)
         } else {
             Ok(StatusCode::CONFLICT)
@@ -561,15 +561,15 @@ async fn media_upload_direct(
         MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
         MediaCreateSource::Download { .. } => panic!("can only patch upload"),
     };
-    let mut media = s
+    let media_v2 = s
         .services()
         .media
         .process_upload(up, media_id, auth.user.id, &filename)
         .await?;
     debug!("finished processing media");
-    s.presign(&mut media).await?;
+    let media_v1: MediaV1 = media_v2.into();
 
-    Ok((StatusCode::CREATED, Json(media)))
+    Ok((StatusCode::CREATED, Json(media_v1)))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

@@ -7,9 +7,10 @@ use std::{
 use async_tempfile::TempFile;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    self, util::truncate::truncate_filename, Media, MediaCreate, MediaCreateSource, MediaId,
-    MediaTrack, MediaTrackInfo, Mime, TrackSource, UserId,
+    util::truncate::truncate_filename, MediaCreate, MediaCreateSource, MediaId, Mime,
+    UserId,
 };
+use common::v2::types::media::{Media as MediaV2, MediaMetadata, MediaStatus};
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
@@ -127,17 +128,16 @@ impl ServiceMedia {
         Ok((Some(meta), mime))
     }
 
-    #[tracing::instrument(skip(self, media, meta))]
+    #[tracing::instrument(skip(self, meta))]
     pub async fn generate_thumbnails(
         &self,
-        media: &mut Media,
+        media_id: MediaId,
         meta: &Metadata,
         path: &std::path::Path,
         mime: &Mime,
     ) -> Result<()> {
-        trace!("media = {:?}", media);
+        trace!("media_id = {:?}", media_id);
         trace!("meta = {:?}", meta);
-        let media_id = media.id;
         let mut fut = FuturesUnordered::new();
         if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
@@ -191,7 +191,7 @@ impl ServiceMedia {
         media_id: MediaId,
         user_id: UserId,
         filename: &str,
-    ) -> Result<Media> {
+    ) -> Result<MediaV2> {
         debug!("processing upload");
         let tmp = up.temp_file;
         let p = tmp.file_path().to_owned();
@@ -199,57 +199,64 @@ impl ServiceMedia {
         let services = self.state.services();
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mime: Mime = mime.parse()?;
-        let mut media = Media {
-            alt: up.create.alt.clone(),
-            id: media_id,
-            filename: filename.to_owned(),
-            source: MediaTrack {
-                mime: mime.clone(),
-                info: match mime.parse() {
-                    Ok(m) => match m.ty().as_str() {
-                        "image" => {
-                            let dims = image::image_dimensions(&p).ok();
-                            MediaTrackInfo::Image(types::Image {
-                                height: dims.as_ref().map(|d| d.1 as u64).unwrap_or_else(|| {
-                                    meta.as_ref()
-                                        .and_then(|m| m.height())
-                                        .expect("all images have a height")
-                                }),
-                                width: dims.as_ref().map(|d| d.0 as u64).unwrap_or_else(|| {
-                                    meta.as_ref()
-                                        .and_then(|m| m.width())
-                                        .expect("all images have a width")
-                                }),
-                                language: None,
-                            })
-                        }
-                        // this is quite a bit harder than it looks...
-                        "audio" | "video" => MediaTrackInfo::Mixed(types::Mixed {
-                            height: meta.as_ref().and_then(|m| m.height()),
-                            width: meta.as_ref().and_then(|m| m.width()),
-                            duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)),
-                            language: None,
+        
+        let metadata = match mime.parse() {
+            Ok(m) => match m.ty().as_str() {
+                "image" => {
+                    let dims = image::image_dimensions(&p).ok();
+                    MediaMetadata::Image {
+                        height: dims.as_ref().map(|d| d.1 as u64).unwrap_or_else(|| {
+                            meta.as_ref()
+                                .and_then(|m| m.height())
+                                .expect("all images have a height")
                         }),
-                        "text" => MediaTrackInfo::Text(types::Text { language: None }),
-                        // "application" => MediaTrackInfo::Other,
-                        _ => MediaTrackInfo::Other,
-                    },
-                    Err(_) => MediaTrackInfo::Other,
-                },
-                size: up.current_size,
-                source: match up.create.source {
-                    MediaCreateSource::Upload { .. } => TrackSource::Uploaded,
-                    MediaCreateSource::Download { source_url, .. } => {
-                        TrackSource::Downloaded { source_url }
+                        width: dims.as_ref().map(|d| d.0 as u64).unwrap_or_else(|| {
+                            meta.as_ref()
+                                .and_then(|m| m.width())
+                                .expect("all images have a width")
+                        }),
                     }
+                }
+                "audio" | "video" => MediaMetadata::Video {
+                    height: meta.as_ref().and_then(|m| m.height()).unwrap_or(0),
+                    width: meta.as_ref().and_then(|m| m.width()).unwrap_or(0),
+                    duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)).unwrap_or(0),
                 },
+                "text" => MediaMetadata::Text,
+                _ => MediaMetadata::File,
             },
+            Err(_) => MediaMetadata::File,
         };
+
+        let mut media = MediaV2 {
+            id: media_id,
+            status: MediaStatus::Uploaded,
+            filename: filename.to_owned(),
+            alt: up.create.alt.clone(),
+            size: up.current_size,
+            content_type: mime.clone(),
+            source_url: match &up.create.source {
+                MediaCreateSource::Upload { .. } => None,
+                MediaCreateSource::Download { source_url, .. } => Some(source_url.clone()),
+            },
+            metadata,
+            user_id: Some(user_id),
+            deleted_at: None,
+            quarantine: None,
+            scans: vec![],
+            has_thumbnail: false,
+            has_gifv: false,
+            links: vec![],
+            room_id: None,
+            channel_id: None,
+        };
+        
         debug!("finish upload for {}, mime {}", media_id, mime);
         trace!("finish upload for {} media {:?}", media_id, media);
         if let Some(meta) = &meta {
             if mime.starts_with("video/") || mime.starts_with("audio/") {
-                let _ = self.generate_thumbnails(&mut media, meta, &p, &mime).await;
+                let _ = self.generate_thumbnails(media_id, meta, &p, &mime).await;
+                media.has_thumbnail = true;
             }
         }
         debug!("finish generating thumbnails for {}", media_id);
@@ -274,12 +281,12 @@ impl ServiceMedia {
         drop(tmp);
         self.state
             .data()
-            .media_insert(user_id, media.clone())
+            .media2_insert(media.clone())
             .await?;
         Ok(media)
     }
 
-    pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<Media> {
+    pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<MediaV2> {
         self.import_from_url_with_max_size(user_id, json, self.state.config.media_max_size)
             .await
     }
@@ -289,7 +296,7 @@ impl ServiceMedia {
         user_id: UserId,
         json: MediaCreate,
         max_size: u64,
-    ) -> Result<Media> {
+    ) -> Result<MediaV2> {
         let (_filename, size, source_url) = match &json.source {
             MediaCreateSource::Upload { .. } => unreachable!(),
             MediaCreateSource::Download {
@@ -320,7 +327,7 @@ impl ServiceMedia {
         json: MediaCreate,
         res: reqwest::Response,
         max_size: u64,
-    ) -> Result<Media> {
+    ) -> Result<MediaV2> {
         let media_id = MediaId::new();
         self.create_upload(media_id, user_id, json.clone()).await?;
         self.import_from_response_inner(user_id, media_id, json, res, max_size)
@@ -334,7 +341,7 @@ impl ServiceMedia {
         json: MediaCreate,
         res: reqwest::Response,
         max_size: u64,
-    ) -> Result<Media> {
+    ) -> Result<MediaV2> {
         let (filename, size, source_url) = match &json.source {
             MediaCreateSource::Upload { .. } => unreachable!(),
             MediaCreateSource::Download {
@@ -412,7 +419,7 @@ impl ServiceMedia {
         user_id: UserId,
         json: MediaCreate,
         bytes: bytes::Bytes,
-    ) -> Result<Media> {
+    ) -> Result<MediaV2> {
         let max_size = self.state.config.media_max_size;
         let filename = match &json.source {
             MediaCreateSource::Upload { filename, .. } => filename,
@@ -463,7 +470,7 @@ async fn upload_extracted_thumb(
     state: Arc<ServerStateInner>,
     bytes: BigData,
     media_id: MediaId,
-) -> Result<Option<MediaTrack>> {
+) -> Result<()> {
     let len = bytes.0.len();
     let span_probe = span!(Level::DEBUG, "probe thumbnail image");
     let (width, height, mime) = async {
@@ -495,17 +502,7 @@ async fn upload_extracted_thumb(
     }
     .instrument(span_upload)
     .await?;
-    let track = MediaTrack {
-        info: MediaTrackInfo::Thumbnail(types::Image {
-            height: height.into(),
-            width: width.into(),
-            language: None,
-        }),
-        size: len as u64,
-        mime,
-        source: TrackSource::Extracted,
-    };
-    Ok(Some(track))
+    Ok(())
 }
 
 async fn get_mime(file: &std::path::Path) -> Result<String> {

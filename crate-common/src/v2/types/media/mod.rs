@@ -9,6 +9,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
+    search::Order,
     util::{Diff, Time},
     ChannelId, EmbedId, MediaId, MessageId, MessageVerId, Mime, RoomId, UserId,
 };
@@ -16,6 +17,7 @@ use crate::v1::types::{
 pub mod proxy;
 
 /// A reference to a piece of media to be used.
+// TODO: use this in create
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -122,7 +124,6 @@ pub struct Media {
     /// Whether this media can be fetched through the `/gifv/{media_id}` cdn route.
     pub has_gifv: bool,
 
-    // TODO: skip serde if is empty
     /// what this piece of media is linked to (admin only)
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub links: Vec<MediaLinkType>,
@@ -252,6 +253,27 @@ pub struct MediaCreate {
     pub source: MediaCreateSource,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaClone {
+    /// Set to override the filename
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 256)
+    )]
+    pub filename: Option<String>,
+
+    /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    pub alt: Option<String>,
+}
+
 /// What to create this media from
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -305,7 +327,7 @@ pub struct MediaCreated {
 /// objects can be linked to multiple objects; for example, media linked to
 /// `Message`s also have links to each `MessageVersion` they're referenced in.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MediaLinkType {
     /// this piece of media is linked to a message
@@ -354,21 +376,57 @@ pub enum MediaLinkType {
     RoomBanner { room_id: RoomId },
 }
 
-// TODO
+// TODO: enforce auth checks on media for MediaUpdate?
+/// the auth checks that should be done for a piece of media
 pub enum MediaAuthCheck {
+    /// only allow viewing this media if the user can view this message
     Message {
         channel_id: ChannelId,
         message_id: MessageId,
     },
-    User {
-        user_id: UserId,
-    },
-    Channel {
-        channel_id: ChannelId,
-    },
-    Room {
-        room_id: RoomId,
-    },
+
+    /// only allow viewing this media if the user can view this user
+    User { user_id: UserId },
+
+    /// only allow viewing this media if the user can view this channel
+    Channel { channel_id: ChannelId },
+
+    /// only allow viewing this media if the user can view this room
+    Room { room_id: RoomId },
+}
+
+/// query for searching through media
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaSearch {
+    /// The full text search query.
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 2048)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub query: Option<String>,
+
+    /// what order to return results in
+    pub sort_order: Order,
+
+    /// field to sort by
+    pub sort_field: MediaSearchOrderField,
+}
+
+/// which field to order media search results by
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MediaSearchOrderField {
+    /// sort by creation time
+    Created,
+
+    /// sort by file size
+    Size,
 }
 
 impl MediaCreateSource {

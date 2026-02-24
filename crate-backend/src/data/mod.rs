@@ -19,6 +19,7 @@ use common::v1::types::{
     SessionToken, Suspended, User, UserId, UserListFilter,
 };
 
+use common::v2::types::media::Media as MediaV2;
 use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
 
 use lamprey_backend_core::data::{
@@ -49,7 +50,8 @@ pub trait Data:
     + DataRoleMember
     + DataPermission
     + DataInvite
-    + DataMedia
+    + DataMediaV1
+    + DataMediaV2
     + DataMessage
     + DataSession
     + DataChannel
@@ -148,7 +150,7 @@ pub trait DataRole {
 }
 
 #[async_trait]
-pub trait DataMedia {
+pub trait DataMediaV1 {
     async fn media_insert(&self, user_id: UserId, media: Media) -> Result<()>;
     async fn media_select(&self, media_id: MediaId) -> Result<MediaWithAdmin>;
     async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
@@ -163,6 +165,33 @@ pub trait DataMedia {
     async fn media_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
     async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()>;
     async fn media_link_create_exclusive(
+        &self,
+        media_id: MediaId,
+        target_id: Uuid,
+        link_type: MediaLinkType,
+    ) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataMediaV2 {
+    async fn media2_insert(&self, media: MediaV2) -> Result<()>;
+    async fn media2_select(&self, media_id: MediaId) -> Result<MediaV2>;
+    async fn media2_update(
+        &self,
+        media_id: MediaId,
+        patch: common::v2::types::media::MediaPatch,
+    ) -> Result<()>;
+    async fn media2_delete(&self, media_id: MediaId) -> Result<()>;
+    async fn media2_link_insert(
+        &self,
+        media_id: MediaId,
+        target_id: Uuid,
+        link_type: MediaLinkType,
+    ) -> Result<()>;
+    async fn media2_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>>;
+    async fn media2_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
+    async fn media2_link_delete_all(&self, target_id: Uuid) -> Result<()>;
+    async fn media2_link_create_exclusive(
         &self,
         media_id: MediaId,
         target_id: Uuid,

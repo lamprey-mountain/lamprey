@@ -304,7 +304,7 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
     info!("Starting server");
 
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .nest("/api/v1", routes::routes())
+        .nest("/api", routes::routes())
         .route("/metrics", get(routes::metrics::get_metrics))
         .with_state(state.clone())
         .split_for_parts();
