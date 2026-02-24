@@ -124,6 +124,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			(c) =>
 				(c.type === "ThreadPublic" ||
 					c.type === "ThreadPrivate" ||
+					c.type === "ThreadForum2" ||
 					(c.type === "Document" &&
 						c.parent_id &&
 						api.channels.cache.get(c.parent_id)?.type === "Wiki")) &&
@@ -134,6 +135,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			(c) =>
 				c.type !== "ThreadPublic" &&
 				c.type !== "ThreadPrivate" &&
+				c.type !== "ThreadForum2" &&
 				!(
 					c.type === "Document" &&
 					c.parent_id &&

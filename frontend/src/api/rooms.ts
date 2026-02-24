@@ -238,3 +238,44 @@ export class Rooms {
 		}
 	}
 }
+
+export class Rooms2 {
+	api: Api = null as unknown as Api;
+	cache = new ReactiveMap<string, Room>();
+	private _requests = new Map<string, Promise<Room>>();
+
+	/** fetch a single room */
+	async fetch(room_id: string): Promise<Room> {
+		const existing = this._requests.get(room_id);
+		if (existing) return existing;
+
+		const req = (async () => {
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/room/{room_id}",
+					{
+						params: { path: { room_id } },
+					},
+				)
+			);
+			this._requests.delete(room_id);
+			this.cache.set(room_id, data);
+			return data;
+		})();
+
+		this._requests.set(room_id, req);
+		return req;
+	}
+
+	/** reactively fetch a single room as a resource */
+	fetchResource(room_id: () => string): Resource<Room> {
+		const [resource] = createResource(room_id, async (room_id) => {
+			const cached = this.cache.get(room_id);
+			if (cached) return cached;
+			await this.fetch(room_id);
+			return this.cache.get(room_id)!;
+		});
+
+		return resource;
+	}
+}

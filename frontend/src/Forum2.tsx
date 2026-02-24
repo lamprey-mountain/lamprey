@@ -295,7 +295,7 @@ const MessageToolbar = (props: { message: Message }) => {
 		const button = e.currentTarget as HTMLButtonElement;
 		const rect = button.getBoundingClientRect();
 
-		queueMicrotask(() => {
+		setTimeout(() => {
 			setMenu({
 				x: rect.left,
 				y: rect.bottom,
@@ -470,7 +470,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 			api.channels.create(room_id, {
 				name,
 				parent_id: props.channel.id,
-				type: "ThreadPublic",
+				type: "ThreadForum2",
 			});
 		});
 	}
@@ -1369,3 +1369,15 @@ const Comment = (
 //     <i>anonymous</i>
 //   {/await}
 // </div>
+
+export const Forum2ThreadPage = (props: { channel: Channel }) => {
+	return (
+		<div class="forum2">
+			<div class="thread">
+				<div class="main">
+					<Forum2Thread channel={props.channel} />
+				</div>
+			</div>
+		</div>
+	);
+};
