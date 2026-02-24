@@ -104,7 +104,7 @@ impl ServiceMedia {
         self.uploads.insert(
             media_id,
             MediaUpload {
-                create,
+                create: create.clone(),
                 user_id,
                 temp_file,
                 temp_writer,
@@ -112,6 +112,40 @@ impl ServiceMedia {
                 max_size: self.state.config.media_max_size,
             },
         );
+
+        let filename = match &create.source {
+            MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+            MediaCreateSource::Download { filename, .. } => {
+                filename.clone().unwrap_or_else(|| "unknown".to_owned())
+            }
+        };
+
+        let media = MediaV2 {
+            id: media_id,
+            status: MediaStatus::Transferring,
+            filename,
+            alt: create.alt,
+            size: 0,
+            content_type: "application/octet-stream".parse().unwrap(),
+            source_url: match &create.source {
+                MediaCreateSource::Upload { .. } => None,
+                MediaCreateSource::Download { source_url, .. } => Some(source_url.clone()),
+            },
+            metadata: MediaMetadata::File,
+            user_id: Some(user_id),
+            deleted_at: None,
+            quarantine: None,
+            scans: vec![],
+            has_thumbnail: false,
+            has_gifv: false,
+            links: vec![],
+            room_id: None,
+            channel_id: None,
+            hashes: HashMap::new(),
+            strip_exif: create.strip_exif,
+        };
+        self.state.data().media_insert(media).await?;
+
         Ok(())
     }
 
@@ -251,7 +285,39 @@ impl ServiceMedia {
         filename: &str,
     ) -> Result<MediaV2> {
         debug!("processing upload");
+
+        let create = up.create;
+        let current_size = up.current_size;
         let tmp = up.temp_file;
+
+        let source_url = match &create.source {
+            MediaCreateSource::Upload { .. } => None,
+            MediaCreateSource::Download { source_url, .. } => Some(source_url.clone()),
+        };
+
+        let media_processing = MediaV2 {
+            id: media_id,
+            status: MediaStatus::Processing,
+            filename: filename.to_owned(),
+            alt: create.alt.clone(),
+            size: current_size,
+            content_type: "application/octet-stream".parse().unwrap(),
+            source_url: source_url.clone(),
+            metadata: MediaMetadata::File,
+            user_id: Some(user_id),
+            deleted_at: None,
+            quarantine: None,
+            scans: vec![],
+            has_thumbnail: false,
+            has_gifv: false,
+            links: vec![],
+            room_id: None,
+            channel_id: None,
+            hashes: HashMap::new(),
+            strip_exif: create.strip_exif,
+        };
+        self.state.data().media_replace(media_processing).await?;
+
         let p = tmp.file_path().to_owned();
         let url = self.state.get_s3_url(&format!("media/{media_id}/file"))?;
         let services = self.state.services();
@@ -338,13 +404,10 @@ impl ServiceMedia {
             id: media_id,
             status: MediaStatus::Uploaded,
             filename: filename.to_owned(),
-            alt: up.create.alt.clone(),
-            size: up.current_size,
+            alt: create.alt.clone(),
+            size: current_size,
             content_type: mime.clone(),
-            source_url: match &up.create.source {
-                MediaCreateSource::Upload { .. } => None,
-                MediaCreateSource::Download { source_url, .. } => Some(source_url.clone()),
-            },
+            source_url,
             metadata,
             user_id: Some(user_id),
             deleted_at: None,
@@ -356,7 +419,7 @@ impl ServiceMedia {
             room_id: None,
             channel_id: None,
             hashes,
-            strip_exif: false,
+            strip_exif: create.strip_exif,
         };
 
         debug!("finish upload for {}, mime {}", media_id, mime);
@@ -387,7 +450,7 @@ impl ServiceMedia {
         };
         upload_s3.await?;
         drop(tmp);
-        self.state.data().media_insert(media.clone()).await?;
+        self.state.data().media_replace(media.clone()).await?;
         Ok(media)
     }
 

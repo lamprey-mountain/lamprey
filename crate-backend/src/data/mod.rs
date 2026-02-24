@@ -153,6 +153,7 @@ pub trait DataMedia {
     async fn media_insert(&self, media: Media) -> Result<()>;
     async fn media_select(&self, media_id: MediaId) -> Result<Media>;
     async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
+    async fn media_replace(&self, media: Media) -> Result<()>;
     async fn media_delete(&self, media_id: MediaId) -> Result<()>;
     async fn media_link_insert(
         &self,

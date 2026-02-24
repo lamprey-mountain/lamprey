@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{Media as MediaV1, MediaTrack as MediaTrackV1};
-use common::v2::types::media::{Media as MediaV2, MediaPatch as MediaPatchV2};
+use common::v2::types::media::{Media as MediaV2, MediaPatch as MediaPatchV2, MediaStatus};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use time::PrimitiveDateTime;
@@ -190,6 +190,10 @@ impl DataMedia for Postgres {
             })
             .collect();
 
+        if !parsed.links.is_empty() {
+            parsed.status = MediaStatus::Consumed;
+        }
+
         Ok(parsed)
     }
 
@@ -271,6 +275,27 @@ impl DataMedia for Postgres {
         Ok(())
     }
 
+    async fn media_replace(&self, media: MediaV2) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        let media_id = media.id;
+        let data =
+            serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
+        query!(
+            r#"
+            UPDATE media SET
+                data = $2
+            WHERE id = $1
+        "#,
+            *media_id,
+            data,
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        info!("replaced media v2");
+        Ok(())
+    }
+
     async fn media_delete(&self, media_id: MediaId) -> Result<()> {
         query!(
             "UPDATE media SET deleted_at = now() WHERE id = $1",
@@ -287,6 +312,13 @@ impl DataMedia for Postgres {
         target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()> {
+        let media = self.media_select(media_id).await?;
+        if media.status != MediaStatus::Uploaded
+            && media.status != MediaStatus::Consumed
+        {
+            return Err(Error::BadStatic("media not uploaded"));
+        }
+
         query!(
             r#"
             INSERT INTO media_link (media_id, target_id, link_type)
@@ -344,8 +376,8 @@ impl DataMedia for Postgres {
         let mut tx = self.pool.begin().await?;
 
         // Lock the media row to serialize access to linking this media
-        query!(
-            "SELECT id FROM media WHERE id = $1 FOR UPDATE",
+        let row = query!(
+            "SELECT id, data FROM media WHERE id = $1 FOR UPDATE",
             media_id.into_inner()
         )
         .fetch_optional(&mut *tx)
@@ -353,6 +385,16 @@ impl DataMedia for Postgres {
         .ok_or(Error::ApiError(ApiError::from_code(
             ErrorCode::UnknownMedia,
         )))?; // Ensure media exists
+
+        let media_data: DbMediaData =
+            serde_json::from_value(row.data).expect("invalid data in db");
+        let media: MediaV2 = media_data.into();
+        if media.status != MediaStatus::Uploaded
+            // NOTE: strictly speaking, exclusive links shouldn't happen on consumed media usually, but we allow it for consistency
+            && media.status != MediaStatus::Consumed
+        {
+            return Err(Error::BadStatic("media not uploaded"));
+        }
 
         let links = query_as!(
             MediaLink,

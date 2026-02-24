@@ -8,10 +8,13 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
-use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{application::Scope, sync::MessageSync};
 use common::v2::types::media::{
-    Media, MediaClone, MediaCreate, MediaCreated, MediaDoneParams, MediaPatch, MediaSearch,
+    Media, MediaClone, MediaCreate, MediaCreateSource, MediaCreated, MediaDoneParams, MediaPatch,
+    MediaSearch,
+};
+use common::{
+    v1::types::error::{ApiError, ErrorCode},
+    v1::types::{application::Scope, sync::MessageSync, Permission},
 };
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
@@ -47,7 +50,7 @@ async fn media_create(
     auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     match &json.source {
-        common::v2::types::media::MediaCreateSource::Upload { size, .. } => {
+        MediaCreateSource::Upload { size, .. } => {
             if *size > Some(s.config.media_max_size) {
                 return Err(Error::TooBig);
             }
@@ -73,7 +76,7 @@ async fn media_create(
             res_headers.insert("upload-offset", 0.into());
             Ok((StatusCode::CREATED, res_headers, Json(res)))
         }
-        common::v2::types::media::MediaCreateSource::Download { size, .. } => {
+        MediaCreateSource::Download { size, .. } => {
             if size.is_some_and(|sz| sz > s.config.media_max_size) {
                 return Err(Error::TooBig);
             }
@@ -102,10 +105,7 @@ async fn media_create(
     path = "/media/{media_id}",
     tags = ["media", "badge.scope.full"],
     params(("media_id", description = "Media id")),
-    responses(
-        (status = NOT_MODIFIED, description = "Not modified"),
-        (status = OK, body = Media, description = "Success"),
-    )
+    responses((status = OK, body = Media, description = "Success")),
 )]
 async fn media_patch(
     Path(media_id): Path<MediaId>,
@@ -123,24 +123,26 @@ async fn media_patch(
             ErrorCode::UnknownMedia,
         )));
     }
+
     if media.user_id != Some(auth.user.id) {
         // NOTE: should i return UnknownMedia here to prevent leaking info?
         return Err(Error::MissingPermissions);
     }
 
-    // Check if strip_exif is being set to true
     let should_strip_exif = json.strip_exif == Some(true);
 
     s.data().media_update(media_id, json).await?;
 
-    // Strip EXIF after updating the database
     if should_strip_exif {
         s.services().media.strip_exif(media_id).await?;
     }
 
     let media = s.data().media_select(media_id).await?;
-    s.broadcast(MessageSync::MediaUpdate { media })?;
-    Ok(StatusCode::NO_CONTENT)
+    s.broadcast(MessageSync::MediaUpdate {
+        media: media.clone(),
+    })?;
+
+    Ok(Json(media))
 }
 
 /// Media done
@@ -197,10 +199,8 @@ async fn media_done(
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
             let filename = match &up.create.source {
-                common::v2::types::media::MediaCreateSource::Upload { filename, .. } => {
-                    filename.to_owned()
-                }
-                common::v2::types::media::MediaCreateSource::Download { .. } => {
+                MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+                MediaCreateSource::Download { .. } => {
                     panic!("can only patch upload")
                 }
             };
@@ -335,10 +335,8 @@ async fn media_upload(
                     }
                 };
                 let filename = match &up.create.source {
-                    common::v2::types::media::MediaCreateSource::Upload { filename, .. } => {
-                        filename.to_owned()
-                    }
-                    common::v2::types::media::MediaCreateSource::Download { .. } => {
+                    MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+                    MediaCreateSource::Download { .. } => {
                         panic!("can only patch upload")
                     }
                 };
@@ -513,7 +511,7 @@ async fn media_search(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(common::v1::types::Permission::Admin)?;
+    perms.ensure(Permission::Admin)?;
     Ok(Error::Unimplemented)
 }
 
@@ -562,10 +560,10 @@ async fn media_upload_direct(
         .create_upload(
             media_id,
             auth.user.id,
-            common::v2::types::media::MediaCreate {
+            MediaCreate {
                 alt: None,
                 strip_exif: false,
-                source: common::v2::types::media::MediaCreateSource::Upload {
+                source: MediaCreateSource::Upload {
                     filename: "unknown".to_owned(),
                     size: Some(data.len() as u64),
                 },
@@ -590,8 +588,8 @@ async fn media_upload_direct(
         .expect("it was there a few milliseconds ago");
 
     let filename = match &up.create.source {
-        common::v2::types::media::MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
-        common::v2::types::media::MediaCreateSource::Download { .. } => {
+        MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+        MediaCreateSource::Download { .. } => {
             panic!("can only patch upload")
         }
     };
