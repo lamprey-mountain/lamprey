@@ -1342,6 +1342,9 @@ const Comment = (
 
 	const collapsed = () => props.collapsed.has(message().id);
 	const isEditing = () => ch.editingMessage?.message_id === message().id;
+	const isSelected = () => ch.selectedMessages?.includes(message().id) ?? false;
+	const isReplyTarget = () => ch.reply_id === message().id;
+	const inSelectMode = () => ch.selectMode ?? false;
 
 	const isOwnMessage = () => {
 		const currentUser = api.users.cache.get("@self");
@@ -1352,6 +1355,36 @@ const Comment = (
 		return message().type === "DefaultMarkdown" &&
 			!message().is_local &&
 			isOwnMessage();
+	};
+
+	const handleClick = (e: MouseEvent) => {
+		if (!inSelectMode() || !chUpdate) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const message_id = message().id;
+		const selected = ch.selectedMessages;
+
+		if (e.shiftKey && selected.length > 0) {
+			// TODO: range selection for comments
+			if (selected.includes(message_id)) {
+				chUpdate(
+					"selectedMessages",
+					selected.filter((id) => id !== message_id),
+				);
+			} else {
+				chUpdate("selectedMessages", [...selected, message_id]);
+			}
+		} else {
+			if (selected.includes(message_id)) {
+				chUpdate(
+					"selectedMessages",
+					selected.filter((id) => id !== message_id),
+				);
+			} else {
+				chUpdate("selectedMessages", [...selected, message_id]);
+			}
+		}
 	};
 
 	const countAllChildren = (node: CommentNode): number => {
@@ -1458,11 +1491,17 @@ const Comment = (
 		<div
 			class="comment menu-message"
 			data-message-id={message().id}
-			classList={{ collapsed: collapsed() }}
+			classList={{
+				collapsed: collapsed(),
+				selected: isSelected(),
+				"reply-target": isReplyTarget(),
+				selectable: inSelectMode(),
+			}}
 			style={{
 				"--depth": props.depth,
 				"--is-darker": props.depth % 2 === 1 ? 1 : 0,
 			}}
+			onClick={handleClick}
 		>
 			<div class="inner">
 				<header>

@@ -60,6 +60,10 @@
 				margin-left: 24px;
 			}
 
+			&.selectable {
+				cursor: pointer;
+			}
+
 			& > .inner:hover > .message-toolbar,
 			&.toolbar-visible > .message-toolbar {
 				visibility: visible;
@@ -78,7 +82,7 @@
 			/* // } */
 
 			background: rgba(0, 0, 0, calc(var(--is-darker) * 0.1));
-			border-radius: 4px;
+			/* border-radius: 4px; */
 
 			/* &.replied { */
 			/* border-left: solid var(--color-accent) 1px; */
@@ -157,6 +161,26 @@
 			& > .children {
 				list-style: none;
 				margin-top: 8px;
+			}
+		}
+
+		& .comment.reply-target > .inner {
+			box-shadow: 4px 0 0 -1px inset #cc1856;
+			background-color: #cc185622;
+
+			& .comment > .inner {
+				box-shadow: none;
+				background-color: rgba(0, 0, 0, calc(var(--is-darker) * 0.1));
+			}
+		}
+
+		& .comment.selected > .inner {
+			box-shadow: 4px 0 0 -1px inset #67dc82;
+			background-color: #67dc8222;
+
+			& .comment > .inner {
+				box-shadow: none;
+				background-color: rgba(0, 0, 0, calc(var(--is-darker) * 0.1));
 			}
 		}
 	}
