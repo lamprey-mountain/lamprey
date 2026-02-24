@@ -9,7 +9,8 @@ use crate::{
 };
 
 pub struct ServiceHttp {
-    client: Client,
+    // TEMP: make client public
+    pub(crate) client: Client,
     state: Arc<ServerStateInner>,
 }
 
@@ -42,4 +43,10 @@ impl ServiceHttp {
 
         Ok(res.error_for_status()?)
     }
+
+    // TODO: add more queries
+    // oauth: get profile url with bearer token
+    // oauth: post revocation url with bearer token
+    // oauth: post exchange code for coken token url
+    // media: post scan request to url
 }

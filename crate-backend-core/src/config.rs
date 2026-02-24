@@ -218,19 +218,25 @@ fn default_port() -> u16 {
     4000
 }
 
-/// A method to scan media
+/// Configuration for an external media scanning service.
+///
+/// Media scanners are external services that analyze uploaded media files
+/// and return confidence scores for various categories (e.g., NSFW content, malware).
 #[derive(Debug, Deserialize)]
 pub struct ConfigMediaScanner {
-    /// The url to post paths to
+    /// The URL to POST scan requests to.
     pub scan_url: Url,
 
-    /// The url to GET for health checks
+    /// The URL to GET for health checks.
     pub health_url: Url,
 
-    /// The unique name of the media scanner (eg. `nsfw`, `malware`)
+    /// The unique name of the media scanner (e.g., `nsfw`, `malware`).
     pub key: String,
 
     /// The current version of this scanner.
+    ///
+    /// This version is stored alongside scan results to track which scanner
+    /// version was used for each scan.
     pub version: u16,
 }
 
@@ -284,33 +290,3 @@ impl Secret {
         }
     }
 }
-
-/*
-media scanning notes
-
-```
-POST /media/{media_id}/rescan
-```
-
-```
-POST scan_url
-Content-Length: blob_length
-
-<blob bytes>
-```
-
-```
-200 OK
-Content-Type: application/json
-
-{"score":0.5}
-```
-*/
-
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct MediaScanResponse {
-//     pub score: f32,
-
-//     /// note for the sysadmin
-//     pub note: Option<String>,
-// }

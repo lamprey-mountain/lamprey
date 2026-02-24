@@ -18,6 +18,7 @@ use crate::v1::types::{
 };
 
 pub mod proxy;
+pub mod scanner;
 
 /// A reference to a piece of media to be used.
 // TODO: use this in more FooCreate and FooPatch structs

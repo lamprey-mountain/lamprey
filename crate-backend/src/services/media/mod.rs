@@ -7,13 +7,16 @@ use std::{
 
 use async_tempfile::TempFile;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
-use common::v1::types::{util::truncate::truncate_filename, MediaId, Mime, UserId};
 use common::v2::types::media::{
-    Media as MediaV2, MediaCreate, MediaCreateSource, MediaMetadata, MediaStatus,
+    Media as MediaV2, MediaCreate, MediaCreateSource, MediaMetadata, MediaScan, MediaStatus,
 };
 use common::{
     v1::types::error::{ApiError, ErrorCode},
     v2::types::media::HashType,
+};
+use common::{
+    v1::types::{util::truncate::truncate_filename, MediaId, Mime, UserId},
+    v2::types::media::scanner::{MediaScanResponse, ScanRequest},
 };
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
@@ -131,6 +134,56 @@ impl ServiceMedia {
             mime = mime.replace("video/webm", "audio/webm");
         }
         Ok((Some(meta), mime))
+    }
+
+    /// Scan media with all configured scanners in parallel.
+    #[tracing::instrument(skip(self, path))]
+    async fn scan_media(&self, path: &std::path::Path) -> Vec<MediaScan> {
+        let scanners = &self.state.config.media_scanners;
+        if scanners.is_empty() {
+            return vec![];
+        }
+
+        let path_str = match path.to_str() {
+            Some(p) => p.to_string(),
+            None => {
+                error!("failed to convert media path to string: {:?}", path);
+                return vec![];
+            }
+        };
+
+        let client = &self.state.services().http.client;
+        let mut futs = FuturesUnordered::new();
+
+        for scanner in scanners {
+            let scan_url = scanner.scan_url.clone();
+            let key = scanner.key.clone();
+            let version = scanner.version;
+            let path = path_str.clone();
+            let client = client.clone();
+
+            futs.push(async move {
+                let req = ScanRequest { path };
+                let res = client.post(scan_url).json(&req).send().await.ok()?;
+
+                let scan_res: MediaScanResponse = res.json().await.ok()?;
+
+                Some(MediaScan {
+                    key,
+                    result: scan_res.score as f32,
+                    version,
+                })
+            });
+        }
+
+        let mut scans = Vec::new();
+        while let Some(result) = futs.next().await {
+            if let Some(scan) = result {
+                scans.push(scan);
+            }
+        }
+
+        scans
     }
 
     #[tracing::instrument(skip(self, meta))]
@@ -278,6 +331,9 @@ impl ServiceMedia {
             hashes.insert(HashType::Sha512_256, hash_b64);
         }
 
+        // scan media with configured scanners in parallel
+        let scans = self.scan_media(&p).await;
+
         let mut media = MediaV2 {
             id: media_id,
             status: MediaStatus::Uploaded,
@@ -293,7 +349,7 @@ impl ServiceMedia {
             user_id: Some(user_id),
             deleted_at: None,
             quarantine: None,
-            scans: vec![],
+            scans,
             has_thumbnail: false,
             has_gifv: false,
             links: vec![],
