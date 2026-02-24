@@ -1345,9 +1345,9 @@ impl ServiceChannels {
 
         for entry in cached_room.channels.iter() {
             let ch = entry.value();
-            let p = perms_calc.query(user_id, Some(ch));
+            let p = perms_calc.query(user_id, Some(&ch.inner));
             if p.has(Permission::ViewChannel) {
-                out.push((ch.id, p.has(Permission::ThreadManage)));
+                out.push((ch.inner.id, p.has(Permission::ThreadManage)));
             }
         }
 

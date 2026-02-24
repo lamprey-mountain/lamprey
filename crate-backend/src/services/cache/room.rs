@@ -3,13 +3,16 @@
 use std::sync::Arc;
 
 use common::v1::types::{
-    Channel, ChannelId, Role, RoleId, Room, RoomMember, RoomSecurity, ThreadMember, User, UserId,
+    Channel, ChannelId, PermissionOverwriteType, Role, RoleId, Room, RoomMember, RoomSecurity,
+    ThreadMember, User, UserId,
 };
 use dashmap::DashMap;
 use tokio::sync::RwLock;
+use uuid::Uuid;
 
 use crate::routes::util::Auth;
 use crate::services::cache::permissions::PermissionsCalculator;
+use crate::types::PermissionBits;
 use crate::{Error, Result};
 
 pub struct CachedRoom {
@@ -20,10 +23,10 @@ pub struct CachedRoom {
     pub members: DashMap<UserId, CachedRoomMember>,
 
     /// every non-thread channel in this room
-    pub channels: DashMap<ChannelId, Channel>,
+    pub channels: DashMap<ChannelId, CachedChannel>,
 
     /// all roles in the room
-    pub roles: DashMap<RoleId, Role>,
+    pub roles: DashMap<RoleId, CachedRole>,
 
     /// all active threads in the room
     pub threads: DashMap<ChannelId, CachedThread>,
@@ -44,6 +47,39 @@ pub struct CachedThread {
     /// thread members
     pub members: DashMap<UserId, ThreadMember>,
     // maybe include first, last message?
+}
+
+pub struct CachedChannel {
+    /// the channel itself
+    pub inner: Channel,
+
+    /// channel permission overwrites as bitfields
+    pub overwrites: Vec<CachedPermissionOverwrite>,
+}
+
+pub struct CachedRole {
+    /// the role itself
+    pub inner: Role,
+
+    /// allowed permissions as a bitfield
+    pub allow: PermissionBits,
+
+    /// denied permissions as a bitfield
+    pub deny: PermissionBits,
+}
+
+pub struct CachedPermissionOverwrite {
+    /// id of role or user
+    pub id: Uuid,
+
+    /// whether this is for a user or role
+    pub ty: PermissionOverwriteType,
+
+    /// allowed permissions as a bitfield
+    pub allow: PermissionBits,
+
+    /// denied permissions as a bitfield
+    pub deny: PermissionBits,
 }
 
 pub struct CachedRoomSecurity(RoomSecurity);

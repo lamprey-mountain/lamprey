@@ -12,14 +12,21 @@ use moka::future::Cache;
 use tokio::sync::RwLock;
 use tracing::warn;
 
-use crate::{error::Result, types::PaginationQuery, ServerStateInner};
+use crate::{
+    error::Result,
+    types::{PaginationQuery, PermissionBits},
+    ServerStateInner,
+};
 
 pub mod permissions;
 pub mod room;
 pub mod user;
 
 pub use permissions::PermissionsCalculator;
-pub use room::{CachedRoom, CachedRoomMember, CachedThread};
+pub use room::{
+    CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoom, CachedRoomMember,
+    CachedThread,
+};
 pub use user::CachedUser;
 
 /// service for caching all in-memory data used by the server
@@ -139,14 +146,39 @@ impl ServiceCache {
 
         let roles = DashMap::new();
         for role in roles_data {
-            roles.insert(role.id, role);
+            let allow = PermissionBits::from(&role.allow);
+            let deny = PermissionBits::from(&role.deny);
+            roles.insert(
+                role.id,
+                CachedRole {
+                    inner: role,
+                    allow,
+                    deny,
+                },
+            );
         }
 
         // 4. load channels
         let channels_data = data.channel_list(room_id).await?;
         let channels = DashMap::new();
         for channel in channels_data {
-            channels.insert(channel.id, channel);
+            let overwrites = channel
+                .permission_overwrites
+                .iter()
+                .map(|ow| CachedPermissionOverwrite {
+                    id: ow.id,
+                    ty: ow.ty,
+                    allow: PermissionBits::from(&ow.allow),
+                    deny: PermissionBits::from(&ow.deny),
+                })
+                .collect();
+            channels.insert(
+                channel.id,
+                CachedChannel {
+                    inner: channel,
+                    overwrites,
+                },
+            );
         }
 
         // 5. load active threads and members
@@ -218,7 +250,16 @@ impl ServiceCache {
     pub async fn reload_role(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
         if let Some(cached) = self.rooms.get(&room_id).await {
             let role = self.state.data().role_select(room_id, role_id).await?;
-            cached.roles.insert(role_id, role);
+            let allow = PermissionBits::from(&role.allow);
+            let deny = PermissionBits::from(&role.deny);
+            cached.roles.insert(
+                role_id,
+                CachedRole {
+                    inner: role,
+                    allow,
+                    deny,
+                },
+            );
         }
         Ok(())
     }
@@ -244,12 +285,28 @@ impl ServiceCache {
                 cached.threads.insert(
                     channel_id,
                     CachedThread {
-                        thread: RwLock::new(channel),
+                        thread: RwLock::new(channel.clone()),
                         members: members_map,
                     },
                 );
             } else {
-                cached.channels.insert(channel_id, channel);
+                let overwrites = channel
+                    .permission_overwrites
+                    .iter()
+                    .map(|ow| CachedPermissionOverwrite {
+                        id: ow.id,
+                        ty: ow.ty,
+                        allow: PermissionBits::from(&ow.allow),
+                        deny: PermissionBits::from(&ow.deny),
+                    })
+                    .collect();
+                cached.channels.insert(
+                    channel_id,
+                    CachedChannel {
+                        inner: channel,
+                        overwrites,
+                    },
+                );
             }
         }
         Ok(())
@@ -444,11 +501,11 @@ impl ServiceCache {
                 }
 
                 for entry in cached_room.roles.iter() {
-                    all_roles.push(entry.value().clone());
+                    all_roles.push(entry.value().inner.clone());
                 }
 
                 for entry in cached_room.channels.iter() {
-                    all_channels.push(entry.value().clone());
+                    all_channels.push(entry.value().inner.clone());
                 }
 
                 for entry in cached_room.threads.iter() {
@@ -507,7 +564,7 @@ impl ServiceCache {
                         let mut t = thread.thread.write().await;
                         t.last_version_id = Some(message.latest_version.version_id);
                     } else if let Some(mut channel) = cached.channels.get_mut(&message.channel_id) {
-                        channel.last_version_id = Some(message.latest_version.version_id);
+                        channel.inner.last_version_id = Some(message.latest_version.version_id);
                     }
                 }
             }
@@ -520,7 +577,7 @@ impl ServiceCache {
                         let mut t = thread.thread.write().await;
                         t.last_version_id = Some(message.latest_version.version_id);
                     } else if let Some(mut channel) = cached.channels.get_mut(&message.channel_id) {
-                        channel.last_version_id = Some(message.latest_version.version_id);
+                        channel.inner.last_version_id = Some(message.latest_version.version_id);
                     }
                 }
             }
@@ -529,6 +586,16 @@ impl ServiceCache {
                     return;
                 };
                 if let Some(cached) = self.rooms.get(&room_id).await {
+                    let overwrites = channel
+                        .permission_overwrites
+                        .iter()
+                        .map(|ow| CachedPermissionOverwrite {
+                            id: ow.id,
+                            ty: ow.ty,
+                            allow: PermissionBits::from(&ow.allow),
+                            deny: PermissionBits::from(&ow.deny),
+                        })
+                        .collect();
                     if channel.ty.is_thread() {
                         cached.threads.insert(
                             channel.id,
@@ -538,7 +605,13 @@ impl ServiceCache {
                             },
                         );
                     } else {
-                        cached.channels.insert(channel.id, *channel.clone());
+                        cached.channels.insert(
+                            channel.id,
+                            CachedChannel {
+                                inner: *channel.clone(),
+                                overwrites,
+                            },
+                        );
                     }
                 }
             }
@@ -547,6 +620,16 @@ impl ServiceCache {
                     return;
                 };
                 if let Some(cached) = self.rooms.get(&room_id).await {
+                    let overwrites = channel
+                        .permission_overwrites
+                        .iter()
+                        .map(|ow| CachedPermissionOverwrite {
+                            id: ow.id,
+                            ty: ow.ty,
+                            allow: PermissionBits::from(&ow.allow),
+                            deny: PermissionBits::from(&ow.deny),
+                        })
+                        .collect();
                     if channel.ty.is_thread() {
                         if channel.deleted_at.is_some() {
                             cached.threads.remove(&channel.id);
@@ -557,18 +640,46 @@ impl ServiceCache {
                     } else if channel.deleted_at.is_some() {
                         cached.channels.remove(&channel.id);
                     } else {
-                        cached.channels.insert(channel.id, *channel.clone());
+                        cached.channels.insert(
+                            channel.id,
+                            CachedChannel {
+                                inner: *channel.clone(),
+                                overwrites,
+                            },
+                        );
                     }
                 }
             }
             MessageSync::RoleCreate { role } => {
                 if let Some(room) = self.rooms.get(&role.room_id).await {
-                    room.roles.insert(role.id, role.clone());
+                    let allow = PermissionBits::from(&role.allow);
+                    let deny = PermissionBits::from(&role.deny);
+                    room.roles.insert(
+                        role.id,
+                        CachedRole {
+                            inner: role.to_owned(),
+                            allow,
+                            deny,
+                        },
+                    );
                 }
             }
             MessageSync::RoleUpdate { role } => {
                 if let Some(room) = self.rooms.get(&role.room_id).await {
-                    if room.roles.insert(role.id, role.clone()).is_none() {
+                    let allow = PermissionBits::from(&role.allow);
+                    let deny = PermissionBits::from(&role.deny);
+                    if room
+                        .roles
+                        .insert(
+                            role.id,
+                            CachedRole {
+                                inner: role.to_owned(),
+                                allow,
+                                deny,
+                            },
+                        )
+                        .is_none()
+                    {
                         warn!(room_id = ?role.room_id, role_id = ?role.id, "got RoleUpdate for role that does not exist");
                     }
                 }
@@ -580,7 +691,7 @@ impl ServiceCache {
                 if let Some(room) = self.rooms.get(room_id).await {
                     for item in roles {
                         if let Some(mut role) = room.roles.get_mut(&item.role_id) {
-                            role.position = item.position;
+                            role.value_mut().inner.position = item.position;
                         }
                     }
                 }

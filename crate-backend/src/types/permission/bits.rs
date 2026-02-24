@@ -281,3 +281,36 @@ impl std::ops::Not for PermissionBits {
         PermissionBits(!self.0)
     }
 }
+
+impl std::ops::BitOrAssign for PermissionBits {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl std::ops::BitAndAssign for PermissionBits {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl PermissionBits {
+    /// Add all permissions from another PermissionBits
+    pub fn add_all(&mut self, other: PermissionBits) {
+        self.0 |= other.0;
+    }
+
+    /// Remove all permissions that are set in another PermissionBits
+    pub fn remove_all(&mut self, other: PermissionBits) {
+        self.0 &= !other.0;
+    }
+
+    /// Create a PermissionBits from a slice of Permissions
+    pub fn from_slice(perms: &[Permission]) -> Self {
+        let mut bits = PermissionBits(0);
+        for perm in perms {
+            bits.add(*perm);
+        }
+        bits
+    }
+}

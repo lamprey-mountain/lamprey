@@ -189,15 +189,15 @@ impl MemberList {
 
         for entry in perms_calc.room.roles.iter() {
             let role = entry.value();
-            if role.id == everyone_role_id || member.roles.contains(&role.id) {
-                if role.allow.contains(&Permission::Admin) {
+            if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
+                if role.allow.has(Permission::Admin) {
                     has_admin = true;
                     break;
                 }
-                if role.allow.contains(&Permission::ViewChannel) {
+                if role.allow.has(Permission::ViewChannel) {
                     has_view_allow = true;
                 }
-                if role.deny.contains(&Permission::ViewChannel) {
+                if role.deny.has(Permission::ViewChannel) {
                     has_view_deny = true;
                 }
             }
@@ -228,9 +228,10 @@ impl MemberList {
             let mut best_role: Option<(RoleId, u64)> = None;
             for role_id in &member.roles {
                 if let Some(role) = cached_room.roles.get(role_id) {
-                    if role.hoist {
-                        if best_role.is_none() || role.position < best_role.unwrap().1 {
-                            best_role = Some((*role_id, role.position));
+                    let cached_role = role.value();
+                    if cached_role.inner.hoist {
+                        if best_role.is_none() || cached_role.inner.position < best_role.unwrap().1 {
+                            best_role = Some((*role_id, cached_role.inner.position as u64));
                         }
                     }
                 }

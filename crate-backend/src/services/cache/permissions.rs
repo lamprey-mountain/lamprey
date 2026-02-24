@@ -4,11 +4,15 @@ use std::sync::Arc;
 
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Channel, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
+    Channel, Permission, PermissionOverwrite, PermissionOverwriteType, RoleId, RoomId, RoomMember,
+    UserId,
 };
 use tracing::warn;
 
-use crate::{services::cache::CachedRoom, types::Permissions};
+use crate::{
+    services::cache::{CachedChannel, CachedRoom},
+    types::{PermissionBits, Permissions},
+};
 
 /// a permission calculator for a room
 // NOTE: the only reason why this exists is because accessing a RwLock requires async or blocking_read, which i don't want
@@ -32,7 +36,11 @@ impl PermissionsCalculator {
         // admins have full permissions
         if !perms.has(Permission::Admin) {
             if let Some(channel) = channel {
-                self.calculate_channel_permissions(&mut perms, channel, member);
+                // only calculate channel permissions if the channel exists in cache
+                // (channels not in cache have no overwrites)
+                if let Some(cached_channel) = self.room.channels.get(&channel.id) {
+                    self.calculate_channel_permissions(&mut perms, &cached_channel, member);
+                }
             }
         }
 
@@ -59,13 +67,14 @@ impl PermissionsCalculator {
                 let everyone_role_id: RoleId = self.room_id.into_inner().into();
                 let mut perms = Permissions::empty();
 
-                if let Some(role) = self.room.roles.iter().find(|r| r.id == everyone_role_id) {
-                    for p in &role.allow {
-                        perms.add(*p);
-                    }
-                    for p in &role.deny {
-                        perms.remove(*p);
-                    }
+                if let Some(role) = self
+                    .room
+                    .roles
+                    .iter()
+                    .find(|r| r.inner.id == everyone_role_id)
+                {
+                    perms.add_bits(role.allow);
+                    perms.remove_bits(role.deny);
                 }
 
                 perms.set_lurker(true);
@@ -76,31 +85,27 @@ impl PermissionsCalculator {
             }
         };
 
-        // calculate role permissions
-        let mut allowed = Vec::new();
-        let mut denied = Vec::new();
+        // calculate role permissions using bit operations
+        let mut allowed_bits = PermissionBits::default();
+        let mut denied_bits = PermissionBits::default();
 
         let everyone_role_id = self.room_id.into_inner().into();
 
         for role in &self.room.roles {
-            if role.id == everyone_role_id || member.roles.contains(&role.id) {
-                allowed.extend_from_slice(&role.allow);
-                denied.extend_from_slice(&role.deny);
+            if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
+                allowed_bits.add_all(role.allow);
+                denied_bits.add_all(role.deny);
             }
         }
 
         let mut perms = Permissions::empty();
-        for p in allowed {
-            perms.add(p);
-        }
+        perms.add_bits(allowed_bits);
 
         if perms.has(Permission::Admin) {
             return perms;
         }
 
-        for p in denied {
-            perms.remove(p);
-        }
+        perms.remove_bits(denied_bits);
 
         // handle timeout
         if let Some(timeout_until) = member.timeout_until {
@@ -121,33 +126,33 @@ impl PermissionsCalculator {
     fn calculate_channel_permissions(
         &self,
         perms: &mut Permissions,
-        channel: &Channel,
+        cc: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
-        if let Some(parent_id) = channel.parent_id {
+        if let Some(parent_id) = cc.inner.parent_id {
             if let Some(parent) = self.room.channels.get(&parent_id) {
                 self.calculate_channel_permissions(perms, &parent, member);
             } else {
                 warn!(
-                    channel_id = ?channel.id,
+                    channel_id = ?cc.inner.id,
                     parent_id = ?parent_id,
                     "channel has a parent_id that doesn't exist"
                 );
             }
         }
 
-        self.apply_channel_overwrites(perms, &channel, member);
+        self.apply_channel_overwrites(perms, cc, member);
     }
 
     /// apply the permission overwrites for a channel to a permissions set
     fn apply_channel_overwrites(
         &self,
         perms: &mut Permissions,
-        channel: &Channel,
+        cc: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
         // handle locked channels/threads
-        if let Some(locked) = &channel.locked {
+        if let Some(locked) = &cc.inner.locked {
             let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
             if !is_expired {
                 perms.set_channel_locked(true);
@@ -162,82 +167,70 @@ impl PermissionsCalculator {
             }
         }
 
-        if channel.permission_overwrites.is_empty() {
+        if cc.overwrites.is_empty() {
             return;
         }
 
         // 1. apply everyone allows
-        for ow in &channel.permission_overwrites {
+        for ow in &cc.overwrites {
             if ow.id != *self.room_id {
                 continue;
             }
-            for p in &ow.allow {
-                perms.add(*p);
-            }
+            perms.add_bits(ow.allow);
         }
 
         // 2. apply everyone denies
-        for ow in &channel.permission_overwrites {
+        for ow in &cc.overwrites {
             if ow.id != *self.room_id {
                 continue;
             }
-            for p in &ow.deny {
-                perms.remove(*p);
-            }
+            perms.remove_bits(ow.deny);
         }
 
         let Some(member) = member else { return };
 
         // 3. apply role allows
-        for ow in &channel.permission_overwrites {
+        for ow in &cc.overwrites {
             if ow.ty != PermissionOverwriteType::Role {
                 continue;
             }
             if !member.roles.contains(&ow.id.into()) {
                 continue;
             }
-            for p in &ow.allow {
-                perms.add(*p);
-            }
+            perms.add_bits(ow.allow);
         }
 
         // 4. apply role denies
-        for ow in &channel.permission_overwrites {
+        for ow in &cc.overwrites {
             if ow.ty != PermissionOverwriteType::Role {
                 continue;
             }
             if !member.roles.contains(&ow.id.into()) {
                 continue;
             }
-            for p in &ow.deny {
-                perms.remove(*p);
-            }
+            perms.remove_bits(ow.deny);
         }
 
-        // 4. apply user allows
-        for ow in &channel.permission_overwrites {
+        // 5. apply user allows
+        for ow in &cc.overwrites {
             if ow.ty != PermissionOverwriteType::User {
                 continue;
             }
             if ow.id != *member.user_id {
                 continue;
             }
-            for p in &ow.allow {
-                perms.add(*p);
-            }
+            perms.add_bits(ow.allow);
         }
 
-        // 4. apply user denies
-        for ow in &channel.permission_overwrites {
+        // 6. apply user denies
+        for ow in &cc.overwrites {
             if ow.ty != PermissionOverwriteType::User {
                 continue;
             }
             if ow.id != *member.user_id {
                 continue;
             }
-            for p in &ow.deny {
-                perms.remove(*p);
-            }
+            perms.remove_bits(ow.deny);
         }
     }
 
@@ -256,7 +249,7 @@ impl PermissionsCalculator {
         let mut rank = 0u64;
         for role_id in &member.roles {
             if let Some(role) = self.room.roles.get(role_id) {
-                rank = rank.max(role.position as u64);
+                rank = rank.max(role.inner.position as u64);
             } else {
                 warn!(user_id = ?user_id, role_id = ?role_id, "user has role that doesnt exist");
             }

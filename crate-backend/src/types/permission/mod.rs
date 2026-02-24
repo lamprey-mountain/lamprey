@@ -8,8 +8,8 @@ use common::v1::types::{
 
 use crate::error::{Error, Result};
 
-mod bits;
-use bits::PermissionBits;
+pub mod bits;
+pub use bits::PermissionBits;
 
 /// permission calculator
 #[derive(Debug, Clone)]
@@ -77,9 +77,8 @@ impl Permissions {
     pub fn add(&mut self, perm: Permission) {
         // Handle implied permissions
         if perm == Permission::Admin {
-            for admin_perm in ADMIN_ROOM.iter() {
-                self.p.add(*admin_perm);
-            }
+            let admin_bits = PermissionBits::from_slice(ADMIN_ROOM);
+            self.p.add_all(admin_bits);
         } else if perm == Permission::CalendarEventManage {
             self.p.add(Permission::CalendarEventCreate);
         }
@@ -92,6 +91,32 @@ impl Permissions {
     pub fn remove(&mut self, perm: Permission) {
         // TODO: handle implied permissions?
         self.p.remove(perm);
+    }
+
+    /// Add all permissions from a PermissionBits (no implied permission handling)
+    #[inline]
+    pub fn add_bits(&mut self, bits: PermissionBits) {
+        self.p.add_all(bits);
+    }
+
+    /// Remove all permissions from a PermissionBits (no implied permission handling)
+    #[inline]
+    pub fn remove_bits(&mut self, bits: PermissionBits) {
+        self.p.remove_all(bits);
+    }
+
+    /// Add all permissions from a slice of Permissions (with implied permission handling)
+    pub fn add_all(&mut self, perms: &[Permission]) {
+        for perm in perms {
+            self.add(*perm);
+        }
+    }
+
+    /// Remove all permissions from a slice of Permissions
+    pub fn remove_all(&mut self, perms: &[Permission]) {
+        for perm in perms {
+            self.remove(*perm);
+        }
     }
 
     #[inline]
@@ -158,13 +183,8 @@ impl Permissions {
 
     /// remove all permissions except those in the allowed set
     pub fn mask(&mut self, perms: &[Permission]) {
-        let mut new = PermissionBits::default();
-        for p in perms {
-            if self.has(*p) {
-                new.add(*p);
-            }
-        }
-        self.p = new;
+        let allowed_bits = PermissionBits::from_slice(perms);
+        self.p = self.p & allowed_bits;
     }
 
     /// whether this user has permissions to bypass slowmode in this channel
