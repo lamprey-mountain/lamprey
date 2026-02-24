@@ -40,7 +40,7 @@ import { createStore } from "solid-js/store";
 import { RoomT } from "./types.ts";
 import { Friends } from "./Friends.tsx";
 import { Calendar } from "./Calendar.tsx";
-import { Document } from "./Document.tsx";
+import { Document } from "./editor/Document.tsx";
 import { Wiki } from "./Wiki.tsx";
 import {
 	createInitialDocumentState,

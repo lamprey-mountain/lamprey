@@ -44,7 +44,7 @@ import {
 } from "./channelctx";
 import { createStore } from "solid-js/store";
 import { handleSubmit } from "./dispatch/submit";
-import { createEditor } from "./Editor";
+import { createEditor } from "./editor/Editor";
 import type { EditorState } from "prosemirror-state";
 import icReply from "./assets/reply.png";
 import icReactionAdd from "./assets/reaction-add.png";

@@ -1,7 +1,7 @@
 import { For, Match, render, Show, Switch } from "solid-js/web";
 import { type Attachment, useCtx } from "./context.ts";
 import type { MessageT, ThreadT } from "./types.ts";
-import { createEditor } from "./Editor.tsx";
+import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";

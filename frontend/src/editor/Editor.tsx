@@ -2,9 +2,9 @@ import { type Command, EditorState, TextSelection } from "prosemirror-state";
 import { DOMParser } from "prosemirror-model";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { createEditor as createBaseEditor } from "./editor/mod.tsx";
-import { schema } from "./editor/schema.ts";
-import { md } from "./markdown.tsx";
+import { createEditor as createBaseEditor } from "./mod.tsx";
+import { schema } from "./schema.ts";
+import { md } from "../markdown.tsx";
 import {
 	createListContinueCommand,
 	createWrapCommand,

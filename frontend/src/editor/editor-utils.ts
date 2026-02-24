@@ -1,8 +1,8 @@
 import { Command, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { Schema } from "prosemirror-model";
-import type { ChatCtx } from "./context";
-import type { AutocompleteContextT } from "./contexts/mod.tsx";
+import type { ChatCtx } from "../context";
+import type { AutocompleteContextT } from "../contexts/mod.tsx";
 
 /** create a command that wraps or unwraps selected text with some characters */
 export function createWrapCommand(wrap: string): Command {

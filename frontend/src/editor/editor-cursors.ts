@@ -7,8 +7,8 @@ import {
 	offset,
 	shift,
 } from "@floating-ui/dom";
-import { Api } from "./api.tsx";
-import { getColor } from "./colors.ts";
+import { Api } from "../api.tsx";
+import { getColor } from "../colors.ts";
 import { base64UrlDecode, base64UrlEncode } from "./editor-utils.ts";
 import * as Y from "yjs";
 import {

@@ -3,7 +3,7 @@ import { useCtx } from "./context.ts";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import { createEditor } from "./Editor.tsx";
+import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
 import { RenderUploadItem } from "./Input.tsx";

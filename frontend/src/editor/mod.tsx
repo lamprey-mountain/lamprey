@@ -9,7 +9,7 @@ import { useCtx } from "../context";
 import { useAutocomplete } from "../contexts/mod.tsx";
 import { initTurndownService } from "../turndown.ts";
 import { decorate, md } from "../markdown.tsx";
-import { handleAutocomplete } from "../editor-utils.ts";
+import { handleAutocomplete } from "./editor-utils.ts";
 import { schema as defaultSchema } from "./schema";
 
 const turndown = initTurndownService();

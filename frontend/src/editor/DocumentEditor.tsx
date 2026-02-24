@@ -10,20 +10,20 @@ import {
 } from "y-prosemirror";
 import { keymap } from "prosemirror-keymap";
 import { render } from "solid-js/web";
-import { getEmojiUrl } from "./media/util.tsx";
-import { md } from "./markdown.tsx";
-import { useApi } from "./api.tsx";
+import { getEmojiUrl } from "../media/util.tsx";
+import { md } from "../markdown.tsx";
+import { useApi } from "../api.tsx";
 import { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
-import { createEditor as createBaseEditor } from "./editor/mod.tsx";
-import { schema } from "./editor/schema.ts";
+import { createEditor as createBaseEditor } from "./mod.tsx";
+import { schema } from "./schema.ts";
 import {
 	base64UrlDecode,
 	base64UrlEncode,
 	createListContinueCommand,
 	createWrapCommand,
 } from "./editor-utils.ts";
-import { type Api } from "./api.tsx";
+import { type Api } from "../api.tsx";
 
 const UserMention = (
 	props: { api: Api; userId: string; channelId: string },

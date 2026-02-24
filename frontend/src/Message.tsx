@@ -28,7 +28,7 @@ import { getEmojiUrl, type MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
-import { createEditor } from "./Editor.tsx";
+import { createEditor } from "./editor/Editor.tsx";
 import { render } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import twemoji from "twemoji";
