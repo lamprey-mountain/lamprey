@@ -501,7 +501,11 @@ const DocumentMain = (
 	});
 
 	return (
-		<main>
+		<main
+			onClick={() => {
+				editor.view?.focus();
+			}}
+		>
 			<editor.View
 				onSubmit={() => false}
 				channelId={props.channel.id}
