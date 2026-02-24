@@ -7,8 +7,14 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use common::v1::types::{self, media::MediaRef, EmbedCreate, MessageCreate, WebhookId};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use common::{
+    v1::types::{
+        self, media::MediaRef, EmbedCreate, MessageAttachmentCreate, MessageAttachmentCreateType,
+        MessageCreate, WebhookId,
+    },
+    v2::types::media::MediaReference,
+};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
@@ -138,15 +144,19 @@ pub async fn webhook_execute_discord(
                 .import_from_bytes(webhook_user_id, media_create, data.into())
                 .await?;
 
-            attachments.push(MediaRef { id: media.id });
+            attachments.push(MessageAttachmentCreate {
+                ty: MessageAttachmentCreateType::Media {
+                    media: MediaReference::Media { media_id: media.id },
+                    alt: None,
+                    filename: None,
+                },
+                spoiler: false,
+            });
         }
     }
     message_create.attachments = attachments;
 
-    if message_create.content.is_none()
-        && message_create.attachments.is_empty()
-        && message_create.embeds.is_empty()
-    {
+    if message_create.is_empty() {
         return Err(Error::BadRequest(
             "at least one of content, attachments, or embeds must be defined".to_string(),
         ));

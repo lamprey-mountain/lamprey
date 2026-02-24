@@ -3,8 +3,8 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
-use common::unstable::types::harvest::{Harvest, HarvestCreate};
 use common::v1::types::application::Scope;
+use common::v1::types::harvest::{Harvest, HarvestCreate};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
@@ -66,7 +66,7 @@ async fn user_update(
     }
     if let Some(Some(avatar_media_id)) = patch.avatar {
         let media = data.media_select(avatar_media_id).await?;
-        if !matches!(media.inner.source.info, MediaTrackInfo::Image(_)) {
+        if !media.metadata.is_image() {
             return Err(Error::BadStatic(
                 "couldn't link media as avatar: not an image",
             ));
@@ -74,7 +74,7 @@ async fn user_update(
     }
     if let Some(Some(banner_media_id)) = patch.banner {
         let media = data.media_select(banner_media_id).await?;
-        if !matches!(media.inner.source.info, MediaTrackInfo::Image(_)) {
+        if !media.metadata.is_image() {
             return Err(Error::BadStatic(
                 "couldn't link media as banner: not an image",
             ));

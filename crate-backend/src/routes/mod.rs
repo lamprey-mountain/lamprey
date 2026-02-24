@@ -19,7 +19,6 @@ mod federation;
 mod internal;
 mod invite;
 mod media;
-mod media2;
 mod message;
 mod moderation;
 mod notification;
@@ -51,7 +50,6 @@ pub mod metrics;
 pub mod util;
 
 fn routes_v1() -> OpenApiRouter<Arc<ServerState>> {
-    // TODO: lamprey_backend_rest::router()
     OpenApiRouter::new()
         .merge(ack::routes())
         .merge(admin::routes())
@@ -96,14 +94,7 @@ fn routes_v1() -> OpenApiRouter<Arc<ServerState>> {
         .merge(webhook::routes())
 }
 
-// TODO: move v1 and v2 routes into separate subdirectories?
-// TODO: copy all unmodified v1 routes here?
-fn routes_v2() -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new().merge(media2::routes())
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new()
-        .nest("/v1", routes_v1())
-        .nest("/v2", routes_v2())
+    // TODO: lamprey_backend_rest::router()
+    OpenApiRouter::new().nest("/v1", routes_v1())
 }

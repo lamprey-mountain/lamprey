@@ -19,17 +19,16 @@ use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
-use crate::v2::types::message::Message as MessageV2;
+use crate::v2::types::media::{Media, MediaReference};
+use crate::v2::types::message::{Message as MessageV2, MessageMetadata};
 
 use super::channel::Channel;
 use super::EmbedCreate;
-use super::{
-    media::{Media, MediaRef},
-    ChannelId, MessageId, MessageVerId,
-};
+use super::{ChannelId, MessageId, MessageVerId};
 use std::fmt;
 
 pub mod components;
+pub mod metadata;
 
 /// a message
 #[derive(Debug, Clone)]
@@ -112,7 +111,6 @@ impl MessageVersion {
                     metadata: None,
                     reply_id: m.reply_id,
                     embeds: vec![],
-                    override_name: None,
                 })
             }
             m => m,
@@ -276,36 +274,22 @@ pub struct MentionsEmoji {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageCreate {
-    /// the message's content, in either markdown or the new format depending on if use_new_text_formatting is true
+    /// the message's content in markdown
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
 
+    /// message attachments
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 0, max_length = 32)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
     #[cfg_attr(feature = "serde", serde(default))]
-    pub attachments: Vec<MediaRef>,
-
-    /// arbitrary metadata associated with a message
-    ///
-    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    // TODO: remove
-    pub metadata: Option<serde_json::Value>,
+    pub attachments: Vec<MessageAttachmentCreate>,
 
     /// the message this message is replying to
     pub reply_id: Option<MessageId>,
-
-    /// override the name of this message's sender
-    ///
-    /// deprecated: create new puppets for each bridged user instead
-    // TODO: remove
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub override_name: Option<String>,
 
     #[cfg_attr(
         feature = "utoipa",
@@ -315,57 +299,43 @@ pub struct MessageCreate {
     #[cfg_attr(feature = "serde", serde(default))]
     pub embeds: Vec<EmbedCreate>,
 
-    /// custom timestamps (timestamp massaging), for bridge bots
-    // TODO: remove (use header instead)
-    pub created_at: Option<Time>,
-
     #[cfg_attr(feature = "serde", serde(default))]
     pub mentions: ParseMentions,
+
+    /// application defined metadata
+    pub metadata: Option<MessageMetadata>,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessagePatch {
-    /// the new message content. whether its markdown/new format depends on the target message's format
+    /// the new message content in markdown
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub content: Option<Option<String>>,
 
+    /// message attachments
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 0, max_length = 32)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
-    pub attachments: Option<Vec<MediaRef>>,
-
-    /// arbitrary metadata associated with a message
-    ///
-    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
-    // TODO: remove (use header instead)
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
-    pub metadata: Option<Option<serde_json::Value>>,
+    pub attachments: Option<Vec<MessageAttachmentCreate>>,
 
     /// the message this message is replying to
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub reply_id: Option<Option<MessageId>>,
 
-    /// override the name of this message's sender
-    ///
-    /// deprecated: create new puppets for each bridged user instead
-    // TODO: remove
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub override_name: Option<Option<String>>,
-
     pub embeds: Option<Vec<EmbedCreate>>,
 
-    // TODO: remove (use header instead)
-    pub edited_at: Option<Time>,
-
-    pub mentions: Option<ParseMentions>,
+    /// application defined metadata
+    ///
+    /// passing this will replace metadata
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    pub metadata: Option<Option<MessageMetadata>>,
 }
 
 // NOTE: utoipa doesnt seem to like #[deprecated] here
@@ -585,7 +555,7 @@ pub struct MessageBotCommand {
 }
 
 /// a basic message, written using markdown
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -595,16 +565,13 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
 
-    // TODO(#325): use MediaRef here during create
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub attachments: Vec<Media>,
+    pub attachments: Vec<MessageAttachment>,
 
-    /// arbitrary metadata associated with a message
-    ///
-    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub metadata: Option<serde_json::Value>,
+    /// application defined metadata
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub metadata: Option<MessageMetadata>,
 
     /// the message this message is replying to
     pub reply_id: Option<MessageId>,
@@ -612,17 +579,97 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<Embed>,
+}
 
-    /// override the name of this message's sender
-    ///
-    /// deprecated: create new puppets for each bridged user instead
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub override_name: Option<String>,
-    // // experimental! don't touch yet.
-    // #[cfg(feature = "feat_interaction")]
-    // #[cfg_attr(feature = "utoipa", schema(ignore))]
-    // #[cfg_attr(feature = "serde", serde(default))]
-    // pub interactions: Interactions,
+/// used in `message_create` and `message_update`
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MessageAttachmentCreate {
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub ty: MessageAttachmentCreateType,
+
+    /// if this is a spoiler and should be blurred
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub spoiler: bool,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MessageAttachment {
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub ty: MessageAttachmentType,
+
+    /// if this is a spoiler and should be blurred
+    pub spoiler: bool,
+}
+
+/// a snapshot of a message at a point in time, for forwards
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageSnapshot {
+    pub room_id: Option<RoomId>,
+    pub channel_id: ChannelId,
+    pub message_id: MessageId,
+    pub version_id: MessageVerId,
+    pub created_at: Time,
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub message_type: MessageType,
+
+    /// who this message mentioned
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Mentions::is_empty"))]
+    pub mentions: Mentions,
+}
+
+// FIXME: validator
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MessageAttachmentCreateType {
+    Media {
+        #[cfg_attr(feature = "serde", serde(flatten))]
+        media: MediaReference,
+
+        /// Shortcut for setting alt text on the media item
+        #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+        // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+        alt: Option<Option<String>>,
+
+        /// Shortcut for setting filename on the media item
+        #[cfg_attr(
+            feature = "utoipa",
+            schema(required = false, min_length = 1, max_length = 256)
+        )]
+        // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+        filename: Option<String>,
+    },
+
+    #[cfg(feature = "feat_message_forwarding")]
+    Forward {
+        channel_id: ChannelId,
+        message_id: MessageId,
+    },
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
+pub enum MessageAttachmentType {
+    /// a piece of media
+    // or should this be called File? should i differentiate files and media?
+    Media { media: Media },
+
+    #[cfg(feature = "feat_message_forwarding")]
+    /// a forwarded message
+    Forward { snapshot: MessageSnapshot },
+    // should i have Embed for explicitly added embeds vs generated embeds?
+    // TODO: Geolocation,
+    // TODO: Moderation, (automod execution? or should this be a message type?)
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -783,14 +830,58 @@ impl Diff<Message> for MessagePatch {
                 self.content.changes(&m.content)
                     || self.reply_id.changes(&m.reply_id)
                     || self.embeds.is_some()
-                    || self.attachments.is_some()
-                    || self.reply_id.changes(&m.reply_id)
-                    || self.override_name.changes(&m.override_name)
+                    || self.metadata.changes(&m.metadata)
                     || self.attachments.as_ref().is_some_and(|a| {
                         a.len() != m.attachments.len()
-                            || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
+                            || a.iter().zip(&m.attachments).any(|(a, b)| {
+                                if a.spoiler != b.spoiler {
+                                    return true;
+                                }
+
+                                match (&a.ty, &b.ty) {
+                                    (
+                                        MessageAttachmentCreateType::Media {
+                                            media,
+                                            alt,
+                                            filename,
+                                        },
+                                        MessageAttachmentType::Media {
+                                            media: existing_media,
+                                        },
+                                    ) => {
+                                        match media {
+                                            MediaReference::Media { media_id } => {
+                                                if *media_id != existing_media.id {
+                                                    return true;
+                                                }
+                                            }
+                                            // if we're not referencing the media by id, we're uploading/downloading it
+                                            _ => return true,
+                                        }
+
+                                        alt.changes(&existing_media.alt)
+                                            || filename
+                                                .as_ref()
+                                                .is_some_and(|f| f != &existing_media.filename)
+                                    }
+                                    #[cfg(feature = "feat_message_forwarding")]
+                                    (
+                                        MessageAttachmentCreateType::Forward {
+                                            channel_id,
+                                            message_id,
+                                        },
+                                        MessageAttachmentType::Forward { snapshot },
+                                    ) => {
+                                        *channel_id != snapshot.channel_id
+                                            || *message_id != snapshot.message_id
+                                    }
+                                    #[allow(unreachable_patterns)]
+                                    _ => true,
+                                }
+                            })
                     })
             }
+            // this edit is invalid!
             _ => false,
         }
     }
@@ -882,6 +973,15 @@ impl MessageDefaultMarkdown {
 
 impl fmt::Display for MessageType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // NOTE: i probably want a better Display impl than using fmt_tantivy
+        self.fmt_tantivy(f)
+    }
+}
+
+impl MessageType {
+    /// format a message for tantivy search indexing
+    pub fn fmt_tantivy(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: include ids (eg. user id in MemberAdd, or message id in MessagePinned)
         match self {
             MessageType::DefaultMarkdown(m) => {
                 if let Some(content) = &m.content {

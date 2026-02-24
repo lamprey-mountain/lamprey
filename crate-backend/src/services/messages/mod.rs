@@ -1,5 +1,6 @@
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
+use common::v2::types::media::MediaReference;
 use futures::{stream::FuturesUnordered, StreamExt};
 use moka::future::Cache;
 use std::collections::{HashMap, HashSet};
@@ -20,7 +21,8 @@ use common::v1::types::{
 use common::v1::types::{ThreadMemberPut, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 use common::v2::types::message::{
-    Message, MessageDefaultMarkdown, MessagePatch, MessageType, MessageVersion,
+    Message, MessageAttachmentCreateType, MessageDefaultMarkdown, MessagePatch, MessageType,
+    MessageVersion,
 };
 use http::StatusCode;
 use linkify::LinkFinder;
@@ -236,19 +238,20 @@ impl ServiceMessages {
                         )
                         .await?;
                 }
-                if json.created_at.is_some() {
-                    if let Some(puppet) = user.puppet {
-                        let owner_perms = srv
-                            .perms
-                            .for_channel(puppet.owner_id.into_inner().into(), thread_id)
-                            .await?;
-                        let required_perms =
-                            vec![Permission::ViewChannel, Permission::MemberBridge];
-                        owner_perms.ensure_all(&required_perms)?;
-                    } else {
-                        return Err(Error::BadStatic("not a puppet"));
-                    }
-                }
+                // TODO: re-add timestamp massaging
+                // if json.created_at.is_some() {
+                //     if let Some(puppet) = user.puppet {
+                //         let owner_perms = srv
+                //             .perms
+                //             .for_channel(puppet.owner_id.into_inner().into(), thread_id)
+                //             .await?;
+                //         let required_perms =
+                //             vec![Permission::ViewChannel, Permission::MemberBridge];
+                //         owner_perms.ensure_all(&required_perms)?;
+                //     } else {
+                //         return Err(Error::BadStatic("not a puppet"));
+                //     }
+                // }
 
                 perms.has(Permission::EmojiUseExternal)
             } else {
@@ -272,16 +275,24 @@ impl ServiceMessages {
         };
 
         // TODO: move this to validation?
-        if json.content.as_ref().is_none_or(|s| s.is_empty())
-            && json.attachments.is_empty()
-            && json.embeds.is_empty()
-        {
+        if json.is_empty() {
             return Err(Error::BadStatic(
                 "at least one of content, attachments, or embeds must be defined",
             ));
         }
 
-        let attachment_ids: Vec<_> = json.attachments.iter().map(|r| r.id).collect();
+        let attachment_ids: Vec<_> = json
+            .attachments
+            .iter()
+            .filter_map(|r| match &r.ty {
+                MessageAttachmentCreateType::Media { media, .. } => match media {
+                    MediaReference::Media { media_id } => Some(*media_id),
+                    // TODO: impl url and attachment media references
+                    MediaReference::Url { .. } => None,
+                    MediaReference::Attachment { .. } => None,
+                },
+            })
+            .collect();
         let mut all_media_ids = std::collections::HashSet::new();
         for id in &attachment_ids {
             if !all_media_ids.insert(*id) {
@@ -292,17 +303,29 @@ impl ServiceMessages {
         if !json.embeds.is_empty() {
             for embed in &json.embeds {
                 if let Some(m) = &embed.media {
-                    if !all_media_ids.insert(m.id) {
+                    let Some(media_id) = m.media_id() else {
+                        return Err(Error::Unimplemented);
+                    };
+
+                    if !all_media_ids.insert(media_id) {
                         return Err(Error::BadStatic("duplicate media id in request"));
                     }
                 }
                 if let Some(m) = &embed.thumbnail {
-                    if !all_media_ids.insert(m.id) {
+                    let Some(media_id) = m.media_id() else {
+                        return Err(Error::Unimplemented);
+                    };
+
+                    if !all_media_ids.insert(media_id) {
                         return Err(Error::BadStatic("duplicate media id in request"));
                     }
                 }
                 if let Some(m) = &embed.author_avatar {
-                    if !all_media_ids.insert(m.id) {
+                    let Some(media_id) = m.media_id() else {
+                        return Err(Error::Unimplemented);
+                    };
+
+                    if !all_media_ids.insert(media_id) {
                         return Err(Error::BadStatic("duplicate media id in request"));
                     }
                 }
@@ -379,7 +402,8 @@ impl ServiceMessages {
                 embeds: embeds.into_iter().map(|e| e.into()).collect(),
                 message_type: payload,
                 edited_at: None,
-                created_at: json.created_at.map(|t| t.into()),
+                created_at: None,
+                // created_at: json.created_at.map(|t| t.into()),
                 removed_at: removed_at.map(|t| t.into()),
                 mentions: mentions.clone(),
             })
@@ -390,9 +414,9 @@ impl ServiceMessages {
             error!("Message id mismatch: {} != {}", message_id, message_id_db);
         }
         for id in &all_media_ids {
-            data.media2_link_insert(*id, message_uuid, MediaLinkType::Message)
+            data.media_link_insert(*id, message_uuid, MediaLinkType::Message)
                 .await?;
-            data.media2_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
+            data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
                 .await?;
         }
         let mut message = self.get(thread_id, message_id, user_id).await?;
@@ -777,13 +801,8 @@ impl ServiceMessages {
             .map(|ats| {
                 ats.into_iter()
                     .filter_map(|r| match r.ty {
-                        common::v2::types::message::MessageAttachmentCreateType::Media {
-                            media,
-                            ..
-                        } => match media {
-                            common::v2::types::media::MediaReference::Media { media_id } => {
-                                Some(media_id)
-                            }
+                        MessageAttachmentCreateType::Media { media, .. } => match media {
+                            MediaReference::Media { media_id } => Some(media_id),
                             _ => None,
                         },
                     })
@@ -802,8 +821,8 @@ impl ServiceMessages {
                 _ => vec![],
             });
         for id in &attachment_ids {
-            data.media2_select(*id).await?;
-            let existing = data.media2_link_select(*id).await?;
+            data.media_select(*id).await?;
+            let existing = data.media_link_select(*id).await?;
             let has_link = existing.iter().any(|i| {
                 i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner()
             });
@@ -876,9 +895,9 @@ impl ServiceMessages {
             .await?;
 
         for id in &attachment_ids {
-            data.media2_link_insert(*id, *version_id, MediaLinkType::MessageVersion)
+            data.media_link_insert(*id, *version_id, MediaLinkType::MessageVersion)
                 .await?;
-            data.media2_link_insert(*id, *message_id, MediaLinkType::Message)
+            data.media_link_insert(*id, *message_id, MediaLinkType::Message)
                 .await?;
         }
 
@@ -1457,8 +1476,11 @@ async fn embed_from_create(
     user_id: UserId,
 ) -> Result<Embed> {
     let media = if let Some(media_ref) = value.media {
-        let media = s.data().media_select(media_ref.id).await?;
-        if media.user_id != user_id {
+        let Some(media_id) = media_ref.media_id() else {
+            return Err(Error::Unimplemented);
+        };
+        let media = s.data().media_select(media_id).await?;
+        if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
         }
         Some(media)
@@ -1466,8 +1488,11 @@ async fn embed_from_create(
         None
     };
     let thumbnail = if let Some(media_ref) = value.thumbnail {
-        let media = s.data().media_select(media_ref.id).await?;
-        if media.user_id != user_id {
+        let Some(media_id) = media_ref.media_id() else {
+            return Err(Error::Unimplemented);
+        };
+        let media = s.data().media_select(media_id).await?;
+        if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
         }
         Some(media)
@@ -1475,8 +1500,11 @@ async fn embed_from_create(
         None
     };
     let author_avatar = if let Some(media_ref) = value.author_avatar {
-        let media = s.data().media_select(media_ref.id).await?;
-        if media.user_id != user_id {
+        let Some(media_id) = media_ref.media_id() else {
+            return Err(Error::Unimplemented);
+        };
+        let media = s.data().media_select(media_id).await?;
+        if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
         }
         Some(media)

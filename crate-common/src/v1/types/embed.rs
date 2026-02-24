@@ -1,5 +1,6 @@
-use crate::v1::types::{
-    media::Media, misc::Color, util::truncate::truncate_with_ellipsis, EmbedId,
+use crate::{
+    v1::types::{misc::Color, util::truncate::truncate_with_ellipsis, EmbedId},
+    v2::types::media::{Media, MediaReference},
 };
 
 #[cfg(feature = "serde")]
@@ -11,8 +12,6 @@ use utoipa::ToSchema;
 
 #[cfg(feature = "validator")]
 use validator::Validate;
-
-use super::media::MediaRef;
 
 // maybe allow iframes for some sites? probably could be done client side though
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -30,7 +29,7 @@ pub enum EmbedType {
     Custom,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -114,10 +113,8 @@ pub struct EmbedCreate {
 
     /// the theme color of the site, as a hex string (`#rrggbb`)
     pub color: Option<String>,
-
-    // TODO(#915): use MediaReference
-    pub media: Option<MediaRef>,
-    pub thumbnail: Option<MediaRef>,
+    pub media: Option<MediaReference>,
+    pub thumbnail: Option<MediaReference>,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
@@ -125,7 +122,7 @@ pub struct EmbedCreate {
 
     pub author_url: Option<Url>,
 
-    pub author_avatar: Option<MediaRef>,
+    pub author_avatar: Option<MediaReference>,
 }
 
 impl Embed {

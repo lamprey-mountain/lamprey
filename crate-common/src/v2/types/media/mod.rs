@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use core::fmt;
+use std::{collections::HashMap, str::FromStr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -122,7 +123,7 @@ pub struct Media {
 
     /// Whether this media can be fetched through the `/thumb/{media_id}` cdn route.
     pub has_thumbnail: bool,
-
+    // TODO: has_thumbnail
     /// Whether this media can be fetched through the `/gifv/{media_id}` cdn route.
     pub has_gifv: bool,
 
@@ -216,6 +217,28 @@ pub enum MediaMetadata {
 
     /// A generic file
     File,
+}
+
+impl MediaMetadata {
+    /// Returns `true` if this media is an image.
+    pub fn is_image(&self) -> bool {
+        matches!(self, MediaMetadata::Image { .. })
+    }
+
+    /// Returns `true` if this media is a video.
+    pub fn is_video(&self) -> bool {
+        matches!(self, MediaMetadata::Video { .. })
+    }
+
+    /// Returns `true` if this media is an audio file.
+    pub fn is_audio(&self) -> bool {
+        matches!(self, MediaMetadata::Audio { .. })
+    }
+
+    /// Returns `true` if this media is a text file.
+    pub fn is_text(&self) -> bool {
+        matches!(self, MediaMetadata::Text)
+    }
 }
 
 /// The type of hash used for media file verification.
@@ -522,5 +545,15 @@ mod val {
 impl Diff<Media> for MediaPatch {
     fn changes(&self, other: &Media) -> bool {
         self.alt.changes(&other.alt) || self.filename.changes(&other.filename)
+    }
+}
+
+impl MediaReference {
+    pub fn media_id(&self) -> Option<MediaId> {
+        match self {
+            MediaReference::Media { media_id } => Some(*media_id),
+            MediaReference::Url { .. } => None,
+            MediaReference::Attachment { .. } => None,
+        }
     }
 }

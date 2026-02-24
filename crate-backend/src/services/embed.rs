@@ -540,19 +540,19 @@ impl ServiceEmbed {
                 }
 
                 if let Some(media) = &embed.media {
-                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.thumbnail {
-                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.author_avatar {
-                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.site_avatar {
-                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
 

@@ -7,21 +7,20 @@ use common::v1::types::document::{
     DocumentBranchState, DocumentPatch, DocumentTag, Wiki, WikiPatch,
 };
 use common::v1::types::email::EmailAddr;
-use common::v1::types::media::MediaWithAdmin;
 use common::v1::types::oauth::Scopes;
 use common::v1::types::util::Time;
 
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
-    DocumentBranchId, DocumentTagId, Media, MediaId, MediaPatch, PaginationQuery,
-    PaginationResponse, PinsReorder, Role, RoleId, RolePatch, RoleReorder, RoleVerId, Room,
-    RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, SessionPatch, SessionStatus,
-    SessionToken, Suspended, User, UserId, UserListFilter,
+    DocumentBranchId, DocumentTagId, MediaId, PaginationQuery, PaginationResponse, PinsReorder,
+    Role, RoleId, RolePatch, RoleReorder, RoleVerId, Room, RoomCreate, RoomId, RoomPatch,
+    RoomVerId, Session, SessionId, SessionPatch, SessionStatus, SessionToken, Suspended, User,
+    UserId, UserListFilter,
 };
 
 use common::v2::types::embed::Embed;
-use common::v2::types::media::Media as MediaV2;
-use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
+use common::v2::types::media::{Media, MediaPatch};
+use common::v2::types::message::{Message, MessageVersion};
 
 use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
@@ -51,8 +50,7 @@ pub trait Data:
     + DataRoleMember
     + DataPermission
     + DataInvite
-    + DataMediaV1
-    + DataMediaV2
+    + DataMedia
     + DataMessage
     + DataSession
     + DataChannel
@@ -151,10 +149,14 @@ pub trait DataRole {
 }
 
 #[async_trait]
-pub trait DataMediaV1 {
-    async fn media_insert(&self, user_id: UserId, media: Media) -> Result<()>;
-    async fn media_select(&self, media_id: MediaId) -> Result<MediaWithAdmin>;
-    async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
+pub trait DataMedia {
+    async fn media_insert(&self, media: Media) -> Result<()>;
+    async fn media_select(&self, media_id: MediaId) -> Result<Media>;
+    async fn media_update(
+        &self,
+        media_id: MediaId,
+        patch: MediaPatch,
+    ) -> Result<()>;
     async fn media_delete(&self, media_id: MediaId) -> Result<()>;
     async fn media_link_insert(
         &self,
@@ -166,33 +168,6 @@ pub trait DataMediaV1 {
     async fn media_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
     async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()>;
     async fn media_link_create_exclusive(
-        &self,
-        media_id: MediaId,
-        target_id: Uuid,
-        link_type: MediaLinkType,
-    ) -> Result<()>;
-}
-
-#[async_trait]
-pub trait DataMediaV2 {
-    async fn media2_insert(&self, media: MediaV2) -> Result<()>;
-    async fn media2_select(&self, media_id: MediaId) -> Result<MediaV2>;
-    async fn media2_update(
-        &self,
-        media_id: MediaId,
-        patch: common::v2::types::media::MediaPatch,
-    ) -> Result<()>;
-    async fn media2_delete(&self, media_id: MediaId) -> Result<()>;
-    async fn media2_link_insert(
-        &self,
-        media_id: MediaId,
-        target_id: Uuid,
-        link_type: MediaLinkType,
-    ) -> Result<()>;
-    async fn media2_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>>;
-    async fn media2_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
-    async fn media2_link_delete_all(&self, target_id: Uuid) -> Result<()>;
-    async fn media2_link_create_exclusive(
         &self,
         media_id: MediaId,
         target_id: Uuid,
@@ -220,43 +195,43 @@ pub trait DataMessage {
         channel_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
-    ) -> Result<MessageV2>;
+    ) -> Result<Message>;
     async fn message_get_many(
         &self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
         user_id: UserId,
-    ) -> Result<Vec<MessageV2>>;
+    ) -> Result<Vec<Message>>;
     async fn message_list(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>>;
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_list_deleted(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>>;
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_list_removed(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>>;
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_list_activity(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>>;
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_list_all(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>>;
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
     async fn message_delete_bulk(
         &self,
@@ -278,7 +253,7 @@ pub trait DataMessage {
         channel_id: ChannelId,
         version_id: MessageVerId,
         user_id: UserId,
-    ) -> Result<MessageVersionV2>;
+    ) -> Result<MessageVersion>;
     async fn message_version_delete(
         &self,
         channel_id: ChannelId,
@@ -290,7 +265,7 @@ pub trait DataMessage {
         message_id: MessageId,
         user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
-    ) -> Result<PaginationResponse<MessageVersionV2>>;
+    ) -> Result<PaginationResponse<MessageVersion>>;
     async fn message_replies(
         &self,
         channel_id: ChannelId,
@@ -299,7 +274,7 @@ pub trait DataMessage {
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>>;
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_pin_create(
         &self,
         channel_id: ChannelId,
@@ -312,12 +287,12 @@ pub trait DataMessage {
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>>;
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_get_ancestors(
         &self,
         message_id: MessageId,
         limit: u16,
-    ) -> Result<Vec<MessageV2>>;
+    ) -> Result<Vec<Message>>;
     async fn message_fetch_mention_ids(
         &self,
         channel_id: ChannelId,

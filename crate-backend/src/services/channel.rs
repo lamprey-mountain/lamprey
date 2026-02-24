@@ -429,10 +429,7 @@ impl ServiceChannels {
 
         if let Some(icon) = json.icon {
             let media = data.media_select(icon).await?;
-            if !matches!(
-                media.inner.source.info,
-                common::v1::types::MediaTrackInfo::Image(_)
-            ) {
+            if !media.metadata.is_image() {
                 return Err(Error::BadStatic("media not an image"));
             }
         }
@@ -927,10 +924,7 @@ impl ServiceChannels {
                 return Err(Error::BadStatic("this channel doesnt have an icon"));
             }
             let media = data.media_select(icon).await?;
-            if !matches!(
-                media.inner.source.info,
-                common::v1::types::MediaTrackInfo::Image(_)
-            ) {
+            if !media.metadata.is_image() {
                 return Err(Error::BadStatic("media not an image"));
             }
         }

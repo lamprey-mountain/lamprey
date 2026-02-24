@@ -477,7 +477,6 @@ pub struct DbMessageCreate {
     pub mentions: Mentions,
 }
 
-// TODO: move to types?
 impl DbMessageCreate {
     pub fn content(&self) -> Option<String> {
         match &self.message_type {

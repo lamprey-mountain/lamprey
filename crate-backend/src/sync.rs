@@ -1,11 +1,8 @@
-use common::{
-    v1::types::{
-        document::{DocumentStateVector, DocumentUpdate},
-        sync::{SyncCompression, SyncParams, SyncResume},
-        voice::VoiceStateScreenshare,
-        ChannelId, ConnectionId, SessionToken, UserId,
-    },
-    v2::types::media::MediaStatus,
+use common::v1::types::{
+    document::{DocumentStateVector, DocumentUpdate},
+    sync::{SyncCompression, SyncParams, SyncResume},
+    voice::VoiceStateScreenshare,
+    ChannelId, ConnectionId, SessionToken, UserId,
 };
 use flate2::{
     Compress, Compression as FlateCompression, Decompress, FlushCompress, FlushDecompress, Status,
@@ -1034,7 +1031,7 @@ impl Connection {
             MessageSync::TagCreate { tag } => AuthCheck::Channel(tag.channel_id),
             MessageSync::TagUpdate { tag } => AuthCheck::Channel(tag.channel_id),
             MessageSync::TagDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
-            MessageSync::MediaProcessed { media, session_id } => AuthCheck::Session(*session_id),
+            MessageSync::MediaProcessed { session_id, .. } => AuthCheck::Session(*session_id),
             MessageSync::MediaUpdate { media } => {
                 if media.links.is_empty() {
                     AuthCheck::User(media.user_id.expect("server always has media.user_id"))

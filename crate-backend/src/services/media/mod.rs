@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    collections::HashMap,
     io::{Cursor, SeekFrom},
     sync::Arc,
 };
@@ -251,6 +252,7 @@ impl ServiceMedia {
             links: vec![],
             room_id: None,
             channel_id: None,
+            hashes: HashMap::default(),
         };
 
         debug!("finish upload for {}, mime {}", media_id, mime);
@@ -281,7 +283,7 @@ impl ServiceMedia {
         };
         upload_s3.await?;
         drop(tmp);
-        self.state.data().media2_insert(media.clone()).await?;
+        self.state.data().media_insert(media.clone()).await?;
         Ok(media)
     }
 

@@ -205,6 +205,7 @@ pub struct MediaRef {
     pub id: MediaId,
 }
 
+// hmmm.... maybe copy this for v2?
 /// even more metadata about media
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

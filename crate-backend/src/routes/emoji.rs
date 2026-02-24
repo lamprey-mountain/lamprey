@@ -55,10 +55,7 @@ async fn emoji_create(
 
     let data = s.data();
     let media = data.media_select(json.media_id).await?;
-    if !matches!(
-        media.inner.source.info,
-        common::v1::types::MediaTrackInfo::Image(_)
-    ) {
+    if !media.metadata.is_image() {
         return Err(Error::BadStatic("media not an image"));
     }
 

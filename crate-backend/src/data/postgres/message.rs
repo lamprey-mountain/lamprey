@@ -5,8 +5,8 @@ use common::v1::types::util::Time;
 use common::v1::types::{ChannelType, Mentions, UserId};
 use common::v2::types::embed::Embed;
 use common::v2::types::message::{
-    Message as MessageV2, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown,
-    MessageType, MessageVersion as MessageVersionV2,
+    Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
+    MessageVersion,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
@@ -62,9 +62,9 @@ pub struct DbMessageVersion {
     pub attachments: serde_json::Value,
 }
 
-impl From<DbMessage> for MessageV2 {
+impl From<DbMessage> for Message {
     fn from(row: DbMessage) -> Self {
-        MessageV2 {
+        Message {
             id: row.id,
             channel_id: row.channel_id,
             room_id: row.room_id.map(|i| i.into()),
@@ -93,9 +93,9 @@ impl From<DbMessage> for MessageV2 {
     }
 }
 
-impl From<DbMessageVersion> for MessageVersionV2 {
+impl From<DbMessageVersion> for MessageVersion {
     fn from(row: DbMessageVersion) -> Self {
-        MessageVersionV2 {
+        MessageVersion {
             version_id: row.version_id,
             author_id: Some(row.author_id),
             message_type: match row.message_type {
@@ -396,7 +396,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         id: MessageId,
         _user_id: UserId,
-    ) -> Result<MessageV2> {
+    ) -> Result<Message> {
         let row = query_file_as!(DbMessage, "sql/message_get.sql", *channel_id, *id)
             .fetch_one(&self.pool)
             .await
@@ -414,7 +414,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         message_ids: &[MessageId],
         _user_id: UserId,
-    ) -> Result<Vec<MessageV2>> {
+    ) -> Result<Vec<Message>> {
         let ids: Vec<Uuid> = message_ids.iter().map(|id| **id).collect();
         let rows = query_file_as!(DbMessage, "sql/message_get_many.sql", *channel_id, &ids)
             .fetch_all(&self.pool)
@@ -427,7 +427,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>> {
+    ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -442,7 +442,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_count.sql", channel_id.into_inner()),
-            |i: &MessageV2| i.id.to_string()
+            |i: &Message| i.id.to_string()
         )
     }
 
@@ -451,7 +451,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>> {
+    ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -466,7 +466,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_count_deleted.sql", channel_id.into_inner()),
-            |i: &MessageV2| i.id.to_string()
+            |i: &Message| i.id.to_string()
         )
     }
 
@@ -475,7 +475,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>> {
+    ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -490,7 +490,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_count_removed.sql", channel_id.into_inner()),
-            |i: &MessageV2| i.id.to_string()
+            |i: &Message| i.id.to_string()
         )
     }
 
@@ -499,7 +499,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>> {
+    ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -514,7 +514,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_activity_count.sql", channel_id.into_inner()),
-            |i: &MessageV2| i.id.to_string()
+            |i: &Message| i.id.to_string()
         )
     }
 
@@ -587,7 +587,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         version_id: MessageVerId,
         _user_id: UserId,
-    ) -> Result<MessageVersionV2> {
+    ) -> Result<MessageVersion> {
         let row = query_file_as!(
             DbMessageVersion,
             "sql/message_version_get.sql",
@@ -648,7 +648,7 @@ impl DataMessage for Postgres {
         message_id: MessageId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
-    ) -> Result<PaginationResponse<MessageVersionV2>> {
+    ) -> Result<PaginationResponse<MessageVersion>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -668,7 +668,7 @@ impl DataMessage for Postgres {
                 channel_id.into_inner(),
                 message_id.into_inner(),
             ),
-            |i: &MessageVersionV2| i.version_id.to_string()
+            |i: &MessageVersion| i.version_id.to_string()
         )
     }
 
@@ -680,7 +680,7 @@ impl DataMessage for Postgres {
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>> {
+    ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         let rmid = root_message_id.map(|i| *i);
         gen_paginate!(
@@ -705,7 +705,7 @@ impl DataMessage for Postgres {
                 depth as i32,
                 breadth.map(|b| b as i64)
             ),
-            |i: &MessageV2| i.id.to_string()
+            |i: &Message| i.id.to_string()
         )
     }
 
@@ -834,7 +834,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>> {
+    ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -849,7 +849,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_pin_list_count.sql", *channel_id),
-            |i: &MessageV2| i.id.to_string()
+            |i: &Message| i.id.to_string()
         )
     }
 
@@ -857,7 +857,7 @@ impl DataMessage for Postgres {
         &self,
         message_id: MessageId,
         limit: u16,
-    ) -> Result<Vec<MessageV2>> {
+    ) -> Result<Vec<Message>> {
         let rows = query_file_as!(
             DbMessage,
             "sql/message_get_ancestors.sql",
@@ -906,7 +906,7 @@ impl DataMessage for Postgres {
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<MessageV2>> {
+    ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
@@ -921,7 +921,7 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_file_scalar!("sql/message_list_all_count.sql", channel_id.into_inner()),
-            |i: &MessageV2| i.id.to_string()
+            |i: &Message| i.id.to_string()
         )
     }
 

@@ -474,14 +474,6 @@ impl AutomodRuleset {
             ));
         }
 
-        if let Some(t) = &req.override_name {
-            result.merge(self.scan_text(
-                t,
-                AutomodTarget::Member,
-                AutomodTextLocation::MemberNickname,
-            ));
-        }
-
         for emb in &req.embeds {
             if let Some(t) = &emb.title {
                 result.merge(self.scan_text(
@@ -536,16 +528,6 @@ impl AutomodRuleset {
                     t,
                     AutomodTarget::Content,
                     AutomodTextLocation::MessageContent,
-                ));
-            }
-        }
-
-        if let Some(override_name) = &req.override_name {
-            if let Some(t) = override_name.as_deref() {
-                result.merge(self.scan_text(
-                    t,
-                    AutomodTarget::Member,
-                    AutomodTextLocation::MemberNickname,
                 ));
             }
         }
