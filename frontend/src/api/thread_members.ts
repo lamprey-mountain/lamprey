@@ -16,6 +16,15 @@ export class ThreadMembers {
 	_requests = new Map<string, Map<string, Promise<ThreadMember>>>();
 	_cachedListings = new Map<string, Listing<ThreadMember>>();
 
+	upsert(member: ThreadMember) {
+		let cache = this.cache.get(member.thread_id);
+		if (!cache) {
+			cache = new ReactiveMap();
+			this.cache.set(member.thread_id, cache);
+		}
+		cache.set(member.user_id, member);
+	}
+
 	subscribeList(thread_id: string, ranges: [number, number][]) {
 		this.api.client.send({
 			type: "MemberListSubscribe",

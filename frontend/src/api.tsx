@@ -206,12 +206,7 @@ export function createApi(
 				}
 
 				for (const member of msg.room_members) {
-					let roomCache = room_members.cache.get(member.room_id);
-					if (!roomCache) {
-						roomCache = new ReactiveMap();
-						room_members.cache.set(member.room_id, roomCache);
-					}
-					roomCache.set(member.user_id, member);
+					room_members.upsert(member);
 				}
 
 				if (!rooms._cachedListing) {
@@ -756,14 +751,8 @@ export function createApi(
 		} else if (
 			msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate"
 		) {
+			room_members.upsert(msg.member);
 			const m = msg.member;
-			const c = room_members.cache.get(m.room_id);
-			if (c) {
-				c.set(m.user_id, m);
-			} else {
-				room_members.cache.set(m.room_id, new ReactiveMap());
-				room_members.cache.get(m.room_id)!.set(m.user_id, m);
-			}
 			const l = room_members._cachedListings.get(m.room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
@@ -803,13 +792,7 @@ export function createApi(
 			const { thread_id, added, removed } = msg;
 
 			for (const member of added) {
-				const c = thread_members.cache.get(thread_id);
-				if (c) {
-					c.set(member.user_id, member);
-				} else {
-					thread_members.cache.set(thread_id, new ReactiveMap());
-					thread_members.cache.get(thread_id)!.set(member.user_id, member);
-				}
+				thread_members.upsert(member);
 				const l = thread_members._cachedListings.get(thread_id);
 				if (l?.resource.latest) {
 					const p = l.resource.latest;
@@ -1074,34 +1057,8 @@ export function createApi(
 			// TODO
 		} else if (msg.type === "EmojiDelete") {
 			// TODO
-		} else if (msg.type === "UserCreate") {
-			users.cache.set(msg.user.id, {
-				...msg.user,
-				relationship: {
-					note: null,
-					relation: null,
-					petname: null,
-					ignore: null,
-				},
-			} as UserWithRelationship);
-		} else if (msg.type === "UserUpdate") {
-			const oldUser = users.cache.get(msg.user.id);
-			const updatedUser: UserWithRelationship = {
-				...(oldUser ?? {
-					relationship: {
-						note: null,
-						relation: null,
-						petname: null,
-						ignore: null,
-					},
-				}),
-				...msg.user,
-			};
-			users.cache.set(msg.user.id, updatedUser);
-
-			if (msg.user.id === users.cache.get("@self")?.id) {
-				users.cache.set("@self", updatedUser);
-			}
+		} else if (msg.type === "UserCreate" || msg.type === "UserUpdate") {
+			users.upsert(msg.user);
 		} else if (msg.type === "PresenceUpdate") {
 			const { user_id, presence } = msg;
 			const user = users.cache.get(user_id);

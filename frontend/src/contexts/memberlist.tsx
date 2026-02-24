@@ -12,11 +12,15 @@ export const MemberListProvider = (props: ParentProps) => {
 	const location = useLocation();
 	const memberLists = new ReactiveMap<string, MemberList>();
 
+	let currentSubscription: string | null = null;
 	createEffect(() => {
 		const roomIdMatch = location.pathname.match(/\/room\/([^/]+)/);
 		if (roomIdMatch) {
 			const id = roomIdMatch[1];
-			api.room_members.subscribeList(id, [[0, 199]]);
+			if (currentSubscription !== id) {
+				currentSubscription = id;
+				api.room_members.subscribeList(id, [[0, 199]]);
+			}
 			return;
 		}
 
@@ -25,8 +29,16 @@ export const MemberListProvider = (props: ParentProps) => {
 		);
 		if (channelIdMatch) {
 			const id = channelIdMatch[2];
-			api.thread_members.subscribeList(id, [[0, 199]]);
+			if (currentSubscription !== id) {
+				currentSubscription = id;
+				api.thread_members.subscribeList(id, [[0, 199]]);
+			}
 			return;
+		}
+
+		if (currentSubscription !== null) {
+			currentSubscription = null;
+			api.client.send({ type: "MemberListSubscribe", ranges: [] });
 		}
 	});
 
@@ -44,21 +56,66 @@ export const MemberListProvider = (props: ParentProps) => {
 
 			for (const op of ops) {
 				if (op.type === "Sync") {
-					const items = op.users.map((user, i) => ({
-						user,
-						room_member: op.room_members?.[i] ?? null,
-						thread_member: op.thread_members?.[i] ?? null,
-					}));
-					list.items.splice(op.position, items.length, ...items);
+					if (op.users) {
+						for (const user of op.users) {
+							api.users.upsert(user);
+						}
+					}
+					if (op.room_members && room_id) {
+						for (const member of op.room_members) {
+							api.room_members.upsert(member);
+						}
+					}
+					if (op.thread_members && thread_id) {
+						for (const member of op.thread_members) {
+							api.thread_members.upsert(member);
+						}
+					}
+
+					const items = op.items.map((user_id) => {
+						const user = api.users.cache.get(user_id);
+						const room_member = room_id
+							? api.room_members.cache.get(room_id)?.get(user_id)
+							: null;
+						const thread_member = thread_id
+							? api.thread_members.cache.get(thread_id)?.get(user_id)
+							: null;
+
+						return {
+							user: user!,
+							room_member: room_member ?? null,
+							thread_member: thread_member ?? null,
+						};
+					});
+					list.items.splice(Number(op.position), items.length, ...items);
 				} else if (op.type === "Insert") {
+					const user_id = op.user_id;
+					if (op.user) {
+						api.users.upsert(op.user);
+					}
+					if (op.room_member && room_id) {
+						api.room_members.upsert(op.room_member);
+					}
+					if (op.thread_member && thread_id) {
+						api.thread_members.upsert(op.thread_member);
+					}
+
+					const user = api.users.cache.get(user_id);
+					const room_member = room_id
+						? api.room_members.cache.get(room_id)?.get(user_id)
+						: null;
+					const thread_member = thread_id
+						? api.thread_members.cache.get(thread_id)?.get(user_id)
+						: null;
+
 					const item = {
-						user: op.user,
-						room_member: op.room_member ?? null,
-						thread_member: op.thread_member ?? null,
+						user: user!,
+						room_member: room_member ?? null,
+						thread_member: thread_member ?? null,
 					};
-					list.items.splice(op.position, 0, item);
+					list.items.splice(Number(op.position), 0, item);
 				} else if (op.type === "Delete") {
-					list.items.splice(op.position, op.count);
+					list.items.splice(Number(op.position), Number(op.count));
 				}
 			}
 			list.groups = groups;

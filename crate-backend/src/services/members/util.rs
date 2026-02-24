@@ -253,11 +253,12 @@ impl MemberListSync {
             match op {
                 MemberListOp::Sync {
                     position,
+                    items,
                     room_members,
                     thread_members,
                     users,
                 } => {
-                    let op_end = position + users.len() as u64;
+                    let op_end = position + items.len() as u64;
 
                     for &(start, end) in &ranges.inner {
                         let intersect_start = position.max(start);
@@ -267,24 +268,32 @@ impl MemberListSync {
                             let slice_start = (intersect_start - position) as usize;
                             let slice_end = (intersect_end - position) as usize;
 
-                            let new_users = users[slice_start..slice_end].to_vec();
+                            let new_items = items[slice_start..slice_end].to_vec();
+
+                            let new_users = users.as_ref().map(|v| {
+                                v.iter()
+                                    .filter(|u| new_items.contains(&u.id))
+                                    .cloned()
+                                    .collect()
+                            });
 
                             let new_room_members = room_members.as_ref().map(|v| {
                                 v.iter()
-                                    .filter(|m| new_users.iter().any(|u| u.id == m.user_id))
+                                    .filter(|m| new_items.contains(&m.user_id))
                                     .cloned()
                                     .collect()
                             });
 
                             let new_thread_members = thread_members.as_ref().map(|v| {
                                 v.iter()
-                                    .filter(|m| new_users.iter().any(|u| u.id == m.user_id))
+                                    .filter(|m| new_items.contains(&m.user_id))
                                     .cloned()
                                     .collect()
                             });
 
                             ops.push(MemberListOp::Sync {
                                 position: intersect_start,
+                                items: new_items,
                                 room_members: new_room_members,
                                 thread_members: new_thread_members,
                                 users: new_users,
@@ -299,6 +308,7 @@ impl MemberListSync {
                 }
                 MemberListOp::Insert {
                     position,
+                    user_id,
                     room_member,
                     thread_member,
                     user,
@@ -306,6 +316,7 @@ impl MemberListSync {
                     if ranges.contains(position) {
                         ops.push(MemberListOp::Insert {
                             position,
+                            user_id,
                             room_member,
                             thread_member,
                             user,

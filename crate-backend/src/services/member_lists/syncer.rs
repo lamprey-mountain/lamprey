@@ -1,7 +1,7 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
-use common::v1::types::{MessageSync, UserId};
+use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
 use tokio::sync::oneshot;
 use tokio_stream::{wrappers::BroadcastStream, StreamExt, StreamMap, StreamNotifyClose};
 use uuid::Uuid;
@@ -21,6 +21,9 @@ pub struct MemberListSyncer {
     pub(super) outbox: VecDeque<MessageSync>,
     pub(super) streams:
         StreamMap<MemberListKey, StreamNotifyClose<BroadcastStream<MemberListEvent>>>,
+    pub(super) known_users: HashSet<UserId>,
+    pub(super) known_room_members: HashSet<(RoomId, UserId)>,
+    pub(super) known_thread_members: HashSet<(ChannelId, UserId)>,
 }
 
 impl MemberListSyncer {
@@ -31,6 +34,9 @@ impl MemberListSyncer {
             conn_id,
             outbox: VecDeque::new(),
             streams: StreamMap::new(),
+            known_users: HashSet::new(),
+            known_room_members: HashSet::new(),
+            known_thread_members: HashSet::new(),
         }
     }
 
@@ -105,13 +111,72 @@ impl MemberListSyncer {
         }
     }
 
-    fn patch_msg(&self, msg: &mut MessageSync, user_id: UserId) {
+    fn patch_msg(&mut self, msg: &mut MessageSync, user_id: UserId) {
         if let MessageSync::MemberListSync {
             user_id: ref mut uid,
+            room_id,
+            channel_id,
+            ops,
             ..
         } = msg
         {
             *uid = user_id;
+
+            for op in ops {
+                match op {
+                    common::v1::types::MemberListOp::Sync {
+                        room_members,
+                        thread_members,
+                        users,
+                        ..
+                    } => {
+                        if let Some(users_vec) = users {
+                            users_vec.retain(|u| self.known_users.insert(u.id));
+                            if users_vec.is_empty() {
+                                *users = None;
+                            }
+                        }
+                        if let (Some(rid), Some(rm_vec)) = (room_id.as_ref(), room_members.as_mut())
+                        {
+                            rm_vec.retain(|m| self.known_room_members.insert((*rid, m.user_id)));
+                            if rm_vec.is_empty() {
+                                *room_members = None;
+                            }
+                        }
+                        if let (Some(tid), Some(tm_vec)) =
+                            (channel_id.as_ref(), thread_members.as_mut())
+                        {
+                            tm_vec.retain(|m| self.known_thread_members.insert((*tid, m.user_id)));
+                            if tm_vec.is_empty() {
+                                *thread_members = None;
+                            }
+                        }
+                    }
+                    common::v1::types::MemberListOp::Insert {
+                        user_id,
+                        room_member,
+                        thread_member,
+                        user,
+                        ..
+                    } => {
+                        if !self.known_users.insert(*user_id) {
+                            *user = None;
+                        }
+                        if let (Some(rid), Some(m)) = (room_id.as_ref(), room_member.as_ref()) {
+                            if !self.known_room_members.insert((*rid, m.user_id)) {
+                                *room_member = None;
+                            }
+                        }
+                        if let (Some(tid), Some(m)) = (channel_id.as_ref(), thread_member.as_ref())
+                        {
+                            if !self.known_thread_members.insert((*tid, m.user_id)) {
+                                *thread_member = None;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 }

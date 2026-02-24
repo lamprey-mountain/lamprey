@@ -10,6 +10,26 @@ export class Users {
 	requests = new Map<string, Promise<UserWithRelationship>>();
 	_cachedListing: Listing<User> | null = null;
 
+	upsert(user: User) {
+		const oldUser = this.cache.get(user.id);
+		const updatedUser: UserWithRelationship = {
+			...(oldUser ?? {
+				relationship: {
+					note: null,
+					relation: null,
+					petname: null,
+					ignore: null,
+				},
+			}),
+			...user,
+		};
+		this.cache.set(user.id, updatedUser);
+
+		if (user.id === this.cache.get("@self")?.id) {
+			this.cache.set("@self", updatedUser);
+		}
+	}
+
 	fetch(user_id: () => string): Resource<UserWithRelationship> {
 		const [resource, { mutate }] = createResource(user_id, (user_id) => {
 			const cached = this.cache.get(user_id);

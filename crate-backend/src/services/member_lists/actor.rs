@@ -506,9 +506,10 @@ impl MemberList {
 
                     self.broadcast_ops(vec![MemberListOp::Insert {
                         position: new_pos,
+                        user_id,
                         room_member: Some(member.clone()),
                         thread_member,
-                        user: Box::new(users_map.get(&user_id).unwrap().clone()),
+                        user: Some(Box::new(users_map.get(&user_id).unwrap().clone())),
                     }]);
                 } else if old_key.is_some() {
                     self.remove_member(user_id).await;
@@ -581,6 +582,7 @@ impl MemberList {
 
             ops.push(MemberListOp::Sync {
                 position: start as u64,
+                items: slice.to_vec(),
                 room_members: if room_members.is_empty() {
                     None
                 } else {
@@ -591,7 +593,7 @@ impl MemberList {
                 } else {
                     Some(thread_members)
                 },
-                users,
+                users: Some(users),
             });
         }
         ops

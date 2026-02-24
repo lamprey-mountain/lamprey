@@ -780,23 +780,26 @@ pub enum MemberListOp {
         /// the start of the range
         position: u64,
 
-        /// only returned if channel is in a room
+        /// the users in this range
+        items: Vec<UserId>,
+
+        /// only returned if channel is in a room and not already cached by client
         room_members: Option<Vec<RoomMember>>,
 
-        /// only returned if listing members in a thread
+        /// only returned if listing members in a thread and not already cached by client
         thread_members: Option<Vec<ThreadMember>>,
 
-        users: Vec<User>,
-        // /// the users in this range
-        // items: Vec<UserId>,
+        /// users in this range that are not already cached by client
+        users: Option<Vec<User>>,
     },
 
     /// insert a member
     Insert {
         position: u64,
+        user_id: UserId,
         room_member: Option<RoomMember>,
         thread_member: Option<ThreadMember>,
-        user: Box<User>,
+        user: Option<Box<User>>,
     },
 
     /// delete a range of one or more members

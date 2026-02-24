@@ -16,6 +16,15 @@ export class RoomMembers {
 	_requests = new Map<string, Map<string, Promise<RoomMember>>>();
 	_cachedListings = new Map<string, Listing<RoomMember>>();
 
+	upsert(member: RoomMember) {
+		let cache = this.cache.get(member.room_id);
+		if (!cache) {
+			cache = new ReactiveMap();
+			this.cache.set(member.room_id, cache);
+		}
+		cache.set(member.user_id, member);
+	}
+
 	subscribeList(room_id: string, ranges: [number, number][]) {
 		this.api.client.send({
 			type: "MemberListSubscribe",

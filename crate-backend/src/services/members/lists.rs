@@ -151,6 +151,11 @@ impl MemberList {
 
         vec![MemberListOp::Sync {
             position: 0,
+            items: self
+                .groups
+                .iter()
+                .flat_map(|g| g.users.iter().copied())
+                .collect(),
             room_members: if self.key.room_id.is_some() {
                 Some(room_members)
             } else {
@@ -161,7 +166,7 @@ impl MemberList {
             } else {
                 None
             },
-            users,
+            users: Some(users),
         }]
     }
 
@@ -375,6 +380,7 @@ impl MemberList {
 
             ops.push(MemberListOp::Sync {
                 position: start as u64,
+                items: slice.to_vec(),
                 room_members: if room_members.is_empty() {
                     None
                 } else {
@@ -385,7 +391,7 @@ impl MemberList {
                 } else {
                     Some(thread_members)
                 },
-                users,
+                users: Some(users),
             });
         }
 
@@ -577,9 +583,10 @@ impl MemberList {
         // return op for syncing
         ops.push(MemberListOp::Insert {
             position: new_pos as u64,
+            user_id,
             room_member: self.room_members.get(&user_id).cloned(),
             thread_member: self.thread_members.get(&user_id).cloned(),
-            user: Box::new(user.clone()),
+            user: Some(Box::new(user.clone())),
         });
 
         ops
