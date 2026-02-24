@@ -160,9 +160,7 @@ impl Handle {
                 attachments: vec![],
                 metadata: None,
                 reply_id: Some(message.id),
-                override_name: None,
                 embeds: vec![],
-                created_at: None,
                 mentions: Default::default(),
             };
             self.http.message_create(message.channel_id, &resp).await?;
@@ -277,9 +275,7 @@ impl Handle {
                                 attachments: vec![],
                                 metadata: None,
                                 reply_id: None,
-                                override_name: None,
                                 embeds: vec![],
-                                created_at: None,
                                 mentions: Default::default(),
                             };
                             if let Err(err) = http.message_create(thread_id, &msg).await {

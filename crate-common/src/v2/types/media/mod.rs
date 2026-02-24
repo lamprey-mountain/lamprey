@@ -23,9 +23,8 @@ pub mod scanner;
 /// A reference to a piece of media to be used.
 // TODO: use this in more FooCreate and FooPatch structs
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum MediaReference {
     /// Use this piece of uploaded media. Prefer using this whenever possible.
     Media { media_id: MediaId },

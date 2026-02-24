@@ -1,12 +1,12 @@
 use anyhow::Result;
-use common::v1::types::{self, media::MediaRef, util::Diff, EmbedCreate};
+use common::v1::types::{self, util::Diff, EmbedCreate};
+use common::v2::types::media::MediaReference;
 use reqwest::Url;
 use serenity::all::{
     Message as DcMessage, MessageId as DcMessageId, MessageReferenceKind,
     MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
 };
 use std::str::FromStr;
-use time::OffsetDateTime;
 use tracing::{debug, info};
 
 use crate::db::{AttachmentMetadata, Data, MessageMetadata, Puppet};
@@ -146,17 +146,7 @@ impl Portal {
             attachments: vec![],
             metadata: None,
             reply_id: None,
-            override_name: message
-                .member
-                .and_then(|m| m.nick)
-                .or(message.author.global_name)
-                .or(Some(message.author.name.clone())),
             embeds: vec![],
-            created_at: Some(
-                OffsetDateTime::from_unix_timestamp(message.timestamp.unix_timestamp())
-                    .unwrap()
-                    .into(),
-            ),
             mentions: Default::default(),
         };
         for a in &message.attachments {
@@ -173,7 +163,14 @@ impl Portal {
                 })
                 .await?;
             debug!("saved attachment metadata to db");
-            req.attachments.push(MediaRef { id: media.id });
+            req.attachments.push(types::MessageAttachmentCreate {
+                ty: types::MessageAttachmentCreateType::Media {
+                    media: MediaReference::Media { media_id: media.id },
+                    alt: None,
+                    filename: None,
+                },
+                spoiler: false,
+            });
         }
         for emb in message.embeds.iter().cloned() {
             let author_avatar = if let Some(url) = emb
@@ -191,7 +188,7 @@ impl Portal {
                 let media = ly
                     .media_upload(filename.to_owned(), bytes.into(), user_id)
                     .await?;
-                Some(MediaRef { id: media.id })
+                Some(MediaReference::Media { media_id: media.id })
             } else {
                 None
             };
@@ -211,7 +208,7 @@ impl Portal {
                     let media = ly
                         .media_upload(filename.to_owned(), bytes.into(), user_id)
                         .await?;
-                    Some(MediaRef { id: media.id })
+                    Some(MediaReference::Media { media_id: media.id })
                 } else {
                     None
                 },
@@ -228,7 +225,7 @@ impl Portal {
                     let media = ly
                         .media_upload(filename.to_owned(), bytes.into(), user_id)
                         .await?;
-                    Some(MediaRef { id: media.id })
+                    Some(MediaReference::Media { media_id: media.id })
                 } else {
                     None
                 },
@@ -302,20 +299,26 @@ impl Portal {
         let user_id = message.author_id;
 
         let mut req = types::MessagePatch {
-            edited_at: update.edited_timestamp.map(|t| {
-                OffsetDateTime::from_unix_timestamp(t.unix_timestamp())
-                    .unwrap()
-                    .into()
-            }),
-            ..Default::default()
+            content: update.content.clone().map(Some),
+            attachments: None,
+            reply_id: None,
+            embeds: None,
+            metadata: None,
         };
         req.attachments = if let Some(atts) = &update.attachments {
             let mut v = vec![];
             for att in atts {
                 let existing = self.globals.get_attachment_dc(att.id).await?;
                 if let Some(existing) = existing {
-                    v.push(MediaRef {
-                        id: existing.chat_id,
+                    v.push(types::MessageAttachmentCreate {
+                        ty: types::MessageAttachmentCreateType::Media {
+                            media: MediaReference::Media {
+                                media_id: existing.chat_id,
+                            },
+                            alt: None,
+                            filename: None,
+                        },
+                        spoiler: false,
                     });
                     continue;
                 }
@@ -329,7 +332,14 @@ impl Portal {
                         discord_id: att.id,
                     })
                     .await?;
-                v.push(MediaRef { id: media.id });
+                v.push(types::MessageAttachmentCreate {
+                    ty: types::MessageAttachmentCreateType::Media {
+                        media: MediaReference::Media { media_id: media.id },
+                        alt: None,
+                        filename: None,
+                    },
+                    spoiler: false,
+                });
             }
             Some(v)
         } else {
