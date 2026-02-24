@@ -4,10 +4,10 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::ids::EmbedId;
 use common::v1::types::misc::Color;
+use common::v1::types::MessageSync;
 use common::v1::types::UserId;
-use common::v1::types::{self, MessageSync};
 use common::v2::types::embed::Embed;
-use common::v2::types::media::Media as MediaV2;
+use common::v2::types::media::{Media as MediaV2, MediaCreateSource};
 use common::v2::types::message::MessageType;
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
@@ -299,9 +299,10 @@ impl ServiceEmbed {
                 .media
                 .import_from_response(
                     user_id,
-                    types::MediaCreate {
+                    common::v2::types::media::MediaCreate {
                         alt: None,
-                        source: types::MediaCreateSource::Download {
+                        strip_exif: false,
+                        source: MediaCreateSource::Download {
                             filename: Some(filename),
                             size: content_length,
                             source_url: url.clone(),
@@ -430,9 +431,10 @@ impl ServiceEmbed {
                     .media
                     .import_from_url_with_max_size(
                         user_id,
-                        types::MediaCreate {
+                        common::v2::types::media::MediaCreate {
                             alt: m.alt,
-                            source: types::MediaCreateSource::Download {
+                            strip_exif: false,
+                            source: MediaCreateSource::Download {
                                 filename: None,
                                 size: None,
                                 source_url: m.url,

@@ -13,9 +13,9 @@ use common::v1::types::media::Media as MediaV1;
 use common::{
     v1::types::{
         media::{MediaClone, MediaSearch},
-        MediaCreateSource, MediaPatch, Permission,
+        MediaPatch, Permission,
     },
-    v2::types::media::MediaDoneParams,
+    v2::types::media::{MediaCreate, MediaCreateSource, MediaDoneParams},
 };
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
@@ -25,7 +25,7 @@ use validator::Validate;
 
 use crate::{
     error::{Error, Result},
-    types::{MediaCreate, MediaCreated, MediaId},
+    types::{MediaCreated, MediaId},
     ServerState,
 };
 
@@ -52,7 +52,7 @@ async fn media_create(
     json.validate()?;
     match &json.source {
         MediaCreateSource::Upload { size, .. } => {
-            if *size > s.config.media_max_size {
+            if size.is_some_and(|sz| sz > s.config.media_max_size) {
                 return Err(Error::TooBig);
             }
 
@@ -71,7 +71,9 @@ async fn media_create(
                 upload_url,
             };
             let mut res_headers = HeaderMap::new();
-            res_headers.insert("upload-length", (*size).into());
+            if let Some(sz) = size {
+                res_headers.insert("upload-length", (*sz).into());
+            }
             res_headers.insert("upload-offset", 0.into());
             Ok((StatusCode::CREATED, res_headers, Json(res)))
         }
@@ -534,9 +536,10 @@ async fn media_upload_direct(
             auth.user.id,
             MediaCreate {
                 alt: None,
+                strip_exif: false,
                 source: MediaCreateSource::Upload {
                     filename: "unknown".to_owned(),
-                    size: data.len() as u64,
+                    size: Some(data.len() as u64),
                 },
             },
         )

@@ -7,9 +7,8 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use common::v1::types::{
-    self, media::MediaRef, EmbedCreate, MediaCreate, MediaCreateSource, MessageCreate, WebhookId,
-};
+use common::v1::types::{self, media::MediaRef, EmbedCreate, MessageCreate, WebhookId};
+use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
@@ -125,8 +124,9 @@ pub async fn webhook_execute_discord(
                 return Err(Error::TooBig);
             }
             let media_create = MediaCreate {
+                strip_exif: false,
                 source: MediaCreateSource::Upload {
-                    size,
+                    size: Some(size),
                     filename: filename.unwrap_or_else(|| "file".to_string()),
                 },
                 alt: None,

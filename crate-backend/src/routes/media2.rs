@@ -1,26 +1,26 @@
-#![allow(unused)] // TEMP
-
+use std::cmp::Ordering;
 use std::sync::Arc;
 
 use axum::{
     body::Body,
     extract::{Multipart, Path, State},
-    http::HeaderMap,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing, Json,
 };
-use common::{
-    v1::types::MediaId,
-    v2::types::media::{
-        Media, MediaClone, MediaCreate, MediaCreated, MediaDoneParams, MediaPatch, MediaSearch,
-    },
+use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
+use common::v2::types::media::{
+    Media, MediaClone, MediaCreate, MediaCreated, MediaDoneParams, MediaPatch, MediaSearch,
 };
+use futures_util::StreamExt;
+use tokio::io::AsyncWriteExt;
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
-use crate::{
-    error::{Error, Result},
-    ServerState,
-};
+use crate::error::{Error, Result};
+use crate::types::MediaId;
+use crate::ServerState;
 
 use super::util::Auth;
 
@@ -42,7 +42,55 @@ async fn media_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    json.validate()?;
+    match &json.source {
+        common::v2::types::media::MediaCreateSource::Upload { size, .. } => {
+            if *size > Some(s.config.media_max_size) {
+                return Err(Error::TooBig);
+            }
+
+            let media_id = MediaId::new();
+            let srv = s.services();
+            srv.media
+                .create_upload(media_id, auth.user.id, json.clone().into())
+                .await?;
+            let upload_url = Some(
+                s.config()
+                    .api_url
+                    .join(&format!("/api/v1/internal/media-upload/{media_id}"))?,
+            );
+            let res = MediaCreated {
+                media_id,
+                upload_url,
+            };
+            let mut res_headers = HeaderMap::new();
+            if let Some(sz) = size {
+                res_headers.insert("upload-length", (*sz).into());
+            }
+            res_headers.insert("upload-offset", 0.into());
+            Ok((StatusCode::CREATED, res_headers, Json(res)))
+        }
+        common::v2::types::media::MediaCreateSource::Download { size, .. } => {
+            if size.is_some_and(|sz| sz > s.config.media_max_size) {
+                return Err(Error::TooBig);
+            }
+
+            let srv = s.services();
+            let media = srv
+                .media
+                .import_from_url(auth.user.id, json.clone().into())
+                .await?;
+            let mut headers = HeaderMap::new();
+            headers.insert("content-length", media.size.into());
+            let res = MediaCreated {
+                media_id: media.id,
+                upload_url: None,
+            };
+            Ok((StatusCode::CREATED, headers, Json(res)))
+        }
+    }
 }
 
 /// Media patch
@@ -64,7 +112,23 @@ async fn media_patch(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaPatch>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    json.validate()?;
+
+    let media = s.data().media2_select(media_id).await?;
+    if media.deleted_at.is_some() {
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )));
+    }
+    if media.user_id != Some(auth.user.id) {
+        // NOTE: should i return UnknownMedia here to prevent leaking info?
+        return Err(Error::MissingPermissions);
+    }
+
+    s.data().media2_update(media_id, json).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Media done
@@ -85,9 +149,65 @@ async fn media_done(
     Path(media_id): Path<MediaId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MediaDoneParams>,
+    Json(_json): Json<MediaDoneParams>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let mut up =
+        srv.media
+            .uploads
+            .get_mut(&media_id)
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMedia,
+            )))?;
+    if up.user_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    let source_size = up
+        .create
+        .source
+        .size()
+        .expect("can only patch source upload");
+    match up.current_size.cmp(&source_size) {
+        Ordering::Greater => {
+            s.services().media.uploads.remove(&media_id);
+            Err(Error::TooBig)
+        }
+        Ordering::Equal => {
+            up.temp_writer.flush().await?;
+            drop(up);
+            let (_, up) = s
+                .services()
+                .media
+                .uploads
+                .remove(&media_id)
+                .expect("it was there a few milliseconds ago");
+            let filename = match &up.create.source {
+                common::v2::types::media::MediaCreateSource::Upload { filename, .. } => {
+                    filename.to_owned()
+                }
+                common::v2::types::media::MediaCreateSource::Download { .. } => {
+                    panic!("can only patch upload")
+                }
+            };
+            let media = s
+                .services()
+                .media
+                .process_upload(up, media_id, auth.user.id, &filename)
+                .await?;
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", media.size.into());
+            headers.insert("upload-length", media.size.into());
+            Ok((StatusCode::OK, headers, Json(Some(media))))
+        }
+        Ordering::Less => {
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", up.current_size.into());
+            headers.insert("upload-length", source_size.into());
+            Ok((StatusCode::NO_CONTENT, headers, Json(None)))
+        }
+    }
 }
 
 /// Media upload
@@ -99,8 +219,91 @@ async fn media_upload(
     headers: HeaderMap,
     body: Body,
 ) -> Result<impl IntoResponse> {
-    // TODO:
-    Ok(Error::Unimplemented)
+    let srv = s.services();
+    let mut up =
+        srv.media
+            .uploads
+            .get_mut(&media_id)
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMedia,
+            )))?;
+    if up.user_id != auth.user.id {
+        return Err(Error::NotFound);
+    }
+
+    let stat = up.temp_file.metadata().await?;
+    let current_size = stat.len();
+    let current_off: u64 = headers
+        .get("upload-offset")
+        .ok_or(Error::BadHeader)?
+        .to_str()?
+        .parse()?;
+    let part_length: u64 = headers
+        .get("content-length")
+        .ok_or(Error::BadHeader)?
+        .to_str()?
+        .parse()?;
+    if current_size != current_off {
+        return Err(Error::CantOverwrite);
+    }
+    let source_size = up
+        .create
+        .source
+        .size()
+        .expect("can only patch source upload");
+    if current_size + part_length > source_size {
+        return Err(Error::TooBig);
+    }
+    up.seek(current_off).await?;
+    let mut stream = body.into_data_stream();
+
+    while let Some(chunk) = stream.next().await {
+        if let Err(err) = up.write(&chunk?).await {
+            srv.media.uploads.remove(&media_id);
+            return Err(err);
+        };
+    }
+
+    match up.current_size.cmp(&source_size) {
+        Ordering::Greater => {
+            s.services().media.uploads.remove(&media_id);
+            Err(Error::TooBig)
+        }
+        Ordering::Equal => {
+            up.temp_writer.flush().await?;
+            drop(up);
+            let (_, up) = s
+                .services()
+                .media
+                .uploads
+                .remove(&media_id)
+                .expect("it was there a few milliseconds ago");
+            let filename = match &up.create.source {
+                common::v2::types::media::MediaCreateSource::Upload { filename, .. } => {
+                    filename.to_owned()
+                }
+                common::v2::types::media::MediaCreateSource::Download { .. } => {
+                    panic!("can only patch upload")
+                }
+            };
+            // FIXME: do this in the background
+            let media = s
+                .services()
+                .media
+                .process_upload(up, media_id, auth.user.id, &filename)
+                .await?;
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", media.size.into());
+            headers.insert("upload-length", media.size.into());
+            Ok((StatusCode::OK, headers, Json(Some(media))))
+        }
+        Ordering::Less => {
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", up.current_size.into());
+            headers.insert("upload-length", source_size.into());
+            Ok((StatusCode::NO_CONTENT, headers, Json(None)))
+        }
+    }
 }
 
 /// Media get
@@ -116,11 +319,12 @@ async fn media_upload(
     )
 )]
 async fn media_get(
-    Path((media_id,)): Path<(MediaId,)>,
-    auth: Auth,
+    Path(media_id): Path<MediaId>,
+    _auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let media = s.data().media2_select(media_id).await?;
+    Ok(Json(media))
 }
 
 /// Media check
@@ -141,7 +345,26 @@ async fn media_check(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
+        if up.user_id == auth.user.id {
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
+            headers.insert(
+                "upload-length",
+                up.create
+                    .source
+                    .size()
+                    .expect("can only check media where source = upload")
+                    .into(),
+            );
+            return Ok((StatusCode::NO_CONTENT, headers));
+        }
+    }
+    let media = s.data().media2_select(media_id).await?;
+    let mut headers = HeaderMap::new();
+    headers.insert("upload-offset", media.size.into());
+    headers.insert("upload-length", media.size.into());
+    Ok((StatusCode::NO_CONTENT, headers))
 }
 
 /// Media delete
@@ -163,7 +386,22 @@ async fn media_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
+        if up.user_id == auth.user.id {
+            s.services().media.uploads.remove(&media_id);
+        }
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        let links = s.data().media2_link_select(media_id).await?;
+        if links.is_empty() {
+            s.data().media2_delete(media_id).await?;
+            Ok(StatusCode::NO_CONTENT)
+        } else {
+            Ok(StatusCode::CONFLICT)
+        }
+    }
 }
 
 /// Media clone
@@ -184,6 +422,8 @@ async fn media_clone(
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<MediaClone>,
 ) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
     Ok(Error::Unimplemented)
 }
 
@@ -201,6 +441,10 @@ async fn media_search(
     State(s): State<Arc<ServerState>>,
     Json(_json): Json<MediaSearch>,
 ) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(common::v1::types::Permission::Admin)?;
     Ok(Error::Unimplemented)
 }
 
@@ -219,7 +463,74 @@ async fn media_upload_direct(
     State(s): State<Arc<ServerState>>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = s.services();
+    let media_id = MediaId::new();
+    let mut data = None;
+
+    while let Some(field) = multipart.next_field().await? {
+        match field
+            .name()
+            .ok_or(Error::BadStatic("field is missing name"))?
+        {
+            "json" => return Err(Error::Unimplemented),
+            "file" => {
+                data = Some(field.bytes().await?);
+            }
+            _ => return Err(Error::BadStatic("unknown field")),
+        }
+    }
+
+    let Some(data) = data else {
+        return Err(Error::BadStatic("no data"));
+    };
+
+    srv.media
+        .create_upload(
+            media_id,
+            auth.user.id,
+            common::v2::types::media::MediaCreate {
+                alt: None,
+                strip_exif: false,
+                source: common::v2::types::media::MediaCreateSource::Upload {
+                    filename: "unknown".to_owned(),
+                    size: Some(data.len() as u64),
+                },
+            }
+            .into(),
+        )
+        .await?;
+
+    let mut up = srv.media.uploads.get_mut(&media_id).unwrap();
+    if let Err(err) = up.write(&data).await {
+        srv.media.uploads.remove(&media_id);
+        return Err(err);
+    }
+
+    up.temp_writer.flush().await?;
+
+    let (_, up) = s
+        .services()
+        .media
+        .uploads
+        .remove(&media_id)
+        .expect("it was there a few milliseconds ago");
+
+    let filename = match &up.create.source {
+        common::v2::types::media::MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+        common::v2::types::media::MediaCreateSource::Download { .. } => {
+            panic!("can only patch upload")
+        }
+    };
+    let media = s
+        .services()
+        .media
+        .process_upload(up, media_id, auth.user.id, &filename)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(media)))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

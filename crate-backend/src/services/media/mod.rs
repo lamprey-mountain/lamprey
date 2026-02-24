@@ -6,10 +6,10 @@ use std::{
 
 use async_tempfile::TempFile;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{
-    util::truncate::truncate_filename, MediaCreate, MediaCreateSource, MediaId, Mime, UserId,
+use common::v1::types::{util::truncate::truncate_filename, MediaId, Mime, UserId};
+use common::v2::types::media::{
+    Media as MediaV2, MediaCreate, MediaCreateSource, MediaMetadata, MediaStatus,
 };
-use common::v2::types::media::{Media as MediaV2, MediaMetadata, MediaStatus};
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
