@@ -356,6 +356,7 @@ impl ServiceMedia {
             room_id: None,
             channel_id: None,
             hashes,
+            strip_exif: false,
         };
 
         debug!("finish upload for {}, mime {}", media_id, mime);
@@ -566,6 +567,59 @@ impl ServiceMedia {
             .await?;
         debug!("finished processing media");
         Ok(media)
+    }
+
+    /// Strip EXIF metadata from an image file.
+    ///
+    /// Downloads the image, strips EXIF data, and re-uploads it.
+    #[tracing::instrument(skip(self, media_id))]
+    pub async fn strip_exif(&self, media_id: MediaId) -> Result<()> {
+        let media = self.state.data().media_select(media_id).await?;
+
+        // NOTE: maybe i want to strip geolocation and other sensitive metadata from video, audio, etc?
+        if !media.content_type.as_str().starts_with("image/") {
+            return Ok(());
+        }
+
+        let url = self.state.get_s3_url(&format!("media/{media_id}/file"))?;
+        let data = self.state.blobs.read(url.path()).await?;
+
+        // PERF: don't do this! this clones the buffer.
+        let data = data.to_vec();
+
+        let temp_file = TempFile::new().await?;
+        {
+            let mut temp_writer = BufWriter::new(temp_file.open_rw().await?);
+            temp_writer.write_all(&data).await?;
+            temp_writer.flush().await?;
+        }
+        let path = temp_file.file_path();
+
+        let format = match media.content_type.as_str() {
+            "image/jpeg" => "mjpeg",
+            "image/png" => "png",
+            "image/webp" => "webp",
+            "image/gif" => "gif",
+            _ => "image2",
+        };
+
+        // strip exif metadata here
+        // this also "bakes in" rotation because ffmpeg applies it by default
+        let output = ffmpeg::strip_metadata(path, format).await?;
+
+        // reupload stripped image
+        let mut w = self
+            .state
+            .blobs
+            .writer_with(url.path())
+            .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+            .content_type(media.content_type.as_str())
+            .await?;
+        w.write(output).await?;
+        w.close().await?;
+
+        info!("stripped EXIF from media {}", media_id);
+        Ok(())
     }
 }
 

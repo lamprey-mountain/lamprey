@@ -128,7 +128,16 @@ async fn media_patch(
         return Err(Error::MissingPermissions);
     }
 
+    // Check if strip_exif is being set to true
+    let should_strip_exif = json.strip_exif == Some(true);
+
     s.data().media_update(media_id, json).await?;
+
+    // Strip EXIF after updating the database
+    if should_strip_exif {
+        s.services().media.strip_exif(media_id).await?;
+    }
+
     let media = s.data().media_select(media_id).await?;
     s.broadcast(MessageSync::MediaUpdate { media })?;
     Ok(StatusCode::NO_CONTENT)

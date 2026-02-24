@@ -152,6 +152,13 @@ pub struct Media {
         serde(default, skip_serializing_if = "HashMap::is_empty")
     )]
     pub hashes: HashMap<HashType, String>,
+
+    // TODO: don't return this in the actual Media struct, just store and handle it internally
+    /// Whether sensitive exif info has been stripped from this media.
+    ///
+    /// Once set to `true`, this cannot be unset.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub strip_exif: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -322,7 +329,8 @@ pub struct MediaPatch {
 
     /// Whether to strip sensitive exif info, like location or camera make and model.
     ///
-    /// This can only be changed if the media status is not `Consumed`.
+    /// This can only be changed if the media status is not `Consumed`. Once
+    /// strip_exif is set to true, cannot be set to false.
     #[cfg_attr(feature = "serde", serde(default))]
     pub strip_exif: Option<bool>,
 }
@@ -334,6 +342,8 @@ pub struct MediaPatch {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaCreate {
     /// Whether to strip sensitive exif info, like location or camera make and model.
+    ///
+    /// Once strip_exif is set to true, cannot be set to false.
     #[cfg_attr(feature = "serde", serde(default))]
     pub strip_exif: bool,
 

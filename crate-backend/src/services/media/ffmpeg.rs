@@ -87,3 +87,28 @@ pub async fn generate_thumb(path: &Path) -> Result<Vec<u8>> {
         Err(Error::Ffmpeg)
     }
 }
+
+pub async fn strip_metadata(path: &Path, format: &str) -> Result<Vec<u8>> {
+    let cmd = Command::new("ffmpeg")
+        // .args(["-v", "quiet", "-i"])
+        .args(["-i"])
+        .arg(path)
+        .args(["-map_metadata", "-1"])
+        .args(["-f", format])
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .output()
+        .await?;
+    if cmd.status.success() {
+        Ok(cmd.stdout)
+    } else {
+        error!(
+            stderr = String::from_utf8_lossy(&cmd.stderr).to_string(),
+            stdout = String::from_utf8_lossy(&cmd.stdout).to_string(),
+            "strip metadata failed",
+        );
+        Err(Error::Ffmpeg)
+    }
+}

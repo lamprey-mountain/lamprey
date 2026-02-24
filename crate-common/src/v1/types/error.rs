@@ -340,6 +340,10 @@ pub enum ErrorCode {
     #[error("unknown connection")]
     UnknownConnection,
 
+    /// cannot set strip_exif to false once it has been set to true
+    #[error("cannot set strip_exif to false once it has been set to true")]
+    CannotUnsetStripExif,
+
     // calls can only be created in Broadcast channels
     // calls can only be deleted in Broadcast channels
 
@@ -437,6 +441,7 @@ impl ErrorCode {
             ErrorCode::UnknownConnection => 404,
             ErrorCode::Automod => 403,
             ErrorCode::MissingPermissions => 403,
+            ErrorCode::CannotUnsetStripExif => 400,
         }
     }
 }

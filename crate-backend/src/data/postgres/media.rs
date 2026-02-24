@@ -225,7 +225,34 @@ impl DataMedia for Postgres {
             media_data.filename = filename;
         }
 
-        // TODO: how do i handle strip_exif?
+        if let Some(strip_exif) = patch.strip_exif {
+            // Check if media has links (is consumed)
+            let links = query_as!(
+                MediaLink,
+                r#"
+                SELECT media_id, target_id, link_type as "link_type: _"
+                FROM media_link
+                WHERE media_id = $1 AND deleted_at IS NULL
+            "#,
+                *media_id,
+            )
+            .fetch_all(&mut *tx)
+            .await?;
+
+            if !links.is_empty() {
+                return Err(Error::BadStatic(
+                    "cannot change strip_exif on consumed media",
+                ));
+            }
+
+            // Once strip_exif is set to true, it cannot be set to false
+            if !strip_exif && media_data.strip_exif {
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::CannotUnsetStripExif,
+                )));
+            }
+            media_data.strip_exif = strip_exif;
+        }
 
         media.data = serde_json::to_value(media_data).expect("failed to serialize media");
 

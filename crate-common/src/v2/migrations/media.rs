@@ -154,6 +154,7 @@ impl Into<Media> for V1Media {
             room_id: None,
             channel_id: None,
             hashes: HashMap::default(),
+            strip_exif: false,
         }
     }
 }
