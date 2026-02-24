@@ -434,6 +434,37 @@ input[type="submit"] {
 	}
 }
 
+.formatting-toolbar {
+	background-color: $bg-200;
+	border: 1px solid $sep-500;
+	border-radius: 4px;
+	padding: 4px;
+	display: flex;
+	gap: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+	button {
+		background: transparent;
+		border: none;
+		padding: 4px;
+		border-radius: 4px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		&:hover {
+			background-color: $bg-300;
+		}
+
+		img {
+			width: 16px;
+			height: 16px;
+			filter: invert(1);
+		}
+	}
+}
+
 h1 {
 	font-size: 1.5rem;
 }

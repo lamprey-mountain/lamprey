@@ -33,6 +33,7 @@ import { UploadsProvider } from "./contexts/uploads.tsx";
 import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
 import {
 	AutocompleteProvider,
+	FormattingToolbarProvider,
 	MenuProvider,
 	UserPopoutProvider,
 } from "./contexts/mod.tsx";
@@ -123,9 +124,11 @@ export const AppProviders: Component<
 								<SlashCommandsProvider value={ctx.slashCommands}>
 									<MenuProvider>
 										<AutocompleteProvider>
-											<UserPopoutProvider>
-												<AppShell>{props.children}</AppShell>
-											</UserPopoutProvider>
+											<FormattingToolbarProvider>
+												<UserPopoutProvider>
+													<AppShell>{props.children}</AppShell>
+												</UserPopoutProvider>
+											</FormattingToolbarProvider>
 										</AutocompleteProvider>
 									</MenuProvider>
 								</SlashCommandsProvider>

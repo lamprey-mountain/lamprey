@@ -12,12 +12,20 @@ import {
 	autoUpdate,
 	type ClientRectObject,
 	computePosition,
+	flip,
+	offset,
 	type ReferenceElement,
 	shift,
 } from "@floating-ui/dom";
 import { Portal } from "solid-js/web";
 import { useCtx } from "../context.ts";
-import { useAutocomplete, useMenu, useUserPopout } from "./mod.tsx";
+import {
+	useAutocomplete,
+	useFormattingToolbar,
+	useMenu,
+	useUserPopout,
+} from "./mod.tsx";
+import { FormattingToolbar } from "./FormattingToolbar.tsx";
 import { useApi } from "../api.tsx";
 import {
 	ChannelMenu,
@@ -38,8 +46,40 @@ export function OverlayProvider(props: ParentProps) {
 	const { menu } = useMenu();
 	const { autocomplete } = useAutocomplete();
 	const { userView } = useUserPopout();
+	const { toolbar, hideToolbar } = useFormattingToolbar();
 	const api = useApi();
 	const [modals] = useModals();
+
+	const [toolbarRef, setToolbarRef] = createSignal<HTMLElement>();
+	const [toolbarFloating, setToolbarFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "fixed" as const,
+	});
+
+	createEffect(() => {
+		const reference = toolbar().reference;
+		const floating = toolbarRef();
+		if (!reference || !floating) return;
+
+		const cleanup = autoUpdate(
+			reference,
+			floating,
+			() => {
+				computePosition(reference, floating, {
+					placement: "top",
+					middleware: [
+						offset({ mainAxis: 8 }),
+						shift({ padding: 8 }),
+						flip(),
+					],
+				}).then(({ x, y, strategy }) => {
+					setToolbarFloating({ x, y, strategy });
+				});
+			},
+		);
+		onCleanup(cleanup);
+	});
 
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
@@ -321,6 +361,20 @@ export function OverlayProvider(props: ParentProps) {
 						}}
 					>
 						<Autocomplete />
+					</div>
+				</Show>
+				<Show when={toolbar().visible}>
+					<div
+						ref={setToolbarRef}
+						style={{
+							position: toolbarFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${toolbarFloating.x}px ${toolbarFloating.y}px`,
+							"z-index": 1000,
+						}}
+					>
+						<FormattingToolbar onClose={hideToolbar} />
 					</div>
 				</Show>
 			</Portal>

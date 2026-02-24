@@ -9,6 +9,7 @@ export * from "./slash-commands.tsx";
 export * from "./user-popout.tsx";
 export * from "./menu.tsx";
 export * from "./autocomplete.tsx";
+export * from "./formatting-toolbar.tsx";
 
 // // TODO: more contexts
 // export * from "./room.tsx";
