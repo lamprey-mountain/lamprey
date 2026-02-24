@@ -77,7 +77,8 @@ impl ServiceUsers {
         let mut missing = Vec::new();
 
         for user_id in user_ids {
-            if let Some(user) = srv.cache.users.get(user_id).await {
+            if let Some(mut user) = srv.cache.users.get(user_id).await {
+                user.presence = srv.presence.get(*user_id);
                 out.push(user);
             } else {
                 missing.push(*user_id);

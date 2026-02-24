@@ -221,6 +221,7 @@ impl MemberList {
     ) -> MemberKey {
         let user = users.get(user_id).unwrap();
         let is_online = user.presence.is_online();
+        tracing::debug!(?user_id, is_online, "calculating key");
 
         let group = if is_online {
             // find highest hoisted role
@@ -385,9 +386,16 @@ impl MemberList {
                         MemberGroupInfo::Offline => false,
                         _ => true,
                     };
+                    tracing::debug!(
+                        ?user_id,
+                        ?presence,
+                        is_online_old,
+                        "processing presence update"
+                    );
                     if is_online_old != presence.is_online() {
                         // group changed, need to recalculate
-                        if let Ok(user) = self.s.services().cache.user_get(user_id).await {
+                        if let Ok(mut user) = self.s.services().cache.user_get(user_id).await {
+                            user.presence = presence.clone();
                             if let Some(room_id) = self.key.room_id() {
                                 if let Ok(cached_room) =
                                     self.s.services().cache.load_room(room_id).await
@@ -461,6 +469,7 @@ impl MemberList {
         member: &RoomMember,
         users_map: &HashMap<UserId, User>,
     ) {
+        tracing::debug!(?user_id, "recalculating member");
         if let Some(room_id) = self.key.room_id() {
             if let Ok(cached_room) = self.s.services().cache.load_room(room_id).await {
                 let perms_calc = cached_room.clone().permissions().await;

@@ -35,9 +35,10 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use common::v1::types::{MessageSync, RoomId};
+use common::v1::types::{MessageSync, RoomId, User};
 use dashmap::DashMap;
 use tokio::sync::mpsc;
+use tokio_stream::StreamExt;
 
 use crate::{
     services::member_lists::{
@@ -118,6 +119,22 @@ impl ServiceMemberLists {
                     HashSet::new()
                 }
             }
+            MessageSync::PresenceUpdate { user_id, .. }
+            | MessageSync::UserUpdate {
+                user: User { id: user_id, .. },
+            } => {
+                let user_id = *user_id;
+                let mut affected = HashSet::new();
+                for entry in self.room_to_lists.iter() {
+                    let room_id = *entry.key();
+                    if let Ok(room) = self.s.services().cache.load_room(room_id).await {
+                        if room.members.contains_key(&user_id) {
+                            affected.extend(entry.value().clone());
+                        }
+                    }
+                }
+                affected
+            }
             _ => return,
         };
 
@@ -168,5 +185,21 @@ impl ServiceMemberLists {
 
         self.lists.insert(key, Arc::clone(&handle));
         Ok(handle)
+    }
+
+    /// Create a new syncer for a connection
+    pub fn create_syncer(&self, conn_id: uuid::Uuid) -> syncer::MemberListSyncer {
+        syncer::MemberListSyncer::new(self.s.clone(), conn_id)
+    }
+
+    /// Start background tasks for the service
+    pub fn start_background_tasks(&self) {
+        let s = self.s.clone();
+        tokio::spawn(async move {
+            let mut sushi = s.subscribe_sushi().await.unwrap();
+            while let Some(msg) = sushi.next().await {
+                s.services().member_lists.handle_event(&msg.message).await;
+            }
+        });
     }
 }

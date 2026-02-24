@@ -100,7 +100,7 @@ impl MemberListSyncer {
                         None => continue, // stream closed, try next
                     }
                 }
-                else => return Ok(None),
+                else => std::future::pending().await,
             }
         }
     }

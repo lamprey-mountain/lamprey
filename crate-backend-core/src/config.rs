@@ -63,6 +63,10 @@ pub struct Config {
     ///
     /// if None, use in memory channels for events
     pub nats: Option<ConfigNats>,
+
+    /// experimental features to enable
+    #[serde(default)]
+    pub experiments: ConfigExperiments,
 }
 
 fn default_require_server_invite() -> bool {
@@ -137,6 +141,11 @@ pub struct ConfigNats {
 
 fn default_nats_addr() -> String {
     "localhost:4222".to_string()
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ConfigExperiments {
+    pub new_member_lists: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]
