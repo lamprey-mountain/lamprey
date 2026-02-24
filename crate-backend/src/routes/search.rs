@@ -83,7 +83,6 @@ pub async fn search_rooms(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(search_messages))
-        .routes(routes!(search_messages))
         .routes(routes!(search_channels))
         .routes(routes!(search_rooms))
 }
