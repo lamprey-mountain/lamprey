@@ -183,12 +183,7 @@ export const Voice = (p: { channel: Channel }) => {
 												"background-color": getColor(uid),
 											}}
 										>
-											<Show when={user()?.avatar}>
-												<img
-													src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
-													class="avatar"
-												/>
-											</Show>
+											<AvatarWithStatus user={user()} />
 											<div class="status">
 												{getName(uid)}
 											</div>
