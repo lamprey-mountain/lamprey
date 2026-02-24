@@ -7,8 +7,7 @@ use std::{
 use async_tempfile::TempFile;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    util::truncate::truncate_filename, MediaCreate, MediaCreateSource, MediaId, Mime,
-    UserId,
+    util::truncate::truncate_filename, MediaCreate, MediaCreateSource, MediaId, Mime, UserId,
 };
 use common::v2::types::media::{Media as MediaV2, MediaMetadata, MediaStatus};
 use dashmap::DashMap;
@@ -199,7 +198,7 @@ impl ServiceMedia {
         let services = self.state.services();
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mime: Mime = mime.parse()?;
-        
+
         let metadata = match mime.parse() {
             Ok(m) => match m.ty().as_str() {
                 "image" => {
@@ -220,7 +219,10 @@ impl ServiceMedia {
                 "audio" | "video" => MediaMetadata::Video {
                     height: meta.as_ref().and_then(|m| m.height()).unwrap_or(0),
                     width: meta.as_ref().and_then(|m| m.width()).unwrap_or(0),
-                    duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)).unwrap_or(0),
+                    duration: meta
+                        .as_ref()
+                        .and_then(|m| m.duration().map(|d| d as u64))
+                        .unwrap_or(0),
                 },
                 "text" => MediaMetadata::Text,
                 _ => MediaMetadata::File,
@@ -250,7 +252,7 @@ impl ServiceMedia {
             room_id: None,
             channel_id: None,
         };
-        
+
         debug!("finish upload for {}, mime {}", media_id, mime);
         trace!("finish upload for {} media {:?}", media_id, media);
         if let Some(meta) = &meta {
@@ -279,10 +281,7 @@ impl ServiceMedia {
         };
         upload_s3.await?;
         drop(tmp);
-        self.state
-            .data()
-            .media2_insert(media.clone())
-            .await?;
+        self.state.data().media2_insert(media.clone()).await?;
         Ok(media)
     }
 
@@ -471,9 +470,9 @@ async fn upload_extracted_thumb(
     bytes: BigData,
     media_id: MediaId,
 ) -> Result<()> {
-    let len = bytes.0.len();
+    let _len = bytes.0.len();
     let span_probe = span!(Level::DEBUG, "probe thumbnail image");
-    let (width, height, mime) = async {
+    let (_width, _height, mime) = async {
         let cursor = Cursor::new(&bytes);
         let reader = image::ImageReader::new(cursor).with_guessed_format()?;
         let mime: Mime = reader

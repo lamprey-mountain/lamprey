@@ -3,10 +3,10 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{MessageSync, MessageType, RoomId};
+use common::v1::types::MessageSync;
 use common::v2::types::message::Message;
 use common::{
-    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, ConnectionId, Media, UserId},
+    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, ConnectionId, RoomId, UserId},
     v2::types::message::MessageVersion,
 };
 use dashmap::DashMap;
@@ -252,7 +252,7 @@ impl ServerStateInner {
     }
 
     /// presigns every relevant url in a piece of media
-    pub async fn presign(&self, _media: &mut Media) -> Result<()> {
+    pub async fn presign(&self, _media: &mut common::v2::types::media::Media) -> Result<()> {
         // in the past, media was served directly from s3
         // this doesn't do anything, but i'll keep it just in case
         Ok(())
@@ -278,8 +278,13 @@ impl ServerStateInner {
     /// presigns every relevant url in a MessageVersion
     pub async fn presign_message_version(&self, ver: &mut MessageVersion) -> Result<()> {
         match &mut ver.message_type {
-            MessageType::DefaultMarkdown(m) => {
-                for media in &mut m.attachments {
+            common::v2::types::message::MessageType::DefaultMarkdown(m) => {
+                for attachment in &mut m.attachments {
+                    let common::v2::types::message::MessageAttachmentType::Media { media } =
+                        &mut attachment.ty
+                    else {
+                        continue;
+                    };
                     self.presign(media).await?;
                 }
                 for emb in &mut m.embeds {

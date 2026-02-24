@@ -9,9 +9,9 @@ use common::v1::types::{
         ChannelSearchOrderField, ChannelSearchRequest, MessageSearchOrderField,
         MessageSearchRequest, Order,
     },
-    ChannelId, Message, MessageId, MessageSync, PaginationDirection, PaginationQuery,
-    SERVER_USER_ID,
+    ChannelId, MessageId, MessageSync, PaginationDirection, PaginationQuery, SERVER_USER_ID,
 };
+use common::v2::types::message::Message;
 use tantivy::{
     collector::{Count, TopDocs},
     query::{BooleanQuery, Query, QueryParser},
@@ -87,21 +87,22 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
 
         let mut index_writer: IndexWriter = index.writer(INDEXING_BUFFER_SIZE).unwrap();
 
-        let insert_message = |index_writer: &IndexWriter, message: Message| {
-            // TODO: add message.room_id
-            let (room_id, parent_channel_id) = rt.block_on(async {
-                if let Ok(channel) = s.services().channels.get(message.channel_id, None).await {
-                    (channel.room_id, channel.parent_id)
-                } else {
-                    (None, None)
-                }
-            });
+        let insert_message =
+            |index_writer: &IndexWriter, message: common::v2::types::message::Message| {
+                // TODO: add message.room_id
+                let (room_id, parent_channel_id) = rt.block_on(async {
+                    if let Ok(channel) = s.services().channels.get(message.channel_id, None).await {
+                        (channel.room_id, channel.parent_id)
+                    } else {
+                        (None, None)
+                    }
+                });
 
-            let doc = tantivy_document_from_message(&sch, message, room_id, parent_channel_id);
-            if let Err(e) = index_writer.add_document(doc) {
-                error!("failed to add document: {}", e);
-            }
-        };
+                let doc = tantivy_document_from_message(&sch, message, room_id, parent_channel_id);
+                if let Err(e) = index_writer.add_document(doc) {
+                    error!("failed to add document: {}", e);
+                }
+            };
 
         let mut last_commit = std::time::Instant::now();
         let mut uncommitted_count = 0;
@@ -246,8 +247,7 @@ pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
                                 } else {
                                     let last_id = page.items.last().map(|m| m.id);
                                     for msg_v2 in page.items {
-                                        let msg: Message = msg_v2.into();
-                                        insert_message(&index_writer, msg);
+                                        insert_message(&index_writer, msg_v2);
                                     }
                                     uncommitted_count += limit as usize;
 

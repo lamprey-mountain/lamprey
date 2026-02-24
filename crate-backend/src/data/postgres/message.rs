@@ -2,10 +2,12 @@ use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Time;
-use common::v1::types::{
-    ChannelType, Embed, Mentions, MessageDefaultMarkdown, MessageType, UserId,
+use common::v1::types::{ChannelType, Mentions, UserId};
+use common::v2::types::embed::Embed;
+use common::v2::types::message::{
+    Message as MessageV2, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown,
+    MessageType, MessageVersion as MessageVersionV2,
 };
-use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
@@ -14,13 +16,12 @@ use crate::consts::MAX_PINNED_MESSAGES;
 use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
-    ChannelId, DbChannelType, DbMessageCreate, MentionsIds, MessageId, MessageVerId,
+    ChannelId, DbChannelType, DbMessageCreate, DbMessageType, MentionsIds, MessageId, MessageVerId,
     PaginationDirection, PaginationQuery, PaginationResponse,
 };
 
 use crate::data::DataMessage;
 
-use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
 #[derive(Debug)]
@@ -59,44 +60,6 @@ pub struct DbMessageVersion {
     pub created_at: time::PrimitiveDateTime,
     pub deleted_at: Option<time::PrimitiveDateTime>,
     pub attachments: serde_json::Value,
-}
-
-#[derive(Debug, sqlx::Type)]
-#[sqlx(type_name = "message_type")]
-pub enum DbMessageType {
-    DefaultMarkdown,
-    DefaultTagged, // removed
-    ThreadUpdate,  // removed
-    MemberAdd,
-    MemberRemove,
-    MemberJoin,
-    MessagePinned,
-    ThreadCreated,
-    ChannelRename,
-    ChannelIcon,
-    ChannelPingback,
-    ChannelMoved,
-    AutomodExecution,
-    Call,
-}
-
-impl From<MessageType> for DbMessageType {
-    fn from(value: MessageType) -> Self {
-        match value {
-            MessageType::DefaultMarkdown(_) => DbMessageType::DefaultMarkdown,
-            MessageType::ChannelRename(_) => DbMessageType::ChannelRename,
-            MessageType::MemberAdd(_) => DbMessageType::MemberAdd,
-            MessageType::MemberRemove(_) => DbMessageType::MemberRemove,
-            MessageType::MemberJoin => DbMessageType::MemberJoin,
-            MessageType::Call(_) => DbMessageType::Call,
-            MessageType::MessagePinned(_) => DbMessageType::MessagePinned,
-            MessageType::ThreadCreated(_) => DbMessageType::ThreadCreated,
-            MessageType::ChannelIcon(_) => DbMessageType::ChannelIcon,
-            MessageType::ChannelPingback(_) => DbMessageType::ChannelPingback,
-            MessageType::ChannelMoved(_) => DbMessageType::ChannelMoved,
-            MessageType::AutomodExecution(_) => DbMessageType::AutomodExecution,
-        }
-    }
 }
 
 impl From<DbMessage> for MessageV2 {
@@ -145,10 +108,21 @@ impl From<DbMessageVersion> for MessageVersionV2 {
                         .unwrap_or_default();
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content: row.content,
-                        attachments: attachments.into_iter().map(media_from_db).collect(),
-                        metadata: row.metadata,
+                        attachments: attachments
+                            .into_iter()
+                            .map(|v| {
+                                let media: common::v1::types::Media = serde_json::from_value(v)
+                                    .unwrap_or_else(|_| panic!("invalid attachment"));
+                                MessageAttachment {
+                                    ty: MessageAttachmentType::Media {
+                                        media: media.into(),
+                                    },
+                                    spoiler: false,
+                                }
+                            })
+                            .collect(),
+                        metadata: row.metadata.and_then(|m| serde_json::from_value(m).ok()),
                         reply_id: row.reply_id.map(Into::into),
-                        override_name: row.override_name,
                         embeds,
                     })
                 }

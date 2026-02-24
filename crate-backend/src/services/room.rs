@@ -324,7 +324,7 @@ impl ServiceRooms {
                     attachment_ids: vec![],
                     author_id: user_id,
                     embeds: vec![],
-                    message_type: MessageType::MemberJoin,
+                    message_type: MessageType::MemberJoin.into(),
                     edited_at: None,
                     created_at: None,
                     removed_at: None,

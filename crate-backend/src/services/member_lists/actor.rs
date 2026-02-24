@@ -230,7 +230,8 @@ impl MemberList {
                 if let Some(role) = cached_room.roles.get(role_id) {
                     let cached_role = role.value();
                     if cached_role.inner.hoist {
-                        if best_role.is_none() || cached_role.inner.position < best_role.unwrap().1 {
+                        if best_role.is_none() || cached_role.inner.position < best_role.unwrap().1
+                        {
                             best_role = Some((*role_id, cached_role.inner.position as u64));
                         }
                     }

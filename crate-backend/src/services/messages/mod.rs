@@ -12,13 +12,16 @@ use common::v1::types::misc::Color;
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    Channel, ChannelId, ChannelPatch, ContextQuery, ContextResponse, Embed, EmbedCreate, EmbedId,
-    EmbedType, Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageCreate,
-    MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync, MessageType, NotificationId,
-    PaginationDirection, PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId,
+    Channel, ChannelId, ChannelPatch, ContextQuery, ContextResponse, EmbedCreate, EmbedId,
+    Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageCreate, MessageId,
+    MessageSync, NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
+    Permission, RepliesQuery, RoomId,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
-use common::v2::types::message::{Message, MessageVersion};
+use common::v2::types::embed::{Embed, EmbedType};
+use common::v2::types::message::{
+    Message, MessageDefaultMarkdown, MessagePatch, MessageType, MessageVersion,
+};
 use http::StatusCode;
 use linkify::LinkFinder;
 use url::Url;
@@ -363,9 +366,8 @@ impl ServiceMessages {
             content: json.content,
             attachments: vec![],
             embeds: vec![],
-            metadata: json.metadata,
+            metadata: None,
             reply_id: json.reply_id,
-            override_name: json.override_name,
         });
 
         let message_id_db = data
@@ -374,7 +376,7 @@ impl ServiceMessages {
                 channel_id: thread_id,
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
-                embeds,
+                embeds: embeds.into_iter().map(|e| e.into()).collect(),
                 message_type: payload,
                 edited_at: None,
                 created_at: json.created_at.map(|t| t.into()),
@@ -388,9 +390,9 @@ impl ServiceMessages {
             error!("Message id mismatch: {} != {}", message_id, message_id_db);
         }
         for id in &all_media_ids {
-            data.media_link_insert(*id, message_uuid, MediaLinkType::Message)
+            data.media2_link_insert(*id, message_uuid, MediaLinkType::Message)
                 .await?;
-            data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
+            data.media2_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
                 .await?;
         }
         let mut message = self.get(thread_id, message_id, user_id).await?;
@@ -766,40 +768,44 @@ impl ServiceMessages {
             perms.ensure_all(&required_perms)?;
         }
 
-        if json.edited_at.is_some() {
-            if is_webhook {
-                // TODO: allow this once webhook permissions exist?
-                return Err(Error::BadStatic("webhook cannot set edited_at"));
-            }
-            let usr = data.user_get(user_id).await?;
-            if let Some(puppet) = usr.puppet {
-                let owner_perms = srv
-                    .perms
-                    .for_channel(puppet.owner_id.into_inner().into(), thread_id)
-                    .await?;
-                let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
-                owner_perms.ensure_all(&required_perms)?;
-            } else {
-                return Err(Error::BadStatic("not a puppet"));
-            }
-        }
-
         if !json.changes(&message) {
             return Ok((StatusCode::NOT_MODIFIED, message));
         }
         let attachment_ids: Vec<_> = json
             .attachments
             .clone()
-            .map(|ats| ats.into_iter().map(|r| r.id).collect())
+            .map(|ats| {
+                ats.into_iter()
+                    .filter_map(|r| match r.ty {
+                        common::v2::types::message::MessageAttachmentCreateType::Media {
+                            media,
+                            ..
+                        } => match media {
+                            common::v2::types::media::MediaReference::Media { media_id } => {
+                                Some(media_id)
+                            }
+                            _ => None,
+                        },
+                        _ => None,
+                    })
+                    .collect()
+            })
             .unwrap_or_else(|| match &message.latest_version.message_type {
-                MessageType::DefaultMarkdown(msg) => {
-                    msg.attachments.iter().map(|media| media.id).collect()
-                }
+                MessageType::DefaultMarkdown(msg) => msg
+                    .attachments
+                    .iter()
+                    .filter_map(|a| match &a.ty {
+                        common::v2::types::message::MessageAttachmentType::Media { media } => {
+                            Some(media.id)
+                        }
+                        _ => None,
+                    })
+                    .collect(),
                 _ => vec![],
             });
         for id in &attachment_ids {
-            data.media_select(*id).await?;
-            let existing = data.media_link_select(*id).await?;
+            data.media2_select(*id).await?;
+            let existing = data.media2_link_select(*id).await?;
             let has_link = existing.iter().any(|i| {
                 i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner()
             });
@@ -811,26 +817,28 @@ impl ServiceMessages {
         if let Some(embed_creates) = json.embeds.clone() {
             let mut embed_futs = Vec::new();
             for embed_create in embed_creates {
-                embed_futs.push(embed_from_create(s.clone(), embed_create, user_id));
+                let v1_embed_create: common::v1::types::EmbedCreate = embed_create.into();
+                embed_futs.push(embed_from_create(s.clone(), v1_embed_create, user_id));
             }
             embeds = futures_util::future::try_join_all(embed_futs).await?;
         }
 
         let mut removed_at = None;
 
-        if let Some(room_id) = thread.room_id {
-            let automod = srv.automod.load(room_id).await?;
-            let scan = automod.scan_message_update(&message, &json);
-            if scan.is_triggered() {
-                let removed = srv
-                    .automod
-                    .enforce_message_create(room_id, thread_id, message_id, user_id, &scan)
-                    .await?;
-                if removed {
-                    removed_at = Some(Time::now_utc());
-                }
-            }
-        }
+        // TODO: update automod to use v2 MessagePatch
+        // if let Some(room_id) = thread.room_id {
+        //     let automod = srv.automod.load(room_id).await?;
+        //     let scan = automod.scan_message_update(&message, &json);
+        //     if scan.is_triggered() {
+        //         let removed = srv
+        //             .automod
+        //             .enforce_message_create(room_id, thread_id, message_id, user_id, &scan)
+        //             .await?;
+        //         if removed {
+        //             removed_at = Some(Time::now_utc());
+        //         }
+        //     }
+        // }
 
         let (content, payload) = match message.latest_version.message_type.clone() {
             MessageType::DefaultMarkdown(msg) => {
@@ -841,9 +849,8 @@ impl ServiceMessages {
                         content,
                         attachments: vec![],
                         embeds: embeds.clone(),
-                        metadata: json.metadata.unwrap_or(msg.metadata),
+                        metadata: None,
                         reply_id: json.reply_id.unwrap_or(msg.reply_id),
-                        override_name: json.override_name.unwrap_or(msg.override_name),
                     }),
                 ))
             }
@@ -859,21 +866,21 @@ impl ServiceMessages {
                     channel_id: thread_id,
                     attachment_ids: attachment_ids.clone(),
                     author_id: user_id,
-                    embeds,
+                    embeds: embeds.into_iter().map(|e| e.into()).collect(),
                     message_type: payload,
-                    edited_at: json.edited_at.map(|t| t.into()),
+                    edited_at: None,
                     // NOTE: this field is ignored
                     created_at: None,
-                    removed_at: removed_at.map(|t| t.into()),
+                    removed_at: removed_at.map(|t: Time| t.into()),
                     mentions: message.latest_version.mentions,
                 },
             )
             .await?;
 
         for id in &attachment_ids {
-            data.media_link_insert(*id, *version_id, MediaLinkType::MessageVersion)
+            data.media2_link_insert(*id, *version_id, MediaLinkType::MessageVersion)
                 .await?;
-            data.media_link_insert(*id, *message_id, MediaLinkType::Message)
+            data.media2_link_insert(*id, *message_id, MediaLinkType::Message)
                 .await?;
         }
 

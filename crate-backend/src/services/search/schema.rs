@@ -2,10 +2,9 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use common::v1::types::util::Time;
-use common::v1::types::{
-    Channel, ChannelId, ChannelType, Message, MessageType, Room, RoomId, User,
-};
+use common::v1::types::{Channel, ChannelId, ChannelType, Room, RoomId, User};
 use common::v2::types::media::Media;
+use common::v2::types::message::{Message, MessageType};
 use serde::{Deserialize, Serialize};
 use tantivy::schema::TextOptions;
 use tantivy::schema::{
@@ -267,57 +266,69 @@ pub fn tantivy_document_from_message(
         if !m.attachments.is_empty() {
             meta_fast.insert("has_attachment".to_string(), true.into());
 
-            let has_audio = m
-                .attachments
-                .iter()
-                .any(|a| a.source.mime.starts_with("audio/"));
-            let has_image = m
-                .attachments
-                .iter()
-                .any(|a| a.source.mime.starts_with("image/"));
-            let has_video = m
-                .attachments
-                .iter()
-                .any(|a| a.source.mime.starts_with("video/"));
+            let has_audio = m.attachments.iter().any(|a| {
+                if let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty {
+                    media.content_type.to_string().starts_with("audio/")
+                } else {
+                    false
+                }
+            });
+            let has_image = m.attachments.iter().any(|a| {
+                if let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty {
+                    media.content_type.to_string().starts_with("image/")
+                } else {
+                    false
+                }
+            });
+            let has_video = m.attachments.iter().any(|a| {
+                if let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty {
+                    media.content_type.to_string().starts_with("video/")
+                } else {
+                    false
+                }
+            });
 
             meta_fast.insert("has_audio".to_string(), has_audio.into());
             meta_fast.insert("has_image".to_string(), has_image.into());
             meta_fast.insert("has_video".to_string(), has_video.into());
 
             for att in &m.attachments {
-                // Helper to push to array
-                let push_val =
-                    |map: &mut BTreeMap<String, OwnedValue>, key: &str, val: OwnedValue| {
-                        let entry = map
-                            .entry(key.to_string())
-                            .or_insert_with(|| OwnedValue::Array(Vec::new()));
-                        if let OwnedValue::Array(vec) = entry {
-                            vec.push(val);
-                        }
-                    };
+                if let common::v2::types::message::MessageAttachmentType::Media { media } = &att.ty
+                {
+                    // Helper to push to array
+                    let push_val =
+                        |map: &mut BTreeMap<String, OwnedValue>, key: &str, val: OwnedValue| {
+                            let entry = map
+                                .entry(key.to_string())
+                                .or_insert_with(|| OwnedValue::Array(Vec::new()));
+                            if let OwnedValue::Array(vec) = entry {
+                                vec.push(val);
+                            }
+                        };
 
-                push_val(&mut meta_fast, "media_size", att.source.size.into());
-                push_val(
-                    &mut meta_fast,
-                    "media_content_type",
-                    att.source.mime.as_str().into(),
-                );
-                push_val(
-                    &mut meta_fast,
-                    "media_filename",
-                    att.filename.as_str().into(),
-                );
+                    push_val(&mut meta_fast, "media_size", media.size.into());
+                    push_val(
+                        &mut meta_fast,
+                        "media_content_type",
+                        media.content_type.to_string().into(),
+                    );
+                    push_val(
+                        &mut meta_fast,
+                        "media_filename",
+                        media.filename.as_str().into(),
+                    );
 
-                if let Some(alt) = &att.alt {
-                    push_val(&mut meta_text, "media_alt", alt.as_str().into());
-                }
+                    if let Some(alt) = &media.alt {
+                        push_val(&mut meta_text, "media_alt", alt.as_str().into());
+                    }
 
-                let extension = Path::new(&att.filename)
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .map(|ext| ext.to_lowercase());
-                if let Some(e) = extension {
-                    push_val(&mut meta_fast, "media_extension", e.as_str().into());
+                    let extension = Path::new(&media.filename)
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map(|ext| ext.to_lowercase());
+                    if let Some(e) = extension {
+                        push_val(&mut meta_fast, "media_extension", e.as_str().into());
+                    }
                 }
             }
         } else {

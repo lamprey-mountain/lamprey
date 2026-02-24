@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use common::v1::types::{Embed, UserId};
+use common::v1::types::UserId;
+use common::v2::types::embed::Embed;
 use sqlx::{query, query_as};
 
 use uuid::Uuid;

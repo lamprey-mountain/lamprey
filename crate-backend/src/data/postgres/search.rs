@@ -10,15 +10,12 @@ use uuid::Uuid;
 
 use crate::{
     data::{
-        postgres::{
-            message::{DbMessage, DbMessageType},
-            Pagination,
-        },
+        postgres::{message::DbMessage, Pagination},
         DataSearch,
     },
     error::Result,
     gen_paginate,
-    types::{DbChannel, DbChannelType},
+    types::{DbChannel, DbChannelType, DbMessageType},
 };
 
 use super::Postgres;

@@ -2,11 +2,13 @@ use std::io::Write;
 use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
 
+use common::v1::types::ids::EmbedId;
 use common::v1::types::misc::Color;
-use common::v1::types::{self, MessageSync, MessageType};
-use common::v2::types::embed::{Embed, EmbedId};
-use common::v2::types::media::Media as MediaV2;
 use common::v1::types::UserId;
+use common::v1::types::{self, MessageSync};
+use common::v2::types::embed::Embed;
+use common::v2::types::media::Media as MediaV2;
+use common::v2::types::message::MessageType;
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::{Deserialize, Serialize};
@@ -59,7 +61,7 @@ pub enum EmbedType {
     Website(Embed),
 
     /// a piece of media
-    Media(Media),
+    Media(MediaV2),
     // /// a custom embed
     // Custom(UrlEmbed),
 }
@@ -312,7 +314,7 @@ impl ServiceEmbed {
             debug!("url embed inserted media");
             let embed = Embed {
                 id: EmbedId::new(),
-                ty: common::v1::types::EmbedType::Media,
+                ty: common::v2::types::embed::EmbedType::Media,
                 url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
                     None
@@ -322,7 +324,7 @@ impl ServiceEmbed {
                 title: None,
                 description: None,
                 color: None,
-                media: Some(media.clone()),
+                media: Some(media_v2.clone()),
                 thumbnail: None,
                 author_url: None,
                 author_name: None,
@@ -467,7 +469,7 @@ impl ServiceEmbed {
 
             let embed = Embed {
                 id: EmbedId::new(),
-                ty: common::v1::types::EmbedType::Link,
+                ty: common::v2::types::embed::EmbedType::Link,
                 url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
                     None
@@ -536,19 +538,19 @@ impl ServiceEmbed {
                 }
 
                 if let Some(media) = &embed.media {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.thumbnail {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.author_avatar {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.site_avatar {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    data.media2_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
 
@@ -561,7 +563,15 @@ impl ServiceEmbed {
                 m.embeds.push(embed);
                 (
                     m.embeds.clone(),
-                    m.attachments.iter().map(|a| a.id).collect(),
+                    m.attachments
+                        .iter()
+                        .filter_map(|a| match &a.ty {
+                            common::v2::types::message::MessageAttachmentType::Media { media } => {
+                                Some(media.id)
+                            }
+                            _ => None,
+                        })
+                        .collect(),
                 )
             }
             _ => return Ok(()),
@@ -575,7 +585,7 @@ impl ServiceEmbed {
                 channel_id: mref.thread_id,
                 attachment_ids: attachments,
                 author_id: message.author_id,
-                embeds,
+                embeds: embeds.into_iter().map(|e| e.into()).collect(),
                 message_type,
                 // NOTE: edited_at is used to set the version created_at
                 edited_at: Some(message.latest_version.created_at.into()),

@@ -10,15 +10,15 @@ use common::v1::types::{
     application::Scope, AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate,
     MessageModerate, MessagePin, MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
 };
-use common::v2::types::message::Message;
+use common::v2::types::message::{Message, MessagePatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
     error::Error,
     types::{
-        ChannelId, DbMessageCreate, MessageCreate, MessageId, MessagePatch, MessageSync,
-        MessageVerId, PaginationQuery, PaginationResponse, Permission,
+        ChannelId, DbMessageCreate, MessageCreate, MessageId, MessageSync, MessageVerId,
+        PaginationQuery, PaginationResponse, Permission,
     },
     ServerState,
 };
@@ -817,7 +817,8 @@ async fn message_pin_create(
             embeds: vec![],
             message_type: MessageType::MessagePinned(MessagePin {
                 pinned_message_id: message_id,
-            }),
+            })
+            .into(),
             edited_at: None,
             created_at: None,
             removed_at: None,

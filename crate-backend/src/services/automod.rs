@@ -790,7 +790,7 @@ impl ServiceAutomod {
                         attachment_ids: vec![],
                         author_id: AUTOMOD_USER_ID,
                         embeds: vec![],
-                        message_type: MessageType::AutomodExecution(execution),
+                        message_type: MessageType::AutomodExecution(execution).into(),
                         edited_at: None,
                         created_at: None,
                         removed_at: None,

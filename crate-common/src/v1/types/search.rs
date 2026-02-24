@@ -10,8 +10,8 @@ use validator::Validate;
 #[cfg(feature = "feat_search_ordering")]
 use crate::v1::types::MessageId;
 use crate::v1::types::{
-    misc::Time, Channel, ChannelId, ChannelType, Message, RoleId, RoomId, RoomMember, TagId,
-    ThreadMember, User, UserId,
+    misc::Time, Channel, ChannelId, ChannelType, RoleId, RoomId, RoomMember, TagId, ThreadMember,
+    User, UserId,
 };
 
 // TODO: remove irrelevant fields (tantivy filters using query)
@@ -317,7 +317,7 @@ pub struct MessageSearch {
     pub results: Vec<MessageId>,
 
     /// all relevant messages (eg. messages that a result replied to)
-    pub messages: Vec<Message>,
+    pub messages: Vec<crate::v2::types::message::Message>,
 
     /// the authors of the messages
     pub users: Vec<User>,

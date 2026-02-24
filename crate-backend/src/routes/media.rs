@@ -140,14 +140,14 @@ async fn media_patch(
     if media_v2.user_id != Some(auth.user.id) {
         return Err(Error::MissingPermissions);
     }
-    
+
     // Convert v1 patch to v2 patch
     let v2_patch = common::v2::types::media::MediaPatch {
         alt: json.alt,
         filename: None,
         strip_exif: None,
     };
-    
+
     s.data().media2_update(media_id, v2_patch).await?;
     let mut headers = HeaderMap::new();
     headers.insert("upload-offset", media_v2.size.into());

@@ -13,12 +13,13 @@ use common::v1::types::util::Time;
 
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
-    DocumentBranchId, DocumentTagId, Embed, Media, MediaId, MediaPatch, PaginationQuery,
+    DocumentBranchId, DocumentTagId, Media, MediaId, MediaPatch, PaginationQuery,
     PaginationResponse, PinsReorder, Role, RoleId, RolePatch, RoleReorder, RoleVerId, Room,
     RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, SessionPatch, SessionStatus,
     SessionToken, Suspended, User, UserId, UserListFilter,
 };
 
+use common::v2::types::embed::Embed;
 use common::v2::types::media::Media as MediaV2;
 use common::v2::types::message::{Message as MessageV2, MessageVersion as MessageVersionV2};
 

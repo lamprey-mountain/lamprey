@@ -3,10 +3,11 @@
 use common::v1::types::automod::{AutomodAction, AutomodTarget, AutomodTrigger};
 use common::v1::types::{
     util::Time, Channel, ChannelId, ChannelType, ChannelVerId, Embed, MediaId, MessageId,
-    MessageType, MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomType, Session,
-    SessionStatus, SessionToken, SessionType, UserId,
+    MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomType, Session, SessionStatus,
+    SessionToken, SessionType, UserId,
 };
 use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
+use common::v2::types::message::MessageType;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use time::PrimitiveDateTime;
@@ -14,6 +15,44 @@ use uuid::Uuid;
 
 pub use common::v1::types::ids::*;
 pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
+
+#[derive(Debug, sqlx::Type)]
+#[sqlx(type_name = "message_type")]
+pub enum DbMessageType {
+    DefaultMarkdown,
+    DefaultTagged, // removed
+    ThreadUpdate,  // removed
+    MemberAdd,
+    MemberRemove,
+    MemberJoin,
+    MessagePinned,
+    ThreadCreated,
+    ChannelRename,
+    ChannelIcon,
+    ChannelPingback,
+    ChannelMoved,
+    AutomodExecution,
+    Call,
+}
+
+impl From<MessageType> for DbMessageType {
+    fn from(value: MessageType) -> Self {
+        match value {
+            MessageType::DefaultMarkdown(_) => DbMessageType::DefaultMarkdown,
+            MessageType::ChannelRename(_) => DbMessageType::ChannelRename,
+            MessageType::MemberAdd(_) => DbMessageType::MemberAdd,
+            MessageType::MemberRemove(_) => DbMessageType::MemberRemove,
+            MessageType::MemberJoin => DbMessageType::MemberJoin,
+            MessageType::Call(_) => DbMessageType::Call,
+            MessageType::MessagePinned(_) => DbMessageType::MessagePinned,
+            MessageType::ThreadCreated(_) => DbMessageType::ThreadCreated,
+            MessageType::ChannelIcon(_) => DbMessageType::ChannelIcon,
+            MessageType::ChannelPingback(_) => DbMessageType::ChannelPingback,
+            MessageType::ChannelMoved(_) => DbMessageType::ChannelMoved,
+            MessageType::AutomodExecution(_) => DbMessageType::AutomodExecution,
+        }
+    }
+}
 
 // deserialize from jsonb
 #[derive(Debug, Serialize, Deserialize)]
@@ -449,7 +488,10 @@ impl DbMessageCreate {
 
     pub fn metadata(&self) -> Option<serde_json::Value> {
         match &self.message_type {
-            MessageType::DefaultMarkdown(msg) => msg.metadata.clone(),
+            MessageType::DefaultMarkdown(msg) => msg
+                .metadata
+                .as_ref()
+                .and_then(|m| serde_json::to_value(m).ok()),
             MessageType::MemberAdd(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberRemove(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberJoin => None,
@@ -472,10 +514,8 @@ impl DbMessageCreate {
     }
 
     pub fn override_name(&self) -> Option<String> {
-        match &self.message_type {
-            MessageType::DefaultMarkdown(msg) => msg.override_name.clone(),
-            _ => None,
-        }
+        // v2 messages don't have override_name, return None
+        None
     }
 }
 

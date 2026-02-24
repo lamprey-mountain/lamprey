@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use clap::Parser;
 use common::v1::types::{
     voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
-    MessageClient, MessageCreate, MessageSync, MessageType, Session, User,
+    MessageClient, MessageCreate, MessageSync, Session, User,
 };
 use common::v2::types::message::Message;
 use figment::providers::{Env, Format, Toml};
@@ -123,7 +123,7 @@ impl Handle {
 
     async fn handle_message(&mut self, message: Message) -> anyhow::Result<()> {
         let content = match &message.latest_version.message_type {
-            MessageType::DefaultMarkdown(m) => m.content.as_deref(),
+            common::v2::types::message::MessageType::DefaultMarkdown(m) => m.content.as_deref(),
             // MessageType::MessagePinned(message_pin) => todo!(),
             // MessageType::MessageUnpinned(message_pin) => todo!(),
             // MessageType::MemberAdd(message_member) => todo!(),

@@ -579,7 +579,8 @@ impl ServiceChannels {
                         message_type: MessageType::ThreadCreated(MessageThreadCreated {
                             source_message_id: None,
                             thread_id: Some(channel.id),
-                        }),
+                        })
+                        .into(),
                         edited_at: None,
                         created_at: None,
                         removed_at: None,
@@ -727,7 +728,8 @@ impl ServiceChannels {
                     message_type: MessageType::ThreadCreated(MessageThreadCreated {
                         source_message_id: Some(source_message_id),
                         thread_id: Some(channel.id),
-                    }),
+                    })
+                    .into(),
                     edited_at: None,
                     created_at: None,
                     removed_at: None,
@@ -1190,7 +1192,8 @@ impl ServiceChannels {
                     message_type: MessageType::ChannelRename(MessageChannelRename {
                         name_new: chan_new.name.clone(),
                         name_old: chan_old.name,
-                    }),
+                    })
+                    .into(),
                     edited_at: None,
                     created_at: None,
                     removed_at: None,
@@ -1222,7 +1225,8 @@ impl ServiceChannels {
                     message_type: MessageType::ChannelIcon(MessageChannelIcon {
                         icon_id_old: chan_old.icon,
                         icon_id_new: chan_new.icon,
-                    }),
+                    })
+                    .into(),
                     edited_at: None,
                     created_at: None,
                     removed_at: None,
@@ -1255,7 +1259,8 @@ impl ServiceChannels {
                     message_type: MessageType::ChannelMoved(MessageChannelMoved {
                         parent_id_old: chan_old.parent_id,
                         parent_id_new: chan_new.parent_id,
-                    }),
+                    })
+                    .into(),
                     edited_at: None,
                     created_at: None,
                     removed_at: None,

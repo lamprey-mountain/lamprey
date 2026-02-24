@@ -211,7 +211,7 @@ pub struct MessageDefaultMarkdown {
 /// - max 2048 chars across all values
 ///
 /// included in interaction. only visible to user who sent it (and the owner if its a bot).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageMetadata(pub HashMap<String, String>);
@@ -469,19 +469,56 @@ impl Diff<Message> for MessagePatch {
                 self.content.changes(&m.content)
                     || self.reply_id.changes(&m.reply_id)
                     || self.embeds.is_some()
-                // FIXME: diff checking for `MessageAttachment`s
-                // || self.attachments.as_ref().is_some_and(|a| {
-                //     a.len() != m.attachments.len()
-                //         || a.iter().zip(&m.attachments).any(|(a, b)| {
-                //             let is_same_media = match &a.media {
-                //                 MediaReference::Media { media_id } => media_id == b.id,
-                //                 _ => return true,
-                //             };
-                //             a.alt.changes(b.alt)
-                //                 || a.filename.changes(b.filename)
-                //                 || a.spoiler.changes(b.)
-                //         })
-                // })
+                    || self.metadata.changes(&m.metadata)
+                    || self.attachments.as_ref().is_some_and(|a| {
+                        a.len() != m.attachments.len()
+                            || a.iter().zip(&m.attachments).any(|(a, b)| {
+                                if a.spoiler != b.spoiler {
+                                    return true;
+                                }
+
+                                match (&a.ty, &b.ty) {
+                                    (
+                                        MessageAttachmentCreateType::Media {
+                                            media,
+                                            alt,
+                                            filename,
+                                        },
+                                        MessageAttachmentType::Media {
+                                            media: existing_media,
+                                        },
+                                    ) => {
+                                        match media {
+                                            MediaReference::Media { media_id } => {
+                                                if *media_id != existing_media.id {
+                                                    return true;
+                                                }
+                                            }
+                                            // if we're not referencing the media by id, we're uploading/downloading it
+                                            _ => return true,
+                                        }
+
+                                        alt.changes(&existing_media.alt)
+                                            || filename
+                                                .as_ref()
+                                                .is_some_and(|f| f != &existing_media.filename)
+                                    }
+                                    #[cfg(feature = "feat_message_forwarding")]
+                                    (
+                                        MessageAttachmentCreateType::Forward {
+                                            channel_id,
+                                            message_id,
+                                        },
+                                        MessageAttachmentType::Forward { snapshot },
+                                    ) => {
+                                        *channel_id != snapshot.channel_id
+                                            || *message_id != snapshot.message_id
+                                    }
+                                    #[allow(unreachable_patterns)]
+                                    _ => true,
+                                }
+                            })
+                    })
             }
             // this edit is invalid!
             _ => false,
