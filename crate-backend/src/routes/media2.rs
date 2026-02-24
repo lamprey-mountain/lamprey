@@ -8,13 +8,14 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
-use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::{application::Scope, sync::MessageSync};
 use common::v2::types::media::{
     Media, MediaClone, MediaCreate, MediaCreated, MediaDoneParams, MediaPatch, MediaSearch,
 };
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
+use tracing::{debug, error};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -149,7 +150,7 @@ async fn media_done(
     Path(media_id): Path<MediaId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<MediaDoneParams>,
+    Json(params): Json<MediaDoneParams>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
@@ -191,15 +192,46 @@ async fn media_done(
                     panic!("can only patch upload")
                 }
             };
-            let media = s
-                .services()
-                .media
-                .process_upload(up, media_id, auth.user.id, &filename)
-                .await?;
-            let mut headers = HeaderMap::new();
-            headers.insert("upload-offset", media.size.into());
-            headers.insert("upload-length", media.size.into());
-            Ok((StatusCode::OK, headers, Json(Some(media))))
+
+            if params.process_async {
+                let state = s.clone();
+                let user_id = auth.user.id;
+                let mut headers = HeaderMap::new();
+                headers.insert("upload-offset", source_size.into());
+                headers.insert("upload-length", source_size.into());
+                tokio::spawn(async move {
+                    match state
+                        .services()
+                        .media
+                        .process_upload(up, media_id, user_id, &filename)
+                        .await
+                    {
+                        Ok(media) => {
+                            debug!("finished processing media asynchronously");
+                            let msg = MessageSync::MediaProcessed {
+                                media: media.clone(),
+                            };
+                            if let Err(e) = state.broadcast(msg) {
+                                error!("failed to broadcast MediaProcessed: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            error!("failed to process media asynchronously: {}", e);
+                        }
+                    }
+                });
+                Ok((StatusCode::ACCEPTED, headers, Json(None)))
+            } else {
+                let media = s
+                    .services()
+                    .media
+                    .process_upload(up, media_id, auth.user.id, &filename)
+                    .await?;
+                let mut headers = HeaderMap::new();
+                headers.insert("upload-offset", media.size.into());
+                headers.insert("upload-length", media.size.into());
+                Ok((StatusCode::OK, headers, Json(Some(media))))
+            }
         }
         Ordering::Less => {
             let mut headers = HeaderMap::new();
@@ -211,7 +243,9 @@ async fn media_done(
 }
 
 /// Media upload
-// TODO: add utoipa attr
+///
+/// Always returns immediately, but will automatically begin processing media in
+/// the background.
 async fn media_upload(
     Path(media_id): Path<MediaId>,
     auth: Auth,
@@ -271,37 +305,57 @@ async fn media_upload(
         }
         Ordering::Equal => {
             up.temp_writer.flush().await?;
-            drop(up);
-            let (_, up) = s
-                .services()
-                .media
-                .uploads
-                .remove(&media_id)
-                .expect("it was there a few milliseconds ago");
-            let filename = match &up.create.source {
-                common::v2::types::media::MediaCreateSource::Upload { filename, .. } => {
-                    filename.to_owned()
-                }
-                common::v2::types::media::MediaCreateSource::Download { .. } => {
-                    panic!("can only patch upload")
-                }
-            };
-            // FIXME: do this in the background
-            let media = s
-                .services()
-                .media
-                .process_upload(up, media_id, auth.user.id, &filename)
-                .await?;
+
             let mut headers = HeaderMap::new();
-            headers.insert("upload-offset", media.size.into());
-            headers.insert("upload-length", media.size.into());
-            Ok((StatusCode::OK, headers, Json(Some(media))))
+            headers.insert("upload-offset", up.current_size.into());
+            headers.insert("upload-length", source_size.into());
+
+            let state = s.clone();
+            let user_id = auth.user.id;
+            tokio::spawn(async move {
+                let up = match state.services().media.uploads.remove(&media_id) {
+                    Some((_, up)) => up,
+                    None => {
+                        error!("upload was removed before processing");
+                        return;
+                    }
+                };
+                let filename = match &up.create.source {
+                    common::v2::types::media::MediaCreateSource::Upload { filename, .. } => {
+                        filename.to_owned()
+                    }
+                    common::v2::types::media::MediaCreateSource::Download { .. } => {
+                        panic!("can only patch upload")
+                    }
+                };
+                match state
+                    .services()
+                    .media
+                    .process_upload(up, media_id, user_id, &filename)
+                    .await
+                {
+                    Ok(media) => {
+                        debug!("finished processing media from upload");
+                        let msg = MessageSync::MediaProcessed {
+                            media: media.clone(),
+                        };
+                        if let Err(e) = state.broadcast(msg) {
+                            error!("failed to broadcast MediaProcessed: {}", e);
+                        }
+                    }
+                    Err(e) => {
+                        error!("failed to process media from upload: {}", e);
+                    }
+                }
+            });
+
+            Ok((StatusCode::NO_CONTENT, headers))
         }
         Ordering::Less => {
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.current_size.into());
             headers.insert("upload-length", source_size.into());
-            Ok((StatusCode::NO_CONTENT, headers, Json(None)))
+            Ok((StatusCode::NO_CONTENT, headers))
         }
     }
 }
@@ -452,11 +506,12 @@ async fn media_search(
 ///
 /// Directly upload a piece of media without doing the whole create/patch/done
 /// dance. Only use this for small media.
+// TODO: allow async puploads here too
 #[utoipa::path(
     post,
     path = "/media/direct",
     tags = ["media", "badge.scope.full"],
-    responses((status = CREATED, description = "success")),
+    responses((status = ACCEPTED, description = "Processing in background")),
 )]
 async fn media_upload_direct(
     auth: Auth,
@@ -475,6 +530,7 @@ async fn media_upload_direct(
             .name()
             .ok_or(Error::BadStatic("field is missing name"))?
         {
+            // TODO: parse {filename, alt, process_async, strip_exif}
             "json" => return Err(Error::Unimplemented),
             "file" => {
                 data = Some(field.bytes().await?);
@@ -524,6 +580,7 @@ async fn media_upload_direct(
             panic!("can only patch upload")
         }
     };
+
     let media = s
         .services()
         .media
