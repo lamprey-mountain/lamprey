@@ -129,6 +129,8 @@ async fn media_patch(
     }
 
     s.data().media_update(media_id, json).await?;
+    let media = s.data().media_select(media_id).await?;
+    s.broadcast(MessageSync::MediaUpdate { media })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
