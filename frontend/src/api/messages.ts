@@ -903,7 +903,7 @@ export class Messages {
 	async search(body: any): Promise<import("sdk").MessageSearch> {
 		const data = await fetchWithRetry(() =>
 			this.api.client.http.POST(
-				"/api/v1/search/message2",
+				"/api/v1/search/message",
 				{
 					body,
 				},
