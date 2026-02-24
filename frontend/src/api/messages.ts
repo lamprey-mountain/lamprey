@@ -19,15 +19,56 @@ import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
 import type { Api } from "../api.tsx";
 import { fetchWithRetry } from "./util.ts";
+import { convertV2MediaToV1 } from "./media.tsx";
+
+type MediaV2 = {
+	id: string;
+	status: "Transferring" | "Processing" | "Uploaded" | "Consumed";
+	filename: string;
+	alt?: string | null;
+	size: number;
+	content_type: string;
+	source_url?: string;
+	metadata?: {
+		type: "Image" | "Video" | "Audio" | "Text" | "File";
+		width?: number;
+		height?: number;
+		duration?: number;
+	};
+	user_id?: string;
+	deleted_at?: string;
+	has_thumbnail: boolean;
+	has_gifv: boolean;
+	[K: string]: any;
+};
+
+type MessageAttachmentV2 = {
+	type: "Media";
+	media: MediaV2;
+	spoiler: boolean;
+};
+
+type MessageDefaultMarkdownV2 = {
+	content?: string | null;
+	attachments: MessageAttachmentV2[];
+	metadata?: any;
+	reply_id?: string | null;
+	embeds: any[];
+};
+
+type MessageVersionV2 = {
+	version_id: string;
+	author_id?: string;
+	type: "DefaultMarkdown";
+	mentions: any;
+	created_at: string;
+	deleted_at?: string;
+} & MessageDefaultMarkdownV2;
 
 type MessageV2 = {
 	id: string;
 	channel_id: string;
-	latest_version: {
-		version_id: string;
-		author_id?: string;
-		[K: string]: any;
-	};
+	latest_version: MessageVersionV2;
 	pinned?: { time: string; position: number };
 	reactions?: any[];
 	deleted_at?: string;
@@ -38,29 +79,74 @@ type MessageV2 = {
 	[K: string]: any;
 };
 
-function convertV2MessageToV1(message: MessageV2): Message {
+/** Convert V2 message attachment to V1 Media format */
+function convertV2AttachmentToV1(attachment: MessageAttachmentV2): Media {
+	if (attachment.type === "Media") {
+		return convertV2MediaToV1(attachment.media);
+	}
+	// Fallback for unknown types
 	return {
-		...message.latest_version,
+		id: "",
+		filename: "unknown",
+		alt: null,
+		source: {
+			info: { type: "Other" },
+			size: 0,
+			mime: "application/octet-stream",
+			source: "Uploaded",
+		},
+	};
+}
+
+/** Convert V2 message to V1 format for backwards compatibility */
+function convertV2MessageToV1(message: MessageV2): Message {
+	const mt = message.latest_version.type;
+	let content: string | null = null;
+	let attachments: Media[] = [];
+	let metadata: any = null;
+	let reply_id: string | null = null;
+	let embeds: any[] = [];
+
+	if (mt === "DefaultMarkdown") {
+		const v = message.latest_version;
+		content = v.content ?? null;
+		attachments = v.attachments.map(convertV2AttachmentToV1);
+		metadata = v.metadata ?? null;
+		reply_id = v.reply_id ?? null;
+		embeds = v.embeds ?? [];
+	}
+
+	return {
+		type: "DefaultMarkdown",
 		id: message.id,
 		channel_id: message.channel_id,
 		version_id: message.latest_version.version_id,
-		nonce: message.nonce ?? null,
-		author_id: message.author_id,
-		pinned: message.pinned,
-		reactions: message.reactions,
+		author_id: message.latest_version.author_id ?? message.author_id,
+		content: content,
+		attachments: attachments,
+		metadata: metadata,
+		reply_id: reply_id,
+		embeds: embeds,
+		override_name: null,
+		nonce: (message as any).nonce ?? null,
+		pinned: message.pinned ?? null,
+		reactions: message.reactions ?? [],
 		created_at: message.created_at,
-		deleted_at: message.deleted_at,
-		removed_at: message.removed_at,
+		deleted_at: message.deleted_at ?? null,
+		removed_at: message.removed_at ?? null,
 		edited_at: message.latest_version.version_id !== message.id
 			? message.latest_version.created_at
 			: null,
-		thread: message.thread,
+		thread: message.thread ?? null,
+		is_local: false,
 	};
 }
 
 function maybeConvertMessage(data: any): Message {
-	if (data && "latest_version" in data) {
-		return convertV2MessageToV1(data);
+	if (
+		data && "latest_version" in data && "message_type" in data.latest_version
+	) {
+		return convertV2MessageToV1(data as MessageV2);
 	}
 	return data as Message;
 }
@@ -80,6 +166,25 @@ function maybeConvertPagination(data: any): PaginationResponseMessage {
 		};
 	}
 	return data;
+}
+
+/** Convert V1 MessageCreate to V2 format for API requests */
+function convertMessageCreateToV2(body: MessageSendReq): any {
+	const attachments = body.attachments?.map((media: Media) => ({
+		type: "Media" as const,
+		media: {
+			id: media.id,
+		},
+		spoiler: false,
+	})) ?? [];
+
+	return {
+		content: body.content,
+		attachments: attachments.length > 0 ? attachments : undefined,
+		reply_id: body.reply_id,
+		embeds: body.embeds,
+		metadata: body.metadata,
+	};
 }
 
 export type MessageMutator = {
@@ -548,6 +653,8 @@ export class Messages {
 			this._updateMutators(r, thread_id);
 		}
 
+		const v2Body = convertMessageCreateToV2(body);
+
 		const data = await fetchWithRetry(() =>
 			this.api.client.http.POST(
 				"/api/v1/channel/{channel_id}/message",
@@ -556,8 +663,7 @@ export class Messages {
 						path: { channel_id: thread_id },
 					},
 					body: {
-						...body,
-						attachments: body.attachments?.map((i) => ({ id: i.id })),
+						...v2Body,
 						nonce: id,
 					},
 					headers: {
