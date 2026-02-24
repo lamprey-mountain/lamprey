@@ -380,6 +380,38 @@ input[type="submit"] {
 	display: flex;
 	flex-direction: column;
 	position: relative;
+
+	& > .text {
+		display: flex;
+		background: $bg-300;
+		border: solid $bg-400 1px;
+		box-shadow: 2px 2px 8px #1114;
+		border-radius: 4px;
+		overflow: hidden;
+		align-items: center;
+
+		& > .upload {
+			cursor: pointer;
+			width: 2rem;
+			height: 2rem;
+			display: grid;
+			place-items: center;
+			font-weight: bold;
+
+			&:hover {
+				background: $bg-200;
+			}
+
+			& > input[type="file"] {
+				display: none;
+			}
+		}
+
+		& > .editor {
+			flex: 1;
+			border: none;
+		}
+	}
 }
 
 .quick-create {

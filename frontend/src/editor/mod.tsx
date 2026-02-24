@@ -148,6 +148,10 @@ export const createEditor = (opts: EditorOptions) => {
 							}
 							if (props.submitOnEnter ?? true) {
 								return submitCommand(view.state, view.dispatch);
+							} else {
+								// submitOnEnter is false, insert newline instead
+								view.dispatch(view.state.tr.insertText("\n"));
+								return true;
 							}
 						}
 

@@ -1,6 +1,6 @@
 // TODO: refactor out duplicated code from here and Message.tsx
 
-import { Channel, getTimestampFromUUID, Message } from "sdk";
+import { type Attachment, Channel, getTimestampFromUUID, Message } from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -56,6 +56,11 @@ import cancelIc from "./assets/x.png";
 import { createTooltip } from "./Tooltip";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { ChannelIcon } from "./User";
+import { EmojiButton } from "./atoms/EmojiButton";
+import { uuidv7 } from "uuidv7";
+import { useUploads } from "./contexts/uploads";
+import { Match, Switch } from "solid-js";
+import icDelete from "./assets/delete.png";
 
 function UserMention(props: { id: string; channel: Channel }) {
 	const api = useApi();
@@ -763,9 +768,25 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const [ch, chUpdate] = useChannel()!;
+	const uploads = useUploads();
 	const reply_id = () => ch.reply_id;
 	const reply = () => api.messages.cache.get(reply_id()!);
 	const storageKey = () => `editor_draft_${props.channel.id}`;
+
+	function handleUpload(file: File) {
+		const local_id = uuidv7();
+		uploads.init(local_id, props.channel.id, file);
+	}
+
+	function uploadFile(e: InputEvent) {
+		const target = e.target! as HTMLInputElement;
+		const files = Array.from(target.files!);
+		for (const file of files) {
+			handleUpload(file);
+		}
+	}
+
+	const atts = () => ch.attachments;
 	const sendTyping = leading(
 		throttle,
 		() => {
@@ -894,6 +915,28 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 			sendTyping();
 		} else {
 			sendTyping.clear();
+		}
+	};
+
+	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
+		const editorState = ch.editor_state;
+		if (editorState) {
+			const { from, to } = editorState.selection;
+			const customMatch = emoji.match(/^<:([^:]+):([^>]+)>$/);
+			let tr;
+			if (customMatch) {
+				const name = customMatch[1];
+				const id = customMatch[2];
+				tr = editorState.tr.replaceWith(
+					from,
+					to,
+					editor.schema.nodes.emoji.create({ id, name }),
+				);
+			} else {
+				tr = editorState.tr.insertText(emoji, from, to);
+			}
+			const newState = editorState.apply(tr);
+			chUpdate("editor_state", newState);
 		}
 	};
 
@@ -1037,16 +1080,44 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 					<Show when={reply()}>
 						<InputReply thread={props.channel} reply={reply()!} />
 					</Show>
-					<editor.View
-						onSubmit={onSubmit}
-						onChange={onChange}
-						placeholder={locked()
-							? "This thread is locked"
-							: "add a comment..."}
-						channelId={props.channel.id}
-						submitOnEnter={false}
-						disabled={locked()}
-					/>
+					<Show when={atts()?.length}>
+						<div class="attachments">
+							<header>
+								{atts()?.length}{" "}
+								{atts()?.length === 1 ? "attachment" : "attachments"}
+							</header>
+							<ul>
+								<For each={atts()}>
+									{(att) => (
+										<RenderUploadItem thread_id={props.channel.id} att={att} />
+									)}
+								</For>
+							</ul>
+						</div>
+					</Show>
+					<div class="text">
+						<label class="upload">
+							+
+							<input
+								multiple
+								type="file"
+								onInput={uploadFile}
+								value="upload file"
+								disabled={locked()}
+							/>
+						</label>
+						<editor.View
+							onSubmit={onSubmit}
+							onChange={onChange}
+							placeholder={locked()
+								? "This thread is locked"
+								: "add a comment..."}
+							channelId={props.channel.id}
+							submitOnEnter={false}
+							disabled={locked()}
+						/>
+						<EmojiButton picked={onEmojiPick} />
+					</div>
 					<footer style="display: flex; align-items: center;">
 						<Show when={props.channel.slowmode_message || slowmodeActive()}>
 							<div class="slowmode" ref={slowmodeRef}>
@@ -1349,6 +1420,89 @@ const Comment = (
 		</div>
 	);
 };
+
+export function RenderUploadItem(
+	props: { thread_id: string; att: Attachment },
+) {
+	const ctx = useCtx();
+	const uploads = useUploads();
+	const thumbUrl = URL.createObjectURL(props.att.file);
+	onCleanup(() => {
+		URL.revokeObjectURL(thumbUrl);
+	});
+
+	function renderInfo(att: Attachment) {
+		if (att.status === "uploading") {
+			if (att.progress === 1) {
+				return `processing`;
+			} else {
+				const percent = (att.progress * 100).toFixed(2);
+				return `${percent}%`;
+			}
+		} else {
+			return "";
+		}
+	}
+
+	function getProgress(att: Attachment) {
+		if (att.status === "uploading") {
+			return att.progress;
+		} else {
+			return 1;
+		}
+	}
+
+	function removeAttachment(local_id: string) {
+		uploads.cancel(local_id, props.thread_id);
+	}
+
+	function pause() {
+		uploads.pause(props.att.local_id);
+	}
+
+	function resume() {
+		uploads.resume(props.att.local_id);
+	}
+
+	return (
+		<>
+			<div class="upload-item">
+				<div class="thumb" style={{ "background-image": `url(${thumbUrl})` }}>
+				</div>
+				<div class="info">
+					<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
+						<rect class="bar" height="1" width={getProgress(props.att)}></rect>
+					</svg>
+					<div style="display: flex">
+						<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
+							{props.att.file.name}
+							<span style="color:#888;margin-left:.5ex">
+								{renderInfo(props.att)}
+							</span>
+						</div>
+						<menu>
+							<Switch>
+								<Match
+									when={props.att.status === "uploading" && props.att.paused}
+								>
+									<button onClick={resume}>
+										⬆️
+									</button>
+								</Match>
+								<Match when={props.att.status === "uploading"}>
+									<button onClick={pause}>⏸️</button>
+								</Match>
+							</Switch>
+							<button onClick={() => removeAttachment(props.att.local_id)}>
+								<img class="icon" src={icDelete} />
+							</button>
+						</menu>
+					</div>
+				</div>
+			</div>
+		</>
+	);
+}
 
 // TODO: name colors
 // <div class="author">

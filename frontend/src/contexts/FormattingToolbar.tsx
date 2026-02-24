@@ -24,16 +24,16 @@ const toggleFormat = (wrapper: string) => {
 	try {
 		const { state, dispatch } = currentView;
 		const { from, to } = state.selection;
-		
+
 		// Ensure valid selection range
 		if (from >= to || from < 0 || to > state.doc.content.size) return false;
-		
+
 		const selectedText = state.doc.textBetween(from, to);
 		if (!selectedText) return false;
 
 		const beforeStart = Math.max(0, from - wrapper.length);
 		const afterEnd = Math.min(state.doc.content.size, to + wrapper.length);
-		
+
 		const textBefore = state.doc.textBetween(beforeStart, from);
 		const textAfter = state.doc.textBetween(to, afterEnd);
 
