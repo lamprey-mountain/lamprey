@@ -28,7 +28,8 @@
               "Enum": [
                 "Unauthorized",
                 "Authorized",
-                "Sudo"
+                "Sudo",
+                "Bound"
               ]
             }
           }

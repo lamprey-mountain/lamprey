@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            select coalesce(\n                (select (config->'friends'->>'allow_everyone')::bool from usr where id = $2),\n                false\n            )\n            or (\n                coalesce(\n                    (select (config->'friends'->>'allow_mutual_room')::bool from usr where id = $2),\n                    false\n                )\n                and exists (\n                    select 1\n                    from room_member rm1\n                    join room_member rm2 on rm1.room_id = rm2.room_id\n                    join user_config_room ucr on rm1.room_id = ucr.room_id\n                    where rm1.user_id = $1\n                      and rm2.user_id = $2\n                      and rm1.membership = 'Join'\n                      and rm2.membership = 'Join'\n                      and (ucr.config->>'friends')::bool = true\n                )\n            )\n            as \"allows!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "allows!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "69ad5901b4074dcb592b7d6903c27abbab28b94b9975022f4236c9dac0d464ce"
+}

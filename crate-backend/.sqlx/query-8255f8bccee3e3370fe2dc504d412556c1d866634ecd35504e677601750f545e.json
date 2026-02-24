@@ -1,0 +1,452 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO role (id, version_id, room_id, name, description, allow, deny, is_mentionable, is_self_applicable, position, hoist, sticky)\n            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\n            RETURNING id, version_id, room_id, name, description, allow as \"allow: _\", deny as \"deny: _\", is_mentionable, is_self_applicable, 0 as \"member_count!\", position, hoist, sticky\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "allow: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "MessageCreateThread",
+                      "VoiceBroadcast",
+                      "BypassSlowmode",
+                      "CalendarEventRsvp",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomManageServer",
+                      "UserManage",
+                      "UserDeleteSelf",
+                      "UserProfile",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomForceJoin",
+                      "RoomCreate",
+                      "ServerMaintenance"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "deny: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "MessageCreateThread",
+                      "VoiceBroadcast",
+                      "BypassSlowmode",
+                      "CalendarEventRsvp",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomManageServer",
+                      "UserManage",
+                      "UserDeleteSelf",
+                      "UserProfile",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomForceJoin",
+                      "RoomCreate",
+                      "ServerMaintenance"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "is_mentionable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "is_self_applicable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "member_count!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "position",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "hoist",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "sticky",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "MessageCreateThread",
+                      "VoiceBroadcast",
+                      "BypassSlowmode",
+                      "CalendarEventRsvp",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomManageServer",
+                      "UserManage",
+                      "UserDeleteSelf",
+                      "UserProfile",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomForceJoin",
+                      "RoomCreate",
+                      "ServerMaintenance"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "IntegrationsManage",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberBridge",
+                      "MemberKick",
+                      "MemberNicknameManage",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageDelete",
+                      "MessageRemove",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MemberNickname",
+                      "MemberTimeout",
+                      "ReactionAdd",
+                      "ReactionPurge",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomManage",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ServerReports",
+                      "TagApply",
+                      "TagManage",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ThreadLock",
+                      "ViewChannel",
+                      "ViewAuditLog",
+                      "VoiceConnect",
+                      "VoiceDeafen",
+                      "VoiceDisconnect",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "CalendarEventManage",
+                      "ViewAnalytics",
+                      "CalendarEventCreate",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "MessageCreateThread",
+                      "VoiceBroadcast",
+                      "BypassSlowmode",
+                      "CalendarEventRsvp",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomManageServer",
+                      "UserManage",
+                      "UserDeleteSelf",
+                      "UserProfile",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomForceJoin",
+                      "RoomCreate",
+                      "ServerMaintenance"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Bool",
+        "Bool",
+        "Int4",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8255f8bccee3e3370fe2dc504d412556c1d866634ecd35504e677601750f545e"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM role_member\n            WHERE user_id = $1\n            AND room_id = $2\n            AND role_id NOT IN (\n                SELECT id FROM role WHERE room_id = $2 AND sticky = true\n            )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3b05eba316b365e5b1fdecc9d76a06b5d1dd62a1e117f354197296656df11362"
+}
