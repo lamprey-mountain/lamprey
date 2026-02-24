@@ -716,7 +716,7 @@ impl ServiceMessages {
         let data = s.data();
         let srv = s.services();
         let user = srv.users.get(user_id, None).await?;
-        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
+        let _thread = srv.channels.get(thread_id, Some(user_id)).await?;
         let is_webhook = user.webhook.is_some();
 
         let perms = if is_webhook {
@@ -786,7 +786,6 @@ impl ServiceMessages {
                             }
                             _ => None,
                         },
-                        _ => None,
                     })
                     .collect()
             })
@@ -798,7 +797,6 @@ impl ServiceMessages {
                         common::v2::types::message::MessageAttachmentType::Media { media } => {
                             Some(media.id)
                         }
-                        _ => None,
                     })
                     .collect(),
                 _ => vec![],
@@ -823,7 +821,7 @@ impl ServiceMessages {
             embeds = futures_util::future::try_join_all(embed_futs).await?;
         }
 
-        let mut removed_at = None;
+        let removed_at = None;
 
         // TODO: update automod to use v2 MessagePatch
         // if let Some(room_id) = thread.room_id {

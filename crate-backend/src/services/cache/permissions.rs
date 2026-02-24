@@ -4,8 +4,7 @@ use std::sync::Arc;
 
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Channel, Permission, PermissionOverwrite, PermissionOverwriteType, RoleId, RoomId, RoomMember,
-    UserId,
+    Channel, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
 };
 use tracing::warn;
 

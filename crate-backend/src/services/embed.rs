@@ -569,7 +569,6 @@ impl ServiceEmbed {
                             common::v2::types::message::MessageAttachmentType::Media { media } => {
                                 Some(media.id)
                             }
-                            _ => None,
                         })
                         .collect(),
                 )

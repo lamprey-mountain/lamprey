@@ -1,5 +1,4 @@
 use anyhow::Result;
-use common::v1::types;
 use common::v2::types::message::Message;
 use serenity::all::{
     CreateAllowedMentions, CreateAttachment, CreateEmbed, EditAttachments, EditWebhookMessage,
@@ -93,26 +92,23 @@ impl Portal {
         if let Some(edit) = existing {
             let mut files = EditAttachments::new();
             for attachment in &msg_inner.attachments {
-                if let common::v2::types::message::MessageAttachmentType::Media { media } =
-                    &attachment.ty
-                {
-                    let existing = self.globals.get_attachment(media.id.to_owned()).await?;
-                    if let Some(existing) = existing {
-                        files = files.keep(existing.discord_id);
-                    } else {
-                        let url = format!(
-                            "{}/media/{}",
-                            self.globals
-                                .config
-                                .lamprey_cdn_url
-                                .as_deref()
-                                .unwrap_or("https://chat-cdn.celery.eu.org"),
-                            media.id
-                        );
-                        let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
-                        files =
-                            files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
-                    }
+                let common::v2::types::message::MessageAttachmentType::Media { media } =
+                    &attachment.ty;
+                let existing = self.globals.get_attachment(media.id.to_owned()).await?;
+                if let Some(existing) = existing {
+                    files = files.keep(existing.discord_id);
+                } else {
+                    let url = format!(
+                        "{}/media/{}",
+                        self.globals
+                            .config
+                            .lamprey_cdn_url
+                            .as_deref()
+                            .unwrap_or("https://chat-cdn.celery.eu.org"),
+                        media.id
+                    );
+                    let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
+                    files = files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                 }
             }
             // let files = files.into_iter().map(|i| EditAttachments::new().add()).collect();
@@ -141,21 +137,19 @@ impl Portal {
         } else {
             let mut files = vec![];
             for attachment in &msg_inner.attachments {
-                if let common::v2::types::message::MessageAttachmentType::Media { media } =
-                    &attachment.ty
-                {
-                    let url = format!(
-                        "{}/media/{}",
-                        self.globals
-                            .config
-                            .lamprey_cdn_url
-                            .as_deref()
-                            .unwrap_or("https://chat-cdn.celery.eu.org"),
-                        media.id
-                    );
-                    let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
-                    files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
-                }
+                let common::v2::types::message::MessageAttachmentType::Media { media } =
+                    &attachment.ty;
+                let url = format!(
+                    "{}/media/{}",
+                    self.globals
+                        .config
+                        .lamprey_cdn_url
+                        .as_deref()
+                        .unwrap_or("https://chat-cdn.celery.eu.org"),
+                    media.id
+                );
+                let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
+                files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
             }
             let user = ly.user_fetch(message.author_id).await?;
             let mut payload = ExecuteWebhook::new()
@@ -205,16 +199,13 @@ impl Portal {
             .await?;
 
         for (att, attachment) in res.attachments.iter().zip(msg_inner.attachments) {
-            if let common::v2::types::message::MessageAttachmentType::Media { media } =
-                attachment.ty
-            {
-                self.globals
-                    .insert_attachment(AttachmentMetadata {
-                        chat_id: media.id,
-                        discord_id: att.id,
-                    })
-                    .await?;
-            }
+            let common::v2::types::message::MessageAttachmentType::Media { media } = attachment.ty;
+            self.globals
+                .insert_attachment(AttachmentMetadata {
+                    chat_id: media.id,
+                    discord_id: att.id,
+                })
+                .await?;
         }
 
         Ok(())

@@ -11,7 +11,6 @@ use common::v1::types::{
     },
     ChannelId, MessageId, MessageSync, PaginationDirection, PaginationQuery, SERVER_USER_ID,
 };
-use common::v2::types::message::Message;
 use tantivy::{
     collector::{Count, TopDocs},
     query::{BooleanQuery, Query, QueryParser},

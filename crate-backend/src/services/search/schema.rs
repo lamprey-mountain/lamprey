@@ -267,25 +267,16 @@ pub fn tantivy_document_from_message(
             meta_fast.insert("has_attachment".to_string(), true.into());
 
             let has_audio = m.attachments.iter().any(|a| {
-                if let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty {
-                    media.content_type.to_string().starts_with("audio/")
-                } else {
-                    false
-                }
+                let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty;
+                media.content_type.to_string().starts_with("audio/")
             });
             let has_image = m.attachments.iter().any(|a| {
-                if let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty {
-                    media.content_type.to_string().starts_with("image/")
-                } else {
-                    false
-                }
+                let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty;
+                media.content_type.to_string().starts_with("image/")
             });
             let has_video = m.attachments.iter().any(|a| {
-                if let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty {
-                    media.content_type.to_string().starts_with("video/")
-                } else {
-                    false
-                }
+                let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty;
+                media.content_type.to_string().starts_with("video/")
             });
 
             meta_fast.insert("has_audio".to_string(), has_audio.into());
@@ -293,42 +284,40 @@ pub fn tantivy_document_from_message(
             meta_fast.insert("has_video".to_string(), has_video.into());
 
             for att in &m.attachments {
-                if let common::v2::types::message::MessageAttachmentType::Media { media } = &att.ty
-                {
-                    // Helper to push to array
-                    let push_val =
-                        |map: &mut BTreeMap<String, OwnedValue>, key: &str, val: OwnedValue| {
-                            let entry = map
-                                .entry(key.to_string())
-                                .or_insert_with(|| OwnedValue::Array(Vec::new()));
-                            if let OwnedValue::Array(vec) = entry {
-                                vec.push(val);
-                            }
-                        };
+                let common::v2::types::message::MessageAttachmentType::Media { media } = &att.ty;
+                // Helper to push to array
+                let push_val =
+                    |map: &mut BTreeMap<String, OwnedValue>, key: &str, val: OwnedValue| {
+                        let entry = map
+                            .entry(key.to_string())
+                            .or_insert_with(|| OwnedValue::Array(Vec::new()));
+                        if let OwnedValue::Array(vec) = entry {
+                            vec.push(val);
+                        }
+                    };
 
-                    push_val(&mut meta_fast, "media_size", media.size.into());
-                    push_val(
-                        &mut meta_fast,
-                        "media_content_type",
-                        media.content_type.to_string().into(),
-                    );
-                    push_val(
-                        &mut meta_fast,
-                        "media_filename",
-                        media.filename.as_str().into(),
-                    );
+                push_val(&mut meta_fast, "media_size", media.size.into());
+                push_val(
+                    &mut meta_fast,
+                    "media_content_type",
+                    media.content_type.to_string().into(),
+                );
+                push_val(
+                    &mut meta_fast,
+                    "media_filename",
+                    media.filename.as_str().into(),
+                );
 
-                    if let Some(alt) = &media.alt {
-                        push_val(&mut meta_text, "media_alt", alt.as_str().into());
-                    }
+                if let Some(alt) = &media.alt {
+                    push_val(&mut meta_text, "media_alt", alt.as_str().into());
+                }
 
-                    let extension = Path::new(&media.filename)
-                        .extension()
-                        .and_then(|e| e.to_str())
-                        .map(|ext| ext.to_lowercase());
-                    if let Some(e) = extension {
-                        push_val(&mut meta_fast, "media_extension", e.as_str().into());
-                    }
+                let extension = Path::new(&media.filename)
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|ext| ext.to_lowercase());
+                if let Some(e) = extension {
+                    push_val(&mut meta_fast, "media_extension", e.as_str().into());
                 }
             }
         } else {

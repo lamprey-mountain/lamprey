@@ -281,10 +281,7 @@ impl ServerStateInner {
             common::v2::types::message::MessageType::DefaultMarkdown(m) => {
                 for attachment in &mut m.attachments {
                     let common::v2::types::message::MessageAttachmentType::Media { media } =
-                        &mut attachment.ty
-                    else {
-                        continue;
-                    };
+                        &mut attachment.ty;
                     self.presign(media).await?;
                 }
                 for emb in &mut m.embeds {

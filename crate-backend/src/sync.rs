@@ -1019,11 +1019,9 @@ impl Connection {
             MessageSync::HarvestUpdate { harvest, .. } => AuthCheck::User(harvest.user_id),
             MessageSync::DocumentEdit { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::DocumentPresence { channel_id, .. } => AuthCheck::Channel(*channel_id),
-            MessageSync::DocumentSubscribed {
-                channel_id,
-                connection_id,
-                ..
-            } => AuthCheck::Connection(*connection_id),
+            MessageSync::DocumentSubscribed { connection_id, .. } => {
+                AuthCheck::Connection(*connection_id)
+            }
             MessageSync::DocumentTagCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::DocumentTagUpdate { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::DocumentTagDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
