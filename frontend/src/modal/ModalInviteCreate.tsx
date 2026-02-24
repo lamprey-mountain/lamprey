@@ -104,10 +104,12 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 							onSelect={(id) => setSelectedRoleIds([...selectedRoleIds(), id])}
 							onRemove={(id) =>
 								setSelectedRoleIds(selectedRoleIds().filter((i) => i !== id))}
-							options={roles()?.items?.map((r) => ({
-								item: r.id,
-								label: r.name,
-							})) ?? []}
+							options={roles()?.items
+								?.filter((r) => r.id !== props.room_id)
+								.map((r) => ({
+									item: r.id,
+									label: r.name,
+								})) ?? []}
 							placeholder="select roles..."
 							style="width:min-content"
 						/>
