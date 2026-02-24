@@ -48,7 +48,7 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 	const [doc, update] = useDocument();
 	const [, modalCtl] = useModals();
 	const [active, setActive] = createSignal<
-		"branches" | "merge" | "export" | "insert" | "format" | null
+		"branches" | "merge" | "export" | "insert" | null
 	>(null);
 
 	const applyFormat = (wrap: string) => {
@@ -81,7 +81,6 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 	const openLinkModal = () => {
 		if (props.editor) {
 			modalCtl.open({ type: "link", editor: props.editor });
-			setActive(null);
 		}
 	};
 
@@ -117,14 +116,6 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 		middleware: [offset(4), flip(), shift()],
 	});
 
-	const [formatBtn, setFormatBtn] = createSignal<HTMLElement>();
-	const [formatMenu, setFormatMenu] = createSignal<HTMLElement>();
-	const formatPos = useFloating(formatBtn, formatMenu, {
-		whileElementsMounted: autoUpdate,
-		placement: "bottom-start",
-		middleware: [offset(4), flip(), shift()],
-	});
-
 	onMount(() => {
 		const close = () => setActive(null);
 		window.addEventListener("click", close);
@@ -135,7 +126,7 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 	// bottom: branches (merge, diff), edit, format, insert, view, tools
 	return (
 		<header>
-			<div class="fake-dropdowns">
+			<div class="menu-group">
 				<button
 					ref={setBranchBtn}
 					onClick={(e) => {
@@ -159,14 +150,60 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 					</button>
 				</Show>
 				<button
-					ref={setExportBtn}
 					onClick={(e) => {
 						e.stopPropagation();
-						setActive(active() === "export" ? null : "export");
+						// TODO
+						// also should this really be in the toolbar?
 					}}
-					classList={{ active: active() === "export" }}
 				>
-					export
+					history
+				</button>
+			</div>
+			<div class="menu-group">
+				<button
+					class="icon-button"
+					onClick={(e) => {
+						e.stopPropagation();
+						applyFormat("**");
+					}}
+				>
+					<img class="icon" src={icFormatBold} />
+				</button>
+				<button
+					class="icon-button"
+					onClick={(e) => {
+						e.stopPropagation();
+						applyFormat("*");
+					}}
+				>
+					<img class="icon" src={icFormatItalic} />
+				</button>
+				<button
+					class="icon-button"
+					onClick={(e) => {
+						e.stopPropagation();
+						applyFormat("~~");
+					}}
+				>
+					<img class="icon" src={icFormatStrikethrough} />
+				</button>
+				<button
+					class="icon-button"
+					onClick={(e) => {
+						e.stopPropagation();
+						applyFormat("`");
+					}}
+				>
+					<img class="icon" src={icFormatCode} />
+				</button>
+				<button
+					class="icon-button"
+					onClick={(e) => {
+						e.stopPropagation();
+						openLinkModal();
+					}}
+				>
+					<img class="icon" src={icFormatUrl} />
 				</button>
 				<button
 					ref={setInsertBtn}
@@ -178,17 +215,20 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 				>
 					insert
 				</button>
+			</div>
+			<div class="menu-group">
 				<button
-					ref={setFormatBtn}
+					ref={setExportBtn}
 					onClick={(e) => {
 						e.stopPropagation();
-						setActive(active() === "format" ? null : "format");
+						setActive(active() === "export" ? null : "export");
 					}}
-					classList={{ active: active() === "format" }}
+					classList={{ active: active() === "export" }}
 				>
-					format
+					export
 				</button>
 			</div>
+
 			<Show when={active() === "branches"}>
 				<Portal>
 					<menu
@@ -206,7 +246,7 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 							type="text"
 							placeholder="filter branches..."
 							style="margin:4px 8px;padding:2px 4px;border-radius:2px"
-							autofocus
+							ref={(el) => queueMicrotask(() => el.focus())}
 						/>
 						<ul>
 							<li
@@ -437,94 +477,6 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 					</menu>
 				</Portal>
 			</Show>
-			<Show when={active() === "format"}>
-				<Portal>
-					<menu
-						class="format-menu document-menu"
-						ref={setFormatMenu}
-						style={{
-							position: formatPos.strategy,
-							top: `${formatPos.y ?? 0}px`,
-							left: `${formatPos.x ?? 0}px`,
-							"z-index": 100,
-						}}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<ul>
-							<li>
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										applyFormat("**");
-									}}
-								>
-									<img class="icon" src={icFormatBold} />
-									<div class="info">
-										<div>bold</div>
-										<div class="dim">make text bold</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										applyFormat("*");
-									}}
-								>
-									<img class="icon" src={icFormatItalic} />
-									<div class="info">
-										<div>italic</div>
-										<div class="dim">make text italic</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										applyFormat("~~");
-									}}
-								>
-									<img class="icon" src={icFormatStrikethrough} />
-									<div class="info">
-										<div>strikethrough</div>
-										<div class="dim">add strikethrough to text</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										applyFormat("`");
-									}}
-								>
-									<img class="icon" src={icFormatCode} />
-									<div class="info">
-										<div>inline code</div>
-										<div class="dim">format text as code</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										openLinkModal();
-									}}
-								>
-									<img class="icon" src={icFormatUrl} />
-									<div class="info">
-										<div>link</div>
-										<div class="dim">insert or edit a link</div>
-									</div>
-								</button>
-							</li>
-						</ul>
-					</menu>
-				</Portal>
-			</Show>
 		</header>
 	);
 };
@@ -554,6 +506,7 @@ const DocumentMain = (
 				onSubmit={() => false}
 				channelId={props.channel.id}
 				submitOnEnter={false}
+				placeholder="write something cool..."
 				disabled={!editor.isSubscribed()}
 			/>
 		</main>

@@ -1,0 +1,136 @@
+@use "./util.scss" as *;
+
+.document {
+	grid-area: main;
+	background-color: $bg-200;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+
+	& > header {
+		padding: 4px;
+		background: $bg-100;
+		display: flex;
+		box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
+		border-bottom: solid $sep-300 1px;
+	}
+
+	& > main {
+		flex: 1;
+		padding: 8px;
+	}
+
+	& .menu-group {
+		display: flex;
+		border: solid $sep-500 1px;
+		border-radius: 4px;
+		overflow: hidden;
+		margin-right: 4px;
+
+		& button {
+			border: none;
+
+			&.selected {
+				background: $bg-150;
+			}
+
+			&:hover {
+				background: $bg-200;
+			}
+
+			&.selected:hover {
+				background: $bg-100;
+			}
+		}
+	}
+
+	.document-presence-cursor {
+		position: absolute;
+		display: inline-block;
+		height: 1.2em;
+		vertical-align: text-bottom;
+		user-select: none;
+	}
+
+	.document-presence-name {
+		color: black;
+		font-size: 12px;
+		padding: 2px 6px;
+		border-radius: 4px;
+		white-space: nowrap;
+		position: absolute;
+		pointer-events: none;
+		z-index: 9999;
+		width: max-content;
+	}
+
+	.editor {
+		background-color: $bg-150;
+		box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
+		border: solid $sep-300 1px;
+		min-height: 100%;
+		max-width: 650px;
+		margin: 0 auto;
+		padding: 8px;
+
+		.placeholder {
+			color: $fg-600;
+		}
+	}
+
+	.icon-button {
+		display: grid;
+		place-items: center;
+	}
+}
+
+.document-menu {
+	display: flex;
+	flex-direction: column;
+	background-color: $bg-150;
+	border: solid $sep-300 1px;
+	border-radius: 4px;
+	padding: 4px 0;
+	box-shadow: 0 2px 8px $bg-100;
+
+	& > ul,
+	& > ul {
+		display: flex;
+		flex-direction: column;
+	}
+
+	& > ul > li,
+	& > ul > li {
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+
+		&.separator {
+			border-bottom: solid $sep-300 1px;
+			margin: 4px 0;
+		}
+
+		& > button {
+			display: flex;
+			background: none;
+			border: none;
+			gap: 4px;
+			margin: 0 4px;
+			border-radius: 4px;
+
+			& > .icon {
+				/* HACK: visually center temp icons */
+				margin-top: 2px;
+			}
+
+			& > .info {
+				display: flex;
+				flex-direction: column;
+			}
+		}
+
+		&:hover > button {
+			background: #fff1;
+		}
+	}
+}

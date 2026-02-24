@@ -191,18 +191,19 @@ export const createEditor = (
 		schema,
 		createState: () => createState(),
 		nodeViews: (view) => ({
-			mention: (node: HTMLElement) => {
+			// TODO: use actual types
+			mention: (node: any) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				let dispose: () => void;
 				if (opts.mentionRenderer) {
-					opts.mentionRenderer(dom, node.getAttribute("user")!);
+					opts.mentionRenderer(dom, node.attrs.user);
 				} else {
 					dispose = render(
 						() => (
 							<UserMention
 								api={api}
-								userId={node.getAttribute("user")!}
+								userId={node.attrs.user}
 								channelId={currentChannelId()}
 							/>
 						),
@@ -216,18 +217,18 @@ export const createEditor = (
 					},
 				};
 			},
-			mentionChannel: (node: HTMLElement) => {
+			mentionChannel: (node: any) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				let dispose: () => void;
 				if (opts.mentionChannelRenderer) {
-					opts.mentionChannelRenderer(dom, node.getAttribute("channel")!);
+					opts.mentionChannelRenderer(dom, node.attrs.channel);
 				} else {
 					dispose = render(
 						() => (
 							<ChannelMention
 								api={api}
-								channelId={node.getAttribute("channel")!}
+								channelId={node.attrs.channel}
 							/>
 						),
 						dom,
@@ -240,14 +241,14 @@ export const createEditor = (
 					},
 				};
 			},
-			mentionRole: (node: HTMLElement) => {
+			mentionRole: (node: any) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				const dispose = render(
 					() => (
 						<RoleMention
 							api={api}
-							roleId={node.getAttribute("role")!}
+							roleId={node.attrs.role}
 						/>
 					),
 					dom,
@@ -259,14 +260,14 @@ export const createEditor = (
 					},
 				};
 			},
-			emoji: (node: HTMLElement) => {
+			emoji: (node: any) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				const dispose = render(
 					() => (
 						<Emoji
-							id={node.getAttribute("id")!}
-							name={node.getAttribute("name")!}
+							id={node.attrs.id}
+							name={node.attrs.name}
 						/>
 					),
 					dom,
@@ -312,5 +313,8 @@ export const createEditor = (
 		...editor,
 		subscribe,
 		isSubscribed,
+		get view() {
+			return editor.view;
+		},
 	};
 };

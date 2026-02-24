@@ -14,6 +14,7 @@
 @use "./forum.scss";
 @use "./calendar.scss";
 @use "./search.scss";
+@use "./document.scss";
 
 :root {
 	font: 16px/1.3 var(--font-default);
@@ -3728,115 +3729,6 @@ input[type="color"] {
 
 	& li:not(:first-child) {
 		border-top: solid 1px $sep-400;
-	}
-}
-
-.document {
-	grid-area: main;
-	background-color: $bg-200;
-	display: flex;
-	flex-direction: column;
-
-	& > header {
-		margin: 4px;
-	}
-
-	& > main {
-		flex: 1;
-	}
-
-	& .fake-dropdowns {
-		display: inline-block;
-		border: solid $sep-500 1px;
-		border-radius: 4px;
-		overflow: hidden;
-
-		& button {
-			border: none;
-
-			&.selected {
-				background: $bg-150;
-			}
-
-			&:hover {
-				background: $bg-200;
-			}
-
-			&.selected:hover {
-				background: $bg-100;
-			}
-		}
-	}
-
-	.document-presence-cursor {
-		position: absolute;
-		display: inline-block;
-		height: 1.2em;
-		vertical-align: text-bottom;
-		user-select: none;
-	}
-
-	.document-presence-name {
-		color: black;
-		font-size: 12px;
-		padding: 2px 6px;
-		border-radius: 4px;
-		white-space: nowrap;
-		position: absolute;
-		pointer-events: none;
-		z-index: 9999;
-		width: max-content;
-	}
-}
-
-.document-menu {
-	display: flex;
-	flex-direction: column;
-	background-color: $bg-150;
-	border: solid $sep-300 1px;
-	border-radius: 4px;
-	padding: 4px 0;
-	box-shadow: 0 2px 8px $bg-100;
-
-	& > ul,
-	& > ul {
-		display: flex;
-		flex-direction: column;
-	}
-
-	& > ul > li,
-	& > ul > li {
-		cursor: pointer;
-		display: flex;
-		flex-direction: column;
-
-		&.separator {
-			border-bottom: solid $sep-300 1px;
-			margin: 4px 0;
-		}
-
-		& > button {
-			display: flex;
-			background: none;
-			border: none;
-			gap: 4px;
-			margin: 0 4px;
-			border-radius: 4px;
-
-			& > .icon {
-				/* HACK: visually center temp icons */
-				margin-top: 2px;
-			}
-
-			& > .info {
-				display: flex;
-				flex-direction: column;
-			}
-		}
-
-		&:hover > button {
-			background: #fff1;
-		}
 	}
 }
 
