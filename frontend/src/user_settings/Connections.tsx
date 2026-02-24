@@ -1,9 +1,4 @@
-import {
-	createResource,
-	createSignal,
-	For,
-	onCleanup,
-} from "solid-js";
+import { createResource, createSignal, For, onCleanup } from "solid-js";
 import { useApi } from "../api";
 import { Time } from "../Time";
 import { Copyable } from "../util";

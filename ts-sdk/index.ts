@@ -4,6 +4,7 @@ export * as types from "./types.ts";
 export * from "./types.ts";
 export * from "./client.ts";
 export * from "./upload.ts";
+export type { paths } from "./schema.d.ts";
 
 export function getTimestampFromUUID(uuid: string): Date {
 	const bytes = UUID.parse(uuid).bytes;
