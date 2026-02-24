@@ -454,6 +454,17 @@ export const ChatHeader = (
 		return props.channel.name;
 	};
 
+	const hasPins = () =>
+		props.channel.type === "Text" ||
+		props.channel.type === "ThreadPublic" ||
+		props.channel.type === "ThreadPrivate" ||
+		props.channel.type === "ThreadForum2" ||
+		props.channel.type === "Announcement" ||
+		props.channel.type === "Dm" ||
+		props.channel.type === "Gdm" ||
+		props.channel.type === "Voice" ||
+		props.channel.type === "Broadcast";
+
 	return (
 		<Show
 			when={inSelectMode()}
@@ -529,6 +540,7 @@ export const ChatHeader = (
 						onClick={togglePinned}
 						classList={{ active: isShowingPinned() }}
 						title="Show pinned messages"
+						style={!hasPins() ? "display:none" : undefined}
 					>
 						<img class="icon" src={icPin} />
 					</button>
