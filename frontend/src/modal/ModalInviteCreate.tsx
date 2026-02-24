@@ -25,6 +25,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [maxUses, setMaxUses] = createSignal<number | null>(null);
 	const [selectedRoleIds, setSelectedRoleIds] = createSignal<string[]>([]);
 	const [inviteCode, setInviteCode] = createSignal<string>("");
+	const [creating, setCreating] = createSignal(false);
 
 	const roles = api.roles.list(() => props.room_id!);
 
@@ -63,6 +64,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	});
 
 	const handleCreate = async () => {
+		setCreating(true);
 		const expires_at = expiry()
 			? new Date(Date.now() + expiry()!).toISOString()
 			: undefined;
@@ -100,6 +102,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 			}
 			if (error) console.error(error);
 		}
+		setCreating(false);
 	};
 
 	const inviteLink = () =>
@@ -171,7 +174,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 						ref={setInputRef}
 						type="text"
 						readOnly
-						placeholder="a1b2c3"
+						placeholder={creating() ? "creating..." : "a1b2c3"}
 						value={inviteLink()}
 						onClick={(e) => {
 							e.currentTarget.select();
