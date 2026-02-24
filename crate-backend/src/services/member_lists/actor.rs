@@ -549,6 +549,8 @@ impl MemberList {
     }
 
     async fn get_initial_ranges(&self, ranges: &[(u64, u64)]) -> Vec<MemberListOp> {
+        let srv = self.s.services();
+
         let mut ops = Vec::new();
         let sorted_ids: Vec<_> = self.members.values().copied().collect();
 
@@ -565,7 +567,8 @@ impl MemberList {
             let mut users = Vec::new();
 
             for user_id in slice {
-                if let Ok(u) = self.s.services().cache.user_get(*user_id).await {
+                if let Ok(mut u) = srv.cache.user_get(*user_id).await {
+                    u.presence = srv.presence.get(*user_id);
                     users.push(u);
                 }
                 if let Some(room_id) = self.key.room_id() {
