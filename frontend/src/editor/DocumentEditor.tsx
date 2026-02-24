@@ -311,5 +311,6 @@ export const createEditor = (
 	return {
 		...editor,
 		subscribe,
+		isSubscribed,
 	};
 };

@@ -554,6 +554,7 @@ const DocumentMain = (
 				onSubmit={() => false}
 				channelId={props.channel.id}
 				submitOnEnter={false}
+				disabled={!editor.isSubscribed()}
 			/>
 		</main>
 	);
