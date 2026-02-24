@@ -3,7 +3,10 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use axum::{extract::DefaultBodyLimit, middleware, response::Html, routing::get, Json};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
-use common::v1::types::{misc::ApplicationIdReq, util::Time, AuditLogEntry, AuditLogEntryType};
+use common::{
+    v1::types::{misc::ApplicationIdReq, util::Time, AuditLogEntry, AuditLogEntryType},
+    v2::types::media::Media,
+};
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use lamprey_backend_core::types::admin::AdminCollectGarbageMode;
@@ -218,6 +221,7 @@ async fn main() -> Result<()> {
     match &args.command {
         cli::Command::Serve {} => serve(state).await?,
         cli::Command::Check {} => check(state).await?,
+        cli::Command::MigrateMedia {} => migrate_media(state).await?,
         cli::Command::GcMedia {} => gc_media(state).await?,
         cli::Command::GcMessages {} => gc_messages(state).await?,
         cli::Command::GcSession {} => gc_sessions(state).await?,
@@ -356,6 +360,54 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
 /// check config
 async fn check(_state: Arc<ServerState>) -> Result<()> {
     info!("done checking");
+    Ok(())
+}
+
+async fn migrate_media(state: Arc<ServerState>) -> Result<()> {
+    info!(
+        "Starting media migration with config: {:#?}",
+        state.config()
+    );
+
+    use lamprey_backend::data::postgres::{DbMediaData, DbMediaWithId};
+
+    loop {
+        let mut tx = state.pool.begin().await?;
+        let rows = sqlx::query_as!(
+            DbMediaWithId,
+            r#"
+            select id, user_id, data, deleted_at
+            from media
+            where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null
+            limit 50
+            for update
+            "#
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+        if rows.is_empty() {
+            break;
+        }
+        for row in rows {
+            let media: DbMediaData = match serde_json::from_value(row.data) {
+                Ok(media) => media,
+                Err(err) => {
+                    warn!(media_id = ?row.id, "unreadable data in db {err:?}");
+                    continue;
+                }
+            };
+            let media: Media = media.into();
+            let media_id = media.id;
+            let data =
+                serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
+            sqlx::query!("update media set data = $1 where id = $2", data, *media_id)
+                .execute(&mut *tx)
+                .await?;
+            info!("migrate {}", media_id);
+        }
+        tx.commit().await?;
+    }
+
     Ok(())
 }
 

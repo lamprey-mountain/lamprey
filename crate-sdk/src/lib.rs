@@ -1,10 +1,14 @@
+#![allow(dead_code)] // TEMP
+
 use common::v1::types::SessionToken;
 use handler::ErasedHandler;
 use syncer::Syncer;
 
+mod cache;
 mod consts;
 mod handler;
 mod http;
+mod member_list;
 mod messages;
 mod syncer;
 

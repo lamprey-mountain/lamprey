@@ -22,6 +22,14 @@ pub struct DbMedia {
     pub deleted_at: Option<PrimitiveDateTime>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DbMediaWithId {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub data: serde_json::Value,
+    pub deleted_at: Option<PrimitiveDateTime>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "v")]
 pub enum DbMediaData {

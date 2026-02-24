@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TEMP
-
 use std::collections::HashMap;
 
 use common::v1::types::{ChannelId, Message, MessageCreate, MessageId, MessagePatch, MessageSync};

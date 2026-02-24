@@ -444,7 +444,7 @@ pub struct HistoryPagination {
 /// parameters for getting a crdt
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(IntoParams))]
+#[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
 pub struct DocumentCrdtDiffParams {
     pub sv: Option<DocumentStateVector>,
 }

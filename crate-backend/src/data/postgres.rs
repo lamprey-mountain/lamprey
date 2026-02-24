@@ -53,6 +53,6 @@ mod webhook;
 pub use util::Pagination;
 
 // TEMP: for media migration
-pub use media::{DbMedia, DbMediaData};
+pub use media::{DbMedia, DbMediaData, DbMediaWithId};
 
 use crate::data::Data;
