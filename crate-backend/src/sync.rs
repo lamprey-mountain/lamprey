@@ -1,8 +1,11 @@
-use common::v1::types::{
-    document::{DocumentStateVector, DocumentUpdate},
-    sync::{SyncCompression, SyncParams, SyncResume},
-    voice::VoiceStateScreenshare,
-    ChannelId, ConnectionId, SessionToken, UserId,
+use common::{
+    v1::types::{
+        document::{DocumentStateVector, DocumentUpdate},
+        sync::{SyncCompression, SyncParams, SyncResume},
+        voice::VoiceStateScreenshare,
+        ChannelId, ConnectionId, SessionToken, UserId,
+    },
+    v2::types::media::MediaStatus,
 };
 use flate2::{
     Compress, Compression as FlateCompression, Decompress, FlushCompress, FlushDecompress, Status,
@@ -1031,13 +1034,57 @@ impl Connection {
             MessageSync::TagCreate { tag } => AuthCheck::Channel(tag.channel_id),
             MessageSync::TagUpdate { tag } => AuthCheck::Channel(tag.channel_id),
             MessageSync::TagDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
-            MessageSync::MediaProcessed { media } => {
-                AuthCheck::User(media.user_id.expect("server always has media.user_id"))
+            MessageSync::MediaProcessed { media, session_id } => AuthCheck::Session(*session_id),
+            MessageSync::MediaUpdate { media } => {
+                if media.links.is_empty() {
+                    AuthCheck::User(media.user_id.expect("server always has media.user_id"))
+                } else {
+                    let mut auth_checks = Vec::new();
+                    auth_checks.push(AuthCheck::User(
+                        media.user_id.expect("server always has media.user_id"),
+                    ));
+
+                    for link in &media.links {
+                        let check = match link {
+                            common::v2::types::media::MediaLinkType::Message {
+                                channel_id, ..
+                            } => AuthCheck::Channel(*channel_id),
+                            common::v2::types::media::MediaLinkType::MessageVersion {
+                                channel_id,
+                                ..
+                            } => AuthCheck::Channel(*channel_id),
+                            common::v2::types::media::MediaLinkType::UserAvatar { user_id } => {
+                                AuthCheck::User(*user_id)
+                            }
+                            common::v2::types::media::MediaLinkType::UserBanner { user_id } => {
+                                AuthCheck::User(*user_id)
+                            }
+                            common::v2::types::media::MediaLinkType::ChannelIcon { channel_id } => {
+                                AuthCheck::Channel(*channel_id)
+                            }
+                            common::v2::types::media::MediaLinkType::RoomIcon { room_id } => {
+                                AuthCheck::Room(*room_id)
+                            }
+                            common::v2::types::media::MediaLinkType::Embed { id: _ } => {
+                                // Embeds are linked to messages, check channel perms for embed message
+                                // For now, fall back to user who uploaded
+                                continue;
+                            }
+                            common::v2::types::media::MediaLinkType::CustomEmoji { room_id } => {
+                                AuthCheck::Room(*room_id)
+                            }
+                            common::v2::types::media::MediaLinkType::RoomBanner { room_id } => {
+                                AuthCheck::Room(*room_id)
+                            }
+                        };
+                        auth_checks.push(check);
+                    }
+
+                    AuthCheck::Any(auth_checks)
+                }
             }
         };
-        let should_send = auth_check
-            .should_send(&session, &self.s, Some(self.id))
-            .await?;
+        let should_send = auth_check.should_send(&session, &self.s, self.id).await?;
         if should_send {
             let srv = self.s.services();
             let msg = match *msg {

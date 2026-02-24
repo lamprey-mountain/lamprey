@@ -195,7 +195,7 @@ async fn media_done(
 
             if params.process_async {
                 let state = s.clone();
-                let user_id = auth.user.id;
+                let session_id = auth.session.id;
                 let mut headers = HeaderMap::new();
                 headers.insert("upload-offset", source_size.into());
                 headers.insert("upload-length", source_size.into());
@@ -210,6 +210,7 @@ async fn media_done(
                             debug!("finished processing media asynchronously");
                             let msg = MessageSync::MediaProcessed {
                                 media: media.clone(),
+                                session_id,
                             };
                             if let Err(e) = state.broadcast(msg) {
                                 error!("failed to broadcast MediaProcessed: {}", e);
@@ -311,7 +312,7 @@ async fn media_upload(
             headers.insert("upload-length", source_size.into());
 
             let state = s.clone();
-            let user_id = auth.user.id;
+            let session_id = auth.session.id;
             tokio::spawn(async move {
                 let up = match state.services().media.uploads.remove(&media_id) {
                     Some((_, up)) => up,
@@ -338,6 +339,7 @@ async fn media_upload(
                         debug!("finished processing media from upload");
                         let msg = MessageSync::MediaProcessed {
                             media: media.clone(),
+                            session_id,
                         };
                         if let Err(e) = state.broadcast(msg) {
                             error!("failed to broadcast MediaProcessed: {}", e);

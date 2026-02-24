@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -125,7 +127,10 @@ pub struct Media {
     pub has_gifv: bool,
 
     /// what this piece of media is linked to (admin only)
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub links: Vec<MediaLinkType>,
 
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
@@ -133,6 +138,16 @@ pub struct Media {
 
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub channel_id: Option<ChannelId>,
+
+    /// the hashes of this file
+    ///
+    /// maps hash type to unpadded url safe base64
+    // TODO: calculate and populate file hashes
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "HashMap::is_empty")
+    )]
+    pub hashes: HashMap<HashType, String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -166,9 +181,8 @@ pub struct MediaScan {
 /// Filetype-specific metadata
 // TODO: consider using NonZeroU64 if i am sure its valid, eg. double check no image format allows image height/width zero.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MediaMetadata {
     /// An image file
     Image {
@@ -202,6 +216,59 @@ pub enum MediaMetadata {
 
     /// A generic file
     File,
+}
+
+/// The type of hash used for media file verification.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(into = "String", try_from = "String")
+)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum HashType {
+    /// SHA-256 hash
+    Sha256,
+
+    /// BLAKE3 hash
+    Blake3,
+
+    /// Some unknown or unsupported
+    Other(String),
+}
+
+impl fmt::Display for HashType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HashType::Sha256 => write!(f, "Sha256"),
+            HashType::Blake3 => write!(f, "Blake3"),
+            HashType::Other(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl FromStr for HashType {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "Sha256" => HashType::Sha256,
+            "Blake3" => HashType::Blake3,
+            other => HashType::Other(other.to_string()),
+        })
+    }
+}
+
+impl From<HashType> for String {
+    fn from(h: HashType) -> Self {
+        h.to_string()
+    }
+}
+
+impl TryFrom<String> for HashType {
+    type Error = std::convert::Infallible;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        s.parse()
+    }
 }
 
 /// An update to a piece of media
@@ -374,25 +441,6 @@ pub enum MediaLinkType {
     /// this piece of media is used as a room banner
     // NOTE: auth checks copy RoomUpdate
     RoomBanner { room_id: RoomId },
-}
-
-// TODO: enforce auth checks on media for MediaUpdate?
-/// the auth checks that should be done for a piece of media
-pub enum MediaAuthCheck {
-    /// only allow viewing this media if the user can view this message
-    Message {
-        channel_id: ChannelId,
-        message_id: MessageId,
-    },
-
-    /// only allow viewing this media if the user can view this user
-    User { user_id: UserId },
-
-    /// only allow viewing this media if the user can view this channel
-    Channel { channel_id: ChannelId },
-
-    /// only allow viewing this media if the user can view this room
-    Room { room_id: RoomId },
 }
 
 /// query for searching through media

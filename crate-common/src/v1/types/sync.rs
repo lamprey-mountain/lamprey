@@ -775,6 +775,11 @@ pub enum MessageSync {
     /// A piece of media has processed and is now in the `Uploaded` state.
     MediaProcessed {
         media: crate::v2::types::media::Media,
+        session_id: SessionId,
+    },
+
+    MediaUpdate {
+        media: crate::v2::types::media::Media,
     },
 }
 

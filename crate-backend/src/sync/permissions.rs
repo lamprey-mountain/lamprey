@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use common::v1::types::{ChannelId, ConnectionId, Permission, RoomId, Session, UserId};
+use common::v1::types::{ChannelId, ConnectionId, Permission, RoomId, Session, SessionId, UserId};
 
 use crate::{Result, ServerState};
 
@@ -17,7 +17,9 @@ pub enum AuthCheck {
     Channel(ChannelId),
     ChannelPerm(ChannelId, Permission),
     EitherChannel(ChannelId, ChannelId),
+    Session(SessionId),
     Connection(ConnectionId),
+    Any(Vec<AuthCheck>),
 }
 
 impl AuthCheck {
@@ -25,7 +27,7 @@ impl AuthCheck {
         &self,
         session: &Session,
         server_state: &Arc<ServerState>,
-        connection_id: Option<ConnectionId>,
+        connection_id: ConnectionId,
     ) -> Result<bool> {
         let should_send = match (session.user_id(), self) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
@@ -100,9 +102,19 @@ impl AuthCheck {
                 }
             }
             (_, AuthCheck::Custom(b)) => *b,
-            (_, AuthCheck::Connection(target_conn_id)) => connection_id == Some(*target_conn_id),
+            (_, AuthCheck::Connection(target_conn_id)) => connection_id == *target_conn_id,
+            (_, AuthCheck::Session(session_id)) => session.id == *session_id,
+            (_, AuthCheck::Any(checks)) => {
+                for check in checks {
+                    if Box::pin(check.should_send(session, server_state, connection_id)).await? {
+                        return Ok(true);
+                    }
+                }
+                false
+            }
             (None, _) => false,
         };
+
         Ok(should_send)
     }
 }

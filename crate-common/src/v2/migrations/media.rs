@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::v1::types::media::{
     Media as V1Media, MediaCreate as V1MediaCreate, MediaCreateSource as V1MediaCreateSource,
     MediaWithAdmin as V1MediaWithAdmin,
@@ -151,6 +153,7 @@ impl Into<Media> for V1Media {
             links: vec![],
             room_id: None,
             channel_id: None,
+            hashes: HashMap::default(),
         }
     }
 }
