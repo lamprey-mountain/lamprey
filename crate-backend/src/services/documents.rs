@@ -765,13 +765,40 @@ impl ServiceDocuments {
     }
 }
 
+/// Handles document synchronization for a single client connection.
+///
+/// This struct manages the lifecycle of document subscriptions for a connection,
+/// including subscribing/unsubscribing from documents, broadcasting updates,
+/// and tracking presence information.
 pub struct DocumentSyncer {
+    /// Reference to the server state for accessing document services
     s: Arc<ServerStateInner>,
+
+    /// Sends subscription requests to switch to a different document context.
+    /// When a client subscribes to a new document, the desired context ID and
+    /// optional state vector are sent through this channel.
     query_tx: tokio::sync::watch::Sender<Option<(EditContextId, Option<Vec<u8>>)>>,
+
+    /// Receives subscription requests from `query_tx`. The poll() loop monitors
+    /// this receiver for changes. When a new query arrives, it sets up a
+    /// subscription to the requested document and moves the subscription to `current_rx`.
     query_rx: tokio::sync::watch::Receiver<Option<(EditContextId, Option<Vec<u8>>)>>,
+
+    /// The active document subscription. Contains the current document context ID
+    /// and a broadcast receiver for receiving document events (updates and presence).
+    /// When switching documents, the old subscription is replaced with a new one.
     current_rx: Option<(EditContextId, broadcast::Receiver<DocumentEvent>)>,
+
+    /// The connection ID associated with this syncer, used to filter out
+    /// self-originated events and track presence.
     conn_id: ConnectionId,
+
+    /// Queue of pending sync messages to be sent to the client. Used for buffering
+    /// messages like initial presence data when first subscribing to a document.
     pending_sync: VecDeque<MessageSync>,
+
+    /// The user ID of the authenticated user. Required for document operations
+    /// and presence tracking.
     user_id: Option<UserId>,
 }
 
@@ -792,10 +819,14 @@ impl DocumentSyncer {
         Ok(())
     }
 
-    /// check if client is subscribed to this document
+    /// Check if client is actively subscribed to a document.
+    ///
+    /// This checks `current_rx` (the active subscription) rather than `query_rx`
+    /// (the pending subscription request). This distinction matters when switching
+    /// documents: a client is only considered "subscribed" after the subscription
+    /// has been fully established and is being polled.
     pub fn is_subscribed(&self, context_id: &EditContextId) -> bool {
-        self.query_rx
-            .borrow()
+        self.current_rx
             .as_ref()
             .map(|(current_id, _)| current_id == context_id)
             .unwrap_or(false)
@@ -859,6 +890,14 @@ impl DocumentSyncer {
                                 });
                             }
                         }
+
+                        // Queue DocumentSubscribed to be sent after the initial DocumentEdit
+                        self.pending_sync
+                            .push_back(MessageSync::DocumentSubscribed {
+                                channel_id: context_id.0,
+                                branch_id: context_id.1,
+                                connection_id: self.conn_id,
+                            });
 
                         return Ok(MessageSync::DocumentEdit {
                             channel_id: context_id.0,

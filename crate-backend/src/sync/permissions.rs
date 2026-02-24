@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use common::v1::types::{ChannelId, Permission, RoomId, Session, UserId};
+use common::v1::types::{ChannelId, ConnectionId, Permission, RoomId, Session, UserId};
 
 use crate::{Result, ServerState};
 
@@ -17,6 +17,7 @@ pub enum AuthCheck {
     Channel(ChannelId),
     ChannelPerm(ChannelId, Permission),
     EitherChannel(ChannelId, ChannelId),
+    Connection(ConnectionId),
 }
 
 impl AuthCheck {
@@ -24,6 +25,7 @@ impl AuthCheck {
         &self,
         session: &Session,
         server_state: &Arc<ServerState>,
+        connection_id: Option<ConnectionId>,
     ) -> Result<bool> {
         let should_send = match (session.user_id(), self) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
@@ -98,6 +100,7 @@ impl AuthCheck {
                 }
             }
             (_, AuthCheck::Custom(b)) => *b,
+            (_, AuthCheck::Connection(target_conn_id)) => connection_id == Some(*target_conn_id),
             (None, _) => false,
         };
         Ok(should_send)

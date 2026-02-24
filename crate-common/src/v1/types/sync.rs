@@ -729,6 +729,18 @@ pub enum MessageSync {
         cursor_tail: Option<String>,
     },
 
+    /// confirmation that the client is now subscribed to a document.
+    ///
+    /// sent after the initial `DocumentEdit` containing the current document
+    /// state has been sent. clients should wait for this event before sending
+    /// `DocumentPresence` or `DocumentEdit` messages to avoid "not subscribed" errors.
+    DocumentSubscribed {
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+        /// the connection ID this subscription confirmation is sent to
+        connection_id: ConnectionId,
+    },
+
     DocumentTagCreate {
         channel_id: ChannelId,
         tag: DocumentTag,
