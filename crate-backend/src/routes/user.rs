@@ -8,9 +8,9 @@ use common::v1::types::harvest::{Harvest, HarvestCreate};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MediaTrackInfo, MessageSync,
-    PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus, User, UserCreate, UserId,
-    UserPatch, UserSearch, UserWithRelationship,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
+    PaginationResponse, Room, RoomId, SessionStatus, User, UserCreate, UserId, UserPatch,
+    UserSearch, UserWithRelationship,
 };
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogFilter, AuditLogPaginationResponse, HarvestId, Permission,

@@ -1,14 +1,11 @@
 use std::result::Result;
 
-use common::v1::types::{Media, PaginationKey};
-use serde_json::Value;
+use common::v1::types::PaginationKey;
 
 use crate::{
     error::Error,
     types::{PaginationDirection, PaginationQuery},
 };
-
-use super::media::DbMediaData;
 
 #[derive(Debug)]
 pub struct Pagination<K> {
@@ -77,9 +74,4 @@ macro_rules! gen_paginate {
     ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr, $id:expr) => {
         gen_paginate!($p, $pool, $qlist, $qtotal, Into::into, $id)
     };
-}
-
-pub fn media_from_db(v: Value) -> Media {
-    let parsed: DbMediaData = serde_json::from_value(v).expect("invalid data in db");
-    parsed.into()
 }

@@ -80,9 +80,13 @@ pub struct AuditLogChange {
 // NOTE: maybe i want to also have Thread{Create,Update,Etc}?
 // NOTE: maybe i should hoist changes to the top level...?
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "metadata")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type", content = "metadata"))]
+#[allow(deprecated)]
 pub enum AuditLogEntryType {
     RoomCreate {
         changes: Vec<AuditLogChange>,

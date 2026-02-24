@@ -10,8 +10,8 @@ use axum::{
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use common::{
     v1::types::{
-        self, media::MediaRef, EmbedCreate, MessageAttachmentCreate, MessageAttachmentCreateType,
-        MessageCreate, WebhookId,
+        self, EmbedCreate, MessageAttachmentCreate, MessageAttachmentCreateType, MessageCreate,
+        WebhookId,
     },
     v2::types::media::MediaReference,
 };

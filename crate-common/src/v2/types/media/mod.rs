@@ -20,7 +20,7 @@ use crate::v1::types::{
 pub mod proxy;
 
 /// A reference to a piece of media to be used.
-// TODO: use this in create
+// TODO: use this in more FooCreate and FooPatch structs
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -30,9 +30,11 @@ pub enum MediaReference {
     Media { media_id: MediaId },
 
     /// Shortcut to download media from a url. Saves a few requests for uploading.
+    // TODO: support this
     Url { source_url: Url },
 
     /// Shortcut to create media from form data. Only usable if the request body is multipart/form-data.
+    // TODO: support this
     Attachment { field_name: String },
 }
 
@@ -250,20 +252,24 @@ impl MediaMetadata {
 )]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum HashType {
-    /// SHA-256 hash
-    Sha256,
+    /// SHA-512/256
+    ///
+    /// generate hashes with `openssl dgst -sha512-256 ./path/to/file`
+    Sha512_256,
 
     /// BLAKE3 hash
+    ///
+    /// generate hashes with `b3sum ./path/to/file`
     Blake3,
 
-    /// Some unknown or unsupported
+    /// Some unknown or unsupported algorithm
     Other(String),
 }
 
 impl fmt::Display for HashType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HashType::Sha256 => write!(f, "Sha256"),
+            HashType::Sha512_256 => write!(f, "Sha512/256"),
             HashType::Blake3 => write!(f, "Blake3"),
             HashType::Other(s) => write!(f, "{}", s),
         }
@@ -274,7 +280,7 @@ impl FromStr for HashType {
     type Err = std::convert::Infallible;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "Sha256" => HashType::Sha256,
+            "Sha512/256" => HashType::Sha512_256,
             "Blake3" => HashType::Blake3,
             other => HashType::Other(other.to_string()),
         })

@@ -6,15 +6,20 @@ use std::{
 };
 
 use async_tempfile::TempFile;
-use common::v1::types::error::{ApiError, ErrorCode};
+use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{util::truncate::truncate_filename, MediaId, Mime, UserId};
 use common::v2::types::media::{
     Media as MediaV2, MediaCreate, MediaCreateSource, MediaMetadata, MediaStatus,
 };
+use common::{
+    v1::types::error::{ApiError, ErrorCode},
+    v2::types::media::HashType,
+};
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
-use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufWriter};
+use sha2::{Digest, Sha512_256};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
 use tracing::{debug, error, info, span, trace, Instrument, Level};
 
 use crate::{
@@ -231,6 +236,48 @@ impl ServiceMedia {
             Err(_) => MediaMetadata::File,
         };
 
+        let mut hashes = HashMap::new();
+
+        {
+            // generate blake3 hash
+            let file = tmp.open_ro().await?;
+            let mut reader = BufReader::new(file);
+            let mut hasher = blake3::Hasher::new();
+            let mut buffer = [0u8; 8192];
+
+            loop {
+                let bytes_read = reader.read(&mut buffer).await?;
+                if bytes_read == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..bytes_read]);
+            }
+
+            let result = hasher.finalize();
+            let hash_b64 = BASE64_URL_SAFE_NO_PAD.encode(result.as_bytes());
+            hashes.insert(HashType::Blake3, hash_b64);
+        }
+
+        {
+            // generate sha512/256 hash
+            let file = tmp.open_ro().await?;
+            let mut reader = BufReader::new(file);
+            let mut hasher = Sha512_256::new();
+            let mut buffer = [0u8; 8192];
+
+            loop {
+                let bytes_read = reader.read(&mut buffer).await?;
+                if bytes_read == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..bytes_read]);
+            }
+
+            let result = hasher.finalize();
+            let hash_b64 = BASE64_URL_SAFE_NO_PAD.encode(result);
+            hashes.insert(HashType::Sha512_256, hash_b64);
+        }
+
         let mut media = MediaV2 {
             id: media_id,
             status: MediaStatus::Uploaded,
@@ -252,7 +299,7 @@ impl ServiceMedia {
             links: vec![],
             room_id: None,
             channel_id: None,
-            hashes: HashMap::default(),
+            hashes,
         };
 
         debug!("finish upload for {}, mime {}", media_id, mime);
