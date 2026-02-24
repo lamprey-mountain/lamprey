@@ -284,6 +284,20 @@ pub trait DataPermission {
         channel_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()>;
+
+    /// Check if target user allows DMs from source user (via global or any shared room)
+    async fn permission_allows_dm_from_user(
+        &self,
+        source_user_id: UserId,
+        target_user_id: UserId,
+    ) -> Result<bool>;
+
+    /// Check if target user allows friend requests from source user (via global or any shared room)
+    async fn permission_allows_friend_request_from_user(
+        &self,
+        source_user_id: UserId,
+        target_user_id: UserId,
+    ) -> Result<bool>;
 }
 
 #[async_trait]
@@ -579,6 +593,9 @@ pub trait DataUserRelationship {
 
     /// check if two users share a room (both are members)
     async fn user_shares_room(&self, user_a: UserId, user_b: UserId) -> Result<bool>;
+
+    /// get shared room IDs between two users (both are members)
+    async fn user_shared_rooms(&self, user_a: UserId, user_b: UserId) -> Result<Vec<RoomId>>;
 
     /// check if two users have at least one mutual friend
     async fn user_has_mutual_friend(&self, user_a: UserId, user_b: UserId) -> Result<bool>;

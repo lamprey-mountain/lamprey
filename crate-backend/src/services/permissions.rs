@@ -300,4 +300,26 @@ impl ServicePermissions {
 
         Ok(perms)
     }
+
+    /// Check if target user allows DMs from source user
+    pub async fn allows_dm_from_user(
+        &self,
+        source_user_id: UserId,
+        target_user_id: UserId,
+    ) -> Result<bool> {
+        let data = self.state.data();
+        data.permission_allows_dm_from_user(source_user_id, target_user_id)
+            .await
+    }
+
+    /// Check if target user allows friend requests from source user
+    pub async fn allows_friend_request_from_user(
+        &self,
+        source_user_id: UserId,
+        target_user_id: UserId,
+    ) -> Result<bool> {
+        let data = self.state.data();
+        data.permission_allows_friend_request_from_user(source_user_id, target_user_id)
+            .await
+    }
 }

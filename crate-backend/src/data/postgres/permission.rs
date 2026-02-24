@@ -69,4 +69,81 @@ impl DataPermission for Postgres {
         .await?;
         Ok(())
     }
+
+    async fn permission_allows_dm_from_user(
+        &self,
+        source_user_id: UserId,
+        target_user_id: UserId,
+    ) -> Result<bool> {
+        // Check if target user allows DMs:
+        // 1. If global dms setting is true, allow
+        // 2. Otherwise, check if any shared room has dms enabled
+        let allows = query_scalar!(
+            r#"
+            select coalesce(
+                (select (config->>'dms')::bool from usr where id = $2),
+                false
+            )
+            or exists (
+                select 1
+                from room_member rm1
+                join room_member rm2 on rm1.room_id = rm2.room_id
+                join user_config_room ucr on rm1.room_id = ucr.room_id
+                where rm1.user_id = $1
+                  and rm2.user_id = $2
+                  and rm1.membership = 'Join'
+                  and rm2.membership = 'Join'
+                  and (ucr.config->>'dms')::bool = true
+            )
+            as "allows!"
+            "#,
+            source_user_id.into_inner(),
+            target_user_id.into_inner(),
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(allows)
+    }
+
+    async fn permission_allows_friend_request_from_user(
+        &self,
+        source_user_id: UserId,
+        target_user_id: UserId,
+    ) -> Result<bool> {
+        // Check if target user allows friend requests:
+        // 1. If global allow_everyone is true, allow
+        // 2. If global allow_mutual_room is true, check if any shared room has friends enabled
+        // Note: allow_mutual_friend is handled separately in the caller
+        let allows = query_scalar!(
+            r#"
+            select coalesce(
+                (select (config->'friends'->>'allow_everyone')::bool from usr where id = $2),
+                false
+            )
+            or (
+                coalesce(
+                    (select (config->'friends'->>'allow_mutual_room')::bool from usr where id = $2),
+                    false
+                )
+                and exists (
+                    select 1
+                    from room_member rm1
+                    join room_member rm2 on rm1.room_id = rm2.room_id
+                    join user_config_room ucr on rm1.room_id = ucr.room_id
+                    where rm1.user_id = $1
+                      and rm2.user_id = $2
+                      and rm1.membership = 'Join'
+                      and rm2.membership = 'Join'
+                      and (ucr.config->>'friends')::bool = true
+                )
+            )
+            as "allows!"
+            "#,
+            source_user_id.into_inner(),
+            target_user_id.into_inner(),
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(allows)
+    }
 }

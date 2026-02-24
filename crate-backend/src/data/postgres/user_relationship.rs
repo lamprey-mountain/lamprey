@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
     Ignore, PaginationDirection, PaginationQuery, PaginationResponse, Relationship,
-    RelationshipPatch, RelationshipType, RelationshipWithUserId,
+    RelationshipPatch, RelationshipType, RelationshipWithUserId, RoomId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
@@ -347,10 +347,9 @@ impl DataUserRelationship for Postgres {
     }
 
     async fn user_shared_rooms(&self, user_a: UserId, user_b: UserId) -> Result<Vec<RoomId>> {
-        use crate::data::postgres::types::RoomIdDb;
         let rooms = query_scalar!(
             r#"
-            SELECT rm1.room_id AS "room_id: RoomIdDb"
+            SELECT rm1.room_id
             FROM room_member rm1
             JOIN room_member rm2 ON rm1.room_id = rm2.room_id
             WHERE rm1.user_id = $1 AND rm2.user_id = $2
@@ -361,7 +360,7 @@ impl DataUserRelationship for Postgres {
         )
         .fetch_all(&self.pool)
         .await?;
-        Ok(rooms.into_iter().map(RoomIdDb::into_inner).collect())
+        Ok(rooms.into_iter().map(|r| r.into()).collect())
     }
 
     async fn user_has_mutual_friend(&self, user_a: UserId, user_b: UserId) -> Result<bool> {

@@ -136,6 +136,11 @@ async fn friend_add(
         }
         (_, Some(RelationshipType::Block)) => return Err(Error::Blocked),
         (None, None) => {
+            srv.perms
+                .for_server(auth.user.id)
+                .await?
+                .ensure(Permission::FriendCreate)?;
+
             let target_prefs = srv.cache.user_config_get(target_user_id).await?;
             let friends_prefs = &target_prefs.privacy.friends;
 
@@ -155,24 +160,9 @@ async fn friend_add(
             } else {
                 let mutual_room_allowed = if friends_prefs.allow_mutual_room {
                     // check shared rooms
-                    // PERF: optimize this into a single query (add to DataPermission)
-                    let shared_rooms = data.user_shared_rooms(auth.user.id, target_user_id).await?;
-                    if shared_rooms.is_empty() {
-                        false
-                    } else {
-                        let mut allowed = false;
-                        for room_id in &shared_rooms {
-                            let room_prefs = srv
-                                .cache
-                                .user_config_room_get(target_user_id, *room_id)
-                                .await?;
-                            if room_prefs.privacy.friends {
-                                allowed = true;
-                                break;
-                            }
-                        }
-                        allowed
-                    }
+                    srv.perms
+                        .allows_friend_request_from_user(auth.user.id, target_user_id)
+                        .await?
                 } else {
                     false
                 };
@@ -190,11 +180,6 @@ async fn friend_add(
                     "friend requests not allowed from this user",
                 ));
             }
-
-            srv.perms
-                .for_server(auth.user.id)
-                .await?
-                .ensure(Permission::FriendCreate)?;
 
             // send friend request
             data.user_relationship_edit(

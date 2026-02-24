@@ -46,34 +46,22 @@ async fn dm_init(
         .await?
         .ensure(Permission::DmCreate)?;
 
+    // you can't dm webhooks
     let target_user = data.user_get(target_user_id).await?;
     if !target_user.can_dm() {
         return Err(Error::BadStatic("cannot dm this user"));
     }
 
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::DmCreate)?;
+
     // a dm can be started with the target user iff
     // 1. dms are enabled globally, OR
     // 2. dms enabled in any shared room
-    let target_prefs = srv.cache.user_config_get(target_user_id).await?;
-    let target_allows_dms = if target_prefs.privacy.dms {
-        true
-    } else {
-        // check shared rooms
-        // PERF: optimize this into a single query (add to DataPermission)
-        let shared_rooms = data.user_shared_rooms(auth.user.id, target_user_id).await?;
-        let mut room_allows_dms = false;
-        for room_id in &shared_rooms {
-            let room_prefs = srv
-                .cache
-                .user_config_room_get(target_user_id, *room_id)
-                .await?;
-            if room_prefs.privacy.dms {
-                room_allows_dms = true;
-                break;
-            }
-        }
-        room_allows_dms
-    };
+    let target_allows_dms = srv
+        .perms
+        .allows_dm_from_user(auth.user.id, target_user_id)
+        .await?;
 
     if !target_allows_dms {
         // friends can always DM
