@@ -1,7 +1,8 @@
-import { createContext, useContext } from "solid-js";
-import { createUpload } from "sdk";
+import { createContext, onCleanup, onMount, useContext } from "solid-js";
+import { createUpload, type Media } from "sdk";
 import type { Attachment, ChatCtx } from "../context";
 import type { ReactiveMap } from "@solid-primitives/map";
+import { useModals } from "./modal";
 
 export type UploadController = {
 	init: (local_id: string, thread_id: string, file: File) => void;
@@ -13,6 +14,66 @@ export type UploadController = {
 const UploadsContext = createContext<UploadController>();
 
 export const UploadsProvider = (props: { ctx: ChatCtx; children: any }) => {
+	const [, modalCtl] = useModals();
+
+	// Track pending uploads by media_id for async processing
+	const pendingUploads = new Map<
+		string,
+		{ local_id: string; thread_id: string }
+	>();
+
+	// Listen for MediaProcessed and MediaUpdate events
+	onMount(() => {
+		const handleMediaProcessed = (media: Media) => {
+			// Find the attachment that was waiting for this media to be processed
+			const pending = pendingUploads.get(media.id);
+			if (pending) {
+				const [ch, chUpdate] = props.ctx.channel_contexts.get(
+					pending.thread_id,
+				)!;
+				const atts = ch.attachments;
+				const idx = atts.findIndex((a) => a.local_id === pending.local_id);
+				if (idx !== -1) {
+					const att: Attachment = {
+						status: "uploaded",
+						media,
+						local_id: pending.local_id,
+						spoiler: atts[idx].spoiler,
+					};
+					chUpdate("attachments", atts.toSpliced(idx, 1, att));
+				}
+				pendingUploads.delete(media.id);
+			}
+		};
+
+		const handleMediaUpdate = (media: Media) => {
+			// Update all attachments that reference this media
+			for (const [thread_id, ctx] of props.ctx.channel_contexts.entries()) {
+				const [ch, chUpdate] = ctx;
+				const atts = ch.attachments;
+				const idx = atts.findIndex((a) =>
+					a.status === "uploaded" && a.media.id === media.id
+				);
+				if (idx !== -1) {
+					const att = atts[idx];
+					const updatedAtt: Attachment = {
+						...att,
+						media,
+					};
+					chUpdate("attachments", atts.toSpliced(idx, 1, updatedAtt));
+				}
+			}
+		};
+
+		props.ctx.events.on("sync", ([msg]) => {
+			if (msg.type === "MediaProcessed") {
+				handleMediaProcessed(msg.media);
+			} else if (msg.type === "MediaUpdate") {
+				handleMediaUpdate(msg.media);
+			}
+		});
+	});
+
 	const init = (local_id: string, thread_id: string, file: File) => {
 		const [ch, chUpdate] = props.ctx.channel_contexts.get(thread_id)!;
 
@@ -23,6 +84,7 @@ export const UploadsProvider = (props: { ctx: ChatCtx; children: any }) => {
 			local_id,
 			progress: 0,
 			paused: false,
+			filename: file.name,
 		}]);
 
 		// Create upload
@@ -48,7 +110,7 @@ export const UploadsProvider = (props: { ctx: ChatCtx; children: any }) => {
 				if (idx === -1) return;
 				chUpdate("attachments", atts.toSpliced(idx, 1));
 				// Replace dispatch with modal controller
-				props.ctx.modalCtl.alert(error.message);
+				modalCtl.alert(error.message);
 			},
 			onComplete(media) {
 				const atts = ch.attachments;
@@ -84,6 +146,8 @@ export const UploadsProvider = (props: { ctx: ChatCtx; children: any }) => {
 			},
 		}).then((upload) => {
 			props.ctx.uploads.set(local_id, upload);
+			// Track this upload for async processing
+			pendingUploads.set(upload.media_id, { local_id, thread_id });
 		});
 	};
 
@@ -106,6 +170,8 @@ export const UploadsProvider = (props: { ctx: ChatCtx; children: any }) => {
 		if (idx !== -1) {
 			chUpdate("attachments", atts.toSpliced(idx, 1));
 		}
+		// Remove from pending uploads
+		pendingUploads.delete(upload.media_id);
 	};
 
 	const controller: UploadController = {

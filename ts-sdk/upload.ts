@@ -35,6 +35,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 	let offset = 0;
 	let currentOffset = 0;
 	let xhr: XMLHttpRequest;
+	let uploadComplete = false;
 
 	async function resumeUpload() {
 		// make sure to cancel the currently in flight upload, in case resume is called multiple times
@@ -65,12 +66,28 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 			opts.onProgress(offset / opts.file.size);
 		};
 
-		xhr.onload = () => {
-			if (xhr.status === 200) {
+		xhr.onload = async () => {
+			if (xhr.status === 204) {
+				uploadComplete = true;
+				// try {
+				// 	const { error } = await opts.client.http.PUT(
+				// 		"/api/v1/media/{media_id}/done",
+				// 		{
+				// 			params: { path: { media_id } },
+				// 			body: { async: true },
+				// 		},
+				// 	);
+				// 	if (error) {
+				// 		opts.onFail(new Error(`media_done failed: ${error}`));
+				// 	} else {
+				// 		console.log("[media] upload complete, processing asynchronously");
+				// 	}
+				// } catch (e) {
+				// 	opts.onFail(e as Error);
+				// }
+			} else if (xhr.status === 200) {
 				const media = JSON.parse(xhr.responseText);
 				opts.onComplete(media);
-			} else if (xhr.status === 204) {
-				opts.onFail(new Error("upload failed: incomplete file"));
 			} else {
 				opts.onFail(new Error(`upload failed: ${xhr.responseText}`));
 			}

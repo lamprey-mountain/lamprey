@@ -647,6 +647,8 @@ export class Messages {
 			is_local: true,
 		};
 
+		console.log("[message:send] local message", local);
+
 		const r = this.cacheRanges.get(thread_id);
 		if (r) {
 			r.live.items.push(local);
@@ -654,6 +656,7 @@ export class Messages {
 		}
 
 		const v2Body = convertMessageCreateToV2(body);
+		console.log("[message:send] v2 body", v2Body);
 
 		const data = await fetchWithRetry(() =>
 			this.api.client.http.POST(
@@ -672,6 +675,7 @@ export class Messages {
 				},
 			)
 		);
+		console.log("[message:send] response from post", v2Body);
 		return maybeConvertMessage(data);
 	}
 

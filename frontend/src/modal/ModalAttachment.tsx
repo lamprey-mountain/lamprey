@@ -1,8 +1,7 @@
-import { createSignal, onMount } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
 import { useApi } from "../api";
-import { useConfig } from "../config";
 import { useModals } from "../contexts/modal";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
@@ -14,7 +13,6 @@ type ModalAttachmentProps = {
 
 export const ModalAttachment = (props: ModalAttachmentProps) => {
 	const api = useApi();
-	const config = useConfig();
 	const [, modalCtl] = useModals();
 	const ctx = useCtx();
 	const [filename, setFilename] = createSignal("");
@@ -22,7 +20,6 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 	const [spoiler, setSpoiler] = createSignal(false);
 	const [exif, setExif] = createSignal(false);
 
-	// Get the attachment from the channel context
 	const channelCtx = ctx.channel_contexts.get(props.channel_id);
 	const attachment = () => {
 		if (!channelCtx) return null;
@@ -33,41 +30,55 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 	onMount(() => {
 		const att = attachment();
 		if (att) {
-			setFilename(att.file.name);
 			if (att.status === "uploaded") {
+				setFilename(att.media.filename);
 				setAlt(att.media.alt ?? "");
-				setSpoiler(att.media.spoiler ?? false);
+				setSpoiler(att.spoiler ?? false);
+			} else {
+				setFilename(att.filename ?? att.file.name);
+				setAlt(att.alt ?? "");
+				setSpoiler(att.spoiler ?? false);
 			}
 		}
 	});
 
 	const save = () => {
 		const att = attachment();
-		if (!att || att.status !== "uploaded") return;
+		if (!att) return;
 
-		// Update the media metadata via API
-		api.client.http.PATCH("/api/v1/media/{media_id}", {
-			params: { path: { media_id: att.media.id } },
-			body: {
-				alt: alt() || null,
-				spoiler: spoiler() || null,
-			},
-		});
+		if (att.status === "uploaded") {
+			api.client.http.PATCH("/api/v1/media/{media_id}", {
+				params: { path: { media_id: att.media.id } },
+				body: {
+					alt: alt() || null,
+					filename: filename() || null,
+				},
+			});
+		}
 
-		// Update local state
 		const [ch, chUpdate] = channelCtx!;
 		chUpdate(
 			"attachments",
 			ch.attachments.map((a) => {
-				if (a.local_id === props.local_id && a.status === "uploaded") {
-					return {
-						...a,
-						media: {
-							...a.media,
-							alt: alt() || null,
-							spoiler: spoiler() || null,
-						},
-					};
+				if (a.local_id === props.local_id) {
+					if (a.status === "uploaded") {
+						return {
+							...a,
+							spoiler: spoiler(),
+							media: {
+								...a.media,
+								filename: filename(),
+								alt: alt() || null,
+							},
+						};
+					} else {
+						return {
+							...a,
+							spoiler: spoiler(),
+							filename: filename(),
+							alt: alt() || undefined,
+						};
+					}
 				}
 				return a;
 			}),
@@ -92,8 +103,8 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 					<input
 						type="text"
 						value={filename()}
+						onInput={(e) => setFilename(e.currentTarget.value)}
 						style="padding:4px;width:100%;box-sizing:border-box"
-						disabled
 					/>
 				</label>
 				<label style="display:block;margin:4px 0">
@@ -122,22 +133,26 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 						</div>
 					</label>
 				</div>
-				<div class="option">
-					<input
-						id="opt-exif"
-						type="checkbox"
-						checked={exif()}
-						onInput={(e) => setExif(e.currentTarget.checked)}
-						style="display:none"
-					/>
-					<Checkbox checked={exif()} seed="modal-attachment-exif" />
-					<label for="opt-exif">
-						<div>Include metadata</div>
-						<div class="dim">
-							Preserve EXIF data from the original file
-						</div>
-					</label>
-				</div>
+				<Show when={false}>
+					<div class="option">
+						<input
+							id="opt-exif"
+							type="checkbox"
+							checked={exif()}
+							onInput={(e) => setExif(e.currentTarget.checked)}
+							style="display:none"
+							disabled={false /* TODO: once strip_exif is set to true, it cannot be set to false */}
+						/>
+						{/* TODO: styles for disabled checkbox */}
+						<Checkbox checked={exif()} seed="modal-attachment-exif" />
+						<label for="opt-exif">
+							<div>Include metadata</div>
+							<div class="dim">
+								Preserve EXIF data from the original file
+							</div>
+						</label>
+					</div>
+				</Show>
 				<div class="bottom">
 					<button onClick={() => modalCtl.close()}>cancel</button>
 					<button class="primary" onClick={save}>save</button>

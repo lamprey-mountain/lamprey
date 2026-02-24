@@ -7,10 +7,8 @@ import {
 import type {
 	Client,
 	Media,
-	Message,
 	MessageReady,
 	MessageSync,
-	Pagination,
 	Upload,
 	UserConfig,
 } from "sdk";
@@ -19,9 +17,8 @@ import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.tsx";
-import { Placement, ReferenceElement } from "@floating-ui/dom";
+import { Placement } from "@floating-ui/dom";
 import { SlashCommands } from "./contexts/slash-commands";
-import type { Modal } from "./contexts/modal";
 
 export type Slice = {
 	start: number;
@@ -29,10 +26,22 @@ export type Slice = {
 };
 
 export type Attachment =
-	& { file: File; local_id: string }
+	& { local_id: string }
 	& (
-		| { status: "uploading"; progress: number; paused: boolean }
-		| { status: "uploaded"; media: Media }
+		| {
+			status: "uploading";
+			file: File;
+			progress: number;
+			paused: boolean;
+			filename?: string;
+			alt?: string;
+			spoiler?: boolean;
+		}
+		| {
+			status: "uploaded";
+			media: Media;
+			spoiler?: boolean;
+		}
 	);
 
 export type Data = {

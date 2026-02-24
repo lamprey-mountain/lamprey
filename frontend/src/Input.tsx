@@ -25,6 +25,7 @@ import { useChannel } from "./channelctx.tsx";
 import { handleSubmit } from "./dispatch/submit.ts";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useModals } from "./contexts/modal.tsx";
+import { getThumbFromId } from "./media/util.tsx";
 
 type InputProps = {
 	channel: Channel;
@@ -400,10 +401,15 @@ export function RenderUploadItem(
 	const ctx = useCtx();
 	const uploads = useUploads();
 	const [, modalCtl] = useModals();
-	const thumbUrl = URL.createObjectURL(props.att.file);
-	onCleanup(() => {
-		URL.revokeObjectURL(thumbUrl);
-	});
+	const thumbUrl = props.att.status === "uploaded"
+		? getThumbFromId(props.att.media.id, 64)
+		: URL.createObjectURL(props.att.file);
+
+	if (props.att.status !== "uploaded") {
+		onCleanup(() => {
+			URL.revokeObjectURL(thumbUrl);
+		});
+	}
 
 	function renderInfo(att: Attachment) {
 		if (att.status === "uploading") {
@@ -439,6 +445,10 @@ export function RenderUploadItem(
 		uploads.resume(props.att.local_id);
 	}
 
+	const filename = props.att.status === "uploaded"
+		? props.att.media.filename
+		: props.att.filename ?? props.att.file.name;
+
 	return (
 		<>
 			<div class="upload-item">
@@ -450,7 +460,7 @@ export function RenderUploadItem(
 					</svg>
 					<div style="display: flex">
 						<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
-							{props.att.file.name}
+							{filename}
 							<span style="color:#888;margin-left:.5ex">
 								{renderInfo(props.att)}
 							</span>
@@ -468,7 +478,7 @@ export function RenderUploadItem(
 									<button onClick={pause}>⏸️</button>
 								</Match>
 							</Switch>
-							<Show when={false /* TODO: attachment editing */}>
+							<Show when={props.att.status === "uploaded"}>
 								<button
 									onClick={() =>
 										modalCtl.open({

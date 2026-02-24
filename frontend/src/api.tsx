@@ -748,6 +748,14 @@ export function createApi(
 			});
 		} else if (msg.type === "MessageVersionDelete") {
 			// TODO
+		} else if (msg.type === "MediaProcessed") {
+			const { media: processedMedia, session_id } = msg;
+			media.cacheInfo.set(processedMedia.id, processedMedia);
+			// attachment updates are handled by the upload context
+		} else if (msg.type === "MediaUpdate") {
+			const { media: updatedMedia } = msg;
+			media.cacheInfo.set(updatedMedia.id, updatedMedia);
+			// attachment updates are handled by the upload context
 		} else if (
 			msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate"
 		) {

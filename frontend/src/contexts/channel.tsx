@@ -3,9 +3,7 @@ import { createContext, useContext } from "solid-js";
 import { MessageListAnchor } from "../api/messages";
 import { Attachment } from "../context";
 import { EditorState } from "prosemirror-state";
-import { createStore, SetStoreFunction, Store } from "solid-js/store";
-import { useCtx } from "../context";
-import { ReactiveMap } from "@solid-primitives/map";
+import { SetStoreFunction, Store } from "solid-js/store";
 
 export type ChannelSearch = {
 	query: string;
