@@ -14,6 +14,7 @@ import { useConfig } from "./config";
 import { flags } from "./flags";
 import { useCtx } from "./context";
 import { useMenu } from "./contexts/mod.tsx";
+import { useModals } from "./contexts/modal";
 import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
 import { useVoice } from "./voice-provider";
 import {
@@ -833,6 +834,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const api = useApi();
 	const nav = useNavigate();
+	const [, modalCtl] = useModals();
 	const currentUserId = () => api.users.cache.get("@self")?.id;
 	const [hovered, setHovered] = createSignal(false);
 
@@ -923,7 +925,17 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 			</Show>
 			<Show when={props.channel.type !== "Dm"}>
 				<Show when={canInvite()}>
-					<button onClick={() => {/* TODO: show invite modal */}}>
+					<button
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							modalCtl.open({
+								type: "invite_create",
+								room_id: props.room_id,
+								channel_id: props.channel.id,
+							});
+						}}
+					>
 						<img class="icon" src={icMemberAdd} />
 					</button>
 				</Show>

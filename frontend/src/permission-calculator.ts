@@ -83,6 +83,81 @@ function applyLurkerRestrictions(perms: Set<Permission>): Set<Permission> {
 	return restricted;
 }
 
+const adminPerms: Permission[] = [
+	"Admin",
+	"ApplicationCreate",
+	"ApplicationManage",
+	"BypassSlowmode",
+	"CalendarEventCreate",
+	"CalendarEventManage",
+	"CalendarEventRsvp",
+	"ChannelEdit",
+	"ChannelManage",
+	"DmCreate",
+	"DocumentComment",
+	"DocumentCreate",
+	"DocumentEdit",
+	"EmojiManage",
+	"EmojiUseExternal",
+	"FriendCreate",
+	"IntegrationsManage",
+	"InviteCreate",
+	"InviteManage",
+	"MemberBan",
+	"MemberBridge",
+	"MemberKick",
+	"MemberNickname",
+	"MemberNicknameManage",
+	"MemberTimeout",
+	"MessageAttachments",
+	"MessageCreate",
+	"MessageCreateThread",
+	"MessageDelete",
+	"MessageEmbeds",
+	"MessageMassMention",
+	"MessageMove",
+	"MessagePin",
+	"MessageRemove",
+	"ReactionAdd",
+	"ReactionPurge",
+	"RoleApply",
+	"RoleManage",
+	"RoomCreate",
+	"RoomManage",
+	"RoomManageServer",
+	"ServerMaintenance",
+	"ServerMetrics",
+	"ServerOversee",
+	"ServerReports",
+	"TagApply",
+	"TagManage",
+	"ThreadCreatePrivate",
+	"ThreadCreatePublic",
+	"ThreadEdit",
+	"ThreadLock",
+	"ThreadManage",
+	"CallUpdate",
+	"RoomForceJoin",
+	"RoomJoin",
+	"UserDeleteSelf",
+	"UserManage",
+	"UserProfile",
+	"ViewAnalytics",
+	"ViewAuditLog",
+	"ViewChannel",
+	"VoiceBroadcast",
+	"VoiceConnect",
+	"VoiceDeafen",
+	"VoiceDisconnect",
+	"VoiceMove",
+	"VoiceMute",
+	"VoicePriority",
+	"VoiceRequest",
+	"VoiceSpeak",
+	"VoiceVad",
+	"VoiceVideo",
+];
+
 /**
  * Calculate the final permissions for a user in a given context
  */
@@ -117,7 +192,7 @@ export function calculatePermissions(
 	const room = ctx.api.rooms.fetch(() => ctx.room_id!)();
 	if (room?.owner_id === user_id) {
 		// owners have full permissions (ViewChannel and Admin)
-		const ownerPerms = new Set<Permission>(["ViewChannel", "Admin"]);
+		const ownerPerms = new Set<Permission>(adminPerms);
 		return { permissions: ownerPerms, rank: Infinity };
 	}
 
@@ -186,8 +261,19 @@ export function calculatePermissions(
 
 	const perms = new Set<Permission>();
 
-	for (const p of allowed) {
+	const addPerm = (p: Permission) => {
+		if (p === "Admin") {
+			for (const ap of adminPerms) {
+				perms.add(ap);
+			}
+		} else if (p === "CalendarEventManage") {
+			perms.add("CalendarEventCreate");
+		}
 		perms.add(p);
+	};
+
+	for (const p of allowed) {
+		addPerm(p);
 	}
 
 	if (perms.has("Admin")) {
@@ -324,11 +410,95 @@ function applyChannelOverwrites(
 
 	const memberRoleIds = new Set(member.roles);
 
+	const addPerm = (p: Permission) => {
+		if (p === "Admin") {
+			const adminPerms: Permission[] = [
+				"ApplicationCreate",
+				"ApplicationManage",
+				"BypassSlowmode",
+				"CalendarEventCreate",
+				"CalendarEventManage",
+				"CalendarEventRsvp",
+				"ChannelEdit",
+				"ChannelManage",
+				"DmCreate",
+				"DocumentComment",
+				"DocumentCreate",
+				"DocumentEdit",
+				"EmojiManage",
+				"EmojiUseExternal",
+				"FriendCreate",
+				"IntegrationsManage",
+				"InviteCreate",
+				"InviteManage",
+				"MemberBan",
+				"MemberBridge",
+				"MemberKick",
+				"MemberNickname",
+				"MemberNicknameManage",
+				"MemberTimeout",
+				"MessageAttachments",
+				"MessageCreate",
+				"MessageCreateThread",
+				"MessageDelete",
+				"MessageEmbeds",
+				"MessageMassMention",
+				"MessageMove",
+				"MessagePin",
+				"MessageRemove",
+				"ReactionAdd",
+				"ReactionPurge",
+				"RoleApply",
+				"RoleManage",
+				"RoomCreate",
+				"RoomManage",
+				"RoomManageServer",
+				"ServerMaintenance",
+				"ServerMetrics",
+				"ServerOversee",
+				"ServerReports",
+				"TagApply",
+				"TagManage",
+				"ThreadCreatePrivate",
+				"ThreadCreatePublic",
+				"ThreadEdit",
+				"ThreadLock",
+				"ThreadManage",
+				"CallUpdate",
+				"RoomForceJoin",
+				"RoomJoin",
+				"UserDeleteSelf",
+				"UserManage",
+				"UserProfile",
+				"ViewAnalytics",
+				"ViewAuditLog",
+				"ViewChannel",
+				"VoiceBroadcast",
+				"VoiceConnect",
+				"VoiceDeafen",
+				"VoiceDisconnect",
+				"VoiceMove",
+				"VoiceMute",
+				"VoicePriority",
+				"VoiceRequest",
+				"VoiceSpeak",
+				"VoiceVad",
+				"VoiceVideo",
+			];
+			for (const ap of adminPerms) {
+				perms.add(ap);
+			}
+		} else if (p === "CalendarEventManage") {
+			perms.add("CalendarEventCreate");
+		}
+		perms.add(p);
+	};
+
 	// 1. Apply everyone allows
 	for (const ow of channel.permission_overwrites) {
 		if (ow.id !== room_id || ow.type !== "Role") continue;
 		for (const p of ow.allow) {
-			perms.add(p);
+			addPerm(p);
 		}
 	}
 
@@ -345,7 +515,7 @@ function applyChannelOverwrites(
 		if (ow.type !== "Role") continue;
 		if (!memberRoleIds.has(ow.id)) continue;
 		for (const p of ow.allow) {
-			perms.add(p);
+			addPerm(p);
 		}
 	}
 
@@ -363,7 +533,7 @@ function applyChannelOverwrites(
 		if (ow.type !== "User") continue;
 		if (ow.id !== member.user_id) continue;
 		for (const p of ow.allow) {
-			perms.add(p);
+			addPerm(p);
 		}
 	}
 

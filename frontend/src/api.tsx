@@ -43,7 +43,6 @@ import { Channels } from "./api/channels.ts";
 import { Threads } from "./api/threads.ts";
 import { Users } from "./api/users.ts";
 import { Invites } from "./api/invite.ts";
-import { ChannelInvites } from "./api/channel_invite.ts";
 import { Webhooks } from "./api/webhooks.ts";
 import { RoomMembers } from "./api/room_members.ts";
 import { RoomBans } from "./api/room_bans.ts";
@@ -163,7 +162,6 @@ export function createApi(
 	const channels = new Channels();
 	const threads = new Threads();
 	const invites = new Invites();
-	const channel_invites = new ChannelInvites();
 	const webhooks = new Webhooks();
 	const roles = new Roles();
 	const room_members = new RoomMembers();
@@ -911,7 +909,7 @@ export function createApi(
 				}
 			} else if (invite.target.type === "Gdm") {
 				const channel_id = invite.target.channel.id;
-				const l = channel_invites._cachedListings.get(channel_id);
+				const l = invites._cachedChannelListings.get(channel_id);
 				if (l?.pagination) {
 					const p = l.resource.latest;
 					if (p) {
@@ -964,7 +962,7 @@ export function createApi(
 				}
 			} else if (msg.target.type === "Gdm") {
 				const channel_id = msg.target.channel_id;
-				const l = channel_invites._cachedListings.get(channel_id);
+				const l = invites._cachedChannelListings.get(channel_id);
 				if (l?.pagination) {
 					const p = l.resource.latest;
 					if (p) {
@@ -1310,7 +1308,6 @@ export function createApi(
 		channels,
 		threads,
 		invites,
-		channel_invites,
 		webhooks,
 		roles,
 		room_members,
@@ -1355,7 +1352,6 @@ export function createApi(
 	room_bans.api = api;
 	thread_members.api = api;
 	invites.api = api;
-	channel_invites.api = api;
 	webhooks.api = api;
 	users.api = api;
 	audit_logs.api = api;
@@ -1387,7 +1383,6 @@ export type Api = {
 	push: Push;
 	inbox: Inbox;
 	invites: Invites;
-	channel_invites: ChannelInvites;
 	webhooks: Webhooks;
 	roles: Roles;
 	audit_logs: AuditLogs;

@@ -9,7 +9,7 @@ import { Copyable } from "../util.tsx";
 export function Invites(props: VoidProps<{ room: RoomT }>) {
 	const api = useApi();
 
-	const invites = api.invites.list(() => props.room.id);
+	const invites = api.invites.list_room(() => props.room.id);
 
 	const createInvite = () => {
 		api.client.http.POST("/api/v1/room/{room_id}/invite", {

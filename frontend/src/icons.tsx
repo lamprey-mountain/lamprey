@@ -5,6 +5,12 @@ import icCheck3 from "./assets/check-3.png";
 import icCheck4 from "./assets/check-4.png";
 import { cyrb53, LCG } from "./rng";
 
+export const getCheckIcon = (seed: string): string => {
+	const rand = LCG(cyrb53(seed));
+	const checks = [icCheck1, icCheck2, icCheck3, icCheck4];
+	return checks[Math.floor(rand() * checks.length)];
+};
+
 export const RadioDot = (props: { checked?: boolean }) => {
 	return (
 		<svg
@@ -28,14 +34,19 @@ export const RadioDot = (props: { checked?: boolean }) => {
 	);
 };
 
-export const Checkbox = (props: { checked?: boolean; seed?: string }) => {
-	const icon = () => {
-		if (!props.checked || !props.seed) return null;
-		const rand = LCG(cyrb53(props.seed));
-		const checks = [icCheck1, icCheck2, icCheck3, icCheck4];
-		return checks[Math.floor(rand() * checks.length)];
-	};
+export const Checkmark = (
+	props: { seed: string; class?: string; style?: any },
+) => {
+	return (
+		<img
+			src={getCheckIcon(props.seed)}
+			class={props.class}
+			style={{ height: "1em", width: "1em", ...props.style }}
+		/>
+	);
+};
 
+export const Checkbox = (props: { checked?: boolean; seed?: string }) => {
 	return (
 		<svg
 			class="radio"
@@ -53,10 +64,10 @@ export const Checkbox = (props: { checked?: boolean; seed?: string }) => {
 				stroke={props.checked ? "oklch(var(--color-link-200))" : "currentColor"}
 				stroke-width="1"
 			/>
-			<Show when={icon()}>
+			<Show when={props.checked && props.seed}>
 				<image
 					class="icon"
-					href={icon()!}
+					href={getCheckIcon(props.seed!)}
 					style="height:12px;width:12px"
 					height="12"
 					width="12"

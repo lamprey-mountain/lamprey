@@ -12,6 +12,7 @@ import { go } from "fuzzysort";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { createKeybinds } from "./keybinds";
+import { Checkmark } from "./icons";
 
 export type DropdownItem<T> = {
 	item: T;
@@ -249,6 +250,182 @@ export function createDropdown<T>(
 			);
 		},
 	};
+}
+
+export function MultiDropdown<T>(
+	props: VoidProps<{
+		selected: T[];
+		onSelect: (item: T) => void;
+		onRemove: (item: T) => void;
+		options: Array<DropdownItem<T>>;
+		style?: string;
+		placeholder?: string;
+		mount?: Element | DocumentFragment | null;
+	}>,
+) {
+	const [shown, setShown] = createSignal(false);
+	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
+	const [dropdownEl, setDropdownEl] = createSignal<HTMLDivElement>();
+	const [containerEl, setContainerEl] = createSignal<HTMLDivElement>();
+
+	const position = useFloating(containerEl, dropdownEl, {
+		whileElementsMounted: autoUpdate,
+		middleware: [offset({ mainAxis: -1 }), flip()],
+		placement: "bottom",
+	});
+
+	const selector = createSelect<T>();
+
+	createEffect(() => {
+		selector.setItems(props.options);
+	});
+
+	const binds = createKeybinds({
+		"ArrowUp, Shift-Tab": (e) => {
+			if (shown()) {
+				e.preventDefault();
+				selector.prev();
+			}
+		},
+		"ArrowDown, Tab": (e) => {
+			if (shown()) {
+				e.preventDefault();
+				selector.next();
+			}
+		},
+		"Escape": (e) => {
+			if (shown()) {
+				e.preventDefault();
+				setShown(false);
+			}
+		},
+		"Enter": (e) => {
+			e.preventDefault();
+			if (shown()) {
+				const hovered = selector.getHovered();
+				if (hovered) {
+					props.onSelect(hovered.item);
+					selector.setFilter("");
+					if (inputEl()) inputEl()!.value = "";
+				}
+			} else {
+				setShown(true);
+			}
+		},
+		"Backspace": (e) => {
+			if (selector.getFilter() === "" && props.selected.length > 0) {
+				props.onRemove(props.selected[props.selected.length - 1]);
+			}
+		},
+	});
+
+	function select(item: T) {
+		props.onSelect(item);
+		selector.setFilter("");
+		if (inputEl()) inputEl()!.value = "";
+		// keep it open for more selections?
+		// setShown(false);
+	}
+
+	const listboxId = createUniqueId();
+
+	return (
+		<div
+			ref={setContainerEl}
+			class="dropdown multi-dropdown"
+			onClick={() => inputEl()?.focus()}
+			style={props.style}
+		>
+			<div class="multi-dropdown-selected">
+				<For each={props.selected}>
+					{(item) => (
+						<span class="chip">
+							{props.options.find((o) => o.item === item)?.label ?? "???"}
+							<button
+								onClick={(e) => {
+									e.stopPropagation();
+									props.onRemove(item);
+								}}
+							>
+								×
+							</button>
+						</span>
+					)}
+				</For>
+				<input
+					ref={setInputEl}
+					placeholder={props.selected.length === 0 ? props.placeholder : ""}
+					onFocus={() => setShown(true)}
+					onBlur={() => {
+						setTimeout(() => setShown(false), 200);
+					}}
+					onInput={(e) => {
+						selector.setFilter(e.target.value);
+						setShown(true);
+					}}
+					onKeyDown={binds}
+					role="combobox"
+					aria-autocomplete="list"
+					aria-haspopup="listbox"
+					aria-controls={shown() ? listboxId : undefined}
+					aria-expanded={shown()}
+				/>
+			</div>
+			<Portal mount={props.mount ?? document.body}>
+				<Show when={shown()}>
+					<menu
+						role="listbox"
+						ref={setDropdownEl}
+						id={listboxId}
+						class="dropdown-items floating"
+						style={{
+							"z-index": 999999,
+							position: position.strategy,
+							translate: `${position.x}px ${position.y}px`,
+							width: `${containerEl()?.parentElement?.offsetWidth || 0}px`,
+						}}
+					>
+						<ul>
+							<For each={selector.getFiltered()} fallback={"no options"}>
+								{(entry) => (
+									<li
+										onMouseOver={() => selector.setHovered(entry.obj)}
+										onMouseDown={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											select(entry.obj.item);
+										}}
+										classList={{
+											hovered: entry.obj.item === selector.getHovered()?.item,
+											selected2: props.selected.includes(entry.obj.item),
+										}}
+										aria-selected={props.selected.includes(entry.obj.item)}
+										style={{
+											display: "flex",
+											// "align-items": "center",
+											// "justify-content": "space-between",
+										}}
+									>
+										<Show when={props.selected.includes(entry.obj.item)}>
+											<Checkmark
+												seed={entry.obj.label}
+												style={{
+													// HACK: colored icons
+													filter:
+														"invert(0.5) sepia(1) saturate(3) hue-rotate(220deg)",
+												}}
+											/>
+										</Show>
+										{entry.obj.view ?? entry.obj.label}
+									</li>
+								)}
+							</For>
+						</ul>
+					</menu>
+				</Show>
+			</Portal>
+		</div>
+	);
 }
 
 // TODO: placeholder

@@ -9,7 +9,7 @@ import { Copyable } from "../util.tsx";
 export function Invites(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();
 
-	const invites = api.channel_invites.list(() => props.channel.id);
+	const invites = api.invites.list_channel(() => props.channel.id);
 
 	const createInvite = () => {
 		api.client.http.POST("/api/v1/channel/{channel_id}/invite", {
