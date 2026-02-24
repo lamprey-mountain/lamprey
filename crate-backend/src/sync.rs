@@ -1138,6 +1138,10 @@ impl Connection {
         self.id
     }
 
+    pub fn state(&self) -> &ConnectionState {
+        &self.state
+    }
+
     fn compress_message(
         compression: &mut Option<Compression>,
         msg: &MessageEnvelope,

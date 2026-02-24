@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
-use axum::extract::ws::{Message, WebSocket};
+use axum::extract::ws::{CloseFrame, Message, WebSocket};
 use axum::extract::WebSocketUpgrade;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::routing::any;
 use common::v1::types::error::SyncError;
+use common::v1::types::presence::Presence;
 use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
 use futures_util::{SinkExt, StreamExt};
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Error;
@@ -42,6 +43,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
     let mut timeout = Timeout::for_ping();
     let mut sushi = s.inner.subscribe_sushi().await.unwrap();
     let mut conn = Connection::new(s.clone(), params);
+    let mut normal_close = false;
 
     loop {
         tokio::select! {
@@ -73,7 +75,14 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
             }
             ws_msg = ws.recv() => {
                 match ws_msg {
-                    Some(Ok(Message::Close(_))) => break,
+                    Some(Ok(Message::Close(Some(CloseFrame { code, .. })))) => {
+                        // 1000 = Normal Closure, 1001 = Going Away
+                        if code == 1000 || code == 1001 {
+                            normal_close = true;
+                        }
+                        break;
+                    }
+                    Some(Ok(Message::Close(None))) => break,
                     Some(Ok(ws_msg)) => {
                         if let Err(err) = conn.handle_message(ws_msg, &mut ws, &mut timeout).await {
                             let _ = ws.send(err.into()).await;
@@ -110,6 +119,20 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
             }
         }
         let _ = conn.drain(&mut ws).await;
+    }
+
+    // mark user as offline on normal close
+    if normal_close {
+        if let Some(user_id) = conn.state().session().and_then(|s| s.user_id()) {
+            if let Err(err) = s
+                .services()
+                .presence
+                .set(user_id, Presence::offline())
+                .await
+            {
+                warn!("failed to set user {user_id} as offline: {err}");
+            }
+        }
     }
 
     conn.disconnect().await;
