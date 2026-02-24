@@ -24,7 +24,15 @@ import {
 	createWrapCommand,
 } from "./editor-utils.ts";
 import { type Api } from "../api.tsx";
-import { createSignal } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { useFormattingToolbar } from "../contexts/formatting-toolbar.tsx";
+import { setFormattingToolbarView } from "../contexts/FormattingToolbar.tsx";
+import { EditorView } from "prosemirror-view";
+
+let isApplyingFormat = false;
+export const setIsApplyingFormat = (value: boolean) => {
+	isApplyingFormat = value;
+};
 
 const UserMention = (
 	props: { api: Api; userId: string; channelId: string },
@@ -73,6 +81,92 @@ type EditorProps = {
 	initialSelection?: "start" | "end";
 	mentionRenderer?: (node: HTMLElement, userId: string) => void;
 	mentionChannelRenderer?: (node: HTMLElement, channelId: string) => void;
+};
+
+const EditorWithToolbar = (props: { getView: () => EditorView }) => {
+	const { showToolbar, hideToolbar } = useFormattingToolbar();
+	let toolbarVisible = false;
+	let initialized = false;
+	let selectionRange: { from: number; to: number } | null = null;
+
+	const updateToolbar = () => {
+		const view = props.getView();
+		if (!view) return;
+
+		const { state } = view;
+		const { empty, from, to } = state.selection;
+
+		if (empty || from === to) {
+			if (toolbarVisible && !isApplyingFormat) {
+				hideToolbar();
+				toolbarVisible = false;
+				selectionRange = null;
+			}
+			return;
+		}
+
+		// Check if selection changed
+		if (
+			selectionRange?.from === from && selectionRange?.to === to &&
+			toolbarVisible
+		) {
+			return;
+		}
+		selectionRange = { from, to };
+
+		// Create a reference element for floating-ui
+		const coords = view.coordsAtPos(from);
+		const endCoords = view.coordsAtPos(to);
+
+		const top = Math.min(coords.top, endCoords.top);
+		const left = coords.left;
+		const width = Math.max(1, endCoords.left - coords.left);
+		const height = Math.max(
+			coords.bottom - coords.top,
+			endCoords.bottom - endCoords.top,
+		);
+
+		showToolbar({
+			getBoundingClientRect() {
+				return {
+					x: left,
+					y: top,
+					width,
+					height,
+					left,
+					top,
+					right: left + width,
+					bottom: top + height,
+				};
+			},
+		});
+		toolbarVisible = true;
+	};
+
+	onMount(() => {
+		const view = props.getView();
+		if (!view) return;
+
+		setFormattingToolbarView(view);
+		view.dom.addEventListener("selectionchange", updateToolbar);
+		view.dom.addEventListener("keyup", updateToolbar);
+		view.dom.addEventListener("mouseup", updateToolbar);
+		initialized = true;
+
+		onCleanup(() => {
+			setFormattingToolbarView(null);
+			view.dom.removeEventListener("selectionchange", updateToolbar);
+			view.dom.removeEventListener("keyup", updateToolbar);
+			view.dom.removeEventListener("mouseup", updateToolbar);
+			if (toolbarVisible) hideToolbar();
+		});
+	});
+
+	createEffect(() => {
+		if (initialized) updateToolbar();
+	});
+
+	return null;
 };
 
 export const createEditor = (
@@ -315,6 +409,14 @@ export const createEditor = (
 		isSubscribed,
 		get view() {
 			return editor.view;
+		},
+		View: (props: Parameters<typeof editor.View>[0]) => {
+			return (
+				<>
+					<editor.View {...props} />
+					<EditorWithToolbar getView={() => editor.view} />
+				</>
+			);
 		},
 	};
 };
