@@ -13,6 +13,7 @@ use common::v1::types::auth::{
     WebauthnPatch,
 };
 use common::v1::types::email::EmailAddr;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::AuditLogEntryStatus;
 use common::v1::types::{
@@ -497,17 +498,17 @@ async fn auth_email_complete(
 
     if req_addr != email {
         debug!("wrong email");
-        return Err(Error::BadStatic("invalid or expired code"));
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
     }
 
     if req_session != auth.session.id {
         debug!("wrong session");
-        return Err(Error::BadStatic("invalid or expired code"));
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
     }
 
     if auth.session.status != SessionStatus::Unauthorized {
         debug!("already authenticated");
-        return Err(Error::BadStatic("invalid or expired code"));
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
     }
 
     let user_id = d.user_email_lookup(&email).await?;
@@ -624,10 +625,10 @@ async fn auth_totp_complete(
         .data()
         .auth_totp_get(auth.user.id)
         .await?
-        .ok_or(Error::BadStatic("totp not initialized"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::TotpNotInitialized))?;
 
     if enabled {
-        return Err(Error::BadStatic("totp already enabled"));
+        return Err(ApiError::from_code(ErrorCode::TotpAlreadyEnabled).into());
     }
 
     let secret_bytes = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, &secret)
@@ -646,7 +647,7 @@ async fn auth_totp_complete(
     })?;
 
     if !totp.check_current(&json.code).unwrap_or(false) {
-        return Err(Error::BadStatic("invalid totp code"));
+        return Err(ApiError::from_code(ErrorCode::InvalidTotpCode).into());
     }
 
     s.data()
@@ -681,10 +682,10 @@ async fn auth_totp_exec(
         .data()
         .auth_totp_get(auth.user.id)
         .await?
-        .ok_or(Error::BadStatic("totp not enabled"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::TotpNotEnabled))?;
 
     if !enabled {
-        return Err(Error::BadStatic("totp not enabled"));
+        return Err(ApiError::from_code(ErrorCode::TotpNotEnabled).into());
     }
 
     let secret_bytes = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, &secret)
@@ -703,7 +704,7 @@ async fn auth_totp_exec(
     })?;
 
     if !totp.check_current(&json.code).unwrap_or(false) {
-        return Err(Error::BadStatic("invalid totp code"));
+        return Err(ApiError::from_code(ErrorCode::InvalidTotpCode).into());
     }
 
     s.data()
@@ -819,9 +820,7 @@ async fn auth_totp_delete(
     }
 
     if s.data().user_owns_room_requiring_mfa(auth.user.id).await? {
-        return Err(Error::BadStatic(
-            "cannot remove MFA while owning a room that requires MFA",
-        ));
+        return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
 
     s.data().auth_totp_set(auth.user.id, None, false).await?;
@@ -851,10 +850,10 @@ async fn auth_totp_recovery_exec(
         .data()
         .auth_totp_get(auth.user.id)
         .await?
-        .ok_or(Error::BadStatic("totp not enabled"))?;
+        .ok_or(ApiError::from_code(ErrorCode::TotpNotEnabled))?;
 
     if !enabled {
-        return Err(Error::BadStatic("totp not enabled"));
+        return Err(ApiError::from_code(ErrorCode::TotpNotEnabled).into());
     }
 
     s.data()
@@ -1096,10 +1095,10 @@ async fn ensure_can_still_login_after_removal(
         // A password requires an email to be useful for login (password reset, etc.)
         if auth_state.has_password {
             // If only password remains, they still can't login (based on can_login logic)
-            return Err(Error::BadStatic("Cannot remove authentication method: this would lock you out of your account. You must have at least one authentication method remaining."));
+            return Err(ApiError::from_code(ErrorCode::CannotRemoveLastAuthMethod).into());
         }
 
-        return Err(Error::BadStatic("Cannot remove authentication method: this would lock you out of your account. You must have at least one authentication method remaining."));
+        return Err(ApiError::from_code(ErrorCode::CannotRemoveLastAuthMethod).into());
     }
 
     Ok(())

@@ -541,19 +541,19 @@ async fn media_upload_direct(
     while let Some(field) = multipart.next_field().await? {
         match field
             .name()
-            .ok_or(Error::BadStatic("field is missing name"))?
+            .ok_or_else(|| ApiError::from_code(ErrorCode::FieldMissingName))?
         {
             // TODO: parse {filename, alt, process_async, strip_exif}
             "json" => return Err(Error::Unimplemented),
             "file" => {
                 data = Some(field.bytes().await?);
             }
-            _ => return Err(Error::BadStatic("unknown field")),
+            _ => return Err(ApiError::from_code(ErrorCode::UnknownField).into()),
         }
     }
 
     let Some(data) = data else {
-        return Err(Error::BadStatic("no data"));
+        return Err(ApiError::from_code(ErrorCode::NoData).into());
     };
 
     srv.media

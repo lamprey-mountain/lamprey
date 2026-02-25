@@ -245,10 +245,10 @@ async fn invite_use(
             if let Ok(ban) = d.room_ban_get(room.id, auth.user.id).await {
                 if let Some(expires_at) = ban.expires_at {
                     if expires_at > Time::now_utc() {
-                        return Err(Error::BadStatic("banned"));
+                        return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
                     }
                 } else {
-                    return Err(Error::BadStatic("banned"));
+                    return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
                 }
             }
 
@@ -345,12 +345,12 @@ async fn invite_use(
             let srv = s.services();
             let user = srv.users.get(auth.user.id, None).await?;
             if user.registered_at.is_some() {
-                return Err(Error::BadStatic("User is not a guest account"));
+                return Err(ApiError::from_code(ErrorCode::UserIsNotAGuestAccount).into());
             }
             let auth_state = fetch_auth_state(&s, user.id).await?;
             if !auth_state.can_login() {
                 // make sure to prevent people from creating accounts they can't log into
-                return Err(Error::BadStatic("add an auth method first"));
+                return Err(ApiError::from_code(ErrorCode::AddAuthMethodFirst).into());
             }
             d.user_set_registered(user.id, Some(Time::now_utc()), Some(invite.invite.code.0))
                 .await?;
@@ -446,7 +446,7 @@ async fn invite_room_create(
     perms.ensure(Permission::InviteCreate)?;
 
     if room_id == SERVER_ROOM_ID {
-        return Err(Error::BadStatic("You can't create an invite for the server room. Use the make-admin subcommand in the cli instead."));
+        return Err(ApiError::from_code(ErrorCode::CannotCreateInviteForServerRoom).into());
     }
 
     if let Some(role_ids) = &json.role_ids {
@@ -464,9 +464,7 @@ async fn invite_room_create(
             }
             for role in roles {
                 if rank <= role.position && room.owner_id != Some(auth.user.id) {
-                    return Err(Error::BadStatic(
-                        "your rank is too low to add one of the roles to this invite",
-                    ));
+                    return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
                 }
             }
         }
@@ -603,7 +601,7 @@ async fn invite_channel_create(
         perms.ensure(Permission::InviteCreate)?;
         Some(room_id)
     } else {
-        return Err(Error::BadStatic("Channel is not in a room or a GDM"));
+        return Err(ApiError::from_code(ErrorCode::ChannelNotInRoomOrGdm).into());
     };
 
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -628,13 +626,11 @@ async fn invite_channel_create(
                 }
                 for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
-                        return Err(Error::BadStatic(
-                            "your rank is too low to add one of the roles to this invite",
-                        ));
+                        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
                     }
                 }
             } else {
-                return Err(Error::BadStatic("cannot add roles to a GDM invite"));
+                return Err(ApiError::from_code(ErrorCode::CannotAddRolesToInvite).into());
             }
         }
     }
@@ -831,13 +827,11 @@ async fn invite_patch(
                 }
                 for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
-                        return Err(Error::BadStatic(
-                            "your rank is too low to add one of the roles to this invite",
-                        ));
+                        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
                     }
                 }
             } else {
-                return Err(Error::BadStatic("cannot add roles to this type of invite"));
+                return Err(ApiError::from_code(ErrorCode::CannotAddRolesToInvite).into());
             }
         }
     }
@@ -909,7 +903,7 @@ async fn invite_server_create(
     let srv = s.services();
     let user = srv.users.get(auth.user.id, None).await?;
     if user.registered_at.is_none() {
-        return Err(Error::BadStatic("Guest users cannot create server invites"));
+        return Err(ApiError::from_code(ErrorCode::GuestsCannotCreateServerInvites).into());
     }
 
     let perms = srv.perms.for_server(user.id).await?;
@@ -970,7 +964,7 @@ async fn invite_server_list(
     let d = s.data();
     let user = srv.users.get(auth.user.id, None).await?;
     if user.registered_at.is_none() {
-        return Err(Error::BadStatic("Guest users cannot list server invites"));
+        return Err(ApiError::from_code(ErrorCode::GuestsCannotListServerInvites).into());
     }
 
     let perms = srv.perms.for_server(user.id).await?;

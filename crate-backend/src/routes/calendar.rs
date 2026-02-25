@@ -71,7 +71,7 @@ async fn calendar_event_list(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let events = s.data().calendar_event_list(channel_id, query).await?;
@@ -103,7 +103,7 @@ async fn calendar_event_create(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s
@@ -116,7 +116,7 @@ async fn calendar_event_create(
         .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::CalendarEventCreate {
@@ -165,7 +165,7 @@ async fn calendar_event_get(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -205,7 +205,7 @@ async fn calendar_event_update(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let old_event = s.data().calendar_event_get(event_id).await?;
@@ -231,7 +231,7 @@ async fn calendar_event_update(
         .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::CalendarEventUpdate {
@@ -284,7 +284,7 @@ async fn calendar_event_delete(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -306,7 +306,7 @@ async fn calendar_event_delete(
         .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::CalendarEventDelete {
@@ -357,7 +357,7 @@ async fn calendar_overwrite_list(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
@@ -394,7 +394,7 @@ async fn calendar_overwrite_get(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
@@ -435,7 +435,7 @@ async fn calendar_overwrite_update(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
     let event = data.calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
@@ -450,7 +450,7 @@ async fn calendar_overwrite_update(
 
     let room_id = chan
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     let sync_event;
     if let Some(old) = old_overwrite {
@@ -531,7 +531,7 @@ async fn calendar_overwrite_delete(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
     let event = s.data().calendar_event_get(event_id).await?;
     if event.channel_id != channel_id {
@@ -545,7 +545,7 @@ async fn calendar_overwrite_delete(
 
     let room_id = chan
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::CalendarOverwriteDelete {
@@ -604,7 +604,7 @@ async fn calendar_event_rsvp_list(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -673,7 +673,7 @@ async fn calendar_event_rsvp_get(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -718,12 +718,12 @@ async fn calendar_event_rsvp_put(
     perms.ensure(Permission::CalendarEventRsvp)?;
 
     if auth.user.id != user_id {
-        return Err(Error::BadStatic("cannot rsvp other people"));
+        return Err(ApiError::from_code(ErrorCode::CannotRsvpOtherPeople).into());
     }
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -738,7 +738,7 @@ async fn calendar_event_rsvp_put(
         .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     match json.status {
         CalendarRsvpStatus::Interested => {
@@ -815,7 +815,7 @@ async fn calendar_event_rsvp_delete(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -831,7 +831,7 @@ async fn calendar_event_rsvp_delete(
 
     let room_id = chan
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     if auth.user.id != user_id {
         let al = auth.audit_log(room_id);
@@ -882,7 +882,7 @@ async fn calendar_overwrite_rsvp_list(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -958,12 +958,12 @@ async fn calendar_overwrite_rsvp_put(
     perms.ensure(Permission::CalendarEventRsvp)?;
 
     if auth.user.id != user_id {
-        return Err(Error::BadStatic("cannot rsvp other people"));
+        return Err(ApiError::from_code(ErrorCode::CannotRsvpOtherPeople).into());
     }
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -978,7 +978,7 @@ async fn calendar_overwrite_rsvp_put(
         .get(channel_id, Some(auth.user.id))
         .await?
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     match json.status {
         CalendarRsvpStatus::Interested => {
@@ -1065,7 +1065,7 @@ async fn calendar_overwrite_rsvp_delete(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
-        return Err(Error::BadStatic("channel is not a calendar"));
+        return Err(ApiError::from_code(ErrorCode::ChannelIsNotACalendar).into());
     }
 
     let event = s.data().calendar_event_get(event_id).await?;
@@ -1081,7 +1081,7 @@ async fn calendar_overwrite_rsvp_delete(
 
     let room_id = chan
         .room_id
-        .ok_or(Error::BadStatic("channel is not in a room"))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     if auth.user.id != user_id {
         let al = auth.audit_log(room_id);

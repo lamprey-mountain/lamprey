@@ -22,6 +22,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use crate::{routes::util::Auth, types::DbSessionCreate, ServerState};
+use common::v1::types::error::{ApiError, ErrorCode};
 
 use crate::error::{Error, Result};
 
@@ -47,16 +48,18 @@ async fn oauth_info(
         return Err(Error::NotFound);
     }
     if q.response_type != "code" {
-        return Err(Error::BadStatic("unknown response_type"));
+        return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
     }
     if q.redirect_uri
         .is_none_or(|u| !app.oauth_redirect_uris.iter().any(|a| a == u.as_str()))
     {
-        return Err(Error::BadStatic("bad redirect_uri"));
+        return Err(ApiError::from_code(ErrorCode::BadRedirectUri).into());
     }
     let mut scopes = HashSet::new();
     for scope in q.scope.split(' ') {
-        scopes.insert(Scope::from_str(scope).map_err(|_| Error::BadStatic("invalid scope"))?);
+        scopes.insert(
+            Scope::from_str(scope).map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
+        );
     }
     let auth_user = srv.users.get(auth.user.id, None).await?;
     let bot_user = srv.users.get(app.id.into_inner().into(), None).await?;
@@ -94,24 +97,26 @@ async fn oauth_authorize(
         return Err(Error::NotFound);
     }
     if q.response_type != "code" {
-        return Err(Error::BadStatic("unknown response_type"));
+        return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
     }
 
     let redirect_uri = if let Some(uri) = &q.redirect_uri {
         if !app.oauth_redirect_uris.iter().any(|u| u == uri.as_str()) {
-            return Err(Error::BadStatic("bad redirect_uri"));
+            return Err(ApiError::from_code(ErrorCode::BadRedirectUri).into());
         }
         uri.clone()
     } else {
         app.oauth_redirect_uris
             .get(0)
-            .ok_or(Error::BadStatic("no redirect_uri configured"))?
+            .ok_or(ApiError::from_code(ErrorCode::NoRedirectUriConfigured))?
             .parse()?
     };
 
     let mut scopes = HashSet::new();
     for scope in q.scope.split(' ') {
-        scopes.insert(Scope::from_str(scope).map_err(|_| Error::BadStatic("invalid scope"))?);
+        scopes.insert(
+            Scope::from_str(scope).map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
+        );
     }
     let scopes = Scopes(scopes.into_iter().collect());
     data.connection_create(auth.user.id, app.id, scopes.clone())
@@ -173,7 +178,7 @@ async fn oauth_token(
         creds
             .username()
             .parse()
-            .map_err(|_| Error::BadStatic("invalid client_id"))?
+            .map_err(|_| ApiError::from_code(ErrorCode::InvalidClientId))?
     } else {
         return Err(Error::InvalidCredentials);
     };
@@ -200,10 +205,12 @@ async fn oauth_token(
 
     match form.grant_type.as_str() {
         "authorization_code" => {
-            let code = form.code.ok_or(Error::BadStatic("missing code"))?;
+            let code = form
+                .code
+                .ok_or(ApiError::from_code(ErrorCode::MissingCode))?;
             let redirect_uri = form
                 .redirect_uri
-                .ok_or(Error::BadStatic("missing redirect_uri"))?;
+                .ok_or(ApiError::from_code(ErrorCode::MissingRedirectUri))?;
 
             let (_app_id, user_id, db_redirect_uri, scopes, code_challenge, code_challenge_method) =
                 data.oauth_auth_code_use(code).await?;
@@ -215,7 +222,7 @@ async fn oauth_token(
             if let Some(code_challenge) = code_challenge {
                 let code_verifier = form
                     .code_verifier
-                    .ok_or(Error::BadStatic("missing code_verifier"))?;
+                    .ok_or(ApiError::from_code(ErrorCode::MissingCodeVerifier))?;
                 let method = code_challenge_method.unwrap_or_else(|| "plain".to_string());
                 let valid = match method.as_str() {
                     "S256" => {
@@ -226,7 +233,11 @@ async fn oauth_token(
                         encoded == code_challenge
                     }
                     "plain" => code_verifier == code_challenge,
-                    _ => return Err(Error::BadStatic("unsupported code_challenge_method")),
+                    _ => {
+                        return Err(
+                            ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod).into(),
+                        )
+                    }
                 };
                 if !valid {
                     return Err(Error::InvalidCredentials);
@@ -276,7 +287,7 @@ async fn oauth_token(
         "refresh_token" => {
             let refresh_token = form
                 .refresh_token
-                .ok_or(Error::BadStatic("missing refresh_token"))?;
+                .ok_or(ApiError::from_code(ErrorCode::MissingRefreshToken))?;
 
             let old_session_id = data.oauth_refresh_token_use(refresh_token).await?;
             let old_session = data.session_get(old_session_id).await?;
@@ -333,7 +344,7 @@ async fn oauth_token(
 
             Ok(Json(response))
         }
-        _ => Err(Error::BadStatic("unsupported grant_type")),
+        _ => Err(ApiError::from_code(ErrorCode::UnsupportedGrantType).into()),
     }
 }
 
@@ -351,7 +362,7 @@ async fn oauth_introspect(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let Some(app_id) = auth.session.app_id else {
-        return Err(Error::BadStatic("not an oauth token"));
+        return Err(ApiError::from_code(ErrorCode::NotAnOauthToken).into());
     };
     let connection = s.data().connection_get(auth.user.id, app_id).await?;
     let res = OauthIntrospectResponse {

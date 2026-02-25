@@ -23,6 +23,7 @@ use crate::{
     },
     Error, ServerState,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 
 use super::util::Auth;
 
@@ -53,7 +54,7 @@ async fn room_create(
         let data = s.data();
         let media = data.media_select(media_id).await?;
         if !media.metadata.is_image() {
-            return Err(Error::BadStatic("media not an image"));
+            return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
         }
     }
 
@@ -188,7 +189,7 @@ async fn room_edit(
         let data = s.data();
         let totp = data.auth_totp_get(auth.user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -196,7 +197,7 @@ async fn room_edit(
         let data = s.data();
         let media = data.media_select(media_id).await?;
         if !media.metadata.is_image() {
-            return Err(Error::BadStatic("media not an image"));
+            return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
         }
     }
 
@@ -253,7 +254,7 @@ async fn room_delete(
 
     let room = srv.rooms.get(room_id, None).await?;
     if room.owner_id != Some(auth.user.id) && !is_admin {
-        return Err(Error::BadStatic("you aren't the room owner"));
+        return Err(ApiError::from_code(ErrorCode::NotRoomOwner).into());
     }
 
     s.broadcast_room(room_id, auth.user.id, MessageSync::RoomDelete { room_id })
@@ -425,7 +426,7 @@ async fn room_transfer_ownership(
     let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let room_start = srv.rooms.get(room_id, Some(auth.user.id)).await?;
     if room_start.owner_id != Some(auth.user.id) {
-        return Err(Error::BadStatic("you aren't the room owner"));
+        return Err(ApiError::from_code(ErrorCode::NotRoomOwner).into());
     }
 
     data.room_set_owner(room_id, target_user_id).await?;
@@ -609,7 +610,7 @@ async fn room_security_set(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = data.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("room owner must have mfa enabled"));
+            return Err(ApiError::from_code(ErrorCode::RoomOwnerMustHaveMfa).into());
         }
     }
 

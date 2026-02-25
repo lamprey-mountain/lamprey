@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch},
     misc::ApplicationIdReq,
@@ -55,7 +56,7 @@ async fn app_create(
     let al = auth.audit_log(auth.user.id.into_inner().into());
     if let Some(bridge) = &json.bridge {
         if bridge.platform_name.is_none() {
-            return Err(Error::BadStatic("platform_name is required for bridge"));
+            return Err(ApiError::from_code(ErrorCode::PlatformNameRequiredForBridge).into());
         }
     }
 
@@ -178,7 +179,7 @@ async fn app_patch(
 
     if let Some(Some(bridge)) = &patch.bridge {
         if bridge.platform_name.is_none() {
-            return Err(Error::BadStatic("platform_name is required for bridge"));
+            return Err(ApiError::from_code(ErrorCode::PlatformNameRequiredForBridge).into());
         }
     }
 
@@ -351,7 +352,7 @@ async fn app_invite_bot(
     let bot_user_id: UserId = app.id.into_inner().into();
 
     if data.room_ban_get(json.room_id, bot_user_id).await.is_ok() {
-        return Err(Error::BadStatic("banned"));
+        return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
     }
 
     let origin = RoomMemberOrigin::BotInstall {
@@ -424,7 +425,7 @@ async fn puppet_ensure(
     let parent = srv.users.get(auth.user.id, None).await?;
     if !parent.bot {
         // TODO: check if it is a bridge?
-        return Err(Error::BadStatic("can't create that user"));
+        return Err(ApiError::from_code(ErrorCode::CantCreateThatUser).into());
     };
     let existing = data.user_lookup_puppet(auth.user.id, &puppet_id).await?;
     if let Some(id) = existing {

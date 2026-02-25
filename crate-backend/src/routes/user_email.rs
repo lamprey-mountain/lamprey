@@ -45,10 +45,10 @@ async fn ensure_can_still_login_after_email_removal(
         // A password requires an email to be useful for login (password reset, etc.)
         if auth_state.has_password {
             // If only password remains, they still can't login (based on can_login logic)
-            return Err(Error::BadStatic("Cannot remove email: this would lock you out of your account. You must have at least one authentication method remaining."));
+            return Err(ApiError::from_code(ErrorCode::CannotRemoveLastAuthMethod).into());
         }
 
-        return Err(Error::BadStatic("Cannot remove email: this would lock you out of your account. You must have at least one authentication method remaining."));
+        return Err(ApiError::from_code(ErrorCode::CannotRemoveLastAuthMethod).into());
     }
 
     Ok(())
@@ -276,9 +276,7 @@ async fn email_update(
     // you can only set an email as primary if it's verified.
     if patch.is_primary == Some(true) {
         if !email_info.is_verified {
-            return Err(Error::BadRequest(
-                "Email address must be verified to be set as primary.".to_string(),
-            ));
+            return Err(ApiError::from_code(ErrorCode::InvalidData).into());
         }
     }
 

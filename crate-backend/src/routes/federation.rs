@@ -8,6 +8,7 @@ use axum::{
     Json,
 };
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     federation::{ServerKeys, ServerUserCreate, ServerUserCreateRequest},
     misc::ServerReq,
@@ -71,7 +72,7 @@ async fn server_user_ensure(
 
     let _hostname: String = match hostname {
         ServerReq::ServerHost => {
-            return Err(Error::BadStatic("can only create user on your own server"))
+            return Err(ApiError::from_code(ErrorCode::CanOnlyCreateUserOnOwnServer).into())
         }
         ServerReq::ServerClient => todo!("valid"),
         ServerReq::ServerFqdn(_) => todo!("only valid if fqdn == client"),
@@ -102,7 +103,9 @@ async fn server_sync_handle(
 
     let _hostname: String = match hostname {
         ServerReq::ServerHost => todo!("valid"),
-        ServerReq::ServerClient => return Err(Error::BadStatic("can only sync for this server")),
+        ServerReq::ServerClient => {
+            return Err(ApiError::from_code(ErrorCode::CanOnlySyncForThisServer).into())
+        }
         ServerReq::ServerFqdn(_) => todo!("only valid if fqdn == remote"),
     };
 

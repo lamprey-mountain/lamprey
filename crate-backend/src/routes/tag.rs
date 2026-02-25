@@ -44,7 +44,7 @@ async fn tag_create(
 
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !channel.ty.has_tags() {
-        return Err(Error::BadStatic("channel does not support tags"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
     }
 
     let tag = s.data().tag_create(channel_id, create).await?;
@@ -232,7 +232,7 @@ async fn tag_search(
 
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !channel.ty.has_tags() {
-        return Err(Error::BadStatic("channel does not support tags"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
     }
 
     let tags = s
@@ -273,7 +273,7 @@ async fn tag_list(
 
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !channel.ty.has_tags() {
-        return Err(Error::BadStatic("channel does not support tags"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
     }
 
     let tags = s

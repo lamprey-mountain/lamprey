@@ -12,7 +12,7 @@ use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use tokio::sync::{broadcast, RwLock};
-use tracing::{debug, error};
+use tracing::{debug, error, trace};
 use uuid::Uuid;
 use yrs::types::{Delta, Event};
 use yrs::updates::encoder::Encode;
@@ -278,6 +278,7 @@ impl ServiceDocuments {
     }
 
     /// apply a change to a document
+    #[tracing::instrument(skip(self, update_bytes))]
     pub async fn apply_update(
         &self,
         context_id: EditContextId,
@@ -286,6 +287,9 @@ impl ServiceDocuments {
         update_bytes: &[u8],
     ) -> Result<()> {
         let update = Update::decode_v1(update_bytes)?;
+
+        // TODO: return Err if update is for any root thats not DOCUMENT_ROOT_NAME
+
         let ctx = self.load(context_id, Some(author_id)).await?;
         let mut ctx = ctx.write().await;
 
@@ -304,7 +308,9 @@ impl ServiceDocuments {
                                 Delta::Inserted(t, _) => {
                                     stats.0 += get_update_len(t, txn);
                                 }
-                                Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                Delta::Deleted(len) => {
+                                    stats.1 += (*len) as usize;
+                                }
                                 Delta::Retain(_, _) => {}
                             }
                         }
@@ -315,7 +321,9 @@ impl ServiceDocuments {
                                 Delta::Inserted(t, _) => {
                                     stats.0 += get_update_len(t, txn);
                                 }
-                                Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                Delta::Deleted(len) => {
+                                    stats.1 += (*len) as usize;
+                                }
                                 Delta::Retain(_, _) => {}
                             }
                         }
@@ -328,7 +336,9 @@ impl ServiceDocuments {
                                         stats.0 += get_update_len(v, txn);
                                     }
                                 }
-                                yrs::types::Change::Removed(len) => stats.1 += (*len) as usize,
+                                yrs::types::Change::Removed(len) => {
+                                    stats.1 += (*len) as usize;
+                                }
                                 yrs::types::Change::Retain(_) => {}
                             }
                         }
@@ -347,6 +357,8 @@ impl ServiceDocuments {
             let s = stats.lock().unwrap();
             (s.0 as u32, s.1 as u32)
         };
+
+        debug!(stat_inserted, stat_deleted, "edit stats");
 
         ctx.last_active = Instant::now();
         ctx.changes_since_last_snapshot += 1;
@@ -999,10 +1011,29 @@ impl EditContext {
 
 fn get_update_len(v: &Out, txn: &yrs::TransactionMut) -> usize {
     match v {
-        Out::Any(yrs::Any::String(s)) => s.chars().count(),
-        Out::YText(t) => t.get_string(txn).chars().count(),
-        Out::YXmlText(t) => t.get_string(txn).chars().count(),
-        Out::YXmlElement(e) => e.get_string(txn).chars().count(),
-        _ => 0,
+        Out::Any(yrs::Any::String(s)) => {
+            let len = s.chars().count();
+            trace!(len = len, "get_update_len matched Any::String");
+            len
+        }
+        Out::YText(t) => {
+            let len = t.get_string(txn).chars().count();
+            trace!(len = len, "get_update_len matched YText");
+            len
+        }
+        Out::YXmlText(t) => {
+            let len = t.get_string(txn).chars().count();
+            trace!(len = len, "get_update_len matched YXmlText");
+            len
+        }
+        Out::YXmlElement(e) => {
+            let len = e.get_string(txn).chars().count();
+            trace!(len = len, "get_update_len matched YXmlElement");
+            len
+        }
+        _ => {
+            trace!("get_update_len matched other");
+            0
+        }
     }
 }

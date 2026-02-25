@@ -7,8 +7,10 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    application::Scope, AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate,
-    MessageModerate, MessagePin, MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
+    application::Scope,
+    error::{ApiError, ErrorCode},
+    AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate, MessageModerate, MessagePin,
+    MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
 };
 use common::v2::types::message::{Message, MessagePatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -58,7 +60,7 @@ async fn message_create(
     let srv = s.services();
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     let message = srv.messages.create(channel_id, &auth, nonce, json).await?;
@@ -181,13 +183,13 @@ async fn message_edit(
     let srv = s.services();
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure_unlocked()?;
@@ -240,7 +242,7 @@ async fn message_delete(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
     }
@@ -251,7 +253,7 @@ async fn message_delete(
         .message_get(channel_id, message_id, auth.user.id)
         .await?;
     if !message.latest_version.message_type.is_deletable() {
-        return Err(Error::BadStatic("cant delete that message"));
+        return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
     }
     if message.author_id == auth.user.id {
         perms.add(Permission::MessageDelete);
@@ -259,13 +261,13 @@ async fn message_delete(
     perms.ensure(Permission::MessageDelete)?;
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -397,19 +399,19 @@ async fn message_version_delete(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
     }
 
     if !thread.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
 
     let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -421,7 +423,7 @@ async fn message_version_delete(
         .await?;
 
     if message.latest_version.version_id == version_id {
-        return Err(Error::BadStatic("cannot delete latest message version"));
+        return Err(ApiError::from_code(ErrorCode::CannotDeleteLatestMessageVersion).into());
     }
 
     let version = data
@@ -429,7 +431,7 @@ async fn message_version_delete(
         .await?;
 
     if !version.message_type.is_deletable() {
-        return Err(Error::BadStatic("cant delete that message type"));
+        return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessageType).into());
     }
 
     if message.author_id == auth.user.id {
@@ -525,7 +527,7 @@ async fn message_moderate(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
     }
@@ -535,13 +537,13 @@ async fn message_moderate(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -551,7 +553,7 @@ async fn message_moderate(
         for id in &json.delete {
             let message = data.message_get(channel_id, *id, auth.user.id).await?;
             if !message.latest_version.message_type.is_deletable() {
-                return Err(Error::BadStatic("cant delete one of the messages"));
+                return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
             }
         }
 
@@ -586,7 +588,7 @@ async fn message_moderate(
         for id in &json.remove {
             let message = data.message_get(channel_id, *id, auth.user.id).await?;
             if !message.latest_version.message_type.is_deletable() {
-                return Err(Error::BadStatic("cant remove one of the messages"));
+                return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
             }
         }
 
@@ -772,7 +774,7 @@ async fn message_pin_create(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
     }
@@ -782,13 +784,13 @@ async fn message_pin_create(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
 
     let created = data.message_pin_create(channel_id, message_id).await?;
@@ -901,7 +903,7 @@ async fn message_pin_delete(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
     }
@@ -911,13 +913,13 @@ async fn message_pin_delete(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
 
     s.data().message_pin_delete(channel_id, message_id).await?;
@@ -983,7 +985,7 @@ async fn message_pin_reorder(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
     }
@@ -993,13 +995,13 @@ async fn message_pin_reorder(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
 
     s.data()

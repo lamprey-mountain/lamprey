@@ -7,6 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     audit_logs::{AuditLogChange, AuditLogEntryType},
     pagination::{PaginationQuery, PaginationResponse},
@@ -54,11 +55,11 @@ async fn webhook_create(
     let chan = srv.channels.get(channel_id, None).await?;
     let room_id = chan
         .room_id
-        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     let webhook = s
@@ -111,11 +112,11 @@ async fn webhook_list_channel(
     let chan = srv.channels.get(channel_id, None).await?;
     let _room_id = chan
         .room_id
-        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     let webhooks = s
@@ -180,11 +181,11 @@ async fn webhook_get(
     let chan = srv.channels.get(webhook.channel_id, None).await?;
     let _room_id = chan
         .room_id
-        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
+        .ok_or(ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     Ok(Json(webhook))
@@ -236,11 +237,11 @@ async fn webhook_delete(
     let chan = srv.channels.get(channel_id, None).await?;
     let room_id = chan
         .room_id
-        .ok_or(Error::BadRequest("channel not in a room".to_string()))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     s.data().webhook_delete(webhook_id).await?;
@@ -309,7 +310,7 @@ async fn webhook_update(
     let before_webhook = s.data().webhook_get(webhook_id).await?;
     let room_id = before_webhook
         .room_id
-        .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::WebhookNotInRoom))?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
@@ -433,7 +434,7 @@ async fn webhook_execute(
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     let message = srv
@@ -469,7 +470,7 @@ async fn webhook_message_get(
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     let mut message = s
@@ -512,7 +513,7 @@ async fn webhook_message_edit(
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     let (status, message) = s
@@ -549,7 +550,7 @@ async fn webhook_message_delete(
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
     if !chan.ty.has_text() {
-        return Err(Error::BadStatic("channel doesnt have text"));
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
 
     let message = s
@@ -562,7 +563,7 @@ async fn webhook_message_delete(
     }
 
     if !message.latest_version.message_type.is_deletable() {
-        return Err(Error::BadStatic("cant delete that message"));
+        return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
     }
 
     s.data().message_delete(channel_id, message_id).await?;

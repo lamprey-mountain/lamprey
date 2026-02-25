@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
+    error::{ApiError, ErrorCode},
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
     ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message, MessageId,
     MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission,
@@ -121,13 +122,13 @@ async fn thread_member_add(
         }
     }
     if !thread.ty.has_members() {
-        return Err(Error::BadStatic("cannot edit thread member list"));
+        return Err(ApiError::from_code(ErrorCode::CannotEditThreadMemberList).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -142,7 +143,7 @@ async fn thread_member_add(
         if is_joining {
             let count = d.thread_member_list_all(thread_id).await?.len() as u32;
             if count >= crate::consts::MAX_GDM_MEMBERS {
-                return Err(Error::BadStatic("group dm is full"));
+                return Err(ApiError::from_code(ErrorCode::GdmTooManyMembers).into());
             }
 
             // inviter must be friends to add recipients
@@ -154,9 +155,7 @@ async fn thread_member_add(
                 relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
 
             if !are_friends {
-                return Err(Error::BadStatic(
-                    "you must be friends with this user to add them to a group dm",
-                ));
+                return Err(ApiError::from_code(ErrorCode::GdmRequiresFriend).into());
             }
         }
     }
@@ -261,13 +260,13 @@ async fn thread_member_delete(
 
     let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
     if !thread.ty.has_members() {
-        return Err(Error::BadStatic("cannot edit thread member list"));
+        return Err(ApiError::from_code(ErrorCode::CannotEditThreadMemberList).into());
     }
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -502,7 +501,7 @@ async fn thread_create(
             | ChannelType::ThreadForum2
             | ChannelType::Document
     ) {
-        return Err(Error::BadStatic("invalid thread type"));
+        return Err(ApiError::from_code(ErrorCode::InvalidThreadType).into());
     }
 
     let parent_channel = s

@@ -238,7 +238,7 @@ async fn document_branch_close(
     let branch = data.document_branch_get(channel_id, branch_id).await?;
 
     if branch.default {
-        return Err(Error::BadRequest("cannot close default branch".to_string()));
+        return Err(ApiError::from_code(ErrorCode::CannotCloseDefaultBranch).into());
     }
 
     if branch.creator_id != auth.user.id {
@@ -359,12 +359,12 @@ async fn document_branch_merge(
     }
 
     if branch.default {
-        return Err(Error::BadRequest("Cannot merge default branch".to_string()));
+        return Err(ApiError::from_code(ErrorCode::CannotMergeDefaultBranch).into());
     }
 
     let parent_id = branch
         .parent_id
-        .ok_or_else(|| Error::BadRequest("Branch has no parent".to_string()))?;
+        .ok_or_else(|| ApiError::from_code(ErrorCode::BranchHasNoParent))?;
     let target_branch_id = parent_id.branch_id;
 
     let target_branch = data
@@ -442,7 +442,7 @@ async fn document_tag_create(
         }
         DocumentRevisionId::Revision { version_id } => (version_id.branch_id, version_id.seq),
         DocumentRevisionId::Tag { .. } => {
-            return Err(Error::BadRequest("Cannot tag another tag".to_string()));
+            return Err(ApiError::from_code(ErrorCode::CannotTagAnotherTag).into());
         }
     };
 

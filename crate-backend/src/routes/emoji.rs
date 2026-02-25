@@ -5,6 +5,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntryType, EmojiId, MessageSync, PaginationQuery, PaginationResponse,
@@ -56,7 +57,7 @@ async fn emoji_create(
     let data = s.data();
     let media = data.media_select(json.media_id).await?;
     if !media.metadata.is_image() {
-        return Err(Error::BadStatic("media not an image"));
+        return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
     }
 
     let emoji = data

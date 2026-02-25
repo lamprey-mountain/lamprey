@@ -6,6 +6,7 @@ use axum::{
     Json,
 };
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     misc::UserIdReq,
     util::{Changes, Time},
@@ -95,7 +96,7 @@ async fn voice_state_patch(
         perms.ensure(Permission::VoiceMove)?;
         let target_chan = srv.channels.get(new_channel_id, None).await?;
         if target_chan.room_id != chan.room_id {
-            return Err(Error::BadStatic("cannot move to different room"));
+            return Err(ApiError::from_code(ErrorCode::CannotMoveToDifferentRoom).into());
         }
         let target_perms = srv
             .perms
@@ -190,9 +191,7 @@ async fn voice_state_patch(
     if let Some(requested_to_speak_at) = json.requested_to_speak_at {
         perms.ensure(Permission::VoiceRequest)?;
         if target_user_id != auth.user.id {
-            return Err(Error::BadStatic(
-                "cannot set requested_to_speak_at for others",
-            ));
+            return Err(ApiError::from_code(ErrorCode::InvalidData).into());
         }
 
         let new_requested_to_speak_at = if requested_to_speak_at.is_some() {
@@ -368,7 +367,7 @@ async fn voice_state_move(
     perms_target.ensure(Permission::ViewChannel)?;
 
     let Some(old) = srv.voice.state_get(target_user_id) else {
-        return Err(Error::BadStatic("not connected to any thread"));
+        return Err(ApiError::from_code(ErrorCode::NotConnectedToAnyThread).into());
     };
 
     let state = VoiceState {
@@ -491,9 +490,7 @@ async fn voice_call_create(
     perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
     let channel = s.services().channels.get(json.channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
-        return Err(Error::BadStatic(
-            "calls can only be created in Broadcast channels",
-        ));
+        return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
     s.services().voice.call_create(json).await?;
     Ok(StatusCode::NO_CONTENT)
@@ -525,9 +522,7 @@ async fn voice_call_delete(
     perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
     let channel = s.services().channels.get(channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
-        return Err(Error::BadStatic(
-            "calls can only be deleted in Broadcast channels",
-        ));
+        return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
     if params.force {
         perms.ensure(Permission::VoiceDisconnect)?;

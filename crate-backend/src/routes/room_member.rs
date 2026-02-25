@@ -6,6 +6,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
 use common::v1::types::automod::AutomodAction;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     util::Changes, AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
@@ -144,7 +145,7 @@ async fn room_member_add(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = data.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -153,16 +154,16 @@ async fn room_member_add(
         let room = srv.rooms.get(room_id, None).await?;
         if room.public {
             if auth.user.registered_at.is_none() {
-                return Err(Error::BadStatic("guests cannot join public rooms"));
+                return Err(ApiError::from_code(ErrorCode::GuestsCannotJoinPublicRooms).into());
             }
 
             if let Ok(ban) = s.data().room_ban_get(room_id, target_user_id).await {
                 if let Some(expires_at) = ban.expires_at {
                     if expires_at > Time::now_utc() {
-                        return Err(Error::BadStatic("banned"));
+                        return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
                     }
                 } else {
-                    return Err(Error::BadStatic("banned"));
+                    return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
                 }
             }
 
@@ -191,7 +192,7 @@ async fn room_member_add(
                     // TODO: let users add self applicable roles to themselves
                     // TODO: also handle if @everyone has RoleApply permissions
                     if !r.is_empty() {
-                        return Err(Error::BadStatic("cannot add roles to yourself"));
+                        return Err(ApiError::from_code(ErrorCode::CannotAddRolesToYourself).into());
                     }
                 }
             } else {
@@ -209,7 +210,7 @@ async fn room_member_add(
                     // TODO: let users add self applicable roles to themselves
                     // TODO: also handle if @everyone has RoleApply permissions
                     if !r.is_empty() {
-                        return Err(Error::BadStatic("cannot add roles to yourself"));
+                        return Err(ApiError::from_code(ErrorCode::CannotAddRolesToYourself).into());
                     }
                 }
             }
@@ -292,10 +293,10 @@ async fn room_member_add(
     let auth_user = srv.users.get(auth.user.id, None).await?;
     let target_user = srv.users.get(target_user_id, None).await?;
     let Some(puppet) = target_user.puppet else {
-        return Err(Error::BadStatic("can't add that user"));
+        return Err(ApiError::from_code(ErrorCode::CantAddThatUser).into());
     };
     if !auth_user.bot {
-        return Err(Error::BadStatic("only bots can use this"));
+        return Err(ApiError::from_code(ErrorCode::OnlyBotsCanUseThis).into());
     };
 
     let app = s
@@ -303,11 +304,11 @@ async fn room_member_add(
         .application_get(auth.user.id.into_inner().into())
         .await?;
     if app.bridge.is_none() {
-        return Err(Error::BadStatic("bot is not a bridge"));
+        return Err(ApiError::from_code(ErrorCode::BotIsNotABridge).into());
     }
 
     if puppet.owner_id.into_inner() != *auth.user.id {
-        return Err(Error::BadStatic("not puppet owner"));
+        return Err(ApiError::from_code(ErrorCode::NotPuppetOwner).into());
     }
 
     let d = s.data();
@@ -337,7 +338,9 @@ async fn room_member_add(
             for role_id in old.difference(&new) {
                 let role = d.role_select(room_id, *role_id).await?;
                 if role.position >= rank {
-                    return Err(Error::BadStatic("cannot remove role above your role"));
+                    return Err(
+                        ApiError::from_code(ErrorCode::CannotRemoveRoleAboveYourRole).into(),
+                    );
                 }
             }
 
@@ -345,7 +348,7 @@ async fn room_member_add(
             for role_id in new.difference(&old) {
                 let role = d.role_select(room_id, *role_id).await?;
                 if role.position >= rank {
-                    return Err(Error::BadStatic("cannot add role above your role"));
+                    return Err(ApiError::from_code(ErrorCode::CannotAddRoleAboveYourRole).into());
                 }
             }
         }
@@ -369,7 +372,7 @@ async fn room_member_add(
             for role_id in r {
                 let role = d.role_select(room_id, *role_id).await?;
                 if role.position >= rank {
-                    return Err(Error::BadStatic("cannot add role above your role"));
+                    return Err(ApiError::from_code(ErrorCode::CannotAddRoleAboveYourRole).into());
                 }
             }
         }
@@ -534,7 +537,7 @@ async fn room_member_update(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -562,7 +565,7 @@ async fn room_member_update(
         let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
         let room = srv.rooms.get(room_id, None).await?;
         if room.owner_id != Some(auth.user.id) && rank <= other_rank {
-            return Err(Error::BadStatic("your rank is too low"));
+            return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
         }
     }
 
@@ -578,7 +581,7 @@ async fn room_member_update(
         for role_id in old.difference(&new) {
             let role = d.role_select(room_id, *role_id).await?;
             if role.position >= rank {
-                return Err(Error::BadStatic("cannot remove role above your role"));
+                return Err(ApiError::from_code(ErrorCode::CannotRemoveRoleAboveYourRole).into());
             }
         }
 
@@ -586,7 +589,7 @@ async fn room_member_update(
         for role_id in new.difference(&old) {
             let role = d.role_select(room_id, *role_id).await?;
             if role.position >= rank {
-                return Err(Error::BadStatic("cannot add role above your role"));
+                return Err(ApiError::from_code(ErrorCode::CannotAddRoleAboveYourRole).into());
             }
         }
 
@@ -715,7 +718,7 @@ async fn room_member_delete(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -724,23 +727,23 @@ async fn room_member_delete(
         perms.ensure(Permission::MemberKick)?;
     }
     if room_id == SERVER_ROOM_ID {
-        return Err(Error::BadStatic("cannot kick people from the server room"));
+        return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
     let room = srv.rooms.get(room_id, None).await?;
     if room.owner_id == Some(target_user_id) {
-        return Err(Error::BadStatic("room owner cannot leave the room"));
+        return Err(ApiError::from_code(ErrorCode::RoomOwnerCannotLeave).into());
     }
     if auth.user.id != target_user_id {
         if room.owner_id != Some(auth.user.id) {
             let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
             if rank <= other_rank {
-                return Err(Error::BadStatic("your rank is too low"));
+                return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
             }
         }
     }
     if room.owner_id == Some(target_user_id) {
-        return Err(Error::BadStatic("cannot ban room owner"));
+        return Err(ApiError::from_code(ErrorCode::CannotBanRoomOwner).into());
     }
     d.room_member_leave(room_id, target_user_id).await?;
     srv.perms.invalidate_room(target_user_id, room_id).await;
@@ -869,7 +872,7 @@ async fn room_member_prune(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = data.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -914,14 +917,14 @@ async fn room_ban_create(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     if room_id == SERVER_ROOM_ID {
-        return Err(Error::BadStatic("cannot kick people from the server room"));
+        return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
 
     // enforce ranking if you're banning a member
@@ -931,11 +934,11 @@ async fn room_ban_create(
             let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
             if rank <= other_rank {
-                return Err(Error::BadStatic("your rank is too low"));
+                return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
             }
         }
         if room.owner_id == Some(target_user_id) {
-            return Err(Error::BadStatic("cannot ban room owner"));
+            return Err(ApiError::from_code(ErrorCode::CannotBanRoomOwner).into());
         }
     }
 
@@ -996,14 +999,14 @@ async fn room_ban_create_bulk(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     if room_id == SERVER_ROOM_ID {
-        return Err(Error::BadStatic("cannot kick people from the server room"));
+        return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
 
     let room = srv.rooms.get(room_id, None).await?;
@@ -1014,9 +1017,7 @@ async fn room_ban_create_bulk(
             if room.owner_id != Some(auth.user.id) {
                 let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
                 if auth_user_rank <= other_rank {
-                    return Err(Error::BadStatic(
-                        "your rank is too low to ban one of the users",
-                    ));
+                    return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
                 }
             }
         }
@@ -1088,7 +1089,7 @@ async fn room_ban_remove(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 

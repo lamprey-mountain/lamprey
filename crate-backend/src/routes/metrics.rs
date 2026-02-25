@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse};
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use prometheus::{Encoder, TextEncoder};
 
 use crate::{
@@ -57,7 +58,7 @@ pub async fn get_metrics(
     let mut buffer = vec![];
     encoder
         .encode(&prometheus::gather(), &mut buffer)
-        .map_err(|_| Error::BadStatic("failed to encode metrics"))?;
+        .map_err(|_| ApiError::from_code(ErrorCode::FailedToEncodeMetrics))?;
 
     Ok(buffer)
 }

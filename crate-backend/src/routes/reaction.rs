@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::reaction::{ReactionKey, ReactionKeyParam, ReactionListItem};
 use common::v1::types::{
@@ -93,7 +94,7 @@ async fn reaction_add(
     perms.ensure(Permission::ReactionAdd)?;
 
     if auth.user.id != user_id {
-        return Err(Error::BadStatic("cannot act on behalf of other users"));
+        return Err(ApiError::from_code(ErrorCode::CannotActOnBehalfOfOthers).into());
     }
 
     let thread = s
@@ -102,10 +103,10 @@ async fn reaction_add(
         .get(channel_id, Some(auth.user.id))
         .await?;
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -184,10 +185,10 @@ async fn reaction_remove(
         .get(channel_id, Some(auth.user.id))
         .await?;
     if chan.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if chan.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -260,10 +261,10 @@ async fn reaction_remove_key(
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if chan.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if chan.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -332,10 +333,10 @@ async fn reaction_remove_all(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 

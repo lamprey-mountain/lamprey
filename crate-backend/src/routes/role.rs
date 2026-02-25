@@ -5,6 +5,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission, Role,
@@ -53,7 +54,7 @@ async fn role_create(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = data.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -61,9 +62,7 @@ async fn role_create(
     let deny_set: HashSet<_> = json.deny.iter().collect();
 
     if !allow_set.is_disjoint(&deny_set) {
-        return Err(Error::BadRequest(
-            "a permission cannot be both allowed and denied".to_string(),
-        ));
+        return Err(ApiError::from_code(ErrorCode::PermissionConflict).into());
     }
 
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -79,7 +78,7 @@ async fn role_create(
         // special case: we don't want people with only the base role to be able
         // to create roles, as that role will always be position 1 and won't be
         // able to be edited or applied
-        return Err(Error::BadStatic("your rank is too low"));
+        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
     let role = data
         .role_create(
@@ -155,7 +154,7 @@ async fn role_update(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -170,9 +169,7 @@ async fn role_update(
     let deny_set: HashSet<_> = new_deny.iter().collect();
 
     if !allow_set.is_disjoint(&deny_set) {
-        return Err(Error::BadRequest(
-            "a permission cannot be both allowed and denied".to_string(),
-        ));
+        return Err(ApiError::from_code(ErrorCode::PermissionConflict).into());
     }
 
     if !json.changes(&start_role) {
@@ -181,7 +178,7 @@ async fn role_update(
     let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
     if rank <= start_role.position && room.owner_id != Some(auth.user.id) {
-        return Err(Error::BadStatic("your rank is too low"));
+        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
     if let Some(new_allow) = &json.allow {
@@ -261,7 +258,7 @@ async fn role_delete(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     if room_id.into_inner() == role_id.into_inner() {
-        return Err(Error::BadStatic("cannot delete the default role"));
+        return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
     let d = s.data();
     let srv = s.services();
@@ -275,7 +272,7 @@ async fn role_delete(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -285,7 +282,7 @@ async fn role_delete(
     let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
     if rank <= role.position && room.owner_id != Some(auth.user.id) {
-        return Err(Error::BadStatic("your rank is too low"));
+        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
     if role.member_count == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
@@ -414,7 +411,7 @@ async fn role_member_add(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     if room_id.into_inner() == role_id.into_inner() {
-        return Err(Error::BadStatic("cannot manually apply the @everyone role"));
+        return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
     let d = s.data();
     let srv = s.services();
@@ -425,7 +422,7 @@ async fn role_member_add(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -437,7 +434,7 @@ async fn role_member_add(
     let room = srv.rooms.get(room_id, None).await?;
     let self_apply = role.is_self_applicable && target_user_id == auth.user.id;
     if rank <= role.position && room.owner_id != Some(auth.user.id) && !self_apply {
-        return Err(Error::BadStatic("your rank is too low"));
+        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
     d.role_member_put(room_id, target_user_id, role_id).await?;
@@ -480,9 +477,7 @@ async fn role_member_remove(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     if room_id.into_inner() == role_id.into_inner() {
-        return Err(Error::BadStatic(
-            "cannot manually remove the @everyone role",
-        ));
+        return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
     let d = s.data();
     let srv = s.services();
@@ -493,7 +488,7 @@ async fn role_member_remove(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -504,7 +499,7 @@ async fn role_member_remove(
     let room = srv.rooms.get(room_id, None).await?;
     let self_apply = role.is_self_applicable && target_user_id == auth.user.id;
     if rank <= role.position && room.owner_id != Some(auth.user.id) && !self_apply {
-        return Err(Error::BadStatic("your rank is too low"));
+        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
     d.role_member_delete(room_id, target_user_id, role_id)
@@ -552,9 +547,7 @@ async fn role_member_bulk_edit(
     body.validate()?;
 
     if room_id.into_inner() == role_id.into_inner() {
-        return Err(Error::BadStatic(
-            "cannot manually apply or remove the @everyone role",
-        ));
+        return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
 
     let d = s.data();
@@ -566,7 +559,7 @@ async fn role_member_bulk_edit(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -578,7 +571,7 @@ async fn role_member_bulk_edit(
     let room = srv.rooms.get(room_id, None).await?;
 
     if auth_user_rank <= role.position && room.owner_id != Some(auth.user.id) {
-        return Err(Error::BadStatic("your rank is too low"));
+        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
     let all_user_ids: Vec<UserId> = body
@@ -591,14 +584,14 @@ async fn role_member_bulk_edit(
     for target_user_id in &body.apply {
         let target_rank = srv.perms.get_user_rank(room_id, *target_user_id).await?;
         if auth_user_rank <= target_rank && room.owner_id != Some(auth.user.id) {
-            return Err(Error::BadStatic("your rank is too low to manage this user"));
+            return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
         }
     }
 
     for target_user_id in &body.remove {
         let target_rank = srv.perms.get_user_rank(room_id, *target_user_id).await?;
         if auth_user_rank <= target_rank && room.owner_id != Some(auth.user.id) {
-            return Err(Error::BadStatic("your rank is too low to manage this user"));
+            return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
         }
     }
 
@@ -664,7 +657,7 @@ async fn role_reorder(
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(Error::BadStatic("mfa required for this action"));
+            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
@@ -678,14 +671,10 @@ async fn role_reorder(
     for r in &body.roles {
         let role = d.role_select(room_id, r.role_id).await?;
         if rank <= role.position && room.owner_id != Some(auth.user.id) {
-            return Err(Error::BadStatic(
-                "your rank is too low to reorder one of the roles",
-            ));
+            return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
         }
         if r.position >= rank && room.owner_id != Some(auth.user.id) {
-            return Err(Error::BadStatic(
-                "you cannot set a role's position to be equal or higher than your own rank",
-            ));
+            return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
         }
     }
 

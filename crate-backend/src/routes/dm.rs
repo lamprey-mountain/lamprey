@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Permission,
     RelationshipType, UserId,
@@ -49,7 +50,7 @@ async fn dm_init(
     // you can't dm webhooks
     let target_user = data.user_get(target_user_id).await?;
     if !target_user.can_dm() {
-        return Err(Error::BadStatic("cannot dm this user"));
+        return Err(ApiError::from_code(ErrorCode::CannotDmThisUser).into());
     }
 
     let perms = srv.perms.for_server(auth.user.id).await?;
@@ -71,7 +72,7 @@ async fn dm_init(
             .is_some_and(|r| r.relation == Some(RelationshipType::Friend));
 
         if !is_friend {
-            return Err(Error::BadStatic("DMs not allowed from this user"));
+            return Err(ApiError::from_code(ErrorCode::DmsNotAllowedFromThisUser).into());
         }
     }
 

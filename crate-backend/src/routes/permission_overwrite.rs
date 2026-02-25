@@ -6,6 +6,7 @@ use axum::{
     Json,
 };
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     util::Changes, AuditLogEntryType, ChannelId, MessageSync, Permission, PermissionOverwriteSet,
     PermissionOverwriteType,
@@ -42,9 +43,7 @@ async fn permission_overwrite(
     let deny_set: HashSet<_> = json.deny.iter().collect();
 
     if !allow_set.is_disjoint(&deny_set) {
-        return Err(Error::BadRequest(
-            "a permission cannot be both allowed and denied".to_string(),
-        ));
+        return Err(ApiError::from_code(ErrorCode::PermissionConflict).into());
     }
 
     let srv = s.services();
@@ -53,15 +52,13 @@ async fn permission_overwrite(
     perms.ensure(Permission::RoleManage)?;
     let channel = srv.channels.get(channel_id, None).await?;
     if channel.ty.is_thread() {
-        return Err(Error::BadStatic(
-            "cant set permission overwrites on threads",
-        ));
+        return Err(ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into());
     }
     if channel.archived_at.is_some() {
-        return Err(Error::BadStatic("channel is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if channel.deleted_at.is_some() {
-        return Err(Error::BadStatic("channel is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -80,12 +77,10 @@ async fn permission_overwrite(
         };
         let room = srv.rooms.get(room_id, None).await?;
         if rank <= other_rank && room.owner_id != Some(auth.user.id) {
-            return Err(Error::BadStatic("your rank is too low"));
+            return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
         }
     } else {
-        return Err(Error::BadStatic(
-            "cannot set overwrites for channels outside of rooms (eg. direct messages)",
-        ));
+        return Err(ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into());
     }
 
     // you can't grant/unset/deny permissions you do not have, and if someone else already set them you can't edit them
@@ -97,10 +92,7 @@ async fn permission_overwrite(
     if existing.is_none()
         && channel.permission_overwrites.len() >= crate::consts::MAX_PERMISSION_OVERWRITES as usize
     {
-        return Err(Error::BadRequest(format!(
-            "too many permission overwrites (max {})",
-            crate::consts::MAX_PERMISSION_OVERWRITES
-        )));
+        return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
 
     if let Some(existing) = &existing {
@@ -201,10 +193,10 @@ async fn permission_delete(
 
     let channel = srv.channels.get(channel_id, None).await?;
     if channel.archived_at.is_some() {
-        return Err(Error::BadStatic("channel is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if channel.deleted_at.is_some() {
-        return Err(Error::BadStatic("channel is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -228,12 +220,12 @@ async fn permission_delete(
             };
             let room = srv.rooms.get(room_id, None).await?;
             if rank <= other_rank && room.owner_id != Some(auth.user.id) {
-                return Err(Error::BadStatic("your rank is too low"));
+                return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
             }
         } else {
-            return Err(Error::BadStatic(
-                "cannot set overwrites for channels outside of rooms (eg. direct messages)",
-            ));
+            return Err(
+                ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into(),
+            );
         }
 
         for p in &existing.allow {

@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::user::Ignore;
 use common::v1::types::util::Time;
 use common::v1::types::{
@@ -93,7 +94,7 @@ async fn friend_add(
 
     let target_user = data.user_get(target_user_id).await?;
     if !target_user.can_friend() {
-        return Err(Error::BadStatic("cannot friend this user"));
+        return Err(ApiError::from_code(ErrorCode::CannotFriendThisUser).into());
     }
 
     let existing = data
@@ -147,7 +148,7 @@ async fn friend_add(
             if let Some(pause_until) = &friends_prefs.pause_until {
                 if pause_until > &Time::now_utc() {
                     // NOTE: do i want to return a more generic error message here?
-                    return Err(Error::BadStatic("friend requests are currently paused"));
+                    return Err(ApiError::from_code(ErrorCode::FriendRequestsPaused).into());
                 }
             }
 
@@ -176,9 +177,7 @@ async fn friend_add(
             };
 
             if !allowed {
-                return Err(Error::BadStatic(
-                    "friend requests not allowed from this user",
-                ));
+                return Err(ApiError::from_code(ErrorCode::InvalidData).into());
             }
 
             // send friend request
@@ -216,7 +215,7 @@ async fn friend_add(
         }
         (Some(RelationshipType::Block), _) => {
             // you blocked them
-            return Err(Error::BadStatic("unblock this user first"));
+            return Err(ApiError::from_code(ErrorCode::UnblockUserFirst).into());
         }
         _ => unreachable!("invalid data in database?"),
     }

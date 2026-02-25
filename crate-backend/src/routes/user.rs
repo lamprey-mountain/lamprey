@@ -4,6 +4,7 @@ use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::harvest::{Harvest, HarvestCreate};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
@@ -67,17 +68,13 @@ async fn user_update(
     if let Some(Some(avatar_media_id)) = patch.avatar {
         let media = data.media_select(avatar_media_id).await?;
         if !media.metadata.is_image() {
-            return Err(Error::BadStatic(
-                "couldn't link media as avatar: not an image",
-            ));
+            return Err(ApiError::from_code(ErrorCode::InvalidData).into());
         }
     }
     if let Some(Some(banner_media_id)) = patch.banner {
         let media = data.media_select(banner_media_id).await?;
         if !media.metadata.is_image() {
-            return Err(Error::BadStatic(
-                "couldn't link media as banner: not an image",
-            ));
+            return Err(ApiError::from_code(ErrorCode::InvalidData).into());
         }
     }
     data.user_update(target_user_id, patch.clone()).await?;
@@ -598,7 +595,7 @@ async fn user_list(
 )]
 async fn harvest_get(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
-        return Err(Error::BadStatic("bots cannot use this endpoint"));
+        return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
     }
     auth.user.ensure_unsuspended()?;
 
@@ -620,7 +617,7 @@ async fn harvest_create(
     Json(_json): Json<HarvestCreate>,
 ) -> Result<impl IntoResponse> {
     if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
-        return Err(Error::BadStatic("bots cannot use this endpoint"));
+        return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
     }
     auth.user.ensure_unsuspended()?;
 

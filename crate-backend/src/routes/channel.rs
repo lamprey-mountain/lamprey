@@ -9,6 +9,7 @@ use axum::{
 use common::v1::types::{
     ack::{AckReq, AckRes},
     application::Scope,
+    error::{ApiError, ErrorCode},
     util::Changes,
     AuditLogEntryType, ChannelReorder, ChannelType, RatelimitPut, RelationshipType, Room,
     RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
@@ -111,12 +112,10 @@ async fn channel_create_dm(
     match json.ty {
         ChannelType::Dm => {
             let Some(recipients) = &json.recipients else {
-                return Err(Error::BadStatic("dm thread is missing recipients"));
+                return Err(ApiError::from_code(ErrorCode::DmThreadMissingRecipients).into());
             };
             if recipients.len() != 1 {
-                return Err(Error::BadStatic(
-                    "dm threads can only be with a single person",
-                ));
+                return Err(ApiError::from_code(ErrorCode::DmThreadSinglePersonOnly).into());
             }
             let target_user_id = recipients.first().unwrap();
             let (thread, is_new) = srv
@@ -134,12 +133,12 @@ async fn channel_create_dm(
         }
         ChannelType::Gdm => {
             let Some(recipients) = &mut json.recipients else {
-                return Err(Error::BadStatic("gdm thread is missing recipients"));
+                return Err(ApiError::from_code(ErrorCode::GdmThreadMissingRecipients).into());
             };
             recipients.push(auth.user.id);
 
             if recipients.len() as u32 > crate::consts::MAX_GDM_MEMBERS {
-                return Err(Error::BadStatic("group dm has too many members"));
+                return Err(ApiError::from_code(ErrorCode::GdmTooManyMembers).into());
             }
 
             // creator must be friends to add recipients
@@ -152,38 +151,30 @@ async fn channel_create_dm(
                     relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
 
                 if !are_friends {
-                    return Err(Error::BadStatic(
-                        "you must be friends with all recipients to create a group dm",
-                    ));
+                    return Err(ApiError::from_code(ErrorCode::GdmRequiresFriend).into());
                 }
             }
         }
-        _ => {
-            return Err(Error::BadStatic(
-                "can only create a dm/gdm thread outside of a room",
-            ))
-        }
+        _ => return Err(ApiError::from_code(ErrorCode::DmGdmOnlyOutsideRoom).into()),
     };
 
     if json.bitrate.is_some_and(|b| b > 393216) {
-        return Err(Error::BadStatic("bitrate is too high"));
+        return Err(ApiError::from_code(ErrorCode::BitrateTooHigh).into());
     }
     if !json.ty.has_voice() && json.bitrate.is_some() {
-        return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
+        return Err(ApiError::from_code(ErrorCode::CannotSetBitrateForNonVoiceThread).into());
     }
     if !json.ty.has_voice() && json.user_limit.is_some() {
-        return Err(Error::BadStatic(
-            "cannot set user_limit for non voice thread",
-        ));
+        return Err(ApiError::from_code(ErrorCode::CannotSetUserLimitForNonVoiceThread).into());
     }
 
     if let Some(icon) = json.icon {
         if json.ty != ChannelType::Gdm {
-            return Err(Error::BadStatic("only gdm threads can have icons"));
+            return Err(ApiError::from_code(ErrorCode::OnlyGdmCanHaveIcons).into());
         }
         let media = data.media_select(icon).await?;
         if !media.metadata.is_image() {
-            return Err(Error::BadStatic("media not an image"));
+            return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
         }
     }
 
@@ -422,7 +413,7 @@ async fn channel_reorder(
 
             let parent_data = srv.channels.get(parent_id, None).await?;
             if !channel_data.ty.can_be_in(Some(parent_data.ty)) {
-                return Err(Error::BadStatic("invalid parent channel type"));
+                return Err(ApiError::from_code(ErrorCode::InvalidParentChannelType).into());
             }
         }
     }
@@ -479,9 +470,7 @@ async fn channel_update(
     auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
     if json.owner_id.is_some() {
-        return Err(Error::BadStatic(
-            "owner_id cannot be changed via this endpoint; use the transfer-ownership endpoint",
-        ));
+        return Err(ApiError::from_code(ErrorCode::OwnerIdCannotBeChanged).into());
     }
     let chan = s
         .services()
@@ -592,7 +581,7 @@ async fn channel_remove(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
 
@@ -663,7 +652,7 @@ async fn channel_restore(
             let user = srv.users.get(auth.user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
 
@@ -742,10 +731,10 @@ async fn channel_typing(
     perms.ensure(Permission::MessageCreate)?;
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
     }
     if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
@@ -788,16 +777,16 @@ async fn channel_upgrade(
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     if chan.ty != ChannelType::Gdm {
-        return Err(Error::BadStatic("only group dms can be upgraded"));
+        return Err(ApiError::from_code(ErrorCode::OnlyGdmCanUpgrade).into());
     }
 
     if chan.owner_id != Some(auth.user.id) {
-        return Err(Error::BadStatic("you are not the thread owner"));
+        return Err(ApiError::from_code(ErrorCode::NotThreadOwner).into());
     }
 
     if chan.room_id.is_some() {
         // NOTE: should this be a panic? gdms can't be in rooms anyways?
-        return Err(Error::BadStatic("thread is already in a room"));
+        return Err(ApiError::from_code(ErrorCode::ThreadAlreadyInRoom).into());
     }
 
     let room = srv
@@ -938,7 +927,7 @@ async fn channel_transfer_ownership(
     let _perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     let thread_start = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if thread_start.owner_id != Some(auth.user.id) {
-        return Err(Error::BadStatic("you aren't the thread owner"));
+        return Err(ApiError::from_code(ErrorCode::NotThreadOwner).into());
     }
 
     let thread = srv
