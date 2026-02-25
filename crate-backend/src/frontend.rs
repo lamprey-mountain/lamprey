@@ -38,11 +38,13 @@ pub async fn frontend_handler(
         path = "index.html".to_string();
     }
 
-    if let Some(content) = Asset::get(&path) {
-        return Ok(Response::builder()
-            .header(header::CONTENT_TYPE, mime_from_ext(&path))
-            .body(Body::from(content.data))
-            .unwrap());
+    if path != "index.html" {
+        if let Some(content) = Asset::get(&path) {
+            return Ok(Response::builder()
+                .header(header::CONTENT_TYPE, mime_from_ext(&path))
+                .body(Body::from(content.data))
+                .unwrap());
+        }
     }
 
     let nonce = make_nonce();

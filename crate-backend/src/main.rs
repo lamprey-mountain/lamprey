@@ -341,8 +341,9 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
         .route(
             "/api/docs",
             get(|| async { Html(include_str!("scalar.html")) }),
-        )
-        .route("/", get(|| async { "it works!" }));
+        );
+    #[cfg(not(feature = "embed-frontend"))]
+    let router = router.route("/", get(|| async { "it works!" }));
     #[cfg(feature = "embed-frontend")]
     let router = router
         .fallback_service(axum::routing::get(frontend::frontend_handler).with_state(state.clone()));

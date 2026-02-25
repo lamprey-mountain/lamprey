@@ -44,6 +44,7 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				app: "./index.html",
+				jinja: "./index-jinja.html",
 				sw: "./sw.ts",
 			},
 			output: {

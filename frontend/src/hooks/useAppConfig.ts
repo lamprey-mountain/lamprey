@@ -7,6 +7,21 @@ function loadSavedConfig(): Config | null {
 	return JSON.parse(c);
 }
 
+async function fetchConfig(): Promise<Config> {
+	const env = (globalThis as any).ENV;
+	if (env) {
+		console.log("[config] using server defined env", env);
+		return env;
+	} else {
+		const c: Config = await fetch("/config.json").then(
+			(res) => res.json(),
+			() => null,
+		);
+		console.log("[config] fetched new config", c);
+		return c;
+	}
+}
+
 export function useAppConfig() {
 	const saved = loadSavedConfig();
 	const [config, setConfig] = createSignal<Config | null>(saved);
@@ -17,11 +32,7 @@ export function useAppConfig() {
 	(async () => {
 		if (localStorage.dontFetchConfig) return;
 
-		const c: Config = await fetch("/config.json").then(
-			(res) => res.json(),
-			() => null,
-		);
-		console.log("[config] fetched new config", c);
+		const c = await fetchConfig();
 
 		if (c.api_url && typeof c?.api_url !== "string") {
 			throw new Error("config.api_url is not a string");
