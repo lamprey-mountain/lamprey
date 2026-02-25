@@ -28,6 +28,7 @@ import type {
 	MessageSync,
 	Pagination,
 	Role,
+	Room,
 	RoomMember,
 	Session,
 	ThreadMember,

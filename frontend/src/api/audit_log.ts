@@ -1,5 +1,6 @@
 import type { AuditLogEntry, Channel, Pagination, RoomMember, User } from "sdk";
 import { createEffect, createResource, type Resource, untrack } from "solid-js";
+import { ReactiveMap } from "@solid-primitives/map";
 import type { Api, Listing } from "../api.tsx";
 
 interface AuditLogPaginationResponse {

@@ -69,7 +69,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const user_id = () => api.users.cache.get("@self")?.id;
 	const perms = usePermissions(
 		user_id,
-		() => props.channel.room_id,
+		() => props.channel.room_id ?? undefined,
 		() => props.channel.id,
 	);
 

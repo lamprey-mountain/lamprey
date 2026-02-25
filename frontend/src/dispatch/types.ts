@@ -42,7 +42,6 @@ export type Action =
 	| ServerAction
 	| ThreadAction
 	| CategoryAction
-	| UploadAction
 	| WindowAction
 	| { do: "menu.preview"; id: string | null };
 

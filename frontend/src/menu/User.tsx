@@ -248,7 +248,7 @@ export function UserMenu(props: UserMenuProps) {
 						<Item
 							onClick={(e) => {
 								e.stopPropagation();
-								if (room_member()?.roles.includes(role.id)) {
+								if (room_member()?.roles.includes(role.id!)) {
 									console.log("remove role");
 									api.client.http.DELETE(
 										"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",

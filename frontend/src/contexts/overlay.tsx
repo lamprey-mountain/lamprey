@@ -19,6 +19,7 @@ import {
 } from "@floating-ui/dom";
 import { Portal } from "solid-js/web";
 import { useCtx } from "../context.ts";
+import type { Menu } from "./menu.tsx";
 import {
 	useAutocomplete,
 	useFormattingToolbar,

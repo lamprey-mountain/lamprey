@@ -4,6 +4,7 @@
 
 // FIXME: firefox doesnt like it when i import?
 // import { stripMarkdownAndResolveMentions } from "./src/notification-util.ts";
+import type { Message } from "sdk";
 
 declare const self: ServiceWorkerGlobalScope;
 

@@ -8,6 +8,7 @@ import {
 	Switch,
 } from "solid-js";
 import { useCtx } from "./context.ts";
+import type { ChannelSearch } from "./context.ts";
 import { createList } from "./list.tsx";
 import type { Channel, Room } from "sdk";
 import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
@@ -632,7 +633,7 @@ const SearchResultItem = (props: {
 export const SearchResults = (props: {
 	channel?: Channel;
 	room?: Room;
-	search: ThreadSearch;
+	search: ChannelSearch;
 }) => {
 	const channelCtx = useChannel();
 	const roomCtx = useRoom();

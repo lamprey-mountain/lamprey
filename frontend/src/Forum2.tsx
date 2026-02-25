@@ -79,7 +79,7 @@ function UserMention(props: { id: string; channel: Channel }) {
 				} else {
 					setUserView({
 						user_id: props.id,
-						room_id: props.channel.room_id,
+						room_id: props.channel.room_id ?? undefined,
 						thread_id: props.channel.id,
 						ref: currentTarget,
 						source: "message",

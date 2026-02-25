@@ -90,7 +90,7 @@ export type ChatCtx = {
 	data: Data;
 	dispatch: (action: Action) => void;
 
-	t: i18n.NullableTranslator<i18n.Flatten<typeof en>>;
+	t: i18n.Translator<i18n.Flatten<typeof en>>;
 	events: Emitter<Events>;
 	popout: Accessor<Popout>;
 	setPopout: Setter<Popout>;

@@ -74,7 +74,7 @@ export function Submenu(
 	});
 
 	const menuId = createUniqueId();
-	let timeout: number;
+	let timeout: ReturnType<typeof setTimeout>;
 
 	function handleMouseEnter() {
 		if (!ctx.data.cursor.preview) {

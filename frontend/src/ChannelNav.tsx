@@ -605,7 +605,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 									x: e.clientX,
 									y: e.clientY,
 									type: "room",
-									room_id: props.room_id,
+									room_id: props.room_id!,
 								});
 							});
 						}

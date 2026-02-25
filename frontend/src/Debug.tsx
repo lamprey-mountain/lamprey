@@ -86,6 +86,7 @@ export const Debug = () => {
 
 const Search = () => {
 	const ctx = useCtx();
+	const api = useApi();
 	const [searchQuery, setSearchQueryRaw] = createSignal<string>("");
 	const setSearchQuery = leadingAndTrailing(throttle, setSearchQueryRaw, 300);
 	const [searchResults] = createResource(

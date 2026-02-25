@@ -13,7 +13,7 @@ import {
 	Switch,
 } from "solid-js";
 import { timeAgo } from "../Time.tsx";
-import { Channel, Tag } from "sdk";
+import type { Channel, NotifsChannel, Tag } from "sdk";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons.tsx";
 

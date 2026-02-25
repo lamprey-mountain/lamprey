@@ -1,4 +1,4 @@
-import type { Pagination, User, UserWithRelationship } from "sdk";
+import type { Pagination, User, UserConfig, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";

@@ -143,7 +143,7 @@ export const Autocomplete = () => {
 			const filteredCommands = allCommands.filter((cmd) => {
 				// If the command has a canUse function, use it to check permissions
 				if (cmd.canUse) {
-					return cmd.canUse(api, channel?.room_id, channel!);
+					return cmd.canUse(api, channel?.room_id ?? undefined, channel!);
 				}
 				// If no canUse function is defined, assume the command can be used
 				return true;
