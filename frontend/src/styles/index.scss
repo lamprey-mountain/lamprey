@@ -3999,3 +3999,54 @@ input[type="search"].tags-search {
 		box-shadow: 1px 1px 3px #0004;
 	}
 }
+
+.user-settings-sessions {
+	.session {
+		display: flex;
+		flex-direction: column;
+		margin: 4px 0;
+		padding: 8px;
+		/* border-radius: 4px; */
+		background: $bg-150;
+		border: solid $sep-300 1px;
+
+		.info {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+
+			menu {
+				display: flex;
+				gap: 4px;
+			}
+		}
+
+		.meta {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin: 4px 0;
+
+			.bullet {
+				display: inline-block;
+				width: 4px;
+				height: 4px;
+				border-radius: 50%;
+				background: $fg-500;
+			}
+
+			.unknown {
+				color: $fg-500;
+				font-style: italic;
+			}
+		}
+
+		&.current {
+			border: solid $link-500 1px;
+		}
+
+		&.sudo {
+			border: solid $color-red 1px;
+		}
+	}
+}
