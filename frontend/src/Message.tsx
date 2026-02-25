@@ -4,6 +4,7 @@ import {
 	createEffect,
 	createSignal,
 	For,
+	type JSX,
 	Match,
 	onCleanup,
 	onMount,
@@ -412,6 +413,28 @@ export function MessageView(props: MessageProps) {
 		}
 	};
 
+	const handleAltClick = (e: MouseEvent) => {
+		if (!e.altKey || !ch || !chUpdate) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const thread_id = props.message.channel_id;
+		const message_id = props.message.id;
+		const messages = api.messages.cacheRanges.get(thread_id)?.live.items ?? [];
+		const currentIndex = messages.findIndex((m) => m.id === message_id);
+
+		if (currentIndex === -1) return;
+
+		// set read marker to the *previous* message (making current message unread)
+		const prevMessage = messages[currentIndex - 1];
+		if (prevMessage) {
+			chUpdate("read_marker_id", prevMessage.id);
+		} else {
+			// TODO: theres probably a better way to handle this than clearing the read marker
+			chUpdate("read_marker_id", undefined);
+		}
+	};
+
 	const handleClick = (e: MouseEvent) => {
 		if (!inSelectMode() || !ch || !chUpdate) return;
 		e.preventDefault();
@@ -447,6 +470,38 @@ export function MessageView(props: MessageProps) {
 		}
 	};
 
+	function SystemMessage(props2: {
+		icon: string;
+		content: JSX.Element;
+		date: Date;
+		class?: string;
+	}) {
+		return (
+			<article
+				ref={messageArticleRef!}
+				class={`message menu-message oneline ${props2.class ?? ""}`}
+				data-message-id={props.message.id}
+				classList={{
+					separate: props.separate,
+					notseparate: !props.separate,
+					"toolbar-visible": toolbarVisible(),
+				}}
+				onClick={handleClick}
+				onMouseDown={(e) => {
+					onMouseDown(e);
+					handleAltClick(e);
+				}}
+				onMouseEnter={() => setHovered(true)}
+				onMouseLeave={() => setHovered(false)}
+			>
+				<img class="icon main" src={props2.icon} />
+				<div class="content">{props2.content}</div>
+				<Time date={props2.date} animGroup="message-ts" />
+				<MessageToolbar message={props.message} />
+			</article>
+		);
+	}
+
 	function getComponent() {
 		const date = new Date(
 			props.message.latest_version.created_at ?? props.message.created_at ??
@@ -476,22 +531,10 @@ export function MessageView(props: MessageProps) {
 				</span>
 			);
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseDown={onMouseDown}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icMemberAdd} />
-					<div class="content">
+				<SystemMessage
+					icon={icMemberAdd}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -499,10 +542,8 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.member_add", author, target)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
 		} else if (props.message.latest_version.type === "MemberRemove") {
 			const author = (
@@ -527,21 +568,10 @@ export function MessageView(props: MessageProps) {
 				</span>
 			);
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icMemberRemove} />
-					<div class="content">
+				<SystemMessage
+					icon={icMemberRemove}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -549,10 +579,8 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.member_remove", author, target)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
 		} else if (props.message.latest_version.type === "MemberJoin") {
 			const author = (
@@ -564,21 +592,10 @@ export function MessageView(props: MessageProps) {
 				</span>
 			);
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icMemberJoin} />
-					<div class="content">
+				<SystemMessage
+					icon={icMemberJoin}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -586,10 +603,8 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.member_join", author)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
 		} else if (props.message.latest_version.type === "MessagePinned") {
 			const navigate = useNavigate();
@@ -618,21 +633,10 @@ export function MessageView(props: MessageProps) {
 			);
 
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icPin} />
-					<div class="content">
+				<SystemMessage
+					icon={icPin}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -640,12 +644,10 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.message_pinned", author, link)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
-		} else if (props.message.latest_version.type === "ThreadRename") {
+		} else if (props.message.latest_version.type === "ChannelRename") {
 			const author = (
 				<span
 					class="author"
@@ -656,21 +658,10 @@ export function MessageView(props: MessageProps) {
 			);
 			const name_new = <b>{props.message.latest_version.name_new}</b>;
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icEdit} />
-					<div class="content">
+				<SystemMessage
+					icon={icEdit}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -678,10 +669,8 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.channel_rename", author, name_new)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
 		} else if (props.message.latest_version.type === "Call") {
 			// TODO: say "you missed a call" in dm channels
@@ -695,21 +684,10 @@ export function MessageView(props: MessageProps) {
 			);
 			const count = props.message.latest_version.participants.length;
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icMemberJoin} />
-					<div class="content">
+				<SystemMessage
+					icon={icMemberJoin}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -719,12 +697,10 @@ export function MessageView(props: MessageProps) {
 								? t("message_content.call_ended", author, count)
 								: t("message_content.call_started", author, count)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
-		} else if (props.message.latest_version.type === "ThreadPingback") {
+		} else if (props.message.latest_version.type === "ChannelPingback") {
 			const author = (
 				<span
 					class="author"
@@ -734,21 +710,10 @@ export function MessageView(props: MessageProps) {
 				</span>
 			);
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icReply} />
-					<div class="content">
+				<SystemMessage
+					icon={icReply}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -756,10 +721,8 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.channel_pingback", author)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
 		} else if (props.message.latest_version.type === "ChannelIcon") {
 			const author = (
@@ -771,21 +734,10 @@ export function MessageView(props: MessageProps) {
 				</span>
 			);
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icEdit} />
-					<div class="content">
+				<SystemMessage
+					icon={icEdit}
+					date={date}
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -793,10 +745,8 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.channel_icon", author)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
 		} else if (props.message.latest_version.type === "ThreadCreated") {
 			const navigate = useNavigate();
@@ -854,21 +804,11 @@ export function MessageView(props: MessageProps) {
 			);
 
 			return (
-				<article
-					ref={messageArticleRef!}
-					class="message menu-message oneline message-dim-content"
-					data-message-id={props.message.id}
-					classList={{
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<img class="icon main" src={icThread} />
-					<div class="content">
+				<SystemMessage
+					icon={icThread}
+					date={date}
+					class="message-dim-content"
+					content={
 						<div
 							class="body markdown"
 							classList={{ local: props.message.is_local }}
@@ -876,10 +816,8 @@ export function MessageView(props: MessageProps) {
 							{/* @ts-ignore */}
 							{t("message_content.thread_created", author, link, viewAll)}
 						</div>
-					</div>
-					<Time date={date} animGroup="message-ts" />
-					<MessageToolbar message={props.message} />
-				</article>
+					}
+				/>
 			);
 		} else if (props.message.latest_version.type === "DefaultMarkdown") {
 			const [arrow_width, set_arrow_width] = createSignal(0);
@@ -913,7 +851,10 @@ export function MessageView(props: MessageProps) {
 						"toolbar-visible": toolbarVisible(),
 					}}
 					onClick={handleClick}
-					onMouseDown={onMouseDown}
+					onMouseDown={(e) => {
+						onMouseDown(e);
+						handleAltClick(e);
+					}}
 					onMouseEnter={() => setHovered(true)}
 					onMouseLeave={() => setHovered(false)}
 				>
@@ -1036,6 +977,10 @@ export function MessageView(props: MessageProps) {
 					data-message-id={props.message.id}
 					classList={{ "toolbar-visible": toolbarVisible() }}
 					onClick={handleClick}
+					onMouseDown={(e) => {
+						onMouseDown(e);
+						handleAltClick(e);
+					}}
 					onMouseEnter={() => setHovered(true)}
 					onMouseLeave={() => setHovered(false)}
 				>
