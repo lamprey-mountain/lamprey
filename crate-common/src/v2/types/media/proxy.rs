@@ -16,6 +16,7 @@ pub struct MediaQuery {
     /// otherwise, immediately return a 409 status code. (409 is used so that
     /// its possible to differentiate between "media doesnt exist" and "media is
     /// still being processed")
+    #[cfg_attr(feature = "serde", serde(default = "default_true"))]
     pub wait: bool,
 }
 
