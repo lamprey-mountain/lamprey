@@ -11,8 +11,8 @@ export class Rooms {
 	_cachedListing: Listing<Room> | null = null;
 	_cachedListingAll: Listing<Room> | null = null;
 
-	fetch(room_id: () => string): Resource<Room> {
-		const [resource, { mutate }] = createResource(room_id, (room_id) => {
+	fetch(room_id_sig: () => string): Resource<Room> {
+		const [resource, { mutate }] = createResource(room_id_sig, (room_id) => {
 			const cached = this.cache.get(room_id);
 			if (cached) return cached;
 			const existing = this._requests.get(room_id);
@@ -32,12 +32,14 @@ export class Rooms {
 				return data;
 			})();
 
-			createEffect(() => {
-				mutate(this.cache.get(room_id));
-			});
-
 			this._requests.set(room_id, req);
 			return req;
+		});
+
+		createEffect(() => {
+			const room_id = room_id_sig();
+			const cached = this.cache.get(room_id);
+			if (cached) mutate(cached);
 		});
 
 		return resource;

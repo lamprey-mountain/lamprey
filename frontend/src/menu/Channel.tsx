@@ -16,11 +16,13 @@ import { timeAgo } from "../Time.tsx";
 import type { Channel, NotifsChannel, Tag } from "sdk";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons.tsx";
+import { useReadTracking } from "../contexts/read-tracking.tsx";
 
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
+	const { markThreadRead, markCategoryRead } = useReadTracking();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 
@@ -48,19 +50,11 @@ export function ChannelMenu(props: { channel_id: string }) {
 		const channel = api.channels.cache.get(props.channel_id)!;
 
 		if (channel.type === "Category") {
-			ctx.dispatch({
-				do: "category.mark_read",
-				category_id: props.channel_id,
-			});
+			markCategoryRead(props.channel_id);
 		} else {
 			const version_id = channel.last_version_id;
 			if (!version_id) return;
-			ctx.dispatch({
-				do: "thread.mark_read",
-				thread_id: props.channel_id,
-				also_local: true,
-				version_id,
-			});
+			markThreadRead(props.channel_id, version_id, true);
 		}
 	};
 

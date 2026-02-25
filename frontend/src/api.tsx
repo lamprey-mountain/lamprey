@@ -467,11 +467,19 @@ export function createApi(
 			const { channel_id, version_id } = msg;
 			const t = channels.cache.get(channel_id);
 			if (t) {
+				const is_unread = version_id < (t.last_version_id ?? "");
+				if (
+					t.last_read_id === version_id &&
+					t.mention_count === 0 &&
+					t.is_unread === is_unread
+				) {
+					return;
+				}
 				channels.cache.set(channel_id, {
 					...t,
 					last_read_id: version_id,
 					mention_count: 0,
-					is_unread: version_id < (t.last_version_id ?? ""),
+					is_unread,
 				});
 			}
 		} else if (msg.type === "MessageCreate") {
@@ -586,55 +594,55 @@ export function createApi(
 				window.speechSynthesis.speak(utterance);
 			}
 
-			const r = messages.cacheRanges.get(m.channel_id);
-			let is_new = false;
-			let is_unread = true;
-			if (r) {
-				if (m.nonce) {
-					// local echo
-					console.log("Message Create local echo");
-					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
-					if (idx !== -1) {
-						r.live.items.splice(idx, 1, m);
-					} else {
-						const id_idx = r.live.items.findIndex((i) => i.id === m.id);
-						if (id_idx === -1) {
-							r.live.items.push(m);
+			batch(() => {
+				const r = messages.cacheRanges.get(m.channel_id);
+				let is_new = false;
+				let is_unread = true;
+				if (r) {
+					if (m.nonce) {
+						// local echo
+						console.log("Message Create local echo");
+						const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
+						if (idx !== -1) {
+							r.live.items.splice(idx, 1, m);
+						} else {
+							const id_idx = r.live.items.findIndex((i) => i.id === m.id);
+							if (id_idx === -1) {
+								r.live.items.push(m);
+							}
 						}
+						is_new = true;
+						is_unread = false;
+					} else {
+						console.log("Message Create new message");
+						r.live.items.push(m);
+						is_new = true;
 					}
-					is_new = true;
-					is_unread = false;
-				} else {
-					console.log("Message Create new message");
-					r.live.items.push(m);
-					is_new = true;
-				}
-				batch(() => {
 					messages.cache.set(m.id, m);
 					messages._updateMutators(r, m.channel_id);
-				});
-			}
-
-			const t = api.channels.cache.get(m.channel_id);
-			if (t) {
-				api.channels.cache.set(m.channel_id, {
-					...t,
-					message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
-					mention_count: (t.mention_count ?? 0) + (is_mentioned ? 1 : 0),
-					last_version_id: m.latest_version.version_id,
-					is_unread,
-				});
-			}
-
-			{
-				const t = typing.get(m.channel_id);
-				if (t) {
-					t.delete(m.author_id);
-					typing.set(m.channel_id, new Set(t));
-					const tt = typing_timeout.get(m.channel_id)?.get(m.author_id);
-					if (tt) clearTimeout(tt);
 				}
-			}
+
+				const t = api.channels.cache.get(m.channel_id);
+				if (t) {
+					api.channels.cache.set(m.channel_id, {
+						...t,
+						message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
+						mention_count: (t.mention_count ?? 0) + (is_mentioned ? 1 : 0),
+						last_version_id: m.latest_version.version_id,
+						is_unread,
+					});
+				}
+
+				{
+					const t = typing.get(m.channel_id);
+					if (t) {
+						t.delete(m.author_id);
+						typing.set(m.channel_id, new Set(t));
+						const tt = typing_timeout.get(m.channel_id)?.get(m.author_id);
+						if (tt) clearTimeout(tt);
+					}
+				}
+			});
 
 			for (
 				const att of m.latest_version.type === "DefaultMarkdown"
@@ -669,10 +677,8 @@ export function createApi(
 					if (idx !== -1) {
 						r.items.splice(idx, 1);
 					}
-					batch(() => {
-						messages.cache.delete(thread_id);
-						messages._updateMutators(ranges, thread_id);
-					});
+					messages.cache.delete(thread_id);
+					messages._updateMutators(ranges, thread_id);
 				}
 				const t = api.channels.cache.get(msg.channel_id);
 				if (t) {

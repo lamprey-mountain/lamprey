@@ -79,10 +79,6 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		Set<string>
 	>(new Set());
 
-	const [categories, setCategories] = createSignal<
-		Array<{ category: Channel | null; channels: Array<Channel> }>
-	>([]);
-
 	createEffect(() => {
 		if (!props.room_id) {
 			api.dms.list();
@@ -112,8 +108,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		return permissions.has("ViewChannel");
 	};
 
-	// update list when room changes
-	createEffect(() => {
+	const categories = createMemo<
+		Array<{ category: Channel | null; channels: Array<Channel> }>
+	>(() => {
 		const allChannels = [...api.channels.cache.values()].filter(
 			(c) =>
 				(props.room_id ? c.room_id === props.room_id : c.room_id === null) &&
@@ -167,8 +164,6 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		}
 
 		for (const thread of threads) {
-			// parent_id should assume to be present if it was filtered as a thread/nested doc
-			// but we handle null just in case
 			if (thread.parent_id) {
 				const parent = channelMap.get(thread.parent_id);
 				if (parent) {
@@ -183,54 +178,47 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			}
 		}
 
-		const categories = new Map<
+		const categoryMap = new Map<
 			string | null,
 			Array<Channel & { threads: Channel[] }>
 		>();
 		for (const c of channelMap.values()) {
 			if (c.type === "Category") {
 				if (canViewChannel(c)) {
-					const cat = categories.get(c.id) ?? [];
-					categories.set(c.id, cat);
+					const cat = categoryMap.get(c.id) ?? [];
+					categoryMap.set(c.id, cat);
 				}
 			} else {
-				const children = categories.get(c.parent_id!) ?? [];
+				const children = categoryMap.get(c.parent_id!) ?? [];
 				children.push(c);
-				categories.set(c.parent_id!, children);
+				categoryMap.set(c.parent_id!, children);
 			}
 		}
-		const list = [...categories.entries()]
+		return [...categoryMap.entries()]
 			.map(([cid, cs]) => ({
 				category: cid ? api.channels.cache.get(cid)! : null,
 				channels: cs,
 			}))
 			.filter(({ channels }) => {
-				// categories and should still be shown if they have visible channels
 				return channels.length > 0;
 			})
 			.sort((a, b) => {
-				// null category comes first
 				if (!a.category) return -1;
 				if (!b.category) return 1;
 
-				// categories with positions come first
 				if (a.category.position === null && b.category.position === null) {
-					// newer categories first
 					return a.category.id < b.category.id ? 1 : -1;
 				}
 				if (a.category.position === null) return 1;
 				if (b.category.position === null) return -1;
 
-				// order by position
 				const p = a.category.position! - b.category.position!;
 				if (p === 0) {
-					// newer categories first
 					return a.category.id < b.category.id ? 1 : -1;
 				}
 
 				return p;
-			});
-		setCategories(list as any);
+			}) as any;
 	});
 
 	// helper to get channel id from the element's data attribute

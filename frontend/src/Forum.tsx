@@ -9,7 +9,7 @@ import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
 import { RenderUploadItem } from "./Input.tsx";
-import { handleSubmit } from "./dispatch/submit.ts";
+import { handleSubmit } from "./contexts/submit.ts";
 import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";

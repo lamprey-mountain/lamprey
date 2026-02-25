@@ -21,33 +21,38 @@ export class Channels {
 		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
 
-	fetch(channel_id: () => string): Resource<Channel> {
-		const [resource, { mutate }] = createResource(channel_id, (channel_id) => {
+	fetch(channel_id_sig: () => string): Resource<Channel> {
+		const [resource, { mutate }] = createResource(
+			channel_id_sig,
+			(channel_id) => {
+				const cached = this.cache.get(channel_id);
+				if (cached) return cached;
+				const existing = this._requests.get(channel_id);
+				if (existing) return existing;
+
+				const req = (async () => {
+					const data = await fetchWithRetry(() =>
+						this.api.client.http.GET(
+							"/api/v1/channel/{channel_id}",
+							{
+								params: { path: { channel_id: channel_id } },
+							},
+						)
+					);
+					this._requests.delete(channel_id);
+					this.cache.set(channel_id, data);
+					return data;
+				})();
+
+				this._requests.set(channel_id, req);
+				return req;
+			},
+		);
+
+		createEffect(() => {
+			const channel_id = channel_id_sig();
 			const cached = this.cache.get(channel_id);
-			if (cached) return cached;
-			const existing = this._requests.get(channel_id);
-			if (existing) return existing;
-
-			const req = (async () => {
-				const data = await fetchWithRetry(() =>
-					this.api.client.http.GET(
-						"/api/v1/channel/{channel_id}",
-						{
-							params: { path: { channel_id: channel_id } },
-						},
-					)
-				);
-				this._requests.delete(channel_id);
-				this.cache.set(channel_id, data);
-				return data;
-			})();
-
-			createEffect(() => {
-				mutate(this.cache.get(channel_id));
-			});
-
-			this._requests.set(channel_id, req);
-			return req;
+			if (cached) mutate(cached);
 		});
 
 		return resource;
@@ -388,11 +393,19 @@ export class Channels {
 		);
 		const t = this.cache.get(channel_id);
 		if (t) {
+			const is_unread = version_id < (t.last_version_id ?? "");
+			if (
+				t.last_read_id === version_id &&
+				t.mention_count === 0 &&
+				t.is_unread === is_unread
+			) {
+				return;
+			}
 			this.cache.set(channel_id, {
 				...t,
 				last_read_id: version_id,
 				mention_count: 0,
-				is_unread: version_id < (t.last_version_id ?? ""),
+				is_unread,
 			});
 		}
 	}
@@ -413,17 +426,28 @@ export class Channels {
 			})
 		);
 
-		for (const ack of acks) {
-			const t = this.cache.get(ack.channel_id);
-			if (t) {
-				this.cache.set(ack.channel_id, {
-					...t,
-					last_read_id: ack.version_id,
-					mention_count: ack.mention_count ?? 0,
-					is_unread: ack.version_id < (t.last_version_id ?? ""),
-				});
+		batch(() => {
+			for (const ack of acks) {
+				const t = this.cache.get(ack.channel_id);
+				if (t) {
+					const is_unread = ack.version_id < (t.last_version_id ?? "");
+					const mention_count = ack.mention_count ?? 0;
+					if (
+						t.last_read_id === ack.version_id &&
+						t.mention_count === mention_count &&
+						t.is_unread === is_unread
+					) {
+						continue;
+					}
+					this.cache.set(ack.channel_id, {
+						...t,
+						last_read_id: ack.version_id,
+						mention_count,
+						is_unread,
+					});
+				}
 			}
-		}
+		});
 	}
 
 	async lock(channel_id: string) {

@@ -33,10 +33,13 @@ export class RoomMembers {
 		});
 	}
 
-	fetch(room_id: () => string, user_id: () => string): Resource<RoomMember> {
+	fetch(
+		room_id_sig: () => string,
+		user_id_sig: () => string,
+	): Resource<RoomMember> {
 		const query = () => ({
-			room_id: room_id(),
-			user_id: user_id(),
+			room_id: room_id_sig(),
+			user_id: user_id_sig(),
 		});
 
 		const [resource, { mutate }] = createResource(
@@ -91,7 +94,9 @@ export class RoomMembers {
 		);
 
 		createEffect(() => {
-			const member = this.cache.get(room_id())?.get(user_id());
+			const room_id = room_id_sig();
+			const user_id = user_id_sig();
+			const member = this.cache.get(room_id)?.get(user_id);
 			if (member) mutate(member);
 		});
 

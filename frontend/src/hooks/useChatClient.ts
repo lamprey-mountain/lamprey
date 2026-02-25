@@ -7,7 +7,6 @@ import { createResource } from "solid-js";
 import * as i18n from "@solid-primitives/i18n";
 import type en from "../i18n/en.tsx";
 import { createApi } from "../api.tsx";
-import { createDispatcher } from "../dispatch/mod.ts";
 import { useMouseTracking } from "./useMouseTracking.ts";
 import { SlashCommands } from "../contexts/slash-commands";
 import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
@@ -67,7 +66,6 @@ export function useChatClient(config: Config) {
 		cursor: {
 			pos: [],
 			vel: 0,
-			preview: null,
 		},
 	});
 
@@ -107,9 +105,7 @@ export function useChatClient(config: Config) {
 	const ctx: ChatCtx = {
 		client,
 		data,
-		dispatch: (() => {
-			throw new Error("Dispatch not initialized");
-		}) as ChatCtx["dispatch"],
+		dataUpdate: update,
 
 		t: i18n.translator(() => dict()),
 		events,
@@ -131,6 +127,7 @@ export function useChatClient(config: Config) {
 		channel_contexts: new ReactiveMap(),
 		room_contexts: new ReactiveMap(),
 		document_contexts: new ReactiveMap(),
+		api,
 	};
 
 	createEffect(() => {
@@ -142,9 +139,6 @@ export function useChatClient(config: Config) {
 		);
 	});
 
-	const dispatch = createDispatcher(ctx, api, update);
-	ctx.dispatch = dispatch;
-
 	useMouseTracking(update);
 
 	onCleanup(() => client.stop());
@@ -155,13 +149,13 @@ export function useChatClient(config: Config) {
 		if (TOKEN) {
 			client.start(TOKEN);
 		} else {
-			ctx.dispatch({ do: "server.init_session" });
+			api.tempCreateSession();
 		}
 	});
 
 	if (!client.opts.token) {
 		queueMicrotask(() => {
-			ctx.dispatch({ do: "server.init_session" });
+			api.tempCreateSession();
 		});
 	}
 

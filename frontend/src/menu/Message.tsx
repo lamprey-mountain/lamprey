@@ -6,6 +6,7 @@ import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Show } from "solid-js";
+import { useReadTracking } from "../contexts/read-tracking.tsx";
 
 // should i have a separate one for bulk messages?
 
@@ -18,6 +19,7 @@ type MessageMenuProps = {
 export function MessageMenu(props: MessageMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const { markThreadRead } = useReadTracking();
 	const message = api.messages.fetch(
 		() => props.channel_id,
 		() => props.message_id,
@@ -52,13 +54,7 @@ export function MessageMenu(props: MessageMenuProps) {
 		const next = tl[index - 1];
 		const next_id = next?.id ?? props.message_id;
 		const next_version_id = next?.version_id ?? props.version_id;
-		ctx.dispatch({
-			do: "thread.mark_read",
-			thread_id: props.channel_id,
-			version_id: next_version_id,
-			message_id: next_id,
-			also_local: true,
-		});
+		markThreadRead(props.channel_id, next_version_id, true);
 	}
 
 	const togglePin = () => {

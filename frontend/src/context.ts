@@ -12,7 +12,6 @@ import type {
 	Upload,
 	UserConfig,
 } from "sdk";
-import type { Action } from "./dispatch/types";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
@@ -49,7 +48,6 @@ export type Data = {
 };
 
 export type Cursor = {
-	preview: string | null;
 	vel: number;
 	pos: Array<[number, number]>;
 };
@@ -83,12 +81,14 @@ export type Popout = {
 import type { ChannelContextT } from "./channelctx";
 import type { RoomContextT } from "./contexts/room.tsx";
 import { DocumentContextT } from "./contexts/document.tsx";
+import type { Api } from "./api.tsx";
+import type { SetStoreFunction } from "solid-js/store";
 
 // TODO: split apart this massive context into more granular contexts
 export type ChatCtx = {
 	client: Client;
 	data: Data;
-	dispatch: (action: Action) => void;
+	dataUpdate: SetStoreFunction<Data>;
 
 	t: i18n.Translator<i18n.Flatten<typeof en>>;
 	events: Emitter<Events>;
@@ -109,6 +109,7 @@ export type ChatCtx = {
 	channel_contexts: ReactiveMap<string, ChannelContextT>;
 	room_contexts: ReactiveMap<string, RoomContextT>;
 	document_contexts: ReactiveMap<string, DocumentContextT>;
+	api: Api;
 };
 
 export type MediaCtx = {

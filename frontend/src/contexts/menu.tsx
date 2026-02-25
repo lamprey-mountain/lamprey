@@ -34,15 +34,18 @@ export type Menu =
 export type MenuContextT = {
 	menu: Accessor<Menu | null>;
 	setMenu: Setter<Menu | null>;
+	preview: Accessor<string | null>;
+	setPreview: Setter<string | null>;
 };
 
 const MenuContext = createContext<MenuContextT>();
 
 export const MenuProvider: ParentComponent = (props) => {
 	const [menu, setMenu] = createSignal<Menu | null>(null);
+	const [preview, setPreview] = createSignal<string | null>(null);
 
 	return (
-		<MenuContext.Provider value={{ menu, setMenu }}>
+		<MenuContext.Provider value={{ menu, setMenu, preview, setPreview }}>
 			{props.children}
 		</MenuContext.Provider>
 	);

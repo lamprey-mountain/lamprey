@@ -11,6 +11,7 @@ import { useFloating } from "solid-floating-ui";
 import { autoUpdate, flip } from "@floating-ui/dom";
 import { chatctx, useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
+import { useMenu } from "../contexts/menu.tsx";
 
 function isSeparator(child: any): boolean {
 	return (child as HTMLElement)?.classList.contains("menu-separator");
@@ -18,6 +19,7 @@ function isSeparator(child: any): boolean {
 
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 	const ctx = useCtx();
+	const { setPreview } = useMenu();
 	const resolved = children(() => props.children);
 
 	const filtered = () => {
@@ -45,7 +47,7 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 	return (
 		<menu
 			onMouseDown={(e) => !props.submenu && e.stopPropagation()}
-			onMouseLeave={() => ctx.dispatch({ do: "menu.preview", id: null })}
+			onMouseLeave={() => setPreview(null)}
 			role="menu"
 		>
 			<ul>{filtered()}</ul>
@@ -63,6 +65,7 @@ export function Submenu(
 	>,
 ) {
 	const ctx = useCtx();
+	const { preview, setPreview } = useMenu();
 	const [itemEl, setItemEl] = createSignal<Element | undefined>();
 	const [subEl, setSubEl] = createSignal<HTMLElement | undefined>();
 	const [hovered, setHovered] = createSignal(false);
@@ -77,14 +80,14 @@ export function Submenu(
 	let timeout: ReturnType<typeof setTimeout>;
 
 	function handleMouseEnter() {
-		if (!ctx.data.cursor.preview) {
-			ctx.dispatch({ do: "menu.preview", id: menuId });
+		if (!preview()) {
+			setPreview(menuId);
 		}
 		let s = 1;
 		const attempt = () => {
 			const a = -ctx.data.cursor.vel * (1 / s);
 			if (a <= 0.3) {
-				ctx.dispatch({ do: "menu.preview", id: menuId });
+				setPreview(menuId);
 			} else {
 				s += .01;
 				timeout = setTimeout(attempt, a);
@@ -97,7 +100,7 @@ export function Submenu(
 		clearTimeout(timeout);
 	}
 
-	const visible = () => hovered() || ctx.data.cursor.preview === menuId;
+	const visible = () => hovered() || preview() === menuId;
 
 	createEffect(() => {
 		if (visible()) {
@@ -153,17 +156,18 @@ export function Item(
 	>,
 ) {
 	const ctx = useContext(chatctx)!;
+	const { preview, setPreview } = useMenu();
 
 	let timeout: number;
 	function handleMouseEnter() {
-		if (!ctx.data.cursor.preview) {
-			ctx.dispatch({ do: "menu.preview", id: null });
+		if (!preview()) {
+			setPreview(null);
 		}
 		const s = 1;
 		const attempt = () => {
 			const a = -ctx.data.cursor.vel * (1 / s);
 			if (a <= 0) {
-				ctx.dispatch({ do: "menu.preview", id: null });
+				setPreview(null);
 			} else {
 				timeout = setTimeout(attempt, a);
 			}

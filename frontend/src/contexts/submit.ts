@@ -1,3 +1,5 @@
+// NOTE: maybe this should be a hook, eg. `useMessageSender()`?
+
 import type { ChatCtx, Data } from "../context.ts";
 import type { SetStoreFunction } from "solid-js/store";
 import type { Api } from "../api.tsx";

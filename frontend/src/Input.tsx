@@ -22,7 +22,7 @@ import { Channel } from "sdk";
 import icDelete from "./assets/delete.png";
 import icEdit from "./assets/edit.png";
 import { useChannel } from "./channelctx.tsx";
-import { handleSubmit } from "./dispatch/submit.ts";
+import { handleSubmit } from "./contexts/submit.ts";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { getThumbFromId } from "./media/util.tsx";

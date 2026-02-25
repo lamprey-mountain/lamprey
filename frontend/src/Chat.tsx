@@ -15,7 +15,7 @@ import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
 import { createSignal } from "solid-js";
-import { reconcile } from "solid-js/store";
+import { createStore, reconcile } from "solid-js/store";
 import type { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import type { MessageListAnchor } from "./api/messages.ts";
@@ -32,6 +32,7 @@ import icCall from "./assets/call.png";
 import icThreads from "./assets/threads.png";
 import { useChannel } from "./channelctx.tsx";
 import { useRoom } from "./contexts/room.tsx";
+import { useReadTracking } from "./contexts/read-tracking.tsx";
 
 type ChatProps = {
 	channel: Channel;
@@ -41,6 +42,7 @@ export const ChatMain = (props: ChatProps) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const { t } = useCtx();
+	const { markChannelRead } = useReadTracking();
 	const [channelState, setChannelState] = useChannel()!;
 
 	const read_marker_id = () => channelState.read_marker_id;
@@ -54,7 +56,7 @@ export const ChatMain = (props: ChatProps) => {
 	};
 
 	const messages = api.messages.list(() => props.channel.id, anchor);
-	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
+	const [tl, setTl] = createStore<Array<TimelineItemT>>([]);
 
 	createEffect(() =>
 		console.log(
@@ -69,13 +71,7 @@ export const ChatMain = (props: ChatProps) => {
 	const markReadImmediately = () => {
 		const version_id = props.channel.last_version_id;
 		if (version_id) {
-			ctx.dispatch({
-				do: "channel.mark_read",
-				channel_id: props.channel.id,
-				delay: true,
-				version_id,
-				also_local: false,
-			});
+			markChannelRead(props.channel.id, version_id, false, true);
 		}
 	};
 
@@ -94,7 +90,7 @@ export const ChatMain = (props: ChatProps) => {
 	let last_thread_id: string | undefined;
 	let chatRef: HTMLDivElement | undefined;
 	const list = createList({
-		items: tl,
+		items: () => [...tl],
 		autoscroll,
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
@@ -190,9 +186,9 @@ export const ChatMain = (props: ChatProps) => {
 					read_marker_id: rid ?? null,
 					// slice: { start: 0, end: 50 },
 				});
-				setTl((old) => [...reconcile(rendered)(old)]);
+				setTl(reconcile(rendered));
 				anchor();
-				console.log("reconciled", tl());
+				console.log("reconciled", tl);
 				console.timeEnd("rendertimeline");
 			} else {
 				console.log("tried to render empty timeline");
@@ -293,13 +289,7 @@ export const ChatMain = (props: ChatProps) => {
 							props.channel.last_version_id;
 
 					if (version_id) {
-						ctx.dispatch({
-							do: "channel.mark_read",
-							channel_id: channel_id,
-							delay: false,
-							also_local: true,
-							version_id,
-						});
+						markChannelRead(channel_id, version_id, true, false);
 					}
 
 					// HACK: i need to make the update order less jank
@@ -737,8 +727,7 @@ export function renderTimeline(
 		}
 		newItems.push({
 			type: "message",
-			id: msg.latest_version.version_id + "/" +
-				("embeds" in msg ? msg.latest_version.embeds.length : 0),
+			id: msg.id,
 			message: msg,
 			separate: prev ? shouldSplit(msg, prev) : true,
 		});

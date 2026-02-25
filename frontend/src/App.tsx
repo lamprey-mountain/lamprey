@@ -31,6 +31,7 @@ import { ModalsProvider, useModals } from "./contexts/modal";
 import { MemberListProvider } from "./contexts/memberlist.tsx";
 import { UploadsProvider } from "./contexts/uploads.tsx";
 import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
+import { ReadTrackingProvider } from "./contexts/read-tracking.tsx";
 import {
 	AutocompleteProvider,
 	FormattingToolbarProvider,
@@ -117,25 +118,31 @@ export const AppProviders: Component<
 	return (
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
-				<MemberListProvider>
-					<ModalsProvider>
-						<UploadsProvider ctx={ctx}>
-							<VoiceProvider>
-								<SlashCommandsProvider value={ctx.slashCommands}>
-									<MenuProvider>
-										<AutocompleteProvider>
-											<FormattingToolbarProvider>
-												<UserPopoutProvider>
-													<AppShell>{props.children}</AppShell>
-												</UserPopoutProvider>
-											</FormattingToolbarProvider>
-										</AutocompleteProvider>
-									</MenuProvider>
-								</SlashCommandsProvider>
-							</VoiceProvider>
-						</UploadsProvider>
-					</ModalsProvider>
-				</MemberListProvider>
+				<ReadTrackingProvider
+					api={api}
+					channel_contexts={ctx.channel_contexts}
+					dataUpdate={ctx.dataUpdate}
+				>
+					<MemberListProvider>
+						<ModalsProvider>
+							<UploadsProvider ctx={ctx}>
+								<VoiceProvider>
+									<SlashCommandsProvider value={ctx.slashCommands}>
+										<MenuProvider>
+											<AutocompleteProvider>
+												<FormattingToolbarProvider>
+													<UserPopoutProvider>
+														<AppShell>{props.children}</AppShell>
+													</UserPopoutProvider>
+												</FormattingToolbarProvider>
+											</AutocompleteProvider>
+										</MenuProvider>
+									</SlashCommandsProvider>
+								</VoiceProvider>
+							</UploadsProvider>
+						</ModalsProvider>
+					</MemberListProvider>
+				</ReadTrackingProvider>
 			</chatctx.Provider>
 		</api.Provider>
 	);

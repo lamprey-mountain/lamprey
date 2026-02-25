@@ -1,4 +1,10 @@
-import { type Channel, getTimestampFromUUID, type Message, User } from "sdk";
+import {
+	Attachment,
+	type Channel,
+	getTimestampFromUUID,
+	type Message,
+	User,
+} from "sdk";
 import { type MessageT, MessageType } from "./types.ts";
 import {
 	createEffect,
@@ -748,7 +754,7 @@ export function MessageView(props: MessageProps) {
 							<Show when={props.message.latest_version.attachments?.length}>
 								<ul class="attachments">
 									<For each={props.message.latest_version.attachments}>
-										{(att) => <AttachmentView media={att} />}
+										{(att) => <AttachmentView att={att} />}
 									</For>
 								</ul>
 							</Show>
@@ -787,7 +793,7 @@ export function MessageView(props: MessageProps) {
 							<Show when={props.message.latest_version.attachments?.length}>
 								<ul class="attachments">
 									<For each={props.message.latest_version.attachments}>
-										{(att) => <AttachmentView media={att} />}
+										{(att) => <AttachmentView att={att} />}
 									</For>
 								</ul>
 							</Show>
@@ -927,44 +933,43 @@ function ReplyView(props: ReplyProps) {
 }
 
 export function AttachmentView(
-	props: { media: Message["latest_version"]["attachments"][number] },
+	props: { att: Attachment },
 ) {
-	console.log("AAA", props.media);
-	if (props.media.type !== "Media") return null;
-	const b = () => props.media.media.content_type.split("/")[0];
+	if (props.att.type !== "Media") return null;
+	const b = () => props.att.media.content_type.split("/")[0];
 	if (b() === "image") {
 		return (
 			<li class="raw">
 				<ImageView
-					media={props.media.media}
+					media={props.att.media}
 				/>
 			</li>
 		);
 	} else if (b() === "video") {
 		return (
 			<li class="raw">
-				<VideoView media={props.media.media} />
+				<VideoView media={props.att.media} />
 			</li>
 		);
 	} else if (b() === "audio") {
 		return (
 			<li class="raw">
-				<AudioView media={props.media.media} />
+				<AudioView media={props.att.media} />
 			</li>
 		);
 	} else if (
 		b() === "text" ||
-		/^application\/json\b/.test(props.media.media.content_type)
+		/^application\/json\b/.test(props.att.media.content_type)
 	) {
 		return (
 			<li class="raw">
-				<TextView media={props.media.media} />
+				<TextView media={props.att.media} />
 			</li>
 		);
 	} else {
 		return (
 			<li>
-				<FileView media={props.media.media} />
+				<FileView media={props.att.media} />
 			</li>
 		);
 	}

@@ -488,31 +488,31 @@ export class Messages {
 
 		console.log("[message:send] local message", local);
 
-		const r = this.cacheRanges.get(channel_id);
-		if (r) {
-			r.live.items.push(local);
-			this._updateMutators(r, channel_id);
-		}
+		batch(() => {
+			this.cache.set(id, local);
+			const r = this.cacheRanges.get(channel_id);
+			if (r) {
+				r.live.items.push(local);
+				this._updateMutators(r, channel_id);
+			}
+		});
 
 		const data = await fetchWithRetry(() =>
-			this.api.client.http.POST(
-				"/api/v1/channel/{channel_id}/message",
-				{
-					params: {
-						path: { channel_id: channel_id },
-					},
-					body: {
-						...body,
-						attachments: body.attachments.map((a) => ({
-							type: "Media",
-							media_id: a.id,
-						})),
-					},
-					headers: {
-						"Idempotency-Key": id,
-					},
+			this.api.client.http.POST("/api/v1/channel/{channel_id}/message", {
+				params: {
+					path: { channel_id: channel_id },
 				},
-			)
+				body: {
+					...body,
+					attachments: body.attachments.map((a) => ({
+						type: "Media",
+						media_id: a.id,
+					})),
+				},
+				headers: {
+					"Idempotency-Key": id,
+				},
+			})
 		);
 		return data as Message;
 	}
@@ -550,11 +550,45 @@ export class Messages {
 		console.log("update mutators", this._mutators);
 		for (const mut of this._mutators) {
 			if (mut.thread_id !== thread_id) continue;
-			if (mut.query.type !== "backwards") continue;
-			if (mut.query.message_id) continue;
-			const start = Math.max(r.live.len - mut.query.limit, 0);
-			const end = Math.min(start + mut.query.limit, r.live.len);
-			mut.mutate(r.live.slice(start, end));
+
+			// 1. Handle live backwards queries (the most common case for being at the bottom)
+			if (mut.query.type === "backwards" && !mut.query.message_id) {
+				const start = Math.max(r.live.len - mut.query.limit, 0);
+				const end = r.live.len;
+				mut.mutate(r.live.slice(start, end));
+				continue;
+			}
+
+			// 2. Handle queries pinned to a specific message ID
+			if (mut.query.message_id) {
+				const range = r.find(mut.query.message_id);
+				// We only care about ranges that are at the "live" end (no forward messages known)
+				// because only those will be affected by a newly sent message.
+				if (range && !range.has_forward) {
+					const idx = range.items.findIndex((i) =>
+						i.id === mut.query.message_id
+					);
+					if (idx !== -1) {
+						let start: number;
+						let end: number;
+
+						if (mut.query.type === "forwards") {
+							start = idx;
+							end = Math.min(idx + mut.query.limit, range.len);
+						} else if (mut.query.type === "backwards") {
+							end = idx + 1;
+							start = Math.max(end - mut.query.limit, 0);
+						} else if (mut.query.type === "context") {
+							start = Math.max(idx - mut.query.limit, 0);
+							end = Math.min(idx + mut.query.limit, range.len);
+						} else {
+							continue;
+						}
+
+						mut.mutate(range.slice(start, end));
+					}
+				}
+			}
 		}
 	}
 

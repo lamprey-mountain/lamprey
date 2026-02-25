@@ -40,7 +40,7 @@ function UserMention(props: { id: string }) {
 
 	return (
 		<span
-			class="mention-user"
+			class="mention mention-user"
 			onClick={(e) => {
 				e.stopPropagation();
 				const currentTarget = e.currentTarget as HTMLElement;
@@ -70,7 +70,7 @@ function RoleMention(props: { id: string }) {
 		return api.roles.fetch(() => ctx.channel!.room_id!, () => props.id)();
 	});
 
-	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
+	return <span class="mention mention-role">@{role()?.name ?? "..."}</span>;
 }
 
 function ChannelMention(props: { id: string }) {
@@ -80,7 +80,7 @@ function ChannelMention(props: { id: string }) {
 
 	return (
 		<span
-			class="mention-channel"
+			class="mention mention-channel"
 			onClick={(e) => {
 				e.stopPropagation();
 				navigate(`/channel/${props.id}`);
