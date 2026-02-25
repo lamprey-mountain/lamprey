@@ -219,7 +219,7 @@ export const createEditor = (
 	api.events.on("sync", onSync);
 
 	const createState = () => {
-		let type = ydoc.get("prosemirror", Y.XmlFragment);
+		let type = ydoc.get("doc", Y.XmlFragment);
 		let mapping = initProseMirrorDoc(type, schema).mapping;
 
 		let doc;
