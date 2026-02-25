@@ -5,6 +5,7 @@ import { notificationPermission } from "../notification";
 import { useCtx } from "../context";
 import { Dropdown } from "../Dropdown";
 import { useApi } from "../api";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 type NotifAction = "Notify" | "Watching" | "Ignore";
 type NotifsMessages = "Everything" | "Watching" | "Mentions" | "Nothing";
@@ -142,17 +143,13 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					</button>
 				</div>
 			</Show>
-			<label class="option">
-				<input
-					type="checkbox"
-					checked={isFrontendConfigEnabled("desktop_notifs")}
-					onInput={(e) =>
-						setFrontendConfig(
-							"desktop_notifs",
-							e.target.checked ? "yes" : "no",
-						)}
-					style="display: none;"
-				/>
+			<CheckboxOption
+				id={`user-${ctx.user?.id ?? "@self"}-desktop-notifs`}
+				checked={isFrontendConfigEnabled("desktop_notifs")}
+				onChange={(checked) =>
+					setFrontendConfig("desktop_notifs", checked ? "yes" : "no")}
+				seed={`user-${ctx.user?.id ?? "@self"}-desktop-notifs`}
+			>
 				<Checkbox
 					checked={isFrontendConfigEnabled("desktop_notifs")}
 					seed={`user-${ctx.user?.id ?? "@self"}-desktop-notifs`}
@@ -161,15 +158,14 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					<div>{t("user_settings.desktop_notifs")}</div>
 					<div class="dim">{t("user_settings.desktop_notifs_description")}</div>
 				</div>
-			</label>
-			<label class="option">
-				<input
-					type="checkbox"
-					checked={isFrontendConfigEnabled("push_notifs")}
-					onInput={(e) =>
-						setFrontendConfig("push_notifs", e.target.checked ? "yes" : "no")}
-					style="display: none;"
-				/>
+			</CheckboxOption>
+			<CheckboxOption
+				id={`user-${ctx.user?.id ?? "@self"}-push-notifs`}
+				checked={isFrontendConfigEnabled("push_notifs")}
+				onChange={(checked) =>
+					setFrontendConfig("push_notifs", checked ? "yes" : "no")}
+				seed={`user-${ctx.user?.id ?? "@self"}-push-notifs`}
+			>
 				<Checkbox
 					checked={isFrontendConfigEnabled("push_notifs")}
 					seed={`user-${ctx.user?.id ?? "@self"}-push-notifs`}
@@ -178,15 +174,14 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					<div>{t("user_settings.push_notifs")}</div>
 					<div class="dim">{t("user_settings.push_notifs_description")}</div>
 				</div>
-			</label>
-			<label class="option">
-				<input
-					type="checkbox"
-					checked={isFrontendConfigEnabled("tts_notifs")}
-					onInput={(e) =>
-						setFrontendConfig("tts_notifs", e.target.checked ? "yes" : "no")}
-					style="display: none;"
-				/>
+			</CheckboxOption>
+			<CheckboxOption
+				id={`user-${ctx.user?.id ?? "@self"}-tts-notifs`}
+				checked={isFrontendConfigEnabled("tts_notifs")}
+				onChange={(checked) =>
+					setFrontendConfig("tts_notifs", checked ? "yes" : "no")}
+				seed={`user-${ctx.user?.id ?? "@self"}-tts-notifs`}
+			>
 				<Checkbox
 					checked={isFrontendConfigEnabled("tts_notifs")}
 					seed={`user-${ctx.user?.id ?? "@self"}-tts-notifs`}
@@ -195,7 +190,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					<div>{t("user_settings.tts_notifs")}</div>
 					<div class="dim">{t("user_settings.tts_notifs_description")}</div>
 				</div>
-			</label>
+			</CheckboxOption>
 			<h3 class="dim" style="margin-top:8px;margin-left:4px">
 				{t("user_settings.notifications_more_stuff")}
 			</h3>

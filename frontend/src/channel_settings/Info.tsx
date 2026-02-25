@@ -8,6 +8,7 @@ import { DurationInput } from "../DurationInput.tsx";
 import { createUpload } from "sdk";
 import { ChannelIconGdm } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
@@ -262,13 +263,12 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</div>
 			</Show>
 			<div>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={editingNsfw()}
-						onInput={(e) => setEditingNsfw(e.currentTarget.checked)}
-						style="display: none;"
-					/>
+				<CheckboxOption
+					id={`channel-${props.channel.id}-nsfw`}
+					checked={editingNsfw()}
+					onChange={setEditingNsfw}
+					seed={`channel-${props.channel.id}-nsfw`}
+				>
 					<Checkbox
 						checked={editingNsfw()}
 						seed={`channel-${props.channel.id}-nsfw`}
@@ -277,7 +277,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						<b>nsfw</b>
 						<div>mark this channel as not safe for work</div>
 					</div>
-				</label>
+				</CheckboxOption>
 			</div>
 			<Show when={props.channel.type === "Forum"}>
 				<div class="tags">

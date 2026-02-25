@@ -5,6 +5,7 @@ import { useApi } from "../api.tsx";
 import { getThumbFromId } from "../media/util.tsx";
 import { Checkbox } from "../icons";
 import { Dropdown } from "../Dropdown";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const api = useApi();
@@ -85,31 +86,30 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 				/>
 			</div>
 			<div class="options">
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["underline_links"] === "yes"}
-						onInput={toggle("underline_links")}
-					/>
+				<CheckboxOption
+					id={`user-${ctx.user?.id ?? "@self"}-underline-links`}
+					checked={ctx.userConfig().frontend["underline_links"] === "yes"}
+					onChange={() => toggle("underline_links")()}
+					seed={`user-${ctx.user?.id ?? "@self"}-underline-links`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["underline_links"] === "yes"}
 						seed={`user-${ctx.user?.id ?? "@self"}-underline-links`}
 					/>
 					<span>{t("user_settings.underline_links")}</span>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
-						onInput={toggle("show_send_button")}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${ctx.user?.id ?? "@self"}-show-send-button`}
+					checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
+					onChange={() => toggle("show_send_button")()}
+					seed={`user-${ctx.user?.id ?? "@self"}-show-send-button`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
 						seed={`user-${ctx.user?.id ?? "@self"}-show-send-button`}
 					/>
 					<span>{t("user_settings.show_send_button")}</span>
-				</label>
+				</CheckboxOption>
 				<div class="option apart">
 					<div>
 						<div>{t("user_settings.message_style")}</div>
@@ -249,60 +249,54 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					/>
 				</div>
 				<h3 class="dim">{t("user_settings.reduced_motion")}</h3>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["reduced_motion"] === "yes"}
-						onInput={toggle("reduced_motion")}
-						style="display: none;"
-					/>
+				<CheckboxOption
+					id={`user-${ctx.user?.id ?? "@self"}-reduced-motion`}
+					checked={ctx.userConfig().frontend["reduced_motion"] === "yes"}
+					onChange={() => toggle("reduced_motion")()}
+					seed={`user-${ctx.user?.id ?? "@self"}-reduced-motion`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["reduced_motion"] === "yes"}
 						seed={`user-${ctx.user?.id ?? "@self"}-reduced-motion`}
 					/>
 					<span>{t("user_settings.reduced_motion")}</span>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["reduced_motion_sync"] ===
-							"yes"}
-						onInput={toggle("reduced_motion_sync")}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${ctx.user?.id ?? "@self"}-reduced-motion-sync`}
+					checked={ctx.userConfig().frontend["reduced_motion_sync"] === "yes"}
+					onChange={() => toggle("reduced_motion_sync")()}
+					seed={`user-${ctx.user?.id ?? "@self"}-reduced-motion-sync`}
+				>
 					<Checkbox
-						checked={ctx.userConfig().frontend["reduced_motion_sync"] ===
-							"yes"}
+						checked={ctx.userConfig().frontend["reduced_motion_sync"] === "yes"}
 						seed={`user-${ctx.user?.id ?? "@self"}-reduced-motion-sync`}
 					/>
 					<span>{t("user_settings.reduced_motion_sync")}</span>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["autoplay_gifs"] === "yes"}
-						onInput={toggle("autoplay_gifs")}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${ctx.user?.id ?? "@self"}-autoplay-gifs`}
+					checked={ctx.userConfig().frontend["autoplay_gifs"] === "yes"}
+					onChange={() => toggle("autoplay_gifs")()}
+					seed={`user-${ctx.user?.id ?? "@self"}-autoplay-gifs`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["autoplay_gifs"] === "yes"}
 						seed={`user-${ctx.user?.id ?? "@self"}-autoplay-gifs`}
 					/>
 					<span>{t("user_settings.autoplay_gifs")}</span>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["autoplay_emoji"] === "yes"}
-						onInput={toggle("autoplay_emoji")}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${ctx.user?.id ?? "@self"}-autoplay-emoji`}
+					checked={ctx.userConfig().frontend["autoplay_emoji"] === "yes"}
+					onChange={() => toggle("autoplay_emoji")()}
+					seed={`user-${ctx.user?.id ?? "@self"}-autoplay-emoji`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["autoplay_emoji"] === "yes"}
 						seed={`user-${ctx.user?.id ?? "@self"}-autoplay-emoji`}
 					/>
 					<span>{t("user_settings.autoplay_emoji")}</span>
-				</label>
+				</CheckboxOption>
 			</div>
 		</div>
 	);

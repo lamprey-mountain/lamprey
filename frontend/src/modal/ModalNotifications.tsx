@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { Dropdown } from "../Dropdown";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 interface ModalNotificationsProps {
 	room_id: string;
@@ -74,14 +75,12 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 				</div>
 				<div>
 					<h3 class="dim">special notifications</h3>
-					<div class="option">
-						<input
-							id="opt-everyone"
-							type="checkbox"
-							checked={everyone()}
-							onInput={(e) => setEveryone(e.currentTarget.checked)}
-							style="display: none;"
-						/>
+					<CheckboxOption
+						id="opt-everyone"
+						checked={everyone()}
+						onChange={setEveryone}
+						seed={`modal-notifications-${props.room_id}-everyone`}
+					>
 						<Checkbox
 							checked={everyone()}
 							seed={`modal-notifications-${props.room_id}-everyone`}
@@ -93,15 +92,13 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 								mentioned.
 							</div>
 						</label>
-					</div>
-					<div class="option">
-						<input
-							id="opt-role"
-							type="checkbox"
-							checked={role()}
-							onInput={(e) => setRole(e.currentTarget.checked)}
-							style="display: none;"
-						/>
+					</CheckboxOption>
+					<CheckboxOption
+						id="opt-role"
+						checked={role()}
+						onChange={setRole}
+						seed={`modal-notifications-${props.room_id}-role`}
+					>
 						<Checkbox
 							checked={role()}
 							seed={`modal-notifications-${props.room_id}-role`}
@@ -113,7 +110,7 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 								mentioned.
 							</div>
 						</label>
-					</div>
+					</CheckboxOption>
 					{/* TODO: (when impl'd) mobile push notifications */}
 					{/* TODO: (when impl'd) calendar event */}
 				</div>

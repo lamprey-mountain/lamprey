@@ -3,6 +3,7 @@ import { type User } from "sdk";
 import { Checkbox } from "../icons";
 import { useCtx } from "../context.ts";
 import { Dropdown } from "../Dropdown.tsx";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 export function Chat(props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
@@ -25,74 +26,69 @@ export function Chat(props: VoidProps<{ user: User }>) {
 			<br />
 			<div class="options">
 				<h3 class="dim" style="margin-top:0">{t("user_settings.media")}</h3>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["preview_attachments"] === "yes"}
-						onInput={toggle("preview_attachments")}
-						style="display: none;"
-					/>
+				<CheckboxOption
+					id={`user-${props.user.id}-preview-attachments`}
+					checked={ctx.userConfig().frontend["preview_attachments"] === "yes"}
+					onChange={() => toggle("preview_attachments")()}
+					seed={`user-${props.user.id}-preview-attachments`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["preview_attachments"] === "yes"}
 						seed={`user-${props.user.id}-preview-attachments`}
 					/>
 					<span>{t("user_settings.preview_attachments")}</span>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig()
-							.frontend["preview_attachments_descriptions"] === "yes"}
-						onInput={toggle("preview_attachments_descriptions")}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${props.user.id}-preview-attachments-descriptions`}
+					checked={ctx.userConfig()
+						.frontend["preview_attachments_descriptions"] === "yes"}
+					onChange={() => toggle("preview_attachments_descriptions")()}
+					seed={`user-${props.user.id}-preview-attachments-descriptions`}
+				>
 					<Checkbox
 						checked={ctx.userConfig()
 							.frontend["preview_attachments_descriptions"] === "yes"}
 						seed={`user-${props.user.id}-preview-attachments-descriptions`}
 					/>
 					<span>{t("user_settings.preview_attachments_descriptions")}</span>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["link_previews"] === "yes"}
-						onInput={toggle("link_previews")}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${props.user.id}-link-previews`}
+					checked={ctx.userConfig().frontend["link_previews"] === "yes"}
+					onChange={() => toggle("link_previews")()}
+					seed={`user-${props.user.id}-link-previews`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["link_previews"] === "yes"}
 						seed={`user-${props.user.id}-link-previews`}
 					/>
 					<span>{t("user_settings.link_previews")}</span>
-				</label>
+				</CheckboxOption>
 				<h3 class="dim">{t("user_settings.input")}</h3>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
-						onInput={toggle("show_send_button")}
-						style="display: none;"
-					/>
+				<CheckboxOption
+					id={`user-${props.user.id}-show-send-button`}
+					checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
+					onChange={() => toggle("show_send_button")()}
+					seed={`user-${props.user.id}-show-send-button`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
 						seed={`user-${props.user.id}-show-send-button`}
 					/>
 					<span>{t("user_settings.show_send_button")}</span>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={ctx.userConfig().frontend["typing_indicators"] === "yes"}
-						onInput={toggle("typing_indicators")}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${props.user.id}-typing-indicators`}
+					checked={ctx.userConfig().frontend["typing_indicators"] === "yes"}
+					onChange={() => toggle("typing_indicators")()}
+					seed={`user-${props.user.id}-typing-indicators`}
+				>
 					<Checkbox
 						checked={ctx.userConfig().frontend["typing_indicators"] === "yes"}
 						seed={`user-${props.user.id}-typing-indicators`}
 					/>
 					<span>{t("user_settings.typing_indicators")}</span>
-				</label>
+				</CheckboxOption>
 				<h3 class="dim">{t("user_settings.content")}</h3>
 				<div class="option apart">
 					<div>

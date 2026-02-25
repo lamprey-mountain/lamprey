@@ -18,6 +18,7 @@ import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
 import { Resizable } from "../Resizable";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 import { getThumbFromId } from "../media/util";
 import { Avatar } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
@@ -531,15 +532,14 @@ const AppEditor = (
 					{props.edit.desc() ?? ""}
 				</textarea>
 				<div style="height: 8px" />
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={props.edit.app.bridge}
-						onInput={(e) => {
-							props.edit.setApp("bridge", e.currentTarget.checked);
-						}}
-						style="display: none;"
-					/>
+				<CheckboxOption
+					id={`app-${props.edit.app.id}-bridge`}
+					checked={props.edit.app.bridge}
+					onChange={(checked) => {
+						props.edit.setApp("bridge", checked);
+					}}
+					seed={`app-${props.edit.app.id}-bridge`}
+				>
 					<Checkbox
 						checked={props.edit.app.bridge}
 						seed={`app-${props.edit.app.id}-bridge`}
@@ -548,16 +548,15 @@ const AppEditor = (
 						<div>bridge</div>
 						<div class="dim">can create puppets</div>
 					</div>
-				</label>
-				<label class="option">
-					<input
-						type="checkbox"
-						checked={props.edit.app.public}
-						onInput={(e) => {
-							props.edit.setApp("public", e.currentTarget.checked);
-						}}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`app-${props.edit.app.id}-public`}
+					checked={props.edit.app.public}
+					onChange={(checked) => {
+						props.edit.setApp("public", checked);
+					}}
+					seed={`app-${props.edit.app.id}-public`}
+				>
 					<Checkbox
 						checked={props.edit.app.public}
 						seed={`app-${props.edit.app.id}-public`}
@@ -566,7 +565,7 @@ const AppEditor = (
 						<div>public</div>
 						<div class="dim">anyone can add and use this bot</div>
 					</div>
-				</label>
+				</CheckboxOption>
 				<button
 					style="margin-left:4px"
 					onClick={(e) => {

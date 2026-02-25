@@ -5,6 +5,7 @@ import { useApi } from "../api";
 import { useModals } from "../contexts/modal";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 type ModalAttachmentProps = {
 	channel_id: string;
@@ -123,14 +124,12 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 						style="padding:4px;width:100%;box-sizing:border-box"
 					/>
 				</label>
-				<div class="option">
-					<input
-						id="opt-spoiler"
-						type="checkbox"
-						checked={spoiler()}
-						onInput={(e) => setSpoiler(e.currentTarget.checked)}
-						style="display:none"
-					/>
+				<CheckboxOption
+					id="opt-spoiler"
+					checked={spoiler()}
+					onChange={setSpoiler}
+					seed="modal-attachment-spoiler"
+				>
 					<Checkbox checked={spoiler()} seed="modal-attachment-spoiler" />
 					<label for="opt-spoiler">
 						<div>Mark as spoiler</div>
@@ -138,17 +137,15 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 							Hide the attachment behind a clickable overlay
 						</div>
 					</label>
-				</div>
+				</CheckboxOption>
 				<Show when={false}>
-					<div class="option">
-						<input
-							id="opt-exif"
-							type="checkbox"
-							checked={exif()}
-							onInput={(e) => setExif(e.currentTarget.checked)}
-							style="display:none"
-							disabled={false /* TODO: once strip_exif is set to true, it cannot be set to false */}
-						/>
+					<CheckboxOption
+						id="opt-exif"
+						checked={exif()}
+						onChange={setExif}
+						seed="modal-attachment-exif"
+						disabled={false /* TODO: once strip_exif is set to true, it cannot be set to false */}
+					>
 						{/* TODO: styles for disabled checkbox */}
 						<Checkbox checked={exif()} seed="modal-attachment-exif" />
 						<label for="opt-exif">
@@ -157,7 +154,7 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 								Preserve EXIF data from the original file
 							</div>
 						</label>
-					</div>
+					</CheckboxOption>
 				</Show>
 				<div class="bottom">
 					<button type="button" onClick={() => modalCtl.close()}>cancel</button>

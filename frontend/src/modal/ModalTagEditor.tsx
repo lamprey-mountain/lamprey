@@ -6,6 +6,7 @@ import { useApi } from "../api";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
 import { Colorpicker } from "../Colorpicker";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 interface ModalTagEditorProps {
 	tag?: Tag;
@@ -103,26 +104,23 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 					/>
 				</div>
 
-				<div class="option">
-					<label class="option">
-						<input
-							type="checkbox"
-							checked={restricted()}
-							onInput={(e) => setRestricted(e.currentTarget.checked)}
-							style="display: none;"
-						/>
-						<Checkbox
-							checked={restricted()}
-							seed={`modal-tag-editor-${props.forumChannelId}-restricted`}
-						/>
-						<div>
-							<div>Restricted</div>
-							<div class="dim">
-								Only users with ThreadEdit or ThreadManage can apply this tag
-							</div>
+				<CheckboxOption
+					id={`modal-tag-editor-${props.forumChannelId}-restricted`}
+					checked={restricted()}
+					onChange={setRestricted}
+					seed={`modal-tag-editor-${props.forumChannelId}-restricted`}
+				>
+					<Checkbox
+						checked={restricted()}
+						seed={`modal-tag-editor-${props.forumChannelId}-restricted`}
+					/>
+					<div>
+						<div>Restricted</div>
+						<div class="dim">
+							Only users with ThreadEdit or ThreadManage can apply this tag
 						</div>
-					</label>
-				</div>
+					</div>
+				</CheckboxOption>
 
 				{error() && (
 					<div class="error">

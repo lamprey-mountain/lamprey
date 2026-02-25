@@ -8,6 +8,7 @@ import { Checkbox } from "../icons";
 import { useModals } from "../contexts/modal";
 import { RoomIcon } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -147,19 +148,18 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				</li>
 			</ul>
 			<br />
-			<label class="option">
-				<input
-					type="checkbox"
-					checked={editingPublic()}
-					onChange={(e) => setEditingPublic(e.target.checked)}
-					style="display: none;"
-				/>
+			<CheckboxOption
+				id={`room-${props.room.id}-public`}
+				checked={editingPublic()}
+				onChange={(checked) => setEditingPublic(checked)}
+				seed={`room-${props.room.id}-public`}
+			>
 				<Checkbox
 					checked={editingPublic()}
 					seed={`room-${props.room.id}-public`}
 				/>
 				<span>Make this room public (anyone can join and view)</span>
-			</label>
+			</CheckboxOption>
 			<br />
 		</>
 	);

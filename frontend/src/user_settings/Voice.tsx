@@ -3,6 +3,7 @@ import { type User } from "sdk";
 import { Checkbox } from "../icons";
 import { useCtx } from "../context.ts";
 import { Dropdown } from "../Dropdown";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 export function Voice(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
@@ -122,36 +123,32 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<button>play</button>
 			</div>
 			<h3 class="dim title">audio processing</h3>
-			<label class="option">
-				<input
-					type="checkbox"
-					checked={ctx.userConfig().frontend["voice_echo_cancellation"] ===
-						"yes"}
-					onInput={toggle("voice_echo_cancellation")}
-					style="display: none;"
-				/>
+			<CheckboxOption
+				id={`user-${ctx.user?.id ?? "@self"}-voice-echo-cancellation`}
+				checked={ctx.userConfig().frontend["voice_echo_cancellation"] === "yes"}
+				onChange={() => toggle("voice_echo_cancellation")()}
+				seed={`user-${ctx.user?.id ?? "@self"}-voice-echo-cancellation`}
+			>
 				<Checkbox
 					checked={ctx.userConfig().frontend["voice_echo_cancellation"] ===
 						"yes"}
 					seed={`user-${ctx.user?.id ?? "@self"}-voice-echo-cancellation`}
 				/>
 				<span>Enable echo cancellation</span>
-			</label>
-			<label class="option">
-				<input
-					type="checkbox"
-					checked={ctx.userConfig().frontend["voice_noise_suppression"] ===
-						"yes"}
-					onInput={toggle("voice_noise_suppression")}
-					style="display: none;"
-				/>
+			</CheckboxOption>
+			<CheckboxOption
+				id={`user-${ctx.user?.id ?? "@self"}-voice-noise-suppression`}
+				checked={ctx.userConfig().frontend["voice_noise_suppression"] === "yes"}
+				onChange={() => toggle("voice_noise_suppression")()}
+				seed={`user-${ctx.user?.id ?? "@self"}-voice-noise-suppression`}
+			>
 				<Checkbox
 					checked={ctx.userConfig().frontend["voice_noise_suppression"] ===
 						"yes"}
 					seed={`user-${ctx.user?.id ?? "@self"}-voice-noise-suppression`}
 				/>
 				<span>Enable noise suppression</span>
-			</label>
+			</CheckboxOption>
 			<h3 class="dim title">activation</h3>
 			<div class="options">
 				<div class="option apart">

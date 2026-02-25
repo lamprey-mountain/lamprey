@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { Modal } from "./mod";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 export const ModalExportData = () => {
 	const [, modalCtl] = useModals();
@@ -26,23 +27,20 @@ export const ModalExportData = () => {
 					handleExport();
 				}}
 			>
-				<div class="option">
-					<label class="option">
-						<input
-							type="checkbox"
-							checked={includeMessages()}
-							onInput={(e) => setIncludeMessages(e.currentTarget.checked)}
-							style="display: none;"
-						/>
-						<Checkbox
-							checked={includeMessages()}
-							seed="modal-export-data-include-messages"
-						/>
-						<div>
-							<div>Include messages</div>
-						</div>
-					</label>
-				</div>
+				<CheckboxOption
+					id="modal-export-data-include-messages"
+					checked={includeMessages()}
+					onChange={setIncludeMessages}
+					seed="modal-export-data-include-messages"
+				>
+					<Checkbox
+						checked={includeMessages()}
+						seed="modal-export-data-include-messages"
+					/>
+					<div>
+						<div>Include messages</div>
+					</div>
+				</CheckboxOption>
 
 				<div class="bottom">
 					<button type="button" onClick={handleCancel}>

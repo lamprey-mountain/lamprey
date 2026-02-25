@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import { Modal } from "./mod";
 import { Checkbox } from "../icons";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 interface ModalPrivacyProps {
 	room_id: string;
@@ -16,14 +17,12 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 		<Modal>
 			<div class="modal-privacy">
 				<h3>privacy</h3>
-				<div class="option">
-					<input
-						id="opt-dms"
-						type="checkbox"
-						checked={dms()}
-						onInput={(e) => setDms(e.currentTarget.checked)}
-						style="display: none;"
-					/>
+				<CheckboxOption
+					id="opt-dms"
+					checked={dms()}
+					onChange={setDms}
+					seed={`modal-privacy-${props.room_id}-dms`}
+				>
 					<Checkbox
 						checked={dms()}
 						seed={`modal-privacy-${props.room_id}-dms`}
@@ -35,15 +34,13 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 							friends can always start dms.
 						</div>
 					</label>
-				</div>
-				<div class="option">
-					<input
-						id="opt-friends"
-						type="checkbox"
-						checked={friends()}
-						onInput={(e) => setFriends(e.currentTarget.checked)}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id="opt-friends"
+					checked={friends()}
+					onChange={setFriends}
+					seed={`modal-privacy-${props.room_id}-friends`}
+				>
 					<Checkbox
 						checked={friends()}
 						seed={`modal-privacy-${props.room_id}-friends`}
@@ -54,15 +51,13 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 							Let others send friend requests to you.
 						</div>
 					</label>
-				</div>
-				<div class="option">
-					<input
-						id="opt-rpc"
-						type="checkbox"
-						checked={rpc()}
-						onInput={(e) => setRpc(e.currentTarget.checked)}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id="opt-rpc"
+					checked={rpc()}
+					onChange={setRpc}
+					seed={`modal-privacy-${props.room_id}-rpc`}
+				>
 					<Checkbox
 						checked={rpc()}
 						seed={`modal-privacy-${props.room_id}-rpc`}
@@ -74,15 +69,13 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 							always view your rich presence.
 						</div>
 					</label>
-				</div>
-				<div class="option">
-					<input
-						id="opt-exif"
-						type="checkbox"
-						checked={exif()}
-						onInput={(e) => setExif(e.currentTarget.checked)}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id="opt-exif"
+					checked={exif()}
+					onChange={setExif}
+					seed={`modal-privacy-${props.room_id}-exif`}
+				>
 					<Checkbox
 						checked={exif()}
 						seed={`modal-privacy-${props.room_id}-exif`}
@@ -94,7 +87,7 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 							location) from images you upload.
 						</div>
 					</label>
-				</div>
+				</CheckboxOption>
 			</div>
 		</Modal>
 	);

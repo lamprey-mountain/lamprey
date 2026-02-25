@@ -2867,7 +2867,8 @@ button.big {
 	padding: 4px;
 	cursor: pointer;
 
-	&:hover {
+	&:hover,
+	&:focus-within {
 		background: $bg-150;
 	}
 }

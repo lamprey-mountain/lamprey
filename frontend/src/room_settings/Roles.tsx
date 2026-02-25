@@ -18,8 +18,9 @@ import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";
 import { md } from "../markdown.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
+import { Checkbox } from "../icons";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 import { useModals } from "../contexts/modal";
-import { Checkbox } from "../icons.tsx";
 import { A } from "@solidjs/router";
 import { Avatar } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
@@ -529,18 +530,17 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					] as const}
 				>
 					{(i) => (
-						<label class="option">
-							<input
-								type="checkbox"
-								checked={(props.edit.role as Role)[i.key]}
-								onInput={(e) => {
-									props.edit.setRole((r) => ({
-										...r,
-										[i.key]: (e.target as HTMLInputElement).checked,
-									}));
-								}}
-								style="display: none;"
-							/>
+						<CheckboxOption
+							id={`role-${props.edit.role.id}-${i.key}`}
+							checked={(props.edit.role as Role)[i.key]}
+							onChange={(checked) => {
+								props.edit.setRole((r) => ({
+									...r,
+									[i.key]: checked,
+								}));
+							}}
+							seed={`role-${props.edit.role.id}-${i.key}`}
+						>
 							<Checkbox
 								checked={(props.edit.role as Role)[i.key]}
 								seed={`role-${props.edit.role.id}-${i.key}`}
@@ -556,7 +556,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 									) as string}
 								/>
 							</div>
-						</label>
+						</CheckboxOption>
 					)}
 				</For>
 

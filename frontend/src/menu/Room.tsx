@@ -7,6 +7,7 @@ import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { Checkbox } from "../icons.tsx";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
@@ -251,17 +252,16 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 					<div class="subtext">You won't be notified for new threads.</div>
 				</Item>
 				<Separator />
-				<div class="option" style="align-items: start; gap: 0;">
-					<input
-						id="room-mention-everyone"
-						type="checkbox"
-						checked={everyone()}
-						onInput={(e) => {
-							setEveryone(e.currentTarget.checked);
-							setNotifs({ mention_everyone: e.currentTarget.checked });
-						}}
-						style="display: none;"
-					/>
+				<CheckboxOption
+					id="room-mention-everyone"
+					checked={everyone()}
+					onChange={(checked) => {
+						setEveryone(checked);
+						setNotifs({ mention_everyone: checked });
+					}}
+					seed={`menu-room-${props.room.id}-everyone`}
+					style={{ "align-items": "start", gap: "0" }}
+				>
 					<Checkbox
 						checked={everyone()}
 						seed={`menu-room-${props.room.id}-everyone`}
@@ -273,18 +273,17 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 							mentioned.
 						</div>
 					</label>
-				</div>
-				<div class="option" style="align-items: start; gap: 0;">
-					<input
-						id="room-mention-roles"
-						type="checkbox"
-						checked={roles()}
-						onInput={(e) => {
-							setRoles(e.currentTarget.checked);
-							setNotifs({ mention_roles: e.currentTarget.checked });
-						}}
-						style="display: none;"
-					/>
+				</CheckboxOption>
+				<CheckboxOption
+					id="room-mention-roles"
+					checked={roles()}
+					onChange={(checked) => {
+						setRoles(checked);
+						setNotifs({ mention_roles: checked });
+					}}
+					seed={`menu-room-${props.room.id}-roles`}
+					style={{ "align-items": "start", gap: "0" }}
+				>
 					<Checkbox
 						checked={roles()}
 						seed={`menu-room-${props.room.id}-roles`}
@@ -296,7 +295,7 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 							mentioned.
 						</div>
 					</label>
-				</div>
+				</CheckboxOption>
 			</Submenu>
 			<Show
 				when={isMuted()}
