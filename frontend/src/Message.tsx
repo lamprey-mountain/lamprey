@@ -30,11 +30,8 @@ import { Time } from "./Time.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { createEditor } from "./editor/Editor.tsx";
-import { render } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
-import twemoji from "twemoji";
 import { Reactions } from "./Reactions.tsx";
-import { md } from "./markdown.tsx";
 import icReply from "./assets/reply.png";
 import icReactionAdd from "./assets/reaction-add.png";
 import icEdit from "./assets/edit.png";
@@ -44,6 +41,7 @@ import icMemberRemove from "./assets/member-remove.png";
 import icMemberJoin from "./assets/member-join.png";
 import icPin from "./assets/pin.png";
 import icThread from "./assets/threads.png";
+import { Markdown } from "./Markdown.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -54,169 +52,7 @@ type MessageTextMarkdownProps = {
 	message: MessageT;
 };
 
-const contentToHtml = new WeakMap();
-
-function UserMention(props: { id: string; channel: Channel }) {
-	const api = useApi();
-	const { userView, setUserView } = useUserPopout();
-	const user = api.users.fetch(() => props.id);
-	// FIXME: handle mentions outside of rooms (eg. in dms)
-	const room_member = api.room_members.fetch(
-		() => props.channel.room_id!,
-		() => props.id,
-	);
-	return (
-		<span
-			class="mention-user"
-			onClick={(e) => {
-				e.stopPropagation();
-				const currentTarget = e.currentTarget as HTMLElement;
-				if (userView()?.ref === currentTarget) {
-					setUserView(null);
-				} else {
-					setUserView({
-						user_id: props.id,
-						room_id: props.channel.room_id,
-						thread_id: props.channel.id,
-						ref: currentTarget,
-						source: "message",
-					});
-				}
-			}}
-		>
-			@{room_member()?.override_name ?? user()?.name ?? "unknown user"}
-		</span>
-	);
-}
-
-function RoleMention(props: { id: string; thread: Channel }) {
-	const api = useApi();
-	const role = () => {
-		if (!props.thread.room_id) return null;
-		return api.roles.cache.get(props.id) ?? null;
-	};
-	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
-}
-
-function ChannelMention(props: { id: string }) {
-	const api = useApi();
-	const navigate = useNavigate();
-	const channel = api.channels.fetch(() => props.id);
-	return (
-		<span
-			class="mention-channel"
-			onClick={(e) => {
-				e.stopPropagation();
-				navigate(`/channel/${props.id}`);
-			}}
-		>
-			#{channel()?.name ?? "unknown channel"}
-		</span>
-	);
-}
-
-function Emoji(props: { id: string; name: string; animated: boolean }) {
-	const url = () => {
-		return getEmojiUrl(props.id);
-	};
-	return (
-		<img
-			class="emoji"
-			src={url()}
-			alt={`:${props.name}:`}
-			title={`:${props.name}:`}
-		/>
-	);
-}
-
-// HACK: this is terrible and extremely cursed and ugly and horrible code and i hate it
-// i should NOT need to break out of solidjs/tsx reactivity then manually recreate it with another render
-function hydrateMentions(el: HTMLElement, thread: Channel) {
-	el.querySelectorAll<HTMLSpanElement>("span.mention[data-mention-type]")
-		.forEach((mentionEl) => {
-			const type = mentionEl.dataset.mentionType;
-			if (type === "user") {
-				const userId = mentionEl.dataset.userId!;
-				render(() => <UserMention channel={thread} id={userId} />, mentionEl);
-			} else if (type === "role") {
-				const roleId = mentionEl.dataset.roleId!;
-				render(() => <RoleMention id={roleId} thread={thread} />, mentionEl);
-			} else if (type === "channel") {
-				const channelId = mentionEl.dataset.channelId!;
-				render(() => <ChannelMention id={channelId} />, mentionEl);
-			} else if (type === "emoji") {
-				const emojiId = mentionEl.dataset.emojiId!;
-				const emojiName = mentionEl.dataset.emojiName!;
-				const emojiAnimated = mentionEl.dataset.emojiAnimated === "true";
-				render(
-					() => (
-						<Emoji id={emojiId} name={emojiName} animated={emojiAnimated} />
-					),
-					mentionEl,
-				);
-			}
-		});
-}
-
 function MessageTextMarkdown(props: MessageTextMarkdownProps) {
-	function getHtml(): string {
-		const cached = contentToHtml.get(props.message);
-		if (cached) return cached;
-
-		const content = props.message.latest_version.type === "DefaultMarkdown"
-			? props.message.latest_version.content ?? ""
-			: "";
-
-		function escape(html: string) {
-			return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
-				/>/g,
-				"&gt;",
-			).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-		}
-
-		const tokens = md.lexer(content);
-		md.walkTokens(tokens, (token) => {
-			if (token.type === "html") {
-				(token as any).text = escape((token as any).text);
-			}
-		});
-
-		const html = (md.parser(tokens) as string).trim();
-
-		const twemojified = twemoji.parse(html, {
-			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-			folder: "svg",
-			ext: ".svg",
-		});
-		contentToHtml.set(props.message, twemojified);
-		return twemojified;
-	}
-
-	let highlightEl!: HTMLDivElement;
-	const api = useApi();
-	const thread = api.channels.fetch(() => props.message.channel_id);
-	function highlight() {
-		getHtml();
-		import("highlight.js").then(({ default: hljs }) => {
-			// FIXME: this highlights the same message multiple times, and is pretty hacky in general
-			console.log("[hljs] attempt to highlight again", highlightEl);
-			if (!highlightEl) return;
-			for (const el of [...highlightEl.querySelectorAll("pre")]) {
-				if (!el.classList.contains("hljs")) {
-					hljs.highlightElement(el);
-				}
-			}
-		});
-	}
-
-	onMount(highlight);
-	createEffect(() => {
-		const t = thread();
-		if (t && highlightEl) {
-			hydrateMentions(highlightEl, t);
-		}
-	});
-
 	const [, modalctl] = useModals();
 	const viewHistory = () => {
 		modalctl.open({
@@ -226,17 +62,22 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		});
 	};
 
+	const content = () =>
+		props.message.latest_version.type === "DefaultMarkdown"
+			? props.message.latest_version.content ?? ""
+			: "";
+
 	return (
-		<div
-			class="body markdown"
+		<Markdown
+			content={content()}
+			channel_id={props.message.channel_id}
+			class="body"
 			classList={{ local: props.message.is_local }}
-			ref={highlightEl!}
 		>
-			<span innerHTML={getHtml()}></span>
 			<Show when={props.message.id !== props.message.latest_version.version_id}>
 				<span class="edited" onClick={viewHistory}>(edited)</span>
 			</Show>
-		</div>
+		</Markdown>
 	);
 }
 
@@ -1020,7 +861,6 @@ function ReplyView(props: ReplyProps) {
 				: undefined);
 	};
 
-	// Function to render content with inline markdown and mentions
 	const ReplyContent = () => {
 		const r = reply();
 		if (
@@ -1028,86 +868,13 @@ function ReplyView(props: ReplyProps) {
 			!r.latest_version.content
 		) return <>{content()}</>;
 
-		let contentStr = r.latest_version.content;
-		const m = r.latest_version.mentions;
-
-		for (const user of m?.users ?? []) {
-			contentStr = contentStr.replace(
-				new RegExp(`<@${user.id}>`, "g"),
-				`<span class="mention-user" data-user-id="${user.id}">@${user.resolved_name}</span>`,
-			);
-		}
-		for (const channel of m?.channels ?? []) {
-			contentStr = contentStr.replace(
-				new RegExp(`<#${channel.id}>`, "g"),
-				`<span class="mention-channel" data-channel-id="${channel.id}">#${channel.name}</span>`,
-			);
-		}
-		for (const role of m?.roles ?? []) {
-			const roleData = thread()?.room_id
-				? api.roles.fetch(() => thread()!.room_id, () => role.id)()
-				: null;
-			contentStr = contentStr.replace(
-				new RegExp(`<@&${role.id}>`, "g"),
-				`<span class="mention-role" data-role-id="${role.id}">@${
-					roleData?.name || "..."
-				}</span>`,
-			);
-		}
-		for (const emoji of m?.emojis ?? []) {
-			contentStr = contentStr.replace(
-				new RegExp(`<a?:${emoji.name}:${emoji.id}>`, "g"),
-				`<span class="mention-emoji">:${emoji.name}:</span>`,
-			);
-		}
-
-		// Process the content with markdown, now that mentions are replaced with proper HTML
-		const processedHTML = md(contentStr);
-
-		// Create a ref to allow post-processing of the rendered content
-		let contentRef: HTMLSpanElement | undefined;
-
-		// Post-process to make mentions interactive
-		createEffect(() => {
-			if (!contentRef) return;
-
-			// Add click handlers to make mentions interactive
-			const userMentions = contentRef.querySelectorAll(
-				".mention-user[data-user-id]",
-			);
-			userMentions.forEach((mention) => {
-				const userId = mention.getAttribute("data-user-id");
-				if (userId) {
-					mention.addEventListener("click", (e) => {
-						e.stopPropagation();
-						// Open user profile modal or similar
-						setUserView({
-							user_id: userId,
-							room_id: thread()?.room_id,
-							thread_id: props.thread_id,
-							ref: mention as HTMLElement,
-							source: "reply",
-						});
-					});
-				}
-			});
-
-			const channelMentions = contentRef.querySelectorAll(
-				".mention-channel[data-channel-id]",
-			);
-			channelMentions.forEach((mention) => {
-				const channelId = mention.getAttribute("data-channel-id");
-				if (channelId) {
-					mention.addEventListener("click", (e) => {
-						e.stopPropagation();
-						// Navigate to channel
-						location.href = `/channel/${channelId}`;
-					});
-				}
-			});
-		});
-
-		return <span ref={contentRef} innerHTML={processedHTML as string} />;
+		return (
+			<Markdown
+				content={r.latest_version.content}
+				channel_id={props.thread_id}
+				inline
+			/>
+		);
 	};
 
 	const scrollToReply = () => {

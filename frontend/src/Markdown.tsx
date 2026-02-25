@@ -1,0 +1,383 @@
+import {
+	createContext,
+	createMemo,
+	createSignal,
+	For,
+	Match,
+	onMount,
+	ParentProps,
+	Show,
+	Switch,
+	useContext,
+} from "solid-js";
+import { useApi } from "./api";
+import { md } from "./markdown";
+import { useNavigate } from "@solidjs/router";
+import { useUserPopout } from "./contexts/mod";
+import { getEmojiUrl } from "./media/util";
+import twemoji from "twemoji";
+import type { Token, Tokens } from "marked";
+import type { Channel } from "sdk";
+
+// --- Context ---
+
+const MarkdownContext = createContext<{ channel?: Channel }>();
+
+// --- Components ---
+
+function UserMention(props: { id: string }) {
+	const ctx = useContext(MarkdownContext);
+	const api = useApi();
+	const { userView, setUserView } = useUserPopout();
+	const user = api.users.fetch(() => props.id);
+	const room_member = createMemo(() => {
+		if (!ctx?.channel?.room_id) return null;
+		return api.room_members.fetch(
+			() => ctx.channel!.room_id!,
+			() => props.id,
+		)();
+	});
+
+	return (
+		<span
+			class="mention-user"
+			onClick={(e) => {
+				e.stopPropagation();
+				const currentTarget = e.currentTarget as HTMLElement;
+				if (userView()?.ref === currentTarget) {
+					setUserView(null);
+				} else {
+					setUserView({
+						user_id: props.id,
+						room_id: ctx?.channel?.room_id,
+						thread_id: ctx?.channel?.id,
+						ref: currentTarget,
+						source: "message",
+					});
+				}
+			}}
+		>
+			@{room_member()?.override_name ?? user()?.name ?? "unknown user"}
+		</span>
+	);
+}
+
+function RoleMention(props: { id: string }) {
+	const ctx = useContext(MarkdownContext);
+	const api = useApi();
+	const role = createMemo(() => {
+		if (!ctx?.channel?.room_id) return null;
+		return api.roles.fetch(() => ctx.channel!.room_id!, () => props.id)();
+	});
+
+	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
+}
+
+function ChannelMention(props: { id: string }) {
+	const api = useApi();
+	const navigate = useNavigate();
+	const channel = api.channels.fetch(() => props.id);
+
+	return (
+		<span
+			class="mention-channel"
+			onClick={(e) => {
+				e.stopPropagation();
+				navigate(`/channel/${props.id}`);
+			}}
+		>
+			#{channel()?.name ?? "unknown channel"}
+		</span>
+	);
+}
+
+function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
+	return (
+		<img
+			class="emoji"
+			src={getEmojiUrl(props.id)}
+			alt={`:${props.name}:`}
+			title={`:${props.name}:`}
+		/>
+	);
+}
+
+function Spoiler(props: { tokens: Token[] }) {
+	const [shown, setShown] = createSignal(false);
+	return (
+		<span
+			class="spoiler"
+			classList={{ shown: shown() }}
+			onClick={(e) => {
+				e.stopPropagation();
+				setShown(!shown());
+			}}
+		>
+			<RenderTokens tokens={props.tokens} />
+		</span>
+	);
+}
+
+function CodeBlock(props: { text: string; lang?: string }) {
+	let ref!: HTMLElement;
+
+	onMount(() => {
+		if (!ref) return;
+		import("highlight.js").then(({ default: hljs }) => {
+			if (ref) hljs.highlightElement(ref);
+		});
+	});
+
+	return (
+		<pre>
+			<code ref={ref} class={props.lang ? `language-${props.lang}` : ""}>
+				{props.text}
+			</code>
+		</pre>
+	);
+}
+
+function TwemojiText(props: { text: string }) {
+	const escape = (html: string) => {
+		return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
+			/>/g,
+			"&gt;",
+		).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	};
+
+	const html = createMemo(() => {
+		return twemoji.parse(escape(props.text), {
+			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+			folder: "svg",
+			ext: ".svg",
+		});
+	});
+
+	return <span innerHTML={html()} />;
+}
+
+// --- Renderer ---
+
+function RenderTokens(props: { tokens?: Token[] }) {
+	return (
+		<For each={props.tokens}>
+			{(token) => <TokenView token={token} />}
+		</For>
+	);
+}
+
+function TokenView(props: { token: Token }) {
+	return (
+		<Switch>
+			<Match when={props.token.type === "paragraph"}>
+				<p>
+					<RenderTokens tokens={(props.token as Tokens.Paragraph).tokens} />
+				</p>
+			</Match>
+			<Match when={props.token.type === "text"}>
+				<Show
+					when={(props.token as Tokens.Text).tokens}
+					fallback={<TwemojiText text={(props.token as Tokens.Text).text} />}
+				>
+					<RenderTokens tokens={(props.token as Tokens.Text).tokens} />
+				</Show>
+			</Match>
+			<Match when={props.token.type === "blockquote"}>
+				<blockquote>
+					<RenderTokens tokens={(props.token as Tokens.Blockquote).tokens} />
+				</blockquote>
+			</Match>
+			<Match when={props.token.type === "code"}>
+				<CodeBlock
+					text={(props.token as Tokens.Code).text}
+					lang={(props.token as Tokens.Code).lang}
+				/>
+			</Match>
+			<Match when={props.token.type === "list"}>
+				<Show
+					when={(props.token as Tokens.List).ordered}
+					fallback={
+						<ul>
+							<For each={(props.token as Tokens.List).items}>
+								{(item) => (
+									<li>
+										<RenderTokens tokens={item.tokens} />
+									</li>
+								)}
+							</For>
+						</ul>
+					}
+				>
+					<ol start={(props.token as Tokens.List).start || 1}>
+						<For each={(props.token as Tokens.List).items}>
+							{(item) => (
+								<li>
+									<RenderTokens tokens={item.tokens} />
+								</li>
+							)}
+						</For>
+					</ol>
+				</Show>
+			</Match>
+			<Match when={props.token.type === "heading"}>
+				<DynamicHeading
+					depth={(props.token as Tokens.Heading).depth}
+					tokens={(props.token as Tokens.Heading).tokens}
+				/>
+			</Match>
+			<Match when={props.token.type === "strong"}>
+				<strong>
+					<RenderTokens tokens={(props.token as Tokens.Strong).tokens} />
+				</strong>
+			</Match>
+			<Match when={props.token.type === "em"}>
+				<em>
+					<RenderTokens tokens={(props.token as Tokens.Em).tokens} />
+				</em>
+			</Match>
+			<Match when={props.token.type === "del"}>
+				<del>
+					<RenderTokens tokens={(props.token as Tokens.Del).tokens} />
+				</del>
+			</Match>
+			<Match when={props.token.type === "codespan"}>
+				<code>{(props.token as Tokens.Codespan).text}</code>
+			</Match>
+			<Match when={props.token.type === "link"}>
+				<a
+					href={(props.token as Tokens.Link).href}
+					title={(props.token as Tokens.Link).title ?? undefined}
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					<RenderTokens tokens={(props.token as Tokens.Link).tokens} />
+				</a>
+			</Match>
+			<Match when={props.token.type === "image"}>
+				<img
+					src={(props.token as Tokens.Image).href}
+					alt={(props.token as Tokens.Image).text}
+					title={(props.token as Tokens.Image).title ?? undefined}
+				/>
+			</Match>
+			<Match when={props.token.type === "br"}>
+				<br />
+			</Match>
+			<Match when={props.token.type === "hr"}>
+				<hr />
+			</Match>
+			<Match when={props.token.type === "html"}>
+				<TwemojiText text={(props.token as Tokens.HTML).text} />
+			</Match>
+
+			{/* Custom Extensions */}
+			<Match when={props.token.type === "spoiler"}>
+				<Spoiler tokens={(props.token as any).tokens} />
+			</Match>
+			<Match when={props.token.type === "mention"}>
+				<MentionToken token={props.token as any} />
+			</Match>
+		</Switch>
+	);
+}
+
+function DynamicHeading(props: { depth: number; tokens: Token[] }) {
+	return (
+		<Switch>
+			<Match when={props.depth === 1}>
+				<h1>
+					<RenderTokens tokens={props.tokens} />
+				</h1>
+			</Match>
+			<Match when={props.depth === 2}>
+				<h2>
+					<RenderTokens tokens={props.tokens} />
+				</h2>
+			</Match>
+			<Match when={props.depth === 3}>
+				<h3>
+					<RenderTokens tokens={props.tokens} />
+				</h3>
+			</Match>
+			<Match when={props.depth === 4}>
+				<h4>
+					<RenderTokens tokens={props.tokens} />
+				</h4>
+			</Match>
+			<Match when={props.depth === 5}>
+				<h5>
+					<RenderTokens tokens={props.tokens} />
+				</h5>
+			</Match>
+			<Match when={props.depth === 6}>
+				<h6>
+					<RenderTokens tokens={props.tokens} />
+				</h6>
+			</Match>
+		</Switch>
+	);
+}
+
+function MentionToken(props: { token: any }) {
+	return (
+		<Switch>
+			<Match when={props.token.mention_type === "user"}>
+				<UserMention id={props.token.id} />
+			</Match>
+			<Match when={props.token.mention_type === "role"}>
+				<RoleMention id={props.token.id} />
+			</Match>
+			<Match when={props.token.mention_type === "channel"}>
+				<ChannelMention id={props.token.id} />
+			</Match>
+			<Match when={props.token.mention_type === "emoji"}>
+				<CustomEmoji
+					id={props.token.id}
+					name={props.token.name}
+					animated={props.token.animated}
+				/>
+			</Match>
+		</Switch>
+	);
+}
+
+// --- Exported Component ---
+
+export const Markdown = (
+	props: ParentProps<{
+		content: string;
+		channel_id?: string;
+		inline?: boolean;
+		class?: string;
+		classList?: { [k: string]: boolean | undefined };
+		ref?: HTMLElement | ((el: HTMLElement) => void);
+	}>,
+) => {
+	const api = useApi();
+	const channel = createMemo(() =>
+		props.channel_id ? api.channels.fetch(() => props.channel_id!)() : undefined
+	);
+
+	const tokens = createMemo(() => {
+		const t = md.lexer(props.content);
+		if (props.inline) {
+			if (t.length === 1 && t[0].type === "paragraph") {
+				return (t[0] as Tokens.Paragraph).tokens;
+			}
+		}
+		return t;
+	});
+
+	return (
+		<MarkdownContext.Provider value={{ channel: channel() }}>
+			<div
+				class={`markdown ${props.class ?? ""}`}
+				classList={props.classList}
+				ref={props.ref}
+			>
+				<RenderTokens tokens={tokens()} />
+				{props.children}
+			</div>
+		</MarkdownContext.Provider>
+	);
+};

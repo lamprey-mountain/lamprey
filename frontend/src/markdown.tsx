@@ -1,7 +1,11 @@
 import { marked, type Token } from "marked";
 import { EditorState } from "prosemirror-state";
 import { Decoration, DecorationAttrs, DecorationSet } from "prosemirror-view";
-import hljs from "highlight.js";
+
+let hljs: any = null;
+import("highlight.js").then((m) => {
+	hljs = m.default;
+});
 
 const mentionExtension = {
 	name: "mention",
@@ -211,6 +215,7 @@ export function decorate(state: EditorState, placeholderText?: string) {
 					offset: number,
 				) {
 					const decos: any[] = [];
+					if (!hljs) return decos;
 					try {
 						const highlighted = hljs.highlight(content, {
 							language: language || "plaintext",
