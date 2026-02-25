@@ -89,7 +89,13 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 
 	return (
 		<Modal>
-			<div style="width:300px">
+			<form
+				style="width:300px"
+				onSubmit={(e) => {
+					e.preventDefault();
+					save();
+				}}
+			>
 				<h2>attachment</h2>
 				<div
 					style="height:70px;width:100px;background-size:cover;background-position:center;border-radius:4px;margin:8px 0"
@@ -154,10 +160,10 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 					</div>
 				</Show>
 				<div class="bottom">
-					<button onClick={() => modalCtl.close()}>cancel</button>
-					<button class="primary" onClick={save}>save</button>
+					<button type="button" onClick={() => modalCtl.close()}>cancel</button>
+					<button type="submit" class="primary">save</button>
 				</div>
-			</div>
+			</form>
 		</Modal>
 	);
 };
