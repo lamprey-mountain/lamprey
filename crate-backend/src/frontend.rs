@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use axum::{
     body::Body,
+    extract::State,
     http::{header, Uri},
     response::{IntoResponse, Response},
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use lamprey_backend::ServerState;
 use minijinja::{context, Environment};
-use rand::{rngs::OsRng, RngCore};
+use rand::RngCore;
 use rust_embed::RustEmbed;
 use serde::Serialize;
 
@@ -28,7 +29,10 @@ struct WebuiConfig {
 }
 
 // TODO: error variants instead of unwrap
-pub async fn frontend_handler(uri: Uri, s: Arc<ServerState>) -> Result<impl IntoResponse> {
+pub async fn frontend_handler(
+    uri: Uri,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
     let mut path = uri.path().trim_start_matches('/').to_string();
     if path.is_empty() {
         path = "index.html".to_string();
