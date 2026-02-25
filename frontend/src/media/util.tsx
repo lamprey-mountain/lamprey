@@ -49,7 +49,8 @@ export const getHeight = (m: Media) => {
 /** get the cdn url for a piece of media */
 export const getUrl = (t: Media) => {
 	const config = useConfig();
-	return `${config.cdn_url}/media/${t.id}`;
+	const url = new URL(`/media/${t.id}`, config.cdn_url);
+	return url.href;
 };
 
 /** get the cdn url for the thumbnail for a piece of media */
@@ -75,17 +76,16 @@ export const getThumbFromId = (
 /** get the cdn url for the thumbnail for a custom emoji from its id */
 export const getThumbFromEmojiId = (emoji_id: string, size?: number) => {
 	const config = useConfig();
-	if (size) {
-		return `${config.cdn_url}/emoji/${emoji_id}?size=${size}`;
-	} else {
-		return `${config.cdn_url}/emoji/${emoji_id}`;
-	}
+	const url = new URL(`/emoji/${emoji_id}`, config.cdn_url);
+	if (size) url.searchParams.set("size", size.toString());
+	return url.href;
 };
 
 /** get the cdn url for an emoji */
 export const getEmojiUrl = (id: string) => {
 	const config = useConfig();
-	return `${config.cdn_url}/emoji/${id}`;
+	const url = new URL(`/emoji/${id}`, config.cdn_url);
+	return url.href;
 };
 
 export function formatBytes(bytes: number): string {
