@@ -14,7 +14,6 @@ export type RoomMemberSearchResponse =
 	components["schemas"]["RoomMemberSearchResponse"];
 export type ThreadMember = components["schemas"]["ThreadMember"];
 export type Media = components["schemas"]["Media"];
-export type MediaTrack = components["schemas"]["MediaTrack"];
 export type MessageCreate = components["schemas"]["MessageCreate"];
 export type PaginationResponseMessage =
 	components["schemas"]["PaginationResponse_Message"];
@@ -28,11 +27,11 @@ export type RelationshipWithUserId =
 	components["schemas"]["RelationshipWithUserId"];
 export type UserWithRelationship =
 	components["schemas"]["UserWithRelationship"];
-export type UserConfig = components["schemas"]["UserConfigGlobal"];
-export type UserConfigGlobal = components["schemas"]["UserConfigGlobal"];
-export type UserConfigUser = components["schemas"]["UserConfigUser"];
-export type UserConfigRoom = components["schemas"]["UserConfigRoom"];
-export type UserConfigChannel = components["schemas"]["UserConfigChannel"];
+export type UserConfig = components["schemas"]["PreferencesGlobal"];
+export type UserConfigGlobal = components["schemas"]["PreferencesGlobal"];
+export type UserConfigUser = components["schemas"]["PreferencesUser"];
+export type UserConfigRoom = components["schemas"]["PreferencesRoom"];
+export type UserConfigChannel = components["schemas"]["PreferencesChannel"];
 export type Application = components["schemas"]["Application"];
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
 export type MessageSync = components["schemas"]["MessageSync"];

@@ -6,7 +6,6 @@ import {
 	on,
 	Show,
 	Switch,
-	useContext,
 } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
@@ -23,7 +22,6 @@ import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
 import { uuidv7 } from "uuidv7";
 import { Portal } from "solid-js/web";
 import { useNavigate } from "@solidjs/router";
-import type { ThreadSearch } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 import { SearchInput } from "./SearchInput.tsx";
 import { md } from "./markdown.tsx";
@@ -202,7 +200,7 @@ export const ChatMain = (props: ChatProps) => {
 	);
 
 	// effect to initialize new channels
-	createEffect(on(() => props.channel.id, (channel_id) => {
+	createEffect(on(() => props.channel.id, (_channel_id) => {
 		const last_read_id = props.channel.last_read_id ??
 			props.channel.last_version_id;
 		if (channelState.read_marker_id) return;
@@ -636,7 +634,6 @@ export const SearchResults = (props: {
 	room?: Room;
 	search: ThreadSearch;
 }) => {
-	const ctx = useCtx();
 	const channelCtx = useChannel();
 	const roomCtx = useRoom();
 	const navigate = useNavigate();
@@ -739,7 +736,8 @@ export function renderTimeline(
 		}
 		newItems.push({
 			type: "message",
-			id: msg.version_id + "/" + ("embeds" in msg ? msg.embeds.length : 0),
+			id: msg.latest_version.version_id + "/" +
+				("embeds" in msg ? msg.latest_version.embeds.length : 0),
 			message: msg,
 			separate: prev ? shouldSplit(msg, prev) : true,
 		});
@@ -791,8 +789,8 @@ function shouldSplit(a: Message, b: Message) {
 }
 
 function shouldSplitInner(a: Message, b: Message) {
-	if (a.type !== "DefaultMarkdown") return true;
-	if (b.type !== "DefaultMarkdown") return true;
+	if (a.latest_version.type !== "DefaultMarkdown") return true;
+	if (b.latest_version.type !== "DefaultMarkdown") return true;
 	if (a.author_id !== b.author_id) return true;
 	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true;
 	const ts_a = get_msg_ts(a);

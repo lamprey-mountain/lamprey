@@ -17,7 +17,7 @@ const MAX_PREVIEW_SIZE = 16384;
 export const TextView = (props: MediaProps) => {
 	const ctx = useCtx();
 
-	const ty = () => props.media.source.mime.split(";")[0];
+	const ty = () => props.media.content_type.split(";")[0];
 
 	const [collapsed, setCollapsed] = createSignal(true);
 	const [copied, setCopied] = createSignal(false);
@@ -80,7 +80,7 @@ export const TextView = (props: MediaProps) => {
 				<button onClick={() => setCollapsed((c) => !c)}>
 					{collapsed() ? "expand" : "collapse"}
 				</button>
-				<Show when={props.media.source.size > MAX_PREVIEW_SIZE}>
+				<Show when={props.media.size > MAX_PREVIEW_SIZE}>
 					<span class="warn">warning:</span> file preview truncated (too long!)
 				</Show>
 			</div>
@@ -89,7 +89,7 @@ export const TextView = (props: MediaProps) => {
 					download {props.media.filename}
 				</a>
 				<div class="dim">
-					{ty()} - {formatBytes(props.media.source.size)}
+					{ty()} - {formatBytes(props.media.size)}
 				</div>
 			</footer>
 		</div>

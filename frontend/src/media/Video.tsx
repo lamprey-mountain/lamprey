@@ -187,7 +187,7 @@ export const VideoView = (props: MediaProps) => {
 			? `${(progressPreview()! / duration()) * 100}%`
 			: undefined;
 
-	const ty = () => props.media.source.mime.split(";")[0];
+	const ty = () => props.media.content_type.split(";")[0];
 
 	const getVolumeIcon = () => {
 		if (muted()) return iconVolumeMute;
@@ -315,7 +315,7 @@ export const VideoView = (props: MediaProps) => {
 							{props.media.filename}
 						</a>
 						<div class="dim">
-							{ty()} - {formatBytes(props.media.source.size)}
+							{ty()} - {formatBytes(props.media.size)}
 							<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
 						</div>
 					</div>

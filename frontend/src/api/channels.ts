@@ -462,21 +462,6 @@ export class Channels {
 		);
 	}
 
-	async update(
-		channel_id: string,
-		body: import("sdk").ChannelPatch,
-	): Promise<Channel> {
-		return await fetchWithRetry(() =>
-			this.api.client.http.PATCH(
-				"/api/v1/channel/{channel_id}",
-				{
-					params: { path: { channel_id } },
-					body: body,
-				},
-			)
-		);
-	}
-
 	async createTag(
 		channel_id: string,
 		body: TagCreate,

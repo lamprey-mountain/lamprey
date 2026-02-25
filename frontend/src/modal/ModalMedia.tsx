@@ -36,7 +36,7 @@ export const ModalMedia = (props: { media: Media }) => {
 							/>
 						</div>
 					</Resize>
-					<a href={props.media.source.url}>Go to url</a>
+					{/* FIXME: <a href={props.media.source.url}>Go to url</a>*/}
 				</div>
 			</div>
 		</div>

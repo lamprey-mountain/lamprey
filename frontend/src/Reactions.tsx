@@ -16,25 +16,42 @@ export const Reactions = (props: ReactionsProps) => {
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
 
-	const getTwemoji = (unicode: string) => {
-		if (unicode.type === "Text") {
-			return twemoji.parse(unicode.content, {
+	const getTwemoji = (key: any) => {
+		if (key.type === "Text") {
+			return twemoji.parse(key.content, {
 				base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
 				attributes: () => ({ loading: "lazy" }),
 				folder: "svg",
 				ext: ".svg",
 			});
-		} else if (unicode.type === "Custom") {
+		} else if (key.type === "Custom") {
 			// FIXME: custom emoji reactions
 			return "(unknown emoji)";
 		}
 	};
 
-	const handleClick = (key: string, self: boolean) => {
+	const reactionKeyToParam = (key: any): string => {
+		if (key.type === "Text") {
+			return `t:${key.content}`;
+		} else if (key.type === "Custom") {
+			return `c:${key.id}`;
+		}
+		return "";
+	};
+
+	const areKeysEqual = (a: any, b: any): boolean => {
+		if (a.type !== b.type) return false;
+		if (a.type === "Text") return a.content === b.content;
+		if (a.type === "Custom") return a.id === b.id;
+		return false;
+	};
+
+	const handleClick = (key: any, self: boolean) => {
+		const param = reactionKeyToParam(key);
 		if (self) {
-			api.reactions.delete(props.message.channel_id, props.message.id, key);
+			api.reactions.delete(props.message.channel_id, props.message.id, param);
 		} else {
-			api.reactions.add(props.message.channel_id, props.message.id, key);
+			api.reactions.add(props.message.channel_id, props.message.id, param);
 		}
 	};
 
@@ -47,14 +64,15 @@ export const Reactions = (props: ReactionsProps) => {
 				props: {
 					selected: (emoji: string | null, keepOpen: boolean) => {
 						if (emoji) {
+							// Picker returns string (unicode), we need to compare with ReactionKey
 							const existing = props.message.reactions?.find((r) =>
-								r.key === emoji
+								r.key.type === "Text" && r.key.content === emoji
 							);
 							if (!existing || !existing.self) {
 								api.reactions.add(
 									props.message.channel_id,
 									props.message.id,
-									emoji,
+									`t:${emoji}`,
 								);
 							}
 						}
@@ -92,13 +110,18 @@ export const Reactions = (props: ReactionsProps) => {
 		<div class="reactions">
 			<For each={props.message.reactions}>
 				{(reaction) => {
-					const tip = createTooltip({ tip: () => `:${reaction.key}:` });
+					const tip = createTooltip({
+						tip: () =>
+							reaction.key.type === "Text"
+								? `:${reaction.key.content}:`
+								: ":custom:",
+					});
 					return (
 						<div
 							ref={tip.setContentEl}
 							class="reaction"
 							classList={{ self: reaction.self }}
-							onClick={() => handleClick(reaction.key, reaction.self)}
+							onClick={() => handleClick(reaction.key, !!reaction.self)}
 						>
 							<div class="key" innerHTML={getTwemoji(reaction.key)} />
 							<div class="count">{reaction.count}</div>

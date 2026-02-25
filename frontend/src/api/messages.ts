@@ -4,7 +4,6 @@ import type {
 	MessageCreate,
 	Pagination,
 	PaginationQuery,
-	PaginationResponseMessage,
 } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
@@ -19,173 +18,6 @@ import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
 import type { Api } from "../api.tsx";
 import { fetchWithRetry } from "./util.ts";
-import { convertV2MediaToV1 } from "./media.tsx";
-
-type MediaV2 = {
-	id: string;
-	status: "Transferring" | "Processing" | "Uploaded" | "Consumed";
-	filename: string;
-	alt?: string | null;
-	size: number;
-	content_type: string;
-	source_url?: string;
-	metadata?: {
-		type: "Image" | "Video" | "Audio" | "Text" | "File";
-		width?: number;
-		height?: number;
-		duration?: number;
-	};
-	user_id?: string;
-	deleted_at?: string;
-	has_thumbnail: boolean;
-	has_gifv: boolean;
-	[K: string]: any;
-};
-
-type MessageAttachmentV2 = {
-	type: "Media";
-	media: MediaV2;
-	spoiler: boolean;
-};
-
-type MessageDefaultMarkdownV2 = {
-	content?: string | null;
-	attachments: MessageAttachmentV2[];
-	metadata?: any;
-	reply_id?: string | null;
-	embeds: any[];
-};
-
-type MessageVersionV2 = {
-	version_id: string;
-	author_id?: string;
-	type: "DefaultMarkdown";
-	mentions: any;
-	created_at: string;
-	deleted_at?: string;
-} & MessageDefaultMarkdownV2;
-
-type MessageV2 = {
-	id: string;
-	channel_id: string;
-	latest_version: MessageVersionV2;
-	pinned?: { time: string; position: number };
-	reactions?: any[];
-	deleted_at?: string;
-	removed_at?: string;
-	created_at: string;
-	author_id: string;
-	thread?: any;
-	[K: string]: any;
-};
-
-/** Convert V2 message attachment to V1 Media format */
-function convertV2AttachmentToV1(attachment: MessageAttachmentV2): Media {
-	if (attachment.type === "Media") {
-		return convertV2MediaToV1(attachment.media);
-	}
-	// Fallback for unknown types
-	return {
-		id: "",
-		filename: "unknown",
-		alt: null,
-		source: {
-			info: { type: "Other" },
-			size: 0,
-			mime: "application/octet-stream",
-			source: "Uploaded",
-		},
-	};
-}
-
-/** Convert V2 message to V1 format for backwards compatibility */
-function convertV2MessageToV1(message: MessageV2): Message {
-	const mt = message.latest_version.type;
-	let content: string | null = null;
-	let attachments: Media[] = [];
-	let metadata: any = null;
-	let reply_id: string | null = null;
-	let embeds: any[] = [];
-
-	if (mt === "DefaultMarkdown") {
-		const v = message.latest_version;
-		content = v.content ?? null;
-		attachments = v.attachments.map(convertV2AttachmentToV1);
-		metadata = v.metadata ?? null;
-		reply_id = v.reply_id ?? null;
-		embeds = v.embeds ?? [];
-	}
-
-	return {
-		type: "DefaultMarkdown",
-		id: message.id,
-		channel_id: message.channel_id,
-		version_id: message.latest_version.version_id,
-		author_id: message.latest_version.author_id ?? message.author_id,
-		content: content,
-		attachments: attachments,
-		metadata: metadata,
-		reply_id: reply_id,
-		embeds: embeds,
-		override_name: null,
-		nonce: (message as any).nonce ?? null,
-		pinned: message.pinned ?? null,
-		reactions: message.reactions ?? [],
-		created_at: message.created_at,
-		deleted_at: message.deleted_at ?? null,
-		removed_at: message.removed_at ?? null,
-		edited_at: message.latest_version.version_id !== message.id
-			? message.latest_version.created_at
-			: null,
-		thread: message.thread ?? null,
-		is_local: false,
-	};
-}
-
-function maybeConvertMessage(data: any): Message {
-	if (
-		data && "latest_version" in data && "message_type" in data.latest_version
-	) {
-		return convertV2MessageToV1(data as MessageV2);
-	}
-	return data as Message;
-}
-
-function maybeConvertMessages(data: any[]): Message[] {
-	return data.map(maybeConvertMessage);
-}
-
-function maybeConvertPagination(data: any): PaginationResponseMessage {
-	if (
-		data && Array.isArray(data.items) && data.items.length > 0 &&
-		"latest_version" in data.items[0]
-	) {
-		return {
-			...data,
-			items: data.items.map((item: MessageV2) => convertV2MessageToV1(item)),
-		};
-	}
-	return data;
-}
-
-/** Convert V1 MessageCreate to V2 format for API requests */
-function convertMessageCreateToV2(body: MessageSendReq): any {
-	const attachments = body.attachments?.map((media: Media) => ({
-		type: "Media" as const,
-		media: {
-			id: media.id,
-		},
-		spoiler: false,
-	})) ?? [];
-
-	return {
-		content: body.content,
-		attachments: attachments.length > 0 ? attachments : undefined,
-		reply_id: body.reply_id,
-		embeds: body.embeds,
-		metadata: body.metadata,
-	};
-}
 
 export type MessageMutator = {
 	mutate: (r: MessageRange) => void;
@@ -526,7 +358,7 @@ export class Messages {
 									ranges!,
 									new MessageRange(false, false, []),
 									{
-										items: data.items,
+										items: data.items as Message[],
 									},
 								);
 								range.has_backwards = data.has_before;
@@ -548,7 +380,7 @@ export class Messages {
 								ranges!,
 								new MessageRange(false, false, []),
 								{
-									items: data.items,
+									items: data.items as Message[],
 								},
 							);
 							// TODO: unify these names
@@ -630,44 +462,51 @@ export class Messages {
 		return resource;
 	}
 
-	async send(thread_id: string, body: MessageSendReq): Promise<Message> {
+	async send(channel_id: string, body: MessageSendReq): Promise<Message> {
 		const id = uuidv7();
-		const local: Message = {
-			type: MessageType.DefaultMarkdown,
+
+		const local = {
 			id,
-			channel_id: thread_id,
-			version_id: id,
-			override_name: null,
-			reply_id: null,
-			content: null,
+			channel_id: channel_id,
 			author_id: this.api.users.cache.get("@self")!.id,
-			metadata: null,
-			...body,
+			created_at: new Date().toISOString(),
+			latest_version: {
+				version_id: id,
+				type: "DefaultMarkdown",
+				content: body.content,
+				attachments: body.attachments.map((a) => ({
+					type: "Media",
+					media: this.api.media.cacheInfo.get(a.id),
+					spoiler: false,
+				})),
+				embeds: body.embeds ?? [],
+				created_at: new Date().toISOString(),
+			},
 			nonce: id,
 			is_local: true,
-		};
+		} as unknown as Message;
 
 		console.log("[message:send] local message", local);
 
-		const r = this.cacheRanges.get(thread_id);
+		const r = this.cacheRanges.get(channel_id);
 		if (r) {
 			r.live.items.push(local);
-			this._updateMutators(r, thread_id);
+			this._updateMutators(r, channel_id);
 		}
-
-		const v2Body = convertMessageCreateToV2(body);
-		console.log("[message:send] v2 body", v2Body);
 
 		const data = await fetchWithRetry(() =>
 			this.api.client.http.POST(
 				"/api/v1/channel/{channel_id}/message",
 				{
 					params: {
-						path: { channel_id: thread_id },
+						path: { channel_id: channel_id },
 					},
 					body: {
-						...v2Body,
-						nonce: id,
+						...body,
+						attachments: body.attachments.map((a) => ({
+							type: "Media",
+							media_id: a.id,
+						})),
 					},
 					headers: {
 						"Idempotency-Key": id,
@@ -675,8 +514,7 @@ export class Messages {
 				},
 			)
 		);
-		console.log("[message:send] response from post", v2Body);
-		return maybeConvertMessage(data);
+		return data as Message;
 	}
 
 	fetch(thread_id: () => string, message_id: () => string): Resource<Message> {
@@ -689,17 +527,16 @@ export class Messages {
 			async ({ thread_id, message_id }) => {
 				const m = this.cache.get(message_id);
 				if (m) return m;
-				const data = await fetchWithRetry(() =>
-					this.api.client.http.GET(
-						"/api/v1/channel/{channel_id}/message/{message_id}",
-						{
-							params: {
-								path: { channel_id: thread_id, message_id },
-							},
+				const { data, error } = await this.api.client.http.GET(
+					"/api/v1/channel/{channel_id}/message/{message_id}",
+					{
+						params: {
+							path: { channel_id: thread_id, message_id },
 						},
-					)
+					},
 				);
-				return maybeConvertMessage(data);
+				if (error) throw error;
+				return data as Message;
 			},
 		);
 		createEffect(() => {
@@ -722,18 +559,17 @@ export class Messages {
 	}
 
 	private async fetchList(thread_id: string, query: PaginationQuery) {
-		const data = await fetchWithRetry(() =>
-			this.api.client.http.GET(
-				"/api/v1/channel/{channel_id}/message",
-				{
-					params: {
-						path: { channel_id: thread_id },
-						query,
-					},
+		const { data, error } = await this.api.client.http.GET(
+			"/api/v1/channel/{channel_id}/message",
+			{
+				params: {
+					path: { channel_id: thread_id },
+					query,
 				},
-			)
+			},
 		);
-		return maybeConvertPagination(data);
+		if (error) throw error;
+		return data as Pagination<Message>;
 	}
 
 	private async fetchContext(
@@ -741,23 +577,17 @@ export class Messages {
 		message_id: string,
 		limit: number,
 	) {
-		const data = await fetchWithRetry(() =>
-			this.api.client.http.GET(
-				"/api/v1/channel/{channel_id}/context/{message_id}",
-				{
-					params: {
-						path: { channel_id: thread_id, message_id },
-						query: { limit },
-					},
+		const { data, error } = await this.api.client.http.GET(
+			"/api/v1/channel/{channel_id}/context/{message_id}",
+			{
+				params: {
+					path: { channel_id: thread_id, message_id },
+					query: { limit },
 				},
-			)
+			},
 		);
-		return {
-			items: maybeConvertMessages(data.items),
-			total: data.total,
-			has_after: data.has_after,
-			has_before: data.has_before,
-		};
+		if (error) throw error;
+		return data;
 	}
 
 	async edit(thread_id: string, message_id: string, content: string) {
@@ -765,11 +595,14 @@ export class Messages {
 		if (originalMessage) {
 			const updatedMessage = {
 				...originalMessage,
-				content: content,
-				edited_at: new Date().toISOString(),
-				version_id: uuidv7(), // fake version_id to show (edited)
+				latest_version: {
+					...originalMessage.latest_version,
+					content: content,
+					created_at: new Date().toISOString(),
+					version_id: uuidv7(),
+				},
 				is_local: true,
-			} as Message;
+			} as unknown as Message;
 			this.cache.set(message_id, updatedMessage);
 			const ranges = this.cacheRanges.get(thread_id);
 			if (ranges) {
@@ -785,16 +618,15 @@ export class Messages {
 		}
 
 		try {
-			const data = await fetchWithRetry(() =>
-				this.api.client.http.PATCH(
-					"/api/v1/channel/{channel_id}/message/{message_id}",
-					{
-						params: { path: { channel_id: thread_id, message_id } },
-						body: { content },
-					},
-				)
+			const { data, error } = await this.api.client.http.PATCH(
+				"/api/v1/channel/{channel_id}/message/{message_id}",
+				{
+					params: { path: { channel_id: thread_id, message_id } },
+					body: { content },
+				},
 			);
-			return maybeConvertMessage(data);
+			if (error) throw error;
+			return data as Message;
 		} catch (e) {
 			if (originalMessage) {
 				this.cache.set(message_id, originalMessage);
@@ -808,24 +640,20 @@ export class Messages {
 	}
 
 	async pin(thread_id: string, message_id: string) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PUT(
-				"/api/v1/channel/{channel_id}/pin/{message_id}",
-				{
-					params: { path: { channel_id: thread_id, message_id } },
-				},
-			)
+		await this.api.client.http.PUT(
+			"/api/v1/channel/{channel_id}/pin/{message_id}",
+			{
+				params: { path: { channel_id: thread_id, message_id } },
+			},
 		);
 	}
 
 	async unpin(thread_id: string, message_id: string) {
-		await fetchWithRetry(() =>
-			this.api.client.http.DELETE(
-				"/api/v1/channel/{channel_id}/pin/{message_id}",
-				{
-					params: { path: { channel_id: thread_id, message_id } },
-				},
-			)
+		await this.api.client.http.DELETE(
+			"/api/v1/channel/{channel_id}/pin/{message_id}",
+			{
+				params: { path: { channel_id: thread_id, message_id } },
+			},
 		);
 	}
 
@@ -841,34 +669,28 @@ export class Messages {
 				query: query?.(),
 			}),
 			async ({ channel_id, message_id, query }) => {
-				const data = await fetchWithRetry(() =>
-					message_id
-						? this.api.client.http.GET(
-							"/api/v1/channel/{channel_id}/reply/{message_id}",
-							{
-								params: { path: { channel_id, message_id }, query },
-							},
-						)
-						: this.api.client.http.GET(
-							"/api/v1/channel/{channel_id}/reply",
-							{
-								params: { path: { channel_id }, query },
-							},
-						)
-				);
-
-				const convertedData = {
-					...data,
-					items: data.items.map(maybeConvertMessage),
-				};
+				const { data, error } = await (message_id
+					? this.api.client.http.GET(
+						"/api/v1/channel/{channel_id}/reply/{message_id}",
+						{
+							params: { path: { channel_id, message_id }, query },
+						},
+					)
+					: this.api.client.http.GET(
+						"/api/v1/channel/{channel_id}/reply",
+						{
+							params: { path: { channel_id }, query },
+						},
+					));
+				if (error) throw error;
 
 				batch(() => {
-					for (const item of convertedData.items) {
-						this.cache.set(item.id, item);
+					for (const item of data.items) {
+						this.cache.set(item.id, item as Message);
 					}
 				});
 
-				return convertedData;
+				return data as Pagination<Message>;
 			},
 		);
 		return resource;
@@ -878,47 +700,39 @@ export class Messages {
 		thread_id: string,
 		messages: { id: string; position: number }[],
 	) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PATCH("/api/v1/channel/{channel_id}/pin", {
-				params: { path: { channel_id: thread_id } },
-				body: { messages },
-			})
-		);
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/pin", {
+			params: { path: { channel_id: thread_id } },
+			body: { messages },
+		});
 	}
 
 	async deleteBulk(thread_id: string, message_ids: string[]) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
-				params: { path: { channel_id: thread_id } },
-				body: { delete: message_ids },
-			})
-		);
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+			params: { path: { channel_id: thread_id } },
+			body: { delete: message_ids },
+		});
 	}
 
 	async removeBulk(thread_id: string, message_ids: string[]) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
-				params: { path: { channel_id: thread_id } },
-				body: { remove: message_ids },
-			})
-		);
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+			params: { path: { channel_id: thread_id } },
+			body: { remove: message_ids },
+		});
 	}
 
 	async search(body: any): Promise<import("sdk").MessageSearch> {
-		const data = await fetchWithRetry(() =>
-			this.api.client.http.POST(
-				"/api/v1/search/message",
-				{
-					body,
-				},
-			)
+		const { data, error } = await this.api.client.http.POST(
+			"/api/v1/search/message",
+			{
+				body,
+			},
 		);
+		if (error) throw error;
 
 		const { users, threads, room_members, thread_members, messages } = data;
 
-		const convertedMessages = messages.map(maybeConvertMessage);
-		for (const message of convertedMessages) {
-			this.cache.set(message.id, message);
+		for (const message of messages) {
+			this.cache.set(message.id, message as Message);
 		}
 
 		if (users) {
@@ -958,7 +772,7 @@ export class Messages {
 		return {
 			...data,
 			approximate_total: data.total,
-			messages: convertedMessages,
+			messages: messages as Message[],
 		};
 	}
 
@@ -966,34 +780,31 @@ export class Messages {
 		const paginate = async (pagination?: Pagination<Message>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const data = await fetchWithRetry(() =>
-				this.api.client.http.GET(
-					"/api/v1/channel/{channel_id}/pin",
-					{
-						params: {
-							path: { channel_id: thread_id_signal() },
-							query: {
-								dir: "f",
-								limit: 1024,
-								from: pagination?.items.at(-1)?.id,
-							},
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/channel/{channel_id}/pin",
+				{
+					params: {
+						path: { channel_id: thread_id_signal() },
+						query: {
+							dir: "f",
+							limit: 1024,
+							from: pagination?.items.at(-1)?.id,
 						},
 					},
-				)
+				},
 			);
-
-			const convertedItems = data.items.map(maybeConvertMessage);
+			if (error) throw error;
 
 			batch(() => {
-				for (const item of convertedItems) {
-					this.cache.set(item.id, item);
+				for (const item of data.items) {
+					this.cache.set(item.id, item as Message);
 				}
 			});
 
 			return {
 				...data,
-				items: [...pagination?.items ?? [], ...convertedItems],
-			};
+				items: [...pagination?.items ?? [], ...data.items as Message[]],
+			} as Pagination<Message>;
 		};
 
 		const thread_id = thread_id_signal();
@@ -1057,7 +868,7 @@ export class Messages {
 	): MessageRange {
 		let items: Array<Message> = [];
 		for (const item of data.items) {
-			const convertedItem = maybeConvertMessage(item);
+			const convertedItem = item as Message;
 			this.cache.set(convertedItem.id, convertedItem);
 			const existing = ranges.find(convertedItem.id);
 			if (existing) {
@@ -1086,7 +897,7 @@ export class Messages {
 	): MessageRange {
 		let items: Array<Message> = [];
 		for (const item of data.items) {
-			const convertedItem = maybeConvertMessage(item);
+			const convertedItem = item as Message;
 			this.cache.set(convertedItem.id, convertedItem);
 			const existing = ranges.find(convertedItem.id);
 			if (existing) {

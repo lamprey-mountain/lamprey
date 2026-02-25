@@ -73,45 +73,6 @@ export type Json =
 	| Array<Json>
 	| { [k in string]: Json };
 
-type MessageV2 = {
-	id: string;
-	channel_id: string;
-	latest_version: {
-		version_id: string;
-		author_id?: string;
-		[K: string]: any;
-	};
-	pinned?: { time: string; position: number };
-	reactions?: any[];
-	deleted_at?: string;
-	removed_at?: string;
-	created_at: string;
-	author_id: string;
-	thread?: any;
-	[K: string]: any;
-};
-
-function convertV2MessageToV1(message: MessageV2): Message {
-	return {
-		...message.latest_version,
-		id: message.id,
-		channel_id: message.channel_id,
-		version_id: message.latest_version.version_id,
-		nonce: message.nonce ?? null,
-		author_id: message.author_id,
-		pinned: message.pinned,
-		mentions: message.latest_version.mentions,
-		reactions: message.reactions,
-		created_at: message.created_at,
-		deleted_at: message.deleted_at,
-		removed_at: message.removed_at,
-		edited_at: message.latest_version.version_id !== message.id
-			? message.latest_version.created_at
-			: null,
-		thread: message.thread,
-	};
-}
-
 const ApiContext = createContext<Api>();
 
 export function useApi() {
@@ -141,6 +102,13 @@ function updateSWState(apiUrl: string, token: string | null) {
 		store.put(token, "token");
 	};
 }
+
+const areReactionKeysEqual = (a: any, b: any): boolean => {
+	if (a.type !== b.type) return false;
+	if (a.type === "Text") return a.content === b.content;
+	if (a.type === "Custom") return a.id === b.id;
+	return false;
+};
 
 export function createApi(
 	client: Client,
@@ -506,16 +474,15 @@ export function createApi(
 				});
 			}
 		} else if (msg.type === "MessageCreate") {
-			const m = "latest_version" in msg.message
-				? convertV2MessageToV1(msg.message)
-				: msg.message;
+			const m = msg.message as Message;
 			m.nonce = raw.nonce;
 
 			const me = users.cache.get("@self");
 			let is_mentioned = false;
-			const mentions = m.mentions;
+			const mentions = m.latest_version.mentions;
 			if (
-				me && m.author_id !== me.id && m.type === "DefaultMarkdown" && mentions
+				me && m.author_id !== me.id &&
+				m.latest_version.type === "DefaultMarkdown" && mentions
 			) {
 				if (mentions.users.some((u) => u.id === me.id)) {
 					is_mentioned = true;
@@ -551,11 +518,13 @@ export function createApi(
 				const title = `${author?.name ?? "Someone"} in #${
 					channel?.name ?? "channel"
 				}`;
-				const rawContent = m.content ?? "";
+				const rawContent = m.latest_version.type === "DefaultMarkdown"
+					? m.latest_version.content ?? ""
+					: "";
 				const processedContent = await stripMarkdownAndResolveMentions(
 					rawContent,
 					m.channel_id,
-					m.mentions,
+					m.latest_version.mentions,
 				);
 				const body = processedContent.substring(0, 200);
 
@@ -594,14 +563,17 @@ export function createApi(
 				(ttsMode === "Always" || (ttsMode === "Mentions" && is_mentioned));
 			const isOwnMessage = m.author_id === users.cache.get("@self")?.id;
 
-			if (shouldSpeak && !isOwnMessage && m.type === "DefaultMarkdown") {
+			if (
+				shouldSpeak && !isOwnMessage &&
+				m.latest_version.type === "DefaultMarkdown"
+			) {
 				const author = users.cache.get(m.author_id);
 				const channel = channels.cache.get(m.channel_id);
-				const rawContent = m.content ?? "";
+				const rawContent = m.latest_version.content ?? "";
 				const processedContent = await stripMarkdownAndResolveMentions(
 					rawContent,
 					m.channel_id,
-					m.mentions,
+					m.latest_version.mentions,
 				);
 				const text = processedContent.substring(0, 200);
 
@@ -648,7 +620,7 @@ export function createApi(
 					...t,
 					message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
 					mention_count: (t.mention_count ?? 0) + (is_mentioned ? 1 : 0),
-					last_version_id: m.version_id,
+					last_version_id: m.latest_version.version_id,
 					is_unread,
 				});
 			}
@@ -664,14 +636,16 @@ export function createApi(
 			}
 
 			for (
-				const att of m.type === "DefaultMarkdown" ? m.attachments ?? [] : []
+				const att of m.latest_version.type === "DefaultMarkdown"
+					? m.latest_version.attachments ?? []
+					: []
 			) {
-				media.cacheInfo.set(att.id, att);
+				if (att.type === "Media") {
+					media.cacheInfo.set(att.media.id, att.media);
+				}
 			}
 		} else if (msg.type === "MessageUpdate") {
-			const m = "latest_version" in msg.message
-				? convertV2MessageToV1(msg.message)
-				: msg.message;
+			const m = msg.message as Message;
 			const r = messages.cacheRanges.get(m.channel_id);
 			if (r) {
 				const idx = r.live.items.findIndex((i) => i.id === m.id);
@@ -701,8 +675,9 @@ export function createApi(
 				}
 				const t = api.channels.cache.get(msg.channel_id);
 				if (t) {
-					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
-						t.last_version_id;
+					const last_version_id =
+						ranges?.live.items.at(-1)?.latest_version.version_id ??
+							t.last_version_id;
 					console.log({ last_version_id });
 					api.channels.cache.set(msg.channel_id, {
 						...t,
@@ -736,8 +711,9 @@ export function createApi(
 
 				const t = api.channels.cache.get(thread_id);
 				if (t) {
-					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
-						t.last_version_id;
+					const last_version_id =
+						ranges?.live.items.at(-1)?.latest_version.version_id ??
+							t.last_version_id;
 					api.channels.cache.set(thread_id, {
 						...t,
 						message_count: t.message_count! - message_ids.length,
@@ -945,12 +921,15 @@ export function createApi(
 			}
 		} else if (msg.type === "RatelimitUpdate") {
 			const { channel_id, slowmode_message_expire_at } = msg;
-			const [_ch, chUpdate] = api.ctx.channel_contexts.get(channel_id)!;
-			if (slowmode_message_expire_at) {
-				const expireDate = new Date(slowmode_message_expire_at);
-				chUpdate("slowmode_expire_at", expireDate);
-			} else {
-				chUpdate("slowmode_expire_at", undefined);
+			const ctx_entry = api.ctx?.channel_contexts.get(channel_id);
+			if (ctx_entry) {
+				const [_ch, chUpdate] = ctx_entry;
+				if (slowmode_message_expire_at) {
+					const expireDate = new Date(slowmode_message_expire_at);
+					chUpdate("slowmode_expire_at", expireDate);
+				} else {
+					chUpdate("slowmode_expire_at", undefined);
+				}
 			}
 		} else if (msg.type === "InviteDelete") {
 			invites.cache.delete(msg.code);
@@ -1008,13 +987,17 @@ export function createApi(
 			const { message_id, channel_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);
 			if (message) {
-				const reactions = message.reactions ?? [];
-				const reaction = reactions.find((r) => r.key === key);
-				if (reaction) {
+				const reactions = [...(message.reactions ?? [])];
+				const idx = reactions.findIndex((r) =>
+					areReactionKeysEqual(r.key, key)
+				);
+				if (idx !== -1) {
+					const reaction = { ...reactions[idx] };
 					reaction.count++;
 					if (user_id === session()?.user_id) {
 						reaction.self = true;
 					}
+					reactions[idx] = reaction;
 				} else {
 					reactions.push({
 						key,
@@ -1028,18 +1011,20 @@ export function createApi(
 			const { message_id, channel_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);
 			if (message) {
-				const reactions = message.reactions ?? [];
-				const reaction = reactions.find((r) => r.key === key);
-				if (reaction) {
+				const reactions = [...(message.reactions ?? [])];
+				const idx = reactions.findIndex((r) =>
+					areReactionKeysEqual(r.key, key)
+				);
+				if (idx !== -1) {
+					const reaction = { ...reactions[idx] };
 					reaction.count--;
 					if (user_id === session()?.user_id) {
 						reaction.self = false;
 					}
 					if (reaction.count === 0) {
-						const idx = reactions.findIndex((r) => r.key === key);
-						if (idx !== -1) {
-							reactions.splice(idx, 1);
-						}
+						reactions.splice(idx, 1);
+					} else {
+						reactions[idx] = reaction;
 					}
 				}
 				messages.cache.set(message_id, { ...message, reactions });
@@ -1048,8 +1033,10 @@ export function createApi(
 			const { message_id, key } = msg;
 			const message = messages.cache.get(message_id);
 			if (message) {
-				const reactions = message.reactions ?? [];
-				const idx = reactions.findIndex((r) => r.key === key);
+				const reactions = [...(message.reactions ?? [])];
+				const idx = reactions.findIndex((r) =>
+					areReactionKeysEqual(r.key, key)
+				);
 				if (idx !== -1) {
 					reactions.splice(idx, 1);
 				}
@@ -1309,7 +1296,7 @@ export function createApi(
 	const stripMarkdownAndResolveMentions = (
 		content: string,
 		thread_id: string,
-		mentions?: Message["mentions"],
+		mentions?: Message["latest_version"]["mentions"],
 	) =>
 		stripMarkdownAndResolveMentionsOriginal(content, thread_id, api, mentions);
 
@@ -1344,6 +1331,7 @@ export function createApi(
 		voiceStates,
 		voiceState,
 		stripMarkdownAndResolveMentions,
+		ctx: null as any,
 		Provider(props: ParentProps) {
 			return (
 				<ApiContext.Provider value={api}>
@@ -1403,7 +1391,7 @@ export type Api = {
 	thread_members: ThreadMembers;
 	users: Users;
 	messages: Messages;
-	media: Media;
+	media: MediaInfo;
 	emoji: Emoji;
 	reactions: Reactions;
 	tags: Tags;
@@ -1416,6 +1404,7 @@ export type Api = {
 	client: Client;
 	clientState: Accessor<ClientState>;
 	Provider: Component<ParentProps>;
+	ctx: any;
 
 	events: Emitter<{
 		sync: [MessageSync, MessageEnvelope];

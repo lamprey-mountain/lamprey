@@ -1,3 +1,5 @@
+@use "sass:color";
+
 @use "./reset.scss";
 @use "./fonts.scss";
 @use "./code.scss";
@@ -700,7 +702,7 @@ em {
 			background: #ba2f42;
 
 			&:hover {
-				background: darken($color: #ba2f42, $amount: 10);
+				background: color.adjust(#ba2f42, $lightness: -10%);
 			}
 		}
 	}
@@ -1398,7 +1400,7 @@ summary {
 			background: #ba2f42;
 
 			&:hover {
-				background: darken($color: #ba2f42, $amount: 10);
+				background: color.adjust(#ba2f42, $lightness: -10%);
 			}
 		}
 	}

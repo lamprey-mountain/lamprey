@@ -1,7 +1,6 @@
 import type { Media } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
 import { useConfig } from "../config";
-import { Emoji } from "../api/emoji";
 
 export type MediaProps = VoidProps<{ media: Media }>;
 
@@ -21,27 +20,27 @@ export function formatTime(time: number): string {
 
 /** in seconds */
 export const getDuration = (m: Media) => {
-	const t = m.source.type;
-	if (t === "Audio" || t === "Mixed" || t === "Video") {
-		return (m.source.duration ?? 0) / 1000;
+	const metadata = m.metadata as any;
+	if (metadata.type === "Audio" || metadata.type === "Video") {
+		return metadata.duration ?? 0;
 	} else {
 		return 0;
 	}
 };
 
 export const getWidth = (m: Media) => {
-	const t = m.source.type;
-	if (t === "Video" || t === "Mixed" || t === "Image" || t === "Thumbnail") {
-		return m.source.width ?? 0;
+	const metadata = m.metadata as any;
+	if (metadata.type === "Video" || metadata.type === "Image") {
+		return metadata.width ?? 0;
 	} else {
 		return 0;
 	}
 };
 
 export const getHeight = (m: Media) => {
-	const t = m.source.type;
-	if (t === "Video" || t === "Mixed" || t === "Image" || t === "Thumbnail") {
-		return m.source.height ?? 0;
+	const metadata = m.metadata as any;
+	if (metadata.type === "Video" || metadata.type === "Image") {
+		return metadata.height ?? 0;
 	} else {
 		return 0;
 	}

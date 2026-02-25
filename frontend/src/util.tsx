@@ -1,5 +1,4 @@
-import { getTimestampFromUUID, type Message } from "sdk";
-import { useCtx } from "./context";
+import { type Message } from "sdk";
 import { useModals } from "./contexts/modal";
 
 export function createWeaklyMemoized<T extends object, U>(
@@ -16,27 +15,26 @@ export function createWeaklyMemoized<T extends object, U>(
 }
 
 export const getMsgTs = createWeaklyMemoized((m: Message) =>
-	getTimestampFromUUID(m.id)
+	new Date(m.created_at)
 );
 
 export function getMessageOverrideName(message: Message | undefined) {
 	if (!message) return undefined;
-	if (message.type === "DefaultMarkdown") {
-		return message.override_name;
-	}
+	// if (message.latest_version.type === "DefaultMarkdown") {
+	// 	return message.override_name;
+	// }
 	return undefined;
 }
 
 export function getMessageContent(message: Message | undefined) {
 	if (!message) return undefined;
-	if (message.type === "DefaultMarkdown") {
-		return message.content;
+	if (message.latest_version.type === "DefaultMarkdown") {
+		return message.latest_version.content;
 	}
 	return undefined;
 }
 
 export const Copyable = (props: { children: string }) => {
-	const ctx = useCtx();
 	const [, modalctl] = useModals();
 	const copy = () => {
 		navigator.clipboard.writeText(props.children);

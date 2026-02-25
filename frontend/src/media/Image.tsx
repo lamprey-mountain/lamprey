@@ -24,15 +24,17 @@ export const ImageView = (props: ImageViewProps) => {
 	const thumbUrl = () => getThumb(props.media, props.thumb_width ?? 320)!;
 
 	const height = () => {
-		if (props.media.source.type === "Image") {
-			return props.media.source.height;
+		const metadata = props.media.metadata as any;
+		if (metadata.type === "Image") {
+			return metadata.height;
 		}
 		return 0;
 	};
 
 	const width = () => {
-		if (props.media.source.type === "Image") {
-			return props.media.source.width;
+		const metadata = props.media.metadata as any;
+		if (metadata.type === "Image") {
+			return metadata.width;
 		}
 		return 0;
 	};
@@ -70,7 +72,7 @@ export const ImageView = (props: ImageViewProps) => {
 					</button>
 				</a>
 				<footer class="info dim">
-					{props.media.filename} - {formatBytes(props.media.source.size)}
+					{props.media.filename} - {formatBytes(props.media.size)}
 				</footer>
 			</article>
 		</Resize>
