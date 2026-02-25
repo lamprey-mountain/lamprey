@@ -46,6 +46,19 @@ export type PushCreate = components["schemas"]["PushCreate"];
 export type PushInfo = components["schemas"]["PushInfo"];
 export type AutomodRule = components["schemas"]["AutomodRule"];
 export type AutomodRuleCreate = components["schemas"]["AutomodRuleCreate"];
+export type Attachment = components["schemas"]["MessageAttachment"];
+export type RelationshipType = components["schemas"]["RelationshipType"];
+export type MemberListGroup = components["schemas"]["MemberListGroup"];
+export type ChannelPatch = components["schemas"]["ChannelPatch"];
+export type HistoryPagination = components["schemas"]["HistoryPagination"];
+export type PaginationResponse =
+	components["schemas"]["PaginationResponse_Message"];
+export type Webhook = components["schemas"]["Webhook"];
+export type NotifsChannel = components["schemas"]["NotifsChannel"];
+export type Time = components["schemas"]["Time"];
+export type PermissionOverwriteType =
+	components["schemas"]["PermissionOverwriteType"];
+export type NotifsRoom = components["schemas"]["NotifsRoom"];
 
 // TODO: use openai schema
 export type MessageSearch = {
@@ -156,4 +169,14 @@ export type VoiceState = {
 	self_deaf: boolean;
 	self_video: boolean;
 	self_screen: boolean;
+};
+
+export type InboxListParams = {
+	from?: string;
+	to?: string;
+	dir?: "b" | "f";
+	limit?: number;
+	room_id?: string[];
+	channel_id?: string[];
+	include_read?: boolean;
 };
