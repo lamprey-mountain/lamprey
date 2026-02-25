@@ -90,7 +90,10 @@ pub struct MessageVersion {
     pub message_type: MessageType,
 
     /// who this message mentioned
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Mentions::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Mentions::is_empty")
+    )]
     pub mentions: Mentions,
 
     /// when this message version was created, use this as edited_at
@@ -180,20 +183,32 @@ pub struct ParseMentions {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
     /// the users that were mentioned
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub users: Vec<MentionsUser>,
 
     /// the roles that were mentioned
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub roles: Vec<MentionsRole>,
 
     /// the channels that were mentioned
     // NOTE: this may not be necessary; the user should already have all channels. this is only needed for forwards, but in that case do i really want to leak channel names/types?
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub channels: Vec<MentionsChannel>,
 
     /// the custom emojis that were used in this message
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub emojis: Vec<MentionsEmoji>,
 
     /// if this message mentions everyone
@@ -621,7 +636,10 @@ pub struct MessageSnapshot {
     pub message_type: MessageType,
 
     /// who this message mentioned
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Mentions::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Mentions::is_empty")
+    )]
     pub mentions: Mentions,
 }
 

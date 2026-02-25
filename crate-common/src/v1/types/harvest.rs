@@ -34,9 +34,12 @@ pub struct Harvest {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(tag = "status")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "status"))]
 pub enum HarvestStatus {
     /// this is in progress or is running
     Queued,

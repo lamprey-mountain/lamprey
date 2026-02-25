@@ -36,6 +36,7 @@ type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
 pub struct MessageBroadcastInner {
     pub message: MessageSync,
     pub nonce: Option<String>,
+    // store the serve where this message came from
 }
 
 pub struct ServerStateInner {
@@ -58,6 +59,7 @@ pub enum MessagingService {
     },
 
     /// use nats to broadcast events
+    // TODO: pubsub to nats, but fan out using tokio broadcast internally
     Nats(async_nats::Client),
 }
 

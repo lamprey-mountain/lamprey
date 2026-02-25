@@ -36,9 +36,12 @@ pub struct EmojiCustom {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(tag = "owner")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "owner"))]
 pub enum EmojiOwner {
     /// an emoji owned by a room
     Room { room_id: RoomId },
