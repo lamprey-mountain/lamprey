@@ -13,6 +13,7 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::consts::MAX_PINNED_MESSAGES;
+use crate::data::postgres::DbMediaData;
 use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
@@ -111,7 +112,7 @@ impl From<DbMessageVersion> for MessageVersion {
                         attachments: attachments
                             .into_iter()
                             .map(|v| {
-                                let media: common::v1::types::Media = serde_json::from_value(v)
+                                let media: DbMediaData = serde_json::from_value(v)
                                     .unwrap_or_else(|_| panic!("invalid attachment"));
                                 MessageAttachment {
                                     ty: MessageAttachmentType::Media {
