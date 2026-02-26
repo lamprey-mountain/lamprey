@@ -11,11 +11,10 @@ use common::{
 };
 use dashmap::DashMap;
 use futures::{Stream, StreamExt};
-use lamprey_backend_core::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
-use tracing::info;
+use tracing::{error, info};
 use url::Url;
 
 use crate::{
@@ -59,8 +58,15 @@ pub enum MessagingService {
     },
 
     /// use nats to broadcast events
-    // TODO: pubsub to nats, but fan out using tokio broadcast internally
-    Nats(async_nats::Client),
+    Nats {
+        client: async_nats::Client,
+
+        /// ALL events on the server
+        sushi: Sender<MessageBroadcastInner>,
+
+        /// ALL events for voice sfus
+        sushi_sfu: Sender<SfuCommand>,
+    },
 }
 
 pub struct ServerState {
@@ -152,12 +158,12 @@ impl ServerStateInner {
             MessagingService::Memory { sushi, .. } => {
                 let _ = sushi.send(msg);
             }
-            MessagingService::Nats(client) => {
+            MessagingService::Nats { client, .. } => {
                 let bytes = serde_json::to_vec(&msg)?;
                 let client = client.clone();
                 self.tokio.spawn(async move {
                     if let Err(e) = client.publish("sushi".to_string(), bytes.into()).await {
-                        tracing::error!("NATS publish failed: {}", e);
+                        error!("NATS publish failed: {}", e);
                     }
                 });
             }
@@ -171,12 +177,12 @@ impl ServerStateInner {
             MessagingService::Memory { sushi_sfu, .. } => {
                 let _ = sushi_sfu.send(cmd);
             }
-            MessagingService::Nats(client) => {
+            MessagingService::Nats { client, .. } => {
                 let bytes = serde_json::to_vec(&cmd)?;
                 let client = client.clone();
                 self.tokio.spawn(async move {
                     if let Err(e) = client.publish("sushi_sfu".to_string(), bytes.into()).await {
-                        tracing::error!("NATS publish failed: {}", e);
+                        error!("NATS publish failed: {}", e);
                     }
                 });
             }
@@ -186,62 +192,19 @@ impl ServerStateInner {
 
     pub async fn subscribe_sushi(&self) -> Result<BoxStream<MessageBroadcastInner>> {
         match &self.messaging {
-            MessagingService::Memory { sushi, .. } => {
+            MessagingService::Memory { sushi, .. } | MessagingService::Nats { sushi, .. } => {
                 let stream = tokio_stream::wrappers::BroadcastStream::new(sushi.subscribe());
                 Ok(Box::pin(stream.filter_map(|res| async move { res.ok() })))
-            }
-            MessagingService::Nats(client) => {
-                let client = client.clone();
-                let sub = client
-                    .subscribe("sushi")
-                    .await
-                    .map_err(|e| Error::Internal(format!("NATS subscribe failed: {}", e)))?;
-                let stream = futures::stream::unfold(sub, move |mut sub| async move {
-                    loop {
-                        match sub.next().await {
-                            Some(msg) => match serde_json::from_slice(&msg.payload) {
-                                Ok(inner) => return Some((inner, sub)),
-                                Err(e) => {
-                                    tracing::error!("NATS message deserialize failed: {}", e);
-                                    continue;
-                                }
-                            },
-                            None => return None,
-                        }
-                    }
-                });
-                Ok(Box::pin(stream))
             }
         }
     }
 
     pub async fn subscribe_sfu(&self) -> Result<BoxStream<SfuCommand>> {
         match &self.messaging {
-            MessagingService::Memory { sushi_sfu, .. } => {
+            MessagingService::Memory { sushi_sfu, .. }
+            | MessagingService::Nats { sushi_sfu, .. } => {
                 let stream = tokio_stream::wrappers::BroadcastStream::new(sushi_sfu.subscribe());
                 Ok(Box::pin(stream.filter_map(|res| async move { res.ok() })))
-            }
-            MessagingService::Nats(client) => {
-                let client = client.clone();
-                let sub = client
-                    .subscribe("sushi_sfu")
-                    .await
-                    .map_err(|e| Error::Internal(format!("NATS subscribe failed: {}", e)))?;
-                let stream = futures::stream::unfold(sub, move |mut sub| async move {
-                    loop {
-                        match sub.next().await {
-                            Some(msg) => match serde_json::from_slice(&msg.payload) {
-                                Ok(cmd) => return Some((cmd, sub)),
-                                Err(e) => {
-                                    tracing::error!("NATS message deserialize failed: {}", e);
-                                    continue;
-                                }
-                            },
-                            None => return None,
-                        }
-                    }
-                });
-                Ok(Box::pin(stream))
             }
         }
     }
@@ -323,7 +286,48 @@ impl ServerState {
                 messaging: match nats {
                     Some(c) => {
                         info!("using NATS for messaging");
-                        MessagingService::Nats(c)
+                        let (sushi_tx, _) = tokio::sync::broadcast::channel(100);
+                        let (sushi_sfu_tx, _) = tokio::sync::broadcast::channel(100);
+
+                        let c_clone = c.clone();
+                        let sushi_tx_clone = sushi_tx.clone();
+                        tokio::spawn(async move {
+                            let mut sub = match c_clone.subscribe("sushi").await {
+                                Ok(sub) => sub,
+                                Err(e) => {
+                                    error!("failed to subscribe to NATS 'sushi': {}", e);
+                                    return;
+                                }
+                            };
+                            while let Some(msg) = sub.next().await {
+                                if let Ok(m) = serde_json::from_slice(&msg.payload) {
+                                    let _ = sushi_tx_clone.send(m);
+                                }
+                            }
+                        });
+
+                        let c_clone = c.clone();
+                        let sushi_sfu_tx_clone = sushi_sfu_tx.clone();
+                        tokio::spawn(async move {
+                            let mut sub = match c_clone.subscribe("sushi_sfu").await {
+                                Ok(sub) => sub,
+                                Err(e) => {
+                                    error!("failed to subscribe to NATS 'sushi_sfu': {}", e);
+                                    return;
+                                }
+                            };
+                            while let Some(msg) = sub.next().await {
+                                if let Ok(m) = serde_json::from_slice(&msg.payload) {
+                                    let _ = sushi_sfu_tx_clone.send(m);
+                                }
+                            }
+                        });
+
+                        MessagingService::Nats {
+                            client: c,
+                            sushi: sushi_tx,
+                            sushi_sfu: sushi_sfu_tx,
+                        }
                     }
                     None => {
                         info!("using in-memory messaging");

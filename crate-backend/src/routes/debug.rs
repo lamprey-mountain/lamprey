@@ -427,14 +427,14 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
 
     let messaging_ok = match &s.messaging {
         MessagingService::Memory { .. } => true,
-        MessagingService::Nats(client) => {
+        MessagingService::Nats { client, .. } => {
             client.connection_state() == async_nats::connection::State::Connected
         }
     };
 
     let queue_ok = match &s.messaging {
         MessagingService::Memory { .. } => true,
-        MessagingService::Nats(client) => {
+        MessagingService::Nats { client, .. } => {
             client.connection_state() == async_nats::connection::State::Connected
         }
     };
