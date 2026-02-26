@@ -15,7 +15,7 @@ use crate::{
     },
     routes::util::Auth,
     types::{Permission, SERVER_ROOM_ID},
-    Error, Result, ServerState,
+    Result, ServerState,
 };
 
 pub async fn get_metrics(

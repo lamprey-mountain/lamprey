@@ -19,7 +19,7 @@ use crate::types::{DbRoleCreate, RoleDeleteQuery};
 use crate::ServerState;
 
 use super::util::Auth;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Role create
 #[utoipa::path(

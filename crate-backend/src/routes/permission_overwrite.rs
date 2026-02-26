@@ -16,7 +16,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use super::util::Auth;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::ServerState;
 
 /// Permission overwrite

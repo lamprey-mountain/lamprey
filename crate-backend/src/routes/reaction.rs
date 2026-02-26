@@ -16,7 +16,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
 use crate::error::Result;
-use crate::{Error, ServerState};
+use crate::ServerState;
 
 /// Reaction list
 ///

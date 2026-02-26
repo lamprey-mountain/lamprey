@@ -18,7 +18,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use super::util::Auth;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::ServerState;
 
 /// Emoji create
