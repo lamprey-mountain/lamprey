@@ -39,6 +39,9 @@ pub enum Error {
 
     #[error("media is still processing")]
     StillProcessing,
+
+    #[error("internal error: {0}")]
+    Internal(String),
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -53,6 +56,7 @@ pub enum ErrorCode {
     Tempfile,
     AsyncTempfile,
     StillProcessing,
+    Internal,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -76,6 +80,7 @@ impl Error {
             Error::Tempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::AsyncTempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::StillProcessing => StatusCode::CONFLICT,
+            Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -91,6 +96,7 @@ impl Error {
             Error::Tempfile(_) => ErrorCode::Tempfile,
             Error::AsyncTempfile(_) => ErrorCode::AsyncTempfile,
             Error::StillProcessing => ErrorCode::StillProcessing,
+            Error::Internal(_) => ErrorCode::Internal,
         }
     }
 

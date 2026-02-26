@@ -1,6 +1,6 @@
 use axum::{response::Html, routing::get, Json};
 use common::{
-    v1::types::{EmojiId, Media, MediaId},
+    v1::types::{EmojiId, Media, MediaId, MessageSync},
     v2::types::media::MediaStatus,
 };
 use error::Result;
@@ -35,6 +35,7 @@ mod routes;
 struct AppState {
     db: PgPool,
     s3: Operator,
+    nats: Option<async_nats::Client>,
     config: Arc<Config>,
 
     // NOTE: be careful about allowing emoji/media editing! i'd need to invalidate these caches
@@ -42,39 +43,62 @@ struct AppState {
     cache_media: Cache<MediaId, Media>,
     pending_thumbnails: Cache<(MediaId, u32, u32, bool), Vec<u8>>,
     pending_gifv: Cache<MediaId, Arc<async_tempfile::TempFile>>,
+
+    sushi_tx: tokio::sync::broadcast::Sender<MessageSync>,
 }
 
 impl AppState {
-    async fn lookup_media(&self, media_id: MediaId) -> Result<Media> {
-        let m = self
-            .cache_media
-            .try_get_with(media_id, data::lookup_media(&self.db, media_id))
-            .await?;
-        Ok(m)
-    }
-
     async fn lookup_emoji(&self, emoji_id: EmojiId) -> Result<MediaId> {
-        let m = self
-            .cache_emoji
-            .try_get_with(emoji_id, data::lookup_emoji(&self.db, emoji_id))
-            .await?;
+        if let Some(m) = self.cache_emoji.get(&emoji_id).await {
+            return Ok(m);
+        }
+        let m = data::lookup_emoji(&self.db, emoji_id).await?;
+        self.cache_emoji.insert(emoji_id, m).await;
         Ok(m)
     }
 
-    async fn ensure_media_ready(&self, media_id: MediaId, wait: bool) -> Result<()> {
+    async fn ensure_media_ready(&self, media_id: MediaId, wait: bool) -> Result<Media> {
+        if let Some(m) = self.cache_media.get(&media_id).await {
+            return Ok(m);
+        }
+
+        let mut sub = self.sushi_tx.subscribe();
+
         loop {
-            let status = data::get_media_status(&self.db, media_id).await?;
-            match status {
-                Some(MediaStatus::Uploaded) | Some(MediaStatus::Consumed) | None => {
-                    return Ok(());
-                }
-                _ => {
-                    if wait {
-                        tokio::time::sleep(Duration::from_secs(2)).await;
-                    } else {
-                        return Err(Error::StillProcessing);
+            let (media, status) = data::lookup_media_with_status(&self.db, media_id).await?;
+            if matches!(
+                status,
+                Some(MediaStatus::Uploaded) | Some(MediaStatus::Consumed) | None
+            ) {
+                self.cache_media.insert(media_id, media.clone()).await;
+                return Ok(media);
+            }
+
+            if !wait {
+                return Err(Error::StillProcessing);
+            }
+
+            if self.nats.is_some() {
+                loop {
+                    match sub.recv().await {
+                        Ok(MessageSync::MediaProcessed { media: m, .. }) if m.id == media_id => {
+                            let media_v1: Media = data::DbMediaData::V2(m).into();
+                            self.cache_media.insert(media_id, media_v1.clone()).await;
+                            return Ok(media_v1);
+                        }
+                        Ok(_) => continue,
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                            break; // Re-check DB
+                        }
+                        Err(_) => {
+                            return Err(Error::Internal(
+                                "NATS subscription ended unexpectedly".to_string(),
+                            ));
+                        }
                     }
                 }
+            } else {
+                tokio::time::sleep(Duration::from_secs(2)).await;
             }
         }
     }
@@ -142,16 +166,58 @@ async fn main() -> anyhow::Result<()> {
         .layer(LoggingLayer::default())
         .finish();
 
+    let nats = if let Some(nats_config) = &config.nats {
+        let mut nats_options = async_nats::ConnectOptions::new();
+        if let Some(credentials_path) = &nats_config.credentials {
+            nats_options = nats_options
+                .credentials_file(credentials_path)
+                .await
+                .map_err(|e| anyhow::anyhow!("NATS credentials file failed: {}", e))?;
+        }
+        Some(
+            async_nats::connect_with_options(&nats_config.addr, nats_options)
+                .await
+                .map_err(|e| anyhow::anyhow!("NATS connect failed: {}", e))?,
+        )
+    } else {
+        None
+    };
+
+    let (sushi_tx, _) = tokio::sync::broadcast::channel(100);
+
+    if let Some(nats_client) = &nats {
+        let nats_client = nats_client.clone();
+        let sushi_tx = sushi_tx.clone();
+        tokio::spawn(async move {
+            use futures_util::StreamExt;
+            let mut sub = match nats_client.subscribe("sushi").await {
+                Ok(sub) => sub,
+                Err(e) => {
+                    tracing::error!("failed to subscribe to NATS: {}", e);
+                    return;
+                }
+            };
+
+            while let Some(msg) = sub.next().await {
+                if let Ok(sync_msg) = serde_json::from_slice::<MessageSync>(&msg.payload) {
+                    let _ = sushi_tx.send(sync_msg);
+                }
+            }
+        });
+    }
+
     let cache_media = Cache::new(config.cache_media);
     let cache_emoji = Cache::new(config.cache_emoji);
     let state = AppState {
         db,
         s3,
+        nats,
         config: Arc::new(config),
         cache_media,
         cache_emoji,
         pending_thumbnails: Cache::new(0),
         pending_gifv: Cache::new(100),
+        sushi_tx,
     };
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())

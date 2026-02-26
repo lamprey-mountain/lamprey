@@ -69,7 +69,10 @@ where
     Ok(media_id)
 }
 
-pub async fn lookup_media<'e, E>(exec: E, media_id: MediaId) -> Result<Media>
+pub async fn lookup_media_with_status<'e, E>(
+    exec: E,
+    media_id: MediaId,
+) -> Result<(Media, Option<MediaStatus>)>
 where
     E: Executor<'e, Database = Postgres>,
 {
@@ -80,22 +83,9 @@ where
     .fetch_one(exec)
     .await?;
     let media: DbMediaData = serde_json::from_value(media).unwrap();
-    Ok(media.into())
-}
-
-pub async fn get_media_status<'e, E>(exec: E, media_id: MediaId) -> Result<Option<MediaStatus>>
-where
-    E: Executor<'e, Database = Postgres>,
-{
-    let media: JsonValue = query_scalar!(
-        "SELECT data FROM media WHERE id = $1 AND deleted_at IS NULL",
-        *media_id
-    )
-    .fetch_one(exec)
-    .await?;
-    let media: DbMediaData = serde_json::from_value(media).unwrap();
-    match media {
-        DbMediaData::V2(m) => Ok(Some(m.status)),
-        _ => Ok(None),
-    }
+    let status = match &media {
+        DbMediaData::V2(m) => Some(m.status.clone()),
+        _ => None,
+    };
+    Ok((media.into(), status))
 }

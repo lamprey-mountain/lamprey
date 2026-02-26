@@ -24,8 +24,7 @@ pub async fn head_media(
     Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    s.ensure_media_ready(media_id, query.wait).await?;
-    let media = s.lookup_media(media_id).await?;
+    let media = s.ensure_media_ready(media_id, query.wait).await?;
     let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
 
     if header_info.unmodified {
@@ -51,8 +50,7 @@ pub async fn head_media_filename(
     Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    s.ensure_media_ready(media_id, query.wait).await?;
-    let media = s.lookup_media(media_id).await?;
+    let media = s.ensure_media_ready(media_id, query.wait).await?;
     if media.filename != filename {
         return Err(Error::NotFound);
     }
@@ -82,10 +80,9 @@ pub async fn get_media(
     Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    s.ensure_media_ready(media_id, query.wait).await?;
+    let media = s.ensure_media_ready(media_id, query.wait).await?;
     let path = format!("/media/{}/file", media_id);
 
-    let media = s.lookup_media(media_id).await?;
     let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
 
     if header_info.unmodified {
@@ -112,10 +109,9 @@ pub async fn get_media_filename(
     Query(query): Query<MediaQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    s.ensure_media_ready(media_id, query.wait).await?;
+    let media = s.ensure_media_ready(media_id, query.wait).await?;
     let path = format!("/media/{}/file", media_id);
 
-    let media = s.lookup_media(media_id).await?;
     if media.filename != filename {
         return Err(Error::NotFound);
     }

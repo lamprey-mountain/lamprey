@@ -3681,6 +3681,7 @@ name = "lamprey-media"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "async-nats",
  "async-recursion",
  "async-tempfile",
  "axum",

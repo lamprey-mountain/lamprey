@@ -29,8 +29,7 @@ async fn gifv_response(
     headers: HeaderMap,
     with_body: bool,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    s.ensure_media_ready(media_id, query.wait).await?;
-    let media = s.lookup_media(media_id).await?;
+    let media = s.ensure_media_ready(media_id, query.wait).await?;
     if media.source.mime.as_str() != "image/gif" {
         return Err(Error::BadRequest);
     }

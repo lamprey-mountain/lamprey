@@ -32,14 +32,13 @@ async fn thumb_response(
     headers: HeaderMap,
     with_body: bool,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    s.ensure_media_ready(media_id, media_query.wait).await?;
+    let media = s.ensure_media_ready(media_id, media_query.wait).await?;
     let animate = query.animate;
     if let Some(size) = query.size {
         if !s.config.thumb_sizes.contains(&size) {
             return Err(Error::BadRequest);
         }
 
-        let media = s.lookup_media(media_id).await?;
         let pre_header_info = build_headers(
             &headers,
             &ContentInfo::Thumb {
@@ -179,8 +178,6 @@ async fn thumb_response(
 
         Ok((status, final_headers.headers, body))
     } else {
-        let media = s.lookup_media(media_id).await?;
-
         let is_animated = media.source.mime.as_str() == "image/gif"
             || media.source.mime.as_str().starts_with("video/");
 

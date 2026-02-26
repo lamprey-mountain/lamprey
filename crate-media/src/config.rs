@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::path::PathBuf;
 use url::Url;
 
 #[derive(Debug, Deserialize)]
@@ -14,6 +15,11 @@ pub struct Config {
 
     #[serde(default = "default_cache_emoji")]
     pub cache_emoji: u64,
+
+    /// configuration for nats
+    ///
+    /// if None, use polling for wait query param
+    pub nats: Option<ConfigNats>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -23,6 +29,20 @@ pub struct ConfigS3 {
     pub region: String,
     pub access_key_id: String,
     pub secret_access_key: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigNats {
+    /// the address of the nats server
+    #[serde(default = "default_nats_addr")]
+    pub addr: String,
+
+    /// path to a nats credential file, if authentication is required
+    pub credentials: Option<PathBuf>,
+}
+
+fn default_nats_addr() -> String {
+    "localhost:4222".to_string()
 }
 
 fn default_cache_media() -> u64 {
