@@ -119,7 +119,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 								flags: 0,
 								presence: { status: "Offline" as const, activities: [] },
 								relationship: null,
-								user_config: null,
+								preferences: null,
 							});
 
 							const channels = api.channels.list(() => i.room_id);

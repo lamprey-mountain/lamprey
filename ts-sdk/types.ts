@@ -27,11 +27,11 @@ export type RelationshipWithUserId =
 	components["schemas"]["RelationshipWithUserId"];
 export type UserWithRelationship =
 	components["schemas"]["UserWithRelationship"];
-export type UserConfig = components["schemas"]["PreferencesGlobal"];
-export type UserConfigGlobal = components["schemas"]["PreferencesGlobal"];
-export type UserConfigUser = components["schemas"]["PreferencesUser"];
-export type UserConfigRoom = components["schemas"]["PreferencesRoom"];
-export type UserConfigChannel = components["schemas"]["PreferencesChannel"];
+export type Preferences = components["schemas"]["PreferencesGlobal"];
+export type PreferencesGlobal = components["schemas"]["PreferencesGlobal"];
+export type PreferencesUser = components["schemas"]["PreferencesUser"];
+export type PreferencesRoom = components["schemas"]["PreferencesRoom"];
+export type PreferencesChannel = components["schemas"]["PreferencesChannel"];
 export type Application = components["schemas"]["Application"];
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
 export type MessageSync = components["schemas"]["MessageSync"];

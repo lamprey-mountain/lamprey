@@ -27,13 +27,13 @@ import type {
 	MessageReady,
 	MessageSync,
 	Pagination,
+	Preferences,
 	Role,
 	Room,
 	RoomMember,
 	Session,
 	ThreadMember,
 	User,
-	UserConfig,
 	UserWithRelationship,
 	VoiceState,
 } from "sdk";
@@ -117,9 +117,9 @@ export function createApi(
 		sync: [MessageSync, MessageEnvelope];
 		ready: MessageReady;
 	}>,
-	{ userConfig, setUserConfig }: {
-		userConfig: Accessor<UserConfig>;
-		setUserConfig: (c: UserConfig) => void;
+	{ preferences, setPreferences }: {
+		preferences: Accessor<Preferences>;
+		setPreferences: (c: Preferences) => void;
 	},
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
@@ -319,8 +319,8 @@ export function createApi(
 					};
 				}
 
-				setUserConfig({
-					...userConfig(),
+				setPreferences({
+					...preferences(),
 					global: msg.config,
 				});
 			});
@@ -520,7 +520,7 @@ export function createApi(
 			if (
 				is_mentioned &&
 				notificationPermission() === "granted" &&
-				userConfig().frontend["desktop_notifs"] === "yes"
+				preferences().frontend["desktop_notifs"] === "yes"
 			) {
 				const author = users.cache.get(m.author_id);
 				const channel = channels.cache.get(m.channel_id);
@@ -566,8 +566,8 @@ export function createApi(
 			}
 
 			// TTS notifications
-			const ttsEnabled = userConfig().frontend["tts_notifs"] === "yes";
-			const ttsMode = userConfig().notifs.tts;
+			const ttsEnabled = preferences().frontend["tts_notifs"] === "yes";
+			const ttsMode = preferences().notifs.tts;
 			const shouldSpeak = ttsEnabled && ttsMode !== "Nothing" &&
 				(ttsMode === "Always" || (ttsMode === "Mentions" && is_mentioned));
 			const isOwnMessage = m.author_id === users.cache.get("@self")?.id;
@@ -1072,36 +1072,36 @@ export function createApi(
 					users.cache.set("@self", newUser);
 				}
 			}
-		} else if (msg.type === "UserConfigGlobal") {
+		} else if (msg.type === "PreferencesGlobal") {
 			if (msg.user_id === session()?.user_id) {
-				if (!deepEqual(userConfig(), msg.config)) {
-					setUserConfig(msg.config);
+				if (!deepEqual(preferences(), msg.config)) {
+					setPreferences(msg.config);
 				}
 			}
-		} else if (msg.type === "UserConfigRoom") {
+		} else if (msg.type === "PreferencesRoom") {
 			if (msg.user_id === session()?.user_id) {
 				const room = rooms.cache.get(msg.room_id);
 				if (room) {
-					rooms.cache.set(msg.room_id, { ...room, user_config: msg.config });
+					rooms.cache.set(msg.room_id, { ...room, preferences: msg.config });
 				}
 			}
-		} else if (msg.type === "UserConfigChannel") {
+		} else if (msg.type === "PreferencesChannel") {
 			if (msg.user_id === session()?.user_id) {
 				const thread = channels.cache.get(msg.channel_id);
 				if (thread) {
 					channels.cache.set(thread.id, {
 						...thread,
-						user_config: msg.config,
+						preferences: msg.config,
 					});
 				}
 			}
-		} else if (msg.type === "UserConfigUser") {
+		} else if (msg.type === "PreferencesUser") {
 			if (msg.user_id === session()?.user_id) {
 				const user = users.cache.get(msg.target_user_id);
 				if (user) {
 					users.cache.set(msg.target_user_id, {
 						...user,
-						user_config: msg.config,
+						preferences: msg.config,
 					});
 				}
 			}

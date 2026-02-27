@@ -682,7 +682,8 @@ export function MessageView(props: MessageProps) {
 				return ch?.editingMessage?.message_id ===
 					props.message.id;
 			};
-			const messageStyle = ctx.userConfig().frontend["message_style"] || "cozy";
+			const messageStyle = ctx.preferences().frontend["message_style"] ||
+				"cozy";
 			const withAvatar = messageStyle === "cozy";
 
 			// TODO: this code is getting messy and needs a refactor soon...

@@ -1,4 +1,4 @@
-import type { Pagination, User, UserConfig, UserWithRelationship } from "sdk";
+import type { Pagination, Preferences, User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
@@ -128,9 +128,9 @@ export class Users {
 		return resource;
 	}
 
-	async getConfig(): Promise<UserConfig> {
+	async getPreferences(): Promise<Preferences> {
 		return await fetchWithRetry(() =>
-			this.api.client.http.GET("/api/v1/config")
+			this.api.client.http.GET("/api/v1/preferences")
 		);
 	}
 
@@ -140,9 +140,9 @@ export class Users {
 		);
 	}
 
-	async setConfig(config: UserConfig) {
+	async setPreferences(config: Preferences) {
 		await fetchWithRetry(() =>
-			this.api.client.http.PUT("/api/v1/config", { body: config })
+			this.api.client.http.PUT("/api/v1/preferences", { body: config })
 		);
 	}
 }

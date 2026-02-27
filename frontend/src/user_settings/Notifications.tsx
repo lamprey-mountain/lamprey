@@ -1,5 +1,5 @@
 import { createEffect, Show, type VoidProps } from "solid-js";
-import { type User, type UserConfig } from "sdk";
+import { type Preferences, type User } from "sdk";
 import { Checkbox } from "../icons";
 import { notificationPermission } from "../notification";
 import { useCtx } from "../context";
@@ -32,7 +32,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 	// TODO: option to disable mention sound
 
 	const setNotifConfig = (
-		field: keyof UserConfig["notifs"],
+		field: keyof Preferences["notifs"],
 		value:
 			| NotifAction
 			| NotifsMessages
@@ -40,8 +40,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			| NotifsReactions
 			| NotifsTts,
 	) => {
-		const c = ctx.userConfig();
-		ctx.setUserConfig({
+		const c = ctx.preferences();
+		ctx.setPreferences({
 			...c,
 			notifs: {
 				...c.notifs,
@@ -51,7 +51,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 	};
 
 	const setFrontendConfig = async (setting: string, value: string) => {
-		const c = ctx.userConfig();
+		const c = ctx.preferences();
 
 		if (setting === "push_notifs") {
 			if (value === "yes") {
@@ -103,7 +103,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			}
 		}
 
-		ctx.setUserConfig({
+		ctx.setPreferences({
 			...c,
 			frontend: {
 				...c.frontend,
@@ -113,7 +113,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 	};
 
 	const isFrontendConfigEnabled = (setting: string) => {
-		return ctx.userConfig().frontend[setting] === "yes";
+		return ctx.preferences().frontend[setting] === "yes";
 	};
 
 	createEffect(async () => {
@@ -121,7 +121,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			const registration = await navigator.serviceWorker.ready;
 			const subscription = await registration.pushManager.getSubscription();
 			const isEnabled = !!subscription;
-			const currentConfig = ctx.userConfig().frontend["push_notifs"] === "yes";
+			const currentConfig = ctx.preferences().frontend["push_notifs"] === "yes";
 
 			if (isEnabled !== currentConfig) {
 				// TODO: sync config
@@ -203,7 +203,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 						</div>
 					</div>
 					<Dropdown
-						selected={ctx.userConfig().notifs.messages}
+						selected={ctx.preferences().notifs.messages}
 						onSelect={(value) => value && setNotifConfig("messages", value)}
 						options={[
 							{ item: "Everything", label: t("user_settings.everything") },
@@ -221,7 +221,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 						</div>
 					</div>
 					<Dropdown
-						selected={ctx.userConfig().notifs.threads}
+						selected={ctx.preferences().notifs.threads}
 						onSelect={(value) => value && setNotifConfig("threads", value)}
 						options={[
 							{ item: "Notify", label: t("user_settings.notify") },
@@ -238,7 +238,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 						</div>
 					</div>
 					<Dropdown
-						selected={ctx.userConfig().notifs.reactions}
+						selected={ctx.preferences().notifs.reactions}
 						onSelect={(value) => value && setNotifConfig("reactions", value)}
 						options={[
 							{ item: "Always", label: t("user_settings.always") },
@@ -256,7 +256,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 						</div>
 					</div>
 					<Dropdown
-						selected={ctx.userConfig().notifs.tts}
+						selected={ctx.preferences().notifs.tts}
 						onSelect={(value) => value && setNotifConfig("tts", value)}
 						options={[
 							{ item: "Always", label: t("user_settings.always") },

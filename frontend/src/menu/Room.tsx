@@ -113,7 +113,7 @@ export function RoomMenu(props: { room_id: string }) {
 
 function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	const api = useApi();
-	const roomConfig = () => props.room.user_config;
+	const roomConfig = () => props.room.preferences;
 
 	const setNotifs = (notifs: Partial<import("sdk").NotifsRoom>) => {
 		const current = roomConfig() ?? { notifs: {}, frontend: {} };
@@ -130,9 +130,9 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 		}
 		api.rooms.cache.set(props.room.id, {
 			...props.room,
-			user_config: newConfig,
+			preferences: newConfig,
 		});
-		api.client.http.PUT("/api/v1/config/room/{room_id}", {
+		api.client.http.PUT("/api/v1/preferences/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
 			body: newConfig,
 		});

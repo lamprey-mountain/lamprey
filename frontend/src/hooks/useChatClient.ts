@@ -1,6 +1,6 @@
 import { createEffect, createSignal, from, onCleanup } from "solid-js";
 import { createStore } from "solid-js/store";
-import { createClient, type UserConfig } from "sdk";
+import { createClient, type Preferences } from "sdk";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createResource } from "solid-js";
@@ -15,13 +15,13 @@ import type { ChatCtx, Data, Events, MediaCtx } from "../context.ts";
 import type { ThreadsViewData } from "../context.ts";
 import type { Config } from "../config.tsx";
 
-function loadSavedUserConfig(): UserConfig | null {
-	const c = localStorage.getItem("user_config");
+function loadSavedPreferences(): Preferences | null {
+	const c = localStorage.getItem("preferences");
 	if (!c) return null;
 	return JSON.parse(c);
 }
 
-const DEFAULT_USER_CONFIG: UserConfig = {
+const DEFAULT_PREFERENCES: Preferences = {
 	frontend: {
 		desktop_notifs: "yes",
 		push_notifs: "yes",
@@ -35,6 +35,17 @@ const DEFAULT_USER_CONFIG: UserConfig = {
 		room_public: "Watching",
 		room_private: "Watching",
 		room_dm: "Watching",
+	},
+	privacy: {
+		friends: {
+			pause_until: null,
+			allow_everyone: true,
+			allow_mutual_friend: true,
+			allow_mutual_room: true,
+		},
+		dms: true,
+		rpc: true,
+		exif: true,
 	},
 };
 
@@ -52,10 +63,10 @@ export function useChatClient(config: Config) {
 		},
 	});
 
-	const [userConfig, setUserConfig] = createSignal<UserConfig>(
-		loadSavedUserConfig() ?? DEFAULT_USER_CONFIG,
+	const [preferences, setPreferences] = createSignal<Preferences>(
+		loadSavedPreferences() ?? DEFAULT_PREFERENCES,
 	);
-	const api = createApi(client, events, { userConfig, setUserConfig });
+	const api = createApi(client, events, { preferences, setPreferences });
 
 	const cs = from(client.state);
 	createEffect(() => {
@@ -85,19 +96,19 @@ export function useChatClient(config: Config) {
 	const slashCommands = new SlashCommands();
 	registerDefaultSlashCommands(slashCommands);
 
-	let userConfigLoaded = false;
+	let preferencesLoaded = false;
 
 	(async () => {
-		const data = await api.users.getConfig();
-		if (data) setUserConfig(data as UserConfig);
-		userConfigLoaded = true;
+		const data = await api.users.getPreferences();
+		if (data) setPreferences(data as Preferences);
+		preferencesLoaded = true;
 	})();
 
 	createEffect(() => {
-		const config = userConfig();
-		if (!userConfigLoaded || !config) return;
-		localStorage.setItem("user_config", JSON.stringify(config));
-		api.users.setConfig(config);
+		const config = preferences();
+		if (!preferencesLoaded || !config) return;
+		localStorage.setItem("preferences", JSON.stringify(config));
+		api.users.setPreferences(config);
 	});
 
 	const [recentChannels, setRecentChannels] = createSignal([] as string[]);
@@ -118,8 +129,8 @@ export function useChatClient(config: Config) {
 		setRecentChannels,
 		currentMedia,
 		setCurrentMedia,
-		userConfig,
-		setUserConfig,
+		preferences,
+		setPreferences,
 		scrollToChatList: (pos: number) => {
 			console.log("scrollToChatList called with position:", pos);
 		},
@@ -161,5 +172,5 @@ export function useChatClient(config: Config) {
 
 	api.ctx = ctx;
 
-	return { client, api, ctx, userConfig, setUserConfig };
+	return { client, api, ctx, preferences, setPreferences };
 }

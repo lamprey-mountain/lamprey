@@ -392,10 +392,10 @@ export function UserMenu(props: UserMenuProps) {
 									min="0"
 									max="100"
 									list="volume-detents"
-									value={voice.userConfig.get(props.user_id)?.volume ?? 100}
+									value={voice.preferences.get(props.user_id)?.volume ?? 100}
 									onInput={(e) =>
-										voice.userConfig.set(props.user_id, {
-											...voice.userConfig.get(props.user_id) ??
+										voice.preferences.set(props.user_id, {
+											...voice.preferences.get(props.user_id) ??
 												{ mute: false, mute_video: false, volume: 100 },
 											volume: parseFloat(e.target.value),
 										})}
@@ -404,13 +404,13 @@ export function UserMenu(props: UserMenuProps) {
 						</li>
 						<Item
 							onClick={() => {
-								const c = voice.userConfig.get(props.user_id) ??
+								const c = voice.preferences.get(props.user_id) ??
 									{ mute: false, mute_video: false, volume: 100 };
 								c.mute = !c.mute;
-								voice.userConfig.set(props.user_id, { ...c });
+								voice.preferences.set(props.user_id, { ...c });
 							}}
 						>
-							{voice.userConfig.get(props.user_id)?.mute === true
+							{voice.preferences.get(props.user_id)?.mute === true
 								? "unmute"
 								: "mute"}
 						</Item>

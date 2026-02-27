@@ -9,8 +9,8 @@ import type {
 	Media,
 	MessageReady,
 	MessageSync,
+	Preferences,
 	Upload,
-	UserConfig,
 } from "sdk";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
@@ -102,8 +102,8 @@ export type ChatCtx = {
 	setRecentChannels: Setter<Array<string>>;
 	currentMedia: Accessor<MediaCtx | null>;
 	setCurrentMedia: Setter<MediaCtx | null>;
-	userConfig: Accessor<UserConfig>;
-	setUserConfig: Setter<UserConfig>;
+	preferences: Accessor<Preferences>;
+	setPreferences: Setter<Preferences>;
 	scrollToChatList: (pos: number) => void;
 	slashCommands: SlashCommands;
 	channel_contexts: ReactiveMap<string, ChannelContextT>;

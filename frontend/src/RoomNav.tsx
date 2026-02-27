@@ -132,7 +132,7 @@ export const RoomNav = () => {
 	let folderTimer: number | undefined;
 
 	const getConfig = (): RoomNavConfig => {
-		const config = ctx.userConfig().frontend.roomNav as RoomNavConfig;
+		const config = ctx.preferences().frontend.roomNav as RoomNavConfig;
 		if (config && Array.isArray(config)) {
 			return JSON.parse(JSON.stringify(config)); // Deep copy
 		}
@@ -311,8 +311,8 @@ export const RoomNav = () => {
 				item.id = crypto.randomUUID();
 			}
 		}
-		const c = ctx.userConfig();
-		ctx.setUserConfig({
+		const c = ctx.preferences();
+		ctx.setPreferences({
 			...c,
 			frontend: {
 				...c.frontend,

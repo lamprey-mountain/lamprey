@@ -10,8 +10,8 @@ export function Chat(props: VoidProps<{ user: User }>) {
 	const { t } = useCtx();
 
 	const toggle = (setting: string) => () => {
-		const c = ctx.userConfig();
-		ctx.setUserConfig({
+		const c = ctx.preferences();
+		ctx.setPreferences({
 			...c,
 			frontend: {
 				...c.frontend,
@@ -28,25 +28,26 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				<h3 class="dim" style="margin-top:0">{t("user_settings.media")}</h3>
 				<CheckboxOption
 					id={`user-${props.user.id}-preview-attachments`}
-					checked={ctx.userConfig().frontend["preview_attachments"] === "yes"}
+					checked={ctx.preferences().frontend["preview_attachments"] === "yes"}
 					onChange={() => toggle("preview_attachments")()}
 					seed={`user-${props.user.id}-preview-attachments`}
 				>
 					<Checkbox
-						checked={ctx.userConfig().frontend["preview_attachments"] === "yes"}
+						checked={ctx.preferences().frontend["preview_attachments"] ===
+							"yes"}
 						seed={`user-${props.user.id}-preview-attachments`}
 					/>
 					<span>{t("user_settings.preview_attachments")}</span>
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-preview-attachments-descriptions`}
-					checked={ctx.userConfig()
+					checked={ctx.preferences()
 						.frontend["preview_attachments_descriptions"] === "yes"}
 					onChange={() => toggle("preview_attachments_descriptions")()}
 					seed={`user-${props.user.id}-preview-attachments-descriptions`}
 				>
 					<Checkbox
-						checked={ctx.userConfig()
+						checked={ctx.preferences()
 							.frontend["preview_attachments_descriptions"] === "yes"}
 						seed={`user-${props.user.id}-preview-attachments-descriptions`}
 					/>
@@ -54,12 +55,12 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-link-previews`}
-					checked={ctx.userConfig().frontend["link_previews"] === "yes"}
+					checked={ctx.preferences().frontend["link_previews"] === "yes"}
 					onChange={() => toggle("link_previews")()}
 					seed={`user-${props.user.id}-link-previews`}
 				>
 					<Checkbox
-						checked={ctx.userConfig().frontend["link_previews"] === "yes"}
+						checked={ctx.preferences().frontend["link_previews"] === "yes"}
 						seed={`user-${props.user.id}-link-previews`}
 					/>
 					<span>{t("user_settings.link_previews")}</span>
@@ -67,24 +68,24 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				<h3 class="dim">{t("user_settings.input")}</h3>
 				<CheckboxOption
 					id={`user-${props.user.id}-show-send-button`}
-					checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
+					checked={ctx.preferences().frontend["show_send_button"] === "yes"}
 					onChange={() => toggle("show_send_button")()}
 					seed={`user-${props.user.id}-show-send-button`}
 				>
 					<Checkbox
-						checked={ctx.userConfig().frontend["show_send_button"] === "yes"}
+						checked={ctx.preferences().frontend["show_send_button"] === "yes"}
 						seed={`user-${props.user.id}-show-send-button`}
 					/>
 					<span>{t("user_settings.show_send_button")}</span>
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-typing-indicators`}
-					checked={ctx.userConfig().frontend["typing_indicators"] === "yes"}
+					checked={ctx.preferences().frontend["typing_indicators"] === "yes"}
 					onChange={() => toggle("typing_indicators")()}
 					seed={`user-${props.user.id}-typing-indicators`}
 				>
 					<Checkbox
-						checked={ctx.userConfig().frontend["typing_indicators"] === "yes"}
+						checked={ctx.preferences().frontend["typing_indicators"] === "yes"}
 						seed={`user-${props.user.id}-typing-indicators`}
 					/>
 					<span>{t("user_settings.typing_indicators")}</span>
@@ -98,11 +99,11 @@ export function Chat(props: VoidProps<{ user: User }>) {
 						</div>
 					</div>
 					<Dropdown
-						selected={ctx.userConfig().frontend["spoilers"] || "click"}
+						selected={ctx.preferences().frontend["spoilers"] || "click"}
 						onSelect={(value) => {
 							if (value) {
-								const c = ctx.userConfig();
-								ctx.setUserConfig({
+								const c = ctx.preferences();
+								ctx.setPreferences({
 									...c,
 									frontend: {
 										...c.frontend,

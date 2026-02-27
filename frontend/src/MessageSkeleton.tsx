@@ -3,7 +3,7 @@ import { useCtx } from "./context";
 
 export const MessageSkeleton = () => {
 	const ctx = useCtx();
-	const messageStyle = ctx.userConfig().frontend["message_style"] || "cozy";
+	const messageStyle = ctx.preferences().frontend["message_style"] || "cozy";
 	const isCozy = messageStyle === "cozy";
 
 	const skeletonItems = Array.from({ length: 20 }, (_, i) => ({

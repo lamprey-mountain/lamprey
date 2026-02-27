@@ -1,8 +1,8 @@
 import type {
+	PreferencesUser,
 	Role,
 	RoomMember,
 	ThreadMember,
-	UserConfigUser,
 	UserWithRelationship,
 } from "sdk";
 import { useApi } from "./api";
@@ -224,10 +224,10 @@ export function UserView(props: UserProps) {
 		}
 	};
 
-	const userConfig = () => props.user.user_config;
+	const preferences = () => props.user.preferences;
 	const [note, setNote] = createSignal("");
 	createEffect(() => {
-		setNote((userConfig()?.frontend?.note as string) || "");
+		setNote((preferences()?.frontend?.note as string) || "");
 	});
 
 	let timeout: NodeJS.Timeout;
@@ -241,13 +241,13 @@ export function UserView(props: UserProps) {
 	};
 
 	const saveNote = (noteToSave: string) => {
-		const currentConfig = userConfig() ?? {
+		const currentConfig = preferences() ?? {
 			frontend: {},
 			voice: { mute: false, volume: 1.0 },
 		};
 		const { note, ...restFrontend } = currentConfig.frontend ?? {};
 
-		const newConfig: UserConfigUser = {
+		const newConfig: PreferencesUser = {
 			...currentConfig,
 			frontend: {
 				...restFrontend,
@@ -255,7 +255,7 @@ export function UserView(props: UserProps) {
 			},
 		};
 
-		api.client.http.PUT("/api/v1/config/user/{user_id}", {
+		api.client.http.PUT("/api/v1/preferences/user/{user_id}", {
 			params: { path: { user_id: props.user.id } },
 			body: newConfig,
 		});

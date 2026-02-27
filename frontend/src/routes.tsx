@@ -109,7 +109,7 @@ const RoomSidebar = (props: { room: RoomT }) => {
 
 	const showMembers = () =>
 		flags.has("room_member_list") &&
-		ctx.userConfig().frontend.showMembers !== false;
+		ctx.preferences().frontend.showMembers !== false;
 
 	return (
 		<Switch>
@@ -213,7 +213,7 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 	const showMembers = () =>
 		props.channel.type !== "Voice" &&
 		flags.has("channel_member_list") &&
-		ctx.userConfig().frontend.showMembers !== false;
+		ctx.preferences().frontend.showMembers !== false;
 	const showPinned = () => ch.pinned_view ?? false;
 	const showVoiceChat = () =>
 		props.channel.type === "Voice" &&

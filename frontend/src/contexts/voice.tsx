@@ -23,7 +23,7 @@ export type VoiceProviderState = {
 	rtc: VoiceClient | null;
 	threadId: string | null;
 	hasVoiceActivity: boolean;
-	userConfig: ReactiveMap<string, VoiceConfigUser>;
+	preferences: ReactiveMap<string, VoiceConfigUser>;
 };
 
 type VoiceConfigUser = {
@@ -57,7 +57,7 @@ export const VoiceProvider = (props: ParentProps) => {
 		musicPlaying: false,
 		rtc: null,
 		threadId: null,
-		userConfig: new ReactiveMap(),
+		preferences: new ReactiveMap(),
 		get hasVoiceActivity() {
 			return vad.hasVoiceActivity();
 		},

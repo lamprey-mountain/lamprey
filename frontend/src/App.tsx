@@ -165,7 +165,7 @@ export const AppShell: Component<RouterParentProps> = (props) => {
 			id="root"
 			classList={{
 				"underline-links":
-					ctx.userConfig().frontend["underline_links"] === "yes",
+					ctx.preferences().frontend["underline_links"] === "yes",
 			}}
 		>
 			{props.children}
@@ -179,7 +179,7 @@ export const AppShell: Component<RouterParentProps> = (props) => {
 							if (audioRef) audioRef.srcObject = stream.media;
 						});
 						createEffect(() => {
-							const c = voice.userConfig.get(stream.user_id) ??
+							const c = voice.preferences.get(stream.user_id) ??
 								{ mute: false, mute_video: false, volume: 100 };
 							audioRef.volume = c.volume / 100;
 						});
@@ -188,7 +188,7 @@ export const AppShell: Component<RouterParentProps> = (props) => {
 								autoplay
 								ref={audioRef!}
 								muted={voice.deafened ||
-									voice.userConfig.get(stream.user_id)?.mute === true}
+									voice.preferences.get(stream.user_id)?.mute === true}
 							/>
 						);
 					}}

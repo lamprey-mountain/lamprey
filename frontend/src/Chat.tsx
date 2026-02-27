@@ -417,8 +417,8 @@ export const ChatHeader = (
 	};
 
 	const toggleMembers = () => {
-		const c = ctx.userConfig();
-		ctx.setUserConfig({
+		const c = ctx.preferences();
+		ctx.setPreferences({
 			...c,
 			frontend: {
 				...c.frontend,
@@ -566,8 +566,8 @@ export const RoomHeader = (
 	const ctx = useCtx();
 
 	const toggleMembers = () => {
-		const c = ctx.userConfig();
-		ctx.setUserConfig({
+		const c = ctx.preferences();
+		ctx.setPreferences({
 			...c,
 			frontend: {
 				...c.frontend,

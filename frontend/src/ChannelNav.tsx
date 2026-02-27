@@ -850,7 +850,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 		return props.channel.name;
 	};
 
-	const channelConfig = () => props.channel.user_config;
+	const channelConfig = () => props.channel.preferences;
 
 	const isMuted = () => {
 		const c = channelConfig();

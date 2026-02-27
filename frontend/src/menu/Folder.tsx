@@ -14,7 +14,7 @@ export function FolderMenu(props: FolderMenuProps) {
 	const [, modalctl] = useModals();
 
 	const getFolder = () => {
-		const config = ctx.userConfig().frontend.roomNav as RoomNavItem[];
+		const config = ctx.preferences().frontend.roomNav as RoomNavItem[];
 		if (!config) return null;
 
 		return config.find((item: RoomNavItem) =>
@@ -37,7 +37,7 @@ export function FolderMenu(props: FolderMenuProps) {
 		modalctl.prompt("new folder name", (name) => {
 			if (!name) return;
 
-			const currentConfig = ctx.userConfig().frontend
+			const currentConfig = ctx.preferences().frontend
 				.roomNav as RoomNavItem[];
 			const newConfig = currentConfig.map((item: RoomNavItem) => {
 				if (item.type === "folder" && item.id === props.folder_id) {
@@ -46,8 +46,8 @@ export function FolderMenu(props: FolderMenuProps) {
 				return item;
 			});
 
-			const c = ctx.userConfig();
-			ctx.setUserConfig({
+			const c = ctx.preferences();
+			ctx.setPreferences({
 				...c,
 				frontend: {
 					...c.frontend,

@@ -295,7 +295,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 function ChannelNotificationMenu(props: { channel: Channel }) {
 	const api = useApi();
-	const channelConfig = () => props.channel.user_config;
+	const channelConfig = () => props.channel.preferences;
 
 	const setNotifs = (notifs: Partial<NotifsChannel>) => {
 		const current = channelConfig() ?? { notifs: {}, frontend: {} };
@@ -312,9 +312,9 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 		}
 		api.channels.cache.set(props.channel.id, {
 			...props.channel,
-			user_config: newConfig,
+			preferences: newConfig,
 		});
-		api.client.http.PUT("/api/v1/config/thread/{thread_id}", {
+		api.client.http.PUT("/api/v1/preferences/channel/{thread_id}", {
 			params: { path: { thread_id: props.channel.id } },
 			body: newConfig,
 		});
