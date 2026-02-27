@@ -20,7 +20,7 @@ use common::v2::types::message::MessagePatch;
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
+use super::util::{Auth, HeaderIdempotencyKey};
 use crate::{
     error::{Error, Result},
     types::{ChannelId, RoomId},
@@ -45,42 +45,14 @@ async fn webhook_create(
     Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<WebhookCreate>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    let chan = srv.channels.get(channel_id, None).await?;
-    let room_id = chan
-        .room_id
-        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
-    perms.ensure(Permission::IntegrationsManage)?;
-
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-
-    let webhook = s
-        .data()
-        .webhook_create(channel_id, auth.user.id, json.clone())
-        .await?;
-
-    let al = auth.audit_log(room_id);
-    al.commit_success(AuditLogEntryType::WebhookCreate {
-        webhook_id: webhook.id,
-        changes: Changes::new()
-            .add("name", &webhook.name)
-            .add("channel_id", &webhook.channel_id)
-            .build(),
-    })
-    .await?;
-
-    let sync_msg = MessageSync::WebhookCreate {
-        webhook: webhook.clone(),
-    };
-    s.broadcast_room(room_id, auth.user.id, sync_msg).await?;
+    let webhook = srv.webhook.create(channel_id, &auth, json, nonce).await?;
 
     Ok((StatusCode::CREATED, Json(webhook)))
 }

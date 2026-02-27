@@ -19,6 +19,8 @@ use validator::Validate;
 
 use crate::{error::Result, routes::util::Auth, Error, ServerState};
 
+use super::util::HeaderIdempotencyKey;
+
 /// Tag create
 #[utoipa::path(
     post,
@@ -33,43 +35,14 @@ async fn tag_create(
     Path(channel_id): Path<ChannelId>,
     State(s): State<Arc<ServerState>>,
     auth: Auth,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(create): Json<TagCreate>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    create.validate()?;
+
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::TagManage)?;
-
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !channel.ty.has_tags() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
-    }
-
-    let tag = s.data().tag_create(channel_id, create).await?;
-
-    if let Some(room_id) = channel.room_id {
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::TagCreate {
-            channel_id,
-            tag_id: tag.id,
-            changes: Changes::new()
-                .add("name", &tag.name)
-                .add("description", &tag.description)
-                .add("color", &tag.color)
-                .add("restricted", &tag.restricted)
-                .build(),
-        })
-        .await?;
-    }
-
-    s.broadcast_channel(
-        channel_id,
-        auth.user.id,
-        MessageSync::TagCreate { tag: tag.clone() },
-    )
-    .await?;
+    let tag = srv.tag.create(channel_id, &auth, create, nonce).await?;
 
     Ok((StatusCode::CREATED, Json(tag)))
 }

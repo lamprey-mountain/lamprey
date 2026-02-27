@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
@@ -7,6 +8,8 @@ use common::v1::types::{
     RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut,
     UserId,
 };
+use moka::future::Cache;
+use validator::Validate;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
@@ -17,11 +20,17 @@ use crate::{Error, ServerStateInner};
 
 pub struct ServiceRooms {
     state: Arc<ServerStateInner>,
+    idempotency_keys: Cache<String, Room>,
 }
 
 impl ServiceRooms {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+        Self {
+            state,
+            idempotency_keys: Cache::builder()
+                .time_to_live(Duration::from_secs(300))
+                .build(),
+        }
     }
 
     // TODO: make this not require writing room
@@ -141,9 +150,20 @@ impl ServiceRooms {
         create: RoomCreate,
         auth: &Auth,
         extra: DbRoomCreate,
+        nonce: Option<String>,
     ) -> Result<Room> {
-        self.create_inner(create, auth.user.id, Some(auth), extra)
-            .await
+        if let Some(n) = &nonce {
+            self.idempotency_keys
+                .try_get_with(
+                    n.clone(),
+                    self.create_inner(create, auth.user.id, Some(auth), extra),
+                )
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            self.create_inner(create, auth.user.id, Some(auth), extra)
+                .await
+        }
     }
 
     pub async fn create_system(
@@ -162,6 +182,7 @@ impl ServiceRooms {
         auth: Option<&Auth>,
         extra: DbRoomCreate,
     ) -> Result<Room> {
+        create.validate()?;
         let data = self.state.data();
         let welcome_channel_id = extra.welcome_channel_id;
         let mut room = data.room_create(create, extra).await?;

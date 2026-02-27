@@ -5,7 +5,6 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
-use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntryType, EmojiId, MessageSync, PaginationQuery, PaginationResponse,
@@ -17,7 +16,7 @@ use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use super::util::Auth;
+use super::util::{Auth, HeaderIdempotencyKey};
 use crate::error::Result;
 use crate::ServerState;
 
@@ -44,45 +43,16 @@ async fn emoji_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<EmojiCustomCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::EmojiManage)?;
-
     json.validate()?;
 
-    let data = s.data();
-    let media = data.media_select(json.media_id).await?;
-    if !media.metadata.is_image() {
-        return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
-    }
+    let srv = s.services();
+    let emoji = srv.emoji.create(room_id, &auth, json, nonce).await?;
 
-    let emoji = data
-        .emoji_create(auth.user.id, room_id, json.clone())
-        .await?;
-
-    let changes = Changes::new()
-        .add("name", &json.name)
-        .add("animated", &json.animated)
-        .add("media_id", &json.media_id);
-
-    let al = auth.audit_log(room_id);
-    al.commit_success(AuditLogEntryType::EmojiCreate {
-        changes: changes.build(),
-    })
-    .await?;
-
-    s.broadcast_room(
-        room_id,
-        auth.user.id,
-        MessageSync::EmojiCreate {
-            emoji: emoji.clone(),
-        },
-    )
-    .await?;
     Ok(Json(emoji))
 }
 

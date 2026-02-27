@@ -29,7 +29,7 @@ use crate::{
 };
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
-use super::util::Auth;
+use super::util::{Auth, HeaderIdempotencyKey};
 use crate::error::Result;
 
 /// Room channel create
@@ -54,6 +54,7 @@ async fn channel_create_room(
     Path((room_id,)): Path<(RoomId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -76,7 +77,7 @@ async fn channel_create_room(
     let channel = s
         .services()
         .channels
-        .create_channel(&auth, Some(room_id), json)
+        .create_channel(&auth, Some(room_id), json, nonce)
         .await?;
     Ok((StatusCode::CREATED, Json(channel)))
 }
@@ -98,6 +99,7 @@ async fn channel_create_room(
 async fn channel_create_dm(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderIdempotencyKey(_nonce): HeaderIdempotencyKey,
     Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -805,6 +807,7 @@ async fn channel_upgrade(
                 ty: RoomType::Default,
                 welcome_channel_id: Some(channel_id),
             },
+            None,
         )
         .await?;
 

@@ -31,6 +31,7 @@ pub struct ServiceChannels {
     cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_thread_recipients: Cache<ChannelId, Vec<User>>,
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
+    idempotency_keys: Cache<String, Channel>,
 }
 
 // #[derive(Debug)]
@@ -62,6 +63,9 @@ impl ServiceChannels {
             typing: Cache::builder()
                 .max_capacity(100_000)
                 .time_to_live(Duration::from_secs(10))
+                .build(),
+            idempotency_keys: Cache::builder()
+                .time_to_live(Duration::from_secs(300))
                 .build(),
         }
     }
@@ -221,7 +225,25 @@ impl ServiceChannels {
         auth: &Auth,
         room_id: Option<RoomId>,
         json: ChannelCreate,
+        nonce: Option<String>,
     ) -> Result<Channel> {
+        if let Some(n) = &nonce {
+            self.idempotency_keys
+                .try_get_with(n.clone(), self.create_channel_inner(auth, room_id, json))
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            self.create_channel_inner(auth, room_id, json).await
+        }
+    }
+
+    async fn create_channel_inner(
+        &self,
+        auth: &Auth,
+        room_id: Option<RoomId>,
+        json: ChannelCreate,
+    ) -> Result<Channel> {
+        json.validate()?;
         // TODO(al2): use this when creating a channel
         let channel_id = ChannelId::new();
         let al = if let Some(room_id) = room_id {

@@ -25,7 +25,7 @@ use crate::{
 };
 use common::v1::types::error::{ApiError, ErrorCode};
 
-use super::util::Auth;
+use super::util::{Auth, HeaderIdempotencyKey};
 
 /// Room create
 #[utoipa::path(
@@ -36,6 +36,7 @@ use super::util::Auth;
 async fn room_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -63,7 +64,7 @@ async fn room_create(
         ty: RoomType::Default,
         welcome_channel_id: None,
     };
-    let room = srv.rooms.create(json, &auth, extra).await?;
+    let room = srv.rooms.create(json, &auth, extra, nonce).await?;
     if let Some(media_id) = icon {
         let data = s.data();
         data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::RoomIcon)

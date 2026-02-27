@@ -521,7 +521,7 @@ async fn thread_create(
     let channel = s
         .services()
         .channels
-        .create_channel(&auth, room_id, json)
+        .create_channel(&auth, room_id, json, None)
         .await?;
 
     Ok((StatusCode::CREATED, Json(channel)))

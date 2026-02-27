@@ -15,10 +15,10 @@ use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::types::{DbRoleCreate, RoleDeleteQuery};
+use crate::types::RoleDeleteQuery;
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::{Auth, HeaderIdempotencyKey};
 use crate::error::Result;
 
 /// Role create
@@ -37,6 +37,7 @@ async fn role_create(
     Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<RoleCreate>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
@@ -44,78 +45,8 @@ async fn role_create(
     json.validate()?;
 
     let srv = s.services();
-    let data = s.data();
-    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    let role = srv.role.create(room_id, &auth, json, nonce).await?;
 
-    if room.security.require_sudo {
-        auth.ensure_sudo()?;
-    }
-    if room.security.require_mfa {
-        let user = srv.users.get(auth.user.id, None).await?;
-        let totp = data.auth_totp_get(user.id).await?;
-        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
-        }
-    }
-
-    let allow_set: HashSet<_> = json.allow.iter().collect();
-    let deny_set: HashSet<_> = json.deny.iter().collect();
-
-    if !allow_set.is_disjoint(&deny_set) {
-        return Err(ApiError::from_code(ErrorCode::PermissionConflict).into());
-    }
-
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::RoleManage)?;
-
-    for p in &json.allow {
-        perms.ensure(*p)?;
-    }
-
-    let room = srv.rooms.get(room_id, None).await?;
-    let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-    if rank == 0 && room.owner_id != Some(auth.user.id) {
-        // special case: we don't want people with only the base role to be able
-        // to create roles, as that role will always be position 1 and won't be
-        // able to be edited or applied
-        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
-    }
-    let role = data
-        .role_create(
-            DbRoleCreate {
-                id: RoleId::new(),
-                room_id,
-                name: json.name,
-                description: json.description,
-                allow: json.allow,
-                deny: json.deny,
-                is_self_applicable: json.is_self_applicable,
-                is_mentionable: json.is_mentionable,
-                hoist: json.hoist,
-                sticky: json.sticky,
-            },
-            1,
-        )
-        .await?;
-
-    let changes = Changes::new()
-        .add("name", &role.name)
-        .add("description", &role.description)
-        .add("allow", &role.allow)
-        .add("deny", &role.deny)
-        .add("is_self_applicable", &role.is_self_applicable)
-        .add("is_mentionable", &role.is_mentionable)
-        .add("hoist", &role.hoist)
-        .add("sticky", &role.sticky)
-        .build();
-
-    let al = auth.audit_log(room_id);
-    al.commit_success(AuditLogEntryType::RoleCreate { changes })
-        .await?;
-
-    let msg = MessageSync::RoleCreate { role: role.clone() };
-    s.broadcast_room(room_id, auth.user.id, msg).await?;
-    srv.perms.invalidate_user_ranks(room_id);
     Ok((StatusCode::CREATED, Json(role)))
 }
 

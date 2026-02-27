@@ -4,14 +4,18 @@ use cache::ServiceCache;
 use channel::ServiceChannels;
 use email::ServiceEmail;
 use embed::ServiceEmbed;
+use emoji::ServiceEmoji;
 use media::ServiceMedia;
 use messages::ServiceMessages;
 use oauth2::ServiceOauth;
 use permissions::ServicePermissions;
+use role::ServiceRoles;
 use room::ServiceRooms;
 use room_analytics::ServiceRoomAnalytics;
 use sessions::ServiceSessions;
+use tag::ServiceTags;
 use users::ServiceUsers;
+use webhook::ServiceWebhooks;
 
 use crate::{
     services::{
@@ -33,6 +37,7 @@ pub mod channel;
 pub mod documents;
 pub mod email;
 pub mod embed;
+pub mod emoji;
 pub mod http;
 pub mod media;
 pub mod member_lists;
@@ -42,13 +47,16 @@ pub mod notifications;
 pub mod oauth2;
 pub mod permissions;
 pub mod presence;
+pub mod role;
 pub mod room;
 pub mod room_analytics;
 pub mod search;
 pub mod sessions;
+pub mod tag;
 pub mod unread;
 pub mod users;
 pub mod voice;
+pub mod webhook;
 
 pub struct Services {
     pub admin: ServiceAdmin,
@@ -60,6 +68,7 @@ pub struct Services {
     pub documents: ServiceDocuments,
     pub email: ServiceEmail,
     pub embed: ServiceEmbed,
+    pub emoji: ServiceEmoji,
     pub http: ServiceHttp,
     pub media: ServiceMedia,
     pub member_lists: ServiceMemberLists,
@@ -69,13 +78,16 @@ pub struct Services {
     pub oauth: ServiceOauth,
     pub perms: ServicePermissions,
     pub presence: ServicePresence,
+    pub role: ServiceRoles,
     pub room_analytics: ServiceRoomAnalytics,
     pub rooms: ServiceRooms,
     pub search: ServiceSearch,
     pub sessions: ServiceSessions,
+    pub tag: ServiceTags,
     pub unread: ServiceUnread,
     pub users: ServiceUsers,
     pub voice: ServiceVoice,
+    pub webhook: ServiceWebhooks,
     pub(super) state: Arc<ServerStateInner>,
 }
 
@@ -91,6 +103,7 @@ impl Services {
             documents: ServiceDocuments::new(state.clone()),
             email: ServiceEmail::new(state.clone()),
             embed: ServiceEmbed::new(state.clone()),
+            emoji: ServiceEmoji::new(state.clone()),
             http: ServiceHttp::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
             member_lists: ServiceMemberLists::new(state.clone()),
@@ -100,13 +113,16 @@ impl Services {
             oauth: ServiceOauth::new(state.clone()),
             perms: ServicePermissions::new(state.clone()),
             presence: ServicePresence::new(state.clone()),
+            role: ServiceRoles::new(state.clone()),
             room_analytics: ServiceRoomAnalytics::new(state.clone()),
             rooms: ServiceRooms::new(state.clone()),
             search: ServiceSearch::new(state.clone()),
             sessions: ServiceSessions::new(state.clone()),
+            tag: ServiceTags::new(state.clone()),
             unread: ServiceUnread::new(state.clone()),
             users: ServiceUsers::new(state.clone()),
             voice: ServiceVoice::new(state.clone()),
+            webhook: ServiceWebhooks::new(state.clone()),
             state,
         }
     }
