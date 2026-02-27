@@ -497,25 +497,24 @@ pub enum MessageSync {
         presence: Presence,
     },
 
-    // TODO: rename these UserConfig -> Preferences
-    UserConfigGlobal {
+    PreferencesGlobal {
         user_id: UserId,
         config: PreferencesGlobal,
     },
 
-    UserConfigRoom {
+    PreferencesRoom {
         user_id: UserId,
         room_id: RoomId,
         config: PreferencesRoom,
     },
 
-    UserConfigChannel {
+    PreferencesChannel {
         user_id: UserId,
         channel_id: ChannelId,
         config: PreferencesChannel,
     },
 
-    UserConfigUser {
+    PreferencesUser {
         user_id: UserId,
         target_user_id: UserId,
         config: PreferencesUser,

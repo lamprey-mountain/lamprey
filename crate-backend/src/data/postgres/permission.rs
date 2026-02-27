@@ -88,7 +88,7 @@ impl DataPermission for Postgres {
                 select 1
                 from room_member rm1
                 join room_member rm2 on rm1.room_id = rm2.room_id
-                join user_config_room ucr on rm1.room_id = ucr.room_id
+                join preferences_room ucr on rm1.room_id = ucr.room_id
                 where rm1.user_id = $1
                   and rm2.user_id = $2
                   and rm1.membership = 'Join'
@@ -129,7 +129,7 @@ impl DataPermission for Postgres {
                     select 1
                     from room_member rm1
                     join room_member rm2 on rm1.room_id = rm2.room_id
-                    join user_config_room ucr on rm1.room_id = ucr.room_id
+                    join preferences_room ucr on rm1.room_id = ucr.room_id
                     where rm1.user_id = $1
                       and rm2.user_id = $2
                       and rm1.membership = 'Join'

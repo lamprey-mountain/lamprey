@@ -77,8 +77,8 @@ impl ServiceChannels {
         // collect all channel ids for batch fetching
         let channel_ids: Vec<_> = channels.iter().map(|c| c.id).collect();
 
-        // fetch user configs for all channels
-        let user_config_map = data
+        // fetch preferences for all channels
+        let preferences_map = data
             .preferences_channel_get_many(user_id, &channel_ids)
             .await?;
 
@@ -110,8 +110,8 @@ impl ServiceChannels {
                 channel.mention_count = Some(private.mention_count as u64);
             }
 
-            if let Some(config) = user_config_map.get(&channel.id) {
-                channel.user_config = Some(config.clone());
+            if let Some(config) = preferences_map.get(&channel.id) {
+                channel.preferences = Some(config.clone());
             }
 
             if channel.ty.is_thread() {

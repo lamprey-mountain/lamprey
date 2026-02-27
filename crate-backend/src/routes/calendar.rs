@@ -899,7 +899,7 @@ async fn calendar_overwrite_rsvp_list(
 
     if query.include_member && !participants.is_empty() {
         let user_ids: Vec<UserId> = participants.iter().map(|p| p.user_id).collect();
-        // TODO: populate user_config, same as above
+        // TODO: populate preferences, same as above
         let users = srv.users.get_many(&user_ids).await?;
         let mut users_map: HashMap<_, _> = users.into_iter().map(|u| (u.id, u)).collect();
 

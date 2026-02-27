@@ -126,7 +126,7 @@ pub struct Channel {
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,
-    pub user_config: Option<PreferencesChannel>,
+    pub preferences: Option<PreferencesChannel>,
 
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub document: Option<Document>,
@@ -615,7 +615,7 @@ impl Channel {
             is_unread: None,
             last_read_id: None,
             mention_count: None,
-            user_config: None,
+            preferences: None,
             ..self
         }
     }

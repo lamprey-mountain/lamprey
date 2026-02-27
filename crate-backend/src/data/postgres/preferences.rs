@@ -46,7 +46,7 @@ impl DataPreferences for Postgres {
     ) -> Result<()> {
         query!(
             "
-            INSERT INTO user_config_room (user_id, room_id, config)
+            INSERT INTO preferences_room (user_id, room_id, config)
             VALUES ($1, $2, $3)
             ON CONFLICT (user_id, room_id) DO UPDATE SET config = $3
             ",
@@ -65,7 +65,7 @@ impl DataPreferences for Postgres {
         room_id: RoomId,
     ) -> Result<PreferencesRoom> {
         let conf = query_scalar!(
-            "SELECT config FROM user_config_room WHERE user_id = $1 AND room_id = $2",
+            "SELECT config FROM preferences_room WHERE user_id = $1 AND room_id = $2",
             *user_id,
             *room_id
         )
@@ -89,7 +89,7 @@ impl DataPreferences for Postgres {
 
         let room_ids: Vec<_> = room_ids.iter().map(|id| **id).collect();
         let rows = query!(
-            "SELECT room_id, config FROM user_config_room WHERE user_id = $1 AND room_id = ANY($2)",
+            "SELECT room_id, config FROM preferences_room WHERE user_id = $1 AND room_id = ANY($2)",
             *user_id,
             &room_ids[..],
         )
@@ -114,7 +114,7 @@ impl DataPreferences for Postgres {
     ) -> Result<()> {
         query!(
             "
-            INSERT INTO user_config_channel (user_id, channel_id, config)
+            INSERT INTO preferences_channel (user_id, channel_id, config)
             VALUES ($1, $2, $3)
             ON CONFLICT (user_id, channel_id) DO UPDATE SET config = $3
             ",
@@ -133,7 +133,7 @@ impl DataPreferences for Postgres {
         channel_id: ChannelId,
     ) -> Result<PreferencesChannel> {
         let conf = query_scalar!(
-            "SELECT config FROM user_config_channel WHERE user_id = $1 AND channel_id = $2",
+            "SELECT config FROM preferences_channel WHERE user_id = $1 AND channel_id = $2",
             *user_id,
             *channel_id,
         )
@@ -157,7 +157,7 @@ impl DataPreferences for Postgres {
 
         let channel_ids: Vec<_> = channel_ids.iter().map(|id| **id).collect();
         let rows = query!(
-            "SELECT channel_id, config FROM user_config_channel WHERE user_id = $1 AND channel_id = ANY($2)",
+            "SELECT channel_id, config FROM preferences_channel WHERE user_id = $1 AND channel_id = ANY($2)",
             *user_id,
             &channel_ids[..],
         )
@@ -182,7 +182,7 @@ impl DataPreferences for Postgres {
     ) -> Result<()> {
         query!(
             "
-            INSERT INTO user_config_user (user_id, other_id, config)
+            INSERT INTO preferences_user (user_id, other_id, config)
             VALUES ($1, $2, $3)
             ON CONFLICT (user_id, other_id) DO UPDATE SET config = $3
             ",
@@ -201,7 +201,7 @@ impl DataPreferences for Postgres {
         other_id: UserId,
     ) -> Result<PreferencesUser> {
         let conf = query_scalar!(
-            "SELECT config FROM user_config_user WHERE user_id = $1 AND other_id = $2",
+            "SELECT config FROM preferences_user WHERE user_id = $1 AND other_id = $2",
             *user_id,
             *other_id
         )

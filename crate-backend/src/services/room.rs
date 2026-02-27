@@ -31,12 +31,12 @@ impl ServiceRooms {
         let mut room = cached.inner.read().await.clone();
 
         if let Some(user_id) = user_id {
-            let user_config = self
+            let preferences = self
                 .state
                 .data()
                 .preferences_room_get(user_id, room_id)
                 .await?;
-            room.user_config = Some(user_config);
+            room.preferences = Some(preferences);
         }
 
         let mut online_count = 0;
@@ -371,13 +371,13 @@ impl ServiceRooms {
         // collect all room ids for batch fetching
         let room_ids: Vec<_> = rooms.iter().map(|r| r.id).collect();
 
-        // fetch user configs for all rooms
-        let user_config_map = data.preferences_room_get_many(user_id, &room_ids).await?;
+        // fetch preferences for all rooms
+        let preferences_map = data.preferences_room_get_many(user_id, &room_ids).await?;
 
         // populate each room with private data
         for room in rooms {
-            if let Some(config) = user_config_map.get(&room.id) {
-                room.user_config = Some(config.clone());
+            if let Some(config) = preferences_map.get(&room.id) {
+                room.preferences = Some(config.clone());
             }
         }
 

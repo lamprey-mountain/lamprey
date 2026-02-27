@@ -59,7 +59,7 @@ pub struct User {
     pub deleted_at: Option<Time>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub emails: Option<Vec<EmailInfo>>,
-    pub user_config: Option<PreferencesUser>,
+    pub preferences: Option<PreferencesUser>,
     // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 16)))]
     // pub fields: Vec<UserField>,
     /// whether this user is considered to have mutifactor authentication enabled on their account

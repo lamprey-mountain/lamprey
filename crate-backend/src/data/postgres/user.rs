@@ -87,7 +87,7 @@ impl From<DbUser> for User {
             registered_at: row.registered_at.map(|i| i.into()),
             deleted_at: row.deleted_at.map(|i| i.into()),
             emails: None,
-            user_config: None,
+            preferences: None,
             has_mfa: None,
         }
     }
@@ -112,7 +112,7 @@ impl DataUser for Postgres {
             suspended: None,
             registered_at: patch.registered_at,
             deleted_at: None,
-            user_config: Default::default(),
+            preferences: Default::default(),
             emails: None,
             has_mfa: None,
         };

@@ -84,7 +84,7 @@ pub struct Room {
 
     /// whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user.
     pub quarantined: bool,
-    pub user_config: Option<PreferencesRoom>,
+    pub preferences: Option<PreferencesRoom>,
 
     /// security configuration for this room
     pub security: RoomSecurity,

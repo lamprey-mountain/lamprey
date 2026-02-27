@@ -818,10 +818,10 @@ impl Connection {
             MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
             MessageSync::UserUpdate { user } => AuthCheck::UserMutual(user.id),
             MessageSync::PresenceUpdate { user_id, .. } => AuthCheck::UserMutual(*user_id),
-            MessageSync::UserConfigGlobal { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::UserConfigRoom { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::UserConfigChannel { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::UserConfigUser { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::PreferencesGlobal { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::PreferencesRoom { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::PreferencesChannel { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::PreferencesUser { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RoomMemberCreate { member, .. } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }

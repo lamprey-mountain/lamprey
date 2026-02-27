@@ -24,6 +24,7 @@ mod moderation;
 mod notification;
 mod oauth;
 mod permission_overwrite;
+mod preferences;
 mod public;
 mod push;
 mod reaction;
@@ -40,7 +41,6 @@ mod sync;
 mod tag;
 mod thread;
 mod user;
-mod user_config;
 mod user_connection;
 mod user_email;
 mod voice;
@@ -87,7 +87,7 @@ fn routes_v1() -> OpenApiRouter<Arc<ServerState>> {
         .merge(tag::routes())
         .merge(thread::routes())
         .merge(user::routes())
-        .merge(user_config::routes())
+        .merge(preferences::routes())
         .merge(user_connection::routes())
         .merge(user_email::routes())
         .merge(voice::routes())

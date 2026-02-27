@@ -164,7 +164,7 @@ impl NotificationActionCalculator {
         // Load channel config
         let channel_config = if let Some(ref ch) = channel {
             srv.cache
-                .user_config_channel_get(self.user_id, ch.id)
+                .preferences_channel_get(self.user_id, ch.id)
                 .await
                 .ok()
                 .map(|c| c.notifs)
@@ -175,7 +175,7 @@ impl NotificationActionCalculator {
         // Load room config
         let room_config = if let Some(ref r) = room {
             srv.cache
-                .user_config_room_get(self.user_id, r.id)
+                .preferences_room_get(self.user_id, r.id)
                 .await
                 .ok()
                 .map(|c| c.notifs)
@@ -184,7 +184,7 @@ impl NotificationActionCalculator {
         };
 
         // Load global config
-        let global_config = srv.cache.user_config_get(self.user_id).await?.notifs;
+        let global_config = srv.cache.preferences_get(self.user_id).await?.notifs;
 
         // Check channel-level mute first (highest priority)
         if let Some(ref channel_config) = channel_config {

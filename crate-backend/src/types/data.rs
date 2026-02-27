@@ -152,7 +152,7 @@ impl From<DbRoom> for Room {
             online_count: Default::default(),
             channel_count: row.channel_count as u64,
             emoji_count: row.emoji_count as u64,
-            user_config: None,
+            preferences: None,
             security: RoomSecurity {
                 require_mfa: row.security_require_mfa,
                 require_sudo: row.security_require_sudo,
@@ -367,7 +367,7 @@ impl From<DbChannel> for Channel {
             last_read_id: None,
             mention_count: None,
             recipients: vec![],
-            user_config: None,
+            preferences: None,
             online_count: 0,
             slowmode_thread_expire_at: None,
             slowmode_message_expire_at: None,

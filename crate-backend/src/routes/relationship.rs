@@ -142,7 +142,7 @@ async fn friend_add(
                 .await?
                 .ensure(Permission::FriendCreate)?;
 
-            let target_prefs = srv.cache.user_config_get(target_user_id).await?;
+            let target_prefs = srv.cache.preferences_get(target_user_id).await?;
             let friends_prefs = &target_prefs.privacy.friends;
 
             if let Some(pause_until) = &friends_prefs.pause_until {

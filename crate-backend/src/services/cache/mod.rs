@@ -40,11 +40,11 @@ pub struct ServiceCache {
     // TODO: make not pub?
     pub(crate) users: Cache<UserId, User>,
 
-    // user config caches
-    user_config_global: Cache<UserId, PreferencesGlobal>,
-    user_config_room: Cache<(UserId, RoomId), PreferencesRoom>,
-    user_config_channel: Cache<(UserId, ChannelId), PreferencesChannel>,
-    user_config_user: Cache<(UserId, UserId), PreferencesUser>,
+    // preferences caches
+    preferences_global: Cache<UserId, PreferencesGlobal>,
+    preferences_room: Cache<(UserId, RoomId), PreferencesRoom>,
+    preferences_channel: Cache<(UserId, ChannelId), PreferencesChannel>,
+    preferences_user: Cache<(UserId, UserId), PreferencesUser>,
     // presences: DashMap<UserId, Presence>,
     // TODO: more caching?
     // - dm/gdm channels?
@@ -62,19 +62,19 @@ impl ServiceCache {
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            user_config_global: Cache::builder()
+            preferences_global: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            user_config_room: Cache::builder()
+            preferences_room: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            user_config_channel: Cache::builder()
+            preferences_channel: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            user_config_user: Cache::builder()
+            preferences_user: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
@@ -378,25 +378,25 @@ impl ServiceCache {
     }
 
     /// get a user's global config from the cache, loading from the database if not present
-    pub async fn user_config_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
-        self.user_config_global
+    pub async fn preferences_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
+        self.preferences_global
             .try_get_with(user_id, self.state.data().preferences_get(user_id))
             .await
             .map_err(|err| err.fake_clone())
     }
 
     /// invalidate a user's global config in the cache
-    pub async fn user_config_invalidate(&self, user_id: UserId) {
-        self.user_config_global.invalidate(&user_id).await;
+    pub async fn preferences_invalidate(&self, user_id: UserId) {
+        self.preferences_global.invalidate(&user_id).await;
     }
 
     /// get a user's room config from the cache, loading from the database if not present
-    pub async fn user_config_room_get(
+    pub async fn preferences_room_get(
         &self,
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<PreferencesRoom> {
-        self.user_config_room
+        self.preferences_room
             .try_get_with(
                 (user_id, room_id),
                 self.state.data().preferences_room_get(user_id, room_id),
@@ -406,17 +406,17 @@ impl ServiceCache {
     }
 
     /// invalidate a user's room config in the cache
-    pub async fn user_config_room_invalidate(&self, user_id: UserId, room_id: RoomId) {
-        self.user_config_room.invalidate(&(user_id, room_id)).await;
+    pub async fn preferences_room_invalidate(&self, user_id: UserId, room_id: RoomId) {
+        self.preferences_room.invalidate(&(user_id, room_id)).await;
     }
 
     /// get a user's channel config from the cache, loading from the database if not present
-    pub async fn user_config_channel_get(
+    pub async fn preferences_channel_get(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
     ) -> Result<PreferencesChannel> {
-        self.user_config_channel
+        self.preferences_channel
             .try_get_with(
                 (user_id, channel_id),
                 self.state
@@ -428,19 +428,19 @@ impl ServiceCache {
     }
 
     /// invalidate a user's channel config in the cache
-    pub async fn user_config_channel_invalidate(&self, user_id: UserId, channel_id: ChannelId) {
-        self.user_config_channel
+    pub async fn preferences_channel_invalidate(&self, user_id: UserId, channel_id: ChannelId) {
+        self.preferences_channel
             .invalidate(&(user_id, channel_id))
             .await;
     }
 
     /// get a user's config for another user from the cache, loading from the database if not present
-    pub async fn user_config_user_get(
+    pub async fn preferences_user_get(
         &self,
         user_id: UserId,
         other_id: UserId,
     ) -> Result<PreferencesUser> {
-        self.user_config_user
+        self.preferences_user
             .try_get_with(
                 (user_id, other_id),
                 self.state.data().preferences_user_get(user_id, other_id),
@@ -450,8 +450,8 @@ impl ServiceCache {
     }
 
     /// invalidate a user's config for another user in the cache
-    pub async fn user_config_user_invalidate(&self, user_id: UserId, other_id: UserId) {
-        self.user_config_user.invalidate(&(user_id, other_id)).await;
+    pub async fn preferences_user_invalidate(&self, user_id: UserId, other_id: UserId) {
+        self.preferences_user.invalidate(&(user_id, other_id)).await;
     }
 
     /// get the permission calculator for this room, loading the room if it doesn't exist
@@ -533,7 +533,7 @@ impl ServiceCache {
             .populate_private(&mut all_threads, user_id)
             .await?;
 
-        let config = self.user_config_get(user_id).await?;
+        let config = self.preferences_get(user_id).await?;
 
         Ok(MessageSync::Ambient {
             user_id,
@@ -732,35 +732,35 @@ impl ServiceCache {
                     }
                 }
             }
-            MessageSync::UserConfigGlobal { user_id, config } => {
-                self.user_config_global
+            MessageSync::PreferencesGlobal { user_id, config } => {
+                self.preferences_global
                     .insert(*user_id, config.clone())
                     .await;
             }
-            MessageSync::UserConfigRoom {
+            MessageSync::PreferencesRoom {
                 user_id,
                 room_id,
                 config,
             } => {
-                self.user_config_room
+                self.preferences_room
                     .insert((*user_id, *room_id), config.clone())
                     .await;
             }
-            MessageSync::UserConfigChannel {
+            MessageSync::PreferencesChannel {
                 user_id,
                 channel_id,
                 config,
             } => {
-                self.user_config_channel
+                self.preferences_channel
                     .insert((*user_id, *channel_id), config.clone())
                     .await;
             }
-            MessageSync::UserConfigUser {
+            MessageSync::PreferencesUser {
                 user_id,
                 target_user_id,
                 config,
             } => {
-                self.user_config_user
+                self.preferences_user
                     .insert((*user_id, *target_user_id), config.clone())
                     .await;
             }

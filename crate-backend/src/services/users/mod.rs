@@ -43,11 +43,11 @@ impl ServiceUsers {
         let mut usr = self.state.services().cache.user_get(user_id).await?;
 
         if let Some(viewer_id) = viewer_id {
-            usr.user_config = Some(
+            usr.preferences = Some(
                 self.state
                     .services()
                     .cache
-                    .user_config_user_get(viewer_id, user_id)
+                    .preferences_user_get(viewer_id, user_id)
                     .await?,
             );
 
