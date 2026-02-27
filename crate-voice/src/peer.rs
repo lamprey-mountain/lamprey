@@ -372,7 +372,10 @@ impl Peer {
             return;
         };
 
-        if self.voice_state.deafened() && track.kind == MediaKind::Audio {
+        if self.voice_state.deafened()
+            && track.kind == MediaKind::Audio
+            && track.key == TrackKey::User
+        {
             trace!("user is deafened");
             return;
         }
@@ -550,17 +553,22 @@ impl Peer {
         };
 
         // enforce that user set appropriate flags and has appropriate permissions before forwarding media
-        if self.voice_state.muted() && track.kind == MediaKind::Audio {
+        if self.voice_state.muted() && track.kind == MediaKind::Audio && track.key == TrackKey::User
+        {
             trace!("user is muted");
             return Ok(());
         }
 
-        if !self.permissions.speak && track.kind == MediaKind::Audio {
+        if !self.permissions.speak && track.kind == MediaKind::Audio && track.key == TrackKey::User
+        {
             trace!("user is missing speak permission");
             return Ok(());
         }
 
-        if !self.permissions.video && track.kind == MediaKind::Video {
+        // video permission prevents user video and screenshare
+        if !self.permissions.video
+            && (track.kind == MediaKind::Video || track.key == TrackKey::Screen)
+        {
             trace!("user is missing video permission");
             return Ok(());
         }
