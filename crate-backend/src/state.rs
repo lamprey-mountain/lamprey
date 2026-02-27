@@ -99,27 +99,37 @@ impl ServerStateInner {
     /// emit a message to everyone in a room
     pub async fn broadcast_room(
         &self,
+        room_id: RoomId,
+        user_id: UserId,
+        msg: MessageSync,
+    ) -> Result<()> {
+        self.broadcast_room_with_nonce(room_id, user_id, None, msg)
+            .await
+    }
+
+    /// emit a message to everyone in a room with a nonce
+    pub async fn broadcast_room_with_nonce(
+        &self,
         _room_id: RoomId,
         _user_id: UserId, // TODO: remove
+        nonce: Option<&str>,
         msg: MessageSync,
     ) -> Result<()> {
         self.broadcast_inner(MessageBroadcastInner {
             message: msg,
-            nonce: None,
+            nonce: nonce.map(|s| s.to_string()),
         })
     }
 
     /// emit a message to everyone in a channel
     pub async fn broadcast_channel(
         &self,
-        _thread_id: ChannelId,
-        _user_id: UserId, // TODO: remove
+        thread_id: ChannelId,
+        user_id: UserId,
         msg: MessageSync,
     ) -> Result<()> {
-        self.broadcast_inner(MessageBroadcastInner {
-            message: msg,
-            nonce: None,
-        })
+        self.broadcast_channel_with_nonce(thread_id, user_id, None, msg)
+            .await
     }
 
     /// emit a message to everyone in a channel with a nonce
@@ -137,18 +147,33 @@ impl ServerStateInner {
     }
 
     /// emit a message to a user
-    pub async fn broadcast_user(&self, _user_id: UserId, msg: MessageSync) -> Result<()> {
+    pub async fn broadcast_user(&self, user_id: UserId, msg: MessageSync) -> Result<()> {
+        self.broadcast_user_with_nonce(user_id, None, msg).await
+    }
+
+    /// emit a message to a user with a nonce
+    pub async fn broadcast_user_with_nonce(
+        &self,
+        _user_id: UserId,
+        nonce: Option<&str>,
+        msg: MessageSync,
+    ) -> Result<()> {
         self.broadcast_inner(MessageBroadcastInner {
             message: msg,
-            nonce: None,
+            nonce: nonce.map(|s| s.to_string()),
         })
     }
 
     /// emit a message to everyone
     pub fn broadcast(&self, msg: MessageSync) -> Result<()> {
+        self.broadcast_with_nonce(None, msg)
+    }
+
+    /// emit a message to everyone with a nonce
+    pub fn broadcast_with_nonce(&self, nonce: Option<&str>, msg: MessageSync) -> Result<()> {
         self.broadcast_inner(MessageBroadcastInner {
             message: msg,
-            nonce: None,
+            nonce: nonce.map(|s| s.to_string()),
         })
     }
 

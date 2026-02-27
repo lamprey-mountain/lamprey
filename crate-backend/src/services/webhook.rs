@@ -14,7 +14,7 @@ use validator::Validate;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::{Error, ServerStateInner};
+use crate::ServerStateInner;
 
 pub struct ServiceWebhooks {
     state: Arc<ServerStateInner>,
@@ -40,11 +40,14 @@ impl ServiceWebhooks {
     ) -> Result<Webhook> {
         if let Some(n) = &nonce {
             self.idempotency_keys
-                .try_get_with(n.clone(), self.create_inner(channel_id, auth, json))
+                .try_get_with(
+                    n.clone(),
+                    self.create_inner(channel_id, auth, json, nonce.clone()),
+                )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(channel_id, auth, json).await
+            self.create_inner(channel_id, auth, json, nonce).await
         }
     }
 
@@ -53,6 +56,7 @@ impl ServiceWebhooks {
         channel_id: ChannelId,
         auth: &Auth,
         json: WebhookCreate,
+        nonce: Option<String>,
     ) -> Result<Webhook> {
         json.validate()?;
         let data = self.state.data();
@@ -88,7 +92,7 @@ impl ServiceWebhooks {
             webhook: webhook.clone(),
         };
         self.state
-            .broadcast_room(room_id, auth.user.id, sync_msg)
+            .broadcast_room_with_nonce(room_id, auth.user.id, nonce.as_deref(), sync_msg)
             .await?;
 
         Ok(webhook)

@@ -156,12 +156,12 @@ impl ServiceRooms {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create_inner(create, auth.user.id, Some(auth), extra),
+                    self.create_inner(create, auth.user.id, Some(auth), extra, nonce.clone()),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(create, auth.user.id, Some(auth), extra)
+            self.create_inner(create, auth.user.id, Some(auth), extra, nonce)
                 .await
         }
     }
@@ -172,7 +172,7 @@ impl ServiceRooms {
         user_id: UserId,
         extra: DbRoomCreate,
     ) -> Result<Room> {
-        self.create_inner(create, user_id, None, extra).await
+        self.create_inner(create, user_id, None, extra, None).await
     }
 
     async fn create_inner(
@@ -181,6 +181,7 @@ impl ServiceRooms {
         creator_id: UserId,
         auth: Option<&Auth>,
         extra: DbRoomCreate,
+        nonce: Option<String>,
     ) -> Result<Room> {
         create.validate()?;
         let data = self.state.data();
@@ -284,8 +285,10 @@ impl ServiceRooms {
         .await?;
         room.welcome_channel_id = Some(welcome_channel_id);
 
-        self.state
-            .broadcast(MessageSync::RoomCreate { room: room.clone() })?;
+        self.state.broadcast_with_nonce(
+            nonce.as_deref(),
+            MessageSync::RoomCreate { room: room.clone() },
+        )?;
 
         if let Some(auth) = auth {
             let al = auth.audit_log(room_id);

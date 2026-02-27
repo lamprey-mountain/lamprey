@@ -229,11 +229,14 @@ impl ServiceChannels {
     ) -> Result<Channel> {
         if let Some(n) = &nonce {
             self.idempotency_keys
-                .try_get_with(n.clone(), self.create_channel_inner(auth, room_id, json))
+                .try_get_with(
+                    n.clone(),
+                    self.create_channel_inner(auth, room_id, json, nonce.clone()),
+                )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_channel_inner(auth, room_id, json).await
+            self.create_channel_inner(auth, room_id, json, nonce).await
         }
     }
 
@@ -242,6 +245,7 @@ impl ServiceChannels {
         auth: &Auth,
         room_id: Option<RoomId>,
         json: ChannelCreate,
+        nonce: Option<String>,
     ) -> Result<Channel> {
         json.validate()?;
         // TODO(al2): use this when creating a channel
@@ -565,9 +569,10 @@ impl ServiceChannels {
 
         if let Some(room_id) = room_id {
             self.state
-                .broadcast_room(
+                .broadcast_room_with_nonce(
                     room_id,
                     auth.user.id,
+                    nonce.as_deref(),
                     MessageSync::ChannelCreate {
                         channel: Box::new(channel.clone()),
                     },
@@ -575,9 +580,10 @@ impl ServiceChannels {
                 .await?;
         } else if let Some(parent_id) = json.parent_id {
             self.state
-                .broadcast_channel(
+                .broadcast_channel_with_nonce(
                     parent_id,
                     auth.user.id,
+                    nonce.as_deref(),
                     MessageSync::ChannelCreate {
                         channel: Box::new(channel.clone()),
                     },

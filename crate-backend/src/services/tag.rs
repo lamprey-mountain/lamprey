@@ -38,11 +38,14 @@ impl ServiceTags {
     ) -> Result<Tag> {
         if let Some(n) = &nonce {
             self.idempotency_keys
-                .try_get_with(n.clone(), self.create_inner(channel_id, auth, create))
+                .try_get_with(
+                    n.clone(),
+                    self.create_inner(channel_id, auth, create, nonce.clone()),
+                )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(channel_id, auth, create).await
+            self.create_inner(channel_id, auth, create, nonce).await
         }
     }
 
@@ -51,6 +54,7 @@ impl ServiceTags {
         channel_id: ChannelId,
         auth: &Auth,
         create: TagCreate,
+        nonce: Option<String>,
     ) -> Result<Tag> {
         create.validate()?;
         let data = self.state.data();
@@ -83,7 +87,7 @@ impl ServiceTags {
 
         let sync_msg = MessageSync::TagCreate { tag: tag.clone() };
         self.state
-            .broadcast_channel(channel_id, auth.user.id, sync_msg)
+            .broadcast_channel_with_nonce(channel_id, auth.user.id, nonce.as_deref(), sync_msg)
             .await?;
 
         Ok(tag)

@@ -42,15 +42,24 @@ impl ServiceRoles {
     ) -> Result<Role> {
         if let Some(n) = &nonce {
             self.idempotency_keys
-                .try_get_with(n.clone(), self.create_inner(room_id, auth, json))
+                .try_get_with(
+                    n.clone(),
+                    self.create_inner(room_id, auth, json, nonce.clone()),
+                )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(room_id, auth, json).await
+            self.create_inner(room_id, auth, json, nonce).await
         }
     }
 
-    async fn create_inner(&self, room_id: RoomId, auth: &Auth, json: RoleCreate) -> Result<Role> {
+    async fn create_inner(
+        &self,
+        room_id: RoomId,
+        auth: &Auth,
+        json: RoleCreate,
+        nonce: Option<String>,
+    ) -> Result<Role> {
         json.validate()?;
         let data = self.state.data();
         let srv = self.state.services();
@@ -123,7 +132,7 @@ impl ServiceRoles {
 
         let msg = MessageSync::RoleCreate { role: role.clone() };
         self.state
-            .broadcast_room(room_id, auth.user.id, msg)
+            .broadcast_room_with_nonce(room_id, auth.user.id, nonce.as_deref(), msg)
             .await?;
 
         srv.perms.invalidate_user_ranks(room_id);
