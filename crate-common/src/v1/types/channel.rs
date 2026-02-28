@@ -25,7 +25,7 @@ use super::{ChannelId, RoomId, UserId};
 /// A channel
 // TODO(#878): minimal data for channels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Channel {
@@ -182,6 +182,267 @@ pub struct Channel {
 
     /// when the current user can create a new message
     pub slowmode_message_expire_at: Option<Time>,
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Channel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct ChannelView<'a> {
+            id: ChannelId,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            room_id: Option<RoomId>,
+            creator_id: UserId,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            owner_id: Option<UserId>,
+            version_id: ChannelVerId,
+            name: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            description: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            url: Option<&'a str>,
+            #[serde(rename = "type")]
+            ty: ChannelType,
+            member_count: u64,
+            online_count: u64,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            tag_count: Option<u64>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            tags: Option<&'a [TagId]>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            tags_available: Option<&'a [Tag]>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            deleted_at: Option<Time>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            archived_at: Option<Time>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            locked: Option<&'a Locked>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            parent_id: Option<ChannelId>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            position: Option<u16>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            permission_overwrites: Option<&'a [PermissionOverwrite]>,
+
+            #[serde(skip_serializing_if = "is_false")]
+            nsfw: bool,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            last_version_id: Option<MessageVerId>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            last_message_id: Option<MessageId>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            message_count: Option<u64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            root_message_count: Option<u64>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            bitrate: Option<u64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            user_limit: Option<u64>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            is_unread: Option<bool>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            last_read_id: Option<MessageVerId>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            mention_count: Option<u64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            preferences: Option<&'a PreferencesChannel>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            document: Option<&'a Document>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            wiki: Option<&'a Wiki>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            calendar: Option<&'a Calendar>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            recipients: Option<&'a [User]>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            icon: Option<Option<MediaId>>,
+
+            #[serde(skip_serializing_if = "is_false")]
+            invitable: bool,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            thread_member: Option<&'a ThreadMember>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            auto_archive_duration: Option<u64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            default_auto_archive_duration: Option<u64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            slowmode_thread: Option<u64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            slowmode_message: Option<u64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            default_slowmode_message: Option<u64>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            slowmode_thread_expire_at: Option<Time>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            slowmode_message_expire_at: Option<Time>,
+        }
+
+        fn is_false(b: &bool) -> bool {
+            !*b
+        }
+
+        let view = ChannelView {
+            id: self.id,
+            room_id: self.room_id,
+            creator_id: self.creator_id,
+            owner_id: self.owner_id,
+            version_id: self.version_id.clone(),
+            name: &self.name,
+            description: self.description.as_deref(),
+            url: if self.ty.has_url() {
+                self.url.as_deref()
+            } else {
+                None
+            },
+            ty: self.ty,
+            member_count: self.member_count,
+            online_count: self.online_count,
+            tag_count: if self.ty.has_tags() {
+                Some(self.tag_count)
+            } else {
+                None
+            },
+            tags: if self.ty.is_taggable() {
+                Some(self.tags.as_deref().unwrap_or(&[]))
+            } else {
+                None
+            },
+            tags_available: if self.ty.has_tags() {
+                self.tags_available.as_deref()
+            } else {
+                None
+            },
+            deleted_at: self.deleted_at,
+            archived_at: self.archived_at,
+            locked: self.locked.as_ref(),
+            parent_id: self.parent_id,
+            position: self.position,
+            permission_overwrites: if self.ty.has_permission_overwrites() {
+                Some(&self.permission_overwrites)
+            } else {
+                None
+            },
+            nsfw: self.nsfw,
+            last_version_id: self.last_version_id,
+            last_message_id: self.last_message_id,
+            message_count: if self.ty.has_text() {
+                self.message_count
+            } else {
+                None
+            },
+            root_message_count: if self.ty.has_text() {
+                self.root_message_count
+            } else {
+                None
+            },
+            bitrate: if self.ty.has_voice() {
+                self.bitrate
+            } else {
+                None
+            },
+            user_limit: if self.ty.has_voice() {
+                self.user_limit
+            } else {
+                None
+            },
+            is_unread: self.is_unread,
+            last_read_id: self.last_read_id.clone(),
+            mention_count: self.mention_count,
+            preferences: self.preferences.as_ref(),
+            document: if self.ty == ChannelType::Document {
+                self.document.as_ref()
+            } else {
+                None
+            },
+            wiki: if self.ty == ChannelType::Wiki {
+                self.wiki.as_ref()
+            } else {
+                None
+            },
+            calendar: if self.ty == ChannelType::Calendar {
+                self.calendar.as_ref()
+            } else {
+                None
+            },
+            recipients: if matches!(self.ty, ChannelType::Dm | ChannelType::Gdm) {
+                Some(&self.recipients)
+            } else {
+                None
+            },
+            icon: if self.ty == ChannelType::Gdm {
+                Some(self.icon)
+            } else {
+                None
+            },
+            invitable: if self.ty.is_thread() {
+                self.invitable
+            } else {
+                false
+            },
+            thread_member: if self.ty.is_thread() {
+                self.thread_member.as_deref()
+            } else {
+                None
+            },
+            auto_archive_duration: if self.ty.is_thread() {
+                self.auto_archive_duration
+            } else {
+                None
+            },
+            default_auto_archive_duration: if self.ty.has_threads() {
+                self.default_auto_archive_duration
+            } else {
+                None
+            },
+            slowmode_thread: if self.ty.has_threads() {
+                self.slowmode_thread
+            } else {
+                None
+            },
+            slowmode_message: if self.ty.has_text() {
+                self.slowmode_message
+            } else {
+                None
+            },
+            default_slowmode_message: if self.ty.has_threads() {
+                self.default_slowmode_message
+            } else {
+                None
+            },
+            slowmode_thread_expire_at: if self.ty.has_threads() {
+                self.slowmode_thread_expire_at
+            } else {
+                None
+            },
+            slowmode_message_expire_at: if self.ty.has_text() {
+                self.slowmode_message_expire_at
+            } else {
+                None
+            },
+        };
+
+        view.serialize(serializer)
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -730,6 +991,10 @@ impl ChannelType {
 
     pub fn has_calendar(&self) -> bool {
         matches!(self, ChannelType::Calendar)
+    }
+
+    pub fn has_permission_overwrites(&self) -> bool {
+        !self.is_thread() || !matches!(self, ChannelType::Dm | ChannelType::Gdm)
     }
 
     pub fn can_change_to(self, other: ChannelType) -> bool {
