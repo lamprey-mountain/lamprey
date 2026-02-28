@@ -777,6 +777,7 @@ export class Messages {
 
 		if (threads) {
 			for (const thread of threads) {
+				this.api.channels.normalize(thread);
 				this.api.channels.cache.set(thread.id, thread);
 			}
 		}

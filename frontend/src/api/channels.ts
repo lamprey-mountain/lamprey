@@ -21,6 +21,19 @@ export class Channels {
 		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
 
+	normalize(channel: Channel): Channel {
+		if (!channel.permission_overwrites) channel.permission_overwrites = [];
+		if (!channel.recipients) channel.recipients = [];
+		if (
+			!channel.tags &&
+			(channel.type === "ThreadPublic" || channel.type === "ThreadPrivate" ||
+				channel.type === "ThreadForum2")
+		) {
+			channel.tags = [];
+		}
+		return channel;
+	}
+
 	fetch(channel_id_sig: () => string): Resource<Channel> {
 		const [resource, { mutate }] = createResource(
 			channel_id_sig,
@@ -40,6 +53,7 @@ export class Channels {
 						)
 					);
 					this._requests.delete(channel_id);
+					this.normalize(data);
 					this.cache.set(channel_id, data);
 					return data;
 				})();
@@ -80,6 +94,7 @@ export class Channels {
 
 			batch(() => {
 				for (const item of data.items) {
+					this.normalize(item);
 					this.cache.set(item.id, item);
 				}
 			});
@@ -232,6 +247,7 @@ export class Channels {
 
 			batch(() => {
 				for (const item of data.items) {
+					this.normalize(item);
 					this.cache.set(item.id, item);
 				}
 			});
@@ -317,6 +333,7 @@ export class Channels {
 
 			batch(() => {
 				for (const item of data.items) {
+					this.normalize(item);
 					this.cache.set(item.id, item);
 				}
 			});

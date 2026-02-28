@@ -163,10 +163,12 @@ export function createApi(
 				}
 
 				for (const channel of msg.channels) {
+					channels.normalize(channel);
 					channels.cache.set(channel.id, channel);
 				}
 
 				for (const thread of msg.threads) {
+					channels.normalize(thread);
 					channels.cache.set(thread.id, thread);
 				}
 
@@ -346,6 +348,7 @@ export function createApi(
 			}
 		} else if (msg.type === "ChannelCreate") {
 			const { channel } = msg;
+			api.channels.normalize(channel);
 			channels.cache.set(channel.id, channel);
 			if (channel.room_id) {
 				const l = channels._cachedListings.get(channel.room_id);
@@ -364,6 +367,7 @@ export function createApi(
 			}
 		} else if (msg.type === "ChannelUpdate") {
 			const { channel: thread } = msg;
+			api.channels.normalize(thread);
 			const old_thread = channels.cache.get(thread.id);
 			channels.cache.set(thread.id, thread);
 
@@ -688,9 +692,10 @@ export function createApi(
 					console.log({ last_version_id });
 					api.channels.cache.set(msg.channel_id, {
 						...t,
-						message_count: t.message_count! - 1,
+						message_count: (t.message_count ?? 0) - 1,
 						last_version_id,
-						is_unread: !!t.last_read_id && t.last_read_id < last_version_id,
+						is_unread: !!t.last_read_id &&
+							t.last_read_id < (last_version_id ?? ""),
 					});
 				}
 			});
@@ -723,9 +728,10 @@ export function createApi(
 							t.last_version_id;
 					api.channels.cache.set(thread_id, {
 						...t,
-						message_count: t.message_count! - message_ids.length,
+						message_count: (t.message_count ?? 0) - message_ids.length,
 						last_version_id,
-						is_unread: !!t.last_read_id && t.last_read_id < last_version_id,
+						is_unread: !!t.last_read_id &&
+							t.last_read_id < (last_version_id ?? ""),
 					});
 				}
 			});
