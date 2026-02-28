@@ -10,13 +10,6 @@ with
         join thread_member on channel.id = thread_member.channel_id
         where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
     ),
-    last_id as (
-        select m.channel_id, max(mv.version_id) as last_version_id
-        from message m
-        join message_version mv on m.latest_version_id = mv.version_id
-        where m.deleted_at is null
-        group by m.channel_id
-    ),
     message_count as (
         select m.channel_id, count(*) as count
         from message m
@@ -64,7 +57,8 @@ select
     channel.last_activity_at,
     coalesce(message_count.count, 0) as "message_count!",
     coalesce(member_count.count, 0) as "member_count!",
-    last_version_id as "last_version_id",
+    channel.last_version_id as "last_version_id",
+    channel.last_message_id as "last_message_id",
     coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!",
     (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = channel.id) as tags,
     (SELECT json_agg(tag.*) FROM tag WHERE channel_id = channel.id) as tags_available,
@@ -76,7 +70,6 @@ from channel
 join channel_viewer on channel.id = channel_viewer.id
 left join message_count on message_count.channel_id = channel.id
 left join member_count on member_count.channel_id = channel.id
-left join last_id on last_id.channel_id = channel.id
 left join permission_overwrites on permission_overwrites.target_id = channel.id
 where ($9::boolean is null or (channel.archived_at is not null) = $9)
   and ($10::boolean is null or (channel.deleted_at is not null) = $10)

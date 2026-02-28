@@ -245,6 +245,15 @@ impl DataMessage for Postgres {
         .await?;
 
         query!(
+            "UPDATE channel SET last_message_id = $1, last_version_id = $2 WHERE id = $3",
+            message_id,
+            version_id,
+            *create.channel_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        query!(
             r#"INSERT INTO message_version (version_id, message_id, author_id, type, content, metadata, reply_id, mentions, embeds, created_at, override_name)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
             version_id,
@@ -282,7 +291,7 @@ impl DataMessage for Postgres {
 
     async fn message_update(
         &self,
-        _channel_id: ChannelId,
+        channel_id: ChannelId,
         message_id: MessageId,
         update: DbMessageUpdate,
     ) -> Result<MessageVerId> {
@@ -339,6 +348,15 @@ impl DataMessage for Postgres {
             .execute(&mut *tx)
             .await?;
         }
+
+        query!(
+            "UPDATE channel SET last_version_id = $1 WHERE id = $2",
+            ver_id,
+            *channel_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
         tx.commit().await?;
         info!("update message");
         Ok(ver_id.into())

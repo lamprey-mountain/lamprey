@@ -176,6 +176,7 @@ pub struct DbChannel {
     pub icon: Option<Uuid>,
     pub ty: DbChannelType,
     pub last_version_id: Option<Uuid>,
+    pub last_message_id: Option<Uuid>,
     pub message_count: i64,
     pub member_count: i64,
     pub permission_overwrites: serde_json::Value,
@@ -334,6 +335,7 @@ impl From<DbChannel> for Channel {
             deleted_at: row.deleted_at.map(|t| t.into()),
             ty: row.ty.into(),
             last_version_id: row.last_version_id.map(|i| i.into()),
+            last_message_id: row.last_message_id.map(|i| i.into()),
             message_count: Some(row.message_count.try_into().expect("count is negative?")),
             parent_id: row.parent_id.map(|i| i.into()),
             position: row

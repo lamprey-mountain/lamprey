@@ -563,8 +563,10 @@ impl ServiceCache {
                     if let Some(thread) = cached.threads.get(&message.channel_id) {
                         let mut t = thread.thread.write().await;
                         t.last_version_id = Some(message.latest_version.version_id);
+                        t.last_message_id = Some(message.id);
                     } else if let Some(mut channel) = cached.channels.get_mut(&message.channel_id) {
                         channel.inner.last_version_id = Some(message.latest_version.version_id);
+                        channel.inner.last_message_id = Some(message.id);
                     }
                 }
             }

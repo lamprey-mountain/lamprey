@@ -56,8 +56,8 @@ impl DataChannel for Postgres {
 
         query!(
             "
-			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url, locked_until, locked_roles)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $21, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, null, $22)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url, locked_until, locked_roles, last_message_id, last_version_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $21, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, null, $22, null, null)
         ",
             channel_id.into_inner(),
             channel_id.into_inner(),

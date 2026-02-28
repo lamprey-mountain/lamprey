@@ -11,7 +11,9 @@ use crate::v1::types::preferences::PreferencesChannel;
 use crate::v1::types::tag::Tag;
 use crate::v1::types::util::Time;
 use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
-use crate::v1::types::{MediaId, MessageCreate, MessageVerId, RoleId, TagId, ThreadMember, User};
+use crate::v1::types::{
+    MediaId, MessageCreate, MessageId, MessageVerId, RoleId, TagId, ThreadMember, User,
+};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
@@ -109,6 +111,7 @@ pub struct Channel {
     pub nsfw: bool,
 
     pub last_version_id: Option<MessageVerId>,
+    pub last_message_id: Option<MessageId>,
     pub message_count: Option<u64>,
     pub root_message_count: Option<u64>,
 
