@@ -215,7 +215,7 @@ pub enum MessageSync {
         /// all roles in all rooms the user can see
         roles: Vec<Role>,
 
-        /// all channels the user can see
+        /// all non-thread channels the user can see
         channels: Vec<Channel>,
 
         /// all active (ie. not archived) threads the user can see

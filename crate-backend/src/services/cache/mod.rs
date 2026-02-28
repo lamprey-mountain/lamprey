@@ -162,6 +162,9 @@ impl ServiceCache {
         let channels_data = data.channel_list(room_id).await?;
         let channels = DashMap::new();
         for channel in channels_data {
+            if channel.ty.is_thread() {
+                continue;
+            }
             let overwrites = channel
                 .permission_overwrites
                 .iter()
