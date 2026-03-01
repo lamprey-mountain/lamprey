@@ -110,8 +110,12 @@ export const Autocomplete = () => {
 			) as User[];
 			setAllUsers(users);
 		} else if (state?.type === "channel") {
+			const channelId = state.channelId;
+			const channel = api.channels.cache.get(channelId);
+			const roomId = channel?.room_id;
+
 			const channels = [...api.channels.cache.values()].filter(
-				(c) => c.type !== "Category",
+				(c) => c.type !== "Category" && c.room_id === roomId,
 			);
 			setAllChannels(channels);
 		} else if (state?.type === "emoji") {
