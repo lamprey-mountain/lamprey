@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use common::v1::types::notifications::Notification;
-use common::v1::types::{ChannelId, MessageId, NotificationId, UserId};
+use common::v1::types::{ChannelId, MessageId, NotificationId, SessionId, UserId};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use p256::pkcs8::EncodePrivateKey;
 use p256::SecretKey;
@@ -33,6 +33,7 @@ pub struct NotificationPayload {
     pub id: NotificationId,
     pub channel_id: ChannelId,
     pub message_id: MessageId,
+    pub session_id: SessionId,
 }
 
 #[derive(Debug, Serialize)]
@@ -77,7 +78,7 @@ impl ServiceNotifications {
     }
 
     /// send a notification to a user through the web push api
-    pub async fn push(&self, user_id: UserId, payload: NotificationPayload) -> Result<()> {
+    pub async fn push(&self, user_id: UserId, mut payload: NotificationPayload) -> Result<()> {
         let data = self.state.data();
         let subscriptions = data.push_list_for_user(user_id).await?;
 
@@ -90,9 +91,10 @@ impl ServiceNotifications {
             None => return Ok(()),
         };
 
-        let json_payload = serde_json::to_vec(&payload)?;
-
         for sub in subscriptions {
+            payload.session_id = sub.session_id;
+            let json_payload = serde_json::to_vec(&payload)?;
+
             let state = self.state.clone();
             let endpoint = sub.endpoint.clone();
 
@@ -214,6 +216,7 @@ impl ServiceNotifications {
                                 id: notif.id,
                                 channel_id,
                                 message_id,
+                                session_id: SessionId::from(uuid::Uuid::nil()),
                             };
 
                             if let Err(e) = srv.notifications.push(user_id, payload).await {

@@ -9,6 +9,7 @@ import {
 	batch,
 	type Component,
 	createContext,
+	createEffect,
 	createSignal,
 	type ParentProps,
 	type Resource,
@@ -90,7 +91,11 @@ export type MemberList = {
 	}[];
 };
 
-function updateSWState(apiUrl: string, token: string | null) {
+function updateSWState(
+	apiUrl: string,
+	token: string | null,
+	sessionId?: string | null,
+) {
 	const request = indexedDB.open("sw-state", 1);
 	request.onupgradeneeded = () => {
 		const db = request.result;
@@ -102,6 +107,9 @@ function updateSWState(apiUrl: string, token: string | null) {
 		const store = tx.objectStore("state");
 		store.put(apiUrl, "api_url");
 		store.put(token, "token");
+		if (sessionId && token) {
+			store.put(token, `token:${sessionId}`);
+		}
 	};
 }
 
@@ -127,7 +135,10 @@ export function createApi(
 	const [clientState, setClientState] = createSignal<ClientState>("stopped");
 	client.state.subscribe(setClientState);
 
-	updateSWState(client.opts.apiUrl, client.opts.token ?? null);
+	createEffect(() => {
+		const s = session();
+		updateSWState(client.opts.apiUrl, client.opts.token ?? null, s?.id);
+	});
 
 	const rooms = new Rooms();
 	const channels = new Channels();
@@ -1291,7 +1302,6 @@ export function createApi(
 			users.cache.set(msg.user.id, msg.user);
 		}
 		setSession(msg.session);
-		updateSWState(client.opts.apiUrl, client.opts.token ?? null);
 	});
 
 	async function tempCreateSession() {

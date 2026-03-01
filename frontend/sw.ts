@@ -51,7 +51,7 @@ self.addEventListener("activate", (e) => {
 	]));
 });
 
-async function getState(): Promise<
+async function getState(sessionId?: string): Promise<
 	{ api_url: string | null; token: string | null }
 > {
 	return new Promise((resolve) => {
@@ -61,7 +61,9 @@ async function getState(): Promise<
 			const tx = db.transaction("state", "readonly");
 			const store = tx.objectStore("state");
 			const apiUrlReq = store.get("api_url");
-			const tokenReq = store.get("token");
+			const tokenReq = sessionId
+				? store.get(`token:${sessionId}`)
+				: store.get("token");
 			tx.oncomplete = () => {
 				resolve({
 					api_url: apiUrlReq.result,
@@ -79,7 +81,7 @@ self.addEventListener("push", (e) => {
 	if (!data) return;
 
 	e.waitUntil((async () => {
-		const { api_url, token } = await getState();
+		const { api_url, token } = await getState(data.session_id);
 		if (!api_url || !token) return;
 
 		const headers = {
