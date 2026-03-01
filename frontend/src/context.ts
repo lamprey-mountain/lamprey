@@ -105,11 +105,19 @@ export type ChatCtx = {
 	preferences: Accessor<Preferences>;
 	setPreferences: Setter<Preferences>;
 	scrollToChatList: (pos: number) => void;
+	cursorStats: Accessor<CursorStats | null>;
+	setCursorStats: Setter<CursorStats | null>;
 	slashCommands: SlashCommands;
 	channel_contexts: ReactiveMap<string, ChannelContextT>;
 	room_contexts: ReactiveMap<string, RoomContextT>;
 	document_contexts: ReactiveMap<string, DocumentContextT>;
 	api: Api;
+};
+
+export type CursorStats = {
+	x: number;
+	y: number;
+	label: string | null;
 };
 
 export type MediaCtx = {

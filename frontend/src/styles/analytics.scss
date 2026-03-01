@@ -1,0 +1,60 @@
+@use "./theme.scss" as *;
+@use "./util.scss" as *;
+
+.analytics-controls {
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 1rem;
+	align-items: flex-end;
+}
+
+.chart-container {
+	background: $bg-150;
+	border: 1px solid $sep-500;
+	border-radius: 4px;
+	padding: 1rem;
+	margin-bottom: 1rem;
+
+	.chart-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+
+		h4 {
+			margin: 0;
+			font-size: 1rem;
+			color: $fg-300;
+		}
+
+		.chart-tooltip {
+			display: flex;
+			gap: 0.5rem;
+			font-size: 0.9rem;
+			background: $bg-300;
+			padding: 2px 8px;
+			border-radius: 4px;
+			border: 1px solid $sep-500;
+
+			.date {
+				color: $fg-500;
+			}
+
+			.value {
+				color: $link-500;
+				font-weight: bold;
+			}
+		}
+	}
+
+	.chart {
+		height: 200px;
+		width: 100%;
+		cursor: crosshair;
+
+		svg {
+			height: 100%;
+			width: 100%;
+		}
+	}
+}

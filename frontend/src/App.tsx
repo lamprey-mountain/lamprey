@@ -160,6 +160,8 @@ export const AppShell: Component<RouterParentProps> = (props) => {
 	useFavicon();
 	useGlobalEventHandlers();
 
+	const cursorStats = ctx.cursorStats;
+
 	return (
 		<div
 			id="root"
@@ -168,6 +170,30 @@ export const AppShell: Component<RouterParentProps> = (props) => {
 					ctx.preferences().frontend["underline_links"] === "yes",
 			}}
 		>
+			<Show when={cursorStats()}>
+				{(stats) => (
+					<div
+						class="cursor-tooltip"
+						style={{
+							position: "fixed",
+							top: `${stats().y + 16}px`,
+							left: `${stats().x + 16}px`,
+							"z-index": 10000,
+							background: "oklch(var(--color-bg2) / 0.9)",
+							color: "oklch(var(--color-fg1))",
+							border: "1px solid oklch(var(--color-sep-300))",
+							padding: "4px 8px",
+							"border-radius": "4px",
+							"pointer-events": "none",
+							"font-size": "12px",
+							"white-space": "nowrap",
+							"backdrop-filter": "blur(4px)",
+						}}
+					>
+						{stats().label}
+					</div>
+				)}
+			</Show>
 			{props.children}
 			<OverlayProvider />
 			<div style="visibility:hidden">

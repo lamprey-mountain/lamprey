@@ -113,6 +113,10 @@ export function useChatClient(config: Config) {
 
 	const [recentChannels, setRecentChannels] = createSignal([] as string[]);
 
+	const [cursorStats, setCursorStats] = createSignal<
+		import("../context.ts").CursorStats | null
+	>(null);
+
 	const ctx: ChatCtx = {
 		client,
 		data,
@@ -134,6 +138,8 @@ export function useChatClient(config: Config) {
 		scrollToChatList: (pos: number) => {
 			console.log("scrollToChatList called with position:", pos);
 		},
+		cursorStats,
+		setCursorStats,
 		slashCommands,
 		channel_contexts: new ReactiveMap(),
 		room_contexts: new ReactiveMap(),

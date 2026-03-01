@@ -60,6 +60,21 @@ export type PermissionOverwriteType =
 	components["schemas"]["PermissionOverwriteType"];
 export type NotifsRoom = components["schemas"]["NotifsRoom"];
 
+export type RoomAnalyticsChannel =
+	components["schemas"]["RoomAnalyticsChannel"];
+export type RoomAnalyticsInvites =
+	components["schemas"]["RoomAnalyticsInvites"];
+export type RoomAnalyticsInvitesOrigin =
+	components["schemas"]["RoomAnalyticsInvitesOrigin"];
+export type RoomAnalyticsMembersCount =
+	components["schemas"]["RoomAnalyticsMembersCount"];
+export type RoomAnalyticsMembersJoin =
+	components["schemas"]["RoomAnalyticsMembersJoin"];
+export type RoomAnalyticsMembersLeave =
+	components["schemas"]["RoomAnalyticsMembersLeave"];
+export type RoomAnalyticsOverview =
+	components["schemas"]["RoomAnalyticsOverview"];
+
 // TODO: use openai schema
 export type MessageSearch = {
 	results: Array<string>; // MessageId[]

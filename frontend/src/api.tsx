@@ -65,6 +65,7 @@ import { deepEqual } from "./utils/deepEqual.ts";
 import { Inbox } from "./api/inbox.ts";
 import { Push } from "./api/push.ts";
 import { Documents } from "./api/document.ts";
+import { RoomAnalytics } from "./api/room_analytics.ts";
 import { generateNotificationIcon } from "./drawing.ts";
 
 export type Json =
@@ -152,6 +153,7 @@ export function createApi(
 	const inbox = new Inbox();
 	const tags = new Tags();
 	const documents = new Documents();
+	const room_analytics = new RoomAnalytics();
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
 
@@ -1341,6 +1343,7 @@ export function createApi(
 		push,
 		inbox,
 		documents,
+		room_analytics,
 		voiceStates,
 		voiceState,
 		stripMarkdownAndResolveMentions,
@@ -1377,6 +1380,7 @@ export function createApi(
 	inbox.api = api;
 	tags.api = api;
 	documents.api = api;
+	room_analytics.api = api;
 
 	console.log("provider created", api);
 	return api;
@@ -1409,6 +1413,7 @@ export type Api = {
 	reactions: Reactions;
 	tags: Tags;
 	documents: Documents;
+	room_analytics: RoomAnalytics;
 	session: Accessor<Session | null>;
 	typing: ReactiveMap<string, Set<string>>;
 	voiceState: Accessor<VoiceState | null>;

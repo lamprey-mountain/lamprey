@@ -1,4 +1,4 @@
-import { createSignal, onMount } from "solid-js";
+import { createEffect, createSignal, onMount } from "solid-js";
 
 type DateRange = {
 	start: string;
@@ -20,6 +20,12 @@ export const DateRangePicker = (props: DateRangePickerProps) => {
 		},
 	);
 
+	createEffect(() => {
+		if (props.initialValue) {
+			setDateRange(props.initialValue);
+		}
+	});
+
 	const handleStartChange = (e: Event) => {
 		const target = e.target as HTMLInputElement;
 		const newRange = { ...dateRange(), start: target.value };
@@ -40,7 +46,7 @@ export const DateRangePicker = (props: DateRangePickerProps) => {
 				<label>From:</label>
 				<input
 					type="date"
-					value={dateRange().start}
+					value={dateRange().start.split("T")[0]}
 					onInput={handleStartChange}
 				/>
 			</div>
@@ -48,7 +54,7 @@ export const DateRangePicker = (props: DateRangePickerProps) => {
 				<label>To:</label>
 				<input
 					type="date"
-					value={dateRange().end}
+					value={dateRange().end.split("T")[0]}
 					onInput={handleEndChange}
 				/>
 			</div>
