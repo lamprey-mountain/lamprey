@@ -16,6 +16,26 @@ export class Roles {
 	_cachedListings = new Map<string, Listing<Role>>();
 	_memberListings = new Map<string, Listing<RoomMember>>();
 
+	private _getOrCreateListing<T>(
+		map: Map<string, Listing<T>>,
+		id: string,
+	): Listing<T> {
+		let l = map.get(id);
+		if (!l) {
+			l = {
+				resource: (() => {}) as unknown as Resource<Pagination<T>>,
+				refetch: () => {},
+				mutate: (value) => {
+					l!.pagination = value;
+				},
+				prom: null,
+				pagination: null,
+			};
+			map.set(id, l);
+		}
+		return l;
+	}
+
 	fetch(room_id: () => string, role_id: () => string): Resource<Role> {
 		const query = () => ({
 			room_id: room_id(),
@@ -92,26 +112,20 @@ export class Roles {
 			};
 		};
 
-		const room_id = untrack(room_id_sig);
-		const l = this._cachedListings.get(room_id);
-		if (l) {
+		const room_id = room_id_sig();
+		const l = this._getOrCreateListing(this._cachedListings, room_id);
+		if ((l.resource as any).upgraded) {
 			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
-		const l2 = {
-			resource: (() => {}) as unknown as Resource<Pagination<Role>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-		this._cachedListings.set(room_id, l2);
-
 		const [resource, { refetch, mutate }] = createResource(
-			room_id_sig,
-			async (room_id) => {
-				const l = this._cachedListings.get(room_id)!;
+			() => [room_id_sig(), this.api.session()] as const,
+			async ([room_id, session]) => {
+				if (session?.status !== "Authorized") {
+					return { items: [], total: 0, has_more: false };
+				}
+				const l = this._getOrCreateListing(this._cachedListings, room_id);
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
@@ -126,9 +140,13 @@ export class Roles {
 			},
 		);
 
-		l2.resource = resource;
-		l2.refetch = refetch;
-		l2.mutate = mutate;
+		(resource as any).upgraded = true;
+		l.resource = resource;
+		l.refetch = refetch;
+		l.mutate = (value: Pagination<Role>) => {
+			l.pagination = value;
+			mutate(value);
+		};
 
 		return resource;
 	}

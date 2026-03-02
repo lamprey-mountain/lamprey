@@ -16,6 +16,23 @@ export class RoomMembers {
 	_requests = new Map<string, Map<string, Promise<RoomMember>>>();
 	_cachedListings = new Map<string, Listing<RoomMember>>();
 
+	private _getOrCreateListing(room_id: string): Listing<RoomMember> {
+		let l = this._cachedListings.get(room_id);
+		if (!l) {
+			l = {
+				resource: (() => {}) as unknown as Resource<Pagination<RoomMember>>,
+				refetch: () => {},
+				mutate: (value) => {
+					l!.pagination = value;
+				},
+				prom: null,
+				pagination: null,
+			};
+			this._cachedListings.set(room_id, l);
+		}
+		return l;
+	}
+
 	upsert(member: RoomMember) {
 		let cache = this.cache.get(member.room_id);
 		if (!cache) {
@@ -104,8 +121,6 @@ export class RoomMembers {
 	}
 
 	list(room_id_sig: () => string): Resource<Pagination<RoomMember>> {
-		const room_id = untrack(room_id_sig);
-
 		const paginate = async (pagination?: Pagination<RoomMember>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
@@ -144,35 +159,19 @@ export class RoomMembers {
 			};
 		};
 
-		const l = this._cachedListings.get(room_id);
-		if (l) {
+		const l = this._getOrCreateListing(room_id_sig());
+		if ((l.resource as any).upgraded) {
 			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
-		const l2 = {
-			resource: (() => {}) as unknown as Resource<Pagination<RoomMember>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-		this._cachedListings.set(room_id, l2);
-
 		const [resource, { refetch, mutate }] = createResource(
-			room_id_sig,
-			async (room_id) => {
-				let l = this._cachedListings.get(room_id)!;
-				if (!l) {
-					l = {
-						resource: (() => {}) as unknown as Resource<Pagination<RoomMember>>,
-						refetch: () => {},
-						mutate: () => {},
-						prom: null,
-						pagination: null,
-					};
-					this._cachedListings.set(room_id, l);
+			() => [room_id_sig(), this.api.session()] as const,
+			async ([room_id, session]) => {
+				if (session?.status !== "Authorized") {
+					return { items: [], total: 0, has_more: false };
 				}
+				const l = this._getOrCreateListing(room_id);
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
@@ -187,9 +186,13 @@ export class RoomMembers {
 			},
 		);
 
-		l2.resource = resource;
-		l2.refetch = refetch;
-		l2.mutate = mutate;
+		(resource as any).upgraded = true;
+		l.resource = resource;
+		l.refetch = refetch;
+		l.mutate = (value: Pagination<RoomMember>) => {
+			l.pagination = value;
+			mutate(value);
+		};
 
 		return resource;
 	}

@@ -8,8 +8,24 @@ export class Rooms {
 	api: Api = null as unknown as Api;
 	cache = new ReactiveMap<string, Room>();
 	_requests = new Map<string, Promise<Room>>();
-	_cachedListing: Listing<Room> | null = null;
-	_cachedListingAll: Listing<Room> | null = null;
+	_cachedListing: Listing<Room> = {
+		resource: (() => {}) as unknown as Resource<Pagination<Room>>,
+		refetch: () => {},
+		mutate: (value) => {
+			this._cachedListing.pagination = value;
+		},
+		prom: null,
+		pagination: null,
+	};
+	_cachedListingAll: Listing<Room> = {
+		resource: (() => {}) as unknown as Resource<Pagination<Room>>,
+		refetch: () => {},
+		mutate: (value) => {
+			this._cachedListingAll.pagination = value;
+		},
+		prom: null,
+		pagination: null,
+	};
 
 	fetch(room_id_sig: () => string): Resource<Room> {
 		const [resource, { mutate }] = createResource(room_id_sig, (room_id) => {
@@ -46,6 +62,10 @@ export class Rooms {
 	}
 
 	list(): Resource<Pagination<Room>> {
+		if ((this._cachedListing.resource as any).upgraded) {
+			return this._cachedListing.resource;
+		}
+
 		const paginate = async (pagination?: Pagination<Room>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
@@ -81,28 +101,17 @@ export class Rooms {
 			}
 		};
 
-		const l = this._cachedListing;
-		if (l) {
-			if (!l.prom) l.refetch();
-			return l.resource;
-		}
-
-		this._cachedListing = {
-			resource: (() => {}) as unknown as Resource<Pagination<Room>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-
 		const [resource, { refetch, mutate }] = createResource(
-			this.api.session,
-			async (session) => {
+			() => [this.api.session(), this.api.preferencesLoaded()] as const,
+			async ([session, loaded]) => {
 				if (session?.status !== "Authorized") {
 					return { items: [], total: 0, has_more: false };
 				}
-				const l = this._cachedListing!;
-				if (l?.prom) {
+				const l = this._cachedListing;
+				if (l.pagination) return l.pagination;
+				if (!loaded) return { items: [], total: 0, has_more: false };
+
+				if (l.prom) {
 					await l.prom;
 					return l.pagination!;
 				}
@@ -110,16 +119,17 @@ export class Rooms {
 				const prom = l.pagination ? paginate(l.pagination) : paginate();
 				l.prom = prom;
 				const res = await prom;
-				l!.pagination = res;
-				l!.prom = null;
-				return res!;
+				l.pagination = res;
+				l.prom = null;
+				return res;
 			},
 		);
 
+		(resource as any).upgraded = true;
 		this._cachedListing.resource = resource;
 		this._cachedListing.refetch = refetch;
 		this._cachedListing.mutate = (value: Pagination<Room>) => {
-			this._cachedListing!.pagination = value;
+			this._cachedListing.pagination = value;
 			mutate(value);
 		};
 
@@ -135,6 +145,10 @@ export class Rooms {
 	}
 
 	list_all(): Resource<Pagination<Room>> {
+		if ((this._cachedListingAll.resource as any).upgraded) {
+			return this._cachedListingAll.resource;
+		}
+
 		const paginate = async (pagination?: Pagination<Room>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
@@ -167,28 +181,14 @@ export class Rooms {
 			}
 		};
 
-		const l = this._cachedListingAll;
-		if (l) {
-			if (!l.prom) l.refetch();
-			return l.resource;
-		}
-
-		this._cachedListingAll = {
-			resource: (() => {}) as unknown as Resource<Pagination<Room>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-
 		const [resource, { refetch, mutate }] = createResource(
 			this.api.session,
 			async (session) => {
 				if (session?.status !== "Authorized") {
 					return { items: [], total: 0, has_more: false };
 				}
-				const l = this._cachedListingAll!;
-				if (l?.prom) {
+				const l = this._cachedListingAll;
+				if (l.prom) {
 					await l.prom;
 					return l.pagination!;
 				}
@@ -196,16 +196,17 @@ export class Rooms {
 				const prom = l.pagination ? paginate(l.pagination) : paginate();
 				l.prom = prom;
 				const res = await prom;
-				l!.pagination = res;
-				l!.prom = null;
-				return res!;
+				l.pagination = res;
+				l.prom = null;
+				return res;
 			},
 		);
 
+		(resource as any).upgraded = true;
 		this._cachedListingAll.resource = resource;
 		this._cachedListingAll.refetch = refetch;
 		this._cachedListingAll.mutate = (value: Pagination<Room>) => {
-			this._cachedListingAll!.pagination = value;
+			this._cachedListingAll.pagination = value;
 			mutate(value);
 		};
 

@@ -21,6 +21,26 @@ export class Channels {
 		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
 
+	private _getOrCreateListing(
+		map: Map<string, Listing<Channel>>,
+		room_id: string,
+	): Listing<Channel> {
+		let l = map.get(room_id);
+		if (!l) {
+			l = {
+				resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
+				refetch: () => {},
+				mutate: (value) => {
+					l!.pagination = value;
+				},
+				prom: null,
+				pagination: null,
+			};
+			map.set(room_id, l);
+		}
+		return l;
+	}
+
 	normalize(channel: Channel): Channel {
 		if (!channel.permission_overwrites) channel.permission_overwrites = [];
 		if (!channel.recipients) channel.recipients = [];
@@ -106,20 +126,11 @@ export class Channels {
 		};
 
 		const room_id = room_id_signal();
-		const l = this._cachedListings.get(room_id);
-		if (l) {
+		const l = this._getOrCreateListing(this._cachedListings, room_id);
+		if ((l.resource as any).upgraded) {
 			if (!l.prom) l.refetch();
 			return l.resource;
 		}
-
-		const l2: Listing<Channel> = {
-			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-		this._cachedListings.set(room_id, l2);
 
 		const [resource, { mutate, refetch }] = createResource(
 			() => [room_id_signal(), this.api.session()] as const,
@@ -127,17 +138,7 @@ export class Channels {
 				if (session?.status !== "Authorized") {
 					return { items: [], total: 0, has_more: false };
 				}
-				let l = this._cachedListings.get(room_id)!;
-				if (!l) {
-					l = {
-						resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
-						refetch: () => {},
-						mutate: () => {},
-						prom: null,
-						pagination: null,
-					};
-					this._cachedListings.set(room_id, l);
-				}
+				const l = this._getOrCreateListing(this._cachedListings, room_id);
 
 				if (l?.prom) {
 					await l.prom;
@@ -158,9 +159,13 @@ export class Channels {
 			},
 		);
 
-		l2.resource = resource;
-		l2.refetch = refetch;
-		l2.mutate = mutate;
+		(resource as any).upgraded = true;
+		l.resource = resource;
+		l.refetch = refetch;
+		l.mutate = (value: Pagination<Channel>) => {
+			l.pagination = value;
+			mutate(value);
+		};
 
 		const mut = { room_id: room_id_signal(), mutate };
 		this._listingMutators.add(mut);
@@ -262,20 +267,11 @@ export class Channels {
 		};
 
 		const room_id = room_id_signal();
-		const l = this._cachedListingsArchived.get(room_id);
-		if (l) {
+		const l = this._getOrCreateListing(this._cachedListingsArchived, room_id);
+		if ((l.resource as any).upgraded) {
 			if (!l.prom) l.refetch();
 			return l.resource;
 		}
-
-		const l2: Listing<Channel> = {
-			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-		this._cachedListingsArchived.set(room_id, l2);
 
 		const [resource, { mutate, refetch }] = createResource(
 			() => [room_id_signal(), this.api.session()] as const,
@@ -283,7 +279,7 @@ export class Channels {
 				if (session?.status !== "Authorized") {
 					return { items: [], total: 0, has_more: false };
 				}
-				let l = this._cachedListingsArchived.get(room_id)!;
+				let l = this._getOrCreateListing(this._cachedListingsArchived, room_id);
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
@@ -303,9 +299,13 @@ export class Channels {
 			},
 		);
 
-		l2.resource = resource;
-		l2.refetch = refetch;
-		l2.mutate = mutate;
+		(resource as any).upgraded = true;
+		l.resource = resource;
+		l.refetch = refetch;
+		l.mutate = (value: Pagination<Channel>) => {
+			l.pagination = value;
+			mutate(value);
+		};
 
 		const mut = { room_id: room_id_signal(), mutate };
 		this._listingMutatorsArchived.add(mut);
@@ -351,20 +351,11 @@ export class Channels {
 		};
 
 		const room_id = room_id_signal();
-		const l = this._cachedListingsRemoved.get(room_id);
-		if (l) {
+		const l = this._getOrCreateListing(this._cachedListingsRemoved, room_id);
+		if ((l.resource as any).upgraded) {
 			if (!l.prom) l.refetch();
 			return l.resource;
 		}
-
-		const l2: Listing<Channel> = {
-			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-		this._cachedListingsRemoved.set(room_id, l2);
 
 		const [resource, { mutate, refetch }] = createResource(
 			() => [room_id_signal(), this.api.session()] as const,
@@ -372,7 +363,7 @@ export class Channels {
 				if (session?.status !== "Authorized") {
 					return { items: [], total: 0, has_more: false };
 				}
-				let l = this._cachedListingsRemoved.get(room_id)!;
+				let l = this._getOrCreateListing(this._cachedListingsRemoved, room_id);
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
@@ -392,9 +383,13 @@ export class Channels {
 			},
 		);
 
-		l2.resource = resource;
-		l2.refetch = refetch;
-		l2.mutate = mutate;
+		(resource as any).upgraded = true;
+		l.resource = resource;
+		l.refetch = refetch;
+		l.mutate = (value: Pagination<Channel>) => {
+			l.pagination = value;
+			mutate(value);
+		};
 
 		const mut = { room_id: room_id_signal(), mutate };
 		this._listingMutatorsRemoved.add(mut);

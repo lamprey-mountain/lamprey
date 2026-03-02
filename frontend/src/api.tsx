@@ -194,24 +194,12 @@ export function createApi(
 					room_members.upsert(member);
 				}
 
-				if (!rooms._cachedListing) {
-					rooms._cachedListing = {
-						resource: (() => {}) as unknown as Resource<Pagination<Room>>,
-						refetch: () => {},
-						mutate: () => {},
-						prom: null,
-						pagination: null,
-					};
-				}
-				rooms._cachedListing.pagination = {
+				rooms._cachedListing.mutate({
 					items: msg.rooms,
 					total: msg.rooms.length,
 					has_more: false,
 					cursor: null,
-				};
-				rooms._cachedListing.mutate = (value: Pagination<Room>) => {
-					rooms._cachedListing!.pagination = value;
-				};
+				});
 
 				const channelsByRoom = new Map<string, Channel[]>();
 				const threadsByRoom = new Map<string, Channel[]>();
@@ -232,47 +220,21 @@ export function createApi(
 				}
 
 				for (const [room_id, channelList] of channelsByRoom) {
-					if (!channels._cachedListings.has(room_id)) {
-						channels._cachedListings.set(room_id, {
-							resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
-							refetch: () => {},
-							mutate: () => {},
-							prom: null,
-							pagination: null,
-						});
-					}
-					const listing = channels._cachedListings.get(room_id)!;
-					listing.pagination = {
+					channels._getOrCreateListing(channels._cachedListings, room_id).mutate({
 						items: channelList,
 						total: channelList.length,
 						has_more: false,
 						cursor: null,
-					};
-					listing.mutate = (value: Pagination<Channel>) => {
-						listing.pagination = value;
-					};
+					});
 				}
 
 				for (const [room_id, threadList] of threadsByRoom) {
-					if (!channels._cachedListingsArchived.has(room_id)) {
-						channels._cachedListingsArchived.set(room_id, {
-							resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
-							refetch: () => {},
-							mutate: () => {},
-							prom: null,
-							pagination: null,
-						});
-					}
-					const listing = channels._cachedListingsArchived.get(room_id)!;
-					listing.pagination = {
+					channels._getOrCreateListing(channels._cachedListingsArchived, room_id).mutate({
 						items: threadList,
 						total: threadList.length,
 						has_more: false,
 						cursor: null,
-					};
-					listing.mutate = (value: Pagination<Channel>) => {
-						listing.pagination = value;
-					};
+					});
 				}
 
 				const rolesByRoom = new Map<string, Role[]>();
@@ -283,25 +245,12 @@ export function createApi(
 				}
 
 				for (const [room_id, roleList] of rolesByRoom) {
-					if (!roles._cachedListings.has(room_id)) {
-						roles._cachedListings.set(room_id, {
-							resource: (() => {}) as unknown as Resource<Pagination<Role>>,
-							refetch: () => {},
-							mutate: () => {},
-							prom: null,
-							pagination: null,
-						});
-					}
-					const listing = roles._cachedListings.get(room_id)!;
-					listing.pagination = {
+					roles._getOrCreateListing(roles._cachedListings, room_id).mutate({
 						items: roleList,
 						total: roleList.length,
 						has_more: false,
 						cursor: null,
-					};
-					listing.mutate = (value: Pagination<Role>) => {
-						listing.pagination = value;
-					};
+					});
 				}
 
 				const membersByRoom = new Map<string, RoomMember[]>();
@@ -312,27 +261,12 @@ export function createApi(
 				}
 
 				for (const [room_id, memberList] of membersByRoom) {
-					if (!room_members._cachedListings.has(room_id)) {
-						room_members._cachedListings.set(room_id, {
-							resource: (() => {}) as unknown as Resource<
-								Pagination<RoomMember>
-							>,
-							refetch: () => {},
-							mutate: () => {},
-							prom: null,
-							pagination: null,
-						});
-					}
-					const listing = room_members._cachedListings.get(room_id)!;
-					listing.pagination = {
+					room_members._getOrCreateListing(room_id).mutate({
 						items: memberList,
 						total: memberList.length,
 						has_more: false,
 						cursor: null,
-					};
-					listing.mutate = (value: Pagination<RoomMember>) => {
-						listing.pagination = value;
-					};
+					});
 				}
 
 				setPreferences(msg.config);
