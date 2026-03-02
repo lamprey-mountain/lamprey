@@ -17,6 +17,7 @@ import { useMenu } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
 import { useVoice } from "./voice-provider";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import {
 	calculatePermissions,
 	type PermissionContext,
@@ -47,7 +48,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const params = useParams();
 	const nav = useNavigate();
 
-	const currentUserId = () => api.users.cache.get("@self")?.id;
+	const user = useCurrentUser();
+	const currentUserId = () => user()?.id;
 
 	createEffect(() => {
 		if (!props.room_id) return;
@@ -825,7 +827,8 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const api = useApi();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
-	const currentUserId = () => api.users.cache.get("@self")?.id;
+	const user = useCurrentUser();
+	const currentUserId = () => user()?.id;
 	const [hovered, setHovered] = createSignal(false);
 
 	const handleClick = (e: MouseEvent) => {

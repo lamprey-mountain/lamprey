@@ -56,20 +56,26 @@ export class Dms {
 			pagination: null,
 		};
 
-		const [resource, { refetch, mutate }] = createResource(async () => {
-			const l = this._cachedListing!;
-			if (l?.prom) {
-				await l.prom;
-				return l.pagination!;
-			}
+		const [resource, { refetch, mutate }] = createResource(
+			this.api.session,
+			async (session) => {
+				if (session?.status !== "Authorized") {
+					return { items: [], total: 0, has_more: false };
+				}
+				const l = this._cachedListing!;
+				if (l?.prom) {
+					await l.prom;
+					return l.pagination!;
+				}
 
-			const prom = l.pagination ? paginate(l.pagination) : paginate();
-			l.prom = prom;
-			const res = await prom;
-			l!.pagination = res;
-			l!.prom = null;
-			return res!;
-		});
+				const prom = l.pagination ? paginate(l.pagination) : paginate();
+				l.prom = prom;
+				const res = await prom;
+				l!.pagination = res;
+				l!.prom = null;
+				return res!;
+			},
+		);
 
 		this._cachedListing.resource = resource;
 		this._cachedListing.refetch = refetch;

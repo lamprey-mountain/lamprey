@@ -13,6 +13,7 @@ import { createIntersectionObserver } from "@solid-primitives/intersection-obser
 import { md } from "./markdown.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useMemberList } from "./contexts/memberlist.tsx";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
@@ -272,14 +273,15 @@ export const RoomHome = (props: { room: RoomT }) => {
 				params: {
 					path: {
 						room_id: props.room.id,
-						user_id: api.users.cache.get("@self")!.id,
+						user_id: user()!.id,
 					},
 				},
 			});
 		});
 	}
 
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const user = useCurrentUser();
+	const user_id = () => user()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	return (

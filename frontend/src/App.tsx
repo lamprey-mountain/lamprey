@@ -39,6 +39,10 @@ import {
 	UserPopoutProvider,
 } from "./contexts/mod.tsx";
 import { useApi } from "./api.tsx";
+import {
+	CurrentUserProvider,
+	useCurrentUser,
+} from "./contexts/currentUser.tsx";
 import { flags } from "./flags.ts";
 
 const App: Component = () => {
@@ -117,33 +121,35 @@ export const AppProviders: Component<
 
 	return (
 		<api.Provider>
-			<chatctx.Provider value={ctx}>
-				<ReadTrackingProvider
-					api={api}
-					channel_contexts={ctx.channel_contexts}
-					dataUpdate={ctx.dataUpdate}
-				>
-					<MemberListProvider>
-						<ModalsProvider>
-							<UploadsProvider ctx={ctx}>
-								<VoiceProvider>
-									<SlashCommandsProvider value={ctx.slashCommands}>
-										<MenuProvider>
-											<AutocompleteProvider>
-												<FormattingToolbarProvider>
-													<UserPopoutProvider>
-														<AppShell>{props.children}</AppShell>
-													</UserPopoutProvider>
-												</FormattingToolbarProvider>
-											</AutocompleteProvider>
-										</MenuProvider>
-									</SlashCommandsProvider>
-								</VoiceProvider>
-							</UploadsProvider>
-						</ModalsProvider>
-					</MemberListProvider>
-				</ReadTrackingProvider>
-			</chatctx.Provider>
+			<CurrentUserProvider>
+				<chatctx.Provider value={ctx}>
+					<ReadTrackingProvider
+						api={api}
+						channel_contexts={ctx.channel_contexts}
+						dataUpdate={ctx.dataUpdate}
+					>
+						<MemberListProvider>
+							<ModalsProvider>
+								<UploadsProvider ctx={ctx}>
+									<VoiceProvider>
+										<SlashCommandsProvider value={ctx.slashCommands}>
+											<MenuProvider>
+												<AutocompleteProvider>
+													<FormattingToolbarProvider>
+														<UserPopoutProvider>
+															<AppShell>{props.children}</AppShell>
+														</UserPopoutProvider>
+													</FormattingToolbarProvider>
+												</AutocompleteProvider>
+											</MenuProvider>
+										</SlashCommandsProvider>
+									</VoiceProvider>
+								</UploadsProvider>
+							</ModalsProvider>
+						</MemberListProvider>
+					</ReadTrackingProvider>
+				</chatctx.Provider>
+			</CurrentUserProvider>
 		</api.Provider>
 	);
 };
@@ -236,8 +242,7 @@ const Title = (props: { title?: string }) => {
 
 function RouteSettings(p: RouteSectionProps) {
 	const { t } = useCtx();
-	const api = useApi();
-	const user = () => api.users.cache.get("@self");
+	const user = useCurrentUser();
 	createEffect(() => {
 		console.log(user());
 	});

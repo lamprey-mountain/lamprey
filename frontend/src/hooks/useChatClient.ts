@@ -96,17 +96,11 @@ export function useChatClient(config: Config) {
 	const slashCommands = new SlashCommands();
 	registerDefaultSlashCommands(slashCommands);
 
-	let preferencesLoaded = false;
-
-	(async () => {
-		const data = await api.users.getPreferences();
-		if (data) setPreferences(data as Preferences);
-		preferencesLoaded = true;
-	})();
-
 	createEffect(() => {
 		const config = preferences();
-		if (!preferencesLoaded || !config) return;
+		if (!api.preferencesLoaded() || !config) return;
+		if (api.session()?.status !== "Authorized") return;
+
 		localStorage.setItem("preferences", JSON.stringify(config));
 		api.users.setPreferences(config);
 	});

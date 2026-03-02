@@ -3,10 +3,12 @@ import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
 import { useModals } from "./contexts/modal";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { flags } from "./flags.ts";
 
 export const Home = () => {
 	const api = useApi();
+	const user = useCurrentUser();
 	const [email, setEmail] = createSignal("");
 	const [password, setPassword] = createSignal("");
 	const [confirmPassword, setConfirmPassword] = createSignal("");
@@ -128,7 +130,7 @@ export const Home = () => {
 			</Show>
 			<br />
 			<br />
-			<Show when={api.users.cache.get("@self")}>
+			<Show when={user()}>
 				<button onClick={createRoom}>
 					create room
 				</button>

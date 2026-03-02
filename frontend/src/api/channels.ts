@@ -122,8 +122,11 @@ export class Channels {
 		this._cachedListings.set(room_id, l2);
 
 		const [resource, { mutate, refetch }] = createResource(
-			room_id_signal,
-			async (room_id) => {
+			() => [room_id_signal(), this.api.session()] as const,
+			async ([room_id, session]) => {
+				if (session?.status !== "Authorized") {
+					return { items: [], total: 0, has_more: false };
+				}
 				let l = this._cachedListings.get(room_id)!;
 				if (!l) {
 					l = {
@@ -275,8 +278,11 @@ export class Channels {
 		this._cachedListingsArchived.set(room_id, l2);
 
 		const [resource, { mutate, refetch }] = createResource(
-			room_id_signal,
-			async (room_id) => {
+			() => [room_id_signal(), this.api.session()] as const,
+			async ([room_id, session]) => {
+				if (session?.status !== "Authorized") {
+					return { items: [], total: 0, has_more: false };
+				}
 				let l = this._cachedListingsArchived.get(room_id)!;
 				if (l?.prom) {
 					await l.prom;
@@ -361,8 +367,11 @@ export class Channels {
 		this._cachedListingsRemoved.set(room_id, l2);
 
 		const [resource, { mutate, refetch }] = createResource(
-			room_id_signal,
-			async (room_id) => {
+			() => [room_id_signal(), this.api.session()] as const,
+			async ([room_id, session]) => {
+				if (session?.status !== "Authorized") {
+					return { items: [], total: 0, has_more: false };
+				}
 				let l = this._cachedListingsRemoved.get(room_id)!;
 				if (l?.prom) {
 					await l.prom;

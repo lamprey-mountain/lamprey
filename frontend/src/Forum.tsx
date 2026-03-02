@@ -17,6 +17,7 @@ import { createIntersectionObserver } from "@solid-primitives/intersection-obser
 import { md } from "./markdown.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -70,7 +71,8 @@ export const Forum = (props: { channel: Channel }) => {
 		});
 	}
 
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const user = useCurrentUser();
+	const user_id = () => user()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	return (

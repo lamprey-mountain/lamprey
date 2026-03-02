@@ -75,8 +75,18 @@ export class Inbox {
 		};
 
 		const [resource, { refetch }] = createResource(
-			params,
-			async (p) => {
+			() => [params(), this.api.session()] as const,
+			async ([p, session]) => {
+				if (session?.status !== "Authorized") {
+					return {
+						items: [],
+						total: 0,
+						has_more: false,
+						channels: [],
+						messages: [],
+						rooms: [],
+					};
+				}
 				// This is not a paginating list right now, so just return the first page
 				return await paginate(p);
 			},

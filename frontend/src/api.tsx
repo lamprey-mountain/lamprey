@@ -132,6 +132,7 @@ export function createApi(
 	},
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
+	const [preferencesLoaded, setPreferencesLoaded] = createSignal(false);
 	const [clientState, setClientState] = createSignal<ClientState>("stopped");
 	client.state.subscribe(setClientState);
 
@@ -334,10 +335,8 @@ export function createApi(
 					};
 				}
 
-				setPreferences({
-					...preferences(),
-					global: msg.config,
-				});
+				setPreferences(msg.config);
+				setPreferencesLoaded(true);
 			});
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			const { room } = msg;
@@ -1096,6 +1095,7 @@ export function createApi(
 				if (!deepEqual(preferences(), msg.config)) {
 					setPreferences(msg.config);
 				}
+				setPreferencesLoaded(true);
 			}
 		} else if (msg.type === "PreferencesRoom") {
 			if (msg.user_id === session()?.user_id) {
@@ -1339,6 +1339,7 @@ export function createApi(
 		messages,
 		media,
 		session,
+		preferencesLoaded,
 		typing,
 		tags,
 		audit_logs,
@@ -1425,6 +1426,7 @@ export type Api = {
 	documents: Documents;
 	room_analytics: RoomAnalytics;
 	session: Accessor<Session | null>;
+	preferencesLoaded: Accessor<boolean>;
 	typing: ReactiveMap<string, Set<string>>;
 	voiceState: Accessor<VoiceState | null>;
 	voiceStates: ReactiveMap<string, VoiceState>;
