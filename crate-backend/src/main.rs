@@ -1,10 +1,21 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
 
-use axum::{extract::DefaultBodyLimit, middleware, response::Html, routing::get, Json};
+use axum::{
+    extract::DefaultBodyLimit,
+    middleware,
+    response::{Html, IntoResponse},
+    routing::get,
+    Json,
+};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
 use common::{
-    v1::types::{misc::ApplicationIdReq, util::Time, AuditLogEntry, AuditLogEntryType},
+    v1::types::{
+        error::{ApiError, ErrorCode},
+        misc::ApplicationIdReq,
+        util::Time,
+        AuditLogEntry, AuditLogEntryType,
+    },
     v2::types::media::Media,
 };
 use figment::providers::{Env, Format, Toml};
@@ -325,12 +336,16 @@ async fn serve_transport(transport: ListenTransport, router: axum::Router) -> Re
     Ok(())
 }
 
+async fn api_fallback() -> impl IntoResponse {
+    Error::from(ApiError::from_code(ErrorCode::NotFound))
+}
+
 /// start the main server
 async fn serve(state: Arc<ServerState>) -> Result<()> {
     info!("Starting server");
 
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .nest("/api", routes::routes())
+        .nest("/api", routes::routes().fallback(api_fallback))
         .route("/metrics", get(routes::metrics::get_metrics))
         .with_state(state.clone())
         .split_for_parts();

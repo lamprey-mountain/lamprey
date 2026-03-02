@@ -798,7 +798,13 @@ pub enum ErrorCode {
 
     // you didn't create this media
 
-    // ratelimited
+    /// ratelimited
+    #[error("ratelimited")]
+    Ratelimit,
+
+    /// not found
+    #[error("not found")]
+    NotFound,
 }
 
 impl ApiError {
@@ -980,6 +986,8 @@ impl ErrorCode {
             ErrorCode::TotpNotEnabled => 400,
             ErrorCode::NotBotOwner => 403,
             ErrorCode::UserIsNotABot => 403,
+            ErrorCode::NotFound => 404,
+            ErrorCode::Ratelimit => 429,
         }
     }
 }
