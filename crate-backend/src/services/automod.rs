@@ -11,7 +11,7 @@ use common::{
         util::Time,
         AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
         MessageAutomodExecution, MessageCreate, MessageId, MessagePatch, MessageSync, MessageType,
-        RoomId, RoomMember, RoomMemberPatch, User, UserId,
+        Permission, RoomId, RoomMember, RoomMemberPatch, User, UserId,
     },
     v2::types::message::Message,
 };
@@ -195,16 +195,21 @@ impl AutomodRuleset {
             match &rule.trigger {
                 AutomodTrigger::TextRegex { deny, allow } => {
                     for p in deny {
-                        regex_deny_patterns.push(p.clone());
-                        regex_deny_map.push(rule_idx);
+                        if regex::Regex::new(p).is_ok() {
+                            regex_deny_patterns.push(p.clone());
+                            regex_deny_map.push(rule_idx);
+                        } else {
+                            warn!("Invalid regex pattern in rule {}: {}", rule.id, p);
+                        }
                     }
                     if !allow.is_empty() {
-                        regex_allow = Some(
-                            regex::RegexSetBuilder::new(allow)
-                                .case_insensitive(true)
-                                .build()
-                                .expect("valid regexes"),
-                        );
+                        match regex::RegexSetBuilder::new(allow)
+                            .case_insensitive(true)
+                            .build()
+                        {
+                            Ok(set) => regex_allow = Some(set),
+                            Err(e) => warn!("Invalid regex allow set in rule {}: {}", rule.id, e),
+                        }
                     }
                 }
                 AutomodTrigger::TextKeywords { keywords, allow } => {
@@ -213,12 +218,13 @@ impl AutomodRuleset {
                         keyword_deny_map.push(rule_idx);
                     }
                     if !allow.is_empty() {
-                        keyword_allow = Some(
-                            regex::RegexSetBuilder::new(allow.iter().map(|s| regex::escape(s)))
-                                .case_insensitive(true)
-                                .build()
-                                .expect("valid regexes"),
-                        );
+                        match regex::RegexSetBuilder::new(allow.iter().map(|s| regex::escape(s)))
+                            .case_insensitive(true)
+                            .build()
+                        {
+                            Ok(set) => keyword_allow = Some(set),
+                            Err(e) => warn!("Invalid keyword allow set in rule {}: {}", rule.id, e),
+                        }
                     }
                 }
                 _ => {}
@@ -228,23 +234,27 @@ impl AutomodRuleset {
         }
 
         let regex_deny_set = if !regex_deny_patterns.is_empty() {
-            Some(
-                regex::RegexSetBuilder::new(&regex_deny_patterns)
-                    .case_insensitive(true)
-                    .build()
-                    .expect("valid regexes"),
-            )
+            regex::RegexSetBuilder::new(&regex_deny_patterns)
+                .case_insensitive(true)
+                .build()
+                .map(Some)
+                .unwrap_or_else(|e| {
+                    warn!("Failed to compile regex deny set: {}", e);
+                    None
+                })
         } else {
             None
         };
 
         let keyword_deny_set = if !keyword_deny_patterns.is_empty() {
-            Some(
-                regex::RegexSetBuilder::new(&keyword_deny_patterns)
-                    .case_insensitive(true)
-                    .build()
-                    .expect("valid regexes"),
-            )
+            regex::RegexSetBuilder::new(&keyword_deny_patterns)
+                .case_insensitive(true)
+                .build()
+                .map(Some)
+                .unwrap_or_else(|e| {
+                    warn!("Failed to compile keyword deny set: {}", e);
+                    None
+                })
         } else {
             None
         };
@@ -273,14 +283,13 @@ impl AutomodRuleset {
     ) -> AutomodResult {
         let mut result = AutomodResult::default();
 
-        let cured_str = match decancer::cure(&text, decancer::Options::default()) {
-            Ok(s) => s,
+        let cured_text = match decancer::cure(&text, decancer::Options::default()) {
+            Ok(s) => s.to_string(),
             Err(err) => {
                 warn!("failed to cure string {:?}", err);
-                return result;
+                text.to_string()
             }
         };
-        let cured_text = cured_str.to_string();
 
         // 1. Regex scanning (raw text)
         if let Some(deny_set) = &self.compiled.regex_deny_set {
@@ -691,18 +700,72 @@ impl ServiceAutomod {
         let mut removed = false;
         let mut block_message = None;
 
-        let is_blocked = scan
-            .actions()
+        let srv = self.state.services();
+        let data = self.state.data();
+
+        let ruleset = self.load(room_id).await?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
+        let channel = data.channel_get(channel_id).await?;
+        let member = data.room_member_get(room_id, user_id).await?;
+
+        let mut final_actions = AutomodResultActions::default();
+        let mut triggered_rules = Vec::new();
+
+        for rule_id in &scan.rule_ids {
+            let Some(rule) = ruleset.rules.iter().find(|r| r.id == *rule_id) else {
+                continue;
+            };
+
+            // 1. check RoomManage exemption
+            if perms.has(Permission::RoomManage) && !rule.include_everyone {
+                continue;
+            }
+
+            // 2. check role exemptions
+            if rule
+                .except_roles
+                .iter()
+                .any(|role_id| member.roles.contains(role_id))
+            {
+                continue;
+            }
+
+            // 3. check channel exemptions
+            if rule.except_channels.contains(&channel_id) {
+                continue;
+            }
+
+            // 4. check nsfw exemption
+            if rule.except_nsfw && channel.nsfw {
+                continue;
+            }
+
+            triggered_rules.push(rule.clone());
+            for action in &rule.actions {
+                // some actions (eg. Timeout) should not apply to members with RoomManage even if include_everyone is true
+                if matches!(action, AutomodAction::Timeout { .. })
+                    && perms.has(Permission::RoomManage)
+                {
+                    continue;
+                }
+                final_actions.add(action);
+            }
+        }
+
+        if triggered_rules.is_empty() {
+            return Ok(false);
+        }
+
+        let is_blocked = final_actions
+            .inner
             .iter()
             .any(|a| matches!(a, AutomodAction::Block { .. }));
 
-        for action in scan.actions() {
+        for action in &final_actions.inner {
             match action {
                 AutomodAction::Block { message } => block_message = Some(message.clone()),
                 AutomodAction::Timeout { duration } => {
                     let timeout_until = Time::now_utc() + Duration::from_millis(*duration);
-                    let data = self.state.data();
-                    let srv = self.state.services();
                     data.room_member_patch(
                         room_id,
                         user_id,
@@ -724,28 +787,15 @@ impl ServiceAutomod {
                 AutomodAction::SendAlert {
                     channel_id: alert_channel_id,
                 } => {
-                    let srv = self.state.services();
-                    let data = self.state.data();
-
                     let mut matches = vec![];
                     matches.extend(scan.matches.clone());
 
-                    let rules: Vec<AutomodRuleStripped> = scan
-                        .rule_ids
-                        .iter()
-                        .filter_map(|id| {
-                            if let Some(ruleset) = self.rulesets.get(&room_id) {
-                                if let Some(rule) = ruleset.rules.iter().find(|r| r.id == *id) {
-                                    return Some(rule.clone().into());
-                                }
-                            }
-                            None
-                        })
-                        .collect();
+                    let rules: Vec<AutomodRuleStripped> =
+                        triggered_rules.iter().map(|r| r.clone().into()).collect();
 
                     let execution = MessageAutomodExecution {
                         rules,
-                        actions: scan.actions.inner.clone(),
+                        actions: final_actions.inner.clone(),
                         matches,
                         user_id,
                         channel_id: Some(channel_id),

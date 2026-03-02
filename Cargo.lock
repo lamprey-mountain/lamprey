@@ -3570,6 +3570,7 @@ dependencies = [
  "lamprey-hakari",
  "mediatype",
  "pastey",
+ "regex",
  "serde",
  "serde_json",
  "str0m",

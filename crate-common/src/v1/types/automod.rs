@@ -50,10 +50,11 @@ pub struct AutomodRule {
 pub struct AutomodRuleCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
+    #[cfg_attr(feature = "validator", validate(nested))]
     pub trigger: AutomodTrigger,
     // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
     // pub triggers: Vec<AutomodTrigger>,
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8), nested))]
     pub actions: Vec<AutomodAction>,
     #[cfg_attr(feature = "serde", serde(default))]
     pub except_roles: Vec<RoleId>,
@@ -74,10 +75,11 @@ pub struct AutomodRuleUpdate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: Option<String>,
     pub enabled: Option<bool>,
+    #[cfg_attr(feature = "validator", validate(nested))]
     pub trigger: Option<AutomodTrigger>,
     // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
     // pub triggers: Option<Vec<AutomodTrigger>>,
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8), nested))]
     pub actions: Option<Vec<AutomodAction>>,
     pub except_roles: Option<Vec<RoleId>>,
     pub except_channels: Option<Vec<ChannelId>>,
@@ -332,4 +334,71 @@ pub enum AutomodAction {
         // TODO: remove this action when channel is removed
         channel_id: ChannelId,
     },
+}
+
+#[cfg(feature = "validator")]
+mod val {
+    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
+
+    use super::{AutomodAction, AutomodTrigger};
+
+    impl Validate for AutomodTrigger {
+        fn validate(&self) -> Result<(), ValidationErrors> {
+            let mut errors = ValidationErrors::new();
+
+            match self {
+                AutomodTrigger::TextRegex { deny, allow } => {
+                    for (i, re) in deny.iter().enumerate() {
+                        if regex::Regex::new(re).is_err() {
+                            let mut err = ValidationError::new("invalid_regex");
+                            err.add_param("index".into(), &serde_json::json!(i));
+                            err.add_param("pattern".into(), re);
+                            errors.add("deny", err);
+                        }
+                    }
+                    for (i, re) in allow.iter().enumerate() {
+                        if regex::Regex::new(re).is_err() {
+                            let mut err = ValidationError::new("invalid_regex");
+                            err.add_param("index".into(), &serde_json::json!(i));
+                            err.add_param("pattern".into(), re);
+                            errors.add("allow", err);
+                        }
+                    }
+                }
+                _ => {}
+            }
+
+            if errors.is_empty() {
+                Ok(())
+            } else {
+                Err(errors)
+            }
+        }
+    }
+
+    impl Validate for AutomodAction {
+        fn validate(&self) -> Result<(), ValidationErrors> {
+            let mut errors = ValidationErrors::new();
+
+            match self {
+                AutomodAction::Block { message } => {
+                    if let Some(m) = message {
+                        if !m.validate_length(Some(1), Some(256), None) {
+                            let mut err = ValidationError::new("length");
+                            err.add_param("min".into(), &serde_json::json!(1));
+                            err.add_param("max".into(), &serde_json::json!(256));
+                            errors.add("message", err);
+                        }
+                    }
+                }
+                _ => {}
+            }
+
+            if errors.is_empty() {
+                Ok(())
+            } else {
+                Err(errors)
+            }
+        }
+    }
 }
