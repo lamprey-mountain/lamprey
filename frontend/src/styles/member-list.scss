@@ -1,0 +1,67 @@
+@use "./theme.scss";
+@use "./util.scss" as *;
+
+.member-list {
+	padding: 4px 0;
+	width: 100%;
+	height: 100%;
+	flex: 1;
+	min-height: 0;
+	background-color: $bg-150;
+	overflow-y: auto;
+
+	& .member-group {
+		@extend .dim !optional;
+		margin-top: 4px;
+		margin-left: 8px;
+		cursor: pointer;
+		height: 24px;
+		display: flex;
+		align-items: center;
+	}
+
+	& .menu-user {
+		display: flex;
+		align-items: center;
+		padding: 2px;
+		cursor: pointer;
+		height: 44px;
+		box-sizing: border-box;
+
+		& > .text {
+			grid-area: name;
+			display: flex;
+			flex-direction: column;
+			padding: 2px 4px;
+			flex: 1;
+			overflow: hidden;
+
+			& > .name {
+				@include truncate;
+				line-height: 1;
+			}
+
+			& > .status-message {
+				@include truncate;
+				line-height: 1;
+				font-size: 0.9em;
+				color: $fg-400;
+			}
+		}
+
+		& > .avatar {
+			height: 36px;
+			width: 36px;
+			padding: 4px 8px;
+			box-sizing: content-box;
+		}
+
+		&:hover {
+			background: #fff1;
+
+			& > .text > .name {
+				color: $fg-100;
+			}
+		}
+	}
+}

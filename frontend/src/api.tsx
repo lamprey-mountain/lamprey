@@ -220,16 +220,20 @@ export function createApi(
 				}
 
 				for (const [room_id, channelList] of channelsByRoom) {
-					channels._getOrCreateListing(channels._cachedListings, room_id).mutate({
-						items: channelList,
-						total: channelList.length,
-						has_more: false,
-						cursor: null,
-					});
+					channels._getOrCreateListing(channels._cachedListings, room_id)
+						.mutate({
+							items: channelList,
+							total: channelList.length,
+							has_more: false,
+							cursor: null,
+						});
 				}
 
 				for (const [room_id, threadList] of threadsByRoom) {
-					channels._getOrCreateListing(channels._cachedListingsArchived, room_id).mutate({
+					channels._getOrCreateListing(
+						channels._cachedListingsArchived,
+						room_id,
+					).mutate({
 						items: threadList,
 						total: threadList.length,
 						has_more: false,

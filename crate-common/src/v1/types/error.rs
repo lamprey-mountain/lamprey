@@ -797,7 +797,6 @@ pub enum ErrorCode {
     // warning
 
     // you didn't create this media
-
     /// ratelimited
     #[error("ratelimited")]
     Ratelimit,

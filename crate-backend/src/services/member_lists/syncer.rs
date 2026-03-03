@@ -1,7 +1,7 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
-use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
+use common::v1::types::{ChannelId, MemberListOp, MessageSync, RoomId, UserId};
 use tokio::sync::oneshot;
 use tokio_stream::{wrappers::BroadcastStream, StreamExt, StreamMap, StreamNotifyClose};
 use uuid::Uuid;
@@ -19,6 +19,7 @@ pub struct MemberListSyncer {
     pub(super) s: Arc<ServerStateInner>,
     pub(super) conn_id: Uuid,
     pub(super) outbox: VecDeque<MessageSync>,
+    pub(super) subscriptions: HashMap<MemberListKey, HashSet<MemberListKey1>>,
     pub(super) streams:
         StreamMap<MemberListKey, StreamNotifyClose<BroadcastStream<MemberListEvent>>>,
     pub(super) known_users: HashSet<UserId>,
@@ -33,6 +34,7 @@ impl MemberListSyncer {
             s,
             conn_id,
             outbox: VecDeque::new(),
+            subscriptions: HashMap::new(),
             streams: StreamMap::new(),
             known_users: HashSet::new(),
             known_room_members: HashSet::new(),
@@ -45,9 +47,10 @@ impl MemberListSyncer {
         let srv = self.s.services();
         let key = srv.member_lists.lookup_member_key(key1).await?;
 
-        if self.streams.contains_key(&key) {
-            return Ok(());
-        }
+        self.subscriptions
+            .entry(key.clone())
+            .or_default()
+            .insert(key1);
 
         let list = srv.member_lists.ensure(key.clone()).await?;
 
@@ -63,13 +66,16 @@ impl MemberListSyncer {
                 Error::Internal("failed to send command to member list actor".to_string())
             })?;
 
-        let initial_sync = rx
+        let mut initial_sync = rx
             .await
             .map_err(|_| Error::Internal("failed to receive initial ranges".to_string()))?;
+        self.patch_msg_key(&mut initial_sync, &key1);
         self.outbox.push_back(initial_sync);
 
-        let stream = StreamNotifyClose::new(BroadcastStream::new(list.subscribe()));
-        self.streams.insert(key, stream);
+        if !self.streams.contains_key(&key) {
+            let stream = StreamNotifyClose::new(BroadcastStream::new(list.subscribe()));
+            self.streams.insert(key, stream);
+        }
 
         Ok(())
     }
@@ -78,7 +84,13 @@ impl MemberListSyncer {
     pub async fn unsubscribe(&mut self, key1: MemberListKey1) -> Result<()> {
         let srv = self.s.services();
         let key = srv.member_lists.lookup_member_key(key1).await?;
-        self.streams.remove(&key);
+        if let Some(subs) = self.subscriptions.get_mut(&key) {
+            subs.remove(&key1);
+            if subs.is_empty() {
+                self.subscriptions.remove(&key);
+                self.streams.remove(&key);
+            }
+        }
         Ok(())
     }
 
@@ -91,23 +103,32 @@ impl MemberListSyncer {
             }
 
             tokio::select! {
-                Some((_key, val)) = self.streams.next() => {
-                    match val {
-                        Some(Ok(MemberListEvent::Broadcast(mut msg))) => {
-                            self.patch_msg(&mut msg, user_id);
-                            return Ok(Some(msg));
-                        }
-                        Some(Ok(MemberListEvent::Unicast(conn_id, mut msg))) if conn_id == self.conn_id => {
-                            self.patch_msg(&mut msg, user_id);
-                            return Ok(Some(msg));
-                        }
+                Some((key, val)) = self.streams.next() => {
+                    let msg = match val {
+                        Some(Ok(MemberListEvent::Broadcast(msg))) => msg,
+                        Some(Ok(MemberListEvent::Unicast(conn_id, msg))) if conn_id == self.conn_id => msg,
                         Some(Ok(_)) => continue, // skip other unicasts
                         Some(Err(e)) => return Err(Error::Internal(format!("member list stream error: {e}"))),
                         None => continue, // stream closed, try next
+                    };
+
+                    // PERF: maybe don't clone msg multiple times?
+                    if let Some(subs) = self.subscriptions.get(&key) {
+                        for key1 in subs {
+                            let mut m = msg.clone();
+                            self.patch_msg_key(&mut m, key1);
+                            self.outbox.push_back(m);
+                        }
                     }
                 }
                 else => std::future::pending().await,
             }
+        }
+    }
+
+    fn patch_msg_key(&self, msg: &mut MessageSync, key1: &MemberListKey1) {
+        if let MessageSync::MemberListSync { channel_id, .. } = msg {
+            *channel_id = key1.channel_id();
         }
     }
 
@@ -124,7 +145,7 @@ impl MemberListSyncer {
 
             for op in ops {
                 match op {
-                    common::v1::types::MemberListOp::Sync {
+                    MemberListOp::Sync {
                         room_members,
                         thread_members,
                         users,
@@ -152,7 +173,7 @@ impl MemberListSyncer {
                             }
                         }
                     }
-                    common::v1::types::MemberListOp::Insert {
+                    MemberListOp::Insert {
                         user_id,
                         room_member,
                         thread_member,

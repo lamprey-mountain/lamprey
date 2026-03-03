@@ -44,3 +44,8 @@ $color-teal: oklch(var(--color-teal));
 	display: grid;
 	place-items: center center;
 }
+
+.dim {
+	color: $fg-500;
+	font-size: 0.8rem;
+}

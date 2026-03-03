@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { Channel } from "sdk";
 import { useApi } from "./api.tsx";
 import { AvatarWithStatus } from "./User.tsx";
@@ -45,85 +46,123 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 		return role?.name ?? group.id;
 	};
 
+	let parentRef!: HTMLDivElement;
+
+	const rowVirtualizer = createVirtualizer({
+		get count() {
+			return rows().length;
+		},
+		getScrollElement: () => parentRef,
+		estimateSize: (i) => {
+			const row = rows()[i];
+			return row.type === "group" ? 28 : 44;
+		},
+		overscan: 5,
+	});
+
 	return (
-		<div class="member-list" data-thread-id={props.thread.id}>
-			<For each={rows()}>
-				{(row) => {
-					return row.type === "group"
-						? (
+		<div ref={parentRef} class="member-list" data-thread-id={props.thread.id}>
+			<div
+				style={{
+					height: `${rowVirtualizer.getTotalSize()}px`,
+					width: "100%",
+					position: "relative",
+				}}
+			>
+				<For each={rowVirtualizer.getVirtualItems()}>
+					{(virtualRow) => {
+						const row = rows()[virtualRow.index];
+						return (
 							<div
-								class="dim"
-								style="margin-top:4px;margin-left:8px; cursor: pointer;"
-								onClick={() => {
-									const groupId = JSON.stringify(row.group.id);
-									const newMap = new ReactiveMap(collapsedGroups());
-									newMap.set(groupId, !newMap.get(groupId));
-									setCollapsedGroups(newMap);
+								style={{
+									position: "absolute",
+									top: 0,
+									left: 0,
+									width: "100%",
+									transform: `translateY(${virtualRow.start}px)`,
 								}}
 							>
-								{getGroupName(row.group)} — {row.group.count}
-							</div>
-						)
-						: (
-							(() => {
-								const member = () =>
-									api.thread_members.cache.get(thread_id())?.get(
-										row.item.user.id,
-									) ?? row.item.thread_member;
-								const user = () =>
-									api.users.cache.get(row.item.user.id) ?? row.item.user;
-								const room_member = props.thread?.room_id
-									? api.room_members.fetch(
-										room_id,
-										() => user()!.id,
+								{row.type === "group"
+									? (
+										<div
+											class="member-group"
+											onClick={() => {
+												const groupId = JSON.stringify(row.group.id);
+												const newMap = new ReactiveMap(collapsedGroups());
+												newMap.set(groupId, !newMap.get(groupId));
+												setCollapsedGroups(newMap);
+											}}
+										>
+											{getGroupName(row.group)} — {row.group.count}
+										</div>
 									)
-									: () => null;
-								const ctx = useCtx();
-								const { userView, setUserView } = useUserPopout();
-								const [hovered, setHovered] = createSignal(false);
+									: (
+										(() => {
+											const member = () =>
+												api.thread_members.cache.get(thread_id())?.get(
+													row.item.user.id,
+												) ?? row.item.thread_member;
+											const user = () =>
+												api.users.cache.get(row.item.user.id) ?? row.item.user;
+											const room_member = props.thread?.room_id
+												? api.room_members.fetch(
+													room_id,
+													() => user()!.id,
+												)
+												: () =>
+													null;
+											const ctx = useCtx();
+											const { userView, setUserView } = useUserPopout();
+											const [hovered, setHovered] = createSignal(false);
 
-								function name() {
-									let name: string | undefined | null = null;
-									const rm = room_member();
-									if (rm?.membership === "Join") {
-										name ??= rm.override_name;
-									}
-									name ??= user()?.name;
-									return name;
-								}
-
-								return (
-									<li
-										class="menu-user"
-										data-user-id={row.item.user.id}
-										onClick={(e) => {
-											e.stopPropagation();
-											const currentTarget = e.currentTarget as HTMLElement;
-											if (userView()?.ref === currentTarget) {
-												setUserView(null);
-											} else {
-												setUserView({
-													user_id: user()!.id,
-													room_id: room_id(),
-													thread_id: thread_id(),
-													ref: currentTarget,
-													source: "member-list",
-												});
+											function name() {
+												let name: string | undefined | null = null;
+												const rm = room_member();
+												if (rm?.membership === "Join") {
+													name ??= rm.override_name;
+												}
+												name ??= user()?.name;
+												return name;
 											}
-										}}
-										onMouseEnter={() => setHovered(true)}
-										onMouseLeave={() => setHovered(false)}
-									>
-										<AvatarWithStatus user={user()} animate={hovered()} />
-										<span class="text">
-											<span class="name">{name()}</span>
-										</span>
-									</li>
-								);
-							})()
+
+											return (
+												<div
+													class="menu-user"
+													data-user-id={row.item.user.id}
+													onClick={(e) => {
+														e.stopPropagation();
+														const currentTarget = e
+															.currentTarget as HTMLElement;
+														if (userView()?.ref === currentTarget) {
+															setUserView(null);
+														} else {
+															setUserView({
+																user_id: user()!.id,
+																room_id: room_id(),
+																thread_id: thread_id(),
+																ref: currentTarget,
+																source: "member-list",
+															});
+														}
+													}}
+													// FIXME: handle keyboard naviatation
+													onMouseEnter={() => setHovered(true)}
+													onMouseLeave={() =>
+														setHovered(false)}
+												>
+													<AvatarWithStatus user={user()} animate={hovered()} />
+													<span class="text">
+														<span class="name">{name()}</span>
+													</span>
+												</div>
+											);
+										})()
+									)}
+							</div>
 						);
-				}}
-			</For>
+					}}
+				</For>
+			</div>
 		</div>
 	);
 };

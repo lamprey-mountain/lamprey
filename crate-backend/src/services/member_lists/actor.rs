@@ -157,6 +157,9 @@ impl MemberList {
         match &self.key {
             MemberListKey::Room(_) => true,
             MemberListKey::RoomChannel(_, visibility) => {
+                if Some(*user_id) == perms_calc.owner_id {
+                    return true;
+                }
                 let (has_admin, has_view) = self.calc_view_base(member, perms_calc);
                 if has_admin {
                     return true;

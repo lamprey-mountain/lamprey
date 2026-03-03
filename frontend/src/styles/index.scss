@@ -18,6 +18,7 @@
 @use "./search.scss";
 @use "./document.scss";
 @use "./analytics.scss";
+@use "./member-list.scss";
 
 :root {
 	font: 16px/1.3 var(--font-default);
@@ -962,11 +963,6 @@ article.message {
 	}
 }
 
-.dim {
-	color: $fg-500;
-	font-size: 0.8rem;
-}
-
 .tooltip {
 	top: 0;
 	left: 0;
@@ -1838,17 +1834,6 @@ svg.avatar {
 	margin: calc(-1 * var(--pad));
 }
 
-.member-list {
-	padding: 4px 0;
-	width: 100%;
-	background-color: $bg-150;
-	overflow-y: auto;
-
-	& > div {
-		@include truncate;
-	}
-}
-
 body.resizing {
 	user-select: none;
 	cursor: col-resize;
@@ -1945,49 +1930,6 @@ body.resizing {
 
 	&.dragging {
 		opacity: 0.5;
-	}
-}
-
-.member-list > .menu-user {
-	display: flex;
-	align-items: center;
-	padding: 2px;
-	cursor: pointer;
-	/* make these buttons? */
-
-	& > .text {
-		grid-area: name;
-		display: flex;
-		flex-direction: column;
-		padding: 2px 4px;
-		flex: 1;
-		overflow: hidden;
-
-		& > .name {
-			@include truncate;
-			line-height: 1;
-		}
-
-		& > .status-message {
-			@include truncate;
-			line-height: 1;
-			font-size: 0.9em;
-			color: $fg-400;
-		}
-	}
-
-	& > .avatar {
-		height: 36px;
-		width: 36px;
-		padding: 4px 8px;
-	}
-
-	&:hover {
-		background: #fff1;
-
-		& > .text > .name {
-			color: $fg-100;
-		}
 	}
 }
 

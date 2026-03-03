@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { useUserPopout } from "./contexts/mod.tsx";
@@ -52,78 +53,114 @@ export const RoomMembers = (props: { room: RoomT }) => {
 		return role?.name ?? group.id;
 	};
 
+	let parentRef!: HTMLDivElement;
+
+	const rowVirtualizer = createVirtualizer({
+		get count() {
+			return rows().length;
+		},
+		getScrollElement: () => parentRef,
+		estimateSize: (i) => {
+			const row = rows()[i];
+			return row.type === "group" ? 28 : 44;
+		},
+		overscan: 5,
+	});
+
 	return (
-		<div class="member-list" data-room-id={props.room.id}>
-			<For each={rows()}>
-				{(row) => {
-					return row.type === "group"
-						? (
+		<div ref={parentRef} class="member-list" data-room-id={props.room.id}>
+			<div
+				style={{
+					height: `${rowVirtualizer.getTotalSize()}px`,
+					width: "100%",
+					position: "relative",
+				}}
+			>
+				<For each={rowVirtualizer.getVirtualItems()}>
+					{(virtualRow) => {
+						const row = rows()[virtualRow.index];
+						return (
 							<div
-								class="dim"
-								style="margin-top:4px;margin-left:8px; cursor: pointer;"
-								onClick={() => {
-									const groupId = JSON.stringify(row.group.id);
-									const newMap = new ReactiveMap(collapsedGroups());
-									newMap.set(groupId, !newMap.get(groupId));
-									setCollapsedGroups(newMap);
+								style={{
+									position: "absolute",
+									top: 0,
+									left: 0,
+									width: "100%",
+									transform: `translateY(${virtualRow.start}px)`,
 								}}
 							>
-								{getGroupName(row.group)} — {row.group.count}
-							</div>
-						)
-						: (
-							(() => {
-								const member = () =>
-									api.room_members.cache.get(room_id())?.get(
-										row.item.user.id,
-									) ??
-										row.item.room_member;
-								const user = () =>
-									api.users.cache.get(row.item.user.id) ?? row.item.user;
+								{row.type === "group"
+									? (
+										<div
+											class="member-group"
+											onClick={() => {
+												const groupId = JSON.stringify(row.group.id);
+												const newMap = new ReactiveMap(collapsedGroups());
+												newMap.set(groupId, !newMap.get(groupId));
+												setCollapsedGroups(newMap);
+											}}
+										>
+											{getGroupName(row.group)} — {row.group.count}
+										</div>
+									)
+									: (
+										(() => {
+											const member = () =>
+												api.room_members.cache.get(room_id())?.get(
+													row.item.user.id,
+												) ??
+													row.item.room_member;
+											const user = () =>
+												api.users.cache.get(row.item.user.id) ?? row.item.user;
 
-								const ctx = useCtx();
-								const { userView, setUserView } = useUserPopout();
-								const [hovered, setHovered] = createSignal(false);
-								function name() {
-									let name: string | undefined | null = null;
-									if (member()?.membership === "Join") {
-										name ??= member()!.override_name;
-									}
-									name ??= user()?.name;
-									return name;
-								}
-
-								return (
-									<li
-										class="menu-user"
-										data-user-id={row.item.user.id}
-										onClick={(e) => {
-											e.stopPropagation();
-											const currentTarget = e.currentTarget as HTMLElement;
-											if (userView()?.ref === currentTarget) {
-												setUserView(null);
-											} else {
-												setUserView({
-													user_id: user()!.id,
-													room_id: props.room.id,
-													ref: currentTarget,
-													source: "member-list",
-												});
+											const ctx = useCtx();
+											const { userView, setUserView } = useUserPopout();
+											const [hovered, setHovered] = createSignal(false);
+											function name() {
+												let name: string | undefined | null = null;
+												if (member()?.membership === "Join") {
+													name ??= member()!.override_name;
+												}
+												name ??= user()?.name;
+												return name;
 											}
-										}}
-										onMouseEnter={() => setHovered(true)}
-										onMouseLeave={() => setHovered(false)}
-									>
-										<AvatarWithStatus user={user()} animate={hovered()} />
-										<span class="text">
-											<span class="name">{name()}</span>
-										</span>
-									</li>
-								);
-							})()
+
+											return (
+												<div
+													class="menu-user"
+													data-user-id={row.item.user.id}
+													onClick={(e) => {
+														e.stopPropagation();
+														const currentTarget = e
+															.currentTarget as HTMLElement;
+														if (userView()?.ref === currentTarget) {
+															setUserView(null);
+														} else {
+															setUserView({
+																user_id: user()!.id,
+																room_id: props.room.id,
+																ref: currentTarget,
+																source: "member-list",
+															});
+														}
+													}}
+													// FIXME: handle keyboard naviatation
+													onMouseEnter={() => setHovered(true)}
+													onMouseLeave={() => setHovered(false)}
+												>
+													<AvatarWithStatus user={user()} animate={hovered()} />
+													<span class="text">
+														<span class="name">{name()}</span>
+													</span>
+												</div>
+											);
+										})()
+									)}
+							</div>
 						);
-				}}
-			</For>
+					}}
+				</For>
+			</div>
 		</div>
 	);
 };
