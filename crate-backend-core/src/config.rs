@@ -144,9 +144,7 @@ fn default_nats_addr() -> String {
 }
 
 #[derive(Debug, Default, Deserialize)]
-pub struct ConfigExperiments {
-    pub new_member_lists: bool,
-}
+pub struct ConfigExperiments {}
 
 #[derive(Clone, Debug, Deserialize)]
 // Incompatible with deny_unknown_fields due to serde(flatten).

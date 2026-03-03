@@ -21,9 +21,9 @@ use crate::{
     services::{
         admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
         calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
-        member_lists::ServiceMemberLists, members::ServiceMembers,
-        notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
-        unread::ServiceUnread, voice::ServiceVoice,
+        member_lists::ServiceMemberLists, notifications::ServiceNotifications,
+        presence::ServicePresence, search::ServiceSearch, unread::ServiceUnread,
+        voice::ServiceVoice,
     },
     ServerStateInner,
 };
@@ -41,7 +41,6 @@ pub mod emoji;
 pub mod http;
 pub mod media;
 pub mod member_lists;
-pub mod members;
 pub mod messages;
 pub mod notifications;
 pub mod oauth2;
@@ -72,7 +71,6 @@ pub struct Services {
     pub http: ServiceHttp,
     pub media: ServiceMedia,
     pub member_lists: ServiceMemberLists,
-    pub members: ServiceMembers,
     pub messages: ServiceMessages,
     pub notifications: ServiceNotifications,
     pub oauth: ServiceOauth,
@@ -107,7 +105,6 @@ impl Services {
             http: ServiceHttp::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
             member_lists: ServiceMemberLists::new(state.clone()),
-            members: ServiceMembers::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),
             notifications: ServiceNotifications::new(state.clone()),
             oauth: ServiceOauth::new(state.clone()),

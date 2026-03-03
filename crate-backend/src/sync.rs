@@ -24,7 +24,10 @@ use common::v1::types::{
 use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
 
-use crate::services::members::MemberListTarget;
+use crate::services::member_lists::{
+    syncer::MemberListSyncer,
+    util::{MemberListKey1, MemberListTarget},
+};
 use crate::sync::permissions::AuthCheck;
 use crate::ServerState;
 use crate::{
@@ -54,7 +57,7 @@ pub struct Connection {
     id: ConnectionId,
     compression: Option<Compression>,
 
-    pub member_list: Box<AnyMemberListSyncer>,
+    pub member_list: Box<ConnectionMemberListSyncer>,
     pub document: Box<DocumentSyncer>,
 }
 
@@ -73,80 +76,37 @@ pub enum ConnectionState {
     Disconnected { session: Session },
 }
 
-pub enum AnyMemberListSyncer {
-    V1(crate::services::members::MemberListSyncer),
-    V2(MemberListSyncerV2Wrapper),
-}
-
-pub struct MemberListSyncerV2Wrapper {
-    inner: crate::services::member_lists::syncer::MemberListSyncer,
+pub struct ConnectionMemberListSyncer {
+    inner: MemberListSyncer,
     user_id: Option<UserId>,
-    current_key: Option<crate::services::member_lists::util::MemberListKey1>,
+    current_key: Option<MemberListKey1>,
     s: Arc<ServerState>,
 }
 
-impl AnyMemberListSyncer {
+// TODO: remove this, merge with MemberListSyncer?
+impl ConnectionMemberListSyncer {
+    pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
+        self.user_id = user_id;
+    }
+
     pub async fn set_query(
         &mut self,
         target: MemberListTarget,
         ranges: &[(u64, u64)],
     ) -> Result<()> {
-        match self {
-            AnyMemberListSyncer::V1(inner) => {
-                // V1's set_query takes ownership of self.s logic internally?
-                // V1::set_query signature: set_query(&self, target, ranges) -> Result<()>
-                // Wait, V1::set_query is on MemberListSyncer.
-                inner.set_query(target, ranges).await
-            }
-            AnyMemberListSyncer::V2(inner) => inner.set_query(target, ranges).await,
-        }
-    }
-
-    pub async fn clear_query(&mut self) {
-        match self {
-            AnyMemberListSyncer::V1(inner) => inner.clear_query().await,
-            AnyMemberListSyncer::V2(inner) => inner.clear_query().await,
-        }
-    }
-
-    pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
-        match self {
-            AnyMemberListSyncer::V1(inner) => inner.set_user_id(user_id).await,
-            AnyMemberListSyncer::V2(inner) => inner.set_user_id(user_id).await,
-        }
-    }
-
-    pub async fn poll(&mut self) -> Result<MessageSync> {
-        match self {
-            AnyMemberListSyncer::V1(inner) => inner.poll().await,
-            AnyMemberListSyncer::V2(inner) => inner.poll().await,
-        }
-    }
-}
-
-impl MemberListSyncerV2Wrapper {
-    async fn set_user_id(&mut self, user_id: Option<UserId>) {
-        self.user_id = user_id;
-    }
-
-    async fn set_query(&mut self, target: MemberListTarget, ranges: &[(u64, u64)]) -> Result<()> {
         if let Some(key) = self.current_key.take() {
-            self.inner.unsubscribe(key).await?;
+            let _ = self.inner.unsubscribe(key).await;
         }
 
         let srv = self.s.services();
         let key1 = match target {
-            MemberListTarget::Room(room_id) => {
-                crate::services::member_lists::util::MemberListKey1::Room(room_id)
-            }
+            MemberListTarget::Room(room_id) => MemberListKey1::Room(room_id),
             MemberListTarget::Channel(channel_id) => {
                 let channel = srv.channels.get(channel_id, None).await?;
                 if let Some(room_id) = channel.room_id {
-                    crate::services::member_lists::util::MemberListKey1::RoomChannel(
-                        room_id, channel_id,
-                    )
+                    MemberListKey1::RoomChannel(room_id, channel_id)
                 } else {
-                    crate::services::member_lists::util::MemberListKey1::DmChannel(channel_id)
+                    MemberListKey1::DmChannel(channel_id)
                 }
             }
         };
@@ -156,13 +116,13 @@ impl MemberListSyncerV2Wrapper {
         Ok(())
     }
 
-    async fn clear_query(&mut self) {
+    pub async fn clear_query(&mut self) {
         if let Some(key) = self.current_key.take() {
             let _ = self.inner.unsubscribe(key).await;
         }
     }
 
-    async fn poll(&mut self) -> Result<MessageSync> {
+    pub async fn poll(&mut self) -> Result<MessageSync> {
         if let Some(user_id) = self.user_id {
             if let Some(msg) = self.inner.poll(user_id).await? {
                 Ok(msg)
@@ -190,18 +150,12 @@ impl Connection {
 
         let id = ConnectionId::new();
 
-        let member_list = if s.config.experiments.new_member_lists {
-            Box::new(AnyMemberListSyncer::V2(MemberListSyncerV2Wrapper {
-                inner: s.services().member_lists.create_syncer(id.into()),
-                user_id: None,
-                current_key: None,
-                s: s.clone(),
-            }))
-        } else {
-            Box::new(AnyMemberListSyncer::V1(
-                s.services().members.create_syncer(),
-            ))
-        };
+        let member_list = Box::new(ConnectionMemberListSyncer {
+            inner: s.services().member_lists.create_syncer(id.into()),
+            user_id: None,
+            current_key: None,
+            s: s.clone(),
+        });
 
         Self {
             state: ConnectionState::Unauthed,

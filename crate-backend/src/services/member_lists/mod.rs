@@ -1,9 +1,3 @@
-// NOTE: this is a rewrite of the original members service
-// this implementation will make use of ServiceCache, the new data caching service
-// the intention is to eventually migrate list management here
-
-//! Experimental rewrite for member management
-//!
 //! Service for managing member lists
 //!
 //! ## Member list logic

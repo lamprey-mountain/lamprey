@@ -4,7 +4,14 @@ use common::v1::types::{ChannelId, MemberListGroupId, RoleId, RoomId, UserId};
 
 use crate::services::member_lists::visibility::MemberListVisibility;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MemberListTarget {
+    Room(RoomId),
+    Channel(ChannelId),
+}
+
 /// A member list identifier from the API
+// TODO; better name for this
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MemberListKey1 {
     Room(RoomId),
