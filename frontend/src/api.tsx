@@ -581,8 +581,13 @@ export function createApi(
 					api.channels.cache.set(m.channel_id, {
 						...t,
 						message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
-						mention_count: (t.mention_count ?? 0) + (is_mentioned ? 1 : 0),
+						mention_count: !is_unread
+							? 0
+							: (t.mention_count ?? 0) + (is_mentioned ? 1 : 0),
 						last_version_id: m.latest_version.version_id,
+						last_read_id: !is_unread
+							? m.latest_version.version_id
+							: t.last_read_id,
 						is_unread,
 					});
 				}

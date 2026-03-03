@@ -406,22 +406,30 @@ export class Channels {
 		message_id: string | undefined,
 		version_id: string,
 	) {
+		{
+			const t = this.cache.get(channel_id);
+			if (t) {
+				const is_unread = version_id < (t.last_version_id ?? "");
+				if (
+					t.last_read_id === version_id &&
+					t.mention_count === 0 &&
+					t.is_unread === is_unread
+				) {
+					return;
+				}
+			}
+		}
+
 		await fetchWithRetry(() =>
 			this.api.client.http.PUT("/api/v1/channel/{channel_id}/ack", {
 				params: { path: { channel_id: channel_id } },
 				body: { message_id, version_id },
 			})
 		);
+
 		const t = this.cache.get(channel_id);
 		if (t) {
 			const is_unread = version_id < (t.last_version_id ?? "");
-			if (
-				t.last_read_id === version_id &&
-				t.mention_count === 0 &&
-				t.is_unread === is_unread
-			) {
-				return;
-			}
 			this.cache.set(channel_id, {
 				...t,
 				last_read_id: version_id,
@@ -441,25 +449,32 @@ export class Channels {
 			}
 		>,
 	) {
+		const filteredAcks = acks.filter((ack) => {
+			const t = this.cache.get(ack.channel_id);
+			if (!t) return true;
+			const is_unread = ack.version_id < (t.last_version_id ?? "");
+			const mention_count = ack.mention_count ?? 0;
+			return !(
+				t.last_read_id === ack.version_id &&
+				t.mention_count === mention_count &&
+				t.is_unread === is_unread
+			);
+		});
+
+		if (filteredAcks.length === 0) return;
+
 		await fetchWithRetry(() =>
 			this.api.client.http.POST("/api/v1/ack", {
-				body: { acks },
+				body: { acks: filteredAcks },
 			})
 		);
 
 		batch(() => {
-			for (const ack of acks) {
+			for (const ack of filteredAcks) {
 				const t = this.cache.get(ack.channel_id);
 				if (t) {
 					const is_unread = ack.version_id < (t.last_version_id ?? "");
 					const mention_count = ack.mention_count ?? 0;
-					if (
-						t.last_read_id === ack.version_id &&
-						t.mention_count === mention_count &&
-						t.is_unread === is_unread
-					) {
-						continue;
-					}
 					this.cache.set(ack.channel_id, {
 						...t,
 						last_read_id: ack.version_id,
