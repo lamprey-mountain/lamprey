@@ -154,7 +154,7 @@
           media-oci = pkgs.dockerTools.streamLayeredImage {
             name = "media";
             tag = "latest";
-            contents = [ pkgs.dockerTools.caCertificates ];
+            contents = [ pkgs.dockerTools.caCertificates pkgs.ffmpeg-headless ];
             config = {
               Entrypoint = [
                 "${pkgs.tini}/bin/tini"
