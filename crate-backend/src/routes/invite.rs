@@ -118,6 +118,7 @@ async fn invite_delete(
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
+                        creator_id: invite.invite.creator_id,
                     },
                 )
                 .await?;
@@ -129,6 +130,7 @@ async fn invite_delete(
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
+                        creator_id: invite.invite.creator_id,
                     },
                 )
                 .await?;
@@ -140,6 +142,7 @@ async fn invite_delete(
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
+                        creator_id: invite.invite.creator_id,
                     },
                 )
                 .await?;
@@ -148,6 +151,7 @@ async fn invite_delete(
                 s.broadcast(MessageSync::InviteDelete {
                     code,
                     target: id_target,
+                    creator_id: invite.invite.creator_id,
                 })?;
             }
         };

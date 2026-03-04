@@ -399,6 +399,8 @@ pub enum MessageSync {
     InviteDelete {
         code: InviteCode,
         target: InviteTargetId,
+        // TODO: should i remove this?
+        creator_id: UserId,
     },
 
     ReactionCreate {

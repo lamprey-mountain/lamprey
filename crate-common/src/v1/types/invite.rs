@@ -190,6 +190,27 @@ impl From<InviteWithMetadata> for Invite {
     }
 }
 
+impl From<InviteTarget> for InviteTargetId {
+    fn from(value: InviteTarget) -> Self {
+        match value {
+            InviteTarget::Room {
+                room,
+                channel,
+                roles,
+            } => InviteTargetId::Room {
+                room_id: room.id,
+                channel_id: channel.map(|c| c.id),
+                role_ids: roles.into_iter().map(|r| r.id).collect(),
+            },
+            InviteTarget::Gdm { channel } => InviteTargetId::Gdm {
+                channel_id: channel.id,
+            },
+            InviteTarget::Server => InviteTargetId::Server,
+            InviteTarget::User { user } => InviteTargetId::User { user_id: user.id },
+        }
+    }
+}
+
 impl InviteWithMetadata {
     pub fn strip_metadata(self) -> Invite {
         self.into()

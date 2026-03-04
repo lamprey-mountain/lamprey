@@ -814,26 +814,31 @@ impl Connection {
             MessageSync::RoleCreate { role } => AuthCheck::Room(role.room_id),
             MessageSync::RoleUpdate { role } => AuthCheck::Room(role.room_id),
             // FIXME(#612): only return invite events to creator and members with InviteManage
-            MessageSync::InviteCreate { invite } => match &invite.invite.target {
-                InviteTarget::Room {
-                    room,
-                    channel: _,
-                    roles: _,
-                } => AuthCheck::Room(room.id),
-                InviteTarget::Gdm { channel, .. } => AuthCheck::Channel(channel.id),
-                InviteTarget::Server => {
-                    AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
+            MessageSync::InviteCreate { invite } | MessageSync::InviteUpdate { invite } => {
+                let mut checks = vec![AuthCheck::User(invite.invite.creator_id)];
+                match &invite.invite.target {
+                    InviteTarget::Room { room, channel, .. } => {
+                        checks.push(AuthCheck::RoomPerm(room.id, Permission::InviteManage));
+                        if let Some(channel) = channel {
+                            checks
+                                .push(AuthCheck::ChannelPerm(channel.id, Permission::InviteManage));
+                        }
+                    }
+                    InviteTarget::Gdm { channel } => {
+                        checks.push(AuthCheck::ChannelPerm(channel.id, Permission::InviteManage));
+                    }
+                    InviteTarget::Server => {
+                        checks.push(AuthCheck::RoomPerm(
+                            SERVER_ROOM_ID,
+                            Permission::InviteManage,
+                        ));
+                    }
+                    InviteTarget::User { user } => {
+                        checks.push(AuthCheck::User(user.id));
+                    }
                 }
-                InviteTarget::User { user, .. } => AuthCheck::User(user.id),
-            },
-            MessageSync::InviteUpdate { invite } => match &invite.invite.target {
-                InviteTarget::Room { room, .. } => AuthCheck::Room(room.id),
-                InviteTarget::Gdm { channel, .. } => AuthCheck::Channel(channel.id),
-                InviteTarget::Server => {
-                    AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
-                }
-                InviteTarget::User { user, .. } => AuthCheck::User(user.id),
-            },
+                AuthCheck::Any(checks)
+            }
             MessageSync::MessageDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::MessageVersionDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::UserDelete { id } => AuthCheck::UserMutual(*id),
@@ -851,14 +856,42 @@ impl Connection {
             MessageSync::SessionDeleteAll { user_id } => AuthCheck::User(*user_id),
             MessageSync::RoleDelete { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::RoleReorder { room_id, .. } => AuthCheck::Room(*room_id),
-            MessageSync::InviteDelete { target, .. } => match target {
-                InviteTargetId::Room { room_id, .. } => AuthCheck::Room(*room_id),
-                InviteTargetId::Gdm { channel_id, .. } => AuthCheck::Channel(*channel_id),
-                InviteTargetId::Server => {
-                    AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
+            MessageSync::InviteDelete {
+                target, creator_id, ..
+            } => {
+                let mut checks = vec![AuthCheck::User(*creator_id)];
+                match target {
+                    InviteTargetId::Room {
+                        room_id,
+                        channel_id,
+                        ..
+                    } => {
+                        checks.push(AuthCheck::RoomPerm(*room_id, Permission::InviteManage));
+                        if let Some(channel_id) = channel_id {
+                            checks.push(AuthCheck::ChannelPerm(
+                                *channel_id,
+                                Permission::InviteManage,
+                            ));
+                        }
+                    }
+                    InviteTargetId::Gdm { channel_id } => {
+                        checks.push(AuthCheck::ChannelPerm(
+                            *channel_id,
+                            Permission::InviteManage,
+                        ));
+                    }
+                    InviteTargetId::Server => {
+                        checks.push(AuthCheck::RoomPerm(
+                            SERVER_ROOM_ID,
+                            Permission::InviteManage,
+                        ));
+                    }
+                    InviteTargetId::User { user_id } => {
+                        checks.push(AuthCheck::User(*user_id));
+                    }
                 }
-                InviteTargetId::User { user_id, .. } => AuthCheck::User(*user_id),
-            },
+                AuthCheck::Any(checks)
+            }
             MessageSync::ChannelTyping { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::ChannelAck { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
