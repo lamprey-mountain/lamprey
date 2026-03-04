@@ -121,7 +121,7 @@ export function handleAutocomplete(
 				let tr = state.tr.replaceWith(
 					mentionStart,
 					to,
-					schema.nodes.mention.create({ user: userId }),
+					schema.nodes.mention.create({ user: userId, name: _userName }),
 				);
 				const posAfter = tr.mapping.map(to);
 				tr = tr.insert(posAfter, schema.text(" ", []));
@@ -165,7 +165,10 @@ export function handleAutocomplete(
 				let tr = state.tr.replaceWith(
 					mentionStart,
 					to,
-					schema.nodes.mentionChannel.create({ channel: channelId }),
+					schema.nodes.mentionChannel.create({
+						channel: channelId,
+						name: _channelName,
+					}),
 				);
 				const posAfter = tr.mapping.map(to);
 				tr = tr.insert(posAfter, schema.text(" ", []));

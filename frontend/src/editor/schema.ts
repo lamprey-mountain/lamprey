@@ -22,16 +22,26 @@ export const schema = new Schema({
 			selectable: false,
 			attrs: {
 				user: {},
+				name: { default: null },
 			},
 			leafText(node) {
-				return `<@${node.attrs.user}>`;
+				return node.attrs.name
+					? `@${node.attrs.name}`
+					: `<@${node.attrs.user}>`;
 			},
 			toDOM: (
 				n,
-			) => ["span", { "data-user-id": n.attrs.user, "class": "mention" }],
+			) => ["span", {
+				"data-user-id": n.attrs.user,
+				"data-name": n.attrs.name,
+				"class": "mention",
+			}, n.attrs.name ? `@${n.attrs.name}` : `<@${n.attrs.user}>`],
 			parseDOM: [{
 				tag: "span.mention[data-user-id]",
-				getAttrs: (el) => ({ user: (el as HTMLElement).dataset.userId }),
+				getAttrs: (el) => ({
+					user: (el as HTMLElement).dataset.userId,
+					name: (el as HTMLElement).dataset.name,
+				}),
 			}],
 		},
 		mentionChannel: {
@@ -41,16 +51,26 @@ export const schema = new Schema({
 			selectable: false,
 			attrs: {
 				channel: {},
+				name: { default: null },
 			},
 			leafText(node) {
-				return `<#${node.attrs.channel}>`;
+				return node.attrs.name
+					? `#${node.attrs.name}`
+					: `<#${node.attrs.channel}>`;
 			},
 			toDOM: (
 				n,
-			) => ["span", { "data-channel-id": n.attrs.channel, "class": "mention" }],
+			) => ["span", {
+				"data-channel-id": n.attrs.channel,
+				"data-name": n.attrs.name,
+				"class": "mention",
+			}, n.attrs.name ? `#${n.attrs.name}` : `<#${n.attrs.channel}>`],
 			parseDOM: [{
 				tag: "span.mention[data-channel-id]",
-				getAttrs: (el) => ({ channel: (el as HTMLElement).dataset.channelId }),
+				getAttrs: (el) => ({
+					channel: (el as HTMLElement).dataset.channelId,
+					name: (el as HTMLElement).dataset.name,
+				}),
 			}],
 		},
 		mentionRole: {
@@ -60,16 +80,26 @@ export const schema = new Schema({
 			selectable: false,
 			attrs: {
 				role: {},
+				name: { default: null },
 			},
 			leafText(node) {
-				return `<@&${node.attrs.role}>`;
+				return node.attrs.name
+					? `@${node.attrs.name}`
+					: `<@&${node.attrs.role}>`;
 			},
 			toDOM: (
 				n,
-			) => ["span", { "data-role-id": n.attrs.role, "class": "mention" }],
+			) => ["span", {
+				"data-role-id": n.attrs.role,
+				"data-name": n.attrs.name,
+				"class": "mention",
+			}, n.attrs.name ? `@${n.attrs.name}` : `<@&${n.attrs.role}>`],
 			parseDOM: [{
 				tag: "span.mention[data-role-id]",
-				getAttrs: (el) => ({ role: (el as HTMLElement).dataset.roleId }),
+				getAttrs: (el) => ({
+					role: (el as HTMLElement).dataset.roleId,
+					name: (el as HTMLElement).dataset.name,
+				}),
 			}],
 		},
 		emoji: {
@@ -80,21 +110,25 @@ export const schema = new Schema({
 			attrs: {
 				id: {},
 				name: {},
+				animated: { default: false },
 			},
 			leafText(node) {
-				return `<:${node.attrs.name}:${node.attrs.id}>`;
+				return `:${node.attrs.name}:`;
 			},
 			toDOM: (
 				n,
 			) => ["span", {
 				"data-emoji-id": n.attrs.id,
 				"data-emoji-name": n.attrs.name,
+				"data-emoji-animated": n.attrs.animated ? "true" : "false",
+				"class": "mention",
 			}, `:${n.attrs.name}:`],
 			parseDOM: [{
 				tag: "span[data-emoji-id][data-emoji-name]",
 				getAttrs: (el) => ({
 					id: (el as HTMLElement).dataset.emojiId,
 					name: (el as HTMLElement).dataset.emojiName,
+					animated: (el as HTMLElement).dataset.emojiAnimated === "true",
 				}),
 			}],
 		},

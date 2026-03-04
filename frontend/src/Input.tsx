@@ -123,15 +123,16 @@ export function Input(props: InputProps) {
 		const editorState = ch.editor_state;
 		if (editorState) {
 			const { from, to } = editorState.selection;
-			const customMatch = emoji.match(/^<:([^:]+):([^>]+)>$/);
+			const customMatch = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
 			let tr;
 			if (customMatch) {
-				const name = customMatch[1];
-				const id = customMatch[2];
+				const animated = customMatch[1] === "a";
+				const name = customMatch[2];
+				const id = customMatch[3];
 				tr = editorState.tr.replaceWith(
 					from,
 					to,
-					editor.schema.nodes.emoji.create({ id, name }),
+					editor.schema.nodes.emoji.create({ id, name, animated }),
 				);
 			} else {
 				tr = editorState.tr.insertText(emoji, from, to);

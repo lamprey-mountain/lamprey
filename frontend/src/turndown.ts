@@ -205,5 +205,27 @@ export function initTurndownService(): TurndownService {
 		replacement: () => "\n",
 	});
 
+	turndownService.addRule("mentions", {
+		filter: (node) =>
+			node.nodeName === "SPAN" &&
+			(node.classList.contains("mention") ||
+				node.hasAttribute("data-user-id") ||
+				node.hasAttribute("data-channel-id") ||
+				node.hasAttribute("data-role-id") ||
+				node.hasAttribute("data-emoji-id")),
+		replacement: (content, node) => {
+			const el = node as HTMLElement;
+			if (el.dataset.userId) return `<@${el.dataset.userId}>`;
+			if (el.dataset.channelId) return `<#${el.dataset.channelId}>`;
+			if (el.dataset.roleId) return `<@&${el.dataset.roleId}>`;
+			if (el.dataset.emojiId) {
+				return `<${el.dataset.emojiAnimated === "true" ? "a" : ""}:${
+					el.dataset.emojiName || "emoji"
+				}:${el.dataset.emojiId}>`;
+			}
+			return content;
+		},
+	});
+
 	return turndownService;
 }

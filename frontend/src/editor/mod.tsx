@@ -96,46 +96,69 @@ export const createEditor = (opts: EditorOptions) => {
 							return true;
 						}
 
-						const html = event.clipboardData?.getData("text/html");
-						if (html) {
-							const markdown = turndown.turndown(html);
-							view.dispatch(
-								view.state.tr.replaceSelectionWith(
-									schema.text(markdown),
-								).scrollIntoView()
-									.setMeta("paste", true),
-							);
-							return true;
+						const isInternal = event.clipboardData?.types.includes(
+							"application/x-prosemirror-slice",
+						);
+						if (isInternal) {
+							return false;
 						}
 
-						const str = slice.content.textBetween(0, slice.size);
+						const html = event.clipboardData?.getData("text/html");
+						const plainText = event.clipboardData?.getData("text/plain");
+						const str = html
+							? turndown.turndown(html)
+							: (plainText !== null && plainText !== undefined
+								? plainText
+								: slice.content.textBetween(0, slice.content.size, "\n"));
+
 						const tr = view.state.tr;
 						if (
-							/^(https?:\/\/|mailto:)\S+$/i.test(str) && !tr.selection.empty
+							!tr.selection.empty &&
+							/^(https?:\/\/|mailto:)\S+$/i.test(str.trim())
 						) {
-							tr.insertText("[", tr.selection.from);
-							tr.insertText(`](${str})`, tr.selection.to);
-							tr.setSelection(TextSelection.create(tr.doc, tr.selection.to));
+							const url = str.trim();
+							const { from, to } = tr.selection;
+							tr.insertText(`](${url})`, to);
+							tr.insertText("[", from);
+							tr.setSelection(
+								TextSelection.create(tr.doc, tr.mapping.map(to)),
+							);
 							view.dispatch(
 								tr.scrollIntoView().setMeta("paste", true).setMeta(
 									"uiEvent",
 									"paste",
 								),
 							);
-						} else {
-							const textToParse = slice.content.textBetween(
-								0,
-								slice.content.size,
-								"\n",
-							);
-							const div = document.createElement("div");
-							div.innerHTML = md.parser(md.lexer(textToParse));
-							const newSlice = DOMParser.fromSchema(schema).parseSlice(div);
+							return true;
+						}
+
+						const tokens = md.lexer(str);
+						const hasSpecial = (t: any): boolean => {
+							if (t.type === "mention") return true;
+							if (t.tokens) return t.tokens.some(hasSpecial);
+							return false;
+						};
+						const hasStructured = tokens.some(hasSpecial);
+
+						if (!html && !hasStructured) {
 							view.dispatch(
-								view.state.tr.replaceSelection(newSlice).scrollIntoView()
+								view.state.tr.replaceSelectionWith(schema.text(str))
+									.scrollIntoView()
 									.setMeta("paste", true),
 							);
+							return true;
 						}
+
+						const div = document.createElement("div");
+						div.style.whiteSpace = "pre-wrap";
+						div.innerHTML = md.parser(tokens).trimEnd();
+						const newSlice = DOMParser.fromSchema(schema).parseSlice(div, {
+							preserveWhitespace: "full",
+						});
+						view.dispatch(
+							view.state.tr.replaceSelection(newSlice).scrollIntoView()
+								.setMeta("paste", true),
+						);
 						return true;
 					},
 					handleKeyDown(view, event) {
