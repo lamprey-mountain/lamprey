@@ -3,6 +3,7 @@ import { useApi } from "../api";
 import { Time } from "../Time";
 import { Copyable } from "../util";
 import type { Scope } from "sdk";
+import fuzzysort from "fuzzysort";
 
 export function Connections() {
 	const api = useApi();
@@ -46,12 +47,30 @@ export function Connections() {
 		});
 	}
 
-	// TODO: search authorized apps
+	const [search, setSearch] = createSignal("");
+
+	const filteredConnections = () => {
+		const query = search();
+		if (!query) return connections()?.items ?? [];
+		const results = fuzzysort.go(query, connections()?.items ?? [], {
+			key: "application.name",
+			threshold: -10000,
+		});
+		return results.map((r) => r.obj);
+	};
 
 	return (
 		<div class="user-settings-connections">
 			<h2>connections</h2>
-			<For each={connections()?.items}>
+			<header class="connections-header">
+				<input
+					type="search"
+					placeholder="search"
+					aria-label="search"
+					onInput={(e) => setSearch(e.target.value)}
+				/>
+			</header>
+			<For each={filteredConnections()}>
 				{(c) => (
 					<article class="connection">
 						<header>

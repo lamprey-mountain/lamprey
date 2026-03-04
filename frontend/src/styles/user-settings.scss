@@ -163,6 +163,17 @@
 }
 
 .user-settings-connections {
+	.connections-header {
+		display: flex;
+		gap: 8px;
+		margin: 8px 0 16px;
+
+		input {
+			flex: 1;
+			padding: 8px;
+		}
+	}
+
 	.connection {
 		background: $bg-150;
 		border: solid $sep-300 1px;
