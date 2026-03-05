@@ -29,21 +29,35 @@ export const TextView = (props: MediaProps) => {
 	const [collapsed, setCollapsed] = createSignal(true);
 	const [copied, setCopied] = createSignal(false);
 	const [preview, setPreview] = createSignal(false);
+	const [fetchFull, setFetchFull] = createSignal(false);
 
-	const [text] = createResource(() => props.media, async (media) => {
-		const req = await fetch(getUrl(media), {
-			headers: {
-				"Range": `bytes=0-${MAX_PREVIEW_SIZE}`,
-			},
-		});
-		if (!req.ok) throw req.statusText;
-		const text = await req.text();
-		return text;
-	});
+	const [text] = createResource(
+		() => ({ media: props.media, full: fetchFull() }),
+		async ({ media, full }) => {
+			const headers: Record<string, string> = {};
+			if (!full && media.size > MAX_PREVIEW_SIZE) {
+				headers["Range"] = `bytes=0-${MAX_PREVIEW_SIZE}`;
+			}
+			const req = await fetch(getUrl(media), { headers });
+			if (!req.ok) throw req.statusText;
+			return await req.text();
+		},
+	);
 
 	const unsetCopied = debounce(() => setCopied(false), 1000);
-	const copy = () => {
-		const t = text();
+	const copy = async () => {
+		let t = text();
+		if (props.media.size > MAX_PREVIEW_SIZE && (!fetchFull() || text.loading)) {
+			setFetchFull(true);
+			const req = await fetch(getUrl(props.media));
+			if (!req.ok) {
+				const [, modalCtl] = useModals();
+				modalCtl.alert("file not loaded yet");
+				return;
+			}
+			t = await req.text();
+		}
+
 		if (t) {
 			setCopied(true);
 			navigator.clipboard.writeText(t);
@@ -77,11 +91,21 @@ export const TextView = (props: MediaProps) => {
 
 	createEffect(highlight);
 
+	createEffect(() => {
+		if (preview()) {
+			setFetchFull(true);
+		}
+	});
+
 	return (
 		<div class="media-text code-block-container">
 			<div class="code-block-header">
 				<div class="file-info">
-					<a class="filename" download={props.media.filename} href={getUrl(props.media)}>
+					<a
+						class="filename"
+						download={props.media.filename}
+						href={getUrl(props.media)}
+					>
 						{props.media.filename}
 					</a>
 					<span class="dim">{formatBytes(props.media.size)}</span>
@@ -119,7 +143,8 @@ export const TextView = (props: MediaProps) => {
 				</Show>
 				<Show when={props.media.size > MAX_PREVIEW_SIZE}>
 					<div class="warn-truncated">
-						<span class="warn">warning:</span> file preview truncated (too long!)
+						<span class="warn">warning:</span>{" "}
+						file preview truncated (too long!)
 					</div>
 				</Show>
 			</div>
