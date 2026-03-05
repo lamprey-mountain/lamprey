@@ -1,5 +1,6 @@
 import {
 	createContext,
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
@@ -18,6 +19,7 @@ import { getEmojiUrl } from "./media/util";
 import twemoji from "twemoji";
 import type { Token, Tokens } from "marked";
 import type { Channel } from "sdk";
+import { flags } from "./flags";
 
 // --- Context ---
 
@@ -121,19 +123,69 @@ function Spoiler(props: { tokens: Token[] }) {
 function CodeBlock(props: { text: string; lang?: string }) {
 	let ref!: HTMLElement;
 
-	onMount(() => {
-		if (!ref) return;
-		import("highlight.js").then(({ default: hljs }) => {
-			if (ref) hljs.highlightElement(ref);
-		});
+	const [copied, setCopied] = createSignal(false);
+	const [preview, setPreview] = createSignal(false);
+
+	createEffect(() => {
+		if (!preview() && ref) {
+			import("highlight.js").then(({ default: hljs }) => {
+				if (ref) {
+					delete (ref as any).dataset.highlighted;
+					hljs.highlightElement(ref);
+				}
+			});
+		}
 	});
 
+	const copy = () => {
+		navigator.clipboard.writeText(props.text);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	const isHtml = () =>
+		props.lang === "html" || props.lang === "htm" || props.lang === "xml" ||
+		props.lang === "svg";
+
 	return (
-		<pre>
-			<code ref={ref} class={props.lang ? `language-${props.lang}` : ""}>
-				{props.text}
-			</code>
-		</pre>
+		<Show
+			when={flags.has("markdown_code_components")}
+			fallback={
+				<pre>
+					<code ref={ref} class={props.lang ? `language-${props.lang}` : ""}>
+						{props.text}
+					</code>
+				</pre>
+			}
+		>
+			<div class="code-block-container">
+				<div class="code-block-header">
+					<span class="lang">{props.lang ?? "text"}</span>
+					<div class="actions">
+						<Show when={isHtml() && flags.has("markdown_html_preview")}>
+							<button onClick={() => setPreview(!preview())}>
+								{preview() ? "code" : "preview"}
+							</button>
+						</Show>
+						<button onClick={copy}>{copied() ? "copied" : "copy"}</button>
+					</div>
+				</div>
+				<Show
+					when={preview()}
+					fallback={
+						<pre>
+							<code ref={ref} class={props.lang ? `language-${props.lang}` : ""}>
+								{props.text}
+							</code>
+						</pre>
+					}
+				>
+					<div class="html-preview">
+						<iframe srcdoc={props.text} sandbox="allow-scripts" />
+					</div>
+				</Show>
+			</div>
+		</Show>
 	);
 }
 

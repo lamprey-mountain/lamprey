@@ -45,6 +45,8 @@ export const allFlags = [
 	{ id: "channel_documents" },
 	{ id: "automod" },
 	{ id: "auto_redirect_last_channel" },
+	{ id: "markdown_code_components" },
+	{ id: "markdown_html_preview" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -65,6 +67,8 @@ const flagsDev: Flag[] = [
 	"channel_calendar",
 	"channel_documents",
 	"automod",
+	"markdown_code_components",
+	"markdown_html_preview",
 ];
 
 const flagsProd: Flag[] = [
