@@ -210,9 +210,10 @@
 	background: white;
 	min-height: 100px;
 	display: flex;
-	resize: vertical;
+	resize: both;
 	overflow: auto;
 	border-top: 1px solid oklch(var(--color-bg3));
+	max-width: 100%;
 
 	iframe {
 		border: none;
