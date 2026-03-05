@@ -106,6 +106,7 @@ pub struct DbRoom {
     pub security_require_sudo: bool,
     pub afk_channel_id: Option<Uuid>,
     pub afk_channel_timeout: i64,
+    pub deleted_at: Option<PrimitiveDateTime>,
 }
 
 pub struct DbRoomCreate {
@@ -146,6 +147,7 @@ impl From<DbRoom> for Room {
             room_type: row.ty.into(),
             archived_at: row.archived_at.map(|t| Time::from(t.assume_utc())),
             public: row.public,
+            deleted_at: row.deleted_at.map(|t| Time::from(t.assume_utc())),
             welcome_channel_id: row.welcome_channel_id.map(|i| i.into()),
             quarantined: row.quarantined,
             member_count: row.member_count as u64,

@@ -22,7 +22,7 @@ use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::routes::util::{Auth, HeaderReason};
-use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
+use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};
 use crate::ServerState;
 
 use super::util::AuthRelaxed2;
@@ -391,10 +391,18 @@ async fn guest_create(
             name: create.name,
             description: create.description,
             puppet: None,
-            registered_at: None,
+            registered_at: if s.config.require_server_invite {
+                None
+            } else {
+                Some(Time::now_utc())
+            },
             system: false,
         })
         .await?;
+
+    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
+        .await?;
+    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
 
     data.session_set_status(session.id, SessionStatus::Authorized { user_id: user.id })
         .await?;

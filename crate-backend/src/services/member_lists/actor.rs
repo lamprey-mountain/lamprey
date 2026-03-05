@@ -297,6 +297,7 @@ impl MemberList {
             });
         }
 
+        tracing::debug!("recalculated groups: {:?}", new_groups);
         self.groups = new_groups;
     }
 

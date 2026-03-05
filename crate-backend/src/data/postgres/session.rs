@@ -42,6 +42,7 @@ impl DataSession for Postgres {
     }
 
     async fn session_get(&self, id: SessionId) -> Result<Session> {
+        tracing::debug!("session_get: {:?}", id);
         let session = query_as!(
             DbSession,
             r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE id = $1"#,
@@ -50,15 +51,19 @@ impl DataSession for Postgres {
         .fetch_one(&self.pool)
         .await
         .map_err(|e| match e {
-            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownSession,
-            )),
+            sqlx::Error::RowNotFound => {
+                tracing::debug!("session_get: row not found for {:?}", id);
+                Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownSession,
+                ))
+            }
             e => Error::Sqlx(e),
         })?;
         Ok(session.into())
     }
 
     async fn session_get_by_token(&self, token: SessionToken) -> Result<Session> {
+        tracing::debug!("session_get_by_token: {:?}", token);
         let session = query_as!(
             DbSession,
             r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE token = $1"#,
@@ -67,9 +72,12 @@ impl DataSession for Postgres {
             .fetch_one(&self.pool)
             .await
             .map_err(|e| match e {
-                sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
-                    ErrorCode::UnknownSession,
-                )),
+                sqlx::Error::RowNotFound => {
+                    tracing::debug!("session_get_by_token: row not found for {:?}", token);
+                    Error::ApiError(ApiError::from_code(
+                        ErrorCode::UnknownSession,
+                    ))
+                }
                 e => Error::Sqlx(e),
             })?;
         Ok(session.into())

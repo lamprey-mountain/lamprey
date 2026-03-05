@@ -79,6 +79,8 @@ pub struct Room {
     /// anyone can view and join
     pub public: bool,
 
+    pub deleted_at: Option<Time>,
+
     /// where member join messages will be sent
     pub welcome_channel_id: Option<ChannelId>,
 

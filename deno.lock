@@ -182,6 +182,9 @@
       "bin": true
     }
   },
+  "remote": {
+    "https://deno.land/std@0.208.0/async/delay.ts": "a6142eb44cdd856b645086af2b811b1fcce08ec06bb7d50969e6a872ee9b8659"
+  },
   "workspace": {
     "packageJson": {
       "dependencies": [

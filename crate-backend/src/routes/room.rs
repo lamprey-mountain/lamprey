@@ -39,15 +39,18 @@ async fn room_create(
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
+    tracing::debug!("room_create for user: {:?}", auth.user.id);
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     json.validate()?;
 
     let srv = s.services();
-    srv.perms
+    let perms = srv.perms
         .for_server(auth.user.id)
-        .await?
-        .ensure(Permission::RoomCreate)?;
+        .await?;
+    
+    tracing::debug!("server perms for {}: {:?}", auth.user.id, perms);
+    perms.ensure(Permission::RoomCreate)?;
 
     // FIXME: run this in a transaction
     let icon = json.icon;
@@ -93,8 +96,14 @@ async fn room_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Rooms])?;
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
     let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    if room.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    if !perms.is_member() {
+        return Err(Error::NotFound);
+    }
     let headers = cache.compare_uuid(&room.version_id)?;
     Ok((headers, Json(room)))
 }

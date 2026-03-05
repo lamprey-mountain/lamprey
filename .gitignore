@@ -45,3 +45,6 @@ scanner-nsfw.toml
 # python
 __pycache__
 *.pyc
+
+# tests
+/data

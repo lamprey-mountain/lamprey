@@ -80,7 +80,10 @@ impl PermissionsCalculator {
                 return perms;
             } else {
                 // the member doesnt exist here; no perms
-                return Permissions::empty();
+                tracing::debug!(?user_id, room_id = ?self.room_id, "user not a member and room not public");
+                let mut perms = Permissions::empty();
+                perms.set_lurker(true);
+                return perms;
             }
         };
 
@@ -99,6 +102,8 @@ impl PermissionsCalculator {
 
         let mut perms = Permissions::empty();
         perms.add_bits(allowed_bits);
+
+        tracing::debug!(?user_id, room_id = ?self.room_id, "calculated perms: {:?}", perms);
 
         if perms.has(Permission::Admin) {
             return perms;

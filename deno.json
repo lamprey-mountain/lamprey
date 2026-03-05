@@ -7,6 +7,8 @@
 	"tasks": {
 		"hakari": "cargo hakari generate && cargo hakari manage-deps",
 		"sqlx-prep": "deno run -A scripts/sqlx-prep.ts",
+		"dev": "deno run -A scripts/dev.ts",
+		"test": "deno run -A scripts/test.ts",
 		"rustdoc": "cargo doc --no-deps -p types -p backend",
 		"fmt": "cargo fmt && deno fmt"
 	}

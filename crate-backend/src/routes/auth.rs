@@ -103,16 +103,18 @@ async fn auth_oauth_redirect(
             {
                 Ok(user_id) => {
                     let user = srv.users.get(user_id, None).await?;
+                    data.room_member_put(
+                        SERVER_ROOM_ID,
+                        user.id,
+                        None,
+                        RoomMemberPut::default(),
+                    )
+                    .await?;
+                    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
+
                     if provider_config.autoregister && user.registered_at.is_none() {
                         data.user_set_registered(user.id, Some(Time::now_utc()), None)
                             .await?;
-                        data.room_member_put(
-                            SERVER_ROOM_ID,
-                            user.id,
-                            None,
-                            RoomMemberPut::default(),
-                        )
-                        .await?;
                         srv.users.invalidate(user.id).await;
                         let updated_user = srv.users.get(user.id, None).await?;
                         let session = srv.sessions.get(session_id).await?;
@@ -158,14 +160,16 @@ async fn auth_oauth_redirect(
                             system: false,
                         })
                         .await?;
+                    data.room_member_put(
+                        SERVER_ROOM_ID,
+                        user.id,
+                        None,
+                        RoomMemberPut::default(),
+                    )
+                    .await?;
+                    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
+
                     if provider_config.autoregister {
-                        data.room_member_put(
-                            SERVER_ROOM_ID,
-                            user.id,
-                            None,
-                            RoomMemberPut::default(),
-                        )
-                        .await?;
                         let session = srv.sessions.get(session_id).await?;
                         let entry = AuditLogEntry {
                             id: AuditLogEntryId::new(),
@@ -239,16 +243,18 @@ async fn auth_oauth_redirect(
             {
                 Ok(user_id) => {
                     let user = srv.users.get(user_id, None).await?;
+                    data.room_member_put(
+                        SERVER_ROOM_ID,
+                        user.id,
+                        None,
+                        RoomMemberPut::default(),
+                    )
+                    .await?;
+                    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
+
                     if provider_config.autoregister && user.registered_at.is_none() {
                         data.user_set_registered(user.id, Some(Time::now_utc()), None)
                             .await?;
-                        data.room_member_put(
-                            SERVER_ROOM_ID,
-                            user.id,
-                            None,
-                            RoomMemberPut::default(),
-                        )
-                        .await?;
                         srv.users.invalidate(user.id).await;
                         let updated_user = srv.users.get(user.id, None).await?;
                         let session = srv.sessions.get(session_id).await?;
@@ -294,14 +300,16 @@ async fn auth_oauth_redirect(
                             system: false,
                         })
                         .await?;
+                    data.room_member_put(
+                        SERVER_ROOM_ID,
+                        user.id,
+                        None,
+                        RoomMemberPut::default(),
+                    )
+                    .await?;
+                    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
+
                     if provider_config.autoregister {
-                        data.room_member_put(
-                            SERVER_ROOM_ID,
-                            user.id,
-                            None,
-                            RoomMemberPut::default(),
-                        )
-                        .await?;
                         let session = srv.sessions.get(session_id).await?;
                         let entry = AuditLogEntry {
                             id: AuditLogEntryId::new(),

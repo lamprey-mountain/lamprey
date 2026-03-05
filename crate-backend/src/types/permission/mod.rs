@@ -38,6 +38,7 @@ pub struct Permissions {
 }
 
 impl Permissions {
+    #[inline]
     pub fn empty() -> Permissions {
         Permissions {
             p: PermissionBits::default(),
@@ -49,28 +50,39 @@ impl Permissions {
         }
     }
 
+    #[inline]
     pub fn set_timed_out(&mut self, timed_out: bool) {
         self.timed_out = timed_out;
     }
 
+    #[inline]
     pub fn set_quarantined(&mut self, quarantined: bool) {
         self.quarantined = quarantined;
     }
 
+    #[inline]
     pub fn set_lurker(&mut self, lurker: bool) {
         self.lurker = lurker;
     }
 
+    #[inline]
     pub fn set_locked_bypass(&mut self, locked_bypass: bool) {
         self.locked_bypass = locked_bypass;
     }
 
+    #[inline]
     pub fn set_channel_locked(&mut self, channel_locked: bool) {
         self.channel_locked = channel_locked;
     }
 
+    #[inline]
     pub fn is_channel_locked(&self) -> bool {
         self.channel_locked
+    }
+
+    #[inline]
+    pub fn is_member(&self) -> bool {
+        !self.lurker
     }
 
     #[inline]

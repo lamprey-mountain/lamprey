@@ -1,0 +1,29 @@
+rust_log = "info,lamprey=debug,tower_http=debug"
+database_url = "postgres://postgres:password@localhost:5433/lamprey"
+api_url = "http://localhost:4000"
+cdn_url = "http://localhost:4000/media"
+html_url = "http://localhost:4000"
+media_max_size = 104857600 # 100MB
+sfu_token = "dev-token"
+admin_token = "debug-admin-token"
+enable_admin_token = false
+require_server_invite = false
+
+[blobs]
+type = "fs"
+data_dir = "data/blobs"
+
+[http]
+user_agent = "lamprey/dev"
+deny = []
+max_parallel_jobs = 4
+
+[smtp]
+username = "user"
+password = "password"
+host = "localhost"
+from = "noreply@localhost"
+
+[url_preview]
+
+[oauth_provider]
