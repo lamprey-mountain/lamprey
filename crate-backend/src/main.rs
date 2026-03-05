@@ -156,15 +156,25 @@ async fn main() -> Result<()> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let blobs_builder = opendal::services::S3::default()
-        .bucket(&config.s3.bucket)
-        .endpoint(config.s3.endpoint.as_str())
-        .region(&config.s3.region)
-        .access_key_id(&config.s3.access_key_id)
-        .secret_access_key(&config.s3.secret_access_key);
-    let blobs = opendal::Operator::new(blobs_builder)?
-        .layer(LoggingLayer::default())
-        .finish();
+    let blobs = match &config.blobs {
+        config::ConfigBlobs::S3(s3) => {
+            let builder = opendal::services::S3::default()
+                .bucket(&s3.bucket)
+                .endpoint(s3.endpoint.as_str())
+                .region(&s3.region)
+                .access_key_id(&s3.access_key_id)
+                .secret_access_key(&s3.secret_access_key);
+            opendal::Operator::new(builder)?
+                .layer(LoggingLayer::default())
+                .finish()
+        }
+        config::ConfigBlobs::Fs(fs) => {
+            let builder = opendal::services::Fs::default().root(fs.data_dir.to_str().unwrap());
+            opendal::Operator::new(builder)?
+                .layer(LoggingLayer::default())
+                .finish()
+        }
+    };
     blobs.check().await?;
 
     let nats = if let Some(nats_config) = &config.nats {

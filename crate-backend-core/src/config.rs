@@ -28,7 +28,9 @@ pub struct Config {
     pub html_url: Url,
 
     /// for media/file uploads
-    pub s3: ConfigS3,
+    #[serde(alias = "s3")]
+    pub blobs: ConfigBlobs,
+
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
     pub url_preview: ConfigUrlPreview,
     pub http: ConfigHttp,
@@ -64,6 +66,9 @@ pub struct Config {
     /// if None, use in memory channels for events
     pub nats: Option<ConfigNats>,
 
+    /// static admin token override
+    pub admin_token: Option<String>,
+
     /// experimental features to enable
     #[serde(default)]
     pub experiments: ConfigExperiments,
@@ -83,6 +88,18 @@ fn default_max_user_emails() -> usize {
 
 fn default_email_queue_workers() -> usize {
     5
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ConfigBlobs {
+    S3(ConfigS3),
+    Fs(ConfigFs),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigFs {
+    pub data_dir: PathBuf,
 }
 
 #[derive(Debug, Deserialize)]

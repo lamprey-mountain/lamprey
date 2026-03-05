@@ -18,7 +18,7 @@ use tracing::{error, info};
 use url::Url;
 
 use crate::{
-    config::Config,
+    config::{self, Config},
     data::{postgres::Postgres, Data},
     services::Services,
     sync::Connection,
@@ -236,7 +236,14 @@ impl ServerStateInner {
 
     pub fn get_s3_url(&self, path: &str) -> Result<Url> {
         let mut u = Url::parse("s3://")?;
-        u.set_host(Some(&self.config.s3.bucket))?;
+        match &self.config.blobs {
+            config::ConfigBlobs::S3(s3) => {
+                u.set_host(Some(&s3.bucket))?;
+            }
+            config::ConfigBlobs::Fs(_) => {
+                u.set_host(Some("localhost"))?;
+            }
+        }
         u.set_path(path);
         Ok(u)
     }
