@@ -44,7 +44,9 @@ impl ServiceAdmin {
         tracing::debug!("verifying admin token: {}", token);
         if let Some(admin_token) = &self.state.config.admin_token {
             tracing::debug!("checking against static override: {}", admin_token);
-            if admin_token.len() == token.len() && admin_token.as_bytes().ct_eq(token.as_bytes()).into() {
+            if admin_token.len() == token.len()
+                && admin_token.as_bytes().ct_eq(token.as_bytes()).into()
+            {
                 return true;
             }
         }

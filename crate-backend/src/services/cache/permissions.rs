@@ -6,7 +6,7 @@ use common::v1::types::util::Time;
 use common::v1::types::{
     Channel, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
 };
-use tracing::warn;
+use tracing::{trace, warn};
 
 use crate::{
     services::cache::{CachedChannel, CachedRoom},
@@ -103,13 +103,14 @@ impl PermissionsCalculator {
         let mut perms = Permissions::empty();
         perms.add_bits(allowed_bits);
 
-        tracing::debug!(?user_id, room_id = ?self.room_id, "calculated perms: {:?}", perms);
+        trace!(?user_id, room_id = ?self.room_id, bits = ?allowed_bits, "calculated base perms");
 
         if perms.has(Permission::Admin) {
             return perms;
         }
 
         perms.remove_bits(denied_bits);
+        trace!(?user_id, room_id = ?self.room_id, "perms after denied bits: {:?}", perms);
 
         // handle timeout
         if let Some(timeout_until) = member.timeout_until {

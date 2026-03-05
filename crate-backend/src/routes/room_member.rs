@@ -556,7 +556,11 @@ async fn room_member_update(
         .as_ref()
         .is_some_and(|m| m != &start.override_name)
     {
-        perms.ensure(Permission::MemberNicknameManage)?;
+        if target_user_id == auth.user.id {
+            perms.ensure(Permission::MemberNickname)?;
+        } else {
+            perms.ensure(Permission::MemberNicknameManage)?;
+        }
     }
 
     if json.timeout_until.changes(&start.timeout_until) {

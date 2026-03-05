@@ -103,13 +103,8 @@ async fn auth_oauth_redirect(
             {
                 Ok(user_id) => {
                     let user = srv.users.get(user_id, None).await?;
-                    data.room_member_put(
-                        SERVER_ROOM_ID,
-                        user.id,
-                        None,
-                        RoomMemberPut::default(),
-                    )
-                    .await?;
+                    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
+                        .await?;
                     srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
 
                     if provider_config.autoregister && user.registered_at.is_none() {
@@ -160,13 +155,8 @@ async fn auth_oauth_redirect(
                             system: false,
                         })
                         .await?;
-                    data.room_member_put(
-                        SERVER_ROOM_ID,
-                        user.id,
-                        None,
-                        RoomMemberPut::default(),
-                    )
-                    .await?;
+                    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
+                        .await?;
                     srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
 
                     if provider_config.autoregister {
@@ -243,13 +233,8 @@ async fn auth_oauth_redirect(
             {
                 Ok(user_id) => {
                     let user = srv.users.get(user_id, None).await?;
-                    data.room_member_put(
-                        SERVER_ROOM_ID,
-                        user.id,
-                        None,
-                        RoomMemberPut::default(),
-                    )
-                    .await?;
+                    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
+                        .await?;
                     srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
 
                     if provider_config.autoregister && user.registered_at.is_none() {
@@ -300,13 +285,8 @@ async fn auth_oauth_redirect(
                             system: false,
                         })
                         .await?;
-                    data.room_member_put(
-                        SERVER_ROOM_ID,
-                        user.id,
-                        None,
-                        RoomMemberPut::default(),
-                    )
-                    .await?;
+                    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
+                        .await?;
                     srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
 
                     if provider_config.autoregister {

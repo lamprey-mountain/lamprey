@@ -45,10 +45,8 @@ async fn room_create(
     json.validate()?;
 
     let srv = s.services();
-    let perms = srv.perms
-        .for_server(auth.user.id)
-        .await?;
-    
+    let perms = srv.perms.for_server(auth.user.id).await?;
+
     tracing::debug!("server perms for {}: {:?}", auth.user.id, perms);
     perms.ensure(Permission::RoomCreate)?;
 

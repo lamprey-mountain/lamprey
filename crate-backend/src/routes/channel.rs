@@ -474,11 +474,17 @@ async fn channel_update(
     if json.owner_id.is_some() {
         return Err(ApiError::from_code(ErrorCode::OwnerIdCannotBeChanged).into());
     }
-    let chan = s
-        .services()
-        .channels
-        .update(&auth, channel_id, json.clone())
-        .await?;
+
+    let srv = s.services();
+    let chan_pre = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    if let Some(room_id) = chan_pre.room_id {
+        let room_perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        if !room_perms.is_member() {
+            return Err(Error::NotFound);
+        }
+    }
+
+    let chan = srv.channels.update(&auth, channel_id, json.clone()).await?;
 
     if let Some(icon) = json.icon {
         s.data()
