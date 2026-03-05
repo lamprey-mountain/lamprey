@@ -147,6 +147,16 @@ function CodeBlock(props: { text: string; lang?: string }) {
 		props.lang === "html" || props.lang === "htm" || props.lang === "xml" ||
 		props.lang === "svg";
 
+	const isRust = () => props.lang === "rust" || props.lang === "rs";
+
+	const openPlayground = () => {
+		const url =
+			`https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&code=${
+				encodeURIComponent(props.text)
+			}`;
+		window.open(url, "_blank");
+	};
+
 	return (
 		<Show
 			when={flags.has("markdown_code_components")}
@@ -166,6 +176,9 @@ function CodeBlock(props: { text: string; lang?: string }) {
 							<button onClick={() => setPreview(!preview())}>
 								{preview() ? "code" : "preview"}
 							</button>
+						</Show>
+						<Show when={isRust() && flags.has("markdown_rust_playground")}>
+							<button onClick={openPlayground}>play</button>
 						</Show>
 						<button onClick={copy}>{copied() ? "copied" : "copy"}</button>
 					</div>

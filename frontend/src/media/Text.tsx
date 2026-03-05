@@ -26,6 +26,10 @@ export const TextView = (props: MediaProps) => {
 		props.media.content_type.includes("text/html") ||
 		props.media.content_type.includes("image/svg+xml");
 
+	const isRust = () =>
+		props.media.filename.endsWith(".rs") ||
+		props.media.content_type.includes("rust");
+
 	const [collapsed, setCollapsed] = createSignal(true);
 	const [copied, setCopied] = createSignal(false);
 	const [preview, setPreview] = createSignal(false);
@@ -45,23 +49,41 @@ export const TextView = (props: MediaProps) => {
 	);
 
 	const unsetCopied = debounce(() => setCopied(false), 1000);
-	const copy = async () => {
+
+	const getFullText = async () => {
 		let t = text();
 		if (props.media.size > MAX_PREVIEW_SIZE && (!fetchFull() || text.loading)) {
 			setFetchFull(true);
 			const req = await fetch(getUrl(props.media));
 			if (!req.ok) {
-				const [, modalCtl] = useModals();
-				modalCtl.alert("file not loaded yet");
-				return;
+				return null;
 			}
 			t = await req.text();
 		}
+		return t;
+	};
+
+	const copy = async () => {
+		const t = await getFullText();
 
 		if (t) {
 			setCopied(true);
 			navigator.clipboard.writeText(t);
 			unsetCopied();
+		} else {
+			const [, modalCtl] = useModals();
+			modalCtl.alert("file not loaded yet");
+		}
+	};
+
+	const openPlayground = async () => {
+		const t = await getFullText();
+		if (t) {
+			const url =
+				`https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&code=${
+					encodeURIComponent(t)
+				}`;
+			window.open(url, "_blank");
 		} else {
 			const [, modalCtl] = useModals();
 			modalCtl.alert("file not loaded yet");
@@ -115,6 +137,9 @@ export const TextView = (props: MediaProps) => {
 						<button onClick={() => setPreview(!preview())}>
 							{preview() ? "code" : "preview"}
 						</button>
+					</Show>
+					<Show when={isRust() && flags.has("markdown_rust_playground")}>
+						<button onClick={openPlayground}>play</button>
 					</Show>
 					<button class="copy" onClick={copy}>
 						{copied() ? "copied!" : "copy"}

@@ -47,6 +47,7 @@ export const allFlags = [
 	{ id: "auto_redirect_last_channel" },
 	{ id: "markdown_code_components" },
 	{ id: "markdown_html_preview" },
+	{ id: "markdown_rust_playground" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -69,6 +70,7 @@ const flagsDev: Flag[] = [
 	"automod",
 	"markdown_code_components",
 	"markdown_html_preview",
+	"markdown_rust_playground",
 ];
 
 const flagsProd: Flag[] = [
