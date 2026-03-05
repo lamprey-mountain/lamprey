@@ -55,6 +55,7 @@ impl PermissionsCalculator {
         // owners have full permissions
         if self.owner_id == Some(user_id) {
             let mut p = Permissions::empty();
+            p.set_is_room_member(true);
             p.add(Permission::ViewChannel);
             p.add(Permission::Admin);
             return p;
@@ -65,6 +66,7 @@ impl PermissionsCalculator {
                 // use public/default perms
                 let everyone_role_id: RoleId = self.room_id.into_inner().into();
                 let mut perms = Permissions::empty();
+                perms.set_is_room_member(false);
 
                 if let Some(role) = self
                     .room
@@ -79,11 +81,9 @@ impl PermissionsCalculator {
                 perms.set_lurker(true);
                 return perms;
             } else {
-                // the member doesnt exist here; no perms
+                // the member doesnt exist here and room not public; no perms
                 tracing::debug!(?user_id, room_id = ?self.room_id, "user not a member and room not public");
-                let mut perms = Permissions::empty();
-                perms.set_lurker(true);
-                return perms;
+                return Permissions::empty();
             }
         };
 
@@ -101,6 +101,7 @@ impl PermissionsCalculator {
         }
 
         let mut perms = Permissions::empty();
+        perms.set_is_room_member(true);
         perms.add_bits(allowed_bits);
 
         trace!(?user_id, room_id = ?self.room_id, bits = ?allowed_bits, "calculated base perms");

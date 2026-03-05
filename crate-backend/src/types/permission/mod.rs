@@ -35,6 +35,9 @@ pub struct Permissions {
     ///
     /// used to determine if they can join voice channels
     lurker: bool,
+
+    /// whether the user is a member of the room
+    is_room_member: bool,
 }
 
 impl Permissions {
@@ -47,6 +50,7 @@ impl Permissions {
             locked_bypass: false,
             channel_locked: false,
             lurker: false,
+            is_room_member: false,
         }
     }
 
@@ -66,6 +70,11 @@ impl Permissions {
     }
 
     #[inline]
+    pub fn set_is_room_member(&mut self, is_room_member: bool) {
+        self.is_room_member = is_room_member;
+    }
+
+    #[inline]
     pub fn set_locked_bypass(&mut self, locked_bypass: bool) {
         self.locked_bypass = locked_bypass;
     }
@@ -82,7 +91,15 @@ impl Permissions {
 
     #[inline]
     pub fn is_member(&self) -> bool {
-        !self.lurker
+        self.is_room_member
+    }
+
+    pub fn ensure_member(&self) -> Result<()> {
+        if self.is_member() {
+            Ok(())
+        } else {
+            Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))
+        }
     }
 
     #[inline]
@@ -134,21 +151,28 @@ impl Permissions {
     #[inline]
     pub fn has(&self, perm: Permission) -> bool {
         if self.timed_out {
-            return perm == Permission::ViewChannel || perm == Permission::ViewAuditLog;
+            let is_allowed = perm == Permission::ViewChannel || perm == Permission::ViewAuditLog;
+            return is_allowed && self.p.has(perm);
         }
 
         if self.quarantined {
-            return perm == Permission::ViewChannel
+            let is_allowed = perm == Permission::ViewChannel
                 || perm == Permission::ViewAuditLog
                 || perm == Permission::MemberNickname;
+            return is_allowed && self.p.has(perm);
         }
 
         if self.lurker {
-            return perm == Permission::ViewChannel || perm == Permission::ViewAuditLog;
-            // FIXME: these three should be enabled in Broadcast channels
-            // || perm == Permission::VoiceConnect
-            // || perm == Permission::VoiceVad
-            // || perm == Permission::VoiceSpeak
+            if !matches!(
+                perm,
+                Permission::ViewChannel
+                    | Permission::ViewAuditLog
+                    | Permission::VoiceConnect
+                    | Permission::VoiceVad
+                    | Permission::VoiceSpeak
+            ) {
+                return false;
+            }
         }
 
         self.p.has(perm)

@@ -691,6 +691,12 @@ impl ServiceCache {
             }
             MessageSync::RoleDelete { room_id, role_id } => {
                 self.remove_role(*room_id, *role_id).await;
+                if let Some(room) = self.rooms.get(room_id).await {
+                    for mut member in room.members.iter_mut() {
+                        member.member.roles.retain(|r| r != role_id);
+                    }
+                }
+                self.state.services().perms.invalidate_user_ranks(*room_id);
             }
             MessageSync::RoleReorder { room_id, roles } => {
                 if let Some(room) = self.rooms.get(room_id).await {

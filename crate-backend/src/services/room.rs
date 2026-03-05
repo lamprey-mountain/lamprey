@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
+use common::v1::types::defaults::{EVERYONE_TRUSTED, EVERYONE_UNTRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Permission,
@@ -186,7 +186,7 @@ impl ServiceRooms {
         create.validate()?;
         let data = self.state.data();
         let welcome_channel_id = extra.welcome_channel_id;
-        let mut room = data.room_create(create, extra).await?;
+        let mut room = data.room_create(create.clone(), extra).await?;
         let room_id = room.id;
 
         let role_admin = DbRoleCreate {
@@ -218,7 +218,11 @@ impl ServiceRooms {
             room_id,
             name: "everyone".to_owned(),
             description: Some("Default role".to_string()),
-            allow: EVERYONE_TRUSTED.to_vec(),
+            allow: if create.public.unwrap_or_default() {
+                EVERYONE_UNTRUSTED.to_vec()
+            } else {
+                EVERYONE_TRUSTED.to_vec()
+            },
             deny: vec![],
             is_self_applicable: false,
             is_mentionable: false,

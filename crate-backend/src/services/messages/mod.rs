@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::error;
 
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::Color;
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::{Diff, Time};
@@ -769,7 +770,7 @@ impl ServiceMessages {
             if is_webhook {
                 return Err(Error::NotFound);
             }
-            return Err(Error::BadStatic("cant edit other user's message"));
+            return Err(ApiError::from_code(ErrorCode::MissingPermissions).into());
         }
         if json.content.is_none()
             && json.attachments.as_ref().is_some_and(|a| a.is_empty())
