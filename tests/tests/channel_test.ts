@@ -49,6 +49,17 @@ Deno.test("Channel Routes and Permissions", async (t) => {
 		assertEquals(channel.id, channelId);
 	});
 
+	await t.step("Alice removes edit permissions from @everyone", async () => {
+		await alice({
+			url: `/room/${roomId}/role/${roomId}`,
+			method: "PATCH",
+			body: {
+				deny: ["ChannelEdit", "ThreadEdit"],
+			},
+			status: 200,
+		});
+	});
+
 	await t.step("Bob cannot edit the channel", async () => {
 		await bob({
 			url: `/channel/${channelId}`,

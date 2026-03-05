@@ -93,6 +93,21 @@ async fn role_update(
     perms.ensure(Permission::RoleManage)?;
     let start_role = d.role_select(room_id, role_id).await?;
 
+    let mut json = json;
+    if json.allow.is_some() && json.deny.is_none() {
+        let mut new_deny = start_role.deny.clone();
+        new_deny.retain(|p| !json.allow.as_ref().unwrap().contains(p));
+        if new_deny.len() != start_role.deny.len() {
+            json.deny = Some(new_deny);
+        }
+    } else if json.deny.is_some() && json.allow.is_none() {
+        let mut new_allow = start_role.allow.clone();
+        new_allow.retain(|p| !json.deny.as_ref().unwrap().contains(p));
+        if new_allow.len() != start_role.allow.len() {
+            json.allow = Some(new_allow);
+        }
+    }
+
     let new_allow = json.allow.as_ref().unwrap_or(&start_role.allow);
     let new_deny = json.deny.as_ref().unwrap_or(&start_role.deny);
 
