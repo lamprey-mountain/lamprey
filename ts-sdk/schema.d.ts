@@ -1973,118 +1973,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/config": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * User config global get
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		get: operations["user_config_global_get"];
-		/**
-		 * User config global put
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		put: operations["user_config_global_put"];
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/config/channel/{channel_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * User config channel get
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		get: operations["user_config_channel_get"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/config/room/{room_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * User config room get
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		get: operations["user_config_room_get"];
-		/**
-		 * User config room put
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		put: operations["user_config_room_put"];
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/config/thread/{thread_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * User config channel put
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		put: operations["user_config_channel_put"];
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/config/user/{user_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * User config user get
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		get: operations["user_config_user_get"];
-		/**
-		 * User config user put
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
-		put: operations["user_config_user_put"];
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/debug/embed-url": {
 		parameters: {
 			query?: never;
@@ -3000,6 +2888,102 @@ export interface paths {
 		 */
 		get: operations["oauth_userinfo"];
 		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/preferences": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Preferences global get
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		get: operations["preferences_global_get"];
+		/**
+		 * Preferences global put
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		put: operations["preferences_global_put"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/preferences/channel/{channel_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Preferences channel get
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		get: operations["preferences_channel_get"];
+		/**
+		 * Preferences channel put
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		put: operations["preferences_channel_put"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/preferences/room/{room_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Preferences room get
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		get: operations["preferences_room_get"];
+		/**
+		 * Preferences room put
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		put: operations["preferences_room_put"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/preferences/user/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Preferences user get
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		get: operations["preferences_user_get"];
+		/**
+		 * Preferences user put
+		 * @description <div class="markdown-alert-scope-required">full</div>
+		 */
+		put: operations["preferences_user_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -6807,6 +6791,7 @@ export interface components {
 			/** @description whether users without ThreadManage can add other members to this thread */
 			invitable?: boolean;
 			is_unread?: boolean | null;
+			last_message_id?: null | components["schemas"]["Id"];
 			last_read_id?: null | components["schemas"]["Id"];
 			last_version_id?: null | components["schemas"]["Id"];
 			locked?: null | components["schemas"]["Locked"];
@@ -6840,6 +6825,7 @@ export interface components {
 			 *     - channels without a position come last, ordered by newest first
 			 */
 			position?: number | null;
+			preferences?: null | components["schemas"]["PreferencesChannel"];
 			/** @description for dm and gdm channels, this is who the dm is with */
 			recipients: components["schemas"]["User"][];
 			room_id?: null | components["schemas"]["Id"];
@@ -6871,7 +6857,6 @@ export interface components {
 			type: components["schemas"]["ChannelType"];
 			/** @description url that this info channel should link to */
 			url?: string | null;
-			user_config?: null | components["schemas"]["PreferencesChannel"];
 			/**
 			 * Format: int64
 			 * @description maximum number of users who can be in this voice channel
@@ -8109,7 +8094,7 @@ export interface components {
 		};
 		MessageSync:
 			| {
-				/** @description all channels the user can see */
+				/** @description all non-thread channels the user can see */
 				channels: components["schemas"]["Channel"][];
 				/** @description user's global preferences */
 				config: components["schemas"]["PreferencesGlobal"];
@@ -8274,6 +8259,7 @@ export interface components {
 			}
 			| {
 				code: components["schemas"]["InviteCode"];
+				creator_id: components["schemas"]["Id"];
 				target: components["schemas"]["InviteTargetId"];
 				/** @enum {string} */
 				type: "InviteDelete";
@@ -8386,28 +8372,28 @@ export interface components {
 			| {
 				config: components["schemas"]["PreferencesGlobal"];
 				/** @enum {string} */
-				type: "UserConfigGlobal";
+				type: "PreferencesGlobal";
 				user_id: components["schemas"]["Id"];
 			}
 			| {
 				config: components["schemas"]["PreferencesRoom"];
 				room_id: components["schemas"]["Id"];
 				/** @enum {string} */
-				type: "UserConfigRoom";
+				type: "PreferencesRoom";
 				user_id: components["schemas"]["Id"];
 			}
 			| {
 				channel_id: components["schemas"]["Id"];
 				config: components["schemas"]["PreferencesChannel"];
 				/** @enum {string} */
-				type: "UserConfigChannel";
+				type: "PreferencesChannel";
 				user_id: components["schemas"]["Id"];
 			}
 			| {
 				config: components["schemas"]["PreferencesUser"];
 				target_user_id: components["schemas"]["Id"];
 				/** @enum {string} */
-				type: "UserConfigUser";
+				type: "PreferencesUser";
 				user_id: components["schemas"]["Id"];
 			}
 			| {
@@ -9026,6 +9012,7 @@ export interface components {
 				/** @description whether users without ThreadManage can add other members to this thread */
 				invitable?: boolean;
 				is_unread?: boolean | null;
+				last_message_id?: null | components["schemas"]["Id"];
 				last_read_id?: null | components["schemas"]["Id"];
 				last_version_id?: null | components["schemas"]["Id"];
 				locked?: null | components["schemas"]["Locked"];
@@ -9059,6 +9046,7 @@ export interface components {
 				 *     - channels without a position come last, ordered by newest first
 				 */
 				position?: number | null;
+				preferences?: null | components["schemas"]["PreferencesChannel"];
 				/** @description for dm and gdm channels, this is who the dm is with */
 				recipients: components["schemas"]["User"][];
 				room_id?: null | components["schemas"]["Id"];
@@ -9090,7 +9078,6 @@ export interface components {
 				type: components["schemas"]["ChannelType"];
 				/** @description url that this info channel should link to */
 				url?: string | null;
-				user_config?: null | components["schemas"]["PreferencesChannel"];
 				/**
 				 * Format: int64
 				 * @description maximum number of users who can be in this voice channel
@@ -9276,6 +9263,7 @@ export interface components {
 				 * @description number of active channels
 				 */
 				channel_count: number;
+				deleted_at?: null | components["schemas"]["Time"];
 				description?: string | null;
 				/**
 				 * Format: int64
@@ -9297,6 +9285,7 @@ export interface components {
 				 */
 				online_count: number;
 				owner_id?: null | components["schemas"]["Id"];
+				preferences?: null | components["schemas"]["PreferencesRoom"];
 				/** @description anyone can view and join */
 				public: boolean;
 				/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
@@ -9304,7 +9293,6 @@ export interface components {
 				/** @description security configuration for this room */
 				security: components["schemas"]["RoomSecurity"];
 				type: components["schemas"]["RoomType"];
-				user_config?: null | components["schemas"]["PreferencesRoom"];
 				/**
 				 * Format: uuid
 				 * @description A monotonically increasing id that is updated every time this room is modified.
@@ -9454,13 +9442,13 @@ export interface components {
 				has_mfa?: boolean | null;
 				id: components["schemas"]["Id"];
 				name: string;
+				preferences?: null | components["schemas"]["PreferencesUser"];
 				presence: components["schemas"]["Presence"];
 				puppet?: null | components["schemas"]["Puppet"];
 				registered_at?: null | components["schemas"]["Time"];
 				suspended?: null | components["schemas"]["Suspended"];
 				/** @description whether this user is an official system user */
 				system: boolean;
-				user_config?: null | components["schemas"]["PreferencesUser"];
 				version_id: components["schemas"]["Id"];
 				webhook?: null | components["schemas"]["UserWebhook"];
 			}[];
@@ -9990,6 +9978,7 @@ export interface components {
 			 * @description number of active channels
 			 */
 			channel_count: number;
+			deleted_at?: null | components["schemas"]["Time"];
 			description?: string | null;
 			/**
 			 * Format: int64
@@ -10011,6 +10000,7 @@ export interface components {
 			 */
 			online_count: number;
 			owner_id?: null | components["schemas"]["Id"];
+			preferences?: null | components["schemas"]["PreferencesRoom"];
 			/** @description anyone can view and join */
 			public: boolean;
 			/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
@@ -10018,7 +10008,6 @@ export interface components {
 			/** @description security configuration for this room */
 			security: components["schemas"]["RoomSecurity"];
 			type: components["schemas"]["RoomType"];
-			user_config?: null | components["schemas"]["PreferencesRoom"];
 			/**
 			 * Format: uuid
 			 * @description A monotonically increasing id that is updated every time this room is modified.
@@ -10779,13 +10768,13 @@ export interface components {
 			has_mfa?: boolean | null;
 			id: components["schemas"]["Id"];
 			name: string;
+			preferences?: null | components["schemas"]["PreferencesUser"];
 			presence: components["schemas"]["Presence"];
 			puppet?: null | components["schemas"]["Puppet"];
 			registered_at?: null | components["schemas"]["Time"];
 			suspended?: null | components["schemas"]["Suspended"];
 			/** @description whether this user is an official system user */
 			system: boolean;
-			user_config?: null | components["schemas"]["PreferencesUser"];
 			version_id: components["schemas"]["Id"];
 			webhook?: null | components["schemas"]["UserWebhook"];
 		};
@@ -13939,200 +13928,6 @@ export interface operations {
 			};
 		};
 	};
-	user_config_global_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesGlobal"];
-				};
-			};
-		};
-	};
-	user_config_global_put: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["PreferencesGlobal"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesGlobal"];
-				};
-			};
-		};
-	};
-	user_config_channel_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id */
-				channel_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesChannel"];
-				};
-			};
-		};
-	};
-	user_config_room_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesRoom"];
-				};
-			};
-		};
-	};
-	user_config_room_put: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["PreferencesRoom"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesRoom"];
-				};
-			};
-		};
-	};
-	user_config_channel_put: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["PreferencesChannel"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesChannel"];
-				};
-			};
-		};
-	};
-	user_config_user_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesUser"];
-				};
-			};
-		};
-	};
-	user_config_user_put: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["PreferencesUser"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PreferencesUser"];
-				};
-			};
-		};
-	};
 	debug_embed_url: {
 		parameters: {
 			query?: never;
@@ -15400,6 +15195,200 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Userinfo"];
+				};
+			};
+		};
+	};
+	preferences_global_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesGlobal"];
+				};
+			};
+		};
+	};
+	preferences_global_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PreferencesGlobal"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesGlobal"];
+				};
+			};
+		};
+	};
+	preferences_channel_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesChannel"];
+				};
+			};
+		};
+	};
+	preferences_channel_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PreferencesChannel"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesChannel"];
+				};
+			};
+		};
+	};
+	preferences_room_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesRoom"];
+				};
+			};
+		};
+	};
+	preferences_room_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PreferencesRoom"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesRoom"];
+				};
+			};
+		};
+	};
+	preferences_user_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesUser"];
+				};
+			};
+		};
+	};
+	preferences_user_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PreferencesUser"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PreferencesUser"];
 				};
 			};
 		};
