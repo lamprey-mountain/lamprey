@@ -1,4 +1,10 @@
-import { createEffect, createSignal, Show, type VoidProps } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	onMount,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
 import { getThumbFromId, getUrl } from "../media/util.tsx";
@@ -9,6 +15,8 @@ import { useModals } from "../contexts/modal";
 import { RoomIcon } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
 import { CheckboxOption } from "../atoms/CheckboxOption";
+import { createEditor } from "../editor/Editor.tsx";
+import { EditorState } from "prosemirror-state";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -54,18 +62,36 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		props.room.description,
 	);
 	const [editingPublic, setEditingPublic] = createSignal(props.room.public);
+	const [editorState, setEditorState] = createSignal<EditorState | null>(null);
+
+	const editor = createEditor({
+		initialContent: props.room.description,
+	});
+
+	onMount(() => {
+		if (editorState()) {
+			editor.setState(editorState());
+		}
+	});
 
 	const isDirty = () =>
 		editingName() !== props.room.name ||
-		editingDescription() !== props.room.description ||
+		getDescriptionFromState() !== props.room.description ||
 		editingPublic() !== props.room.public;
 
+	const getDescriptionFromState = () => {
+		if (!editorState()) return "";
+		const text = editorState()!.doc.textContent;
+		return text;
+	};
+
 	const save = () => {
+		const description = getDescriptionFromState();
 		ctx.client.http.PATCH("/api/v1/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
 			body: {
 				name: editingName(),
-				description: editingDescription(),
+				description,
 				public: editingPublic(),
 			},
 		});
@@ -100,9 +126,10 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<br />
 			<br />
 			<div class="dim">description</div>
-			<textarea
-				value={editingDescription()}
-				onInput={(e) => setEditingDescription(e.target.value)}
+			<editor.View
+				onChange={(state) => setEditorState(state)}
+				submitOnEnter={false}
+				autofocus={false}
 			/>
 			<br />
 			<br />

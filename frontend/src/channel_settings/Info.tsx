@@ -1,5 +1,5 @@
 import type { Channel } from "sdk";
-import { createSignal, For, Show, type VoidProps } from "solid-js";
+import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 import { useModals } from "../contexts/modal";
@@ -9,6 +9,8 @@ import { createUpload } from "sdk";
 import { ChannelIconGdm } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
 import { CheckboxOption } from "../atoms/CheckboxOption";
+import { createEditor } from "../editor/Editor.tsx";
+import { EditorState } from "prosemirror-state";
 
 const slowmodePresets: DurationPreset[] = [
 	{ label: "disabled", seconds: null as any },
@@ -56,8 +58,19 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		props.channel.bitrate ?? 65535,
 	);
 	const [editingIcon, setEditingIcon] = createSignal(props.channel.icon);
+	const [editorState, setEditorState] = createSignal<EditorState | null>(null);
 
 	let iconInputEl!: HTMLInputElement;
+
+	const editor = createEditor({
+		initialContent: props.channel.description,
+	});
+
+	onMount(() => {
+		if (editorState()) {
+			editor.setState(editorState());
+		}
+	});
 
 	const isGdm = () => props.channel.type === "Gdm";
 
@@ -98,7 +111,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const isDirty = () =>
 		editingName() !== props.channel.name ||
-		editingDescription() !== props.channel.description ||
+		getDescriptionFromState() !== props.channel.description ||
 		editingNsfw() !== props.channel.nsfw ||
 		editingSlowmodeMessage() !== props.channel.slowmode_message ||
 		editingSlowmodeThread() !== props.channel.slowmode_thread ||
@@ -109,12 +122,19 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				editingBitrate() !== (props.channel.bitrate ?? 65535))) ||
 		(isGdm() && editingIcon() !== props.channel.icon);
 
+	const getDescriptionFromState = () => {
+		if (!editorState()) return "";
+		const text = editorState()!.doc.textContent;
+		return text;
+	};
+
 	const save = () => {
+		const description = getDescriptionFromState();
 		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
 			params: { path: { channel_id: props.channel.id } },
 			body: {
 				name: editingName(),
-				description: editingDescription(),
+				description,
 				nsfw: editingNsfw(),
 				slowmode_message: editingSlowmodeMessage(),
 				slowmode_thread: editingSlowmodeThread(),
@@ -146,7 +166,6 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const reset = () => {
 		setEditingName(props.channel.name);
-		setEditingDescription(props.channel.description);
 		setEditingNsfw(props.channel.nsfw);
 		setEditingSlowmodeMessage(props.channel.slowmode_message);
 		setEditingSlowmodeThread(props.channel.slowmode_thread);
@@ -154,6 +173,14 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		setEditingUserLimit(props.channel.user_limit ?? 0);
 		setEditingBitrate(props.channel.bitrate ?? 65535);
 		setEditingIcon(props.channel.icon);
+		setEditorState(
+			editor.createEditorState({
+				doc: editor.schema.nodes.doc.create(
+					null,
+					editor.schema.text(props.channel.description),
+				),
+			}),
+		);
 	};
 
 	return (
@@ -168,9 +195,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			<br />
 			<br />
 			<div class="dim">description</div>
-			<textarea
-				value={editingDescription()}
-				onInput={(e) => setEditingDescription(e.target.value)}
+			<editor.View
+				onChange={(state) => setEditorState(state)}
+				channelId={props.channel.id}
+				submitOnEnter={false}
+				autofocus={false}
 			/>
 			<br />
 			<br />

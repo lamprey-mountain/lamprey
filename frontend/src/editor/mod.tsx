@@ -31,6 +31,7 @@ export type EditorViewProps = {
 	onChange?: (state: EditorState) => void;
 	channelId?: string; // Needed for autocomplete
 	submitOnEnter?: boolean;
+	autofocus?: boolean;
 };
 
 function isInsideCodeBlock(state: EditorState): boolean {
@@ -199,7 +200,7 @@ export const createEditor = (opts: EditorOptions) => {
 					},
 				});
 
-				if (opts.autofocus ?? true) {
+				if (props.autofocus ?? opts.autofocus ?? true) {
 					view.focus();
 				}
 			});
