@@ -11,6 +11,7 @@ import { createStore } from "solid-js/store";
 import { useApi } from "../api";
 import { createVoiceClient } from "../rtc";
 import { ReactiveMap } from "@solid-primitives/map";
+import vadProcessorUrl from "../vad-processor?url";
 
 type VoiceClient = ReturnType<typeof createVoiceClient>;
 
@@ -381,55 +382,34 @@ function createVoiceActivityDetection() {
 	console.log("[vad] init");
 
 	const [hasVoiceActivity, setHasVoiceActivity] = createSignal(false);
-	const threshold = 0.02;
-	const minFramesEnable = 3;
-	const minFramesDisable = 5;
-
 	const ctx = new AudioContext();
-	let source: MediaStreamAudioSourceNode;
-	const analyzer = ctx.createAnalyser();
-	analyzer.fftSize = 2048;
+	let source: MediaStreamAudioSourceNode | undefined;
+	let node: AudioWorkletNode | undefined;
 
-	const array = new Uint8Array(analyzer.fftSize);
-
-	let running = false;
-	let consecutiveOn = 0;
-	let consecutiveOff = 0;
-
-	// calculates rms of the waveform: https://en.wikipedia.org/wiki/Root_mean_square#Audio_Engineering
-	const detect = () => {
-		analyzer.getByteTimeDomainData(array);
-		let sumSquares = 0;
-		for (let i = 0; i < array.length; i++) {
-			const normalized = (array[i] - 128) / 128;
-			sumSquares += normalized * normalized;
-		}
-
-		const rms = Math.sqrt(sumSquares / array.length);
-		const currentActivity = rms > threshold;
-
-		if (currentActivity) {
-			consecutiveOn++;
-			consecutiveOff = 0;
-			if (!hasVoiceActivity() && consecutiveOn >= minFramesEnable) {
-				setHasVoiceActivity(true);
+	const initWorklet = async () => {
+		try {
+			await ctx.audioWorklet.addModule(vadProcessorUrl);
+			node = new AudioWorkletNode(ctx, "vad-processor");
+			node.port.onmessage = (event) => {
+				if (event.data && typeof event.data.hasVoiceActivity === "boolean") {
+					setHasVoiceActivity(event.data.hasVoiceActivity);
+				}
+			};
+			if (source) {
+				source.connect(node);
 			}
-		} else {
-			consecutiveOff++;
-			consecutiveOn = 0;
-			if (hasVoiceActivity() && consecutiveOff >= minFramesDisable) {
-				setHasVoiceActivity(false);
-			}
-		}
-
-		if (running) {
-			requestAnimationFrame(detect);
+		} catch (e) {
+			console.error("[vad] failed to initialize audio worklet", e);
 		}
 	};
 
+	initWorklet();
+
 	onCleanup(() => {
 		console.log("[vad] cleanup");
-		running = false;
+		node?.disconnect();
+		source?.disconnect();
+		ctx.close();
 	});
 
 	return {
@@ -437,9 +417,12 @@ function createVoiceActivityDetection() {
 		connect(stream: MediaStream) {
 			source?.disconnect();
 			source = ctx.createMediaStreamSource(stream);
-			source.connect(analyzer);
-			running = true;
-			detect();
+			if (node) {
+				source.connect(node);
+			}
+			if (ctx.state === "suspended") {
+				ctx.resume();
+			}
 			console.log("[vad] new stream connected");
 		},
 	};
