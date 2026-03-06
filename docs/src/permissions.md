@@ -1,42 +1,62 @@
 # permissions
 
-how permissions work in lamprey
+how permissions are calculated and applied in lamprey.
 
 ## calculating
 
-resolving overwrites for a room
+### room permissions
 
-1. if the user is the owner, they have all permissions
-2. add all allow permissions for roles
-3. if the user has Admin, return all permissions
-4. remove all deny permissions for roles
+1. if the user is the **owner**, they have all permissions (and maximum rank).
+2. start with an empty permission set.
+3. add all **allow** permissions from the roles the user has.
+4. if the user has the **Admin** permission, return all permissions.
+5. remove all **deny** permissions from the roles the user has.
 
-resolving overwrites for a channel
+### channel permissions
 
-1. start with parent_id channel (or room) permissions
-2. if the user has Admin, return all permissions
-3. add all allow permissions for everyone
-4. remove all deny permissions for everyone
-5. add all allow permissions for roles
-6. remove all deny permissions for roles
-7. add all allow permissions for users
-8. remove all deny permissions for users
+1. start with the user's **room permissions**.
+2. if the user has **Admin**, return all permissions.
+3. apply **overwrites** for the parent channel (if any), then for the current
+   channel.
+   - overwrites are applied in this order:
+     - `@everyone` role **allow**.
+     - `@everyone` role **deny**.
+     - Role **allows**.
+     - Role **denies**.
+     - User **allows**.
+     - User **denies**.
 
-timed out
+## restrictions
 
-1. remove all permissions except ViewChannel and ViewAuditLog
+Specific states can override the final permissions.
 
-<!--
-guest/lurker
+- **Timed Out**: remove all permissions except `ViewChannel` and `ViewAuditLog`.
+- **Quarantined**: remove all permissions except `ViewChannel`, `ViewAuditLog`,
+  and `MemberNickname`.
+- **Lurker** (non-members in a public room): remove all permissions except
+  `ViewChannel` and `ViewAuditLog`.
+  - In broadcast channels, members will retain `VoiceConnect`, `VoiceRequest`,
+    and `VoiceVad`
 
-1. remove all permissions except ViewChannel, ViewAuditLog, and VoiceConnect
-2. if a channel isnt Broadast, remove VoiceConnect
--->
+## hierarchy (rank)
 
-## hierarchy
+- a member's **rank** is the highest `position` of all roles they possess.
+- room owners have a special "infinite"/maximum rank.
+- rank restricts administrative actions:
+  - you can only manage members with a lower rank than yours (kick, ban,
+    timeout).
+  - you can only apply or reorder roles with a lower position than your rank.
 
-- a member's rank is the position of their highest role.
-- you can only reorder and edit roles with a lower position than your rank
-- you can only apply roles to members with a lower position than your rank (but
-  you can apply those roles to anyone, regardless of rank)
-- you can only kick, ban, and timeout members with a lower rank than you
+## channel locks
+
+Channels and threads can be **locked**.
+
+- when a channel is locked, normal message creation is restricted.
+- users with `ThreadManage`, `ChannelManage`, or `ThreadLock` can also bypass
+  the lock.
+- specific roles can be configured to bypass the lock; this is api only
+
+## notes
+
+The `Admin` permission overrides all denies and cannot be revoked. This means
+all private channels are visible to admins. Use with caution!

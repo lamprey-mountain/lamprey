@@ -1,7 +1,9 @@
 # Summary
 
 - [intro](./intro.md)
-- [media](./media.md)
-- [voice](./voice.md)
-- [sync](./sync.md)
 - [auth](./auth.md)
+- [bridge](./bridge.md)
+- [media](./media.md)
+- [permissions](./permissions.md)
+- [sync](./sync.md)
+- [voice](./voice.md)

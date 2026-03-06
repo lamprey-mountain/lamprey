@@ -22,6 +22,7 @@ pub struct Presence {
     pub activities: Vec<Activity>,
 }
 
+// NOTE: do i want to rename away/busy to idle/dnd? (or away -> afk?)
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
