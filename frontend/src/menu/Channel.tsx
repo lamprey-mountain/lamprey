@@ -26,9 +26,9 @@ export function ChannelMenu(props: { channel_id: string }) {
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 
-	const self_id = () => api.users.cache.get("@self")!.id;
+	const self_id = () => api.users.cache.get("@self")?.id ?? "";
 	const channel = api.channels.fetch(() => props.channel_id);
-	const parentChan = api.channels.fetch(() => channel()?.parent_id);
+	const parentChan = api.channels.fetch(() => channel()?.parent_id ?? undefined);
 
 	const { has: hasPermission } = usePermissions(
 		self_id,
@@ -47,12 +47,13 @@ export function ChannelMenu(props: { channel_id: string }) {
 	);
 	const copyId = () => navigator.clipboard.writeText(props.channel_id);
 	const markRead = async () => {
-		const channel = api.channels.cache.get(props.channel_id)!;
+		const c = api.channels.cache.get(props.channel_id);
+		if (!c) return;
 
-		if (channel.type === "Category") {
+		if (c.type === "Category") {
 			markCategoryRead(props.channel_id);
 		} else {
-			const version_id = channel.last_version_id;
+			const version_id = c.last_version_id;
 			if (!version_id) return;
 			markThreadRead(props.channel_id, version_id, true);
 		}
@@ -332,7 +333,7 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 	const isMuted = () => {
 		const c = channelConfig();
 		if (!c?.notifs.mute) return false;
-		if (c.notifs.mute.expires_at === null) return true;
+		if (!c.notifs.mute.expires_at) return true;
 		return Date.parse(c.notifs.mute.expires_at) > Date.now();
 	};
 

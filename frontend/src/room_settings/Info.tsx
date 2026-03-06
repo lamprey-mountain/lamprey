@@ -62,15 +62,16 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		props.room.description,
 	);
 	const [editingPublic, setEditingPublic] = createSignal(props.room.public);
-	const [editorState, setEditorState] = createSignal<EditorState | null>(null);
+	const [editorState, setEditorState] = createSignal<EditorState | undefined>(undefined);
 
 	const editor = createEditor({
 		initialContent: props.room.description,
 	});
 
 	onMount(() => {
-		if (editorState()) {
-			editor.setState(editorState());
+		const state = editorState();
+		if (state) {
+			editor.setState(state);
 		}
 	});
 
@@ -80,9 +81,9 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		editingPublic() !== props.room.public;
 
 	const getDescriptionFromState = () => {
-		if (!editorState()) return "";
-		const text = editorState()!.doc.textContent;
-		return text;
+		const state = editorState();
+		if (!state) return "";
+		return state.doc.textContent;
 	};
 
 	const save = () => {

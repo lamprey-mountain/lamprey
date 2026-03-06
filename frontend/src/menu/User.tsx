@@ -238,7 +238,7 @@ export function UserMenu(props: UserMenuProps) {
 		);
 	};
 
-	const roles = api.roles.list(() => props.room_id);
+	const roles = api.roles.list(() => props.room_id ?? undefined);
 
 	const RoleSubmenu = () => (
 		<Submenu content="roles">

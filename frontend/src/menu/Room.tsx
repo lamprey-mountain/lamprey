@@ -150,7 +150,7 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	const isMuted = () => {
 		const c = roomConfig();
 		if (!c?.notifs.mute) return false;
-		if (c.notifs.mute.expires_at === null) return true;
+		if (!c.notifs.mute.expires_at) return true;
 		return Date.parse(c.notifs.mute.expires_at) > Date.now();
 	};
 

@@ -27,35 +27,38 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [inviteCode, setInviteCode] = createSignal<string>("");
 	const [creating, setCreating] = createSignal(false);
 
-	const roles = api.roles.list(() => props.room_id!);
+	const roles = api.roles.list(() => props.room_id ?? undefined);
 
 	const currentUserId = () => api.users.cache.get("@self")?.id;
 
 	const canApplyRoles = createMemo(() => {
-		if (!props.room_id || !currentUserId()) return false;
+		const roomId = props.room_id;
+		const userId = currentUserId();
+		if (!roomId || !userId) return false;
 		const permissionContext: PermissionContext = {
 			api,
-			room_id: props.room_id,
+			room_id: roomId,
 			channel_id: props.channel_id,
 		};
 		const { permissions, rank } = calculatePermissions(
 			permissionContext,
-			currentUserId(),
+			userId,
 		);
 		const hasRoleApply = permissions.has("RoleApply") ||
 			permissions.has("Admin");
-		const room = api.rooms.fetch(() => props.room_id!)();
-		const isOwner = room?.owner_id === currentUserId();
+		const room = api.rooms.fetch(() => roomId)();
+		const isOwner = room?.owner_id === userId;
 		return { canApply: hasRoleApply, rank, isOwner };
 	});
 
 	const availableRoles = createMemo(() => {
 		const roleItems = roles()?.items;
-		if (!roleItems || !props.room_id) return [];
+		const roomId = props.room_id;
+		if (!roleItems || !roomId) return [];
 		const { canApply, rank, isOwner } = canApplyRoles();
 		if (!canApply) return [];
 		return roleItems
-			.filter((r) => r.id !== props.room_id)
+			.filter((r) => r.id !== roomId)
 			.filter((r) => isOwner || rank > r.position)
 			.map((r) => ({
 				item: r.id,
@@ -65,8 +68,9 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 
 	const handleCreate = async () => {
 		setCreating(true);
-		const expires_at = expiry()
-			? new Date(Date.now() + expiry()!).toISOString()
+		const exp = expiry();
+		const expires_at = exp
+			? new Date(Date.now() + exp).toISOString()
 			: undefined;
 
 		const body = {

@@ -108,9 +108,9 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 				<ul>
 					<For each={filteredWebhooks()}>
 						{(i) => {
-							const creator = api.users.fetch(() => i.creator_id);
-							const [name, setName] = createSignal(i.name);
-							const [avatar, setAvatar] = createSignal(i.avatar);
+							const creator = api.users.fetch(() => i.creator_id ?? undefined);
+							const [name, setName] = createSignal(i.name ?? "");
+							const [avatar, setAvatar] = createSignal(i.avatar ?? "");
 
 							const webhookUser = () => ({
 								id: i.id,
@@ -124,7 +124,7 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 								preferences: null,
 							});
 
-							const channels = api.channels.list(() => i.room_id);
+							const channels = api.channels.list(() => i.room_id ?? undefined);
 
 							createEffect(() => {
 								setName(i.name);
