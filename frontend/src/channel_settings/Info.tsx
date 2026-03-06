@@ -4,11 +4,31 @@ import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
-import { DurationInput } from "../DurationInput.tsx";
+import { DurationInput, type DurationPreset } from "../DurationInput.tsx";
 import { createUpload } from "sdk";
 import { ChannelIconGdm } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
 import { CheckboxOption } from "../atoms/CheckboxOption";
+
+const slowmodePresets: DurationPreset[] = [
+	{ label: "disabled", seconds: null as any },
+	{ label: "1 second", seconds: 1 },
+	{ label: "2 seconds", seconds: 2 },
+	{ label: "3 seconds", seconds: 3 },
+	{ label: "5 seconds", seconds: 5 },
+	{ label: "10 seconds", seconds: 10 },
+	{ label: "15 seconds", seconds: 15 },
+	{ label: "30 seconds", seconds: 30 },
+	{ label: "1 minute", seconds: 60 },
+	{ label: "2 minutes", seconds: 120 },
+	{ label: "5 minutes", seconds: 300 },
+	{ label: "10 minutes", seconds: 600 },
+	{ label: "15 minutes", seconds: 900 },
+	{ label: "1 hour", seconds: 3600 },
+	{ label: "2 hours", seconds: 7200 },
+	{ label: "6 hours", seconds: 21600 },
+	{ label: "24 hours", seconds: 86400 },
+];
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
@@ -194,14 +214,20 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				<div class="dim">slowmode (messages)</div>
 				<DurationInput
 					value={editingSlowmodeMessage()}
-					onInput={setEditingSlowmodeMessage}
+					onInput={(d) =>
+						setEditingSlowmodeMessage(typeof d === "number" ? d : null)}
+					presets={slowmodePresets}
+					placeholder="disabled"
 				/>
 			</div>
 			<div>
 				<div class="dim">slowmode (threads)</div>
 				<DurationInput
 					value={editingSlowmodeThread()}
-					onInput={setEditingSlowmodeThread}
+					onInput={(d) =>
+						setEditingSlowmodeThread(typeof d === "number" ? d : null)}
+					presets={slowmodePresets}
+					placeholder="disabled"
 				/>
 			</div>
 			<Show
@@ -212,7 +238,12 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					<div class="dim">slowmode (messages default for threads)</div>
 					<DurationInput
 						value={editingDefaultSlowmodeMessage()}
-						onInput={setEditingDefaultSlowmodeMessage}
+						onInput={(d) =>
+							setEditingDefaultSlowmodeMessage(
+								typeof d === "number" ? d : null,
+							)}
+						presets={slowmodePresets}
+						placeholder="disabled"
 					/>
 				</div>
 			</Show>

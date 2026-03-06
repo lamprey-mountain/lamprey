@@ -5,6 +5,7 @@ import {
 	For,
 	type JSX,
 	Show,
+	untrack,
 	type VoidProps,
 } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -19,6 +20,25 @@ export type DropdownItem<T> = {
 	label: string;
 	view?: JSX.Element;
 };
+
+const ChevronDown = () => (
+	<svg
+		width="16"
+		height="16"
+		viewBox="0 0 16 16"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+		class="dropdown-chevron"
+	>
+		<path
+			d="M4 6L8 10L12 6"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		/>
+	</svg>
+);
 
 function createSelect<T>() {
 	const [getItems, setItems] = createSignal<Array<DropdownItem<T>>>([]);
@@ -47,15 +67,16 @@ function createSelect<T>() {
 		setFilter,
 		setHovered,
 		next() {
-			const idx = getFiltered().findIndex((i) => i.obj === getHovered()!);
-			setHovered(getFiltered()[(idx + 1) % getFiltered().length].obj);
+			const filtered = getFiltered();
+			if (filtered.length === 0) return;
+			const idx = filtered.findIndex((i) => i.obj === getHovered()!);
+			setHovered(filtered[(idx + 1) % filtered.length].obj);
 		},
 		prev() {
-			const idx = getFiltered().findIndex((i) => i.obj === getHovered()!);
-			setHovered(
-				getFiltered()[(getFiltered().length + idx - 1) % getFiltered().length]
-					.obj,
-			);
+			const filtered = getFiltered();
+			if (filtered.length === 0) return;
+			const idx = filtered.findIndex((i) => i.obj === getHovered()!);
+			setHovered(filtered[(filtered.length + idx - 1) % filtered.length].obj);
 		},
 	};
 }
@@ -65,17 +86,23 @@ export function createDropdown<T>(
 		selected?: T;
 		required?: boolean;
 		onSelect?: (item: T | null) => void;
+		onInput?: (value: string) => void;
+		onKeyDown?: (e: KeyboardEvent) => void;
+		onBlur?: (e: FocusEvent) => void;
+		ignoreMissingLabel?: boolean;
 		options: () => Array<DropdownItem<T>>;
 		mount?: Element | DocumentFragment | null;
+		placeholder?: string;
 	},
 ) {
 	const [shown, setShown] = createSignal(false);
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
 	const [dropdownEl, setDropdownEl] = createSignal<HTMLDivElement>();
+	const [containerEl, setContainerEl] = createSignal<HTMLDivElement>();
 	const [selected, setSelected] = createSignal<T | null>(
-		props.selected ?? props.options()[0]?.item ?? null,
+		props.selected ?? null,
 	);
-	const position = useFloating(inputEl, dropdownEl, {
+	const position = useFloating(containerEl, dropdownEl, {
 		whileElementsMounted: autoUpdate,
 		middleware: [offset({ mainAxis: -1 }), flip()],
 		placement: "bottom",
@@ -88,22 +115,32 @@ export function createDropdown<T>(
 	});
 
 	createEffect(() => {
-		if (props.selected) setSelected(() => props.selected!);
+		if (props.selected !== undefined) setSelected(() => props.selected!);
 	});
 
+	const select = (item: T | null) => {
+		setSelected(() => item);
+		setShown(false);
+		props.onSelect?.(item);
+	};
+
 	const binds = createKeybinds({
-		"ArrowUp": () => {
+		"ArrowUp": (e) => {
 			if (!shown()) {
-				const idx = props.options().findIndex((i) => i.item === selected());
-				const next = (props.options.length + idx - 1) % props.options.length;
-				select(props.options()[next]?.item);
+				e.preventDefault();
+				const options = props.options();
+				const idx = options.findIndex((i) => i.item === selected());
+				const next = (options.length + idx - 1) % options.length;
+				select(options[next]?.item);
 			}
 		},
-		"ArrowDown": () => {
+		"ArrowDown": (e) => {
 			if (!shown()) {
-				const idx = props.options().findIndex((i) => i.item === selected());
-				const next = (idx + 1) % props.options.length;
-				select(props.options()[next]?.item);
+				e.preventDefault();
+				const options = props.options();
+				const idx = options.findIndex((i) => i.item === selected());
+				const next = (idx + 1) % options.length;
+				select(options[next]?.item);
 			}
 		},
 		"ArrowUp, Shift-Tab": (e) => {
@@ -125,92 +162,121 @@ export function createDropdown<T>(
 			}
 		},
 		"Enter": (e) => {
-			e.preventDefault();
-			if (shown()) {
-				select(selector.getHovered()?.item ?? null);
-			} else {
-				setShown(true);
-				setTimeout(() => {
-					debugger;
-				}, 100);
+			const hovered = selector.getHovered();
+			if (shown() && hovered) {
+				e.preventDefault();
+				select(hovered.item);
 			}
 		},
 	});
 
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
+		const options = props.options();
 		if (e.deltaY < 0) {
 			if (shown()) {
 				selector.prev();
 			} else {
-				const idx = props.options().findIndex((i) => i.item === selected());
-				const next = (props.options.length + idx - 1) % props.options.length;
-				select(props.options()[next]?.item);
+				const idx = options.findIndex((i) => i.item === selected());
+				const next = (options.length + idx - 1) % options.length;
+				select(options[next]?.item);
 			}
 		} else if (e.deltaY > 0) {
 			if (shown()) {
 				selector.next();
 			} else {
-				const idx = props.options().findIndex((i) => i.item === selected());
-				const next = (idx + 1) % props.options.length;
-				select(props.options()[next]?.item);
+				const idx = options.findIndex((i) => i.item === selected());
+				const next = (idx + 1) % options.length;
+				select(options[next]?.item);
 			}
 		}
 	}
 
-	function select(item: T | null) {
-		setSelected(() => item);
-		setShown(false);
-		props.onSelect?.(item);
-	}
-
-	const [value, setValue] = createSignal<string | undefined>(undefined, {
-		equals: false,
-	});
-	createEffect(() => {
-		setValue(props.options().find((i) => i.item === selected())?.label);
+	const [value, setValue] = createSignal<string>("");
+	createEffect((prev) => {
+		const s = selected();
+		if (s !== prev) {
+			if (document.activeElement === inputEl()) return s;
+			const opt = untrack(() => props.options()).find((i) => i.item === s);
+			if (opt) {
+				setValue(opt.label);
+			} else if (!props.ignoreMissingLabel) {
+				setValue("");
+			}
+		}
+		return s;
 	});
 
 	const listboxId = createUniqueId();
-
-	// TODO: maybe use click instead of mousedown?
-	// TODO: automatically show dropdown items on hover?
 
 	return {
 		setSelected(t: T) {
 			setSelected(() => t);
 		},
-		View() {
+		setValue(s: string) {
+			setValue(s);
+		},
+		open() {
+			setShown(true);
+			selector.setFilter("");
+		},
+		focus() {
+			inputEl()?.focus();
+		},
+		View(props2: { style?: string | JSX.CSSProperties; class?: string }) {
 			return (
-				<>
+				<div
+					ref={setContainerEl}
+					class={`dropdown-container ${props2.class ?? ""}`}
+					style={props2.style}
+				>
 					<input
+						type="text"
 						class="dropdown"
 						ref={setInputEl}
-						placeholder="select an item..."
+						placeholder={props.placeholder ?? "select an item..."}
 						value={value()}
-						onMouseDown={() => setShown(!shown())}
-						onBlur={() => {
-							setShown(false);
-							setValue(
-								props.options().find((i) => i.item === selected())?.label,
-							);
+						onClick={() => {
+							setShown(true);
+							selector.setFilter("");
+						}}
+						onBlur={(e) => {
+							queueMicrotask(() => setShown(false));
+							if (!props.ignoreMissingLabel) {
+								const opt = props.options().find((i) => i.item === selected());
+								if (opt) {
+									setValue(opt.label);
+								} else {
+									setValue("");
+								}
+							}
+							props.onBlur?.(e);
 						}}
 						onInput={(e) => {
 							const { value } = e.target;
-							selector.setFilter(e.target.value);
+							setValue(value);
+							selector.setFilter(value);
 							if (value) setShown(true);
+							props.onInput?.(value);
 						}}
-						onKeyDown={binds}
+						onKeyDown={(e) => {
+							binds(e);
+							props.onKeyDown?.(e);
+						}}
 						onWheel={handleWheel}
 						role="combobox"
 						aria-autocomplete="list"
 						aria-haspopup="listbox"
 						aria-controls={shown() ? listboxId : undefined}
 						aria-expanded={shown()}
-						aria-keyshortcuts={shown()
-							? "ArrowUp ArrowDown Tab Shift+Tab Escape Enter"
-							: "Enter"}
+						style={{ width: "100%" }}
 					/>
+					<div
+						class="dropdown-chevron-wrapper"
+						onClick={() => setShown(!shown())}
+					>
+						<ChevronDown />
+					</div>
 					<Portal mount={props.mount ?? document.body}>
 						<Show when={shown()}>
 							<menu
@@ -222,7 +288,7 @@ export function createDropdown<T>(
 									"z-index": 999999,
 									position: position.strategy,
 									translate: `${position.x}px ${position.y}px`,
-									width: `${inputEl()?.offsetWidth || 0}px`,
+									width: `${containerEl()?.offsetWidth || 0}px`,
 								}}
 							>
 								<ul>
@@ -230,7 +296,10 @@ export function createDropdown<T>(
 										{(entry) => (
 											<li
 												onMouseOver={() => selector.setHovered(entry.obj)}
-												onMouseDown={() => select(entry.obj.item)}
+												onMouseDown={(e) => {
+													e.preventDefault();
+													select(entry.obj.item);
+												}}
 												classList={{
 													hovered:
 														entry.obj.item === selector.getHovered()?.item,
@@ -246,7 +315,7 @@ export function createDropdown<T>(
 							</menu>
 						</Show>
 					</Portal>
-				</>
+				</div>
 			);
 		},
 	};
@@ -327,8 +396,6 @@ export function MultiDropdown<T>(
 		}
 		selector.setFilter("");
 		if (inputEl()) inputEl()!.value = "";
-		// keep it open for more selections?
-		// setShown(false);
 	}
 
 	const listboxId = createUniqueId();
@@ -361,7 +428,7 @@ export function MultiDropdown<T>(
 					placeholder={props.selected.length === 0 ? props.placeholder : ""}
 					onFocus={() => setShown(true)}
 					onBlur={() => {
-						setTimeout(() => setShown(false), 200);
+						queueMicrotask(() => setShown(false));
 					}}
 					onInput={(e) => {
 						selector.setFilter(e.target.value);
@@ -374,6 +441,15 @@ export function MultiDropdown<T>(
 					aria-controls={shown() ? listboxId : undefined}
 					aria-expanded={shown()}
 				/>
+			</div>
+			<div
+				class="dropdown-chevron-wrapper"
+				onClick={(e) => {
+					e.stopPropagation();
+					setShown(!shown());
+				}}
+			>
+				<ChevronDown />
 			</div>
 			<Portal mount={props.mount ?? document.body}>
 				<Show when={shown()}>
@@ -406,15 +482,12 @@ export function MultiDropdown<T>(
 										aria-selected={props.selected.includes(entry.obj.item)}
 										style={{
 											display: "flex",
-											// "align-items": "center",
-											// "justify-content": "space-between",
 										}}
 									>
 										<Show when={props.selected.includes(entry.obj.item)}>
 											<Checkmark
 												seed={entry.obj.label}
 												style={{
-													// HACK: colored icons
 													filter:
 														"invert(0.5) sepia(1) saturate(3) hue-rotate(220deg)",
 												}}
@@ -432,7 +505,6 @@ export function MultiDropdown<T>(
 	);
 }
 
-// TODO: placeholder
 export function Dropdown<T>(
 	props: VoidProps<{
 		selected?: T;
@@ -441,179 +513,21 @@ export function Dropdown<T>(
 		options: Array<DropdownItem<T>>;
 		style?: string;
 		mount?: Element | DocumentFragment | null;
+		ignoreMissingLabel?: boolean;
+		placeholder?: string;
 	}>,
 ) {
-	const [shown, setShown] = createSignal(false);
-	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
-	const [dropdownEl, setDropdownEl] = createSignal<HTMLDivElement>();
-	const [selected, setSelected] = createSignal<T | null>(
-		props.selected ?? props.options[0]?.item ?? null,
-	);
-	const position = useFloating(inputEl, dropdownEl, {
-		whileElementsMounted: autoUpdate,
-		middleware: [offset({ mainAxis: -1 }), flip()],
-		placement: "bottom",
+	const dropdown = createDropdown<T>({
+		get selected() {
+			return props.selected;
+		},
+		required: props.required,
+		onSelect: props.onSelect,
+		options: () => props.options,
+		mount: props.mount,
+		ignoreMissingLabel: props.ignoreMissingLabel,
+		placeholder: props.placeholder,
 	});
 
-	const selector = createSelect<T>();
-
-	createEffect(() => {
-		selector.setItems(props.options);
-	});
-
-	createEffect(() => {
-		if (props.selected) setSelected(() => props.selected!);
-	});
-
-	const binds = createKeybinds({
-		"ArrowUp": () => {
-			if (!shown()) {
-				const idx = props.options.findIndex((i) => i.item === selected());
-				const next = (props.options.length + idx - 1) % props.options.length;
-				select(props.options[next]?.item);
-			}
-		},
-		"ArrowDown": () => {
-			if (!shown()) {
-				const idx = props.options.findIndex((i) => i.item === selected());
-				const next = (idx + 1) % props.options.length;
-				select(props.options[next]?.item);
-			}
-		},
-		"ArrowUp, Shift-Tab": (e) => {
-			if (shown()) {
-				e.preventDefault();
-				selector.prev();
-			}
-		},
-		"ArrowDown, Tab": (e) => {
-			if (shown()) {
-				e.preventDefault();
-				selector.next();
-			}
-		},
-		"Escape": (e) => {
-			if (shown()) {
-				e.preventDefault();
-				setShown(false);
-			}
-		},
-		"Enter": (e) => {
-			e.preventDefault();
-			if (shown()) {
-				select(selector.getHovered()?.item ?? null);
-			} else {
-				setShown(true);
-				setTimeout(() => {
-					debugger;
-				}, 100);
-			}
-		},
-	});
-
-	function handleWheel(e: WheelEvent) {
-		e.preventDefault();
-		if (e.deltaY < 0) {
-			if (shown()) {
-				selector.prev();
-			} else {
-				const idx = props.options.findIndex((i) => i.item === selected());
-				const next = (props.options.length + idx - 1) % props.options.length;
-				select(props.options[next]?.item);
-			}
-		} else if (e.deltaY > 0) {
-			if (shown()) {
-				selector.next();
-			} else {
-				const idx = props.options.findIndex((i) => i.item === selected());
-				const next = (idx + 1) % props.options.length;
-				select(props.options[next]?.item);
-			}
-		}
-	}
-
-	function select(item: T | null) {
-		setSelected(() => item);
-		setShown(false);
-		props.onSelect?.(item);
-	}
-
-	const [value, setValue] = createSignal<string | undefined>(undefined, {
-		equals: false,
-	});
-	createEffect(() => {
-		setValue(props.options.find((i) => i.item === selected())?.label);
-	});
-
-	const listboxId = createUniqueId();
-
-	// TODO: maybe use click instead of mousedown?
-	// TODO: automatically show dropdown items on hover?
-	// TODO: show chevron arrow
-
-	return (
-		<>
-			<input
-				class="dropdown"
-				ref={setInputEl}
-				placeholder="select an item..."
-				value={value()}
-				onMouseDown={() => setShown(!shown())}
-				onBlur={() => {
-					setShown(false);
-					setValue(props.options.find((i) => i.item === selected())?.label);
-				}}
-				onInput={(e) => {
-					const { value } = e.target;
-					selector.setFilter(e.target.value);
-					if (value) setShown(true);
-				}}
-				onKeyDown={binds}
-				onWheel={handleWheel}
-				role="combobox"
-				aria-autocomplete="list"
-				aria-haspopup="listbox"
-				aria-controls={shown() ? listboxId : undefined}
-				aria-expanded={shown()}
-				aria-keyshortcuts={shown()
-					? "ArrowUp ArrowDown Tab Shift+Tab Escape Enter"
-					: "Enter"}
-				style={props.style}
-			/>
-			<Portal mount={props.mount ?? document.body}>
-				<Show when={shown()}>
-					<menu
-						role="listbox"
-						ref={setDropdownEl}
-						id={listboxId}
-						class="dropdown-items floating"
-						style={{
-							"z-index": 999999,
-							position: position.strategy,
-							translate: `${position.x}px ${position.y}px`,
-							width: `${inputEl()?.offsetWidth || 0}px`,
-						}}
-					>
-						<ul>
-							<For each={selector.getFiltered()} fallback={"no options"}>
-								{(entry) => (
-									<li
-										onMouseOver={() => selector.setHovered(entry.obj)}
-										onMouseDown={() => select(entry.obj.item)}
-										classList={{
-											hovered: entry.obj.item === selector.getHovered()?.item,
-											selected: entry.obj.item === selected(),
-										}}
-										aria-selected={entry.obj.item === selected()}
-									>
-										{entry.obj.view ?? entry.obj.label}
-									</li>
-								)}
-							</For>
-						</ul>
-					</menu>
-				</Show>
-			</Portal>
-		</>
-	);
+	return <dropdown.View style={props.style} />;
 }

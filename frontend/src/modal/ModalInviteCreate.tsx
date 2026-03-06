@@ -139,6 +139,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 							{ item: 1000 * 60 * 60 * 24, label: "1 day" },
 							{ item: 1000 * 60 * 60 * 24 * 7, label: "1 week" },
 						]}
+						placeholder="never"
 					/>
 				</div>
 				<div style="margin-top:8px">
@@ -153,6 +154,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 							{ item: 10, label: "10 uses" },
 							{ item: 100, label: "100 uses" },
 						]}
+						placeholder="no limit"
 					/>
 				</div>
 				<Show when={availableRoles().length > 0}>

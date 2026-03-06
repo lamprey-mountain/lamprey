@@ -123,7 +123,7 @@ export function OverwriteDropdown(props: {
 					setShown(true);
 				}}
 				onFocus={() => setShown(true)}
-				onBlur={() => setTimeout(() => setShown(false), 200)}
+				onBlur={() => queueMicrotask(() => setShown(false))}
 				onKeyDown={binds}
 				role="combobox"
 				aria-autocomplete="list"
