@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { For, Match, render, Show, Switch } from "solid-js/web";
 import { type Attachment, useCtx } from "./context.ts";
 import type { MessageT, ThreadT } from "./types.ts";
@@ -38,6 +39,7 @@ export function Input(props: InputProps) {
 	const reply_id = () => ch.reply_id;
 	const reply = () => api.messages.cache.get(reply_id()!);
 	const uploads = useUploads();
+	const currentUser = useCurrentUser();
 
 	function handleUpload(file: File) {
 		console.log(file);
@@ -77,7 +79,7 @@ export function Input(props: InputProps) {
 	const fmt = new (Intl as any).ListFormat();
 
 	const typingUsers = createMemo(() => {
-		const user_id = api.users.cache.get("@self")?.id;
+		const user_id = currentUser()?.id;
 		const user_ids = [...api.typing.get(props.channel.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
 		return user_ids;
@@ -172,7 +174,7 @@ export function Input(props: InputProps) {
 				const ranges = api.messages.cacheRanges.get(props.channel.id);
 				if (!ranges) return false;
 
-				const self_id = api.users.cache.get("@self")?.id;
+				const self_id = currentUser()?.id;
 				if (!self_id) return false;
 
 				for (let i = ranges.live.items.length - 1; i >= 0; i--) {
@@ -224,7 +226,7 @@ export function Input(props: InputProps) {
 	});
 
 	const perms = usePermissions(
-		() => api.users.cache.get("@self")?.id ?? "",
+		() => currentUser()?.id ?? "",
 		() => props.channel.room_id ?? undefined,
 		() => props.channel.id,
 	);

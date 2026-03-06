@@ -30,6 +30,7 @@ import {
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { useNavigate } from "@solidjs/router";
 import { AvatarWithStatus } from "./avatar/UserAvatar.tsx";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 type UserProps = {
 	room_member?: RoomMember;
@@ -124,7 +125,8 @@ const EditRoles = (
 	const getRoles = () =>
 		(roles()?.items ?? []).filter((r) => r.id !== props.room_id);
 
-	const self_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const self_id = () => currentUser()?.id;
 
 	const { permissions } = usePermissions(
 		self_id,
@@ -171,7 +173,8 @@ export function UserView(props: UserProps) {
 	const { setMenu } = useMenu();
 	const nav = useNavigate();
 
-	const self_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const self_id = () => currentUser()?.id;
 	const { has: hasPermission } = usePermissions(
 		self_id,
 		() => props.room_member?.room_id,

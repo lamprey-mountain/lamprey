@@ -839,7 +839,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
-			const selfId = api.users.cache.get("@self")!.id;
+			const selfId = user()?.id;
 			return props.channel.recipients.find((i) => i.id !== selfId);
 		}
 		return undefined;

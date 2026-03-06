@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 // TODO: refactor out duplicated code from here and Message.tsx
 
 import { type Attachment, Channel, getTimestampFromUUID, Message } from "sdk";
@@ -264,9 +265,9 @@ const MessageToolbar = (props: { message: Message }) => {
 		onCleanup(() => document.removeEventListener("click", closePicker));
 	});
 
+	const currentUser = useCurrentUser();
 	const isOwnMessage = () => {
-		const currentUser = api.users.cache.get("@self");
-		return currentUser && currentUser.id === props.message.author_id;
+		return currentUser()?.id === props.message.author_id;
 	};
 
 	const canEditMessage = () => {
@@ -481,7 +482,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 		});
 	}
 
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	const [threadId, setThreadId] = createSignal<null | string>(null);
@@ -770,6 +772,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const api = useApi();
 	const [ch, chUpdate] = useChannel()!;
 	const uploads = useUploads();
+	const currentUser = useCurrentUser();
 	const reply_id = () => ch.reply_id;
 	const reply = () => api.messages.cache.get(reply_id()!);
 	const storageKey = () => `editor_draft_${props.channel.id}`;
@@ -974,7 +977,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	});
 
 	const perms = usePermissions(
-		() => api.users.cache.get("@self")?.id ?? "",
+		() => currentUser()?.id ?? "",
 		() => props.channel.room_id ?? undefined,
 		() => props.channel.id,
 	);
@@ -1346,9 +1349,9 @@ const Comment = (
 	const isReplyTarget = () => ch.reply_id === message().id;
 	const inSelectMode = () => ch.selectMode ?? false;
 
+	const currentUser = useCurrentUser();
 	const isOwnMessage = () => {
-		const currentUser = api.users.cache.get("@self");
-		return currentUser && currentUser.id === message().author_id;
+		return currentUser()?.id === message().author_id;
 	};
 
 	const canEditMessage = () => {

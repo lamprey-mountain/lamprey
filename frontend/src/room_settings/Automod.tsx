@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	createEffect,
 	createResource,
@@ -25,6 +26,7 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 	const ctx = useCtx();
 	const api = useApi();
 	const [, modalCtl] = useModals();
+	const currentUser = useCurrentUser();
 
 	const [rules, { refetch }] = createResource(async () => {
 		const { data } = await api.client.http.GET(
@@ -77,7 +79,7 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 		// TODO: show a automod rule "skeleton" ui, make user enter in name, triggers, actions, etc
 	};
 
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(user_id, () => props.room.id, () => undefined);
 
 	return (

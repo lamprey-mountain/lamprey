@@ -8,6 +8,7 @@ import { useModals } from "../contexts/modal";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { Checkbox } from "../icons.tsx";
 import { CheckboxOption } from "../atoms/CheckboxOption";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
@@ -17,7 +18,8 @@ export function RoomMenu(props: { room_id: string }) {
 	const room = api.rooms.fetch(() => props.room_id);
 	const [, modalctl] = useModals();
 
-	const self_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const self_id = () => currentUser()?.id;
 	const { has: hasPermission } = usePermissions(
 		self_id,
 		() => props.room_id,
@@ -40,7 +42,7 @@ export function RoomMenu(props: { room_id: string }) {
 				params: {
 					path: {
 						room_id: props.room_id,
-						user_id: api.users.cache.get("@self")!.id,
+						user_id: currentUser()?.id || "",
 					},
 				},
 			});

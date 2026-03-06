@@ -62,7 +62,9 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		props.room.description,
 	);
 	const [editingPublic, setEditingPublic] = createSignal(props.room.public);
-	const [editorState, setEditorState] = createSignal<EditorState | undefined>(undefined);
+	const [editorState, setEditorState] = createSignal<EditorState | undefined>(
+		undefined,
+	);
 
 	const editor = createEditor({
 		initialContent: props.room.description,

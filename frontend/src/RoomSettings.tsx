@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { Component, createMemo, For, Match, Show, Switch } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { Dynamic } from "solid-js/web";
@@ -209,7 +210,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const [, modalCtl] = useModals();
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(
 		user_id,
 		() => props.room.id,

@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	createEffect,
 	createResource,
@@ -17,8 +18,9 @@ import icDelete from "../assets/delete.png";
 export function Tags(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();
 	const [, modalCtl] = useModals();
+	const currentUser = useCurrentUser();
 	const perms = usePermissions(
-		() => api.users.cache.get("@self")?.id,
+		() => currentUser()?.id,
 		() => props.channel.room_id,
 		() => props.channel.id,
 	);

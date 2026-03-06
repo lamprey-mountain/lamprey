@@ -17,6 +17,7 @@ import type { Channel, NotifsChannel, Tag } from "sdk";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons.tsx";
 import { useReadTracking } from "../contexts/read-tracking.tsx";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
@@ -26,9 +27,12 @@ export function ChannelMenu(props: { channel_id: string }) {
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 
-	const self_id = () => api.users.cache.get("@self")?.id ?? "";
+	const currentUser = useCurrentUser();
+	const self_id = () => currentUser()?.id ?? "";
 	const channel = api.channels.fetch(() => props.channel_id);
-	const parentChan = api.channels.fetch(() => channel()?.parent_id ?? undefined);
+	const parentChan = api.channels.fetch(() =>
+		channel()?.parent_id ?? undefined
+	);
 
 	const { has: hasPermission } = usePermissions(
 		self_id,

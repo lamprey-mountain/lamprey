@@ -57,7 +57,8 @@ export const cursorPlugin = (
 
 				if (!yState || !yState.binding) return DecorationSet.empty;
 
-				const selfId = api.users.cache.get("@self")?.id;
+				const currentUser = api.users.cache.get("@self");
+				const selfId = currentUser?.id;
 
 				for (const [userId, data] of cursors) {
 					if (userId === selfId) continue;
@@ -137,7 +138,8 @@ export const cursorPlugin = (
 					msg.type === "DocumentPresence" && msg.channel_id === channelId &&
 					msg.branch_id === branchId
 				) {
-					const selfId = api.users.cache.get("@self")?.id;
+					const currentUser = api.users.cache.get("@self");
+					const selfId = currentUser?.id;
 					if (msg.user_id === selfId) return;
 
 					let cursor = null;

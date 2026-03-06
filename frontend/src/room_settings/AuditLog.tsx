@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	createEffect,
 	createSignal,

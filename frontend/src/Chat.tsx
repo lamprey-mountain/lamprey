@@ -33,6 +33,7 @@ import icThreads from "./assets/threads.png";
 import { useChannel } from "./channelctx.tsx";
 import { useRoom } from "./contexts/room.tsx";
 import { useReadTracking } from "./contexts/read-tracking.tsx";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 type ChatProps = {
 	channel: Channel;
@@ -254,9 +255,9 @@ export const ChatMain = (props: ChatProps) => {
 
 	const [dragging, setDragging] = createSignal(false);
 
+	const currentUser = useCurrentUser();
 	const getTyping = () => {
-		// TODO: fix types here
-		const user_id = api.users.cache.get("@self")?.id;
+		const user_id = currentUser()?.id;
 		const user_ids = [...api.typing.get(props.channel.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
 		return user_ids;
@@ -341,7 +342,7 @@ export const ChatMain = (props: ChatProps) => {
 				when={messages.loading}
 				fallback={
 					<list.List>
-						{(item) => renderTimelineItem(props.channel, item)}
+						{(item) => renderTimelineItem(props.channel, item, currentUser)}
 					</list.List>
 				}
 			>
@@ -377,12 +378,13 @@ export const ChatHeader = (
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
 	const [hovered, setHovered] = createSignal(false);
+	const currentUser = useCurrentUser();
 
 	const selected = () => channelState.selectedMessages;
 	const inSelectMode = () => channelState.selectMode;
 
 	const { has: hasPermission } = usePermissions(
-		() => api.users.cache.get("@self")?.id,
+		() => currentUser()?.id,
 		() => props.channel.room_id,
 		() => props.channel.id,
 	);
@@ -435,7 +437,7 @@ export const ChatHeader = (
 
 	const name = () => {
 		if (props.channel.type === "Dm") {
-			const user_id = api.users.cache.get("@self")?.id;
+			const user_id = currentUser()?.id;
 			return props.channel.recipients.find((i) => i.id !== user_id)?.name ??
 				"dm";
 		}

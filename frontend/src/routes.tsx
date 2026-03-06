@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
@@ -331,11 +332,12 @@ export const RouteChannel = (p: RouteSectionProps) => {
 		}
 	});
 
+	const currentUser = useCurrentUser();
 	const title = () => {
 		const ch = channel();
 		if (!ch) return t("loading");
 		if (ch.type === "Dm") {
-			const user_id = api.users.cache.get("@self")!.id;
+			const user_id = currentUser()?.id;
 			return ch.recipients.find((i) => i.id !== user_id)?.name ??
 				"dm";
 		}

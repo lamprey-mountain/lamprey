@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	createEffect,
 	createResource,
@@ -712,7 +713,8 @@ const InviteToRoom = (
 		});
 	};
 
-	const self_id = () => api.users.cache.get("@self")!.id;
+	const u = useCurrentUser();
+	const self_id = () => u()?.id;
 
 	return (
 		<menu
@@ -723,23 +725,37 @@ const InviteToRoom = (
 			ref={setMenuRef}
 		>
 			<For each={rooms()?.items ?? []} fallback="no rooms?">
-				{(r) => {
-					const perms = usePermissions(
-						self_id,
-						() => r.id,
-						() => undefined,
-					);
-
-					return (
-						<button
-							onClick={[inviteToRoom, r.id]}
-							disabled={!perms.has("IntegrationsManage")}
-						>
-							{r.name}
-						</button>
-					);
-				}}
+				{(r) => (
+					<RoomInviteButton
+						room={r}
+						self_id={self_id}
+						onInvite={inviteToRoom}
+					/>
+				)}
 			</For>
 		</menu>
+	);
+};
+
+const RoomInviteButton = (
+	props: {
+		room: RoomT;
+		self_id: () => string | undefined;
+		onInvite: (id: string) => void;
+	},
+) => {
+	const perms = usePermissions(
+		props.self_id,
+		() => props.room.id,
+		() => undefined,
+	);
+
+	return (
+		<button
+			onClick={() => props.onInvite(props.room.id)}
+			disabled={!perms.has("IntegrationsManage")}
+		>
+			{props.room.name}
+		</button>
 	);
 };

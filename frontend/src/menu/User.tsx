@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { For, Match, Show, Switch } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
@@ -24,11 +25,12 @@ export function UserMenu(props: UserMenuProps) {
 	const { setMenu } = useMenu();
 	const api = useApi();
 	const navigate = useNavigate();
+	const currentUser = useCurrentUser();
 	const user = api.users.fetch(() => props.user_id);
 	const room_member = props.room_id
 		? api.room_members.fetch(() => props.room_id!, () => props.user_id)
 		: () => null;
-	const self_id = () => api.users.cache.get("@self")!.id;
+	const self_id = () => currentUser()?.id;
 
 	const { has: hasPermission, permissions } = usePermissions(
 		self_id,

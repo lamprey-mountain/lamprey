@@ -23,6 +23,7 @@ import { createStore } from "solid-js/store";
 import { Document } from "./editor/Document";
 import { Resizable } from "./Resizable";
 import { ChannelIcon } from "./User";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 export const Wiki = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -120,7 +121,8 @@ export const Wiki = (props: { channel: Channel }) => {
 		});
 	}
 
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	const [documentId, setDocumentId] = createSignal<null | string>(null);

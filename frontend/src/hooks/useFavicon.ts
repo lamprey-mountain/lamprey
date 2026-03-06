@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useLocation } from "@solidjs/router";
 import { useApi } from "../api.tsx";
@@ -30,10 +31,11 @@ export function useFavicon() {
 			const channel = api.channels.cache.get(channelMatch[1]);
 			if (channel) {
 				if (channel.type === "Dm") {
-					const self = api.users.cache.get("@self");
-					if (self) {
+					const self = useCurrentUser();
+					const selfUser = self();
+					if (selfUser) {
 						const otherUser = channel.recipients.find(
-							(i) => i.id !== self.id,
+							(i) => i.id !== selfUser.id,
 						);
 						if (otherUser) {
 							return { type: "user" as const, user: otherUser };

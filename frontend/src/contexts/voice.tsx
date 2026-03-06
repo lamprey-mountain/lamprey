@@ -12,6 +12,7 @@ import { useApi } from "../api";
 import { createVoiceClient } from "../rtc";
 import { ReactiveMap } from "@solid-primitives/map";
 import vadProcessorUrl from "../vad-processor?url";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 
 type VoiceClient = ReturnType<typeof createVoiceClient>;
 
@@ -89,7 +90,10 @@ export const VoiceProvider = (props: ParentProps) => {
 	});
 
 	api.events.on("sync", async ([e]) => {
-		const user_id = api.users.cache.get("@self")!.id;
+		const currentUser = api.users.cache.get("@self");
+		const user_id = currentUser?.id;
+		if (!user_id) return;
+
 		if (e.type === "VoiceState" && e.user_id === user_id) {
 			if (e.state) {
 				const rtc = state.rtc;

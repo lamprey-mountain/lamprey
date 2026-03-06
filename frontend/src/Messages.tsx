@@ -1,4 +1,3 @@
-// import { Tooltip } from "./Atoms.tsx";
 import { createMemo, Match, Show, Switch } from "solid-js";
 import { useApi } from "./api.tsx";
 import type { MessageT, ThreadT } from "./types.ts";
@@ -6,6 +5,7 @@ import { useCtx } from "./context.ts";
 import { md } from "./markdown.tsx";
 import { MessageView } from "./Message.tsx";
 import { useChannel } from "./channelctx.tsx";
+import { UserWithRelationship } from "sdk";
 
 // const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
 
@@ -25,21 +25,24 @@ export type TimelineItemT =
 		}
 	);
 
-export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
+export function renderTimelineItem(
+	thread: ThreadT,
+	item: TimelineItemT,
+	currentUser: () => UserWithRelationship | undefined,
+) {
 	switch (item.type) {
 		case "message": {
 			const ctx = useCtx();
 			const api = useApi();
 			const [ch] = useChannel()!;
-			const self = () => api.users.cache.get("@self");
 			const room_member = createMemo(() => {
-				const me = self();
+				const me = currentUser();
 				if (!me || !thread.room_id) return null;
-				return api.room_members.fetch(() => thread.room_id, () => me.id)();
+				return api.room_members.fetch(() => thread.room_id!, () => me.id)();
 			});
 
 			const is_mentioned = () => {
-				const me = self();
+				const me = currentUser();
 				if (!me) return false;
 				if (!item.message.mentions) return false;
 

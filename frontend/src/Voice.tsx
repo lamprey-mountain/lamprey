@@ -29,6 +29,7 @@ import { md } from "./markdown.tsx";
 import { getColor } from "./colors.ts";
 import { useChannel } from "./channelctx.tsx";
 import { AvatarWithStatus } from "./User.tsx";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
 	const config = useConfig();
@@ -256,12 +257,13 @@ export const Voice = (p: { channel: Channel }) => {
 
 export const VoiceTray = () => {
 	const api = useApi();
+	const currentUser = useCurrentUser();
 	const [voice, actions] = useVoice();
 	const thread = () =>
 		voice.threadId ? api.channels.fetch(() => voice.threadId!)() : null;
 	const room = () =>
 		thread()?.room_id ? api.rooms.fetch(() => thread()?.room_id!)() : null;
-	const user = () => api.users.cache.get("@self");
+	const user = () => currentUser();
 
 	const calcConnectedDuration = () => {
 		const joinedAt = api.voiceState()?.joined_at;
@@ -352,11 +354,11 @@ export const VoiceTray = () => {
 				</div>
 			</Show>
 			<div class="row toolbar">
-				<AvatarWithStatus user={user()!} />
+				<AvatarWithStatus user={currentUser()!} />
 				<div style="flex:1">
-					<Show when={user()} fallback="loading...">
-						{api.users.cache.get("@self")?.name}
-						<Show when={!user()?.registered_at}>
+					<Show when={currentUser()} fallback="loading...">
+						{currentUser()?.name}
+						<Show when={!currentUser()?.registered_at}>
 							{" "}
 							<b class="dim">(guest)</b>
 						</Show>

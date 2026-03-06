@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useApi } from "./api";
 import { useCtx } from "./context";

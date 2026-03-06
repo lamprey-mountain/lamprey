@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { createMemo, Match, Show, Switch } from "solid-js";
 import { getThumbFromId } from "../media/util";
 import { getColor } from "../colors";
@@ -44,9 +45,10 @@ export const ChannelIcon = (
 		}
 	};
 
+	const currentUser = useCurrentUser();
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
-			const selfId = api.users.cache.get("@self")!.id;
+			const selfId = currentUser()?.id;
 			return props.channel.recipients.find((i) => i.id !== selfId);
 		}
 		return undefined;

@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	createEffect,
 	createMemo,
@@ -26,10 +27,11 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [selectedRoleIds, setSelectedRoleIds] = createSignal<string[]>([]);
 	const [inviteCode, setInviteCode] = createSignal<string>("");
 	const [creating, setCreating] = createSignal(false);
+	const currentUser = useCurrentUser();
 
 	const roles = api.roles.list(() => props.room_id ?? undefined);
 
-	const currentUserId = () => api.users.cache.get("@self")?.id;
+	const currentUserId = () => currentUser()?.id;
 
 	const canApplyRoles = createMemo(() => {
 		const roomId = props.room_id;

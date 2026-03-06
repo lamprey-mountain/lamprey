@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import {
 	Attachment,
 	type Channel,
@@ -1118,9 +1119,9 @@ const MessageToolbar = (props: { message: Message }) => {
 		onCleanup(() => document.removeEventListener("click", closePicker));
 	});
 
+	const currentUser = useCurrentUser();
 	const isOwnMessage = () => {
-		const currentUser = api.users.cache.get("@self");
-		return currentUser && currentUser.id === props.message.author_id;
+		return currentUser()?.id === props.message.author_id;
 	};
 
 	const canEditMessage = () => {

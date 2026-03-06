@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { useApi } from "./api";

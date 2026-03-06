@@ -7,6 +7,7 @@ import { useModals } from "../contexts/modal";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Show } from "solid-js";
 import { useReadTracking } from "../contexts/read-tracking.tsx";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 
 // should i have a separate one for bulk messages?
 
@@ -27,7 +28,8 @@ export function MessageMenu(props: MessageMenuProps) {
 	const [ch, chUpdate] = ctx.channel_contexts.get(props.channel_id)!;
 	const [, modalCtl] = useModals();
 
-	const self_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const self_id = () => currentUser()?.id;
 	const channel = api.channels.fetch(() => props.channel_id);
 	const { has: hasPermission } = usePermissions(
 		self_id,

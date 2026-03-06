@@ -1,3 +1,4 @@
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	createEffect,
 	createResource,
@@ -239,7 +240,8 @@ const EditRoles = (
 	const getRoles = () =>
 		(roles()?.items ?? []).filter((r) => r.id !== r.room_id);
 
-	const self_id = () => api.users.cache.get("@self")!.id;
+	const u = useCurrentUser();
+	const self_id = () => u()!.id;
 
 	const { permissions } = usePermissions(
 		self_id,

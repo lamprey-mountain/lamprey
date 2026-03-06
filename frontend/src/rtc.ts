@@ -230,7 +230,8 @@ export const createVoiceClient = () => {
 	}
 
 	async function drainSendQueue() {
-		const user_id = api.users.cache.get("@self")?.id;
+		const currentUser = api.users.cache.get("@self");
+		const user_id = currentUser?.id;
 		if (!user_id) return;
 		for (const payload of sendQueue) {
 			if (!ready && payload.type !== "VoiceState") return;
@@ -317,7 +318,8 @@ export const createVoiceClient = () => {
 				console.log("[rtc:signal] remote ICE candidate", msg.candidate);
 				await conn.addIceCandidate({ candidate: msg.candidate });
 			} else if (msg.type === "Have") {
-				const user_id = api.users.cache.get("@self")!.id;
+				const currentUser = api.users.cache.get("@self");
+				const user_id = currentUser!.id;
 				const ruid = msg.user_id;
 				if (ruid === user_id) {
 					console.log("[rtc:signal] ignoring Have from self");
@@ -405,7 +407,7 @@ export const createVoiceClient = () => {
 	return {
 		conn,
 		state: rtcState,
-		connect(channel_id: string) {
+		connect(thread_id: string) {
 			const existing = api.voiceState();
 			if (existing) {
 				console.warn(
@@ -416,7 +418,7 @@ export const createVoiceClient = () => {
 			send({
 				type: "VoiceState",
 				state: {
-					channel_id,
+					thread_id,
 					self_mute: true,
 					self_deaf: false,
 					self_video: false,
@@ -431,7 +433,8 @@ export const createVoiceClient = () => {
 			});
 		},
 		createStream(key: string) {
-			const user_id = api.users.cache.get("@self")!.id;
+			const currentUser = api.users.cache.get("@self");
+			const user_id = currentUser!.id;
 			const existing = localStreams.find((i) =>
 				i.key === key && i.user_id === user_id
 			);
@@ -483,7 +486,7 @@ export const createVoiceClient = () => {
 			send({
 				type: "VoiceState",
 				state: {
-					channel_id: existing.channel_id,
+					thread_id: existing.thread_id,
 					...indicators,
 				},
 			});

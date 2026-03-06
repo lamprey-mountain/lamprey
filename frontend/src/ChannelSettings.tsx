@@ -13,6 +13,7 @@ import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { useApi } from "./api.tsx";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 const tabs: Array<{
 	name: string;
@@ -66,7 +67,8 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const [, modalCtl] = useModals();
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const currentUser = useCurrentUser();
+	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(
 		user_id,
 		() => props.channel.room_id ?? undefined,

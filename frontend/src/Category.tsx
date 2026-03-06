@@ -1,3 +1,4 @@
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { Channel, getTimestampFromUUID } from "sdk";
@@ -64,7 +65,8 @@ export const Category = (props: { channel: Channel }) => {
 		});
 	}
 
-	const user_id = () => api.users.cache.get("@self")?.id;
+	const u = useCurrentUser();
+	const user_id = () => u()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	return (
