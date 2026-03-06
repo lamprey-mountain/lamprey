@@ -35,7 +35,10 @@ export const ModalMessageEdits = (
 					{(i, x) => {
 						const prev = edits()?.items[x() - 1];
 						if (prev) {
-							const pages = diffChars(prev.content ?? "", i.content ?? "");
+							const pages = diffChars(
+								(prev as any).content ?? "",
+								(i as any).content ?? "",
+							);
 							const content = pages.map((i) => {
 								if (i.added) return `<ins>${i.value}</ins>`;
 								if (i.removed) return `<del>${i.value}</del>`;
@@ -43,7 +46,7 @@ export const ModalMessageEdits = (
 							}).join("");
 							return (
 								<li>
-									<MessageView message={{ ...i, content }} separate />
+									<MessageView message={{ ...i, content } as any} separate />
 								</li>
 							);
 						} else {

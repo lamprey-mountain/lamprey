@@ -29,12 +29,12 @@ const DEFAULT_PREFERENCES: Preferences = {
 		message_style: "cozy",
 	},
 	notifs: {
-		messages: "Watching",
+		messages: "Nothing",
 		mentions: "Notify",
-		threads: "Watching",
-		room_public: "Watching",
-		room_private: "Watching",
-		room_dm: "Watching",
+		threads: "Nothing",
+		room_public: "Nothing",
+		room_private: "Nothing",
+		room_dm: "Nothing",
 	},
 	privacy: {
 		friends: {
@@ -50,7 +50,10 @@ const DEFAULT_PREFERENCES: Preferences = {
 };
 
 export function useChatClient(config: Config) {
-	const events = createEmitter<Events>();
+	const events = createEmitter<{
+		sync: [import("sdk").MessageSync, unknown];
+		ready: import("sdk").MessageReady;
+	}>();
 	const client = createClient({
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
@@ -116,7 +119,9 @@ export function useChatClient(config: Config) {
 		data,
 		dataUpdate: update,
 
-		t: i18n.translator(() => dict()),
+		t: i18n.translator(() => dict()) as i18n.Translator<
+			i18n.Flatten<typeof en>
+		>,
 		events,
 		popout,
 		setPopout,

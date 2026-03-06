@@ -118,25 +118,21 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	const roomConfig = () => props.room.preferences;
 
 	const setNotifs = (notifs: Partial<import("sdk").NotifsRoom>) => {
-		const current = roomConfig() ?? { notifs: {}, frontend: {} };
+		const current = roomConfig() ?? {
+			notifs: { mention_everyone: true, mention_roles: true },
+			frontend: {},
+		};
 		const newConfig = {
 			...current,
 			notifs: { ...current.notifs, ...notifs },
 		};
-		for (const key in newConfig.notifs) {
-			if (
-				newConfig.notifs[key as keyof typeof newConfig.notifs] === undefined
-			) {
-				delete newConfig.notifs[key as keyof typeof newConfig.notifs];
-			}
-		}
 		api.rooms.cache.set(props.room.id, {
 			...props.room,
-			preferences: newConfig,
+			preferences: newConfig as any,
 		});
 		api.client.http.PUT("/api/v1/preferences/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
-			body: newConfig,
+			body: newConfig as any,
 		});
 	};
 
@@ -165,9 +161,11 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	const [, modalctl] = useModals();
 
 	const [everyone, setEveryone] = createSignal(
-		roomConfig()?.mention_everyone ?? true,
+		((roomConfig() as any)?.mention_everyone ?? true) as boolean,
 	);
-	const [roles, setRoles] = createSignal(roomConfig()?.mention_roles ?? true);
+	const [roles, setRoles] = createSignal(
+		((roomConfig() as any)?.mention_roles ?? true) as boolean,
+	);
 
 	return (
 		<>

@@ -21,7 +21,7 @@ export class Channels {
 		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
 
-	private _getOrCreateListing(
+	_getOrCreateListing(
 		map: Map<string, Listing<Channel>>,
 		room_id: string,
 	): Listing<Channel> {

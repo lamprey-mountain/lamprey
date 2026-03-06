@@ -334,6 +334,7 @@ export const VideoView = (props: MediaProps) => {
 							onClick={toggleMute}
 							title={getVolumeText()}
 							onWheel={handleVolumeWheel}
+							// @ts-ignore - use:vtc is a directive
 							use:vtc
 						>
 							<img

@@ -1,7 +1,7 @@
 import { createEffect, Show } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import { useNavigate } from "@solidjs/router";
 import { getThumbFromId } from "./media/util.tsx";
 
@@ -19,11 +19,11 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const name = () => {
 		const i = invite();
 		if (!i) return "unknown";
-		switch (i.target.type) {
+		switch (((i as any).target.type as any)) {
 			case "Room":
-				return i.target.room.name;
+				return ((i as any).target.room as any)?.name;
 			case "Thread":
-				return i.target.thread.name;
+				return ((i as any).target.thread as any)?.name;
 			case "Server":
 				return "the server";
 			default:
@@ -34,7 +34,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const joinName = () => {
 		const i = invite();
 		if (!i) return "join";
-		switch (i.target.type) {
+		switch ((i.target.type as any)) {
 			case "Room":
 				return "join";
 			case "Thread":
@@ -84,9 +84,12 @@ export const RouteInviteInner = (props: { code: string }) => {
 						</h3>
 						<div class="box">
 							<div style="display:flex;">
-								<Show when={invite()?.target.room?.icon}>
+								<Show when={(invite()?.target as any)?.room?.icon}>
 									<img
-										src={getThumbFromId(invite()?.target.room.icon, 64)}
+										src={getThumbFromId(
+											(invite()?.target as any)?.room?.icon,
+											64,
+										)}
 										class="avatar"
 									/>
 								</Show>
@@ -94,17 +97,20 @@ export const RouteInviteInner = (props: { code: string }) => {
 									<div style="font-size: 1.3rem;font-weight: bold">
 										{name()}
 									</div>
-									<Show when={invite()?.target.type === "Room"}>
+									<Show when={(invite()?.target as any)?.type === "Room"}>
 										<div
 											class="markdown"
 											innerHTML={md(
-												invite()?.target.room.description ?? "",
+												((invite()?.target as any)?.room?.description ??
+													"") as string,
 											) as string}
 										>
 										</div>
 										<div class="dim">
-											{invite()?.target.room.member_count} members,{" "}
-											{invite()?.target.room.online_count} online
+											{(invite()?.target as any)?.room?.member_count ?? 0}{" "}
+											members,{" "}
+											{(invite()?.target as any)?.room?.online_count ?? 0}{" "}
+											online
 										</div>
 									</Show>
 									<div style="display:flex;justify-content:end;gap:4px">

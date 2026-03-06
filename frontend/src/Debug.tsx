@@ -94,7 +94,7 @@ const Search = () => {
 		(async (query: string) => {
 			if (!query) return;
 			const data = await api.messages.search({ query });
-			return data.items;
+			return (data as any).items;
 		}) as any,
 	);
 

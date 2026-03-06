@@ -16,7 +16,7 @@ export class Roles {
 	_cachedListings = new Map<string, Listing<Role>>();
 	_memberListings = new Map<string, Listing<RoomMember>>();
 
-	private _getOrCreateListing<T>(
+	_getOrCreateListing<T>(
 		map: Map<string, Listing<T>>,
 		id: string,
 	): Listing<T> {

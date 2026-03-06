@@ -67,7 +67,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	);
 
 	const editor = createEditor({
-		initialContent: props.room.description,
+		initialContent: props.room.description as string | undefined,
 	});
 
 	onMount(() => {

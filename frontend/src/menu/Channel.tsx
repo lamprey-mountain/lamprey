@@ -31,7 +31,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	const self_id = () => currentUser()?.id ?? "";
 	const channel = api.channels.fetch(() => props.channel_id);
 	const parentChan = api.channels.fetch(() =>
-		channel()?.parent_id ?? undefined
+		(channel() as any)?.parent_id as string
 	);
 
 	const { has: hasPermission } = usePermissions(
@@ -115,7 +115,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	};
 
 	const joinOrLeaveChannel = () => {
-		if (self_channel_member()?.membership === "Leave") {
+		if ((self_channel_member() as any)?.membership === "Leave") {
 			ctx.client.http.PUT("/api/v1/thread/{thread_id}/member/{user_id}", {
 				params: {
 					path: { thread_id: props.channel_id, user_id: "@self" },
@@ -191,7 +191,9 @@ export function ChannelMenu(props: { channel_id: string }) {
 			</Show>
 			<Show when={channel() && isThread()}>
 				<Item onClick={joinOrLeaveChannel}>
-					{self_channel_member()?.membership === "Leave" ? "join" : "leave"}
+					{(self_channel_member() as any)?.membership === "Leave"
+						? "join"
+						: "leave"}
 				</Item>
 			</Show>
 			<Separator />
@@ -237,7 +239,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 										<div style="display: flex; align-items: start; gap: 8px">
 											<Checkbox
 												checked={isChecked}
-												seed={`menu-channel-${props.channel.id}-tag-${tag.id}`}
+												seed={`menu-channel-${props.channel_id}-tag-${tag.id}`}
 											/>
 											<div style="margin: 2px 0">
 												<div classList={{ has: isChecked }}>
@@ -317,11 +319,11 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 		}
 		api.channels.cache.set(props.channel.id, {
 			...props.channel,
-			preferences: newConfig,
+			preferences: newConfig as any,
 		});
-		api.client.http.PUT("/api/v1/preferences/channel/{thread_id}", {
-			params: { path: { thread_id: props.channel.id } },
-			body: newConfig,
+		api.client.http.PUT("/api/v1/preferences/channel/{thread_id}" as any, {
+			params: { path: { thread_id: (props.channel as any).id } },
+			body: newConfig as any,
 		});
 	};
 

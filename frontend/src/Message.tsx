@@ -4,6 +4,7 @@ import {
 	type Channel,
 	getTimestampFromUUID,
 	type Message,
+	type ReactionKey,
 	User,
 } from "sdk";
 import { type MessageT, MessageType } from "./types.ts";
@@ -213,7 +214,10 @@ function MessageEditor(
 	return (
 		<div class="message-editor" ref={containerRef}>
 			<editor.View
-				onSubmit={save}
+				onSubmit={(text) => {
+					save(text);
+					return true;
+				}}
 				onChange={(state) => {
 					const text = state.doc.textContent;
 					setDraft(text);
@@ -246,10 +250,13 @@ export function MessageView(props: MessageProps) {
 
 	const isReactionPickerOpen = () => {
 		const popout = ctx.popout();
-		if (popout.id !== "emoji" || !popout.ref || !messageArticleRef) {
+		if (
+			!("id" in popout) || popout.id !== "emoji" || !popout.ref ||
+			!messageArticleRef
+		) {
 			return false;
 		}
-		return messageArticleRef.contains(popout.ref as Node);
+		return messageArticleRef.contains(popout.ref);
 	};
 	const toolbarVisible = () => isMenuOpen() || isReactionPickerOpen();
 
@@ -465,6 +472,7 @@ export function MessageView(props: MessageProps) {
 				</span>
 			);
 
+			const version = props.message.latest_version;
 			const link = (text: string) => (
 				<button
 					style="color: oklch(var(--color-fg1))"
@@ -472,7 +480,7 @@ export function MessageView(props: MessageProps) {
 					onClick={(e) => {
 						e.stopPropagation();
 						navigate(
-							`/channel/${props.message.channel_id}/message/${props.message.latest_version.pinned_message_id}`,
+							`/channel/${props.message.channel_id}/message/${version.pinned_message_id}`,
 						);
 					}}
 				>
@@ -728,7 +736,7 @@ export function MessageView(props: MessageProps) {
 									} else {
 										setUserView({
 											user_id: props.message.author_id,
-											room_id: thread()?.room_id,
+											room_id: (thread() as any)?.room_id,
 											thread_id: props.message.channel_id,
 											ref: currentTarget,
 											source: "message",
@@ -923,10 +931,13 @@ function ReplyView(props: ReplyProps) {
 						>
 							<Author message={reply()!} thread={thread()!} />
 						</Show>
-						{reply()?.latest_version.type === "DefaultMarkdown" &&
-								reply()?.latest_version.content
-							? <ReplyContent />
-							: <>{content()}</>}
+						{(() => {
+							const r = reply();
+							const version = r?.latest_version;
+							return version?.type === "DefaultMarkdown" && version.content
+								? <ReplyContent />
+								: <>{content()}</>;
+						})()}
 					</Show>
 				</div>
 			</div>
@@ -991,7 +1002,7 @@ export function Author(props: { message: Message; thread?: Channel }) {
 	function name() {
 		let name;
 		const rm = room_member?.();
-		if (rm?.membership === "Join") name ??= rm.override_name;
+		if (rm) name ??= rm.override_name;
 
 		const us = user();
 		name ??= us?.name;
@@ -1011,7 +1022,7 @@ export function Author(props: { message: Message; thread?: Channel }) {
 				} else {
 					setUserView({
 						user_id: props.message.author_id,
-						room_id: props.thread?.room_id,
+						room_id: (props.thread as any)?.room_id,
 						thread_id: props.message.channel_id,
 						ref: currentTarget,
 						source: "message",
@@ -1038,7 +1049,7 @@ function Actor(props: { user_id: string; thread: Channel }) {
 		let name;
 
 		const rm = room_member?.();
-		if (rm?.membership === "Join") name ??= rm.override_name;
+		if (rm) name ??= rm.override_name;
 
 		const us = user();
 		name ??= us?.name;
@@ -1060,10 +1071,10 @@ const MessageToolbar = (props: { message: Message }) => {
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
 
-	const areReactionKeysEqual = (a: any, b: any): boolean => {
+	const areReactionKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
 		if (a.type !== b.type) return false;
-		if (a.type === "Text") return a.content === b.content;
-		if (a.type === "Custom") return a.id === b.id;
+		if (a.type === "Text" && b.type === "Text") return a.content === b.content;
+		if (a.type === "Custom" && b.type === "Custom") return a.id === b.id;
 		return false;
 	};
 
@@ -1092,8 +1103,10 @@ const MessageToolbar = (props: { message: Message }) => {
 				},
 			});
 		} else {
+			const popout = ctx.popout();
 			if (
-				ctx.popout().id === "emoji" && ctx.popout().ref === reactionButtonRef
+				"id" in popout && popout.id === "emoji" &&
+				popout.ref === reactionButtonRef
 			) {
 				ctx.setPopout({});
 			}

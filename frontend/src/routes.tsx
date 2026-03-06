@@ -1,7 +1,9 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
+import type { ParentProps, VoidProps } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
+import { type ChannelSearch } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ChannelNav } from "./ChannelNav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
@@ -58,7 +60,7 @@ const Title = (props: { title?: string }) => {
 
 type LayoutDefaultProps = {
 	title?: string;
-	children: any;
+	children?: any;
 	showChannelNav?: boolean;
 	channelNavRoomId?: string;
 	showVoiceTray?: boolean;
@@ -116,7 +118,10 @@ const RoomSidebar = (props: { room: RoomT }) => {
 		<Switch>
 			<Match when={search()}>
 				<Resizable storageKey="search-sidebar-width" initialWidth={320}>
-					<SearchResults room={props.room} search={search()!} />
+					<SearchResults
+						room={props.room}
+						search={search()! as ChannelSearch}
+					/>
 				</Resizable>
 			</Match>
 			<Match when={showMembers()}>
@@ -133,7 +138,7 @@ const RoomSidebar = (props: { room: RoomT }) => {
 	);
 };
 
-export const RouteRoom = (p: RouteSectionProps) => {
+export const RouteRoom = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api = useApi();
@@ -173,7 +178,7 @@ export const RouteRoom = (p: RouteSectionProps) => {
 	);
 };
 
-export const RouteRoomSettings = (p: RouteSectionProps) => {
+export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const api = useApi();
 	const room = api.rooms.fetch(() => p.params.room_id);
@@ -189,7 +194,7 @@ export const RouteRoomSettings = (p: RouteSectionProps) => {
 	);
 };
 
-export const RouteChannelSettings = (p: RouteSectionProps) => {
+export const RouteChannelSettings = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const api = useApi();
 	const channel = api.channels.fetch(() => p.params.channel_id);
@@ -243,7 +248,10 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 			</Match>
 			<Match when={search()}>
 				<Resizable storageKey="search-sidebar-width" initialWidth={320}>
-					<SearchResults channel={props.channel} search={search()!} />
+					<SearchResults
+						channel={props.channel}
+						search={search()! as ChannelSearch}
+					/>
 				</Resizable>
 			</Match>
 			<Match when={showPinned()}>
@@ -265,7 +273,7 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 	);
 };
 
-export const RouteChannel = (p: RouteSectionProps) => {
+export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api = useApi();
@@ -402,7 +410,7 @@ export const RouteChannel = (p: RouteSectionProps) => {
 	);
 };
 
-export const RouteHome = () => {
+export const RouteHome = (_props: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	return (
 		<LayoutDefault
@@ -415,7 +423,7 @@ export const RouteHome = () => {
 	);
 };
 
-export const RouteFeed = () => {
+export const RouteFeed = (_props: ParentProps<RouteSectionProps>) => {
 	return (
 		<LayoutDefault
 			title="feed"
@@ -427,7 +435,7 @@ export const RouteFeed = () => {
 	);
 };
 
-export const RouteInvite = (p: RouteSectionProps) => {
+export const RouteInvite = (p: ParentProps<RouteSectionProps>) => {
 	return (
 		<Show when={p.params.code}>
 			<LayoutDefault
@@ -441,7 +449,7 @@ export const RouteInvite = (p: RouteSectionProps) => {
 	);
 };
 
-export const RouteUser = (p: RouteSectionProps) => {
+export const RouteUser = (p: ParentProps<RouteSectionProps>) => {
 	const api = useApi();
 	const user = api.users.fetch(() => p.params.user_id);
 

@@ -1,5 +1,6 @@
 import { type Command, EditorState, TextSelection } from "prosemirror-state";
-import { DOMParser, type NodeViewConstructor } from "prosemirror-model";
+import { DOMParser } from "prosemirror-model";
+type NodeViewConstructor = any;
 import {
 	type EditorProps as ProsemirrorEditorProps,
 	EditorView,
@@ -8,7 +9,7 @@ import { createEffect, onCleanup, onMount } from "solid-js";
 import { useCtx } from "../context";
 import { useAutocomplete } from "../contexts/mod.tsx";
 import { initTurndownService } from "../turndown.ts";
-import { decorate, md } from "../markdown.tsx";
+import { decorate, md } from "../markdown_utils.tsx";
 import { handleAutocomplete } from "./editor-utils.ts";
 import { schema as defaultSchema } from "./schema";
 

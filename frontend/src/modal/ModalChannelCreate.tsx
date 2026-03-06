@@ -36,7 +36,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 	};
 
 	const handleCancel = () => {
-		props.cont(null);
+		props.cont(null as any);
 		modalCtl.close();
 	};
 
@@ -98,7 +98,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 									type="radio"
 									value={c.type}
 									checked={channelType() === c.type}
-									onInput={() => setChannelType(c.type)}
+									onInput={() => setChannelType(c.type as any)}
 								/>
 								<RadioDot checked={channelType() === c.type} />
 								<div>

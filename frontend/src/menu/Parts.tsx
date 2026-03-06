@@ -152,13 +152,18 @@ type ItemColor = "danger";
 
 export function Item(
 	props: ParentProps<
-		{ onClick?: (e: MouseEvent) => void; disabled?: boolean; color?: ItemColor }
+		{
+			onClick?: (e: MouseEvent) => void;
+			disabled?: boolean;
+			color?: ItemColor;
+			classList?: Record<string, boolean>;
+		}
 	>,
 ) {
 	const ctx = useContext(chatctx)!;
 	const { preview, setPreview } = useMenu();
 
-	let timeout: number;
+	let timeout: ReturnType<typeof setTimeout>;
 	function handleMouseEnter() {
 		if (!preview()) {
 			setPreview(null);
@@ -192,7 +197,10 @@ export function Item(
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}
 				disabled={props.disabled ?? false}
-				classList={{ ["color-" + props.color]: !!props.color }}
+				classList={{
+					...props.classList,
+					["color-" + props.color]: !!props.color,
+				}}
 			>
 				{props.children}
 			</button>

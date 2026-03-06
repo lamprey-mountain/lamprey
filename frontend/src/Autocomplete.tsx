@@ -185,15 +185,15 @@ export const Autocomplete = () => {
 				keys: ["name", "shortcodes"],
 				limit: 10,
 				all: true,
-			});
+			}) as any;
 		} else if (state?.type === "command") {
 			results = go(state.query, allCommands(), {
 				key: "name",
 				limit: 10,
 				all: true,
-			});
+			}) as any;
 		} else {
-			results = [];
+			results = [] as any;
 		}
 		setFiltered(results as any);
 		if (hoveredIndex() >= results.length) {

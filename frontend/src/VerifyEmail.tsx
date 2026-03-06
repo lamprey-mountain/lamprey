@@ -25,8 +25,8 @@ export const RouteVerifyEmail = (props: RouteSectionProps<unknown>) => {
 			.POST("/api/v1/user/{user_id}/email/{addr}/verify/{code}", {
 				params: {
 					path: {
-						addr: emailAddr,
-						code: code,
+						addr: (emailAddr as any),
+						code: (code as any),
 						user_id: "@self",
 					},
 				},
@@ -34,7 +34,7 @@ export const RouteVerifyEmail = (props: RouteSectionProps<unknown>) => {
 			.then(({ error }) => {
 				if (error) {
 					console.error(error);
-					setError(`Failed to verify email: ${error.message}`);
+					setError(`Failed to verify email: ${(error as any).message}`);
 				} else {
 					nav("/settings/email");
 				}

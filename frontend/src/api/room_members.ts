@@ -16,7 +16,7 @@ export class RoomMembers {
 	_requests = new Map<string, Map<string, Promise<RoomMember>>>();
 	_cachedListings = new Map<string, Listing<RoomMember>>();
 
-	private _getOrCreateListing(room_id: string): Listing<RoomMember> {
+	_getOrCreateListing(room_id: string): Listing<RoomMember> {
 		let l = this._cachedListings.get(room_id);
 		if (!l) {
 			l = {

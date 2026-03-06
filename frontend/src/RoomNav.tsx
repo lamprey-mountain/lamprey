@@ -593,19 +593,23 @@ export const RoomNav = () => {
 											onDrop={handleDrop}
 											onDragLeave={handleDragLeave}
 											classList={{
-												dragging: dragging()?.id === folder.id,
-												"drag-over": target()?.id === folder.id &&
+												dragging: !!dragging()?.id &&
+													dragging()?.id === folder.id,
+												"drag-over": !!target()?.id &&
+													target()?.id === folder.id &&
 													target()?.position === "before",
-												"drag-over-after": target()?.id === folder.id &&
+												"drag-over-after": !!target()?.id &&
+													target()?.id === folder.id &&
 													target()?.position === "after",
-												"drag-over-inside": target()?.id === folder.id &&
+												"drag-over-inside": !!target()?.id &&
+													target()?.id === folder.id &&
 													target()?.position === "inside",
-												"preview": folderPreview() &&
+												"preview": !!folderPreview() &&
 													folder.items.some((room) =>
 														room.id === folderPreview()
 													),
 												collapsed: collapsedFolders().has(folder.id),
-												unread: getFolderUnread(folder),
+												unread: !!getFolderUnread(folder),
 											}}
 										>
 											<div
@@ -636,14 +640,16 @@ export const RoomNav = () => {
 									)}
 								</Match>
 								<Match when={item.type === "view"} keyed>
-									{(view) => (
+									{(view: any) => (
 										<li
 											class="menu-room"
-											data-id={`view-${view.name}`}
+											data-id={`view-${(view as any)?.name}`}
 											data-type="view"
 										>
 											<A href="#" class="nav">
-												<div class="avatar">{view.name.substring(0, 2)}</div>
+												<div class="avatar">
+													{(view as any)?.name?.substring?.(0, 2)}
+												</div>
 											</A>
 										</li>
 									)}

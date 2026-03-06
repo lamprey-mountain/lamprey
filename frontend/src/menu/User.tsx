@@ -161,14 +161,17 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const disconnect = () => {
-		api.client.http.DELETE("/api/v1/voice/{thread_id}/member/{user_id}", {
-			params: {
-				path: {
-					thread_id: userVoiceStates()[0].thread_id,
-					user_id: props.user_id,
+		api.client.http.DELETE(
+			"/api/v1/voice/{thread_id}/member/{user_id}" as any,
+			{
+				params: {
+					path: {
+						thread_id: (userVoiceStates()[0] as any).thread_id,
+						user_id: props.user_id,
+					},
 				},
 			},
-		});
+		);
 	};
 
 	const openDm = () => {
@@ -240,7 +243,7 @@ export function UserMenu(props: UserMenuProps) {
 		);
 	};
 
-	const roles = api.roles.list(() => props.room_id ?? undefined);
+	const roles = api.roles.list(() => props.room_id as string);
 
 	const RoleSubmenu = () => (
 		<Submenu content="roles">

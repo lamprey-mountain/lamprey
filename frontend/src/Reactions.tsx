@@ -81,7 +81,10 @@ export const Reactions = (props: ReactionsProps) => {
 				},
 			});
 		} else {
-			if (ctx.popout().id === "emoji" && ctx.popout().ref === addEl) {
+			if (
+				(ctx.popout() as any).id === "emoji" &&
+				(ctx.popout() as any).ref === addEl
+			) {
 				ctx.setPopout({});
 			}
 		}
@@ -129,7 +132,7 @@ export const Reactions = (props: ReactionsProps) => {
 					);
 				}}
 			</For>
-			<button class="add-reaction" ref={addEl}>
+			<button class="add-reaction" ref={addEl as any}>
 				<img
 					class="icon"
 					classList={{ show: showPicker() }}

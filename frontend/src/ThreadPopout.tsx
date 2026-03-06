@@ -30,7 +30,7 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 		for (const t of active) {
 			// FIXME: populate thread_member for joined threads
 			if (filter(t)) {
-				if (t.thread_member && t.thread_member.membership === "Join") {
+				if ((t.thread_member as any)?.membership === "Join") {
 					joined.push(t);
 				} else {
 					notJoined.push(t);
@@ -58,8 +58,9 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 			const chan = await api.channels.create(channel.room_id!, {
 				name,
 				parent_id: channel_id,
-				type: "ThreadPublic",
-			});
+				type: "ThreadPublic" as any,
+				// @ts-ignore
+			} as any);
 			nav(`/channel/${chan.id}`);
 		});
 	};

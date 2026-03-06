@@ -29,7 +29,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [creating, setCreating] = createSignal(false);
 	const currentUser = useCurrentUser();
 
-	const roles = api.roles.list(() => props.room_id ?? undefined);
+	const roles = api.roles.list(() => props.room_id as string);
 
 	const currentUserId = () => currentUser()?.id;
 
@@ -57,7 +57,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		const roleItems = roles()?.items;
 		const roomId = props.room_id;
 		if (!roleItems || !roomId) return [];
-		const { canApply, rank, isOwner } = canApplyRoles();
+		const { canApply, rank, isOwner } = canApplyRoles() as any;
 		if (!canApply) return [];
 		return roleItems
 			.filter((r) => r.id !== roomId)

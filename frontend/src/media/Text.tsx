@@ -99,7 +99,7 @@ export const TextView = (props: MediaProps) => {
 		import("highlight.js").then(({ default: hljs }) => {
 			// HACK: determine file type via extension
 			// HACK: retain line numbers
-			for (const el of [...highlightEl.children]) {
+			for (const el of Array.from(highlightEl.children)) {
 				const cell = el as HTMLElement;
 				delete cell.dataset.highlighted;
 				cell.classList.add(

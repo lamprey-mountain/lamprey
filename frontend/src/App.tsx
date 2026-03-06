@@ -1,7 +1,14 @@
-import { type Component, createEffect, For, from, Show } from "solid-js";
-import { type ParentProps as RouterParentProps } from "@solidjs/router";
+import {
+	type Component,
+	createEffect,
+	For,
+	from,
+	type ParentProps,
+	Show,
+} from "solid-js";
+import { type RouteSectionProps } from "@solidjs/router";
 import { Portal } from "solid-js/web";
-import { Route, Router, type RouteSectionProps } from "@solidjs/router";
+import { Route, Router } from "@solidjs/router";
 import { Debug } from "./Debug.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { chatctx, useCtx } from "./context.ts";
@@ -48,39 +55,39 @@ import { flags } from "./flags.ts";
 const App: Component = () => {
 	return (
 		<Router root={AppBootstrap}>
-			<Route path="/" component={RouteHome} />
-			<Route path="/inbox" component={RouteInbox} />
-			<Route path="/friends" component={RouteFriends} />
-			<Route path="/settings/:page?" component={RouteSettings} />
-			<Route path="/room/:room_id" component={RouteRoom} />
+			<Route path="/" component={RouteHome as any} />
+			<Route path="/inbox" component={RouteInbox as any} />
+			<Route path="/friends" component={RouteFriends as any} />
+			<Route path="/settings/:page?" component={RouteSettings as any} />
+			<Route path="/room/:room_id" component={RouteRoom as any} />
 			<Route
 				path="/room/:room_id/settings/:page?"
-				component={RouteRoomSettings}
+				component={RouteRoomSettings as any}
 			/>
 			<Route
 				path="/channel/:channel_id/settings/:page?"
-				component={RouteChannelSettings}
+				component={RouteChannelSettings as any}
 			/>
-			<Route path="/channel/:channel_id" component={RouteChannel} />
+			<Route path="/channel/:channel_id" component={RouteChannel as any} />
 			<Route
 				path="/channel/:channel_id/message/:message_id"
-				component={RouteChannel}
+				component={RouteChannel as any}
 			/>
 			<Route
 				path="/thread/:channel_id/settings/:page?"
-				component={RouteChannelSettings}
+				component={RouteChannelSettings as any}
 			/>
-			<Route path="/thread/:channel_id" component={RouteChannel} />
+			<Route path="/thread/:channel_id" component={RouteChannel as any} />
 			<Route
 				path="/thread/:channel_id/message/:message_id"
-				component={RouteChannel}
+				component={RouteChannel as any}
 			/>
-			<Route path="/debug" component={Debug} />
-			<Route path="/feed" component={RouteFeed} />
-			<Route path="/invite/:code" component={RouteInvite} />
-			<Route path="/verify-email" component={RouteVerifyEmail} />
-			<Route path="/user/:user_id" component={RouteUser} />
-			<Route path="/authorize" component={RouteAuthorize} />
+			<Route path="/debug" component={Debug as any} />
+			<Route path="/feed" component={RouteFeed as any} />
+			<Route path="/invite/:code" component={RouteInvite as any} />
+			<Route path="/verify-email" component={RouteVerifyEmail as any} />
+			<Route path="/user/:user_id" component={RouteUser as any} />
+			<Route path="/authorize" component={RouteAuthorize as any} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
 	);
@@ -91,7 +98,7 @@ const App: Component = () => {
  * Handles config loading and provides ConfigProvider.
  * Renders conditionally until config is available.
  */
-export const AppBootstrap: Component<RouterParentProps> = (props) => {
+export const AppBootstrap: Component<RouteSectionProps> = (props) => {
 	const { config, resolved } = useAppConfig();
 
 	return (
@@ -107,9 +114,9 @@ export const AppBootstrap: Component<RouterParentProps> = (props) => {
  * AppProviders - Layer 2
  * Initializes client, API, and all context providers.
  */
-export const AppProviders: Component<
-	RouterParentProps & { resolved: boolean }
-> = (props) => {
+export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
+	props,
+) => {
 	const config = useConfig();
 	const { client, api, ctx } = useChatClient(config);
 
@@ -158,7 +165,7 @@ export const AppProviders: Component<
  * AppShell - Layer 3
  * Renders UI chrome, global event handlers, and overlay.
  */
-export const AppShell: Component<RouterParentProps> = (props) => {
+export const AppShell: Component<ParentProps<{}>> = (props) => {
 	const ctx = useCtx();
 	const [voice] = useVoice();
 	const state = from(ctx.client.state);

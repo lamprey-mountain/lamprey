@@ -316,15 +316,17 @@ const AutocompleteDropdown = (props: {
 	onSelectFilter: (text: string) => void;
 }) => {
 	const api = useApi();
-	const threadMembers = api.thread_members.list(() => props.channel?.id);
+	const threadMembers = api.thread_members.list(
+		() => (props.channel?.id as any),
+	);
 	const roomMembers = api.room_members.list(() =>
-		props.channel?.room_id ?? props.room?.id ?? ""
+		(props.channel?.room_id as any) ?? props.room?.id ?? ""
 	);
 	const roomThreads = api.channels.list(() =>
-		props.channel?.room_id ?? props.room?.id ?? ""
+		(props.channel?.room_id as any) ?? props.room?.id ?? ""
 	);
 	const roomRoles = api.roles.list(() =>
-		props.channel?.room_id ?? props.room?.id ?? ""
+		(props.channel?.room_id as any) ?? props.room?.id ?? ""
 	);
 
 	const authorSuggestions = createMemo(() => {
@@ -412,13 +414,17 @@ const AutocompleteDropdown = (props: {
 			.filter((r) => r.name.toLowerCase().includes(query))
 			.map(
 				(r) =>
-					({ id: `role-${r.id}`, name: r.name, type: "role" }) as Mentionable,
+					({
+						id: `role-${r.id}`,
+						name: r.name,
+						type: "role" as const,
+					}) as Mentionable,
 			);
 
 		const special: Mentionable[] = [
-			{ id: "everyone-room", name: "@room", type: "special" },
-			{ id: "everyone-thread", name: "@thread", type: "special" },
-		].filter((s) => s.name.toLowerCase().includes(query));
+			{ id: "everyone-room", name: "@room", type: "special" as const },
+			{ id: "everyone-thread", name: "@thread", type: "special" as const },
+		].filter((s) => (s.name as any).toLowerCase().includes(query));
 
 		return [...users, ...roles, ...special].slice(0, 10);
 	});
@@ -787,7 +793,7 @@ export const SearchInput = (
 		const textQuery = textQueryParts.join(" ");
 
 		const existing = currentSearch();
-		const searchState: ChannelSearch = {
+		const searchState: any = {
 			query: queryString,
 			results: existing?.results ?? null,
 			loading: true,
@@ -973,10 +979,10 @@ export const SearchInput = (
 	};
 
 	const editor = createBaseEditor({
-		schema,
+		schema: (schema as any),
 		createState: (schema) =>
 			EditorState.create({
-				schema,
+				schema: (schema as any),
 				plugins: [
 					history(),
 					keymap({

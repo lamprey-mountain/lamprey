@@ -124,7 +124,9 @@ const NotificationItem = (
 ) => {
 	const api = useApi();
 	const thread = () =>
-		props.allData?.threads.find((t) => t.id === props.notification.thread_id);
+		props.allData?.threads.find((t) =>
+			t.id === ((props.notification as any).thread_id as any)
+		);
 	const message = () =>
 		props.allData?.messages.find((m) => m.id === props.notification.message_id);
 	const room = () => {
@@ -144,7 +146,7 @@ const NotificationItem = (
 	};
 
 	const reasonText = () => {
-		switch (props.notification.reason) {
+		switch (((props.notification as any).reason as any)) {
 			case "Mention":
 				return "Mention";
 			case "MentionBulk":
@@ -157,7 +159,10 @@ const NotificationItem = (
 	};
 
 	return (
-		<article class="notification" data-type={props.notification.reason}>
+		<article
+			class="notification"
+			data-type={(props.notification as any).reason as any}
+		>
 			<header>
 				<input
 					type="checkbox"

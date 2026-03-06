@@ -5,6 +5,7 @@ export type Channel = components["schemas"]["Channel"];
 export type ChannelType = components["schemas"]["ChannelType"];
 export type User = components["schemas"]["User"];
 export type Message = components["schemas"]["Message"] & { is_local?: true };
+export type MessageVersion = components["schemas"]["MessageVersion"];
 export type Role = components["schemas"]["Role"];
 export type Invite = components["schemas"]["Invite"];
 export type InviteWithMetadata = components["schemas"]["InviteWithMetadata"];
@@ -47,6 +48,7 @@ export type PushInfo = components["schemas"]["PushInfo"];
 export type AutomodRule = components["schemas"]["AutomodRule"];
 export type AutomodRuleCreate = components["schemas"]["AutomodRuleCreate"];
 export type Attachment = components["schemas"]["MessageAttachment"];
+export type ReactionKey = components["schemas"]["ReactionKey"];
 export type RelationshipType = components["schemas"]["RelationshipType"];
 export type MemberListGroup = components["schemas"]["MemberListGroup"];
 export type ChannelPatch = components["schemas"]["ChannelPatch"];
@@ -117,7 +119,7 @@ export type MessageReady = {
 
 export type MessageEnvelope =
 	| { op: "Ping" }
-	| { op: "Sync"; data: MessageSync; seq: number }
+	| { op: "Sync"; data: MessageSync; seq: number; nonce?: string }
 	| { op: "Error"; error: string }
 	| MessageReady
 	| { op: "Resumed" }

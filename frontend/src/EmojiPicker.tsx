@@ -58,7 +58,7 @@ const parseEmoji = async (): Promise<EmojiGroup[]> => {
 		name: getGroupName(i) || "Unknown",
 		icon: getGroupIcon(i),
 		emojis: emojis.map((e) => ({
-			type: "standard",
+			type: "standard" as const,
 			label: e.label,
 			unicode: e.unicode,
 			hexcode: e.hexcode,

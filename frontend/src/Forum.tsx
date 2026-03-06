@@ -14,7 +14,7 @@ import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
@@ -66,7 +66,6 @@ export const Forum = (props: { channel: Channel }) => {
 			api.channels.create(room_id, {
 				name,
 				parent_id: props.channel.id,
-				type: "ThreadPublic",
 			});
 		});
 	}
@@ -207,25 +206,25 @@ const QuickCreate = (
 		uploads.init(local_id, props.channel.id, file);
 	}
 
-	const onSubmit = async (text: string) => {
-		if (!text) return;
-		const t = await api.channels.create(props.channel.room_id!, {
+	const onSubmit = (text: string) => {
+		if (!text) return false;
+		api.channels.create(props.channel.room_id!, {
 			name: "thread",
 			parent_id: props.channel.id,
-			type: "ThreadPublic",
+		}).then((t) => {
+			if (!t) return;
+			handleSubmit(
+				ctx,
+				[ch, chUpdate],
+				t.id,
+				text,
+				null as any,
+				api,
+				props.channel.id,
+			);
+			n(`/channel/${t.id}`);
 		});
-
-		if (!t) return;
-		handleSubmit(
-			ctx,
-			[ch, chUpdate],
-			t.id,
-			text,
-			null as any,
-			api,
-			props.channel.id,
-		);
-		n(`/channel/${t.id}`);
+		return true;
 	};
 
 	const onChange = (state: EditorState) => {
@@ -246,7 +245,7 @@ const QuickCreate = (
 						<For each={atts()}>
 							{(att) => (
 								<RenderUploadItem
-									channel_id={props.channel.id}
+									thread_id={props.channel.id}
 									att={att}
 								/>
 							)}

@@ -102,7 +102,7 @@ const tabs: Array<
 	},
 ];
 
-const todo = (what: string) => () => `todo: ${what}` as Component;
+const todo = (what: string) => () => `todo: ${what}` as any as Component;
 
 const adminTabs: Array<
 	{ category: string } | {
@@ -195,7 +195,8 @@ function groupTabsByCategory(
 			currentGroup = { category: tab.category, items: [] };
 			groups.push(currentGroup);
 		} else if (currentGroup) {
-			const isVisible = (!tab.permissionCheck || tab.permissionCheck(perms)) &&
+			const isVisible =
+				(!tab.permissionCheck || tab.permissionCheck(perms as any)) &&
 				(!tab.ownerOnly || room.owner_id === user_id());
 			if (isVisible) {
 				currentGroup.items.push(tab);
@@ -219,7 +220,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	);
 	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
-		currentTabs().find((i) => i.path === (props.page ?? ""))!;
+		currentTabs().find((i: any) => i.path === (props.page ?? ""))!;
 
 	const groupedTabs = createMemo(() =>
 		groupTabsByCategory(currentTabs(), perms, user_id, props.room)
@@ -253,7 +254,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 		<div class="settings">
 			<header>
 				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}
-				: {currentTab()?.name} <A href={`/room/${props.room.id}`}>back</A>
+				: {(currentTab() as any)?.name}{" "}
+				<A href={`/room/${props.room.id}`}>back</A>
 			</header>
 			<nav>
 				<ul>
@@ -272,15 +274,13 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 								<For each={group.items}>
 									{(tab) => (
 										<Switch>
-											<Match when={tab.action}>
+											<Match when={(tab as any).action}>
 												<li>
 													<button
 														class="action"
-														onClick={() => handleAction(tab.action)}
-														style={{
-															color: tab.style === "danger"
-																? "oklch(var(--color-red))"
-																: "inherit",
+														onClick={() => handleAction((tab as any).action)}
+														classList={{
+															"danger": (tab as any).style === "danger",
 														}}
 													>
 														{tab.name}
@@ -290,9 +290,10 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 											<Match when={true}>
 												<li>
 													<A
-														href={`/room/${props.room.id}/settings/${tab.path}`}
+														href={`/room/${props.room.id}/settings/${((tab as any)
+															.path as any)}`}
 													>
-														{tab.name}
+														{(tab as any).name}
 													</A>
 												</li>
 											</Match>
@@ -304,10 +305,10 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 					</For>
 				</ul>
 			</nav>
-			<main classList={{ padded: !currentTab()?.noPad }}>
+			<main classList={{ padded: !((currentTab() as any).noPad as any) }}>
 				<Show when={currentTab()} fallback="unknown page">
 					<Dynamic
-						component={currentTab()?.component}
+						component={(currentTab() as any)?.component}
 						room={props.room}
 					/>
 				</Show>

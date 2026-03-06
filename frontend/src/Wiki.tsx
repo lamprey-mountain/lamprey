@@ -16,7 +16,7 @@ import { Time } from "./Time";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { usePermissions } from "./hooks/usePermissions";
-import { md } from "./markdown";
+import { md } from "./markdown_utils";
 import { flags } from "./flags";
 import { ChannelContext, createInitialChannelState } from "./channelctx";
 import { createStore } from "solid-js/store";
@@ -116,8 +116,8 @@ export const Wiki = (props: { channel: Channel }) => {
 			api.channels.create(room_id, {
 				name,
 				parent_id: props.channel.id,
-				type: "Document",
-			});
+				type: "Document" as any,
+			} as any);
 		});
 	}
 

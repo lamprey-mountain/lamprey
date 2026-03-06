@@ -56,10 +56,10 @@ function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
 
 	for (const tab of tabs) {
 		if ("category" in tab) {
-			currentGroup = { category: tab.category, items: [] };
+			currentGroup = { category: (tab.category as any), items: [] };
 			groups.push(currentGroup);
 		} else {
-			currentGroup?.items.push(tab);
+			(currentGroup as any)?.items?.push(tab);
 		}
 	}
 

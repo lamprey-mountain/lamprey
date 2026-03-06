@@ -50,8 +50,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 									i.creator_id);
 								const creatorName = () => {
 									const r = rm();
-									return (r?.membership === "Join" && r.override_name) ||
-										user()?.name || "unknown";
+									return r?.override_name || user()?.name || "unknown";
 								};
 								return (
 									<li class="invite">

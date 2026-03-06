@@ -2,7 +2,7 @@ import type { Embed } from "sdk";
 import { Show, type VoidProps } from "solid-js";
 import { ImageView } from "./media/mod.tsx";
 import sanitizeHtml from "sanitize-html";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 
 type EmbedProps = {
 	embed: Embed;

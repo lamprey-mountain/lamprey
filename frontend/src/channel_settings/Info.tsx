@@ -63,12 +63,12 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	let iconInputEl!: HTMLInputElement;
 
 	const editor = createEditor({
-		initialContent: props.channel.description,
+		initialContent: props.channel.description as string | undefined,
 	});
 
 	onMount(() => {
 		if (editorState()) {
-			editor.setState(editorState());
+			editor.setState(editorState() as any);
 		}
 	});
 
@@ -174,10 +174,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		setEditingBitrate(props.channel.bitrate ?? 65535);
 		setEditingIcon(props.channel.icon);
 		setEditorState(
-			editor.createEditorState({
+			(editor as any).createEditorState({
 				doc: editor.schema.nodes.doc.create(
 					null,
-					editor.schema.text(props.channel.description),
+					editor.schema.text(props.channel.description as string),
 				),
 			}),
 		);
@@ -348,7 +348,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 								<div
 									class="tag-item"
 									style={{
-										background: tag.color,
+										background: tag.color as string | undefined,
 										opacity: tag.archived ? 0.6 : 1,
 									}}
 									onClick={() => {

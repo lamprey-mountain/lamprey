@@ -447,20 +447,20 @@ export function createApi(
 				me && m.author_id !== me.id &&
 				m.latest_version.type === "DefaultMarkdown" && mentions
 			) {
-				if (mentions.users.some((u) => u.id === me.id)) {
+				if (mentions.users?.some((u) => u.id === me.id)) {
 					is_mentioned = true;
 				}
 				if (!is_mentioned && mentions.everyone) {
 					is_mentioned = true;
 				}
-				if (!is_mentioned && mentions.roles.length > 0) {
+				if (!is_mentioned && mentions.roles?.length > 0) {
 					const channel = channels.cache.get(m.channel_id);
 					if (channel?.room_id) {
 						const room_member = room_members.cache.get(channel.room_id)?.get(
 							me.id,
 						);
 						if (room_member) {
-							for (const role of mentions.roles) {
+							for (const role of mentions.roles!) {
 								if (room_member.roles.some((r) => r.id === role.id)) {
 									is_mentioned = true;
 									break;

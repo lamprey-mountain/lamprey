@@ -80,7 +80,7 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 	const create = () => {
 		modalCtl.prompt("New webhook name?", async (name) => {
 			if (!name) return;
-			await api.client.http.POST("/api/v1/room/{room_id}/webhook", {
+			await api.client.http.POST("/api/v1/room/{room_id}/webhook" as any, {
 				params: { path: { room_id: props.room.id } },
 				body: {
 					name,
@@ -108,9 +108,11 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 				<ul>
 					<For each={filteredWebhooks()}>
 						{(i) => {
-							const creator = api.users.fetch(() => i.creator_id ?? undefined);
+							const creator = api.users.fetch(() => i.creator_id as string);
 							const [name, setName] = createSignal(i.name ?? "");
-							const [avatar, setAvatar] = createSignal(i.avatar ?? "");
+							const [avatar, setAvatar] = createSignal<string | null>(
+								i.avatar ?? null,
+							);
 
 							const webhookUser = () => ({
 								id: i.id,
@@ -118,13 +120,16 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 								avatar: avatar(),
 								banner: null,
 								description: null,
+								bot: true,
+								system: false,
+								version_id: "",
 								flags: 0,
 								presence: { status: "Offline" as const, activities: [] },
 								relationship: null,
 								preferences: null,
 							});
 
-							const channels = api.channels.list(() => i.room_id ?? undefined);
+							const channels = api.channels.list(() => i.room_id as string);
 
 							createEffect(() => {
 								setName(i.name);
@@ -236,7 +241,7 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 																type="text"
 																value={name()}
 																onInput={(e) => setName(e.target.value)}
-																onBlur={updateWebhook}
+																onBlur={updateWebhook as any}
 															/>
 														</div>
 														<Show when={false}>
@@ -251,7 +256,7 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 																		label: ch.name ||
 																			`#${ch.id.substring(0, 8)}...`,
 																		value: ch.id,
-																	})) || []}
+																	})) as any || []}
 																/>
 															</div>
 														</Show>

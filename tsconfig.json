@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		// features
 		"lib": ["ES2023", "DOM", "DOM.Iterable", "ESNext.Intl"],
-		"target": "ES2020",
+		"target": "ES2023",
 		"module": "ESNext",
 		"jsxImportSource": "solid-js",
 

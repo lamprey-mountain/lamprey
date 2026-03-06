@@ -12,7 +12,7 @@ import {
 	useContext,
 } from "solid-js";
 import { useApi } from "./api";
-import { md } from "./markdown";
+import { md } from "./markdown_utils";
 import { useNavigate } from "@solidjs/router";
 import { useUserPopout } from "./contexts/mod";
 import { getEmojiUrl } from "./media/util";
@@ -50,9 +50,9 @@ function UserMention(props: { id: string }) {
 					setUserView(null);
 				} else {
 					setUserView({
-						user_id: props.id,
-						room_id: ctx?.channel?.room_id,
-						thread_id: ctx?.channel?.id,
+						user_id: (props.id as any),
+						room_id: (ctx?.channel?.room_id as any),
+						channel_id: ctx?.channel?.id,
 						ref: currentTarget,
 						source: "message",
 					});
@@ -438,7 +438,7 @@ export const Markdown = (
 			<div
 				class={`markdown ${props.class ?? ""}`}
 				classList={props.classList}
-				ref={props.ref}
+				ref={props.ref as any}
 			>
 				<RenderTokens tokens={tokens()} />
 				{props.children}

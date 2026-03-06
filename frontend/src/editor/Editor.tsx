@@ -6,7 +6,7 @@ import { keymap } from "prosemirror-keymap";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createEditor as createBaseEditor } from "./mod.tsx";
 import { schema } from "./schema.ts";
-import { md } from "../markdown.tsx";
+import { md } from "../markdown_utils.tsx";
 import {
 	createListContinueCommand,
 	createWrapCommand,
@@ -177,7 +177,7 @@ export const createEditor = (opts: EditorProps) => {
 		schema,
 		createState: () => createState(),
 		nodeViews: () => ({
-			mention: (node) => {
+			mention: (node: any) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				if (opts.mentionRenderer) {
@@ -187,7 +187,7 @@ export const createEditor = (opts: EditorProps) => {
 				}
 				return { dom };
 			},
-			mentionChannel: (node) => {
+			mentionChannel: (node: any) => {
 				const dom = document.createElement("span");
 				dom.classList.add("mention");
 				if (opts.mentionChannelRenderer) {
@@ -206,7 +206,7 @@ export const createEditor = (opts: EditorProps) => {
 			return (
 				<>
 					<editor.View {...props} />
-					<EditorWithToolbar getView={() => editor.view} />
+					<EditorWithToolbar getView={() => (editor.view as any)} />
 				</>
 			);
 		},

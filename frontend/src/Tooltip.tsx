@@ -161,7 +161,7 @@ export function tooltip(
 						}}
 					>
 						<div class="base"></div>
-						<div class="inner">{tip}</div>
+						<div class="inner">{tip as any}</div>
 					</div>
 				</Portal>
 			</Show>

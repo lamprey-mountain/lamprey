@@ -74,7 +74,8 @@ export function Input(props: InputProps) {
 		);
 
 		const m = member();
-		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
+		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
+			user()?.name;
 	};
 	const fmt = new (Intl as any).ListFormat();
 
@@ -179,7 +180,10 @@ export function Input(props: InputProps) {
 
 				for (let i = ranges.live.items.length - 1; i >= 0; i--) {
 					const msg = ranges.live.items[i];
-					if (msg.author_id === self_id && msg.type === "DefaultMarkdown") {
+					if (
+						msg.author_id === self_id &&
+						((msg as any).type as any) === "DefaultMarkdown"
+					) {
 						chUpdate("editingMessage", {
 							message_id: msg.id,
 							selection: "end",
@@ -319,7 +323,7 @@ export function Input(props: InputProps) {
 		<div
 			class="message-input"
 			classList={{
-				locked: locked(),
+				locked: locked() ?? false,
 			}}
 		>
 			<Show when={atts()?.length}>
@@ -362,7 +366,7 @@ export function Input(props: InputProps) {
 						type="file"
 						onInput={uploadFile}
 						value="upload file"
-						disabled={locked()}
+						disabled={locked() ?? false}
 					/>
 				</label>
 				<editor.View
@@ -370,10 +374,10 @@ export function Input(props: InputProps) {
 					onChange={onChange}
 					onUpload={handleUpload}
 					channelId={props.channel.id}
-					placeholder={locked()
+					placeholder={(locked() ?? false)
 						? "you cannot send messages here"
 						: `send a message...`}
-					disabled={locked()}
+					disabled={locked() ?? false}
 				/>
 				<EmojiButton picked={onEmojiPick} />
 			</div>
@@ -520,7 +524,8 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 		);
 
 		const m = member();
-		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
+		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
+			user()?.name;
 	};
 
 	const getNameNullable = (user_id?: string) => {

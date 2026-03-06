@@ -78,7 +78,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 						{({ member: i }) => {
 							const user = api.users.fetch(() => i.user_id);
 							const name = () =>
-								(i.membership === "Join" ? i.override_name : null) ??
+								((i as any).membership === "Join" ? i.override_name : null) ??
 									user()?.name;
 							return (
 								<li>
@@ -87,7 +87,9 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 										<div>
 											<h3 class="name">{name()}</h3>
 											<ul class="roles">
-												<For each={i.membership === "Join" ? i.roles : []}>
+												<For
+													each={(i as any).membership === "Join" ? i.roles : []}
+												>
 													{(role_id) => {
 														const role = api.roles.fetch(
 															() => props.room.id,

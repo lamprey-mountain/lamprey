@@ -46,7 +46,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 
 	const voiceStates = createMemo(() => {
 		return [...api.voiceStates.values()].filter((i) =>
-			i.thread_id === voice.threadId
+			(i as any).thread_id === voice.threadId
 		);
 	});
 

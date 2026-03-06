@@ -17,6 +17,7 @@ export type Pagination<T> = {
 	total: number;
 	items: Array<T>;
 	has_more: boolean;
+	cursor?: string | null;
 };
 
 export enum MessageType {

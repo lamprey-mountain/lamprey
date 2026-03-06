@@ -11,7 +11,7 @@ import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { Time } from "./Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useMemberList } from "./contexts/memberlist.tsx";
 import { useCurrentUser } from "./contexts/currentUser.tsx";

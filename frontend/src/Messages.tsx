@@ -2,7 +2,7 @@ import { createMemo, Match, Show, Switch } from "solid-js";
 import { useApi } from "./api.tsx";
 import type { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import { MessageView } from "./Message.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { UserWithRelationship } from "sdk";
@@ -44,20 +44,19 @@ export function renderTimelineItem(
 			const is_mentioned = () => {
 				const me = currentUser();
 				if (!me) return false;
-				if (!item.message.mentions) return false;
+				const mentions = (item.message as any).mentions as any;
+				if (!mentions) return false;
 
-				if (item.message.mentions.users.some((u) => u.id === me.id)) {
+				if (mentions.users.some((u: any) => u.id === me.id)) {
 					return true;
 				}
-				if (
-					item.message.mentions.everyone
-				) {
+				if (mentions.everyone) {
 					return true;
 				}
 				const rm = room_member();
 				if (rm) {
-					for (const role of item.message.mentions.roles) {
-						if (rm.roles.some((r) => r.id === role.id)) {
+					for (const role of mentions.roles) {
+						if (rm.roles.some((r: any) => r.id === (role as any).id)) {
 							return true;
 						}
 					}

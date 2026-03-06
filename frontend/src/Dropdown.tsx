@@ -382,7 +382,7 @@ export function MultiDropdown<T>(
 			}
 		},
 		"Backspace": (e) => {
-			if (selector.getFilter() === "" && props.selected.length > 0) {
+			if (selector.getFiltered().length === 0 && props.selected.length > 0) {
 				props.onRemove(props.selected[props.selected.length - 1]);
 			}
 		},

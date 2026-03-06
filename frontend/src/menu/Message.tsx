@@ -55,7 +55,8 @@ export function MessageMenu(props: MessageMenuProps) {
 		const index = tl.findIndex((i) => i.id === props.message_id && !i.is_local);
 		const next = tl[index - 1];
 		const next_id = next?.id ?? props.message_id;
-		const next_version_id = next?.version_id ?? props.version_id;
+		const next_version_id = ((next as any)?.version_id as string) ??
+			props.version_id;
 		markThreadRead(props.channel_id, next_version_id, true);
 	}
 

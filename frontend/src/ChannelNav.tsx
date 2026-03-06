@@ -363,7 +363,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					setTarget({ id, mode: "inside" });
 				}
 				return;
-			} else if (targetChannel.type !== "Category") {
+			} else if ((targetChannel.type as any) !== "Category") {
 				// Reorder relative to other channel
 				const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 				const after = e.clientY > rect.top + rect.height / 2;
@@ -859,7 +859,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 		const c = channelConfig();
 		if (!c?.notifs.mute) return false;
 		if (c.notifs.mute.expires_at === null) return true;
-		return Date.parse(c.notifs.mute.expires_at) > Date.now();
+		return Date.parse(c.notifs.mute.expires_at!) > Date.now();
 	};
 
 	const canInvite = createMemo(() => {

@@ -16,7 +16,7 @@ import { Copyable } from "../util.tsx";
 import { createStore, produce } from "solid-js/store";
 import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";
-import { md } from "../markdown.tsx";
+import { md } from "../markdown_utils.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
 import { Checkbox } from "../icons";
 import { CheckboxOption } from "../atoms/CheckboxOption";
@@ -335,7 +335,9 @@ const RoleList = (
 								<Match when={i.allow.includes("Admin")}>
 									<div class="perm-admin">admin!</div>
 								</Match>
-								<Match when={i.allow.length === 0 && i.deny.length === 0}>
+								<Match
+									when={i.allow.length === 0 && (i.deny?.length ?? 0) === 0}
+								>
 									<div>cosmetic</div>
 								</Match>
 								<Match when={true}>
@@ -634,8 +636,9 @@ const RolePermissionSelector = (
 			}
 
 			if (!searchQuery) return true;
-			const name = t(`permissions.${perm.id}.name`) ?? perm.id;
-			const description = t(`permissions.${perm.id}.description`) ?? "";
+			const name = (t(`permissions.${perm.id}.name`) ?? perm.id) as string;
+			const description =
+				(t(`permissions.${perm.id}.description`) ?? "") as string;
 			return (
 				name.toLowerCase().includes(searchQuery) ||
 				description.toLowerCase().includes(searchQuery) ||

@@ -56,8 +56,9 @@ const tabs: Array<{
 	},
 	{
 		name: "remove channel",
+		path: "remove",
+		component: null as any,
 		action: "remove",
-		style: "danger",
 		// TODO: check ThreadManage in threads, ChannelManage in channels
 		permissionCheck: (p) => p.has("ThreadManage") || p.has("ChannelManage"),
 	},
@@ -116,21 +117,19 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 							<Show
 								when={(!tab.channelTypes ||
 									tab.channelTypes.includes(props.channel.type)) &&
-									(!tab.permissionCheck || tab.permissionCheck(perms))}
+									(!tab.permissionCheck || tab.permissionCheck(perms as any))}
 							>
 								<Switch>
 									<Match when={tab.action}>
 										<li>
 											<button
 												class="action"
-												onClick={() => handleAction(tab.action)}
-												style={{
-													color: tab.style === "danger"
-														? "oklch(var(--color-red))"
-														: "inherit",
+												onClick={() => handleAction(tab.action as any)}
+												classList={{
+													"danger": ((tab as any).style) === "danger",
 												}}
 											>
-												{tab.name}
+												{tab.name as any}
 											</button>
 										</li>
 									</Match>

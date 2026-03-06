@@ -37,7 +37,7 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				<label>
 					<button
 						onClick={() => {
-							modalctl.open({ type: "settings", user_id: props.user.id });
+							modalctl.open({ type: "reset_password" });
 						}}
 					>
 						change password
@@ -148,7 +148,11 @@ function Oauth() {
 	// add something to sync i guess
 	const [oauthProviders] = createResource(async () => {
 		const { data } = await api.client.http.GET("/api/v1/debug/info");
-		return data?.features.oauth.providers;
+		return (data && "features" in data && data.features &&
+				"oauth" in data.features &&
+				data.features.oauth && "providers" in data.features.oauth)
+			? data.features.oauth.providers
+			: undefined;
 	});
 
 	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =

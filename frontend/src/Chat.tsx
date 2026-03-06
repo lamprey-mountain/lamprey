@@ -25,7 +25,7 @@ import { Portal } from "solid-js/web";
 import { useNavigate } from "@solidjs/router";
 import { MessageView } from "./Message.tsx";
 import { SearchInput } from "./SearchInput.tsx";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import icPin from "./assets/pin.png";
 import icMembers from "./assets/members.png";
 import icCall from "./assets/call.png";
@@ -384,8 +384,8 @@ export const ChatHeader = (
 	const inSelectMode = () => channelState.selectMode;
 
 	const { has: hasPermission } = usePermissions(
-		() => currentUser()?.id,
-		() => props.channel.room_id,
+		() => currentUser()?.id as string | undefined,
+		() => props.channel.room_id as string | undefined,
 		() => props.channel.id,
 	);
 	const canDelete = () => hasPermission("MessageDelete");

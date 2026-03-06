@@ -72,6 +72,9 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		avatar: editingAvatar(),
 		banner: null,
 		description: null,
+		bot: false,
+		system: false,
+		version_id: "",
 		flags: 0,
 		presence: { status: "Offline" as const, activities: [] },
 		relationship: null,
@@ -90,7 +93,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 				/>
 				<textarea
 					class="description"
-					value={editingDescription()}
+					value={editingDescription() ?? ""}
 					onInput={(e) => setEditingDescription(e.target.value)}
 				/>
 				<div class="avatar-uploader" onClick={openAvatarPicker}>

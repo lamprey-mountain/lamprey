@@ -130,5 +130,16 @@ export type Events = {
 	ready: MessageReady;
 };
 
+export type Menu = {
+	ref?: HTMLElement;
+	props?: any;
+	placement?: Placement;
+} | {};
+
+export type Modal = {
+	id?: string;
+	props?: any;
+} | {};
+
 export const chatctx = createContext<ChatCtx>();
 export const useCtx = () => useContext(chatctx)!;

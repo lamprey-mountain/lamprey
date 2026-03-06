@@ -62,12 +62,12 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		} else if (menuEl.classList.contains("menu-message")) {
 			const message = api.messages.cache.get(message_id!);
 			if (!message) return;
-			const { channel_id, version_id } = message;
+			const { channel_id, version_id } = message as Record<string, unknown>;
 			menu = {
 				type: "message",
 				channel_id,
 				message_id,
-				version_id,
+				version_id: (version_id as string) || undefined,
 			};
 		} else if (menuEl.classList.contains("menu-user")) {
 			if (!user_id) return;

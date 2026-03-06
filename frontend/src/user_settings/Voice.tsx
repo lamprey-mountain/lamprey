@@ -55,14 +55,16 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 						type="range"
 						min="0"
 						max="100"
-						value={ctx.preferences().frontend["mic_volume"] || 50}
+						value={(ctx.preferences().frontend["mic_volume"] as
+							| number
+							| undefined) || 50}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
 								...c,
 								frontend: {
 									...c.frontend,
-									["mic_volume"]: e.target.value,
+									["mic_volume"]: Number(e.target.value),
 								},
 							});
 						}}
@@ -98,14 +100,16 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 						type="range"
 						min="0"
 						max="100"
-						value={ctx.preferences().frontend["speaker_volume"] || 75}
+						value={(ctx.preferences().frontend["speaker_volume"] as
+							| number
+							| undefined) || 75}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
 								...c,
 								frontend: {
 									...c.frontend,
-									["speaker_volume"]: e.target.value,
+									["speaker_volume"]: Number(e.target.value),
 								},
 							});
 						}}
@@ -124,30 +128,30 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 			</div>
 			<h3 class="dim title">audio processing</h3>
 			<CheckboxOption
-				id={`user-${ctx.user?.id ?? "@self"}-voice-echo-cancellation`}
+				id={`user-${_props.user?.id ?? "@self"}-voice-echo-cancellation`}
 				checked={ctx.preferences().frontend["voice_echo_cancellation"] ===
 					"yes"}
 				onChange={() => toggle("voice_echo_cancellation")()}
-				seed={`user-${ctx.user?.id ?? "@self"}-voice-echo-cancellation`}
+				seed={`user-${_props.user?.id ?? "@self"}-voice-echo-cancellation`}
 			>
 				<Checkbox
 					checked={ctx.preferences().frontend["voice_echo_cancellation"] ===
 						"yes"}
-					seed={`user-${ctx.user?.id ?? "@self"}-voice-echo-cancellation`}
+					seed={`user-${_props.user?.id ?? "@self"}-voice-echo-cancellation`}
 				/>
 				<span>Enable echo cancellation</span>
 			</CheckboxOption>
 			<CheckboxOption
-				id={`user-${ctx.user?.id ?? "@self"}-voice-noise-suppression`}
+				id={`user-${_props.user?.id ?? "@self"}-voice-noise-suppression`}
 				checked={ctx.preferences().frontend["voice_noise_suppression"] ===
 					"yes"}
 				onChange={() => toggle("voice_noise_suppression")()}
-				seed={`user-${ctx.user?.id ?? "@self"}-voice-noise-suppression`}
+				seed={`user-${_props.user?.id ?? "@self"}-voice-noise-suppression`}
 			>
 				<Checkbox
 					checked={ctx.preferences().frontend["voice_noise_suppression"] ===
 						"yes"}
-					seed={`user-${ctx.user?.id ?? "@self"}-voice-noise-suppression`}
+					seed={`user-${_props.user?.id ?? "@self"}-voice-noise-suppression`}
 				/>
 				<span>Enable noise suppression</span>
 			</CheckboxOption>
@@ -192,7 +196,9 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 							type="range"
 							min="0"
 							max="100"
-							value={ctx.preferences().frontend["voice_activity_threshold"] ||
+							value={(ctx.preferences().frontend["voice_activity_threshold"] as
+								| number
+								| undefined) ||
 								30}
 							onChange={(e) => {
 								const c = ctx.preferences();
@@ -200,7 +206,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 									...c,
 									frontend: {
 										...c.frontend,
-										["voice_activity_threshold"]: e.target.value,
+										["voice_activity_threshold"]: Number(e.target.value),
 									},
 								});
 							}}
@@ -217,7 +223,9 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 							min="0"
 							max="5000"
 							step="100"
-							value={ctx.preferences().frontend["voice_activity_timeout"] ||
+							value={(ctx.preferences().frontend["voice_activity_timeout"] as
+								| number
+								| undefined) ||
 								1000}
 							onChange={(e) => {
 								const c = ctx.preferences();
@@ -225,7 +233,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 									...c,
 									frontend: {
 										...c.frontend,
-										["voice_activity_timeout"]: e.target.value,
+										["voice_activity_timeout"]: Number(e.target.value),
 									},
 								});
 							}}

@@ -45,24 +45,28 @@ export const Modal = (
 
 export function getModal(modal: ContextModal) {
 	const api = useApi();
-	switch (modal.type) {
+	switch ((modal as any).type) {
 		case "alert": {
-			return <ModalAlert text={modal.text} />;
+			return <ModalAlert text={(modal as any).text} />;
 		}
 		case "confirm": {
-			return <ModalConfirm text={modal.text} cont={modal.cont} />;
+			return (
+				<ModalConfirm text={(modal as any).text} cont={(modal as any).cont} />
+			);
 		}
 		case "prompt": {
-			return <ModalPrompt text={modal.text} cont={modal.cont} />;
+			return (
+				<ModalPrompt text={(modal as any).text} cont={(modal as any).cont} />
+			);
 		}
 		case "media": {
-			return <ModalMedia media={modal.media} />;
+			return <ModalMedia media={(modal as any).media} />;
 		}
 		case "message_edits": {
 			return (
 				<ModalMessageEdits
-					thread_id={modal.channel_id}
-					message_id={modal.message_id}
+					thread_id={(modal as any).channel_id}
+					message_id={(modal as any).message_id}
 				/>
 			);
 		}
@@ -75,18 +79,18 @@ export function getModal(modal: ContextModal) {
 		case "channel_create": {
 			return (
 				<ModalChannelCreate
-					room_id={modal.room_id}
-					cont={modal.cont}
+					room_id={(modal as any).room_id}
+					cont={(modal as any).cont}
 				/>
 			);
 		}
 		case "tag_editor": {
 			return (
 				<ModalTagEditor
-					forumChannelId={modal.forumChannelId}
-					tag={modal.tag}
-					onSave={modal.onSave}
-					onClose={modal.onClose}
+					forumChannelId={(modal as any).forumChannelId}
+					tag={(modal as any).tag}
+					onSave={(modal as any).onSave}
+					onClose={(modal as any).onClose}
 				/>
 			);
 		}
@@ -96,44 +100,44 @@ export function getModal(modal: ContextModal) {
 		case "view_reactions": {
 			return (
 				<ModalReactions
-					channel_id={modal.channel_id}
-					message_id={modal.message_id}
+					channel_id={(modal as any).channel_id}
+					message_id={(modal as any).message_id}
 				/>
 			);
 		}
 		case "privacy": {
-			return <ModalPrivacy room_id={modal.room_id} />;
+			return <ModalPrivacy room_id={(modal as any).room_id} />;
 		}
 		case "notifications": {
-			return <ModalNotifications channel_id={modal.room_id} />;
+			return <ModalNotifications room_id={(modal as any).room_id} />;
 		}
 		case "attachment": {
 			return (
 				<ModalAttachment
-					channel_id={modal.channel_id}
-					local_id={modal.local_id}
+					channel_id={(modal as any).channel_id}
+					local_id={(modal as any).local_id}
 				/>
 			);
 		}
 		case "invite_create": {
 			return (
 				<ModalInviteCreate
-					channel_id={modal.channel_id}
-					room_id={modal.room_id}
+					channel_id={(modal as any).channel_id}
+					room_id={(modal as any).room_id}
 				/>
 			);
 		}
 		case "channel_topic": {
 			return (
 				<ModalChannelTopic
-					channel_id={modal.channel_id}
+					channel_id={(modal as any).channel_id}
 				/>
 			);
 		}
 		case "link": {
 			return (
 				<ModalLink
-					editor={modal.editor}
+					editor={(modal as any).editor}
 				/>
 			);
 		}
@@ -141,8 +145,8 @@ export function getModal(modal: ContextModal) {
 			return (
 				<ModalKick
 					api={api}
-					room_id={modal.room_id}
-					user_id={modal.user_id}
+					room_id={(modal as any).room_id}
+					user_id={(modal as any).user_id}
 				/>
 			);
 		}
@@ -150,8 +154,8 @@ export function getModal(modal: ContextModal) {
 			return (
 				<ModalBan
 					api={api}
-					room_id={modal.room_id}
-					user_id={modal.user_id}
+					room_id={(modal as any).room_id}
+					user_id={(modal as any).user_id}
 				/>
 			);
 		}
@@ -159,15 +163,15 @@ export function getModal(modal: ContextModal) {
 			return (
 				<ModalTimeout
 					api={api}
-					room_id={modal.room_id}
-					user_id={modal.user_id}
+					room_id={(modal as any).room_id}
+					user_id={(modal as any).user_id}
 				/>
 			);
 		}
 		case "camera_preview": {
 			return (
 				<ModalCameraPreview
-					stream={modal.stream}
+					stream={(modal as any).stream}
 				/>
 			);
 		}

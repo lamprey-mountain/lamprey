@@ -111,7 +111,7 @@ const Friend = (props: { user_id: string }) => {
 			{ params: { path: { target_id: props.user_id } } },
 		);
 		if (data) {
-			navigate(`/channel/${data.id}`);
+			navigate(`/channel/${(data as any).id}`);
 		}
 	};
 

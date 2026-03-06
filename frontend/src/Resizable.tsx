@@ -6,6 +6,7 @@ type ResizableProps = ParentProps<{
 	minWidth?: number;
 	maxWidth?: number;
 	side?: "left" | "right";
+	classList?: Record<string, boolean>;
 }>;
 
 export const Resizable = (props: ResizableProps) => {
@@ -58,6 +59,7 @@ export const Resizable = (props: ResizableProps) => {
 	return (
 		<div
 			class="resizable-sidebar"
+			classList={props.classList}
 			data-side={side()}
 			style={{ width: `${width()}px` }}
 		>

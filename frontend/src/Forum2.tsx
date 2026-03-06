@@ -1,7 +1,13 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 // TODO: refactor out duplicated code from here and Message.tsx
 
-import { type Attachment, Channel, getTimestampFromUUID, Message } from "sdk";
+import {
+	type Attachment,
+	Channel,
+	getTimestampFromUUID,
+	type Media,
+	Message,
+} from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -24,7 +30,7 @@ import { A, useNavigate } from "@solidjs/router";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { usePermissions } from "./hooks/usePermissions";
-import { md } from "./markdown";
+import { md } from "./markdown_utils";
 import { flags } from "./flags";
 import { Dropdown } from "./Dropdown";
 import { Author } from "./Message";
@@ -134,16 +140,12 @@ function Emoji(props: { id: string; name: string; animated: boolean }) {
 }
 
 function AttachmentView(props: MediaProps) {
-	const b = () => props.media.source.mime.split("/")[0];
-	const ty = () => props.media.source.mime.split(";")[0];
+	const b = () => props.media.content_type.split("/")[0];
+	const ty = () => props.media.content_type.split(";")[0];
 	if (b() === "image") {
 		return (
 			<li class="raw">
-				<ImageView
-					media={props.media}
-					thumb_height={props.size}
-					thumb_width={props.size}
-				/>
+				<ImageView media={props.media} />
 			</li>
 		);
 	} else if (b() === "video") {
@@ -160,7 +162,7 @@ function AttachmentView(props: MediaProps) {
 		);
 	} else if (
 		b() === "text" ||
-		/^application\/json\b/.test(props.media.source.mime)
+		/^application\/json\b/.test(props.media.content_type)
 	) {
 		return (
 			<li class="raw">
@@ -222,7 +224,7 @@ const MessageToolbar = (props: { message: Message }) => {
 					selected: (emoji: string | null, keepOpen: boolean) => {
 						if (emoji) {
 							const existing = props.message.reactions?.find((r) =>
-								r.key === emoji
+								(r as any).key === emoji
 							);
 							if (!existing || !existing.self) {
 								api.reactions.add(
@@ -237,9 +239,8 @@ const MessageToolbar = (props: { message: Message }) => {
 				},
 			});
 		} else {
-			if (
-				ctx.popout().id === "emoji" && ctx.popout().ref === reactionButtonRef
-			) {
+			const popout = ctx.popout() as any;
+			if (popout && popout.id === "emoji" && popout.ref === reactionButtonRef) {
 				ctx.setPopout({});
 			}
 		}
@@ -271,7 +272,7 @@ const MessageToolbar = (props: { message: Message }) => {
 	};
 
 	const canEditMessage = () => {
-		return props.message.type === "DefaultMarkdown" &&
+		return (props.message as any).type === "DefaultMarkdown" &&
 			!props.message.is_local &&
 			isOwnMessage();
 	};
@@ -309,7 +310,7 @@ const MessageToolbar = (props: { message: Message }) => {
 				type: "message",
 				channel_id: props.message.channel_id,
 				message_id: props.message.id,
-				version_id: props.message.version_id,
+				version_id: (props.message as any).version_id,
 			});
 		});
 	};
@@ -359,7 +360,8 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 		);
 
 		const m = member();
-		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
+		return ((m as any)?.membership === "Join" && (m as any)?.override_name) ??
+			user()?.name;
 	};
 
 	const getNameNullable = (user_id?: string) => {
@@ -463,8 +465,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 				return a.id < b.id ? 1 : -1;
 			} else if (sortBy() === "activity") {
 				// activity
-				const tA = a.last_version_id ?? a.id;
-				const tB = b.last_version_id ?? b.id;
+				const tA = (a as any).last_version_id ?? a.id;
+				const tB = (b as any).last_version_id ?? b.id;
 				return tA < tB ? 1 : -1;
 			}
 			return 0;
@@ -477,7 +479,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 			api.channels.create(room_id, {
 				name,
 				parent_id: props.channel.id,
-				type: "ThreadForum2",
 			});
 		});
 	}
@@ -718,7 +719,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 													{thread.message_count} message(s) &bull; last msg{" "}
 													<Time
 														date={getTimestampFromUUID(
-															thread.last_version_id ?? thread.id,
+															(thread as any).last_version_id ?? thread.id,
 														)}
 													/>
 												</div>
@@ -815,8 +816,13 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 		const rootComments: CommentNode[] = [];
 		for (const node of commentMap.values()) {
-			if (node.message.reply_id && commentMap.has(node.message.reply_id)) {
-				commentMap.get(node.message.reply_id)!.children.push(node);
+			const msg = node.message;
+			const replyId = msg.latest_version.type === "DefaultMarkdown"
+				? msg.latest_version.reply_id
+				: undefined;
+
+			if (replyId && commentMap.has(replyId)) {
+				commentMap.get(replyId)!.children.push(node);
 			} else {
 				rootComments.push(node);
 			}
@@ -989,7 +995,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const locked = () => {
 		return !perms.has("MessageCreate") ||
-			(props.channel.locked && !perms.has("ThreadLock"));
+			((props.channel.locked as any) && !perms.has("ThreadLock"));
 	};
 
 	const [remainingTime, setRemainingTime] = createSignal(0);
@@ -1093,7 +1099,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 							<ul>
 								<For each={atts()}>
 									{(att) => (
-										<RenderUploadItem thread_id={props.channel.id} att={att} />
+										<RenderUploadItem
+											thread_id={props.channel.id}
+											att={att as any}
+										/>
 									)}
 								</For>
 							</ul>
@@ -1145,7 +1154,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	);
 };
 
-const ThreadLog = (props) => {
+const ThreadLog = (props: { comments: any; commentTree: any }) => {
 	const comments = () => props.comments;
 	const commentTree = () => props.commentTree;
 
@@ -1239,7 +1248,11 @@ function CommentEditor(
 	const ctx = useCtx();
 	const api = useApi();
 	const [ch, chUpdate] = useChannel()!;
-	const [draft, setDraft] = createSignal(props.message.content ?? "");
+	const [draft, setDraft] = createSignal(
+		props.message.latest_version.type === "DefaultMarkdown"
+			? props.message.latest_version.content ?? ""
+			: "",
+	);
 
 	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
 		const editorState = ch.editor_state;
@@ -1268,25 +1281,29 @@ function CommentEditor(
 		initialSelection: "end",
 	});
 
-	const save = async (content: string) => {
-		if (content.trim() === (props.message.content ?? "").trim()) {
+	const save = (content: string) => {
+		const currentContent =
+			props.message.latest_version.type === "DefaultMarkdown"
+				? props.message.latest_version.content ?? ""
+				: "";
+
+		if (content.trim() === currentContent.trim()) {
 			chUpdate("editingMessage", undefined);
-			return;
+			return true;
 		}
 		if (content.trim().length === 0) {
 			chUpdate("editingMessage", undefined);
-			return;
+			return true;
 		}
-		try {
-			await api.messages.edit(
-				props.message.channel_id,
-				props.message.id,
-				content,
-			);
-		} catch (e) {
+		api.messages.edit(
+			props.message.channel_id,
+			props.message.id,
+			content,
+		).catch((e) => {
 			console.error("failed to edit comment", e);
-		}
+		});
 		chUpdate("editingMessage", undefined);
+		return true;
 	};
 
 	const cancel = () => {
@@ -1355,7 +1372,7 @@ const Comment = (
 	};
 
 	const canEditMessage = () => {
-		return message().type === "DefaultMarkdown" &&
+		return (message() as any).type === "DefaultMarkdown" &&
 			!message().is_local &&
 			isOwnMessage();
 	};
@@ -1399,7 +1416,10 @@ const Comment = (
 		const cached = contentToHtml.get(message());
 		if (cached) return cached;
 
-		const content = message().content ?? "";
+		const version = message().latest_version;
+		const content = version.type === "DefaultMarkdown"
+			? version.content ?? ""
+			: "";
 
 		function escape(html: string) {
 			return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
@@ -1483,7 +1503,7 @@ const Comment = (
 		getHtml();
 		import("highlight.js").then(({ default: hljs }) => {
 			if (!contentEl) return;
-			for (const el of [...contentEl.querySelectorAll("pre")]) {
+			for (const el of Array.from(contentEl.querySelectorAll("pre"))) {
 				el.dataset.highlighted = "";
 				hljs.highlightElement(el);
 			}
@@ -1526,12 +1546,15 @@ const Comment = (
 					<Time date={getTimestampFromUUID(message().id)} />
 					<Show when={collapsed()}>
 						<div class="summary">
-							{message().content
-								? api.stripMarkdownAndResolveMentions(
-									message().content!,
-									message().channel_id,
-								)
-								: "(no content)"}
+							{(() => {
+								const version = message().latest_version;
+								return version.type === "DefaultMarkdown" && version.content
+									? api.stripMarkdownAndResolveMentions(
+										version.content,
+										message().channel_id,
+									)
+									: "(no content)";
+							})()}
 						</div>
 					</Show>
 				</header>
@@ -1549,17 +1572,34 @@ const Comment = (
 						>
 						</div>
 						<div style="padding: 0 8px">
-							<Show when={message().attachments?.length}>
-								<ul class="attachments">
-									<For each={message().attachments}>
-										{(att) => <AttachmentView media={att} />}
-									</For>
-								</ul>
-							</Show>
-							<Show when={message().reactions?.length}>
-								<Reactions message={message()} />
-							</Show>
+							{(() => {
+								const version = message().latest_version;
+								return (
+									<Show
+										when={version.type === "DefaultMarkdown" &&
+											version.attachments?.length}
+									>
+										<ul class="attachments">
+											<For
+												each={version.type === "DefaultMarkdown"
+													? version.attachments
+													: []}
+											>
+												{(att) => (
+													<Show when={att.type === "Media"}>
+														<AttachmentView media={att.media as Media} />
+													</Show>
+												)}
+											</For>
+										</ul>
+									</Show>
+								);
+							})()}
 						</div>
+
+						<Show when={message().reactions?.length}>
+							<Reactions message={message()} />
+						</Show>
 						<MessageToolbar message={message()} />
 					</Show>
 				</Show>
@@ -1589,17 +1629,18 @@ export function RenderUploadItem(
 ) {
 	const ctx = useCtx();
 	const uploads = useUploads();
-	const thumbUrl = URL.createObjectURL(props.att.file);
+	const thumbUrl = URL.createObjectURL((props.att as any).file);
 	onCleanup(() => {
 		URL.revokeObjectURL(thumbUrl);
 	});
 
 	function renderInfo(att: Attachment) {
-		if (att.status === "uploading") {
-			if (att.progress === 1) {
+		const a = att as any;
+		if (a.status === "uploading") {
+			if (a.progress === 1) {
 				return `processing`;
 			} else {
-				const percent = (att.progress * 100).toFixed(2);
+				const percent = (a.progress * 100).toFixed(2);
 				return `${percent}%`;
 			}
 		} else {
@@ -1608,8 +1649,9 @@ export function RenderUploadItem(
 	}
 
 	function getProgress(att: Attachment) {
-		if (att.status === "uploading") {
-			return att.progress;
+		const a = att as any;
+		if (a.status === "uploading") {
+			return a.progress;
 		} else {
 			return 1;
 		}
@@ -1620,11 +1662,11 @@ export function RenderUploadItem(
 	}
 
 	function pause() {
-		uploads.pause(props.att.local_id);
+		uploads.pause((props.att as any).local_id);
 	}
 
 	function resume() {
-		uploads.resume(props.att.local_id);
+		uploads.resume((props.att as any).local_id);
 	}
 
 	return (
@@ -1638,7 +1680,7 @@ export function RenderUploadItem(
 					</svg>
 					<div style="display: flex">
 						<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
-							{props.att.file.name}
+							{(props.att as any).file.name}
 							<span style="color:#888;margin-left:.5ex">
 								{renderInfo(props.att)}
 							</span>
@@ -1646,17 +1688,20 @@ export function RenderUploadItem(
 						<menu>
 							<Switch>
 								<Match
-									when={props.att.status === "uploading" && props.att.paused}
+									when={(props.att as any).status === "uploading" &&
+										(props.att as any).paused}
 								>
 									<button onClick={resume}>
 										⬆️
 									</button>
 								</Match>
-								<Match when={props.att.status === "uploading"}>
+								<Match when={(props.att as any).status === "uploading"}>
 									<button onClick={pause}>⏸️</button>
 								</Match>
 							</Switch>
-							<button onClick={() => removeAttachment(props.att.local_id)}>
+							<button
+								onClick={() => removeAttachment((props.att as any).local_id)}
+							>
 								<img class="icon" src={icDelete} />
 							</button>
 						</menu>

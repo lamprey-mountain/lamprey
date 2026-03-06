@@ -12,7 +12,7 @@ export async function handleSubmit(
 	[ch, chUpdate]: ChannelContextT,
 	thread_id: string,
 	text: string,
-	_update: SetStoreFunction<Data>,
+	_update: any,
 	api: Api,
 	atts_thread_id?: string,
 	bypassSlowmode?: boolean,

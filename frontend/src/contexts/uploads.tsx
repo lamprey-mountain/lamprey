@@ -1,4 +1,10 @@
-import { createContext, onCleanup, onMount, useContext } from "solid-js";
+import {
+	createContext,
+	onCleanup,
+	onMount,
+	type ParentProps,
+	useContext,
+} from "solid-js";
 import { createUpload, type Media } from "sdk";
 import type { Attachment, ChatCtx } from "../context";
 import type { ReactiveMap } from "@solid-primitives/map";
@@ -13,7 +19,7 @@ export type UploadController = {
 
 const UploadsContext = createContext<UploadController>();
 
-export const UploadsProvider = (props: { ctx: ChatCtx; children: any }) => {
+export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 	const [, modalCtl] = useModals();
 
 	// Track pending uploads by media_id for async processing

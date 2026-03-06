@@ -106,9 +106,11 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 				<ul>
 					<For each={filteredWebhooks()}>
 						{(i) => {
-							const creator = api.users.fetch(() => i.creator_id);
+							const creator = api.users.fetch(() => i.creator_id as string);
 							const [name, setName] = createSignal(i.name);
-							const [avatar, setAvatar] = createSignal(i.avatar);
+							const [avatar, setAvatar] = createSignal<
+								string | null | undefined
+							>(i.avatar);
 
 							const webhookUser = () => ({
 								id: i.id,
@@ -116,13 +118,16 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 								avatar: avatar(),
 								banner: null,
 								description: null,
+								bot: true,
+								system: false,
+								version_id: "",
 								flags: 0,
 								presence: { status: "Offline" as const, activities: [] },
 								relationship: null,
 								preferences: null,
 							});
 
-							const channels = api.channels.list(() => i.room_id);
+							const channels = api.channels.list(() => i.room_id as string);
 
 							createEffect(() => {
 								setName(i.name);
@@ -234,7 +239,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 																type="text"
 																value={name()}
 																onInput={(e) => setName(e.target.value)}
-																onBlur={updateWebhook}
+																onBlur={updateWebhook as any}
 															/>
 														</div>
 														<Show when={false}>
@@ -249,7 +254,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 																		label: ch.name ||
 																			`#${ch.id.substring(0, 8)}...`,
 																		value: ch.id,
-																	})) || []}
+																	})) as any || []}
 																/>
 															</div>
 														</Show>

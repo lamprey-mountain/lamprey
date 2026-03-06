@@ -13,7 +13,7 @@ import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useModals } from "./contexts/modal";
@@ -111,7 +111,7 @@ export const Category = (props: { channel: Channel }) => {
 					>
 						archived
 					</button>
-					<Show when={perms.has("ThreadRemove")}>
+					<Show when={perms.has("ThreadManage")}>
 						<button
 							classList={{ selected: threadFilter() === "removed" }}
 							onClick={[setThreadFilter, "removed"]}
@@ -199,16 +199,27 @@ const QuickCreate = (
 		uploads.init(local_id, props.channel.id, file);
 	}
 
-	const onSubmit = async (text: string) => {
-		if (!text) return;
-		const t = await api.channels.create(props.channel.room_id!, {
+	const onSubmit = (text: string) => {
+		if (!text) return false;
+		api.channels.create(props.channel.room_id!, {
 			name: "thread",
 			parent_id: props.channel.id,
+		}).then((t) => {
+			if (!t) return;
+			const chCtx = ctx.channel_contexts.get(props.channel.id);
+			if (!chCtx) return;
+			handleSubmit(
+				ctx,
+				chCtx,
+				t.id,
+				text,
+				ctx.dataUpdate,
+				api,
+				props.channel.id,
+			);
+			n(`/channel/${t.id}`);
 		});
-
-		if (!t.data) return;
-		handleSubmit(ctx, t.data.id, text, null as any, api, props.channel.id);
-		n(`/channel/${t.data.id}`);
+		return true;
 	};
 
 	const onChange = (state: EditorState) => {
@@ -229,7 +240,7 @@ const QuickCreate = (
 						<For each={atts()}>
 							{(att) => (
 								<RenderUploadItem
-									channel_id={props.channel.id}
+									thread_id={props.channel.id}
 									att={att}
 								/>
 							)}

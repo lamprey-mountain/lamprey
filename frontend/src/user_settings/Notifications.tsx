@@ -65,16 +65,20 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					const serverInfo = await api.client.http.GET("/api/v1/server/@self")
 						.then((res) => res.data);
 
-					if (!serverInfo?.features.web_push?.vapid_public_key) {
+					const vapidKey = serverInfo && "features" in serverInfo &&
+						serverInfo.features && "web_push" in serverInfo.features &&
+						serverInfo.features.web_push &&
+						"vapid_public_key" in serverInfo.features.web_push &&
+						serverInfo.features.web_push.vapid_public_key;
+
+					if (!vapidKey) {
 						console.error("No push info from backend");
 						return;
 					}
 
 					const subscription = await registration.pushManager.subscribe({
 						userVisibleOnly: true,
-						applicationServerKey: urlBase64ToUint8Array(
-							serverInfo.features.web_push.vapid_public_key,
-						),
+						applicationServerKey: urlBase64ToUint8Array(vapidKey),
 					});
 
 					const subJson = subscription.toJSON();
@@ -144,15 +148,15 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				</div>
 			</Show>
 			<CheckboxOption
-				id={`user-${ctx.user?.id ?? "@self"}-desktop-notifs`}
+				id={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 				checked={isFrontendConfigEnabled("desktop_notifs")}
 				onChange={(checked) =>
 					setFrontendConfig("desktop_notifs", checked ? "yes" : "no")}
-				seed={`user-${ctx.user?.id ?? "@self"}-desktop-notifs`}
+				seed={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 			>
 				<Checkbox
 					checked={isFrontendConfigEnabled("desktop_notifs")}
-					seed={`user-${ctx.user?.id ?? "@self"}-desktop-notifs`}
+					seed={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 				/>
 				<div>
 					<div>{t("user_settings.desktop_notifs")}</div>
@@ -160,15 +164,15 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				</div>
 			</CheckboxOption>
 			<CheckboxOption
-				id={`user-${ctx.user?.id ?? "@self"}-push-notifs`}
+				id={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 				checked={isFrontendConfigEnabled("push_notifs")}
 				onChange={(checked) =>
 					setFrontendConfig("push_notifs", checked ? "yes" : "no")}
-				seed={`user-${ctx.user?.id ?? "@self"}-push-notifs`}
+				seed={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 			>
 				<Checkbox
 					checked={isFrontendConfigEnabled("push_notifs")}
-					seed={`user-${ctx.user?.id ?? "@self"}-push-notifs`}
+					seed={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 				/>
 				<div>
 					<div>{t("user_settings.push_notifs")}</div>
@@ -176,15 +180,15 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				</div>
 			</CheckboxOption>
 			<CheckboxOption
-				id={`user-${ctx.user?.id ?? "@self"}-tts-notifs`}
+				id={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 				checked={isFrontendConfigEnabled("tts_notifs")}
 				onChange={(checked) =>
 					setFrontendConfig("tts_notifs", checked ? "yes" : "no")}
-				seed={`user-${ctx.user?.id ?? "@self"}-tts-notifs`}
+				seed={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 			>
 				<Checkbox
 					checked={isFrontendConfigEnabled("tts_notifs")}
-					seed={`user-${ctx.user?.id ?? "@self"}-tts-notifs`}
+					seed={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 				/>
 				<div>
 					<div>{t("user_settings.tts_notifs")}</div>
@@ -204,7 +208,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.messages}
-						onSelect={(value) => value && setNotifConfig("messages", value)}
+						onSelect={(value) =>
+							value && setNotifConfig("messages", value as any)}
 						options={[
 							{ item: "Everything", label: t("user_settings.everything") },
 							{ item: "Watching", label: t("user_settings.watching") },
@@ -222,7 +227,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.threads}
-						onSelect={(value) => value && setNotifConfig("threads", value)}
+						onSelect={(value) =>
+							value && setNotifConfig("threads", value as any)}
 						options={[
 							{ item: "Notify", label: t("user_settings.notify") },
 							{ item: "Inbox", label: t("user_settings.inbox") },
@@ -239,7 +245,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.reactions}
-						onSelect={(value) => value && setNotifConfig("reactions", value)}
+						onSelect={(value) =>
+							value && setNotifConfig("reactions", value as any)}
 						options={[
 							{ item: "Always", label: t("user_settings.always") },
 							{ item: "Restricted", label: t("user_settings.restricted") },
@@ -257,7 +264,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.tts}
-						onSelect={(value) => value && setNotifConfig("tts", value)}
+						onSelect={(value) => value && setNotifConfig("tts", value as any)}
 						options={[
 							{ item: "Always", label: t("user_settings.always") },
 							{ item: "Mentions", label: t("user_settings.mentions_only") },

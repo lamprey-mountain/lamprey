@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import type { Channel } from "sdk";
+import type { Channel, Role, RoomMember, User } from "sdk";
 import { useApi } from "./api.tsx";
 import { AvatarWithStatus } from "./User.tsx";
 import { useCtx } from "./context.ts";
@@ -22,8 +22,8 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 		const l = list();
 		if (!l) return [];
 		const rows: (
-			| { type: "group"; group: any }
-			| { type: "member"; item: any }
+			| { type: "group"; group: any } // TODO: type group
+			| { type: "member"; item: any } // TODO: type member
 		)[] = [];
 		let offset = 0;
 		for (const group of l.groups) {
@@ -42,8 +42,11 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 	});
 
 	const getGroupName = (group: any) => {
-		const role = api.roles.cache.get(group.id);
-		return role?.name ?? group.id;
+		if (typeof group.id === "string") {
+			const role = api.roles.cache.get(group.id);
+			return role?.name ?? group.id;
+		}
+		return JSON.stringify(group.id);
 	};
 
 	let parentRef!: HTMLDivElement;
@@ -103,14 +106,18 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 													row.item.user.id,
 												) ?? row.item.thread_member;
 											const user = () =>
-												api.users.cache.get(row.item.user.id) ?? row.item.user;
-											const room_member = props.thread?.room_id
+												(api.users.cache.get(row.item.user.id) ??
+													row.item.user) as User;
+											const userIdSig = () => user().id;
+											const room_member = props.thread.room_id
 												? api.room_members.fetch(
-													room_id,
-													() => user()!.id,
+													() =>
+														room_id() as string,
+													userIdSig,
 												)
 												: () =>
 													null;
+											// Thread member display - end
 											const ctx = useCtx();
 											const { userView, setUserView } = useUserPopout();
 											const [hovered, setHovered] = createSignal(false);
@@ -118,10 +125,10 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 											function name() {
 												let name: string | undefined | null = null;
 												const rm = room_member();
-												if (rm?.membership === "Join") {
+												if (rm) {
 													name ??= rm.override_name;
 												}
-												name ??= user()?.name;
+												name ??= user().name;
 												return name;
 											}
 
@@ -137,9 +144,9 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 															setUserView(null);
 														} else {
 															setUserView({
-																user_id: user()!.id,
-																room_id: room_id(),
-																thread_id: thread_id(),
+																user_id: user().id,
+																room_id: room_id() as string | undefined,
+																thread_id: thread_id() as string,
 																ref: currentTarget,
 																source: "member-list",
 															});

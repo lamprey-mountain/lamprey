@@ -32,7 +32,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 	createEffect(() => {
 		const r = reactions();
 		if (r.length > 0 && selectedReaction() === null) {
-			setSelectedReaction(r[0].key);
+			setSelectedReaction((r[0] as any).key);
 		}
 	});
 
@@ -98,15 +98,16 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 			<div class="reactions-modal">
 				<div class="reactions">
 					<For each={reactions()}>
-						{(reaction) => (
-							<button
-								onClick={() => setSelectedReaction(reaction.key)}
-								data-selected={selectedReaction() === reaction.key}
-							>
-								<div>{reaction.key}</div>
-								<div>{reaction.count}</div>
-							</button>
-						)}
+						{(reaction) =>
+							(
+								<button
+									onClick={() => setSelectedReaction((reaction as any).key)}
+									data-selected={selectedReaction() === (reaction as any).key}
+								>
+									<div>{(reaction as any).key}</div>
+									<div>{(reaction as any).count}</div>
+								</button>
+							) as any}
 					</For>
 				</div>
 				<div class="users">

@@ -25,7 +25,7 @@ import { useNavigate } from "@solidjs/router";
 import { VoiceDebug } from "./VoiceDebug.tsx";
 import { createPopup } from "./popup.tsx";
 import { useCtx } from "./context.ts";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import { getColor } from "./colors.ts";
 import { useChannel } from "./channelctx.tsx";
 import { AvatarWithStatus } from "./User.tsx";
@@ -48,7 +48,8 @@ export const Voice = (p: { channel: Channel }) => {
 			? api.room_members.fetch(() => p.channel.room_id!, () => uid)
 			: null;
 		const rm = room_member?.();
-		return (rm?.membership === "Join" && rm.override_name) || user()?.name ||
+		return ((rm as any)?.membership === "Join" && rm?.override_name) ||
+			user()?.name ||
 			uid;
 	};
 
@@ -59,7 +60,10 @@ export const Voice = (p: { channel: Channel }) => {
 		}
 		const users = [];
 		for (const state of api.voiceStates.values()) {
-			if (state.thread_id === p.channel.id && !hasStream.has(state.user_id)) {
+			if (
+				(state as any).thread_id === p.channel.id &&
+				!hasStream.has(state.user_id)
+			) {
 				users.push(state.user_id);
 			}
 		}

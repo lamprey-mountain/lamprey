@@ -101,7 +101,7 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 				<div
 					style="height:70px;width:100px;background-size:cover;background-position:center;border-radius:4px;margin:8px 0"
 					style:background-image={attachment()?.status === "uploaded"
-						? `url(${getThumbFromId(attachment()!.media.id, 64)})`
+						? `url(${getThumbFromId((attachment() as any).media.id, 64)})`
 						: "none"}
 				>
 				</div>

@@ -20,7 +20,7 @@ import { getThumbFromId } from "./media/util";
 import { createStore } from "solid-js/store";
 import { useCtx } from "./context.ts";
 import { useMenu } from "./contexts/mod.tsx";
-import { md } from "./markdown.tsx";
+import { md } from "./markdown_utils.tsx";
 import {
 	autoUpdate,
 	computePosition,
@@ -82,7 +82,7 @@ const EditRoles = (
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: "right-start",
 				}).then(({ x, y, strategy }) => {
-					setMenuFloating({ x, y, strategy });
+					setMenuFloating({ x, y, strategy: strategy as any });
 				});
 			},
 		);
@@ -185,7 +185,7 @@ export function UserView(props: UserProps) {
 		let name = null;
 
 		const rm = props.room_member;
-		if (rm?.membership === "Join") name ??= rm.override_name;
+		if ((rm as any)?.membership === "Join") name ??= rm?.override_name;
 
 		name ??= props.user.name;
 		return name;
@@ -196,10 +196,10 @@ export function UserView(props: UserProps) {
 			setMenu({
 				type: "user",
 				user_id: props.user.id,
-				room_id: props.room_member?.room_id,
+				room_id: (props.room_member as any)?.room_id,
 				x: e.clientX,
 				y: e.clientY,
-			});
+			} as any);
 		});
 	};
 
@@ -223,7 +223,7 @@ export function UserView(props: UserProps) {
 			},
 		);
 		if (data) {
-			nav(`/thread/${data.id}`);
+			nav(`/thread/${(data as any).id}`);
 		}
 	};
 
@@ -283,7 +283,7 @@ export function UserView(props: UserProps) {
 				class="banner"
 				style={{
 					"background-image": props.user.banner &&
-						`url(${getThumbFromId(props.user.banner!, 640)})`,
+							`url(${getThumbFromId(props.user.banner!, 640)})` || undefined,
 				}}
 			/>
 			<div class="header">
@@ -332,7 +332,7 @@ export function UserView(props: UserProps) {
 					</div>
 				</Show>
 
-				<Show when={room_member()?.membership === "Join"}>
+				<Show when={(room_member() as any)?.membership === "Join"}>
 					<div class="roles">
 						<h3 class="dim">
 							Roles

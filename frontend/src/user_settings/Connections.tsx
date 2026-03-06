@@ -136,5 +136,7 @@ function formatScope(scope: Scope): string {
 			return "**FULL ACESSS** to your account";
 		case "auth":
 			return "**FULL ACESSS** to your account, including authentication info";
+		default:
+			return scope;
 	}
 }
