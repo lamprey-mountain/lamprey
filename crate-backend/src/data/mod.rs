@@ -129,7 +129,7 @@ pub trait DataRoom {
 #[async_trait]
 pub trait DataRole {
     async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role>;
-    // TODO: make this return all roles, paginate in server logic
+    // TODO(#998): make this return all roles, paginate in server logic
     async fn role_list(
         &self,
         room_id: RoomId,
@@ -316,7 +316,7 @@ pub trait DataSession {
     async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
     async fn session_delete(&self, session_id: SessionId) -> Result<()>;
     async fn session_delete_all(&self, user_id: UserId) -> Result<()>;
-    // TODO: replace session_set_last_seen_at with session_heartbeat
+    // TODO(#999): replace session_set_last_seen_at with session_heartbeat
     async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()>;
     // /// update last seen at and other metadata
     // async fn session_heartbeat(&self, session_id: SessionId, ip_addr: IpAddr, user_agent: String) -> Result<()>;
@@ -479,7 +479,7 @@ pub trait DataAuth {
     async fn auth_totp_recovery_use(&self, user_id: UserId, code: &str) -> Result<()>;
     async fn auth_totp_recovery_delete_all(&self, user_id: UserId) -> Result<()>;
 
-    // TODO: move these into a new DataOauth trait?
+    // TODO(#999): move these into a new DataOauth trait?
     async fn oauth_auth_code_create(
         &self,
         code: String,

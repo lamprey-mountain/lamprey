@@ -83,7 +83,7 @@ pub struct ConnectionMemberListSyncer {
     s: Arc<ServerState>,
 }
 
-// TODO: remove this, merge with MemberListSyncer?
+// TODO(#996): remove this, merge with MemberListSyncer?
 impl ConnectionMemberListSyncer {
     pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
         self.user_id = user_id;

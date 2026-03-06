@@ -73,7 +73,7 @@ pub struct ServerState {
     pub inner: Arc<ServerStateInner>,
     pub services: Arc<Services>,
 
-    // TODO: limit number of connections per user, clean up old/unused entries
+    // TODO(#997): limit number of connections per user, clean up old/unused entries
     pub syncers: Arc<DashMap<ConnectionId, Connection>>,
 }
 

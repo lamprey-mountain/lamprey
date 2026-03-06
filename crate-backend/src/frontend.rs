@@ -28,7 +28,7 @@ struct WebuiConfig {
     cdn_url: String,
 }
 
-// TODO: error variants instead of unwrap
+// TODO(#994): error variants instead of unwrap
 pub async fn frontend_handler(
     uri: Uri,
     State(s): State<Arc<ServerState>>,
