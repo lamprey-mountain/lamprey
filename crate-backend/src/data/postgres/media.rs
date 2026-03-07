@@ -144,6 +144,7 @@ impl DataMedia for Postgres {
         let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(media.data)
             .unwrap()
             .into();
+        parsed.deleted_at = media.deleted_at.map(Into::into);
 
         let links = query_as!(
             MediaLink,

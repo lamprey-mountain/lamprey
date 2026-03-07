@@ -125,9 +125,16 @@ impl ServicePermissions {
                 Box::pin(self.for_channel(user_id, parent_id)).await
             } else {
                 let mut p = Permissions::empty();
-                p.add(Permission::ViewChannel);
-                for a in EVERYONE_TRUSTED {
-                    p.add(*a);
+
+                // if its not in a room and doesnt have a parent, it must be a dm or gdm
+                let is_recipient = chan.recipients.iter().any(|r| r.id == user_id);
+                let is_owner = chan.owner_id == Some(user_id);
+
+                if is_recipient || is_owner {
+                    p.add(Permission::ViewChannel);
+                    for a in EVERYONE_TRUSTED {
+                        p.add(*a);
+                    }
                 }
 
                 // permission overwrites dont exist outside of rooms

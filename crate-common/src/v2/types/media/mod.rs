@@ -50,6 +50,26 @@ pub struct MediaDoneParams {
     pub process_async: bool,
 }
 
+/// request body for `media_upload_direct`
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MediaDirectParams {
+    /// Descriptive alt text, not entirely unlike a caption
+    pub alt: Option<String>,
+
+    /// The filename for this piece of media
+    pub filename: Option<String>,
+
+    /// Whether to strip sensitive exif info, like location or camera make and model.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub strip_exif: bool,
+
+    /// Whether to process this media asynchronously.
+    #[cfg_attr(feature = "serde", serde(default, rename = "async"))]
+    pub process_async: bool,
+}
+
 /// The status for this media
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

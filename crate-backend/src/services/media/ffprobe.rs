@@ -105,19 +105,23 @@ impl Metadata {
 }
 
 pub async fn extract(file: &std::path::Path) -> Result<Metadata> {
-    let out = Command::new("ffprobe")
-        .args([
-            "-v",
-            "quiet",
-            "-of",
-            "json",
-            "-show_format",
-            "-show_streams",
-            "-i",
-        ])
-        .arg(file)
-        .output()
-        .await?;
+    let out = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        Command::new("ffprobe")
+            .args([
+                "-v",
+                "quiet",
+                "-of",
+                "json",
+                "-show_format",
+                "-show_streams",
+                "-i",
+            ])
+            .arg(file)
+            .output(),
+    )
+    .await
+    .map_err(|_| Error::Ffmpeg)??;
     if out.status.success() {
         let meta = serde_json::from_slice(&out.stdout)?;
         Ok(meta)

@@ -128,6 +128,33 @@ impl ServiceChannels {
         Ok(())
     }
 
+    pub async fn populate_recipients(&self, channels: &mut [Channel]) -> Result<()> {
+        let dm_channels: Vec<_> = channels
+            .iter_mut()
+            .filter(|c| c.ty == ChannelType::Dm || c.ty == ChannelType::Gdm)
+            .collect();
+
+        if dm_channels.is_empty() {
+            return Ok(());
+        }
+
+        for channel in dm_channels {
+            let recipients = self
+                .cache_thread_recipients
+                .try_get_with(channel.id, async {
+                    let members = self.state.data().thread_member_list_all(channel.id).await?;
+                    let user_ids: Vec<_> = members.into_iter().map(|m| m.user_id).collect();
+                    let users = self.state.data().user_get_many(&user_ids).await?;
+                    Result::Ok(users)
+                })
+                .await
+                .map_err(|err| err.fake_clone())?;
+            channel.recipients = recipients;
+        }
+
+        Ok(())
+    }
+
     pub async fn get(&self, channel_id: ChannelId, user_id: Option<UserId>) -> Result<Channel> {
         let mut thread = self
             .cache_thread
@@ -139,6 +166,9 @@ impl ServiceChannels {
             self.populate_private(std::slice::from_mut(&mut thread), user_id)
                 .await?;
         }
+
+        self.populate_recipients(std::slice::from_mut(&mut thread))
+            .await?;
 
         let members = self.state.data().thread_member_list_all(channel_id).await?;
 
@@ -186,6 +216,8 @@ impl ServiceChannels {
         if let Some(user_id) = user_id {
             self.populate_private(&mut channels, user_id).await?;
         }
+
+        self.populate_recipients(&mut channels).await?;
 
         for channel in &mut channels {
             let members = self.state.data().thread_member_list_all(channel.id).await?;

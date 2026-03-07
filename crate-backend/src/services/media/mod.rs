@@ -295,6 +295,7 @@ impl ServiceMedia {
             MediaCreateSource::Download { source_url, .. } => Some(source_url.clone()),
         };
 
+        trace!("inserting processing status to db");
         let media_processing = MediaV2 {
             id: media_id,
             status: MediaStatus::Processing,
@@ -321,9 +322,12 @@ impl ServiceMedia {
         let p = tmp.file_path().to_owned();
         let url = self.state.get_s3_url(&format!("media/{media_id}/file"))?;
         let services = self.state.services();
+
+        trace!("getting metadata and mime");
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mime: Mime = mime.parse()?;
 
+        trace!("calculating metadata for mime: {}", mime);
         let metadata = match mime.parse() {
             Ok(m) => match m.ty().as_str() {
                 "image" => {
@@ -358,6 +362,7 @@ impl ServiceMedia {
         let mut hashes = HashMap::new();
 
         {
+            trace!("generating blake3 hash");
             // generate blake3 hash
             let file = tmp.open_ro().await?;
             let mut reader = BufReader::new(file);
@@ -378,6 +383,7 @@ impl ServiceMedia {
         }
 
         {
+            trace!("generating sha512/256 hash");
             // generate sha512/256 hash
             let file = tmp.open_ro().await?;
             let mut reader = BufReader::new(file);
@@ -398,6 +404,7 @@ impl ServiceMedia {
         }
 
         // scan media with configured scanners in parallel
+        trace!("scanning media");
         let scans = self.scan_media(&p).await;
 
         let mut media = MediaV2 {
@@ -426,11 +433,14 @@ impl ServiceMedia {
         trace!("finish upload for {} media {:?}", media_id, media);
         if let Some(meta) = &meta {
             if mime.starts_with("video/") || mime.starts_with("audio/") {
+                trace!("generating thumbnails");
                 let _ = self.generate_thumbnails(media_id, meta, &p, &mime).await;
                 media.has_thumbnail = true;
             }
         }
         debug!("finish generating thumbnails for {}", media_id);
+
+        trace!("uploading to s3");
         let upload_s3 = async {
             let mut f = tokio::fs::OpenOptions::new().read(true).open(&p).await?;
             let mut buf = vec![0u8; 1024 * 1024];
@@ -441,14 +451,20 @@ impl ServiceMedia {
                 .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
                 .content_type(mime.as_str())
                 .await?;
-            while f.read(&mut buf).await? != 0 {
-                w.write(buf.to_vec()).await?;
+            loop {
+                let n = f.read(&mut buf).await?;
+                if n == 0 {
+                    break;
+                }
+                w.write(buf[..n].to_vec()).await?;
             }
             w.close().await?;
             info!("uploaded {} bytes to s3", up.current_size);
             Result::Ok(())
         };
         upload_s3.await?;
+
+        trace!("final media update in db");
         drop(tmp);
         self.state.data().media_replace(media.clone()).await?;
         Ok(media)
