@@ -11,6 +11,20 @@ Deno.test("Message Reactions", async (t) => {
 		body: { name: "Reaction Test Room", public: true },
 		status: 201,
 	});
+
+	// Bob joins the room
+	const invite = await alice({
+		url: `/room/${room.id}/invite`,
+		method: "POST",
+		body: {},
+		status: 201,
+	});
+	await bob({
+		url: `/invite/${invite.code}`,
+		method: "POST",
+		status: 204,
+	});
+
 	const channel = await alice({
 		url: `/room/${room.id}/channel`,
 		method: "POST",
@@ -27,7 +41,7 @@ Deno.test("Message Reactions", async (t) => {
 	const messageId = message.id;
 
 	await t.step("Alice adds a reaction", async () => {
-		const reactionKey = "👍";
+		const reactionKey = "t:👍";
 		await alice({
 			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
 				encodeURIComponent(reactionKey) + "/@self",
@@ -41,11 +55,11 @@ Deno.test("Message Reactions", async (t) => {
 		});
 		const reaction = msg.reactions.find((r: any) => r.key.content === "👍");
 		assertEquals(reaction.count, 1);
-		assertEquals(reaction.me, true);
+		assertEquals(reaction.self, true);
 	});
 
 	await t.step("Bob adds the same reaction", async () => {
-		const reactionKey = "👍";
+		const reactionKey = "t:👍";
 		await bob({
 			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
 				encodeURIComponent(reactionKey) + "/@self",
@@ -59,11 +73,11 @@ Deno.test("Message Reactions", async (t) => {
 		});
 		const reaction = msg.reactions.find((r: any) => r.key.content === "👍");
 		assertEquals(reaction.count, 2);
-		assertEquals(reaction.me, true);
+		assertEquals(reaction.self, true);
 	});
 
 	await t.step("Listing users for a reaction", async () => {
-		const reactionKey = "👍";
+		const reactionKey = "t:👍";
 		const reactors = await alice({
 			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
 				encodeURIComponent(reactionKey),
@@ -73,7 +87,7 @@ Deno.test("Message Reactions", async (t) => {
 	});
 
 	await t.step("Alice removes her reaction", async () => {
-		const reactionKey = "👍";
+		const reactionKey = "t:👍";
 		await alice({
 			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
 				encodeURIComponent(reactionKey) + "/@self",
@@ -87,6 +101,6 @@ Deno.test("Message Reactions", async (t) => {
 		});
 		const reaction = msg.reactions.find((r: any) => r.key.content === "👍");
 		assertEquals(reaction.count, 1);
-		assertEquals(reaction.me, false);
+		assertEquals(reaction.self, false);
 	});
 });

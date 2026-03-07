@@ -242,6 +242,12 @@ impl ServiceRooms {
         data.room_set_owner(room_id, creator_id).await?;
         room.owner_id = Some(creator_id);
 
+        self.state
+            .services()
+            .perms
+            .invalidate_room(creator_id, room_id)
+            .await;
+
         let (welcome_channel_id, welcome_channel) = if let Some(channel_id) = welcome_channel_id {
             (channel_id, None)
         } else {

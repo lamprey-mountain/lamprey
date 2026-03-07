@@ -160,13 +160,9 @@ async fn thread_member_add(
         }
     }
 
-    let start = d.thread_member_get(thread_id, target_user_id).await.ok();
     d.thread_member_put(thread_id, target_user_id, ThreadMemberPut {})
         .await?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
-    if start.is_some_and(|s| s == res) {
-        return Ok(StatusCode::NOT_MODIFIED.into_response());
-    }
 
     if target_user_id != auth.user.id {
         let message_id = d

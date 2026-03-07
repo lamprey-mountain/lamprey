@@ -134,7 +134,7 @@ async fn reaction_add(
     )
     .await?;
 
-    Ok(StatusCode::OK)
+    Ok(Json(()))
 }
 
 /// Reaction remove

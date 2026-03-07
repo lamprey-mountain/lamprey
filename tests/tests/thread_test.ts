@@ -56,10 +56,11 @@ Deno.test("Threads", async (t) => {
 		assertEquals(thread.name, "Discussion Thread");
 		threadId = thread.id;
 
-		// Join the thread
+		// Join the thread (might be 304 if auto-joined)
 		await alice({
 			url: `/thread/${threadId}/member/@self`,
 			method: "PUT",
+			body: {},
 			status: 200,
 		});
 	});
