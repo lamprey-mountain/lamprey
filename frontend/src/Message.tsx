@@ -1064,7 +1064,7 @@ function Actor(props: { user_id: string; thread: Channel }) {
 	);
 }
 
-const MessageToolbar = (props: { message: Message }) => {
+export const MessageToolbar = (props: { message: Message }) => {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const api = useApi();

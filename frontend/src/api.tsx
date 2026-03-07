@@ -166,8 +166,17 @@ export function createApi(
 	const tags = new Tags();
 	const documents = new Documents();
 	const room_analytics = new RoomAnalytics();
-	const voiceStates = new ReactiveMap();
-	const [voiceState, setVoiceState] = createSignal();
+	const voiceStates = new ReactiveMap<string, VoiceState>();
+	const [voiceState, setVoiceState] = createSignal<VoiceState | null>(null);
+
+	// Helper to safely get current user ID from session
+	const getCurrentUserId = (): string | undefined => {
+		const s = session();
+		if (s && s.status !== "Unauthorized") {
+			return s.user_id;
+		}
+		return undefined;
+	};
 
 	events.on("sync", async ([msg, raw]) => {
 		if (msg.type === "Ambient") {
@@ -442,7 +451,10 @@ export function createApi(
 			}
 		} else if (msg.type === "MessageCreate") {
 			const m = msg.message as Message;
-			m.nonce = raw.nonce;
+			// Only set nonce if raw is a Sync message
+			if (raw.op === "Sync") {
+				m.nonce = raw.nonce;
+			}
 
 			const me = users.cache.get("@self");
 			let is_mentioned = false;
@@ -457,15 +469,15 @@ export function createApi(
 				if (!is_mentioned && mentions.everyone) {
 					is_mentioned = true;
 				}
-				if (!is_mentioned && mentions.roles?.length > 0) {
+				if (!is_mentioned && mentions.roles && mentions.roles.length > 0) {
 					const channel = channels.cache.get(m.channel_id);
 					if (channel?.room_id) {
 						const room_member = room_members.cache.get(channel.room_id)?.get(
 							me.id,
 						);
-						if (room_member) {
-							for (const role of mentions.roles!) {
-								if (room_member.roles.some((r) => r.id === role.id)) {
+						if (room_member && mentions.roles) {
+							for (const role of mentions.roles) {
+								if (room_member.roles.some((r) => r === role.id)) {
 									is_mentioned = true;
 									break;
 								}
@@ -957,8 +969,6 @@ export function createApi(
 					}
 				}
 			}
-		} else if (msg.type === "BotAdd") {
-			// TODO: maybe do something here?
 		} else if (msg.type === "ReactionCreate") {
 			const { message_id, channel_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);
@@ -970,7 +980,7 @@ export function createApi(
 				if (idx !== -1) {
 					const reaction = { ...reactions[idx] };
 					reaction.count++;
-					if (user_id === session()?.user_id) {
+					if (user_id === getCurrentUserId()) {
 						reaction.self = true;
 					}
 					reactions[idx] = reaction;
@@ -978,7 +988,7 @@ export function createApi(
 					reactions.push({
 						key,
 						count: 1,
-						self: user_id === session()?.user_id,
+						self: user_id === getCurrentUserId(),
 					});
 				}
 				messages.cache.set(message_id, { ...message, reactions });
@@ -994,7 +1004,7 @@ export function createApi(
 				if (idx !== -1) {
 					const reaction = { ...reactions[idx] };
 					reaction.count--;
-					if (user_id === session()?.user_id) {
+					if (user_id === getCurrentUserId()) {
 						reaction.self = false;
 					}
 					if (reaction.count === 0) {
@@ -1034,7 +1044,10 @@ export function createApi(
 			const { user_id, presence } = msg;
 			const user = users.cache.get(user_id);
 			if (user) {
-				const newUser = { ...user, presence };
+				const newUser: UserWithRelationship = {
+					...user,
+					presence,
+				};
 				users.cache.set(user_id, newUser);
 
 				if (user_id === users.cache.get("@self")?.id) {
@@ -1042,21 +1055,21 @@ export function createApi(
 				}
 			}
 		} else if (msg.type === "PreferencesGlobal") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				if (!deepEqual(preferences(), msg.config)) {
 					setPreferences(msg.config);
 				}
 				setPreferencesLoaded(true);
 			}
 		} else if (msg.type === "PreferencesRoom") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				const room = rooms.cache.get(msg.room_id);
 				if (room) {
 					rooms.cache.set(msg.room_id, { ...room, preferences: msg.config });
 				}
 			}
 		} else if (msg.type === "PreferencesChannel") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				const thread = channels.cache.get(msg.channel_id);
 				if (thread) {
 					channels.cache.set(thread.id, {
@@ -1066,13 +1079,14 @@ export function createApi(
 				}
 			}
 		} else if (msg.type === "PreferencesUser") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				const user = users.cache.get(msg.target_user_id);
 				if (user) {
-					users.cache.set(msg.target_user_id, {
+					const updatedUser: UserWithRelationship = {
 						...user,
 						preferences: msg.config,
-					});
+					};
+					users.cache.set(msg.target_user_id, updatedUser);
 				}
 			}
 		} else if (msg.type === "UserDelete") {
@@ -1097,21 +1111,26 @@ export function createApi(
 			const { target_user_id, relationship } = msg;
 			const user = users.cache.get(target_user_id);
 			if (user) {
-				users.cache.set(target_user_id, { ...user, relationship });
+				const updatedUser: UserWithRelationship = {
+					...user,
+					relationship,
+				};
+				users.cache.set(target_user_id, updatedUser);
 			}
 		} else if (msg.type === "RelationshipDelete") {
 			const { target_user_id } = msg;
 			const user = users.cache.get(target_user_id);
 			if (user) {
-				users.cache.set(target_user_id, {
+				const updatedUser: UserWithRelationship = {
 					...user,
 					relationship: {
-						note: null,
 						relation: null,
+						until: null,
+						note: null,
 						petname: null,
-						ignore: null,
 					},
-				});
+				};
+				users.cache.set(target_user_id, updatedUser);
 			}
 		} else if (msg.type === "VoiceState") {
 			const state = msg.state as VoiceState | null;
@@ -1132,15 +1151,15 @@ export function createApi(
 				cached.pagination.total += 1;
 			}
 		} else if (msg.type === "BanCreate") {
-			const { ban } = msg;
-			const c = room_bans.cache.get(ban.room_id);
+			const { ban, room_id } = msg;
+			const c = room_bans.cache.get(room_id);
 			if (c) {
 				c.set(ban.user_id, ban);
 			} else {
-				room_bans.cache.set(ban.room_id, new ReactiveMap());
-				room_bans.cache.get(ban.room_id)!.set(ban.user_id, ban);
+				room_bans.cache.set(room_id, new ReactiveMap());
+				room_bans.cache.get(room_id)!.set(ban.user_id, ban);
 			}
-			const l = room_bans._cachedListings.get(ban.room_id);
+			const l = room_bans._cachedListings.get(room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
 				const idx = p.items.findIndex((i) => i.user_id === ban.user_id);
@@ -1193,7 +1212,7 @@ export function createApi(
 			const { webhook } = msg;
 			webhooks.cache.set(webhook.id, webhook);
 			const l = webhooks._cachedListings.get(webhook.channel_id);
-			if (l?.pagination) {
+			if (l?.pagination && l.resource.latest) {
 				const p = l.resource.latest;
 				const idx = p.items.findIndex((i) => i.id === webhook.id);
 				if (idx !== -1) {
@@ -1210,7 +1229,7 @@ export function createApi(
 		} else if (msg.type === "WebhookDelete") {
 			webhooks.cache.delete(msg.webhook_id);
 			const l = webhooks._cachedListings.get(msg.channel_id);
-			if (l?.pagination) {
+			if (l?.pagination && l.resource.latest) {
 				const p = l.resource.latest;
 				const idx = p.items.findIndex((i) => i.id === msg.webhook_id);
 				if (idx !== -1) {
@@ -1222,26 +1241,26 @@ export function createApi(
 				}
 			}
 		} else if (msg.type === "InboxNotificationCreate") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				inbox.cache.set(msg.notification.id, msg.notification);
 				for (const listing of inbox._listings.values()) {
 					listing.refetch();
 				}
 			}
 		} else if (msg.type === "InboxMarkRead") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				for (const listing of inbox._listings.values()) {
 					listing.refetch();
 				}
 			}
 		} else if (msg.type === "InboxMarkUnread") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				for (const listing of inbox._listings.values()) {
 					listing.refetch();
 				}
 			}
 		} else if (msg.type === "InboxFlush") {
-			if (msg.user_id === session()?.user_id) {
+			if (msg.user_id === getCurrentUserId()) {
 				for (const listing of inbox._listings.values()) {
 					listing.refetch();
 				}
@@ -1253,8 +1272,18 @@ export function createApi(
 
 	events.on("ready", (msg) => {
 		if (msg.user) {
-			users.cache.set("@self", msg.user);
-			users.cache.set(msg.user.id, msg.user);
+			// Convert User to UserWithRelationship
+			const userWithRelationship: UserWithRelationship = {
+				...msg.user,
+				relationship: {
+					note: null,
+					relation: null,
+					petname: null,
+					until: null,
+				},
+			};
+			users.cache.set("@self", userWithRelationship);
+			users.cache.set(msg.user.id, userWithRelationship);
 		}
 		setSession(msg.session);
 	});
@@ -1400,7 +1429,8 @@ export type Api = {
 	stripMarkdownAndResolveMentions: (
 		content: string,
 		thread_id: string,
-	) => string;
+		mentions?: Message["latest_version"]["mentions"],
+	) => Promise<string>;
 };
 
 export type Listing<T> = {

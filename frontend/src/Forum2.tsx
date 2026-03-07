@@ -11,6 +11,7 @@ import {
 import {
 	createEffect,
 	createMemo,
+	createResource,
 	createSignal,
 	createUniqueId,
 	For,
@@ -33,7 +34,8 @@ import { usePermissions } from "./hooks/usePermissions";
 import { md } from "./markdown_utils";
 import { flags } from "./flags";
 import { Dropdown } from "./Dropdown";
-import { Author } from "./Message";
+import { Author, MessageToolbar } from "./Message";
+import { Markdown } from "./Markdown";
 import { render } from "solid-js/web";
 import twemoji from "twemoji";
 import { getEmojiUrl, type MediaProps } from "./media/util";
@@ -54,10 +56,7 @@ import { createStore } from "solid-js/store";
 import { handleSubmit } from "./contexts/submit";
 import { createEditor } from "./editor/Editor";
 import type { EditorState } from "prosemirror-state";
-import icReply from "./assets/reply.png";
-import icReactionAdd from "./assets/reaction-add.png";
-import icEdit from "./assets/edit.png";
-import icMore from "./assets/more.png";
+
 import { Resizable } from "./Resizable";
 import { getMessageOverrideName } from "./util";
 import cancelIc from "./assets/x.png";
@@ -69,75 +68,6 @@ import { uuidv7 } from "uuidv7";
 import { useUploads } from "./contexts/uploads";
 import { Match, Switch } from "solid-js";
 import icDelete from "./assets/delete.png";
-
-function UserMention(props: { id: string; channel: Channel }) {
-	const api = useApi();
-	const ctx = useCtx();
-	const { userView, setUserView } = useUserPopout();
-	const user = api.users.fetch(() => props.id);
-	return (
-		<span
-			class="mention-user"
-			onClick={(e) => {
-				e.stopPropagation();
-				const currentTarget = e.currentTarget as HTMLElement;
-				if (userView()?.ref === currentTarget) {
-					setUserView(null);
-				} else {
-					setUserView({
-						user_id: props.id,
-						room_id: props.channel.room_id ?? undefined,
-						thread_id: props.channel.id,
-						ref: currentTarget,
-						source: "message",
-					});
-				}
-			}}
-		>
-			@{user()?.name ?? "..."}
-		</span>
-	);
-}
-
-function RoleMention(props: { id: string; thread: Channel }) {
-	const api = useApi();
-	const role = () => {
-		if (!props.thread.room_id) return null;
-		return api.roles.cache.get(props.id) ?? null;
-	};
-	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
-}
-
-function ChannelMention(props: { id: string }) {
-	const api = useApi();
-	const navigate = useNavigate();
-	const channel = api.channels.fetch(() => props.id);
-	return (
-		<span
-			class="mention-channel"
-			onClick={(e) => {
-				e.stopPropagation();
-				navigate(`/channel/${props.id}`);
-			}}
-		>
-			#{channel()?.name ?? "..."}
-		</span>
-	);
-}
-
-function Emoji(props: { id: string; name: string; animated: boolean }) {
-	const url = () => {
-		return getEmojiUrl(props.id);
-	};
-	return (
-		<img
-			class="emoji"
-			src={url()}
-			alt={`:${props.name}:`}
-			title={`:${props.name}:`}
-		/>
-	);
-}
 
 function AttachmentView(props: MediaProps) {
 	const b = () => props.media.content_type.split("/")[0];
@@ -177,172 +107,6 @@ function AttachmentView(props: MediaProps) {
 		);
 	}
 }
-
-function hydrateMentions(el: HTMLElement, thread: Channel) {
-	el.querySelectorAll<HTMLSpanElement>("span.mention[data-mention-type]")
-		.forEach(
-			(mentionEl) => {
-				const type = mentionEl.dataset.mentionType;
-				if (type === "user") {
-					const userId = mentionEl.dataset.userId!;
-					render(() => <UserMention channel={thread} id={userId} />, mentionEl);
-				} else if (type === "role") {
-					const roleId = mentionEl.dataset.roleId!;
-					render(() => <RoleMention id={roleId} thread={thread} />, mentionEl);
-				} else if (type === "channel") {
-					const channelId = mentionEl.dataset.channelId!;
-					render(() => <ChannelMention id={channelId} />, mentionEl);
-				} else if (type === "emoji") {
-					const emojiId = mentionEl.dataset.emojiId!;
-					const emojiName = mentionEl.dataset.emojiName!;
-					const emojiAnimated = mentionEl.dataset.emojiAnimated === "true";
-					render(
-						() => (
-							<Emoji id={emojiId} name={emojiName} animated={emojiAnimated} />
-						),
-						mentionEl,
-					);
-				}
-			},
-		);
-}
-
-const MessageToolbar = (props: { message: Message }) => {
-	const ctx = useCtx();
-	const { setMenu } = useMenu();
-	const api = useApi();
-	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
-	let reactionButtonRef: HTMLButtonElement | undefined;
-
-	createEffect(() => {
-		if (showReactionPicker()) {
-			ctx.setPopout({
-				id: "emoji",
-				ref: reactionButtonRef,
-				placement: "left-start",
-				props: {
-					selected: (emoji: string | null, keepOpen: boolean) => {
-						if (emoji) {
-							const existing = props.message.reactions?.find((r) =>
-								(r as any).key === emoji
-							);
-							if (!existing || !existing.self) {
-								api.reactions.add(
-									props.message.channel_id,
-									props.message.id,
-									emoji,
-								);
-							}
-						}
-						if (!keepOpen) setShowReactionPicker(false);
-					},
-				},
-			});
-		} else {
-			const popout = ctx.popout() as any;
-			if (popout && popout.id === "emoji" && popout.ref === reactionButtonRef) {
-				ctx.setPopout({});
-			}
-		}
-	});
-
-	const closePicker = (e: MouseEvent) => {
-		const popoutEl = document.querySelector(".popout");
-		if (
-			reactionButtonRef &&
-			!reactionButtonRef.contains(e.target as Node) &&
-			(!popoutEl || !popoutEl.contains(e.target as Node))
-		) {
-			setShowReactionPicker(false);
-		}
-	};
-
-	createEffect(() => {
-		if (showReactionPicker()) {
-			document.addEventListener("click", closePicker);
-		} else {
-			document.removeEventListener("click", closePicker);
-		}
-		onCleanup(() => document.removeEventListener("click", closePicker));
-	});
-
-	const currentUser = useCurrentUser();
-	const isOwnMessage = () => {
-		return currentUser()?.id === props.message.author_id;
-	};
-
-	const canEditMessage = () => {
-		return (props.message as any).type === "DefaultMarkdown" &&
-			!props.message.is_local &&
-			isOwnMessage();
-	};
-
-	const handleAddReaction = (e: MouseEvent) => {
-		e.stopPropagation();
-		setShowReactionPicker(!showReactionPicker());
-	};
-
-	const [ch, chUpdate] = useChannel()!;
-
-	const handleReply = () => {
-		chUpdate("reply_id", props.message.id);
-	};
-
-	const handleEdit = () => {
-		if (canEditMessage()) {
-			chUpdate("editingMessage", {
-				message_id: props.message.id,
-				selection: "end",
-			});
-		}
-	};
-
-	const handleContextMenu = (e: MouseEvent) => {
-		e.preventDefault();
-
-		const button = e.currentTarget as HTMLButtonElement;
-		const rect = button.getBoundingClientRect();
-
-		setTimeout(() => {
-			setMenu({
-				x: rect.left,
-				y: rect.bottom,
-				type: "message",
-				channel_id: props.message.channel_id,
-				message_id: props.message.id,
-				version_id: (props.message as any).version_id,
-			});
-		});
-	};
-
-	return (
-		<div class="message-toolbar">
-			<button
-				ref={reactionButtonRef}
-				onClick={handleAddReaction}
-				title="Add reaction"
-				aria-label="Add reaction"
-			>
-				<img class="icon" src={icReactionAdd} />
-			</button>
-			<button onClick={handleReply} title="Reply" aria-label="Reply">
-				<img class="icon" src={icReply} />
-			</button>
-			<Show when={canEditMessage()}>
-				<button onClick={handleEdit} title="Edit" aria-label="Edit">
-					<img class="icon" src={icEdit} />
-				</button>
-			</Show>
-			<button
-				onClick={handleContextMenu}
-				title="More options"
-				aria-label="More options"
-			>
-				<img class="icon" src={icMore} />
-			</button>
-		</div>
-	);
-};
 
 const InputReply = (props: { thread: Channel; reply: Message }) => {
 	const api = useApi();
@@ -1407,52 +1171,34 @@ const Comment = (
 		}
 	};
 
+	const [summary] = createResource(
+		() => {
+			const v = message().latest_version;
+			if (v.type === "DefaultMarkdown" && v.content) {
+				return {
+					content: v.content,
+					channel_id: message().channel_id,
+					mentions: v.mentions,
+				};
+			}
+			return null;
+		},
+		async (data) => {
+			if (!data) return "(no content)";
+			return await api.stripMarkdownAndResolveMentions(
+				data.content,
+				data.channel_id,
+				data.mentions,
+			);
+		},
+	);
+
 	const countAllChildren = (node: CommentNode): number => {
 		return node.children.length +
 			node.children.reduce((sum, child) => sum + countAllChildren(child), 0);
 	};
 
-	function getHtml(): string {
-		const cached = contentToHtml.get(message());
-		if (cached) return cached;
-
-		const version = message().latest_version;
-		const content = version.type === "DefaultMarkdown"
-			? version.content ?? ""
-			: "";
-
-		function escape(html: string) {
-			return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
-				/>/g,
-				"&gt;",
-			).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-		}
-
-		const tokens = md.lexer(content);
-		md.walkTokens(tokens, (token) => {
-			if (token.type === "html") {
-				(token as any).text = escape((token as any).text);
-			}
-		});
-
-		const html = (md.parser(tokens) as string).trim();
-
-		const twemojified = twemoji.parse(html, {
-			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-			folder: "svg",
-			ext: ".svg",
-		});
-		contentToHtml.set(message(), twemojified);
-		return twemojified;
-	}
-
-	let contentEl!: HTMLDivElement;
-
-	createEffect(() => {
-		if (contentEl) {
-			hydrateMentions(contentEl, props.channel);
-		}
-	});
+	let contentEl!: HTMLElement;
 
 	createEffect(() => {
 		const hl = ch.highlight;
@@ -1467,47 +1213,6 @@ const Comment = (
 				chUpdate("highlight", undefined);
 			}
 		}
-	});
-
-	createEffect(() => {
-		const hl = ch.highlight;
-		if (hl === message().id) {
-			// expand parent comments
-			// props.expand(); // TODO: we need a way to expand parents if they are collapsed
-			// for now we just scroll to it
-			const el = contentEl?.closest(".comment");
-			if (el) {
-				el.scrollIntoView({ block: "center" });
-				highlight(el);
-				chUpdate("highlight", undefined);
-			}
-		}
-	});
-
-	createEffect(() => {
-		const hl = ch.highlight;
-		if (hl === message().id) {
-			// expand parent comments
-			// props.expand(); // TODO: we need a way to expand parents if they are collapsed
-			// for now we just scroll to it
-			const el = contentEl?.closest(".comment");
-			if (el) {
-				el.scrollIntoView({ block: "center" });
-				highlight(el);
-				chUpdate("highlight", undefined);
-			}
-		}
-	});
-
-	createEffect(() => {
-		getHtml();
-		import("highlight.js").then(({ default: hljs }) => {
-			if (!contentEl) return;
-			for (const el of Array.from(contentEl.querySelectorAll("pre"))) {
-				el.dataset.highlighted = "";
-				hljs.highlightElement(el);
-			}
-		});
 	});
 
 	return (
@@ -1546,15 +1251,7 @@ const Comment = (
 					<Time date={getTimestampFromUUID(message().id)} />
 					<Show when={collapsed()}>
 						<div class="summary">
-							{(() => {
-								const version = message().latest_version;
-								return version.type === "DefaultMarkdown" && version.content
-									? api.stripMarkdownAndResolveMentions(
-										version.content,
-										message().channel_id,
-									)
-									: "(no content)";
-							})()}
+							{summary() ?? "..."}
 						</div>
 					</Show>
 				</header>
@@ -1565,12 +1262,14 @@ const Comment = (
 							<CommentEditor message={message()} channel={props.channel} />
 						}
 					>
-						<div
-							class="content markdown"
-							ref={contentEl!}
-							innerHTML={getHtml()}
-						>
-						</div>
+						<Markdown
+							content={message().latest_version.type === "DefaultMarkdown"
+								? message().latest_version.content ?? ""
+								: ""}
+							channel_id={message().channel_id}
+							class="content"
+							ref={contentEl}
+						/>
 						<div style="padding: 0 8px">
 							{(() => {
 								const version = message().latest_version;

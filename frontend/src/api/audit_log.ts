@@ -1,4 +1,13 @@
-import type { AuditLogEntry, Channel, Pagination, RoomMember, User } from "sdk";
+import type {
+	AuditLogEntry,
+	Channel,
+	Pagination,
+	RoomMember,
+	Tag,
+	User,
+	UserWithRelationship,
+	Webhook,
+} from "sdk";
 import { createEffect, createResource, type Resource, untrack } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 import type { Api, Listing } from "../api.tsx";
@@ -8,6 +17,8 @@ interface AuditLogPaginationResponse {
 	threads: Channel[];
 	users: User[];
 	room_members: RoomMember[];
+	webhooks: Webhook[];
+	tags: Tag[];
 	has_more: boolean;
 	cursor?: string;
 }
@@ -47,7 +58,16 @@ export class AuditLogs {
 				this.api.channels.cache.set(thread.id, thread);
 			}
 			for (const user of data.users) {
-				this.api.users.cache.set(user.id, user);
+				const userWithRelationship: UserWithRelationship = {
+					...user,
+					relationship: {
+						note: null,
+						relation: null,
+						petname: null,
+						until: null,
+					},
+				};
+				this.api.users.cache.set(user.id, userWithRelationship);
 			}
 			for (const member of data.room_members) {
 				let cache = this.api.room_members.cache.get(member.room_id);

@@ -3,17 +3,35 @@ import type { components } from "./schema.d.ts";
 export type Room = components["schemas"]["Room"];
 export type Channel = components["schemas"]["Channel"];
 export type ChannelType = components["schemas"]["ChannelType"];
-export type User = components["schemas"]["User"];
-export type Message = components["schemas"]["Message"] & { is_local?: true };
+export type User = components["schemas"]["User"] & {
+	/** @description relationship with current user (for UserWithRelationship endpoints) */
+	relationship?: components["schemas"]["Relationship"];
+};
+export type Message = components["schemas"]["Message"] & {
+	/** @description mentions parsed from message content */
+	mentions?: components["schemas"]["Mentions"];
+	/** @description mark as local message */
+	is_local?: true;
+	/** @description idempotency key nonce (client-side only) */
+	nonce?: string;
+};
 export type MessageVersion = components["schemas"]["MessageVersion"];
 export type Role = components["schemas"]["Role"];
 export type Invite = components["schemas"]["Invite"];
 export type InviteWithMetadata = components["schemas"]["InviteWithMetadata"];
 export type Session = components["schemas"]["Session"];
-export type RoomMember = components["schemas"]["RoomMember"];
+export type RoomMember = components["schemas"]["RoomMember"] & {
+	/** @description membership status (client-side only, not in canonical schema) */
+	membership?: "Join" | "Leave" | "Pending";
+};
 export type RoomMemberSearchResponse =
 	components["schemas"]["RoomMemberSearchResponse"];
-export type ThreadMember = components["schemas"]["ThreadMember"];
+export type ThreadMember = components["schemas"]["ThreadMember"] & {
+	/** @description membership status (client-side only, not in canonical schema) */
+	membership?: "Join" | "Leave" | "Pending";
+	/** @description when membership was updated (client-side only) */
+	membership_updated_at?: string;
+};
 export type Media = components["schemas"]["Media"];
 export type MessageCreate = components["schemas"]["MessageCreate"];
 export type PaginationResponseMessage =
@@ -26,17 +44,40 @@ export type Embed = components["schemas"]["Embed"];
 export type EmojiCustom = components["schemas"]["EmojiCustom"];
 export type RelationshipWithUserId =
 	components["schemas"]["RelationshipWithUserId"];
+export type Relationship = components["schemas"]["Relationship"] & {
+	/** @description user note for relationship (client-side extension) */
+	note?: string | null;
+	/** @description petname for relationship (client-side extension) */
+	petname?: string | null;
+};
+export type Ignore = components["schemas"]["Ignore"];
 export type UserWithRelationship =
-	components["schemas"]["UserWithRelationship"];
+	& components["schemas"]["UserWithRelationship"]
+	& {
+		/** @description relationship with current user (with client-side extensions) */
+		relationship: Relationship;
+	};
 export type Preferences = components["schemas"]["PreferencesGlobal"];
 export type PreferencesGlobal = components["schemas"]["PreferencesGlobal"];
 export type PreferencesUser = components["schemas"]["PreferencesUser"];
 export type PreferencesRoom = components["schemas"]["PreferencesRoom"];
 export type PreferencesChannel = components["schemas"]["PreferencesChannel"];
-export type Application = components["schemas"]["Application"];
+export type Application = components["schemas"]["Application"] & {
+	/** @description application avatar (not in canonical schema but used in frontend) */
+	avatar?: components["schemas"]["Id"];
+	/** @description whether this is a bot */
+	bot?: boolean;
+	/** @description whether this is a system application */
+	system?: boolean;
+	/** @description application version id */
+	version_id?: components["schemas"]["Id"];
+};
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
 export type MessageSync = components["schemas"]["MessageSync"];
-export type RoomBan = components["schemas"]["RoomBan"];
+export type RoomBan = components["schemas"]["RoomBan"] & {
+	/** @description room id (client-side context, not in canonical schema) */
+	room_id?: components["schemas"]["Id"];
+};
 export type Notification = components["schemas"]["Notification"];
 export type Connection = components["schemas"]["Connection"];
 export type Scope = components["schemas"]["Scope"];
@@ -53,8 +94,12 @@ export type RelationshipType = components["schemas"]["RelationshipType"];
 export type MemberListGroup = components["schemas"]["MemberListGroup"];
 export type ChannelPatch = components["schemas"]["ChannelPatch"];
 export type HistoryPagination = components["schemas"]["HistoryPagination"];
-export type PaginationResponse =
-	components["schemas"]["PaginationResponse_Message"];
+export type PaginationResponse<T = any> = {
+	items: Array<T>;
+	total: number;
+	has_more: boolean;
+	cursor?: string | null;
+};
 export type Webhook = components["schemas"]["Webhook"];
 export type NotifsChannel = components["schemas"]["NotifsChannel"];
 export type Time = components["schemas"]["Time"];
@@ -100,6 +145,7 @@ export type Pagination<T> = {
 	total: number;
 	items: Array<T>;
 	has_more: boolean;
+	cursor?: string | null;
 };
 
 export type PaginationQuery = {
@@ -186,6 +232,8 @@ export type VoiceState = {
 	self_deaf: boolean;
 	self_video: boolean;
 	self_screen: boolean;
+	/** @description the thread this voice state is in */
+	thread_id?: string;
 };
 
 export type InboxListParams = {

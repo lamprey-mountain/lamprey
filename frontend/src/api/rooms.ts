@@ -62,8 +62,10 @@ export class Rooms {
 	}
 
 	list(): Resource<Pagination<Room>> {
-		if ((this._cachedListing.resource as any).upgraded) {
-			return this._cachedListing.resource;
+		const l = this._cachedListing;
+		if ((l.resource as any).upgraded) {
+			if (!l.prom) l.refetch();
+			return l.resource;
 		}
 
 		const paginate = async (pagination?: Pagination<Room>) => {
@@ -145,8 +147,10 @@ export class Rooms {
 	}
 
 	list_all(): Resource<Pagination<Room>> {
-		if ((this._cachedListingAll.resource as any).upgraded) {
-			return this._cachedListingAll.resource;
+		const l = this._cachedListingAll;
+		if ((l.resource as any).upgraded) {
+			if (!l.prom) l.refetch();
+			return l.resource;
 		}
 
 		const paginate = async (pagination?: Pagination<Room>) => {

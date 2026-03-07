@@ -1,4 +1,4 @@
-import type { HistoryPagination } from "sdk";
+import type { HistoryPagination, User, UserWithRelationship } from "sdk";
 import type { Api } from "../api.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { fetchWithRetry } from "./util.ts";
@@ -31,7 +31,16 @@ export class Documents {
 		);
 
 		for (const user of data.users) {
-			this.api.users.cache.set(user.id, user);
+			const userWithRelationship: UserWithRelationship = {
+				...user,
+				relationship: {
+					note: null,
+					relation: null,
+					petname: null,
+					until: null,
+				},
+			};
+			this.api.users.cache.set(user.id, userWithRelationship);
 		}
 
 		for (const member of data.room_members) {

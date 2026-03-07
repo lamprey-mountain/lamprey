@@ -16,7 +16,7 @@ export function Users() {
 
 	const fetchMore = () => {
 		if (users()?.has_more) {
-			api.users.list({ from: users()?.cursor });
+			api.users.list();
 		}
 	};
 

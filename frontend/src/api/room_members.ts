@@ -82,12 +82,12 @@ export class RoomMembers {
 						// HACK: handle 404s
 						if (error?.error === "not found") {
 							const placeholder: RoomMember = {
-								membership: "Leave",
+								membership: "Leave" as const,
 								room_id,
 								user_id,
 								deaf: false,
 								mute: false,
-								roles: [],
+								roles: [] as string[],
 								joined_at: new Date().toISOString(),
 							};
 							return placeholder;

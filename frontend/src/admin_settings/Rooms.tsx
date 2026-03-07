@@ -12,7 +12,7 @@ export function Rooms() {
 
 	const fetchMore = () => {
 		if (rooms()?.has_more) {
-			api.rooms.list_all({ from: rooms()?.cursor });
+			api.rooms.list_all();
 		}
 	};
 

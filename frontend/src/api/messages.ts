@@ -4,6 +4,8 @@ import type {
 	MessageCreate,
 	Pagination,
 	PaginationQuery,
+	User,
+	UserWithRelationship,
 } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
@@ -474,11 +476,17 @@ export class Messages {
 				version_id: id,
 				type: "DefaultMarkdown",
 				content: body.content,
-				attachments: body.attachments.map((a) => ({
-					type: "Media",
-					media: this.api.media.cacheInfo.get(a.id),
-					spoiler: false,
-				})),
+				attachments: body.attachments.map((a) => {
+					// Extract media_id from the attachment
+					const media_id = "media_id" in a ? a.media_id : null;
+					return {
+						type: "Media",
+						media: media_id
+							? this.api.media.cacheInfo.get(media_id)
+							: undefined,
+						spoiler: a.spoiler ?? false,
+					};
+				}),
 				embeds: body.embeds ?? [],
 				created_at: new Date().toISOString(),
 			},
@@ -504,10 +512,14 @@ export class Messages {
 				},
 				body: {
 					...body,
-					attachments: body.attachments.map((a) => ({
-						type: "Media",
-						media_id: a.id,
-					})),
+					attachments: body.attachments.map((a) => {
+						// Only include media_id if it's a media reference
+						return "media_id" in a
+							? { type: "Media", media_id: a.media_id }
+							: null;
+					}).filter((a): a is { type: "Media"; media_id: string } =>
+						a !== null
+					),
 				},
 				headers: {
 					"Idempotency-Key": id,
@@ -771,7 +783,16 @@ export class Messages {
 
 		if (users) {
 			for (const user of users) {
-				this.api.users.cache.set(user.id, user);
+				const userWithRelationship: UserWithRelationship = {
+					...user,
+					relationship: {
+						relation: null,
+						until: null,
+						note: null,
+						petname: null,
+					},
+				};
+				this.api.users.cache.set(user.id, userWithRelationship);
 			}
 		}
 
