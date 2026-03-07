@@ -7,7 +7,7 @@ use common::v1::types::error::{ApiError, SyncError};
 use common::v1::types::{MessageEnvelope, MessagePayload, MessageSync};
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
@@ -246,20 +246,21 @@ impl IntoResponse for Error {
             return self.get_status().into_response();
         };
 
+        let status = self.get_status();
         if let Error::ApiError(e) = self {
-            error!("Response api error: {:?}", e);
-            (StatusCode::from_u16(e.code.status()).unwrap(), Json(e)).into_response()
+            if status.is_client_error() {
+                debug!("Response api error: {:?}", e);
+            } else {
+                error!("Response api error: {:?}", e);
+            }
+            (status, Json(e)).into_response()
         } else {
-            error!(
-                "Response error: status {}, message {:?}",
-                self.get_status(),
-                self
-            );
-            (
-                self.get_status(),
-                Json(json!({ "error": self.to_string() })),
-            )
-                .into_response()
+            if status.is_client_error() {
+                debug!("Response error: status {}, message {:?}", status, self);
+            } else {
+                error!("Response error: status {}, message {:?}", status, self);
+            }
+            (status, Json(json!({ "error": self.to_string() }))).into_response()
         }
     }
 }
