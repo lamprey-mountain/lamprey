@@ -9,7 +9,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi } from "./api";
+import { useApi, useChannels2, useRooms2, useUsers2 } from "./api";
 import { useConfig } from "./config";
 import { flags } from "./flags";
 import { useCtx } from "./context";
@@ -42,6 +42,9 @@ function setLastViewedChannel(roomId: string, channelId: string): void {
 export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
 	const api = useApi();
+	const rooms2 = useRooms2();
+	const channels2 = useChannels2();
+	const users2 = useUsers2();
 	const [voice] = useVoice();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
@@ -62,7 +65,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		const currentPath = params.channel_id;
 		if (currentPath && currentPath === lastChannelId) return;
 
-		const channel = api.channels.cache.get(lastChannelId);
+		const channel = channels2.cache.get(lastChannelId);
 		if (!channel) return;
 
 		nav(`/channel/${lastChannelId}`, { replace: true });
@@ -87,9 +90,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		}
 	});
 
-	const room = props.room_id
-		? api.rooms.fetch(() => props.room_id!)
-		: () => null;
+	const room = props.room_id ? rooms2.use(() => props.room_id!) : () => null;
 
 	const canViewChannel = (channel: Channel): boolean => {
 		if (!props.room_id || !currentUserId()) {
@@ -113,7 +114,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const categories = createMemo<
 		Array<{ category: Channel | null; channels: Array<Channel> }>
 	>(() => {
-		const allChannels = [...api.channels.cache.values()].filter(
+		const allChannels = [...channels2.cache.values()].filter(
 			(c) =>
 				(props.room_id ? c.room_id === props.room_id : c.room_id === null) &&
 				!c.deleted_at,
@@ -126,7 +127,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					c.type === "ThreadForum2" ||
 					(c.type === "Document" &&
 						c.parent_id &&
-						api.channels.cache.get(c.parent_id)?.type === "Wiki")) &&
+						channels2.cache.get(c.parent_id)?.type === "Wiki")) &&
 				!c.archived_at &&
 				canViewChannel(c),
 		);
@@ -138,7 +139,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				!(
 					c.type === "Document" &&
 					c.parent_id &&
-					api.channels.cache.get(c.parent_id)?.type === "Wiki"
+					channels2.cache.get(c.parent_id)?.type === "Wiki"
 				) &&
 				canViewChannel(c),
 		);
@@ -198,7 +199,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		}
 		return [...categoryMap.entries()]
 			.map(([cid, cs]) => ({
-				category: cid ? api.channels.cache.get(cid)! : null,
+				category: cid ? channels2.cache.get(cid)! : null,
 				channels: cs,
 			}))
 			.filter(({ channels }) => {
@@ -261,7 +262,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 		// handle voice participant drag
 		if (dragInfo?.type === "voice") {
-			const targetChannel = api.channels.cache.get(id);
+			const targetChannel = channels2.cache.get(id);
 			if (targetChannel?.type === "Voice") {
 				if (target()?.id !== id) {
 					setTarget({ id, mode: "inside" });
@@ -272,8 +273,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 		const draggingId = dragInfo?.id;
 		if (draggingId) {
-			const draggingChannel = api.channels.cache.get(draggingId);
-			const targetChannel = api.channels.cache.get(id);
+			const draggingChannel = channels2.cache.get(draggingId);
+			const targetChannel = channels2.cache.get(id);
 
 			if (!draggingChannel || !targetChannel) return;
 
@@ -302,7 +303,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						targetChannel.parent_id
 					) {
 						// find parent
-						const parent = api.channels.cache.get(targetChannel.parent_id);
+						const parent = channels2.cache.get(targetChannel.parent_id);
 						if (parent && validParents.includes(parent.type)) {
 							if (target()?.id !== parent.id) {
 								setTarget({ id: parent.id, mode: "inside" });
@@ -332,7 +333,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				}
 				// if hovering over another document in a wiki, target the wiki
 				if (targetChannel.type === "Document" && targetChannel.parent_id) {
-					const p = api.channels.cache.get(targetChannel.parent_id);
+					const p = channels2.cache.get(targetChannel.parent_id);
 					if (p?.type === "Wiki") {
 						if (target()?.id !== p.id) {
 							setTarget({ id: p.id, mode: "inside" });
@@ -391,7 +392,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 		// Handle voice participant move
 		if (dragInfo.type === "voice") {
-			const toChannel = api.channels.cache.get(toId);
+			const toChannel = channels2.cache.get(toId);
 			if (!toChannel || toChannel.type !== "Voice") return;
 
 			// Move the user to the target voice channel
@@ -409,9 +410,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			return;
 		}
 
-		const fromChannel = api.channels.cache.get(dragInfo.id);
+		const fromChannel = channels2.cache.get(dragInfo.id);
 		if (!fromChannel) return;
-		const toChannel = api.channels.cache.get(toId);
+		const toChannel = channels2.cache.get(toId);
 		if (!toChannel) return;
 
 		// Handle thread/doc move (Reparenting)
@@ -771,7 +772,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 												)}
 											>
 												{(s) => {
-													const user = api.users.fetch(() => s.user_id);
+													const user = users2.use(() => s.user_id);
 													const room_member = props.room_id
 														? api.room_members.fetch(
 															() => props.room_id!,

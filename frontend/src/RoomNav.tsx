@@ -8,7 +8,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi } from "./api";
+import { useApi, useChannels2, useRooms2 } from "./api";
 import { flags } from "./flags";
 import { getThumbFromId } from "./media/util";
 import { useCtx } from "./context";
@@ -76,14 +76,15 @@ type ViewChannel = {
 type RoomNavConfig = Array<RoomNavItem>;
 
 export const RoomNav = () => {
-	const api = useApi();
+	const rooms2 = useRooms2();
+	const channels2 = useChannels2();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const rooms = api.rooms.list();
+	const rooms = createMemo(() => [...rooms2.cache.values()]);
 
 	const getRoomMentionCount = (roomId: string) => {
 		let totalMentions = 0;
-		for (const channel of api.channels.cache.values()) {
+		for (const channel of channels2.cache.values()) {
 			if (channel.room_id === roomId && channel.mention_count) {
 				totalMentions += channel.mention_count;
 			}
@@ -92,7 +93,7 @@ export const RoomNav = () => {
 	};
 
 	const getRoomUnread = (roomId: string) => {
-		for (const channel of api.channels.cache.values()) {
+		for (const channel of channels2.cache.values()) {
 			if (
 				channel.room_id === roomId && channel.is_unread &&
 				channel.type !== "Voice"
@@ -141,7 +142,7 @@ export const RoomNav = () => {
 
 	const reorderedItems = createMemo(() => {
 		let config = getConfig();
-		const roomsList = rooms()?.items || [];
+		const roomsList = rooms();
 		const roomMap = new Map(roomsList.map((r) => [r.id, r]));
 
 		const orderedIds = new Set<string>();
@@ -403,7 +404,7 @@ export const RoomNav = () => {
 
 		let config = getConfig();
 		if (config.length === 0) {
-			config = (rooms()?.items || []).map((r) => ({
+			config = rooms().map((r) => ({
 				type: "room",
 				room_id: r.id,
 			}));

@@ -49,9 +49,11 @@ const DEFAULT_PREFERENCES: Preferences = {
 	},
 };
 
+import { RootStore } from "../api/core/Store.ts";
+
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
-		sync: [import("sdk").MessageSync, unknown];
+		sync: [import("sdk").MessageSync, import("sdk").MessageEnvelope];
 		ready: import("sdk").MessageReady;
 	}>();
 	const client = createClient({
@@ -59,7 +61,7 @@ export function useChatClient(config: Config) {
 		token: localStorage.getItem("token") || undefined,
 		onSync(msg, raw) {
 			console.log("recv", msg, raw);
-			events.emit("sync", [msg, raw]);
+			events.emit("sync", [msg, raw as import("sdk").MessageEnvelope]);
 		},
 		onReady(msg) {
 			events.emit("ready", msg);
@@ -70,6 +72,7 @@ export function useChatClient(config: Config) {
 		loadSavedPreferences() ?? DEFAULT_PREFERENCES,
 	);
 	const api = createApi(client, events, { preferences, setPreferences });
+	const store = new RootStore(client, events);
 
 	const cs = from(client.state);
 	createEffect(() => {
@@ -177,5 +180,5 @@ export function useChatClient(config: Config) {
 
 	api.ctx = ctx;
 
-	return { client, api, ctx, preferences, setPreferences };
+	return { client, api, ctx, preferences, setPreferences, store };
 }

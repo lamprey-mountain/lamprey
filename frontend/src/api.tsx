@@ -69,6 +69,8 @@ import { Documents } from "./api/document.ts";
 import { RoomAnalytics } from "./api/room_analytics.ts";
 import { generateNotificationIcon } from "./drawing.ts";
 
+import { RootStore } from "./api/core/Store.ts";
+
 export type Json =
 	| number
 	| string
@@ -77,9 +79,26 @@ export type Json =
 	| { [k in string]: Json };
 
 const ApiContext = createContext<Api>();
+export const RootStoreContext = createContext<RootStore>();
 
 export function useApi() {
 	return useContext(ApiContext)!;
+}
+
+export function useApi2() {
+	return useContext(RootStoreContext)!;
+}
+
+export function useRooms2() {
+	return useApi2().rooms;
+}
+
+export function useChannels2() {
+	return useApi2().channels;
+}
+
+export function useUsers2() {
+	return useApi2().users;
 }
 
 export type MemberList = {
