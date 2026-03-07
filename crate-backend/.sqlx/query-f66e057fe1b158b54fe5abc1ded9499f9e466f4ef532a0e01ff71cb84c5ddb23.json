@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.banner,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id,\n                    r.welcome_channel_id,\n                    r.quarantined,\n                    r.security_require_mfa,\n                    r.security_require_sudo,\n                    r.afk_channel_id,\n                    r.afk_channel_timeout,\n                    (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS \"member_count!\",\n                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS \"channel_count!\",\n                    (SELECT COUNT(*) FROM custom_emoji WHERE room_id = r.id AND deleted_at IS NULL) AS \"emoji_count!\"\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                  AND r.type != 'Server'\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
+  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.banner,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id,\n                    r.welcome_channel_id,\n                    r.quarantined,\n                    r.security_require_mfa,\n                    r.security_require_sudo,\n                    r.afk_channel_id,\n                    r.afk_channel_timeout,\n                    r.deleted_at,\n                    (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS \"member_count!\",\n                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS \"channel_count!\",\n                    (SELECT COUNT(*) FROM custom_emoji WHERE room_id = r.id AND deleted_at IS NULL) AS \"emoji_count!\"\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                  AND r.type != 'Server'\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
   "describe": {
     "columns": [
       {
@@ -95,16 +95,21 @@
       },
       {
         "ordinal": 16,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 17,
         "name": "member_count!",
         "type_info": "Int8"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "channel_count!",
         "type_info": "Int8"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "emoji_count!",
         "type_info": "Int8"
       }
@@ -136,10 +141,11 @@
       false,
       true,
       false,
+      true,
       null,
       null,
       null
     ]
   },
-  "hash": "ba33621b7f58800008a7e72bd74bf29e3ace5e8ba4d7abd04e95a9ff643f1e50"
+  "hash": "f66e057fe1b158b54fe5abc1ded9499f9e466f4ef532a0e01ff71cb84c5ddb23"
 }

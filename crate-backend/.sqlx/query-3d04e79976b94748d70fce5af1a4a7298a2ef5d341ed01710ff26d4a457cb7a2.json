@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with last_id as (\n    select m.channel_id, max(mv.version_id) as last_version_id\n    from message m\n    join message_version mv on m.latest_version_id = mv.version_id\n    where m.deleted_at is null\n    group by m.channel_id\n)\nselect\n    channel.id,\n    channel.type as \"ty: DbChannelType\",\n    u.message_id as \"last_read_id?\",\n    coalesce(u.version_id < last_version_id, true) as \"is_unread!\",\n    coalesce(u.mention_count, 0) as \"mention_count!\"\nfrom channel\nleft join last_id on last_id.channel_id = channel.id\nleft join unread u on u.channel_id = channel.id and u.user_id = $2\nwhere channel.id = $1\n",
+  "query": "select\n    channel.id,\n    channel.type as \"ty: DbChannelType\",\n    u.message_id as \"last_read_id?\",\n    coalesce(u.version_id < channel.last_message_id, true) as \"is_unread!\",\n    coalesce(u.mention_count, 0) as \"mention_count!\"\nfrom channel\nleft join unread u on u.channel_id = channel.id and u.user_id = $2\nwhere channel.id = $1\n",
   "describe": {
     "columns": [
       {
@@ -70,5 +70,5 @@
       null
     ]
   },
-  "hash": "1c196fe965272d141fe421567eff07abc0b5916b2c16750110cbad0abed8c33e"
+  "hash": "3d04e79976b94748d70fce5af1a4a7298a2ef5d341ed01710ff26d4a457cb7a2"
 }

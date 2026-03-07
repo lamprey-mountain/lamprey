@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT channel_id, config FROM user_config_channel WHERE user_id = $1 AND channel_id = ANY($2)",
+  "query": "SELECT room_id, config FROM preferences_room WHERE user_id = $1 AND room_id = ANY($2)",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "channel_id",
+        "name": "room_id",
         "type_info": "Uuid"
       },
       {
@@ -25,5 +25,5 @@
       false
     ]
   },
-  "hash": "aa9da9497cbfcd5b540d2569a675bd0ca763ad7fb910ef179169990205c1ed43"
+  "hash": "2743970609ddd8a7c418bffe9dda8aef3b76d662e2feb6ed0bc0a3a682a25bb5"
 }

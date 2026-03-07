@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT config FROM user_config_channel WHERE user_id = $1 AND channel_id = $2",
+  "query": "SELECT config FROM preferences_channel WHERE user_id = $1 AND channel_id = $2",
   "describe": {
     "columns": [
       {
@@ -19,5 +19,5 @@
       false
     ]
   },
-  "hash": "f1ef80982bb3f64bcbaae26d8a61ed35a7e825896cd7bedeca487c86abb6cb7a"
+  "hash": "e4a0f7021e55e5510bbe1b90498f19d7ff2aa59838e8b3a28efc38b23a2d316c"
 }

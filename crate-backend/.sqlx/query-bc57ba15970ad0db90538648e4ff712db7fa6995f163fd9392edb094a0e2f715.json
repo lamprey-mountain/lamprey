@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id\n            FROM webhook w\n            JOIN usr u ON w.id = u.id\n            JOIN channel c ON w.channel_id = c.id\n            WHERE w.id = $1 AND w.token = $2\n            ",
+  "query": "\n            SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id\n            FROM webhook w\n            JOIN usr u ON w.id = u.id\n            JOIN channel c ON w.channel_id = c.id\n            WHERE w.id = $1 AND u.deleted_at IS NULL\n            ",
   "describe": {
     "columns": [
       {
@@ -41,8 +41,7 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -55,5 +54,5 @@
       true
     ]
   },
-  "hash": "187b439f80eea3f12b6a7d2e18193b2860559b98f0fa773eae13d6e13039d544"
+  "hash": "bc57ba15970ad0db90538648e4ff712db7fa6995f163fd9392edb094a0e2f715"
 }
