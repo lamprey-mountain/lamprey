@@ -810,10 +810,17 @@ input[type="url"] {
 			display: block;
 			padding: 4px 8px;
 			background: none;
+			border: none;
+			border-radius: 4px;
+			width: 100%;
+			text-align: left;
+			font: inherit;
+			color: $fg-400;
 
 			&:hover,
 			&:focus {
 				background-color: #fff1;
+				color: $fg-200;
 
 				&.active {
 					background-color: #fff3;
@@ -822,13 +829,24 @@ input[type="url"] {
 
 			&.active {
 				background-color: #fff2;
+				color: $fg-100;
+			}
+
+			&.danger {
+				color: $color-red;
+
+				&:hover,
+				&:focus {
+					background-color: oklch(var(--color-red) / 0.1);
+					color: $color-red;
+				}
 			}
 		}
 
 		.action {
-			border: none;
-			border-radius: 4px;
-			width: 100%;
+			/* border: none; */
+			/* border-radius: 4px; */
+			/* width: 100%; */
 		}
 	}
 
@@ -843,17 +861,6 @@ input[type="url"] {
 
 	& button.spaced {
 		margin-left: 4px;
-	}
-
-	& .danger {
-		border: solid #e8374f 1px;
-		padding: 2px;
-		margin: 0 -2px;
-
-		& button {
-			background: #ba2f42;
-			border: solid #e8374f 1px;
-		}
 	}
 }
 

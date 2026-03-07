@@ -59,6 +59,7 @@ const tabs: Array<{
 		path: "remove",
 		component: null as any,
 		action: "remove",
+		style: "danger",
 		// TODO: check ThreadManage in threads, ChannelManage in channels
 		permissionCheck: (p) => p.has("ThreadManage") || p.has("ChannelManage"),
 	},
@@ -126,7 +127,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 												class="action"
 												onClick={() => handleAction(tab.action as any)}
 												classList={{
-													"danger": ((tab as any).style) === "danger",
+													"danger": tab.style === "danger",
 												}}
 											>
 												{tab.name as any}
