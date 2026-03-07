@@ -64,7 +64,7 @@ export class AuditLogs {
 			return {
 				items: [
 					...pagination?.items ?? [],
-					...data.audit_log_entries.toReversed(),
+					...[...data.audit_log_entries].reverse(),
 				],
 				has_more: data.has_more,
 				cursor: data.cursor,

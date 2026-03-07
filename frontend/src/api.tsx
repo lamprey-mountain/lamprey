@@ -292,7 +292,7 @@ export function createApi(
 				} else {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1, room),
+						items: [...p.items.slice(0, idx), room, ...p.items.slice(idx + 1)],
 					});
 				}
 			}
@@ -352,7 +352,7 @@ export function createApi(
 						if (idx !== -1) {
 							old_listing.mutate({
 								...p,
-								items: p.items.toSpliced(idx, 1),
+								items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 								total: p.total - 1,
 							});
 						}
@@ -390,7 +390,11 @@ export function createApi(
 						if (idx !== -1) {
 							listing.mutate({
 								...p,
-								items: p.items.toSpliced(idx, 1, thread),
+								items: [
+									...p.items.slice(0, idx),
+									thread,
+									...p.items.slice(idx + 1),
+								],
 							});
 						}
 					}
@@ -712,7 +716,7 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1, m),
+						items: [...p.items.slice(0, idx), m, ...p.items.slice(idx + 1)],
 					});
 				} else {
 					l.mutate({
@@ -735,7 +739,7 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1),
+						items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 						total: p.total - 1,
 					});
 				}
@@ -752,7 +756,11 @@ export function createApi(
 					if (idx !== -1) {
 						l.mutate({
 							...p,
-							items: p.items.toSpliced(idx, 1, member),
+							items: [
+								...p.items.slice(0, idx),
+								member,
+								...p.items.slice(idx + 1),
+							],
 						});
 					} else {
 						l.mutate({
@@ -776,7 +784,7 @@ export function createApi(
 					if (idx !== -1) {
 						l.mutate({
 							...p,
-							items: p.items.toSpliced(idx, 1),
+							items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 							total: p.total - 1,
 						});
 					}
@@ -804,7 +812,7 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1, r),
+						items: [...p.items.slice(0, idx), r, ...p.items.slice(idx + 1)],
 					});
 				}
 			}
@@ -817,7 +825,7 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1),
+						items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 						total: p.total - 1,
 					});
 				}
@@ -911,7 +919,7 @@ export function createApi(
 						if (idx !== -1) {
 							l.mutate({
 								...p,
-								items: p.items.toSpliced(idx, 1),
+								items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 								total: p.total - 1,
 							});
 						}
@@ -927,7 +935,7 @@ export function createApi(
 						if (idx !== -1) {
 							l.mutate({
 								...p,
-								items: p.items.toSpliced(idx, 1),
+								items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 								total: p.total - 1,
 							});
 						}
@@ -942,7 +950,7 @@ export function createApi(
 						if (idx !== -1) {
 							l.mutate({
 								...p,
-								items: p.items.toSpliced(idx, 1),
+								items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 								total: p.total - 1,
 							});
 						}
@@ -1139,7 +1147,7 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1, ban),
+						items: [...p.items.slice(0, idx), ban, ...p.items.slice(idx + 1)],
 					});
 				} else {
 					l.mutate({
@@ -1162,7 +1170,7 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1),
+						items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 						total: p.total - 1,
 					});
 				}
@@ -1191,7 +1199,11 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1, webhook),
+						items: [
+							...p.items.slice(0, idx),
+							webhook,
+							...p.items.slice(idx + 1),
+						],
 					});
 				}
 			}
@@ -1204,7 +1216,7 @@ export function createApi(
 				if (idx !== -1) {
 					l.mutate({
 						...p,
-						items: p.items.toSpliced(idx, 1),
+						items: [...p.items.slice(0, idx), ...p.items.slice(idx + 1)],
 						total: p.total - 1,
 					});
 				}

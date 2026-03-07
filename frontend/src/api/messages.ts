@@ -107,7 +107,7 @@ export class MessageRanges {
 			a.has_forward && b.has_forward,
 			a.has_backwards && b.has_backwards,
 			[...new Set([...a.items.map((i) => i.id), ...b.items.map((i) => i.id)])]
-				.toSorted((a, b) => a > b ? 1 : -1)
+				.sort((a, b) => a > b ? 1 : -1)
 				.map((i) =>
 					a.items.find((j) => i === j.id) ??
 						b.items.find((j) => i === j.id)!

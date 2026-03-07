@@ -46,7 +46,11 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 						local_id: pending.local_id,
 						spoiler: atts[idx].spoiler,
 					};
-					chUpdate("attachments", atts.toSpliced(idx, 1, att));
+					chUpdate("attachments", [
+						...atts.slice(0, idx),
+						att,
+						...atts.slice(idx + 1),
+					]);
 				}
 				pendingUploads.delete(media.id);
 			}
@@ -66,7 +70,11 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 						...att,
 						media,
 					};
-					chUpdate("attachments", atts.toSpliced(idx, 1, updatedAtt));
+					chUpdate("attachments", [
+						...atts.slice(0, idx),
+						updatedAtt,
+						...atts.slice(idx + 1),
+					]);
 				}
 			}
 		};
@@ -108,13 +116,20 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 					progress,
 					paused: false,
 				};
-				chUpdate("attachments", atts.toSpliced(idx, 1, att));
+				chUpdate("attachments", [
+					...atts.slice(0, idx),
+					att,
+					...atts.slice(idx + 1),
+				]);
 			},
 			onFail(error) {
 				const atts = ch.attachments;
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
-				chUpdate("attachments", atts.toSpliced(idx, 1));
+				chUpdate("attachments", [
+					...atts.slice(0, idx),
+					...atts.slice(idx + 1),
+				]);
 				// Replace dispatch with modal controller
 				modalCtl.alert(error.message);
 			},
@@ -128,7 +143,11 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 					local_id,
 					file,
 				};
-				chUpdate("attachments", atts.toSpliced(idx, 1, att));
+				chUpdate("attachments", [
+					...atts.slice(0, idx),
+					att,
+					...atts.slice(idx + 1),
+				]);
 			},
 			onPause() {
 				const atts = ch.attachments;
@@ -138,7 +157,11 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 					...atts[idx],
 					paused: true,
 				};
-				chUpdate("attachments", atts.toSpliced(idx, 1, att));
+				chUpdate("attachments", [
+					...atts.slice(0, idx),
+					att,
+					...atts.slice(idx + 1),
+				]);
 			},
 			onResume() {
 				const atts = ch.attachments;
@@ -148,7 +171,11 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 					...atts[idx],
 					paused: false,
 				};
-				chUpdate("attachments", atts.toSpliced(idx, 1, att));
+				chUpdate("attachments", [
+					...atts.slice(0, idx),
+					att,
+					...atts.slice(idx + 1),
+				]);
 			},
 		}).then((upload) => {
 			props.ctx.uploads.set(local_id, upload);
@@ -174,7 +201,7 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 		const atts = ch.attachments;
 		const idx = atts.findIndex((i) => i.local_id === local_id)!;
 		if (idx !== -1) {
-			chUpdate("attachments", atts.toSpliced(idx, 1));
+			chUpdate("attachments", [...atts.slice(0, idx), ...atts.slice(idx + 1)]);
 		}
 		// Remove from pending uploads
 		pendingUploads.delete(upload.media_id);
