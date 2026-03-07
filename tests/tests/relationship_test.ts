@@ -126,11 +126,12 @@ Deno.test("User Relationships (Friends, Blocking, Ignoring)", async (t) => {
 	});
 
 	await t.step("Alice ignores Bob", async () => {
+		const until = new Date(Date.now() + 1000 * 60 * 60).toISOString();
 		await alice({
 			url: `/user/@self/ignore/${bob.user.id}`,
 			method: "PUT",
 			body: {
-				chat: true,
+				until,
 			},
 			status: 204,
 		});
@@ -142,7 +143,7 @@ Deno.test("User Relationships (Friends, Blocking, Ignoring)", async (t) => {
 		const ignore = aliceIgnores.items.find((r: any) =>
 			r.user_id === bob.user.id
 		);
-		assertEquals(ignore.ignore.chat, true);
+		assertEquals(!!ignore.until, true);
 	});
 
 	await t.step("Alice unignores Bob", async () => {

@@ -927,7 +927,7 @@ impl ServiceMessages {
         )
         .await?;
         s.services().channels.invalidate(thread_id).await; // last version id
-        Ok((StatusCode::CREATED, message))
+        Ok((StatusCode::OK, message))
     }
 
     // TODO: batch fetching

@@ -105,7 +105,7 @@ impl DataWebhook for Postgres {
             FROM webhook w
             JOIN usr u ON w.id = u.id
             JOIN channel c ON w.channel_id = c.id
-            WHERE w.id = $1
+            WHERE w.id = $1 AND u.deleted_at IS NULL
             "#,
             *webhook_id
         )
@@ -136,7 +136,7 @@ impl DataWebhook for Postgres {
             FROM webhook w
             JOIN usr u ON w.id = u.id
             JOIN channel c ON w.channel_id = c.id
-            WHERE w.id = $1 AND w.token = $2
+            WHERE w.id = $1 AND u.deleted_at IS NULL AND w.token = $2
             "#,
             *webhook_id,
             token

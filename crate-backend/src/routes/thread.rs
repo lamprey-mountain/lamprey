@@ -270,12 +270,7 @@ async fn thread_member_delete(
     }
     perms.ensure_unlocked()?;
 
-    let start = d.thread_member_get(thread_id, target_user_id).await?;
     d.thread_member_leave(thread_id, target_user_id).await?;
-    let res = d.thread_member_get(thread_id, target_user_id).await?;
-    if start == res {
-        return Ok(StatusCode::NOT_MODIFIED);
-    }
 
     s.services()
         .perms
@@ -327,7 +322,7 @@ async fn thread_member_delete(
             room_id: thread.room_id,
             thread_id,
             added: vec![],
-            removed: vec![res.user_id],
+            removed: vec![target_user_id],
         },
     )
     .await?;

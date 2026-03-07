@@ -40,6 +40,7 @@ Deno.test("Media Uploads", async (t) => {
 		});
 		assertEquals(res.status, 204);
 		assertEquals(res.headers.get("upload-offset"), "11");
+		await res.body?.cancel();
 	});
 
 	await t.step(
@@ -58,6 +59,8 @@ Deno.test("Media Uploads", async (t) => {
 						media = m;
 						break;
 					}
+				} else {
+					await res.body?.cancel();
 				}
 				await new Promise((r) => setTimeout(r, 500));
 			}
@@ -78,6 +81,7 @@ Deno.test("Media Uploads", async (t) => {
 			headers: { "Authorization": `Bearer ${alice.token}` },
 		});
 		assertEquals(res.status, 404);
+		await res.body?.cancel();
 	});
 
 	await t.step("Alice uploads via direct upload (sync)", async () => {
@@ -103,12 +107,12 @@ Deno.test("Media Uploads", async (t) => {
 			body: formData,
 		});
 		assertEquals(res.status, 201);
-		const media = await res.json();
+		const created = await res.json();
 		// media_upload_direct returns MediaCreated which has media_id
-		assertEquals(typeof media.media_id, "string");
+		assertEquals(typeof created.media_id, "string");
 
 		// verify its actually processed by getting it
-		const getRes = await fetch(`${BASE_URL}/api/v1/media/${media.media_id}`, {
+		const getRes = await fetch(`${BASE_URL}/api/v1/media/${created.media_id}`, {
 			headers: { "Authorization": `Bearer ${alice.token}` },
 		});
 		assertEquals(getRes.status, 200);
@@ -150,6 +154,7 @@ Deno.test("Media Uploads", async (t) => {
 			const processedMsg = await aliceWs.waitFor((msg) =>
 				msg.type === "MediaProcessed" && msg.media.id === media_id
 			);
+			assertEquals(processedMsg.media.id, media_id);
 			assertEquals(processedMsg.media.size, data.length);
 			assertEquals(processedMsg.media.status, "Uploaded");
 		} finally {

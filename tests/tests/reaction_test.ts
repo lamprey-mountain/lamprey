@@ -29,8 +29,8 @@ Deno.test("Message Reactions", async (t) => {
 	await t.step("Alice adds a reaction", async () => {
 		const reactionKey = "👍";
 		await alice({
-			url:
-				`/channel/${channel.id}/message/${messageId}/reaction/${reactionKey}/@self`,
+			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
+				encodeURIComponent(reactionKey) + "/@self",
 			method: "PUT",
 			status: 200,
 		});
@@ -47,8 +47,8 @@ Deno.test("Message Reactions", async (t) => {
 	await t.step("Bob adds the same reaction", async () => {
 		const reactionKey = "👍";
 		await bob({
-			url:
-				`/channel/${channel.id}/message/${messageId}/reaction/${reactionKey}/@self`,
+			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
+				encodeURIComponent(reactionKey) + "/@self",
 			method: "PUT",
 			status: 200,
 		});
@@ -65,8 +65,8 @@ Deno.test("Message Reactions", async (t) => {
 	await t.step("Listing users for a reaction", async () => {
 		const reactionKey = "👍";
 		const reactors = await alice({
-			url:
-				`/channel/${channel.id}/message/${messageId}/reaction/${reactionKey}`,
+			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
+				encodeURIComponent(reactionKey),
 			status: 200,
 		});
 		assertEquals(reactors.items.length, 2);
@@ -75,8 +75,8 @@ Deno.test("Message Reactions", async (t) => {
 	await t.step("Alice removes her reaction", async () => {
 		const reactionKey = "👍";
 		await alice({
-			url:
-				`/channel/${channel.id}/message/${messageId}/reaction/${reactionKey}/@self`,
+			url: `/channel/${channel.id}/message/${messageId}/reaction/` +
+				encodeURIComponent(reactionKey) + "/@self",
 			method: "DELETE",
 			status: 204,
 		});

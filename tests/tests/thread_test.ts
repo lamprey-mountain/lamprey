@@ -11,31 +11,57 @@ Deno.test("Threads", async (t) => {
 		body: { name: "Thread Test Room", public: true },
 		status: 201,
 	});
-	const channel = await alice({
-		url: `/room/${room.id}/channel`,
-		method: "POST",
-		body: { name: "general", type: "Text" },
-		status: 201,
+
+	let channelId: string;
+	await t.step("Alice creates a text channel", async () => {
+		const channel = await alice({
+			url: `/room/${room.id}/channel`,
+			method: "POST",
+			body: { name: "general", type: "Text" },
+			status: 201,
+		});
+		channelId = channel.id;
+	});
+
+	await t.step("Bob joins the room", async () => {
+		const invite = await alice({
+			url: `/room/${room.id}/invite`,
+			method: "POST",
+			body: {},
+			status: 201,
+		});
+		await bob({
+			url: `/invite/${invite.code}`,
+			method: "POST",
+			status: 204,
+		});
 	});
 
 	let threadId: string;
 
 	await t.step("Alice creates a thread from a message", async () => {
 		const message = await alice({
-			url: `/channel/${channel.id}/message`,
+			url: `/channel/${channelId}/message`,
 			method: "POST",
 			body: { content: "let's discuss this" },
 			status: 201,
 		});
 
 		const thread = await alice({
-			url: `/channel/${channel.id}/message/${message.id}/thread`,
+			url: `/channel/${channelId}/message/${message.id}/thread`,
 			method: "POST",
 			body: { name: "Discussion Thread", ty: "ThreadPublic" },
 			status: 201,
 		});
 		assertEquals(thread.name, "Discussion Thread");
 		threadId = thread.id;
+
+		// Join the thread
+		await alice({
+			url: `/thread/${threadId}/member/@self`,
+			method: "PUT",
+			status: 200,
+		});
 	});
 
 	await t.step("Bob joins the thread", async () => {
