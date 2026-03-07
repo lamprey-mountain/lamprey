@@ -171,7 +171,7 @@ async fn emoji_update(
     perms.ensure(Permission::EmojiManage)?;
 
     let emoji_before = data.emoji_get(emoji_id).await?;
-    if patch.changes(&emoji_before) {
+    if !patch.changes(&emoji_before) {
         return Ok(Json(emoji_before));
     }
 

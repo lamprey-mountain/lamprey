@@ -901,7 +901,7 @@ impl ErrorCode {
             ErrorCode::CannotSetBitrateForNonVoiceThread => 400,
             ErrorCode::CannotSetUserLimitForNonVoiceThread => 400,
             ErrorCode::OnlyGdmCanHaveIcons => 400,
-            ErrorCode::MediaNotAnImage => 400,
+            ErrorCode::MediaNotAnImage => 422,
             ErrorCode::InvalidParentChannelType => 400,
             ErrorCode::OwnerIdCannotBeChanged => 400,
             ErrorCode::ChannelDoesntHaveText => 400,
