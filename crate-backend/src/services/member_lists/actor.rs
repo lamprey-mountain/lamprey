@@ -485,14 +485,15 @@ impl MemberList {
 
                 if included {
                     let new_key = self.calculate_key(&user_id, member, users_map, &cached_room);
+                    let mut ops = Vec::new();
 
                     if let Some(ok) = old_key {
                         let old_pos = self.members.range(..&ok).count() as u64;
                         self.members.remove(&ok);
-                        self.broadcast_ops(vec![MemberListOp::Delete {
+                        ops.push(MemberListOp::Delete {
                             position: old_pos,
                             count: 1,
-                        }]);
+                        });
                     }
 
                     self.members.insert(new_key.clone(), user_id);
@@ -510,13 +511,15 @@ impl MemberList {
                             .ok();
                     }
 
-                    self.broadcast_ops(vec![MemberListOp::Insert {
+                    ops.push(MemberListOp::Insert {
                         position: new_pos,
                         user_id,
                         room_member: Some(member.clone()),
                         thread_member,
                         user: Some(Box::new(users_map.get(&user_id).unwrap().clone())),
-                    }]);
+                    });
+
+                    self.broadcast_ops(ops);
                 } else if old_key.is_some() {
                     self.remove_member(user_id).await;
                 }

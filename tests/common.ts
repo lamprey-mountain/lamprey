@@ -152,7 +152,11 @@ export class SyncClient {
 		this.ws.send(JSON.stringify(msg));
 	}
 
-	close() {
+	async close() {
 		this.ws.close();
+		if (this.ws.readyState === WebSocket.CLOSED) return;
+		await new Promise<void>((resolve) => {
+			this.ws.onclose = () => resolve();
+		});
 	}
 }
