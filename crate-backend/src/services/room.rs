@@ -4,7 +4,7 @@ use std::time::Duration;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Room,
-    RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut, UserId,
+    RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut, User, UserId,
 };
 use moka::future::Cache;
 use validator::Validate;
@@ -204,6 +204,8 @@ impl ServiceRooms {
             .invalidate_room(creator_id, room_id)
             .await;
 
+        let mut template_items = None;
+
         if welcome_channel_id.is_none() {
             let snapshot = if create.public.unwrap_or_default() {
                 builtin::public_room()
@@ -211,12 +213,14 @@ impl ServiceRooms {
                 builtin::private_room()
             };
 
-            srv.room_templates
-                .apply_to_room(room_id, creator_id, snapshot)
-                .await?;
+            template_items = Some(
+                srv.room_templates
+                    .apply_to_room(room_id, creator_id, snapshot)
+                    .await?,
+            );
         }
 
-        // reload room to get updated welcome_channel_id
+        // reload room to get updated welcome_channel_id and other stuff set by apply_to_room
         let mut room = data.room_get(room_id).await?;
         room.owner_id = Some(creator_id);
 
@@ -224,6 +228,26 @@ impl ServiceRooms {
             nonce.as_deref(),
             MessageSync::RoomCreate { room: room.clone() },
         )?;
+
+        if let Some((roles, channels)) = template_items {
+            for role in roles {
+                self.state
+                    .broadcast_room(room_id, creator_id, MessageSync::RoleCreate { role })
+                    .await?;
+            }
+
+            for channel in channels {
+                self.state
+                    .broadcast_room(
+                        room_id,
+                        creator_id,
+                        MessageSync::ChannelCreate {
+                            channel: Box::new(channel),
+                        },
+                    )
+                    .await?;
+            }
+        }
 
         if let Some(auth) = auth {
             let al = auth.audit_log(room_id);

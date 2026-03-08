@@ -7,7 +7,7 @@ use common::v1::types::room_template::{
     RoomTemplateRole, RoomTemplateSnapshot,
 };
 use common::v1::types::{channel::ChannelCreate, role::RoleCreate, RoomId, RoomPatch, UserId};
-use common::v1::types::{ChannelType, MessageSync, PermissionOverwriteType, RoleId};
+use common::v1::types::{Channel, ChannelType, PermissionOverwriteType, Role, RoleId};
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use uuid::Uuid;
 
@@ -213,10 +213,12 @@ impl ServiceRoomTemplates {
         room_id: RoomId,
         creator_id: UserId,
         snapshot: RoomTemplateSnapshot,
-    ) -> Result<()> {
+    ) -> Result<(Vec<Role>, Vec<Channel>)> {
         let data = self.state.data();
         let mut role_map = HashMap::new();
         let mut channel_map = HashMap::new();
+        let mut created_roles = Vec::new();
+        let mut created_channels = Vec::new();
 
         // Create roles
         for template_role in &snapshot.roles {
@@ -245,6 +247,7 @@ impl ServiceRoomTemplates {
                 .await?;
 
             role_map.insert(template_role.id, role.id);
+            created_roles.push(role);
         }
 
         // Create channels
@@ -308,17 +311,8 @@ impl ServiceRoomTemplates {
                 .await?;
             }
 
-            // Broadcast channel creation
             let channel = data.channel_get(channel_id).await?;
-            self.state
-                .broadcast_room(
-                    room_id,
-                    creator_id,
-                    MessageSync::ChannelCreate {
-                        channel: Box::new(channel),
-                    },
-                )
-                .await?;
+            created_channels.push(channel);
         }
 
         // Set welcome channel
@@ -346,7 +340,7 @@ impl ServiceRoomTemplates {
             }
         }
 
-        Ok(())
+        Ok((created_roles, created_channels))
     }
 
     /// Generate a room template snapshot from an existing room using cached data
