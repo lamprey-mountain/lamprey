@@ -557,6 +557,10 @@ impl ServiceChannels {
             })
             .await?;
 
+        if let Some(room_id) = room_id {
+            data.room_template_mark_dirty(room_id).await?;
+        }
+
         if let Some(icon) = json.icon {
             data.media_link_create_exclusive(
                 icon,
@@ -1046,6 +1050,9 @@ impl ServiceChannels {
 
         // update and refetch
         data.channel_update(thread_id, patch.clone()).await?;
+        if let Some(room_id) = chan_old.room_id {
+            data.room_template_mark_dirty(room_id).await?;
+        }
         self.invalidate(thread_id).await;
         self.invalidate_user(thread_id, auth.user.id).await;
         let chan_new = self.get(thread_id, Some(auth.user.id)).await?;

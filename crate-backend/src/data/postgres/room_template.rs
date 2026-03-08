@@ -11,7 +11,7 @@ use crate::{
 };
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
-use common::v1::types::UserId;
+use common::v1::types::{RoomId, UserId};
 
 use super::Postgres;
 
@@ -58,7 +58,8 @@ impl DataRoomTemplate for Postgres {
                 rt.updated_at,
                 rt.creator_id,
                 rt.source_room_id,
-                rt.snapshot
+                rt.snapshot,
+                rt.dirty
             FROM room_templates rt
             WHERE rt.code = $1
             "#,
@@ -97,7 +98,8 @@ impl DataRoomTemplate for Postgres {
                     rt.updated_at,
                     rt.creator_id,
                     rt.source_room_id,
-                    rt.snapshot
+                    rt.snapshot,
+                    rt.dirty
                 FROM room_templates rt
                 WHERE rt.creator_id = $1 AND rt.code > $2 AND rt.code < $3
                 ORDER BY (CASE WHEN $4 = 'f' THEN rt.code END) ASC, rt.code DESC
@@ -114,7 +116,7 @@ impl DataRoomTemplate for Postgres {
                 *creator_id
             ),
             |row: DbRoomTemplate| { row },
-            |i: &DbRoomTemplate| i.code.clone()
+            |i: &DbRoomTemplate| RoomTemplateCode(i.code.clone()).0
         )
     }
 
@@ -174,7 +176,7 @@ impl DataRoomTemplate for Postgres {
         query!(
             r#"
             UPDATE room_templates
-            SET snapshot = $1, updated_at = NOW()
+            SET snapshot = $1, updated_at = NOW(), dirty = false
             WHERE code = $2 AND source_room_id IS NOT NULL
             "#,
             snapshot,
@@ -186,6 +188,20 @@ impl DataRoomTemplate for Postgres {
         tx.commit().await?;
 
         self.room_template_get(code).await
+    }
+
+    async fn room_template_mark_dirty(&self, source_room_id: RoomId) -> Result<()> {
+        query!(
+            r#"
+            UPDATE room_templates
+            SET dirty = true, updated_at = NOW()
+            WHERE source_room_id = $1
+            "#,
+            *source_room_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 
     async fn room_template_delete(&self, code: RoomTemplateCode) -> Result<()> {

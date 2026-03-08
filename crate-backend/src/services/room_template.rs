@@ -40,7 +40,7 @@ impl ServiceRoomTemplates {
             creator,
             source_room_id: db.source_room_id.map(|id| id.into()),
             snapshot,
-            dirty: None,
+            dirty: Some(db.dirty),
         })
     }
 

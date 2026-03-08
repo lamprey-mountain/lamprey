@@ -704,5 +704,7 @@ pub trait DataRoomTemplate {
         snapshot: serde_json::Value,
     ) -> Result<DbRoomTemplate>;
 
+    async fn room_template_mark_dirty(&self, source_room_id: RoomId) -> Result<()>;
+
     async fn room_template_delete(&self, code: RoomTemplateCode) -> Result<()>;
 }

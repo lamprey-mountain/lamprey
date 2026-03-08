@@ -421,6 +421,7 @@ async fn channel_reorder(
     }
 
     data.channel_reorder(json.clone()).await?;
+    data.room_template_mark_dirty(room_id).await?;
 
     for chan in &json.channels {
         srv.channels.invalidate(chan.id).await;
@@ -598,6 +599,7 @@ async fn channel_remove(
             return Ok(StatusCode::NO_CONTENT);
         }
         data.channel_delete(channel_id).await?;
+        data.room_template_mark_dirty(room_id).await?;
         srv.channels.invalidate(channel_id).await;
         srv.voice.disconnect_everyone(channel_id).await?;
         let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -675,6 +677,7 @@ async fn channel_restore(
             return Ok(StatusCode::NO_CONTENT);
         }
         data.channel_undelete(channel_id).await?;
+        data.room_template_mark_dirty(room_id).await?;
         srv.channels.invalidate(channel_id).await;
         let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 

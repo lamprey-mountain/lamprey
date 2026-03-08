@@ -864,6 +864,7 @@ pub struct DbRoomTemplate {
     pub creator_id: Uuid,
     pub source_room_id: Option<Uuid>,
     pub snapshot: serde_json::Value,
+    pub dirty: bool,
 }
 
 #[derive(Debug)]

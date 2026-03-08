@@ -115,6 +115,8 @@ impl ServiceRoles {
             )
             .await?;
 
+        data.room_template_mark_dirty(room_id).await?;
+
         let changes = Changes::new()
             .add("name", &role.name)
             .add("description", &role.description)
@@ -177,6 +179,7 @@ impl ServiceRoles {
             .next()
             .ok_or(crate::Error::NotFound)?;
         data.role_update(room_id, role_id, json).await?;
+        data.room_template_mark_dirty(room_id).await?;
         let role = data.role_get_many(room_id, &[role_id]).await?;
         let role = role.into_iter().next().ok_or(crate::Error::NotFound)?;
 
@@ -237,6 +240,7 @@ impl ServiceRoles {
         let role = roles.into_iter().next().ok_or(crate::Error::NotFound)?;
 
         data.role_delete(room_id, role_id).await?;
+        data.room_template_mark_dirty(room_id).await?;
 
         let changes = Changes::new()
             .remove("name", &role.name)
@@ -267,6 +271,7 @@ impl ServiceRoles {
         perms.ensure(Permission::RoleManage)?;
 
         data.role_reorder(room_id, reorder).await?;
+        data.room_template_mark_dirty(room_id).await?;
         srv.perms.invalidate_user_ranks(room_id);
 
         Ok(())
