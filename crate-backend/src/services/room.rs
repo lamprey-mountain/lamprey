@@ -1,21 +1,18 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use common::v1::types::defaults::{EVERYONE_TRUSTED, EVERYONE_UNTRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Permission,
-    RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut,
-    UserId,
+    AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Room,
+    RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut, UserId,
 };
 use moka::future::Cache;
 use validator::Validate;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::types::{
-    DbChannelCreate, DbChannelType, DbMessageCreate, DbRoleCreate, DbRoomCreate, MediaLinkType,
-};
+use crate::services::room_template::builtin;
+use crate::types::{DbMessageCreate, DbRoomCreate, MediaLinkType};
 use crate::{Error, ServerStateInner};
 
 pub struct ServiceRooms {
@@ -186,53 +183,11 @@ impl ServiceRooms {
     ) -> Result<Room> {
         create.validate()?;
         let data = self.state.data();
+        let srv = self.state.services();
         let welcome_channel_id = extra.welcome_channel_id;
         let mut room = data.room_create(create.clone(), extra).await?;
         let room_id = room.id;
 
-        let role_admin = DbRoleCreate {
-            id: RoleId::new(),
-            room_id,
-            name: "admin".to_owned(),
-            description: None,
-            allow: vec![Permission::Admin],
-            deny: vec![],
-            is_self_applicable: false,
-            is_mentionable: false,
-            hoist: false,
-            sticky: false,
-        };
-        let role_moderator = DbRoleCreate {
-            id: RoleId::new(),
-            room_id,
-            name: "moderator".to_owned(),
-            description: None,
-            allow: MODERATOR.to_vec(),
-            deny: vec![],
-            is_self_applicable: false,
-            is_mentionable: false,
-            hoist: false,
-            sticky: false,
-        };
-        let role_everyone = DbRoleCreate {
-            id: RoleId::from(room.id.into_inner()),
-            room_id,
-            name: "everyone".to_owned(),
-            description: Some("Default role".to_string()),
-            allow: if create.public.unwrap_or_default() {
-                EVERYONE_UNTRUSTED.to_vec()
-            } else {
-                EVERYONE_TRUSTED.to_vec()
-            },
-            deny: vec![],
-            is_self_applicable: false,
-            is_mentionable: false,
-            hoist: false,
-            sticky: false,
-        };
-        data.role_create(role_admin, 1).await?;
-        data.role_create(role_moderator, 1).await?;
-        data.role_create(role_everyone, 0).await?;
         data.room_member_put(
             room_id,
             creator_id,
@@ -249,52 +204,21 @@ impl ServiceRooms {
             .invalidate_room(creator_id, room_id)
             .await;
 
-        let (welcome_channel_id, welcome_channel) = if let Some(channel_id) = welcome_channel_id {
-            (channel_id, None)
-        } else {
-            let welcome_channel_id = data
-                .channel_create(DbChannelCreate {
-                    room_id: Some(room.id.into_inner()),
-                    creator_id,
-                    name: "general".to_string(),
-                    description: None,
-                    url: None,
-                    ty: DbChannelType::Text,
-                    nsfw: false,
-                    bitrate: None,
-                    user_limit: None,
-                    parent_id: None,
-                    owner_id: None,
-                    icon: None,
-                    invitable: false,
-                    auto_archive_duration: None,
-                    default_auto_archive_duration: None,
-                    slowmode_thread: None,
-                    slowmode_message: None,
-                    default_slowmode_message: None,
-                    locked: false,
-                    tags: None,
-                })
-                .await?;
-            let welcome_channel = data.channel_get(welcome_channel_id).await?;
-            (welcome_channel_id, Some(welcome_channel))
-        };
+        if welcome_channel_id.is_none() {
+            let snapshot = if create.public.unwrap_or_default() {
+                builtin::public_room()
+            } else {
+                builtin::private_room()
+            };
 
-        data.room_update(
-            room_id,
-            RoomPatch {
-                welcome_channel_id: Some(Some(welcome_channel_id)),
-                name: None,
-                description: None,
-                icon: None,
-                banner: None,
-                public: None,
-                afk_channel_id: None,
-                afk_channel_timeout: None,
-            },
-        )
-        .await?;
-        room.welcome_channel_id = Some(welcome_channel_id);
+            srv.room_templates
+                .apply_to_room(room_id, creator_id, snapshot)
+                .await?;
+        }
+
+        // reload room to get updated welcome_channel_id
+        let mut room = data.room_get(room_id).await?;
+        room.owner_id = Some(creator_id);
 
         self.state.broadcast_with_nonce(
             nonce.as_deref(),
@@ -316,30 +240,7 @@ impl ServiceRooms {
             .await?;
         }
 
-        if let Some(welcome_thread) = welcome_channel {
-            self.state
-                .broadcast_room(
-                    room_id,
-                    creator_id,
-                    MessageSync::ChannelCreate {
-                        channel: Box::new(welcome_thread),
-                    },
-                )
-                .await?;
-
-            if let Some(auth) = auth {
-                let al = auth.audit_log(room_id);
-                al.commit_success(AuditLogEntryType::ChannelCreate {
-                    channel_id: welcome_channel_id,
-                    channel_type: ChannelType::Text,
-                    changes: Changes::new()
-                        .add("name", &"general")
-                        .add("nsfw", &false)
-                        .build(),
-                })
-                .await?;
-            }
-
+        if room.welcome_channel_id.is_some() {
             self.send_welcome_message(room_id, creator_id).await?;
         }
 

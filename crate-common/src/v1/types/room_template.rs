@@ -128,4 +128,8 @@ pub struct RoomTemplateRole {
 
     /// temporary placeholder id, for use in permission overwrites
     pub id: Uuid,
+
+    pub default: bool,
+
+    pub position: u64,
 }
