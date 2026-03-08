@@ -3,12 +3,22 @@ import icCheck1 from "./assets/check-1.png";
 import icCheck2 from "./assets/check-2.png";
 import icCheck3 from "./assets/check-3.png";
 import icCheck4 from "./assets/check-4.png";
+import icX1 from "./assets/x-1.png";
+import icX2 from "./assets/x-2.png";
+import icX3 from "./assets/x-3.png";
+import icX4 from "./assets/x-4.png";
 import { cyrb53, LCG } from "./rng";
 
 export const getCheckIcon = (seed: string): string => {
 	const rand = LCG(cyrb53(seed));
 	const checks = [icCheck1, icCheck2, icCheck3, icCheck4];
 	return checks[Math.floor(rand() * checks.length)];
+};
+
+export const getXIcon = (seed: string): string => {
+	const rand = LCG(cyrb53(seed));
+	const xs = [icX1, icX2, icX3, icX4];
+	return xs[Math.floor(rand() * xs.length)];
 };
 
 export const RadioDot = (props: { checked?: boolean }) => {
@@ -41,6 +51,18 @@ export const Checkmark = (
 		<img
 			src={getCheckIcon(props.seed)}
 			class={props.class}
+			style={{ height: "1em", width: "1em", ...props.style }}
+		/>
+	);
+};
+
+export const XMark = (
+	props: { seed: string; class?: string; style?: any },
+) => {
+	return (
+		<img
+			src={getXIcon(props.seed)}
+			class={`icon ${props.class || ""}`}
 			style={{ height: "1em", width: "1em", ...props.style }}
 		/>
 	);

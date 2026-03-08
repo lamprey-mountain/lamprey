@@ -1,17 +1,17 @@
 import { Channel } from "sdk";
 import {
+	createContext,
 	createEffect,
 	createMemo,
 	createSignal,
 	Match,
-	Switch,
 	type ParentProps,
-	createContext,
-	useContext,
 	Show,
+	Switch,
+	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { Checkbox } from "./icons";
+import { Checkbox, XMark } from "./icons";
 import { CheckboxOption } from "./atoms/CheckboxOption";
 import { Dropdown, type DropdownItem } from "./Dropdown";
 
@@ -113,7 +113,9 @@ export const CalendarPopupProvider = (props: ParentProps) => {
 export const useCalendarPopup = (): CalendarPopupContextType => {
 	const context = useContext(CalendarPopupContext);
 	if (!context) {
-		throw new Error("useCalendarPopup must be used within a CalendarPopupProvider");
+		throw new Error(
+			"useCalendarPopup must be used within a CalendarPopupProvider",
+		);
 	}
 	return context;
 };
@@ -137,7 +139,9 @@ export const PopupEventEditor = (props: {
 	};
 	onClose: () => void;
 }) => {
-	const [activeTab, setActiveTab] = createSignal<"event" | "instances" | "participants">("event");
+	const [activeTab, setActiveTab] = createSignal<
+		"event" | "instances" | "participants"
+	>("event");
 	const [formData, setFormData] = createStore({
 		name: props.event?.name || "",
 		start: props.event?.start ? new Date(props.event.start) : new Date(),
@@ -166,15 +170,15 @@ export const PopupEventEditor = (props: {
 			// Only reset other fields if it's a completely different event (different ID)
 			...(!isSameEvent
 				? {
-						name: event.name || "",
-						allDay: event.allDay || false,
-						timezone: event.timezone || "UTC",
-						recurrence: event.recurrence || "",
-						location: event.location || "",
-						url: event.url || "",
-						description: event.description || "",
-						reminders: event.reminders || [],
-					}
+					name: event.name || "",
+					allDay: event.allDay || false,
+					timezone: event.timezone || "UTC",
+					recurrence: event.recurrence || "",
+					location: event.location || "",
+					url: event.url || "",
+					description: event.description || "",
+					reminders: event.reminders || [],
+				}
 				: {}),
 		});
 	});
@@ -186,9 +190,11 @@ export const PopupEventEditor = (props: {
 	return (
 		<div class="calendar-event-popup">
 			<div class="popup-header">
-				<h2>{formData.name || (props.event?.id ? "Edit Event" : "New Event")}</h2>
+				<h2>
+					{formData.name || (props.event?.id ? "Edit Event" : "New Event")}
+				</h2>
 				<button class="popup-close" onClick={props.onClose}>
-					&times;
+					<XMark seed={props.event?.id || "new"} />
 				</button>
 			</div>
 
@@ -211,7 +217,9 @@ export const PopupEventEditor = (props: {
 						</button>
 					</Show>
 					<button
-						class={`popup-tab ${activeTab() === "participants" ? "active" : ""}`}
+						class={`popup-tab ${
+							activeTab() === "participants" ? "active" : ""
+						}`}
 						onClick={() => setActiveTab("participants")}
 					>
 						{props.event?.participants && props.event.participants.length > 0
@@ -273,7 +281,8 @@ export const PopupEventEditor = (props: {
 									type="time"
 									value={formData.start.toTimeString().slice(0, 5)}
 									onInput={(e) => {
-										const [hours, minutes] = e.currentTarget.value.split(":").map(Number);
+										const [hours, minutes] = e.currentTarget.value.split(":")
+											.map(Number);
 										const newDate = new Date(formData.start);
 										newDate.setHours(hours, minutes);
 										handleChange("start", newDate);
@@ -286,7 +295,8 @@ export const PopupEventEditor = (props: {
 									type="time"
 									value={formData.end.toTimeString().slice(0, 5)}
 									onInput={(e) => {
-										const [hours, minutes] = e.currentTarget.value.split(":").map(Number);
+										const [hours, minutes] = e.currentTarget.value.split(":")
+											.map(Number);
 										const newDate = new Date(formData.end);
 										newDate.setHours(hours, minutes);
 										handleChange("end", newDate);
@@ -347,7 +357,8 @@ export const PopupEventEditor = (props: {
 							<textarea
 								placeholder="Description"
 								value={formData.description}
-								onInput={(e) => handleChange("description", e.currentTarget.value)}
+								onInput={(e) =>
+									handleChange("description", e.currentTarget.value)}
 							/>
 						</div>
 
@@ -371,30 +382,43 @@ export const PopupEventEditor = (props: {
 				</div>
 
 				{/* Instances Tab */}
-				<div class={`tab-content ${activeTab() === "instances" ? "active" : ""}`}>
-					{props.event?.instances ? (
-						<div class="popup-form">
-							<h3>Event Instances</h3>
+				<div
+					class={`tab-content ${activeTab() === "instances" ? "active" : ""}`}
+				>
+					{props.event?.instances
+						? (
+							<div class="popup-form">
+								<h3>Event Instances</h3>
+								<p>
+									This event has {props.event.instances.length}{" "}
+									instances. Click on individual instances to edit them.
+								</p>
+							</div>
+						)
+						: (
 							<p>
-								This event has {props.event.instances.length} instances. Click on individual instances to edit
-								them.
+								No instances configured. Set a recurrence pattern to create
+								recurring instances.
 							</p>
-						</div>
-					) : (
-						<p>No instances configured. Set a recurrence pattern to create recurring instances.</p>
-					)}
+						)}
 				</div>
 
 				{/* Participants Tab */}
-				<div class={`tab-content ${activeTab() === "participants" ? "active" : ""}`}>
-					{props.event?.participants ? (
-						<div class="popup-form">
-							<h3>Event Participants</h3>
-							<p>This event has {props.event.participants.length} participants.</p>
-						</div>
-					) : (
-						<p>No participants added yet.</p>
-					)}
+				<div
+					class={`tab-content ${
+						activeTab() === "participants" ? "active" : ""
+					}`}
+				>
+					{props.event?.participants
+						? (
+							<div class="popup-form">
+								<h3>Event Participants</h3>
+								<p>
+									This event has {props.event.participants.length} participants.
+								</p>
+							</div>
+						)
+						: <p>No participants added yet.</p>}
 				</div>
 			</div>
 
@@ -412,22 +436,28 @@ export const PopupEventEditor = (props: {
 
 export const Calendar = (props: { channel: Channel }) => {
 	const [currentDate, setCurrentDate] = createSignal(new Date(2025, 11, 1));
-	const { popup: calendarPopup, setPopup, closePopup, setChannelId } = useCalendarPopup();
+	const { popup: calendarPopup, setPopup, closePopup, setChannelId } =
+		useCalendarPopup();
 
 	// Set channel_id when component mounts or channel_id changes
 	createEffect(() => {
 		setChannelId(props.channel.id);
 	});
 
-	const month = () => currentDate().toLocaleString("default", { month: "long" });
+	const month = () =>
+		currentDate().toLocaleString("default", { month: "long" });
 	const year = () => currentDate().getFullYear();
 
 	const prevMonth = () => {
-		setCurrentDate(new Date(currentDate().setMonth(currentDate().getMonth() - 1)));
+		setCurrentDate(
+			new Date(currentDate().setMonth(currentDate().getMonth() - 1)),
+		);
 	};
 
 	const nextMonth = () => {
-		setCurrentDate(new Date(currentDate().setMonth(currentDate().getMonth() + 1)));
+		setCurrentDate(
+			new Date(currentDate().setMonth(currentDate().getMonth() + 1)),
+		);
 	};
 
 	const goToToday = () => {
@@ -451,8 +481,20 @@ export const Calendar = (props: { channel: Channel }) => {
 
 		const newEvent = {
 			name: "",
-			start: new Date(currentDate().getFullYear(), currentDate().getMonth(), day, 9, 0),
-			end: new Date(currentDate().getFullYear(), currentDate().getMonth(), day, 10, 0),
+			start: new Date(
+				currentDate().getFullYear(),
+				currentDate().getMonth(),
+				day,
+				9,
+				0,
+			),
+			end: new Date(
+				currentDate().getFullYear(),
+				currentDate().getMonth(),
+				day,
+				10,
+				0,
+			),
 			allDay: false,
 			timezone: "UTC",
 		};
@@ -460,7 +502,11 @@ export const Calendar = (props: { channel: Channel }) => {
 	};
 
 	// Open popup for editing event when clicking an event
-	const handleEventClick = (eventName: string, day: number, el: HTMLElement) => {
+	const handleEventClick = (
+		eventName: string,
+		day: number,
+		el: HTMLElement,
+	) => {
 		const current = calendarPopup();
 		if (current?.ref === el) {
 			closePopup();
@@ -470,8 +516,20 @@ export const Calendar = (props: { channel: Channel }) => {
 		const existingEvent = {
 			id: `event-${day}-${eventName}`,
 			name: eventName,
-			start: new Date(currentDate().getFullYear(), currentDate().getMonth(), day, 9, 0),
-			end: new Date(currentDate().getFullYear(), currentDate().getMonth(), day, 10, 0),
+			start: new Date(
+				currentDate().getFullYear(),
+				currentDate().getMonth(),
+				day,
+				9,
+				0,
+			),
+			end: new Date(
+				currentDate().getFullYear(),
+				currentDate().getMonth(),
+				day,
+				10,
+				0,
+			),
 			allDay: false,
 			timezone: "UTC",
 			recurrence: "",
@@ -494,13 +552,22 @@ export const Calendar = (props: { channel: Channel }) => {
 				<div style="flex:1"></div>
 				<menu>
 					<div class="filters">
-						<button onClick={() => setView("week")} classList={{ active: view() === "week" }}>
+						<button
+							onClick={() => setView("week")}
+							classList={{ active: view() === "week" }}
+						>
 							week
 						</button>
-						<button onClick={() => setView("month")} classList={{ active: view() === "month" }}>
+						<button
+							onClick={() => setView("month")}
+							classList={{ active: view() === "month" }}
+						>
 							month
 						</button>
-						<button onClick={() => setView("timeline")} classList={{ active: view() === "timeline" }}>
+						<button
+							onClick={() => setView("timeline")}
+							classList={{ active: view() === "timeline" }}
+						>
 							timeline
 						</button>
 					</div>
@@ -583,7 +650,8 @@ const CalendarMonth = (props: {
 
 	const today = new Date();
 	const isToday = (day: number) => {
-		return day === today.getDate() && month() === today.getMonth() && year() === today.getFullYear();
+		return day === today.getDate() && month() === today.getMonth() &&
+			year() === today.getFullYear();
 	};
 
 	const displayDaysOfWeek = createMemo(() => {
@@ -594,9 +662,7 @@ const CalendarMonth = (props: {
 
 	return (
 		<div class="month-view">
-			{displayDaysOfWeek().map((i) => (
-				<div class="dayofweek">{i}</div>
-			))}
+			{displayDaysOfWeek().map((i) => <div class="dayofweek">{i}</div>)}
 			{calendarDays().map((d) => {
 				return (
 					<div

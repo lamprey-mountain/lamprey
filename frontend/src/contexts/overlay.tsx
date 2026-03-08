@@ -51,7 +51,8 @@ export function OverlayProvider(props: ParentProps) {
 	const { toolbar, hideToolbar } = useFormattingToolbar();
 	const api = useApi();
 	const [modals] = useModals();
-	const { popup: calendarPopup, closePopup: closeCalendarPopup } = useCalendarPopup();
+	const { popup: calendarPopup, closePopup: closeCalendarPopup } =
+		useCalendarPopup();
 
 	const [toolbarRef, setToolbarRef] = createSignal<HTMLElement>();
 	const [toolbarFloating, setToolbarFloating] = createStore({

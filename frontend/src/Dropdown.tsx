@@ -13,7 +13,7 @@ import { go } from "fuzzysort";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { createKeybinds } from "./keybinds";
-import { Checkmark } from "./icons";
+import { Checkmark, XMark } from "./icons";
 
 export type DropdownItem<T> = {
 	item: T;
@@ -418,7 +418,7 @@ export function MultiDropdown<T>(
 									props.onRemove(item);
 								}}
 							>
-								×
+								<XMark seed={String(item)} />
 							</button>
 						</span>
 					)}
