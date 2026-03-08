@@ -307,6 +307,10 @@ pub enum ErrorCode {
     #[error("unknown webhook")]
     UnknownWebhook,
 
+    /// unknown room template
+    #[error("unknown room template")]
+    UnknownRoomTemplate,
+
     /// unknown room member
     #[error("unknown room member")]
     UnknownRoomMember,
@@ -864,6 +868,7 @@ impl ErrorCode {
             ErrorCode::UnknownApplication => 404,
             ErrorCode::UnknownAutomodRule => 404,
             ErrorCode::UnknownWebhook => 404,
+            ErrorCode::UnknownRoomTemplate => 404,
             ErrorCode::UnknownRoomMember => 404,
             ErrorCode::UnknownThreadMember => 404,
             ErrorCode::UnknownRoomBan => 404,

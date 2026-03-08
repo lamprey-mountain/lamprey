@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
@@ -9,20 +10,19 @@ use common::v1::types::application::Scope;
 use common::v1::types::room_template::{
     RoomTemplate, RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch,
 };
+use common::v1::types::Permission;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
-    error::{Error, Result},
+    error::Result,
     types::{PaginationQuery, PaginationResponse},
-    ServerState,
+    Error, ServerState,
 };
 
 use super::util::Auth;
 
-/// Room template create (TODO)
-///
-/// create a new reusable room template from an existing room
+/// Room template create
 #[utoipa::path(
     post,
     path = "/room-template",
@@ -34,19 +34,30 @@ use super::util::Auth;
 )]
 async fn room_template_create(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplateCreate>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     json.validate()?;
 
-    Ok(Error::Unimplemented)
+    let perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, json.room_id)
+        .await?;
+    perms.ensure(Permission::RoomManage)?;
+
+    let template = s
+        .services()
+        .room_templates
+        .create(auth.user.id, json)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(template)))
 }
 
-/// Room template list (TODO)
-///
-/// list room templates you have created
+/// Room template list
 #[utoipa::path(
     get,
     path = "/room-template",
@@ -57,17 +68,19 @@ async fn room_template_create(
     )
 )]
 async fn room_template_list(
-    Query(_q): Query<PaginationQuery<RoomTemplateCode>>,
+    Query(q): Query<PaginationQuery<RoomTemplateCode>>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    Ok(Error::Unimplemented)
+    let response = s.services().room_templates.list(auth.user.id, q).await?;
+
+    Ok(Json(response))
 }
 
-/// Room template get (TODO)
+/// Room template get
 #[utoipa::path(
     get,
     path = "/room-template/{code}",
@@ -78,17 +91,18 @@ async fn room_template_list(
     )
 )]
 async fn room_template_get(
-    Path(_code): Path<RoomTemplateCode>,
+    Path(code): Path<RoomTemplateCode>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    Ok(Error::Unimplemented)
+    let template = s.services().room_templates.get(code).await?;
+    Ok(Json(template))
 }
 
-/// Room template edit (TODO)
+/// Room template edit
 #[utoipa::path(
     patch,
     path = "/room-template/{code}",
@@ -100,19 +114,25 @@ async fn room_template_get(
     )
 )]
 async fn room_template_edit(
-    Path(_code): Path<RoomTemplateCode>,
+    Path(code): Path<RoomTemplateCode>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomTemplatePatch>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     json.validate()?;
 
-    Ok(Error::Unimplemented)
+    let template = s.services().room_templates.get(code.clone()).await?;
+    if template.creator.id != auth.user.id {
+        return Err(Error::MissingPermissions);
+    }
+
+    let updated = s.services().room_templates.update(code, json).await?;
+    Ok(Json(updated))
 }
 
-/// Room template delete (TODO)
+/// Room template delete
 #[utoipa::path(
     delete,
     path = "/room-template/{code}",
@@ -123,17 +143,23 @@ async fn room_template_edit(
     )
 )]
 async fn room_template_delete(
-    Path(_code): Path<RoomTemplateCode>,
+    Path(code): Path<RoomTemplateCode>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    Ok(Error::Unimplemented)
+    let template = s.services().room_templates.get(code.clone()).await?;
+    if template.creator.id != auth.user.id {
+        return Err(Error::MissingPermissions);
+    }
+
+    s.services().room_templates.delete(code).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Room template sync (TODO)
+/// Room template sync
 #[utoipa::path(
     post,
     path = "/room-template/{code}/sync",
@@ -144,13 +170,29 @@ async fn room_template_delete(
     )
 )]
 async fn room_template_sync(
-    Path(_code): Path<RoomTemplateCode>,
+    Path(code): Path<RoomTemplateCode>,
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let template = s.services().room_templates.get(code.clone()).await?;
+    if template.creator.id != auth.user.id {
+        return Err(Error::MissingPermissions);
+    }
+
+    let source_room_id = template.source_room_id.ok_or(Error::NotFound)?;
+
+    let perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, source_room_id)
+        .await?;
+    perms.ensure(Permission::RoomManage)?;
+
+    let updated = s.services().room_templates.sync(code).await?;
+    Ok(Json(updated))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

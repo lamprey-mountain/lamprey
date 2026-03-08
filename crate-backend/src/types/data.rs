@@ -854,6 +854,18 @@ pub struct DbChannelDocument {
     pub published_unlisted: Option<bool>,
 }
 
+#[derive(Debug, sqlx::FromRow)]
+pub struct DbRoomTemplate {
+    pub code: String,
+    pub name: String,
+    pub description: String,
+    pub created_at: PrimitiveDateTime,
+    pub updated_at: PrimitiveDateTime,
+    pub creator_id: Uuid,
+    pub source_room_id: Option<Uuid>,
+    pub snapshot: serde_json::Value,
+}
+
 #[derive(Debug)]
 pub struct DbChannelWiki {
     pub channel_id: Uuid,

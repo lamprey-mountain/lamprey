@@ -8,6 +8,7 @@ use common::v1::types::document::{
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::oauth::Scopes;
+use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
 use common::v1::types::util::Time;
 
 use common::v1::types::{
@@ -35,7 +36,7 @@ use crate::error::Result;
 use crate::services::documents::EditContextId;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbMessageUpdate,
-    DbRoleCreate, DbRoomCreate, DbSessionCreate, DbUserCreate, DehydratedDocument,
+    DbRoleCreate, DbRoomCreate, DbRoomTemplate, DbSessionCreate, DbUserCreate, DehydratedDocument,
     DocumentUpdateSummary, EmailPurpose, MediaLink, MediaLinkType, MentionsIds, MessageId,
     MessageRef, MessageVerId, PushData, UrlEmbedQueue, UserPatch, UserVerId,
 };
@@ -83,6 +84,7 @@ pub trait Data:
     + DataDocument
     + DataPush
     + DataConfigInternal
+    + DataRoomTemplate
     + Send
     + Sync
 {
@@ -671,4 +673,36 @@ pub trait DataPush {
 
     /// delete all web push subscriptions for a user
     async fn push_delete_for_user(&self, user_id: UserId) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataRoomTemplate {
+    async fn room_template_create(
+        &self,
+        creator_id: UserId,
+        snapshot: serde_json::Value,
+        create: RoomTemplateCreate,
+    ) -> Result<DbRoomTemplate>;
+
+    async fn room_template_get(&self, code: RoomTemplateCode) -> Result<DbRoomTemplate>;
+
+    async fn room_template_list(
+        &self,
+        creator_id: UserId,
+        pagination: PaginationQuery<RoomTemplateCode>,
+    ) -> Result<PaginationResponse<DbRoomTemplate>>;
+
+    async fn room_template_update(
+        &self,
+        code: RoomTemplateCode,
+        patch: RoomTemplatePatch,
+    ) -> Result<DbRoomTemplate>;
+
+    async fn room_template_update_snapshot(
+        &self,
+        code: RoomTemplateCode,
+        snapshot: serde_json::Value,
+    ) -> Result<DbRoomTemplate>;
+
+    async fn room_template_delete(&self, code: RoomTemplateCode) -> Result<()>;
 }
