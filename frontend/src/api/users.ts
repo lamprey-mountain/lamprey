@@ -94,7 +94,6 @@ export class Users {
 
 		const l = this._cachedListing;
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

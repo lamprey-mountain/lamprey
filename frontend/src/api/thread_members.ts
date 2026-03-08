@@ -141,7 +141,6 @@ export class ThreadMembers {
 
 		const l = this._cachedListings.get(thread_id);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

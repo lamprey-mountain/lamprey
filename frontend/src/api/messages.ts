@@ -866,7 +866,6 @@ export class Messages {
 		const thread_id = thread_id_signal();
 		const l = this._pinnedListings.get(thread_id);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

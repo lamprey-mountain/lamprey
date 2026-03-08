@@ -64,7 +64,6 @@ export class Rooms {
 	list(): Resource<Pagination<Room>> {
 		const l = this._cachedListing;
 		if ((l.resource as any).upgraded) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
@@ -149,7 +148,6 @@ export class Rooms {
 	list_all(): Resource<Pagination<Room>> {
 		const l = this._cachedListingAll;
 		if ((l.resource as any).upgraded) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

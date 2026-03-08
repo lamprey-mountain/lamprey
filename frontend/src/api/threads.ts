@@ -51,7 +51,6 @@ export class Threads {
 		const cacheKey = key();
 		const l = cache.get(cacheKey);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

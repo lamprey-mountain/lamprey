@@ -91,7 +91,6 @@ export class Invites {
 		const room_id = untrack(room_id_signal);
 		const l = this._cachedListings.get(room_id);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
@@ -168,7 +167,6 @@ export class Invites {
 		const channel_id = untrack(channel_id_signal);
 		const l = this._cachedChannelListings.get(channel_id);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
@@ -243,7 +241,6 @@ export class Invites {
 
 		const l = this._cachedServerListing;
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

@@ -89,7 +89,6 @@ export class Webhooks {
 		const channel_id = untrack(channel_id_signal);
 		const l = this._cachedListings.get(channel_id);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

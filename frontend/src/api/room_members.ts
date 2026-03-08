@@ -161,7 +161,6 @@ export class RoomMembers {
 
 		const l = this._getOrCreateListing(room_id_sig());
 		if ((l.resource as any).upgraded) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

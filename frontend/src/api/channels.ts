@@ -128,7 +128,6 @@ export class Channels {
 		const room_id = room_id_signal();
 		const l = this._getOrCreateListing(this._cachedListings, room_id);
 		if ((l.resource as any).upgraded) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
@@ -269,7 +268,6 @@ export class Channels {
 		const room_id = room_id_signal();
 		const l = this._getOrCreateListing(this._cachedListingsArchived, room_id);
 		if ((l.resource as any).upgraded) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
@@ -353,7 +351,6 @@ export class Channels {
 		const room_id = room_id_signal();
 		const l = this._getOrCreateListing(this._cachedListingsRemoved, room_id);
 		if ((l.resource as any).upgraded) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

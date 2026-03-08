@@ -111,7 +111,6 @@ export class RoomBans {
 
 		const l = this._cachedListings.get(room_id);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 

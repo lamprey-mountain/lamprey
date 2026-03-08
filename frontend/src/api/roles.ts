@@ -115,7 +115,6 @@ export class Roles {
 		const room_id = room_id_sig();
 		const l = this._getOrCreateListing(this._cachedListings, room_id);
 		if ((l.resource as any).upgraded) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
@@ -195,7 +194,6 @@ export class Roles {
 		const key = `${room_id_sig()}:${role_id_sig()}`;
 		const l = this._memberListings.get(key);
 		if (l) {
-			if (!l.prom) l.refetch();
 			return l.resource;
 		}
 
