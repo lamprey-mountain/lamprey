@@ -3,6 +3,8 @@
 use std::sync::Arc;
 
 use common::v1::types::{
+    emoji::EmojiCustom,
+    ids::EmojiId,
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     ChannelId, MessageSync, RoleId, Room, RoomId, User, UserId,
 };
@@ -40,6 +42,8 @@ pub struct ServiceCache {
     // TODO: make not pub?
     pub(crate) users: Cache<UserId, User>,
 
+    pub(crate) emojis: Cache<EmojiId, EmojiCustom>,
+
     // preferences caches
     preferences_global: Cache<UserId, PreferencesGlobal>,
     preferences_room: Cache<(UserId, RoomId), PreferencesRoom>,
@@ -62,6 +66,7 @@ impl ServiceCache {
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
+            emojis: Cache::builder().max_capacity(100_000).build(),
             preferences_global: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
@@ -457,6 +462,47 @@ impl ServiceCache {
         self.preferences_user.invalidate(&(user_id, other_id)).await;
     }
 
+    /// get an emoji from the cache, loading from the database if not present
+    pub async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {
+        self.emojis
+            .try_get_with(emoji_id, self.state.data().emoji_get(emoji_id))
+            .await
+            .map_err(|err| err.fake_clone())
+    }
+
+    /// get multiple emojis from the cache, loading missing ones from the database
+    pub async fn emoji_get_many(&self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>> {
+        if emoji_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut out = Vec::with_capacity(emoji_ids.len());
+        let mut missing = Vec::new();
+
+        for id in emoji_ids {
+            if let Some(emoji) = self.emojis.get(id).await {
+                out.push(emoji);
+            } else {
+                missing.push(*id);
+            }
+        }
+
+        if !missing.is_empty() {
+            let emojis = self.state.data().emoji_get_many(&missing).await?;
+            for emoji in emojis {
+                self.emojis.insert(emoji.id, emoji.clone()).await;
+                out.push(emoji);
+            }
+        }
+
+        Ok(out)
+    }
+
+    /// invalidate an emoji in the cache
+    pub async fn emoji_invalidate(&self, emoji_id: EmojiId) {
+        self.emojis.invalidate(&emoji_id).await;
+    }
+
     /// get the permission calculator for this room, loading the room if it doesn't exist
     pub async fn permissions(&self, room_id: RoomId) -> Result<PermissionsCalculator> {
         Ok(self.load_room(room_id).await?.permissions().await)
@@ -774,6 +820,12 @@ impl ServiceCache {
                 self.preferences_user
                     .insert((*user_id, *target_user_id), config.clone())
                     .await;
+            }
+            MessageSync::EmojiCreate { emoji } | MessageSync::EmojiUpdate { emoji } => {
+                self.emojis.insert(emoji.id, emoji.clone()).await;
+            }
+            MessageSync::EmojiDelete { emoji_id, .. } => {
+                self.emojis.invalidate(emoji_id).await;
             }
             _ => {}
         }

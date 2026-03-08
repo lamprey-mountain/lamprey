@@ -17,7 +17,7 @@ use common::v1::types::{
     Channel, ChannelId, ChannelPatch, ContextQuery, ContextResponse, EmbedCreate, EmbedId,
     Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageCreate, MessageId,
     MessageSync, NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
-    Permission, RepliesQuery, RoomId,
+    Permission, RepliesQuery, RoomId, User,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
@@ -267,7 +267,15 @@ impl ServiceMessages {
                     )
                     .await?;
                     srv.channels.invalidate(thread_id).await;
-                    // FIXME: broadcast channel update
+                    let channel = srv.channels.get(thread_id, None).await?;
+                    s.broadcast_channel(
+                        thread_id,
+                        user_id,
+                        MessageSync::ChannelUpdate {
+                            channel: Box::new(channel),
+                        },
+                    )
+                    .await?;
                 }
                 true
             }
@@ -727,7 +735,6 @@ impl ServiceMessages {
 
     // TODO: refactor create and edit together
     // FIXME: webhook permisison checks
-    // FIXME: use external emoji permission checks
     pub async fn edit(
         &self,
         thread_id: ChannelId,
@@ -740,7 +747,7 @@ impl ServiceMessages {
         let data = s.data();
         let srv = s.services();
         let user = srv.users.get(user_id, None).await?;
-        let _thread = srv.channels.get(thread_id, Some(user_id)).await?;
+        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         let is_webhook = user.webhook.is_some();
 
         let perms = if is_webhook {
@@ -752,6 +759,16 @@ impl ServiceMessages {
         if let Some(perms) = &perms {
             perms.ensure(Permission::ViewChannel)?;
         }
+
+        let can_use_external_emoji = if !is_webhook {
+            if let Some(perms) = &perms {
+                perms.has(Permission::EmojiUseExternal)
+            } else {
+                true // system
+            }
+        } else {
+            true
+        };
 
         let mut message = match self.get(thread_id, message_id, user_id).await {
             Ok(m) => m,
@@ -840,26 +857,48 @@ impl ServiceMessages {
             embeds = futures_util::future::try_join_all(embed_futs).await?;
         }
 
-        // let removed_at = None;
+        if let Some(room_id) = thread.room_id {
+            let automod = srv.automod.load(room_id).await?;
+            let scan = automod.scan_message_update(&message, &json);
+            if scan.is_triggered() {
+                let removed = srv
+                    .automod
+                    .enforce_message_create(room_id, thread_id, message_id, user_id, &scan)
+                    .await?;
+                if removed {
+                    data.message_remove_bulk(thread_id, &[message_id]).await?;
+                }
+            }
+        }
 
-        // TODO: update automod to use v2 MessagePatch
-        // if let Some(room_id) = thread.room_id {
-        //     let automod = srv.automod.load(room_id).await?;
-        //     let scan = automod.scan_message_update(&message, &json);
-        //     if scan.is_triggered() {
-        //         let removed = srv
-        //             .automod
-        //             .enforce_message_create(room_id, thread_id, message_id, user_id, &scan)
-        //             .await?;
-        //         if removed {
-        //             removed_at = Some(Time::now_utc());
-        //         }
-        //     }
-        // }
-
-        let (content, payload) = match message.latest_version.message_type.clone() {
+        let (content, payload, mentions) = match message.latest_version.message_type.clone() {
             MessageType::DefaultMarkdown(msg) => {
-                let content = json.content.unwrap_or(msg.content);
+                let mut content = json.content.clone().unwrap_or(msg.content);
+                let mut mentions = message.latest_version.mentions.clone();
+
+                if json.content.is_some() {
+                    let parsed_mentions = mentions::parse(
+                        content.as_deref().unwrap_or_default(),
+                        &Default::default(),
+                    );
+                    mentions = self
+                        .fetch_full_mentions_from_ids(parsed_mentions, thread.room_id)
+                        .await?;
+                }
+
+                if let Some(room_id) = thread.room_id {
+                    if let Some(c) = &mut content {
+                        *c = self
+                            .enforce_emoji_use_external(
+                                &mentions,
+                                room_id,
+                                can_use_external_emoji,
+                                c,
+                            )
+                            .await?;
+                    }
+                }
+
                 Result::Ok((
                     content.clone(),
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
@@ -869,6 +908,7 @@ impl ServiceMessages {
                         metadata: None,
                         reply_id: json.reply_id.unwrap_or(msg.reply_id),
                     }),
+                    mentions,
                 ))
             }
             _ => return Err(Error::Unimplemented),
@@ -883,9 +923,8 @@ impl ServiceMessages {
                     author_id: user_id,
                     embeds: embeds.into_iter().map(|e| e.into()).collect(),
                     message_type: payload,
-                    // NOTE: this field is ignored
                     created_at: None,
-                    mentions: message.latest_version.mentions,
+                    mentions,
                 },
             )
             .await?;
@@ -930,14 +969,12 @@ impl ServiceMessages {
         Ok((StatusCode::OK, message))
     }
 
-    // TODO: batch fetching
     pub async fn fetch_full_mentions_from_ids(
         &self,
         mentions_ids: MentionsIds,
         room_id: Option<RoomId>,
     ) -> Result<Mentions> {
         let srv = self.state.services();
-        let data = self.state.data();
 
         let mut mentions = Mentions {
             users: vec![],
@@ -947,49 +984,58 @@ impl ServiceMessages {
             everyone: mentions_ids.everyone,
         };
 
-        for user_id in mentions_ids.users {
-            let user = srv.users.get(user_id, None).await?;
-            let room_member = if let Some(room_id) = room_id {
-                data.room_member_get(room_id, user_id).await.ok()
-            } else {
-                None
-            };
-
-            let resolved_name = if let Some(room_member) = room_member {
-                room_member
-                    .override_name
-                    .unwrap_or_else(|| user.name.clone())
-            } else {
-                user.name.clone()
-            };
-
-            mentions.users.push(MentionsUser {
-                id: user_id,
-                resolved_name,
-            });
-        }
+        let users = srv.users.get_many(&mentions_ids.users).await?;
+        let users_map: HashMap<UserId, User> = users.into_iter().map(|u| (u.id, u)).collect();
 
         if let Some(room_id) = room_id {
+            let room = srv.cache.load_room(room_id).await?;
+
+            for user_id in mentions_ids.users {
+                let Some(user) = users_map.get(&user_id) else {
+                    continue;
+                };
+                let resolved_name = room
+                    .members
+                    .get(&user_id)
+                    .and_then(|m| m.member.override_name.clone())
+                    .unwrap_or_else(|| user.name.clone());
+
+                mentions.users.push(MentionsUser {
+                    id: user_id,
+                    resolved_name,
+                });
+            }
+
             for role_id in mentions_ids.roles {
-                let _role = data.role_select(room_id, role_id).await?;
-                mentions.roles.push(MentionsRole { id: role_id });
+                if room.roles.contains_key(&role_id) {
+                    mentions.roles.push(MentionsRole { id: role_id });
+                }
+            }
+        } else {
+            for user_id in mentions_ids.users {
+                if let Some(user) = users_map.get(&user_id) {
+                    mentions.users.push(MentionsUser {
+                        id: user_id,
+                        resolved_name: user.name.clone(),
+                    });
+                }
             }
         }
 
-        for channel_id in mentions_ids.channels {
-            let channel = srv.channels.get(channel_id, None).await?;
+        let channels = srv.channels.get_many(&mentions_ids.channels, None).await?;
+        for channel in channels {
             mentions.channels.push(MentionsChannel {
-                id: channel_id,
+                id: channel.id,
                 room_id: channel.room_id,
                 ty: channel.ty,
                 name: channel.name,
             });
         }
 
-        for emoji_id in mentions_ids.emojis {
-            let emoji = data.emoji_get(emoji_id).await?;
+        let emojis = srv.cache.emoji_get_many(&mentions_ids.emojis).await?;
+        for emoji in emojis {
             mentions.emojis.push(MentionsEmoji {
-                id: emoji_id,
+                id: emoji.id,
                 name: emoji.name,
                 animated: emoji.animated,
             });
@@ -998,7 +1044,6 @@ impl ServiceMessages {
         Ok(mentions)
     }
 
-    // TODO(#833): enforce EmojiUseExternal permission
     async fn enforce_emoji_use_external(
         &self,
         m: &Mentions,
@@ -1006,11 +1051,13 @@ impl ServiceMessages {
         allow: bool,
         content: &str,
     ) -> Result<String> {
-        let data = self.state.data();
+        let srv = self.state.services();
         let mut allowed_emoji = vec![];
 
-        for i in &m.emojis {
-            let emoji = data.emoji_get(i.id).await?;
+        let emoji_ids: Vec<_> = m.emojis.iter().map(|e| e.id).collect();
+        let emojis = srv.cache.emoji_get_many(&emoji_ids).await?;
+
+        for emoji in emojis {
             let is_room_emoji = emoji.owner == Some(EmojiOwner::Room { room_id });
             if is_room_emoji || allow {
                 allowed_emoji.push(emoji.id);

@@ -127,6 +127,19 @@ impl DataEmoji for Postgres {
         Ok(row.into())
     }
 
+    async fn emoji_get_many(&self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>> {
+        let ids: Vec<Uuid> = emoji_ids.iter().map(|id| id.into_inner()).collect();
+        let mut conn = self.pool.acquire().await?;
+        let rows = query_as!(
+            DbEmojiCustom,
+            r#"SELECT id, name, creator_id, animated, media_id, room_id FROM custom_emoji WHERE id = ANY($1)"#,
+            &ids
+        )
+        .fetch_all(&mut *conn)
+        .await?;
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     async fn emoji_list(
         &self,
         room_id: RoomId,

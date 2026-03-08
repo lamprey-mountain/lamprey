@@ -734,6 +734,7 @@ pub trait DataEmoji {
         create: EmojiCustomCreate,
     ) -> Result<EmojiCustom>;
     async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom>;
+    async fn emoji_get_many(&self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>>;
     async fn emoji_list(
         &self,
         room_id: RoomId,

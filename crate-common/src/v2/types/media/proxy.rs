@@ -65,7 +65,6 @@ pub struct StreamQuery {
     pub s: u64,
 }
 
-// TODO: move to common?
 /// an available stream format
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
