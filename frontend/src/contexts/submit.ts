@@ -4,6 +4,7 @@ import type { ChatCtx, Data } from "../context.ts";
 import type { SetStoreFunction } from "solid-js/store";
 import type { Api } from "../api.tsx";
 import { ChannelContextT } from "../channelctx.tsx";
+import { RootStore } from "../api/core/Store.ts";
 
 // TODO: implement a retry queue
 // TODO: show when messages fail to send
@@ -16,6 +17,7 @@ export async function handleSubmit(
 	api: Api,
 	atts_thread_id?: string,
 	bypassSlowmode?: boolean,
+	store?: RootStore,
 ) {
 	if (text.startsWith("/")) {
 		await ctx.slashCommands.run(ctx, api, thread_id, text);
@@ -30,7 +32,9 @@ export async function handleSubmit(
 
 	const channel = api.channels.cache.get(thread_id);
 
-	api.messages.send(thread_id, {
+	const messagesService = store?.messages ?? api.messages;
+
+	messagesService.send(thread_id, {
 		content: text || null,
 		reply_id,
 		attachments,

@@ -432,20 +432,79 @@ export class MessagesService extends BaseService<Message> {
 		}
 	}
 
+    handleMessageCreate(m: Message) {
+        batch(() => {
+            this.upsert(m);
+            const ranges = this.cacheRanges.get(m.channel_id);
+            if (ranges) {
+                if (m.nonce) {
+                    // Local echo replacement
+                    const idx = ranges.live.items.findIndex(i => i.nonce === m.nonce);
+                    if (idx !== -1) {
+                        ranges.live.items.splice(idx, 1, m);
+                    } else {
+                        const id_idx = ranges.live.items.findIndex(i => i.id === m.id);
+                        if (id_idx === -1) {
+                            ranges.live.items.push(m);
+                        }
+                    }
+                } else {
+                    const id_idx = ranges.live.items.findIndex(i => i.id === m.id);
+                    if (id_idx === -1) {
+                        ranges.live.items.push(m);
+                    }
+                }
+                ranges.live.items.sort((a, b) => a.id > b.id ? 1 : -1);
+                this.updateMutators(m.channel_id);
+            }
+        });
+    }
+
+    handleMessageUpdate(m: Message) {
+        batch(() => {
+            this.upsert(m);
+            const ranges = this.cacheRanges.get(m.channel_id);
+            if (ranges) {
+                const range = ranges.find(m.id);
+                if (range) {
+                    const idx = range.items.findIndex(i => i.id === m.id);
+                    if (idx !== -1) range.items[idx] = m;
+                }
+                this.updateMutators(m.channel_id);
+            }
+        });
+    }
+
+    handleMessageDelete(channel_id: string, message_id: string) {
+        batch(() => {
+            this.delete(message_id);
+            const ranges = this.cacheRanges.get(channel_id);
+            if (ranges) {
+                const range = ranges.find(message_id);
+                if (range) {
+                    const idx = range.items.findIndex(i => i.id === message_id);
+                    if (idx !== -1) range.items.splice(idx, 1);
+                }
+                this.updateMutators(channel_id);
+            }
+        });
+    }
+
 	async send(channel_id: string, body: MessageSendReq): Promise<Message> {
 		const id = uuidv7();
 		const local = {
 			id,
 			channel_id,
-			author_id: this.store.users.cache.get("@self")?.id ?? "",
+			author_id: this.store.session()?.user_id ?? "",
 			created_at: new Date().toISOString(),
 			latest_version: {
 				version_id: id,
 				type: "DefaultMarkdown",
 				content: body.content,
-				attachments: [], // Simplified for now
+				attachments: [],
 				embeds: body.embeds ?? [],
 				created_at: new Date().toISOString(),
+                mentions: { users: [], roles: [], everyone: false }
 			},
 			nonce: id,
 			is_local: true,
@@ -456,6 +515,7 @@ export class MessagesService extends BaseService<Message> {
 			const r = this.cacheRanges.get(channel_id);
 			if (r) {
 				r.live.items.push(local);
+                r.live.items.sort((a, b) => a.id > b.id ? 1 : -1);
 				this.updateMutators(channel_id);
 			}
 		});
@@ -463,7 +523,7 @@ export class MessagesService extends BaseService<Message> {
 		const data = await fetchWithRetry(() =>
 			this.client.http.POST("/api/v1/channel/{channel_id}/message", {
 				params: { path: { channel_id } },
-				body: { ...body, attachments: [] }, // Simplified
+				body: { ...body, attachments: [] },
 				headers: { "Idempotency-Key": id },
 			})
 		);
@@ -483,18 +543,7 @@ export class MessagesService extends BaseService<Message> {
 				},
 				is_local: true,
 			} as unknown as Message;
-			this.cache.set(message_id, updatedMessage);
-			const ranges = this.cacheRanges.get(thread_id);
-			if (ranges) {
-				const range = ranges.find(message_id);
-				if (range) {
-					const index = range.items.findIndex((m) => m.id === message_id);
-					if (index !== -1) {
-						range.items[index] = updatedMessage;
-						this.updateMutators(thread_id);
-					}
-				}
-			}
+            this.handleMessageUpdate(updatedMessage);
 		}
 
 		try {
@@ -509,11 +558,7 @@ export class MessagesService extends BaseService<Message> {
 			return data as Message;
 		} catch (e) {
 			if (originalMessage) {
-				this.cache.set(message_id, originalMessage);
-				const ranges = this.cacheRanges.get(thread_id);
-				if (ranges) {
-					this.updateMutators(thread_id);
-				}
+                this.handleMessageUpdate(originalMessage);
 			}
 			throw e;
 		}
@@ -568,7 +613,6 @@ export class MessagesService extends BaseService<Message> {
 		range: MessageRange,
 		data: { items: any[] },
 	): MessageRange {
-		// Simplified merge logic
 		const items = data.items as Message[];
 		for (const item of items) this.upsert(item);
 		range.items.push(...items);

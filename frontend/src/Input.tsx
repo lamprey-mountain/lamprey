@@ -4,7 +4,7 @@ import { type Attachment, useCtx } from "./context.ts";
 import type { MessageT, ThreadT } from "./types.ts";
 import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
-import { useApi } from "./api.tsx";
+import { useApi, useApi2, useMessages2 } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import {
 	createEffect,
@@ -23,7 +23,7 @@ import { Channel } from "sdk";
 import icDelete from "./assets/delete.png";
 import icEdit from "./assets/edit.png";
 import { useChannel } from "./channelctx.tsx";
-import { handleSubmit } from "./contexts/submit.ts";
+import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { getThumbFromId } from "./media/util.tsx";
@@ -35,7 +35,10 @@ type InputProps = {
 export function Input(props: InputProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
+	const store = useApi2();
 	const [ch, chUpdate] = useChannel()!;
+	const submit = useMessageSubmit(props.channel.id);
 	const reply_id = () => ch.reply_id;
 	const reply = () => api.messages.cache.get(reply_id()!);
 	const uploads = useUploads();
@@ -109,17 +112,7 @@ export function Input(props: InputProps) {
 			slowmodeShake();
 			return false;
 		}
-		handleSubmit(
-			ctx,
-			[ch, chUpdate],
-			props.channel.id,
-			text,
-			null as any,
-			api,
-			undefined,
-			bypassSlowmode(),
-		);
-		return true;
+		return submit(text, bypassSlowmode());
 	};
 
 	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
@@ -172,7 +165,7 @@ export function Input(props: InputProps) {
 					return false; // not empty, do default behavior
 				}
 
-				const ranges = api.messages.cacheRanges.get(props.channel.id);
+				const ranges = messagesService.cacheRanges.get(props.channel.id);
 				if (!ranges) return false;
 
 				const self_id = currentUser()?.id;
@@ -287,14 +280,14 @@ export function Input(props: InputProps) {
 		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
-	const anchor = (): import("./api/messages.ts").MessageListAnchor => {
+	const anchor = (): import("./api/services/MessagesService.ts").MessageListAnchor => {
 		const a = ch.anchor;
 		const r = ch.read_marker_id;
 		if (a) return a;
 		if (r) return { type: "context", limit: 50, message_id: r };
 		return { type: "backwards", limit: 50 };
 	};
-	const messages = api.messages.list(() => props.channel.id, anchor);
+	const messages = messagesService.useList(() => props.channel.id, anchor);
 
 	const jumpToLatest = () => {
 		// messages are approx. 20 px high, show 3 pages of messages

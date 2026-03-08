@@ -121,6 +121,10 @@ export function useThreadMembers2() {
 	return useApi2().threadMembers;
 }
 
+export function useMemberList2() {
+	return useApi2().memberLists;
+}
+
 export type MemberList = {
 	groups: MemberListGroup[];
 	items: {
