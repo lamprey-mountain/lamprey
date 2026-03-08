@@ -34,6 +34,7 @@ import {
 	RouteUser,
 } from "./routes.tsx";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
+import { CalendarPopupProvider } from "./Calendar.tsx";
 import { ModalsProvider, useModals } from "./contexts/modal";
 import { MemberListProvider } from "./contexts/memberlist.tsx";
 import { UploadsProvider } from "./contexts/uploads.tsx";
@@ -146,7 +147,9 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 													<AutocompleteProvider>
 														<FormattingToolbarProvider>
 															<UserPopoutProvider>
-																<AppShell>{props.children}</AppShell>
+																<CalendarPopupProvider>
+																	<AppShell>{props.children}</AppShell>
+																</CalendarPopupProvider>
 															</UserPopoutProvider>
 														</FormattingToolbarProvider>
 													</AutocompleteProvider>

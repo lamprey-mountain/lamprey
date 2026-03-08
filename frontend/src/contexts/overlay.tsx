@@ -39,6 +39,7 @@ import { EmojiPicker } from "../EmojiPicker.tsx";
 import { UserView } from "../User.tsx";
 import { ThreadPopout } from "../ThreadPopout.tsx";
 import { Autocomplete } from "../Autocomplete.tsx";
+import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
 import { getModal } from "../modal/mod.tsx";
 import { useModals } from "./modal.tsx";
 
@@ -50,12 +51,20 @@ export function OverlayProvider(props: ParentProps) {
 	const { toolbar, hideToolbar } = useFormattingToolbar();
 	const api = useApi();
 	const [modals] = useModals();
+	const { popup: calendarPopup, closePopup: closeCalendarPopup } = useCalendarPopup();
 
 	const [toolbarRef, setToolbarRef] = createSignal<HTMLElement>();
 	const [toolbarFloating, setToolbarFloating] = createStore({
 		x: 0,
 		y: 0,
 		strategy: "fixed" as const,
+	});
+
+	const [popupRef, setPopupRef] = createSignal<HTMLElement>();
+	const [popupFloating, setPopupFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
 	});
 
 	createEffect(() => {
@@ -71,14 +80,34 @@ export function OverlayProvider(props: ParentProps) {
 					placement: "top",
 					middleware: [
 						offset({ mainAxis: 8 }),
-						shift({ padding: 8 }),
 						flip(),
+						shift({ padding: 8 }),
 					],
 				}).then(({ x, y, strategy }) => {
 					setToolbarFloating({ x, y, strategy });
 				});
 			},
 		);
+		onCleanup(cleanup);
+	});
+
+	createEffect(() => {
+		const referenceEl = calendarPopup()?.ref;
+		const floatingEl = popupRef();
+		if (!referenceEl || !floatingEl) return;
+
+		const cleanup = autoUpdate(referenceEl, floatingEl, () => {
+			computePosition(referenceEl, floatingEl, {
+				placement: calendarPopup()?.placement ?? "bottom-start",
+				middleware: [
+					offset({ mainAxis: 8 }),
+					flip(),
+					shift({ mainAxis: true, crossAxis: true, padding: 8 }),
+				],
+			}).then(({ x, y, strategy }) => {
+				setPopupFloating({ x, y, strategy });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
@@ -376,6 +405,24 @@ export function OverlayProvider(props: ParentProps) {
 						}}
 					>
 						<FormattingToolbar onClose={hideToolbar} />
+					</div>
+				</Show>
+				<Show when={calendarPopup()}>
+					<div
+						ref={setPopupRef}
+						style={{
+							position: popupFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${popupFloating.x}px ${popupFloating.y}px`,
+							"z-index": 100,
+						}}
+					>
+						<PopupEventEditor
+							channel_id={calendarPopup()!.props.channel_id}
+							event={calendarPopup()!.props.event}
+							onClose={closeCalendarPopup}
+						/>
 					</div>
 				</Show>
 			</Portal>
