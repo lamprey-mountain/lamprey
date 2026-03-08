@@ -90,6 +90,9 @@ async fn voice_state_patch(
         return Err(Error::NotFound);
     };
     let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_voice() {
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
+    }
 
     // handle move
     if let Some(new_channel_id) = json.channel_id {
@@ -271,6 +274,10 @@ async fn voice_state_disconnect(
     let Some(_state) = srv.voice.state_get(target_user_id) else {
         return Ok(StatusCode::NO_CONTENT);
     };
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_voice() {
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
+    }
     let _ = s.broadcast_sfu(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
@@ -280,7 +287,6 @@ async fn voice_state_disconnect(
             priority: target_perms.has(Permission::VoicePriority),
         },
     });
-    let chan = srv.channels.get(channel_id, None).await?;
     if let Some(room_id) = chan.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MemberDisconnect {
@@ -317,8 +323,11 @@ async fn voice_state_disconnect_all(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::VoiceDisconnect)?;
-    srv.voice.disconnect_everyone(channel_id).await?;
     let thread = srv.channels.get(channel_id, None).await?;
+    if !thread.ty.has_voice() {
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
+    }
+    srv.voice.disconnect_everyone(channel_id).await?;
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MemberDisconnectAll { channel_id })
@@ -387,6 +396,9 @@ async fn voice_state_move(
     });
 
     let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_voice() {
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
+    }
     if let Some(room_id) = chan.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MemberMove {
@@ -425,6 +437,10 @@ async fn voice_state_move_bulk(
     let perms_source = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms_source.ensure(Permission::ViewChannel)?;
     perms_source.ensure(Permission::VoiceMove)?;
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_voice() {
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
+    }
 
     Ok(Error::Unimplemented)
 }
@@ -449,6 +465,10 @@ async fn voice_state_list(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.ty.has_voice() {
+        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
+    }
     let states: Vec<_> = srv
         .voice
         .state_list()

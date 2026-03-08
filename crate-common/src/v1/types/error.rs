@@ -462,6 +462,10 @@ pub enum ErrorCode {
     #[error("channel doesnt have text")]
     ChannelDoesntHaveText,
 
+    /// channel doesnt have voice
+    #[error("channel doesnt have voice")]
+    ChannelDoesntHaveVoice,
+
     /// cannot edit thread member list
     #[error("cannot edit thread member list")]
     CannotEditThreadMemberList,
@@ -910,6 +914,7 @@ impl ErrorCode {
             ErrorCode::InvalidParentChannelType => 400,
             ErrorCode::OwnerIdCannotBeChanged => 400,
             ErrorCode::ChannelDoesntHaveText => 400,
+            ErrorCode::ChannelDoesntHaveVoice => 400,
             ErrorCode::CannotEditThreadMemberList => 400,
             ErrorCode::InvalidThreadType => 400,
             ErrorCode::CantDeleteThatMessage => 403,
