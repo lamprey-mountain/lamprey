@@ -3518,6 +3518,7 @@ name = "lamprey-bot"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "dotenvy",
  "figment",
@@ -3526,6 +3527,7 @@ dependencies = [
  "lamprey-sdk",
  "serde",
  "serde_json",
+ "sqlx",
  "str0m",
  "stunclient",
  "symphonia",

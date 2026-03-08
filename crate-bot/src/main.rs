@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -9,15 +10,18 @@ use common::v1::types::{
 use common::v2::types::message::Message;
 use figment::providers::{Env, Format, Toml};
 use sdk::{Client, EventHandler, Http};
+use sqlx::SqlitePool;
 use tokio::sync::{mpsc::Sender, Mutex};
 use tracing::{debug, error, info, warn};
 
 use crate::{
     config::Config,
+    duration::Duration,
     rtc::{Player, PlayerCommand},
 };
 
 mod config;
+mod duration;
 mod rtc;
 
 #[tokio::main]
@@ -34,6 +38,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     info!("config {config:#?}");
+
+    let pool = SqlitePool::connect(&config.database_url).await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
 
     let mut client = Client::new(config.token.clone().into());
     client.http = if let Some(base_url) = config.base_url.clone() {
@@ -55,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         user: None,
         player: Arc::new(Mutex::new(None)),
         config,
+        pool,
     };
     client
         .syncer
@@ -74,6 +83,10 @@ pub enum Command {
     /// commands for voice/music management
     #[command(subcommand, alias = "vc")]
     Voice(VoiceCommand),
+
+    /// reminder commands
+    #[command(subcommand)]
+    Remind(RemindCommand),
 }
 
 #[derive(Debug, clap::Subcommand)]
@@ -97,6 +110,29 @@ pub enum VoiceCommand {
     Stop,
 }
 
+#[derive(Debug, clap::Subcommand)]
+pub enum RemindCommand {
+    /// add a reminder (format: [duration] [text...])
+    Add {
+        /// duration (e.g., "5m", "1h", "2d", "5m30s")
+        duration: String,
+        /// reminder text
+        text: Vec<String>,
+    },
+
+    /// remove a reminder by id
+    Remove {
+        /// reminder id
+        id: i64,
+    },
+
+    /// remove all reminders
+    RemoveAll,
+
+    /// list all reminders
+    List,
+}
+
 struct Handle {
     http: Http,
     voice_states: Vec<VoiceState>,
@@ -104,6 +140,7 @@ struct Handle {
     user: Option<User>,
     player: Arc<Mutex<Option<Sender<PlayerCommand>>>>,
     config: Config,
+    pool: SqlitePool,
 }
 
 impl Handle {
@@ -186,7 +223,7 @@ impl Handle {
                 VoiceCommand::Play => {
                     let _ = self.join_voice(message).await;
                     if let Some(p) = &*self.player.lock().await {
-                        p.send(PlayerCommand::Play(self.config.music_path.clone()))
+                        p.send(PlayerCommand::Play(self.config.music_path.clone().into()))
                             .await?;
                         "playing".to_string()
                     } else {
@@ -210,9 +247,90 @@ impl Handle {
                     }
                 }
             },
+            Command::Remind(cmd) => match cmd {
+                RemindCommand::Add { duration, text } => {
+                    let text = text.join(" ");
+                    let scheduled_at = self
+                        .add_reminder(&duration, &text, &message.author_id.to_string())
+                        .await?;
+                    format!("Reminder set for {scheduled_at}: {text}")
+                }
+                RemindCommand::Remove { id } => {
+                    sqlx::query!("DELETE FROM reminders WHERE id = ?", id)
+                        .execute(&self.pool)
+                        .await?;
+                    format!("Removed reminder {id}")
+                }
+                RemindCommand::RemoveAll => {
+                    let user_id = message.author_id.to_string();
+                    sqlx::query!("DELETE FROM reminders WHERE user_id = ?", user_id)
+                        .execute(&self.pool)
+                        .await?;
+                    "Removed all your reminders".to_string()
+                }
+                RemindCommand::List => {
+                    let user_id = message.author_id.to_string();
+                    let reminders = sqlx::query_as!(
+                        ReminderRow,
+                        r#"
+                        SELECT
+                          id,
+                          text,
+                          scheduled_at
+                        FROM reminders
+                        WHERE user_id = ?
+                        ORDER BY scheduled_at ASC
+                        "#,
+                        user_id
+                    )
+                    .fetch_all(&self.pool)
+                    .await?;
+
+                    if reminders.is_empty() {
+                        "No reminders".to_string()
+                    } else {
+                        let mut output = String::new();
+                        for reminder in &reminders {
+                            output
+                                .push_str(&format!("[{}] {}", reminder.id, reminder.scheduled_at));
+                            if !reminder.text.is_empty() {
+                                output.push_str(&format!(": {}", reminder.text));
+                            }
+                            output.push('\n');
+                        }
+                        output
+                    }
+                }
+            },
         };
 
         Ok(resp)
+    }
+
+    async fn add_reminder(
+        &self,
+        duration: &str,
+        text: &str,
+        user_id: &str,
+    ) -> anyhow::Result<String> {
+        let duration = Duration::from_str(duration)?;
+        let now = chrono::Utc::now();
+        let scheduled = now + chrono::Duration::seconds(duration.seconds());
+        let formatted = scheduled.format("%Y-%m-%d %H:%M:%S").to_string();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO reminders (user_id, text, scheduled_at)
+            VALUES (?, ?, ?)
+            "#,
+            user_id,
+            text,
+            formatted
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(formatted)
     }
 
     async fn join_voice(&mut self, message: &Message) -> anyhow::Result<()> {
@@ -350,4 +468,11 @@ impl EventHandler for Handle {
         }
         Ok(())
     }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct ReminderRow {
+    id: i64,
+    text: String,
+    scheduled_at: String,
 }
