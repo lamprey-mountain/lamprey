@@ -15,8 +15,8 @@ use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::types::RoleDeleteQuery;
 use crate::ServerState;
+use common::v1::types::role::RoleDeleteQuery;
 
 use super::util::{Auth, HeaderIdempotencyKey};
 use crate::error::Result;

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::thread::ThreadListRoom;
 use common::v1::types::{
     error::{ApiError, ErrorCode},
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
@@ -11,8 +12,6 @@ use common::v1::types::{
     RelationshipType, RoomId, ThreadMember, ThreadMemberPut, UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
-use serde::Serialize;
-use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -555,13 +554,6 @@ async fn thread_create_from_message(
         .await?;
 
     Ok((StatusCode::CREATED, Json(channel)))
-}
-
-// TODO: move to common
-#[derive(Serialize, ToSchema)]
-pub struct ThreadListRoom {
-    /// threads in this room
-    pub threads: Vec<Channel>,
 }
 
 /// Thread list room

@@ -37,6 +37,7 @@ pub mod session;
 pub mod sync;
 pub mod tag;
 pub mod text;
+pub mod thread;
 pub mod thread_member;
 pub mod user;
 pub mod user_connection;

@@ -64,6 +64,14 @@ pub struct Role {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoleDeleteQuery {
+    #[serde(default)]
+    pub force: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoleCreate {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]

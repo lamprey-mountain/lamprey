@@ -654,13 +654,6 @@ pub struct DbInvite {
     pub description: Option<String>,
 }
 
-// TODO: move to common
-#[derive(Deserialize)]
-pub struct RoleDeleteQuery {
-    #[serde(default)]
-    pub force: bool,
-}
-
 /// what object this media is linked to
 ///
 /// normally one piece of media is linked to exactly one object, but a slightly

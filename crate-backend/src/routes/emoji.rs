@@ -4,15 +4,15 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
-use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
+use common::v1::types::emoji::{
+    EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner, EmojiSearchQuery,
+};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntryType, EmojiId, MessageSync, PaginationQuery, PaginationResponse,
     Permission, RoomId,
 };
 use http::StatusCode;
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -274,12 +274,6 @@ async fn emoji_lookup(
     }
 
     Ok(Json(emoji))
-}
-
-// TODO: move to common
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
-pub struct EmojiSearchQuery {
-    pub query: String,
 }
 
 /// Emoji search

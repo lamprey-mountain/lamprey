@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -101,4 +101,11 @@ impl Diff<EmojiCustom> for EmojiCustomPatch {
     fn changes(&self, other: &EmojiCustom) -> bool {
         self.name.changes(&other.name)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct EmojiSearchQuery {
+    pub query: String,
 }
