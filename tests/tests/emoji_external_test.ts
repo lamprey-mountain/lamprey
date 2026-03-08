@@ -3,8 +3,9 @@ import { BASE_URL, createTester } from "../common.ts";
 
 Deno.test("Emoji Use External Permission", async (t) => {
 	const alice = await createTester("alice-external-emoji");
+	const bob = await createTester("bob-external-emoji");
 
-	// Room A: Where the emoji lives
+	// Room A: Where the emoji lives (owned by Alice)
 	const roomA = await alice({
 		url: "/room",
 		method: "POST",
@@ -13,7 +14,7 @@ Deno.test("Emoji Use External Permission", async (t) => {
 	});
 	const roomAId = roomA.id;
 
-	// Room B: Where we want to use it
+	// Room B: Where we want to use it (owned by Alice, Bob is a member)
 	const roomB = await alice({
 		url: "/room",
 		method: "POST",
@@ -21,6 +22,19 @@ Deno.test("Emoji Use External Permission", async (t) => {
 		status: 201,
 	});
 	const roomBId = roomB.id;
+
+	// Invite Bob to Room B
+	const invite = await alice({
+		url: `/room/${roomBId}/invite`,
+		method: "POST",
+		body: {},
+		status: 201,
+	});
+	await bob({
+		url: `/invite/${invite.code}`,
+		method: "POST",
+		status: 204,
+	});
 
 	// Channel in Room B
 	const channelB = await alice({
@@ -75,9 +89,9 @@ Deno.test("Emoji Use External Permission", async (t) => {
 	});
 
 	await t.step(
-		"Alice cannot use Room A emoji in Room B when permission is denied",
+		"Bob cannot use Room A emoji in Room B when permission is denied",
 		async () => {
-			const message = await alice({
+			const message = await bob({
 				url: `/channel/${channelBId}/message`,
 				method: "POST",
 				body: { content: `hello ${emojiStr}` },
@@ -96,8 +110,8 @@ Deno.test("Emoji Use External Permission", async (t) => {
 		status: 200,
 	});
 
-	await t.step("Alice can now use Room A emoji in Room B", async () => {
-		const message = await alice({
+	await t.step("Bob can now use Room A emoji in Room B", async () => {
+		const message = await bob({
 			url: `/channel/${channelBId}/message`,
 			method: "POST",
 			body: { content: `hello ${emojiStr}` },
@@ -107,8 +121,8 @@ Deno.test("Emoji Use External Permission", async (t) => {
 		assertEquals(message.latest_version.content, `hello ${emojiStr}`);
 	});
 
-	await t.step("Alice can use Room A emoji in edit in Room B", async () => {
-		const message = await alice({
+	await t.step("Bob can use Room A emoji in edit in Room B", async () => {
+		const message = await bob({
 			url: `/channel/${channelBId}/message`,
 			method: "POST",
 			body: { content: "plain text" },
@@ -116,7 +130,7 @@ Deno.test("Emoji Use External Permission", async (t) => {
 		});
 		const messageId = message.id;
 
-		const updated = await alice({
+		const updated = await bob({
 			url: `/channel/${channelBId}/message/${messageId}`,
 			method: "PATCH",
 			body: { content: `edited ${emojiStr}` },
