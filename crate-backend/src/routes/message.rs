@@ -235,18 +235,6 @@ async fn message_delete(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
-    // FIXME: allow deleting your own messages without mfa
-    if let Some(room_id) = thread.room_id {
-        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
-        if room.security.require_mfa {
-            let user = srv.users.get(auth.user.id, None).await?;
-            let totp = data.auth_totp_get(user.id).await?;
-            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
-            }
-        }
-    }
-
     let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let message = data
@@ -259,7 +247,21 @@ async fn message_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+
+    // Require MFA only if user is not the message author
+    if message.author_id != auth.user.id {
+        if let Some(room_id) = thread.room_id {
+            let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+            if room.security.require_mfa {
+                let user = srv.users.get(auth.user.id, None).await?;
+                let totp = data.auth_totp_get(user.id).await?;
+                if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                    return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+                }
+            }
+        }
+    }
+
     if !thread.ty.has_text() {
         return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
@@ -392,18 +394,6 @@ async fn message_version_delete(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
-    // FIXME: allow deleting your own messages without mfa
-    if let Some(room_id) = thread.room_id {
-        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
-        if room.security.require_mfa {
-            let user = srv.users.get(auth.user.id, None).await?;
-            let totp = data.auth_totp_get(user.id).await?;
-            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
-            }
-        }
-    }
-
     if !thread.ty.has_text() {
         return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
@@ -438,6 +428,20 @@ async fn message_version_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
+
+    // Require MFA only if user is not the message author
+    if message.author_id != auth.user.id {
+        if let Some(room_id) = thread.room_id {
+            let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+            if room.security.require_mfa {
+                let user = srv.users.get(auth.user.id, None).await?;
+                let totp = data.auth_totp_get(user.id).await?;
+                if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                    return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+                }
+            }
+        }
+    }
 
     data.message_version_delete(channel_id, version_id).await?;
 
@@ -520,22 +524,9 @@ async fn message_moderate(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
-    // FIXME: allow deleting your own messages without mfa
-    if let Some(room_id) = thread.room_id {
-        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
-        if room.security.require_mfa {
-            let user = srv.users.get(auth.user.id, None).await?;
-            let totp = data.auth_totp_get(user.id).await?;
-            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
-            }
-        }
-    }
-
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !thread.ty.has_text() {
         return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
     }
@@ -547,6 +538,8 @@ async fn message_moderate(
     }
     perms.ensure_unlocked()?;
 
+    // Check MFA requirement only for messages not authored by the user
+    let mut needs_mfa = false;
     if !json.delete.is_empty() {
         perms.ensure(Permission::MessageDelete)?;
         // TODO: fix n+1 query
@@ -555,12 +548,52 @@ async fn message_moderate(
             if !message.latest_version.message_type.is_deletable() {
                 return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
             }
+            // If message is not authored by the user, MFA is required
+            if message.author_id != auth.user.id {
+                needs_mfa = true;
+            }
         }
+    }
 
-        data.message_delete_bulk(channel_id, &json.delete).await?;
+    if !json.remove.is_empty() {
+        perms.ensure(Permission::MessageRemove)?;
+        // TODO: fix n+1 query
+        for id in &json.remove {
+            let message = data.message_get(channel_id, *id, auth.user.id).await?;
+            if !message.latest_version.message_type.is_deletable() {
+                return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
+            }
+        }
+        // Removing messages always requires MFA (moderation action)
+        needs_mfa = true;
+    }
+
+    // Restore operations also require MFA in MFA-enabled rooms
+    if !json.restore.is_empty() {
+        perms.ensure(Permission::MessageRemove)?;
+        needs_mfa = true;
+    }
+
+    if needs_mfa {
+        if let Some(room_id) = thread.room_id {
+            let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+            if room.security.require_mfa {
+                let user = srv.users.get(auth.user.id, None).await?;
+                let totp = data.auth_totp_get(user.id).await?;
+                if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                    return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+                }
+            }
+        }
+    }
+
+    if !json.delete.is_empty() {
+        // TODO: fix n+1 query
         for id in &json.delete {
             data.media_link_delete_all(id.into_inner()).await?;
         }
+
+        data.message_delete_bulk(channel_id, &json.delete).await?;
 
         if let Some(room_id) = thread.room_id {
             let al = auth.audit_log(room_id);
@@ -583,15 +616,6 @@ async fn message_moderate(
     }
 
     if !json.remove.is_empty() {
-        perms.ensure(Permission::MessageRemove)?;
-        // TODO: fix n+1 query
-        for id in &json.remove {
-            let message = data.message_get(channel_id, *id, auth.user.id).await?;
-            if !message.latest_version.message_type.is_deletable() {
-                return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
-            }
-        }
-
         data.message_remove_bulk(channel_id, &json.remove).await?;
 
         if let Some(room_id) = thread.room_id {
