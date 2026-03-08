@@ -102,12 +102,8 @@ async fn reaction_add(
         .channels
         .get(channel_id, Some(auth.user.id))
         .await?;
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
     perms.ensure_unlocked()?;
 
     let data = s.data();
@@ -184,12 +180,8 @@ async fn reaction_remove(
         .channels
         .get(channel_id, Some(auth.user.id))
         .await?;
-    if chan.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if chan.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    chan.ensure_unarchived()?;
+    chan.ensure_unremoved()?;
     perms.ensure_unlocked()?;
 
     let data = s.data();
@@ -260,12 +252,8 @@ async fn reaction_remove_key(
     perms.ensure(Permission::ReactionPurge)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if chan.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if chan.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    chan.ensure_unarchived()?;
+    chan.ensure_unremoved()?;
     perms.ensure_unlocked()?;
 
     data.reaction_delete_key(channel_id, message_id, reaction_key.clone())
@@ -332,12 +320,8 @@ async fn reaction_remove_all(
     perms.ensure(Permission::ReactionPurge)?;
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
     perms.ensure_unlocked()?;
 
     data.reaction_delete_all(channel_id, message_id).await?;

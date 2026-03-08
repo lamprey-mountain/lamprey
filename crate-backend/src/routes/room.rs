@@ -95,7 +95,7 @@ async fn room_get(
     auth.ensure_scopes(&[Scope::Rooms])?;
     let srv = s.services();
     let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
-    if room.deleted_at.is_some() {
+    if room.is_removed() {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
     }
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;

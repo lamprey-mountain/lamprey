@@ -216,6 +216,14 @@ pub enum ErrorCode {
     #[error("thread is removed")]
     ThreadRemoved,
 
+    /// channel is archived
+    #[error("channel is archived")]
+    ChannelArchived,
+
+    /// channel is removed
+    #[error("channel is removed")]
+    ChannelRemoved,
+
     /// cannot delete latest message version
     #[error("cannot delete latest message version")]
     CannotDeleteLatestMessageVersion,
@@ -910,6 +918,8 @@ impl ErrorCode {
             ErrorCode::CannotActOnBehalfOfOthers => 403,
             ErrorCode::ThreadArchived => 400,
             ErrorCode::ThreadRemoved => 404,
+            ErrorCode::ChannelArchived => 400,
+            ErrorCode::ChannelRemoved => 404,
             ErrorCode::MfaRequired => 403,
             ErrorCode::PermissionConflict => 400,
             ErrorCode::InsufficientRank => 403,

@@ -190,7 +190,7 @@ impl ServiceMessages {
                 perms.ensure_unlocked()?;
 
                 let mut required_perms = vec![Permission::ViewChannel];
-                if thread.ty.is_thread() {
+                if thread.is_thread() {
                     required_perms.push(Permission::MessageCreateThread);
                 } else {
                     required_perms.push(Permission::MessageCreate);
@@ -227,7 +227,7 @@ impl ServiceMessages {
                     }
                 }
 
-                if thread.archived_at.is_some() {
+                if thread.is_archived() {
                     srv.channels
                         .update(
                             auth,
@@ -257,7 +257,7 @@ impl ServiceMessages {
                 perms.has(Permission::EmojiUseExternal)
             } else {
                 // system messages bypass permissions
-                if thread.archived_at.is_some() {
+                if thread.is_archived() {
                     data.channel_update(
                         thread_id,
                         ChannelPatch {
@@ -468,7 +468,7 @@ impl ServiceMessages {
         let s_clone = self.state.clone();
         let author_id = user_id;
         let room_id = thread.room_id;
-        let channel_is_thread = thread.ty.is_thread();
+        let channel_is_thread = thread.is_thread();
 
         tokio::spawn(async move {
             let mut notified_users = HashSet::new();

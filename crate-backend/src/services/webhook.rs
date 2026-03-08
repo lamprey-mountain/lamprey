@@ -70,9 +70,7 @@ impl ServiceWebhooks {
 
         perms.ensure(Permission::IntegrationsManage)?;
 
-        if !chan.ty.has_text() {
-            return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-        }
+        chan.ensure_has_text()?;
 
         let webhook = data
             .webhook_create(channel_id, auth.user.id, json.clone())

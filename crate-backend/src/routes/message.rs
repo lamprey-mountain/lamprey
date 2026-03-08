@@ -59,9 +59,7 @@ async fn message_create(
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     let message = srv.messages.create(channel_id, &auth, nonce, json).await?;
 
@@ -181,18 +179,12 @@ async fn message_edit(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !thread.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure_unlocked()?;
+    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
+    thread.ensure_has_text()?;
 
     let (_status, message) = srv
         .messages
@@ -262,15 +254,9 @@ async fn message_delete(
         }
     }
 
-    if !thread.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
+    thread.ensure_has_text()?;
     perms.ensure_unlocked()?;
 
     data.message_delete(channel_id, message_id).await?;
@@ -394,19 +380,14 @@ async fn message_version_delete(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
-    if !thread.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_has_text()?;
 
     let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure_unlocked()?;
     perms.ensure(Permission::ViewChannel)?;
+
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
 
     let message = data
         .message_get(channel_id, message_id, auth.user.id)
@@ -527,15 +508,10 @@ async fn message_moderate(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    if !thread.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
+
+    thread.ensure_has_text()?;
     perms.ensure_unlocked()?;
 
     // Check MFA requirement only for messages not authored by the user
@@ -806,16 +782,10 @@ async fn message_pin_create(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !thread.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_has_text()?;
+
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
 
     let created = data.message_pin_create(channel_id, message_id).await?;
 
@@ -935,16 +905,10 @@ async fn message_pin_delete(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !thread.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_has_text()?;
+
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
 
     s.data().message_pin_delete(channel_id, message_id).await?;
 
@@ -1017,16 +981,10 @@ async fn message_pin_reorder(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !thread.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_has_text()?;
+
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
 
     s.data()
         .message_pin_reorder(channel_id, json.clone())

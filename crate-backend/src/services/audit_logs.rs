@@ -61,7 +61,7 @@ impl ServiceAuditLogs {
         }
 
         // NOTE: will this always remove everything?
-        threads.retain(|chan| chan.archived_at.is_none() || chan.ty.is_thread());
+        threads.retain(|chan| !chan.is_archived() || chan.is_thread());
 
         let user_ids: Vec<_> = resolve.users.iter().cloned().collect();
         let users = srv.users.get_many(&user_ids).await?;

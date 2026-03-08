@@ -167,7 +167,7 @@ impl ServiceCache {
         let channels_data = data.channel_list(room_id).await?;
         let channels = DashMap::new();
         for channel in channels_data {
-            if channel.ty.is_thread() {
+            if channel.is_thread() {
                 continue;
             }
             let overwrites = channel
@@ -283,7 +283,7 @@ impl ServiceCache {
     pub async fn reload_channel(&self, room_id: RoomId, channel_id: ChannelId) -> Result<()> {
         if let Some(cached) = self.rooms.get(&room_id).await {
             let channel = self.state.data().channel_get(channel_id).await?;
-            if channel.ty.is_thread() {
+            if channel.is_thread() {
                 let thread_members_vec =
                     self.state.data().thread_member_list_all(channel_id).await?;
                 let members_map = DashMap::new();
@@ -647,7 +647,7 @@ impl ServiceCache {
                             deny: PermissionBits::from(&ow.deny),
                         })
                         .collect();
-                    if channel.ty.is_thread() {
+                    if channel.is_thread() {
                         cached.threads.insert(
                             channel.id,
                             CachedThread {
@@ -681,14 +681,14 @@ impl ServiceCache {
                             deny: PermissionBits::from(&ow.deny),
                         })
                         .collect();
-                    if channel.ty.is_thread() {
-                        if channel.deleted_at.is_some() {
+                    if channel.is_thread() {
+                        if channel.is_removed() {
                             cached.threads.remove(&channel.id);
                         } else if let Some(thread) = cached.threads.get(&channel.id) {
                             let mut t = thread.thread.write().await;
                             *t = *channel.to_owned();
                         }
-                    } else if channel.deleted_at.is_some() {
+                    } else if channel.is_removed() {
                         cached.channels.remove(&channel.id);
                     } else {
                         cached.channels.insert(

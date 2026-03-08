@@ -579,12 +579,8 @@ impl Connection {
                 perms.ensure(Permission::ViewChannel)?;
                 perms.ensure(Permission::VoiceConnect)?;
                 let thread = srv.channels.get(state.channel_id, Some(user_id)).await?;
-                if thread.archived_at.is_some() {
-                    return Err(Error::BadStatic("thread is archived"));
-                }
-                if thread.deleted_at.is_some() {
-                    return Err(Error::BadStatic("thread is removed"));
-                }
+                thread.ensure_unarchived()?;
+                thread.ensure_unremoved()?;
                 perms.ensure_unlocked()?;
                 let old_state = srv.voice.state_get(user_id);
                 let mut state = VoiceState {

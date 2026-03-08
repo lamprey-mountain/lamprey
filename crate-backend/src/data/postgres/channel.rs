@@ -188,7 +188,7 @@ impl DataChannel for Postgres {
         let mut last_activity_at = db_chan.last_activity_at;
         let thread: Channel = db_chan.into();
 
-        if patch.archived == Some(false) && thread.archived_at.is_some() {
+        if patch.archived == Some(false) && thread.is_archived() {
             if let Some(room_id) = thread.room_id {
                 let count: i64 = query_scalar!(
                     "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",

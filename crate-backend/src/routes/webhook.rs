@@ -87,9 +87,7 @@ async fn webhook_list_channel(
         .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
     perms.ensure(Permission::IntegrationsManage)?;
 
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     let webhooks = s
         .data()
@@ -156,9 +154,7 @@ async fn webhook_get(
         .ok_or(ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
     perms.ensure(Permission::IntegrationsManage)?;
 
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     Ok(Json(webhook))
 }
@@ -212,9 +208,7 @@ async fn webhook_delete(
         .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
     perms.ensure(Permission::IntegrationsManage)?;
 
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     s.data().webhook_delete(webhook_id).await?;
 
@@ -405,9 +399,7 @@ async fn webhook_execute(
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     let message = srv
         .messages
@@ -441,9 +433,7 @@ async fn webhook_message_get(
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     let mut message = s
         .data()
@@ -486,9 +476,7 @@ async fn webhook_message_edit(
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     let (status, message) = s
         .services()
@@ -523,9 +511,7 @@ async fn webhook_message_delete(
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_text() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText).into());
-    }
+    chan.ensure_has_text()?;
 
     let message = s
         .data()

@@ -90,9 +90,7 @@ async fn voice_state_patch(
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     };
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_voice() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
-    }
+    chan.ensure_has_voice()?;
 
     // handle move
     if let Some(new_channel_id) = json.channel_id {
@@ -275,9 +273,7 @@ async fn voice_state_disconnect(
         return Ok(StatusCode::NO_CONTENT);
     };
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_voice() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
-    }
+    chan.ensure_has_voice()?;
     let _ = s.broadcast_sfu(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
@@ -324,9 +320,7 @@ async fn voice_state_disconnect_all(
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::VoiceDisconnect)?;
     let thread = srv.channels.get(channel_id, None).await?;
-    if !thread.ty.has_voice() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
-    }
+    thread.ensure_has_voice()?;
     srv.voice.disconnect_everyone(channel_id).await?;
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
@@ -396,9 +390,7 @@ async fn voice_state_move(
     });
 
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_voice() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
-    }
+    chan.ensure_has_voice()?;
     if let Some(room_id) = chan.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MemberMove {
@@ -438,9 +430,7 @@ async fn voice_state_move_bulk(
     perms_source.ensure(Permission::ViewChannel)?;
     perms_source.ensure(Permission::VoiceMove)?;
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_voice() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
-    }
+    chan.ensure_has_voice()?;
 
     Ok(Error::Unimplemented)
 }
@@ -466,9 +456,7 @@ async fn voice_state_list(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let chan = srv.channels.get(channel_id, None).await?;
-    if !chan.ty.has_voice() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice).into());
-    }
+    chan.ensure_has_voice()?;
     let states: Vec<_> = srv
         .voice
         .state_list()

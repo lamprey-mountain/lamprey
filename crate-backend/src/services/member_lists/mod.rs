@@ -72,7 +72,7 @@ impl ServiceMemberLists {
             MemberListKey1::Room(room_id) => Ok(MemberListKey::Room(room_id)),
             MemberListKey1::RoomChannel(room_id, channel_id) => {
                 let chan = srv.channels.get(channel_id, None).await?;
-                if chan.ty.is_thread() && chan.ty.member_list_uses_thread_members() {
+                if chan.is_thread() && chan.ty.member_list_uses_thread_members() {
                     return Ok(MemberListKey::RoomThread(
                         room_id,
                         MemberListVisibility::default(),

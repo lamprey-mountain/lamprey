@@ -115,6 +115,8 @@ async fn thread_member_add(
     let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
     if target_user_id != auth.user.id {
         if !thread.invitable {
             perms.ensure(Permission::MemberKick)?;
@@ -122,12 +124,6 @@ async fn thread_member_add(
     }
     if !thread.ty.has_members() {
         return Err(ApiError::from_code(ErrorCode::CannotEditThreadMemberList).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 
@@ -249,19 +245,15 @@ async fn thread_member_delete(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
     perms.ensure(Permission::ViewChannel)?;
+    let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
     if target_user_id != auth.user.id {
         perms.ensure(Permission::MemberKick)?;
     }
 
-    let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
     if !thread.ty.has_members() {
         return Err(ApiError::from_code(ErrorCode::CannotEditThreadMemberList).into());
-    }
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
     }
     perms.ensure_unlocked()?;
 

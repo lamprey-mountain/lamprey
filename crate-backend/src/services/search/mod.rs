@@ -119,7 +119,7 @@ impl ServiceSearch {
                 .await?;
             for chan in channels {
                 channel_room_map.insert(chan.id, chan.room_id);
-                if chan.ty.is_thread() && chan.archived_at.is_some() {
+                if chan.is_thread() && chan.is_archived() {
                     threads.push(chan);
                 }
             }

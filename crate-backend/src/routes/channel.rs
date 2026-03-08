@@ -171,9 +171,7 @@ async fn channel_create_dm(
     }
 
     if let Some(icon) = json.icon {
-        if json.ty != ChannelType::Gdm {
-            return Err(ApiError::from_code(ErrorCode::OnlyGdmCanHaveIcons).into());
-        }
+        json.ty.ensure_has_icon()?;
         let media = data.media_select(icon).await?;
         if !media.metadata.is_image() {
             return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
@@ -576,7 +574,7 @@ async fn channel_remove(
 
     let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    if chan_before.ty.is_thread() {
+    if chan_before.is_thread() {
         perms.ensure(Permission::ThreadManage)?;
     } else {
         perms.ensure(Permission::ChannelManage)?;
@@ -597,7 +595,7 @@ async fn channel_remove(
         }
 
         let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-        if chan_before.deleted_at.is_some() {
+        if chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
         data.channel_delete(channel_id).await?;
@@ -625,7 +623,7 @@ async fn channel_remove(
         .await?;
     } else {
         let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-        if chan_before.deleted_at.is_some() {
+        if chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
         data.channel_delete(channel_id).await?;
@@ -669,13 +667,13 @@ async fn channel_restore(
         }
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-        if channel.ty.is_thread() {
+        if channel.is_thread() {
             perms.ensure(Permission::ThreadManage)?;
         } else {
             perms.ensure(Permission::ChannelManage)?;
         }
         let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-        if chan_before.deleted_at.is_none() {
+        if !chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
         data.channel_undelete(channel_id).await?;
@@ -702,13 +700,13 @@ async fn channel_restore(
         .await?;
     } else {
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-        if channel.ty.is_thread() {
+        if channel.is_thread() {
             perms.ensure(Permission::ThreadManage)?;
         } else {
             perms.ensure(Permission::ChannelManage)?;
         }
         let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-        if chan_before.deleted_at.is_none() {
+        if !chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
         data.channel_undelete(channel_id).await?;
@@ -743,12 +741,8 @@ async fn channel_typing(
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::MessageCreate)?;
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if thread.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if thread.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    thread.ensure_unarchived()?;
+    thread.ensure_unremoved()?;
     perms.ensure_unlocked()?;
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     srv.channels

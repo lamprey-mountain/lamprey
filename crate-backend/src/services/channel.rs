@@ -89,7 +89,7 @@ impl ServiceChannels {
         // fetch thread members for thread channels
         let thread_channels: Vec<_> = channels
             .iter()
-            .filter(|c| c.ty.is_thread())
+            .filter(|c| c.is_thread())
             .map(|c| c.id)
             .collect();
 
@@ -118,7 +118,7 @@ impl ServiceChannels {
                 channel.preferences = Some(config.clone());
             }
 
-            if channel.ty.is_thread() {
+            if channel.is_thread() {
                 if let Some(member) = thread_member_map.get(&channel.id) {
                     channel.thread_member = Some(Box::new(member.clone()));
                 }
@@ -448,29 +448,25 @@ impl ServiceChannels {
         if json.bitrate.is_some_and(|b| b > 393216) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
-        if !json.ty.has_voice() && json.bitrate.is_some() {
-            return Err(Error::BadStatic("cannot set bitrate for non voice channel"));
+        if json.bitrate.is_some() {
+            json.ty.ensure_has_voice()?;
         }
-        if !json.ty.has_voice() && json.user_limit.is_some() {
-            return Err(Error::BadStatic(
-                "cannot set user_limit for non voice channel",
-            ));
+        if json.user_limit.is_some() {
+            json.ty.ensure_has_voice()?;
         }
-        if !json.ty.has_icon() && json.icon.is_some() {
-            return Err(Error::BadStatic("this channel type cannot have an icon"));
+        if json.icon.is_some() {
+            json.ty.ensure_has_icon()?;
         }
-        if !json.ty.has_url() && json.url.is_some() {
-            return Err(Error::BadStatic("cannot set url for non info channel"));
+        if json.url.is_some() {
+            json.ty.ensure_has_url()?;
         }
 
-        if json.default_auto_archive_duration.is_some() && !json.ty.has_threads() {
-            return Err(Error::BadStatic("channel does not have threads"));
+        if json.default_auto_archive_duration.is_some() {
+            json.ty.ensure_has_threads()?;
         }
 
-        if json.auto_archive_duration.is_some() && !json.ty.is_thread() {
-            return Err(Error::BadStatic(
-                "auto_archive_duration can only be set on threads",
-            ));
+        if json.auto_archive_duration.is_some() {
+            json.ty.ensure_is_thread()?;
         }
 
         if json.ty == ChannelType::Forum2 && json.starter_message.is_none() {
@@ -479,10 +475,8 @@ impl ServiceChannels {
             ));
         }
 
-        if json.starter_message.is_some() && !json.ty.is_thread() {
-            return Err(Error::BadStatic(
-                "starter_message can only be used with thread channels",
-            ));
+        if json.starter_message.is_some() {
+            json.ty.ensure_is_thread()?;
         }
 
         if let Some(icon) = json.icon {
@@ -851,7 +845,7 @@ impl ServiceChannels {
         let data = self.state.data();
         let srv = self.state.services();
         let chan_old = srv.channels.get(thread_id, None).await?;
-        if chan_old.archived_at.is_some() {
+        if chan_old.is_archived() {
             let can_unarchive = patch.archived == Some(false);
             let mut other_changes = patch.clone();
             other_changes.archived = None;
@@ -861,7 +855,7 @@ impl ServiceChannels {
                 return Err(Error::BadStatic("thread is archived"));
             }
         }
-        if chan_old.deleted_at.is_some() {
+        if chan_old.is_removed() {
             return Err(Error::BadStatic("thread is removed"));
         }
 
@@ -872,7 +866,7 @@ impl ServiceChannels {
         other_changes.archived = None;
         other_changes.locked = None;
         if other_changes.changes(&chan_old) {
-            if chan_old.ty.is_thread() {
+            if chan_old.is_thread() {
                 if chan_old.creator_id != auth.user.id {
                     perms.ensure(Permission::ThreadEdit)?;
                 }
@@ -908,7 +902,7 @@ impl ServiceChannels {
                 return Err(Error::BadStatic("invalid channel type change"));
             }
 
-            if chan_old.ty.is_thread() && new_ty.is_thread() && chan_old.ty != new_ty {
+            if chan_old.is_thread() && new_ty.is_thread() && chan_old.ty != new_ty {
                 perms.ensure(Permission::ThreadManage)?;
             }
         }
@@ -951,30 +945,23 @@ impl ServiceChannels {
         if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
-        if !chan_old.ty.has_voice() && patch.bitrate.is_some() {
-            return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
+        if patch.bitrate.is_some() {
+            chan_old.ensure_has_voice()?;
         }
-        if !chan_old.ty.has_voice() && patch.user_limit.is_some() {
-            return Err(Error::BadStatic(
-                "cannot set user_limit for non voice thread",
-            ));
+        if patch.user_limit.is_some() {
+            chan_old.ensure_has_voice()?;
         }
-        if !chan_old.ty.has_url() && patch.url.is_some() {
-            return Err(Error::BadStatic("cannot set url for non info channel"));
+        if patch.url.is_some() {
+            chan_old.ensure_has_url()?;
         }
 
-        if patch
-            .archived
-            .is_some_and(|a| a != chan_old.archived_at.is_some())
-        {
-            if !chan_old.ty.is_thread() {
-                return Err(Error::BadStatic("not a thread"));
-            }
+        if patch.archived.is_some_and(|a| a != chan_old.is_archived()) {
+            chan_old.ensure_is_thread()?;
             data.thread_member_get(thread_id, auth.user.id).await?;
         }
 
         if patch.locked.as_ref().is_some_and(|a| a != &chan_old.locked) {
-            if chan_old.ty.is_thread() {
+            if chan_old.is_thread() {
                 perms.ensure(Permission::ThreadLock)?;
             } else {
                 perms.ensure(Permission::ChannelManage)?;
@@ -982,9 +969,7 @@ impl ServiceChannels {
         }
 
         if let Some(Some(icon)) = patch.icon {
-            if chan_old.ty.has_icon() {
-                return Err(Error::BadStatic("this channel doesnt have an icon"));
-            }
+            chan_old.ensure_has_icon()?;
             let media = data.media_select(icon).await?;
             if !media.metadata.is_image() {
                 return Err(Error::BadStatic("media not an image"));
@@ -992,7 +977,7 @@ impl ServiceChannels {
         }
 
         if let Some(tags) = &patch.tags {
-            if !chan_old.ty.is_taggable() {
+            if !chan_old.is_taggable() {
                 return Err(Error::BadStatic("channel is not taggable"));
             }
             perms.ensure(Permission::TagApply)?;
@@ -1038,14 +1023,12 @@ impl ServiceChannels {
             }
         }
 
-        if patch.default_auto_archive_duration.is_some() && !chan_old.ty.has_threads() {
-            return Err(Error::BadStatic("channel does not have threads"));
+        if patch.default_auto_archive_duration.is_some() {
+            chan_old.ensure_has_threads()?;
         }
 
-        if patch.auto_archive_duration.is_some() && !chan_old.ty.is_thread() {
-            return Err(Error::BadStatic(
-                "auto_archive_duration can only be set on threads",
-            ));
+        if patch.auto_archive_duration.is_some() {
+            chan_old.ensure_is_thread()?;
         }
 
         // update and refetch
@@ -1070,11 +1053,7 @@ impl ServiceChannels {
                     .change("nsfw", &chan_old.nsfw, &chan_new.nsfw)
                     .change("bitrate", &chan_old.bitrate, &chan_new.bitrate)
                     .change("user_limit", &chan_old.user_limit, &chan_new.user_limit)
-                    .change(
-                        "archived",
-                        &chan_old.archived_at.is_some(),
-                        &chan_new.archived_at.is_some(),
-                    )
+                    .change("archived", &chan_old.is_archived(), &chan_new.is_archived())
                     .change("locked", &chan_old.locked, &chan_new.locked)
                     .change("tags", &chan_old.tags, &chan_new.tags)
                     .change("parent_id", &chan_old.parent_id, &chan_new.parent_id)

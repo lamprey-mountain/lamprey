@@ -101,6 +101,16 @@ pub struct Room {
     pub remote: Option<Remote>,
 }
 
+impl Room {
+    pub fn is_archived(&self) -> bool {
+        self.archived_at.is_some()
+    }
+
+    pub fn is_removed(&self) -> bool {
+        self.deleted_at.is_some()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

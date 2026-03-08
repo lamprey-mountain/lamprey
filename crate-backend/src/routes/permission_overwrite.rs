@@ -51,15 +51,11 @@ async fn permission_overwrite(
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
     let channel = srv.channels.get(channel_id, None).await?;
-    if channel.ty.is_thread() {
+    if channel.is_thread() {
         return Err(ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into());
     }
-    if channel.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if channel.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    channel.ensure_unarchived()?;
+    channel.ensure_unremoved()?;
     perms.ensure_unlocked()?;
 
     if let Some(room_id) = channel.room_id {
@@ -192,12 +188,8 @@ async fn permission_delete(
     perms.ensure(Permission::RoleManage)?;
 
     let channel = srv.channels.get(channel_id, None).await?;
-    if channel.archived_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
-    }
-    if channel.deleted_at.is_some() {
-        return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
-    }
+    channel.ensure_unarchived()?;
+    channel.ensure_unremoved()?;
     perms.ensure_unlocked()?;
 
     let existing = if let Some(existing) = channel

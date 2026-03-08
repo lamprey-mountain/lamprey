@@ -7,6 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::preferences::PreferencesChannel;
 use crate::v1::types::tag::Tag;
 use crate::v1::types::util::Time;
@@ -345,22 +346,18 @@ impl Serialize for Channel {
             nsfw: self.nsfw,
             last_version_id: self.last_version_id,
             last_message_id: self.last_message_id,
-            message_count: if self.ty.has_text() {
+            message_count: if self.has_text() {
                 self.message_count
             } else {
                 None
             },
-            root_message_count: if self.ty.has_text() {
+            root_message_count: if self.has_text() {
                 self.root_message_count
             } else {
                 None
             },
-            bitrate: if self.ty.has_voice() {
-                self.bitrate
-            } else {
-                None
-            },
-            user_limit: if self.ty.has_voice() {
+            bitrate: if self.has_voice() { self.bitrate } else { None },
+            user_limit: if self.has_voice() {
                 self.user_limit
             } else {
                 None
@@ -369,72 +366,72 @@ impl Serialize for Channel {
             last_read_id: self.last_read_id.clone(),
             mention_count: self.mention_count,
             preferences: self.preferences.as_ref(),
-            document: if self.ty == ChannelType::Document {
+            document: if self.has_document() {
                 self.document.as_ref()
             } else {
                 None
             },
-            wiki: if self.ty == ChannelType::Wiki {
+            wiki: if self.has_wiki() {
                 self.wiki.as_ref()
             } else {
                 None
             },
-            calendar: if self.ty == ChannelType::Calendar {
+            calendar: if self.has_calendar() {
                 self.calendar.as_ref()
             } else {
                 None
             },
-            recipients: if matches!(self.ty, ChannelType::Dm | ChannelType::Gdm) {
+            recipients: if self.has_recipients() {
                 Some(&self.recipients)
             } else {
                 None
             },
-            icon: if self.ty == ChannelType::Gdm {
+            icon: if self.has_icon() {
                 Some(self.icon)
             } else {
                 None
             },
-            invitable: if self.ty.is_thread() {
+            invitable: if self.is_thread() {
                 self.invitable
             } else {
                 false
             },
-            thread_member: if self.ty.is_thread() {
-                self.thread_member.as_deref()
+            thread_member: if self.is_thread() {
+                self.thread_member.as_ref().map(|v| &**v)
             } else {
                 None
             },
-            auto_archive_duration: if self.ty.is_thread() {
+            auto_archive_duration: if self.is_thread() {
                 self.auto_archive_duration
             } else {
                 None
             },
-            default_auto_archive_duration: if self.ty.has_threads() {
+            default_auto_archive_duration: if self.has_threads() {
                 self.default_auto_archive_duration
             } else {
                 None
             },
-            slowmode_thread: if self.ty.has_threads() {
+            slowmode_thread: if self.has_threads() {
                 self.slowmode_thread
             } else {
                 None
             },
-            slowmode_message: if self.ty.has_text() {
+            slowmode_message: if self.has_text() {
                 self.slowmode_message
             } else {
                 None
             },
-            default_slowmode_message: if self.ty.has_threads() {
+            default_slowmode_message: if self.has_threads() {
                 self.default_slowmode_message
             } else {
                 None
             },
-            slowmode_thread_expire_at: if self.ty.has_threads() {
+            slowmode_thread_expire_at: if self.has_threads() {
                 self.slowmode_thread_expire_at
             } else {
                 None
             },
-            slowmode_message_expire_at: if self.ty.has_text() {
+            slowmode_message_expire_at: if self.has_text() {
                 self.slowmode_message_expire_at
             } else {
                 None
@@ -831,9 +828,7 @@ impl Diff<Channel> for ChannelPatch {
             || self.parent_id.changes(&other.parent_id)
             || self.locked.changes(&other.locked)
             || self.invitable.changes(&other.invitable)
-            || self
-                .archived
-                .is_some_and(|a| a != other.archived_at.is_some())
+            || self.archived.is_some_and(|a| a != other.is_archived())
             || self
                 .auto_archive_duration
                 .changes(&other.auto_archive_duration)
@@ -896,6 +891,102 @@ impl Channel {
         }
         false
     }
+
+    pub fn is_archived(&self) -> bool {
+        self.archived_at.is_some()
+    }
+
+    pub fn ensure_unarchived(&self) -> Result<(), ApiError> {
+        if self.is_archived() {
+            Err(ApiError::from_code(ErrorCode::ChannelArchived))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn is_removed(&self) -> bool {
+        self.deleted_at.is_some()
+    }
+
+    pub fn ensure_unremoved(&self) -> Result<(), ApiError> {
+        if self.is_removed() {
+            Err(ApiError::from_code(ErrorCode::ChannelRemoved))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn is_thread(&self) -> bool {
+        self.ty.is_thread()
+    }
+
+    pub fn is_taggable(&self) -> bool {
+        self.ty.is_taggable()
+    }
+
+    pub fn has_document(&self) -> bool {
+        self.ty.has_document()
+    }
+
+    pub fn has_wiki(&self) -> bool {
+        self.ty.has_wiki()
+    }
+
+    pub fn has_recipients(&self) -> bool {
+        matches!(self.ty, ChannelType::Dm | ChannelType::Gdm)
+    }
+
+    pub fn has_calendar(&self) -> bool {
+        self.ty.has_calendar()
+    }
+
+    pub fn has_url(&self) -> bool {
+        self.ty.has_url()
+    }
+
+    pub fn has_icon(&self) -> bool {
+        self.ty.has_icon()
+    }
+
+    pub fn has_threads(&self) -> bool {
+        self.ty.has_threads()
+    }
+
+    pub fn has_text(&self) -> bool {
+        self.ty.has_text()
+    }
+
+    pub fn ensure_has_text(&self) -> Result<(), ApiError> {
+        self.ty.ensure_has_text()
+    }
+
+    pub fn has_voice(&self) -> bool {
+        self.ty.has_voice()
+    }
+
+    pub fn ensure_has_voice(&self) -> Result<(), ApiError> {
+        self.ty.ensure_has_voice()
+    }
+
+    pub fn ensure_has_icon(&self) -> Result<(), ApiError> {
+        self.ty.ensure_has_icon()
+    }
+
+    pub fn ensure_is_thread(&self) -> Result<(), ApiError> {
+        self.ty.ensure_is_thread()
+    }
+
+    pub fn ensure_has_calendar(&self) -> Result<(), ApiError> {
+        self.ty.ensure_has_calendar()
+    }
+
+    pub fn ensure_has_url(&self) -> Result<(), ApiError> {
+        self.ty.ensure_has_url()
+    }
+
+    pub fn ensure_has_threads(&self) -> Result<(), ApiError> {
+        self.ty.ensure_has_threads()
+    }
 }
 
 impl ChannelType {
@@ -904,6 +995,14 @@ impl ChannelType {
             self,
             ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2
         )
+    }
+
+    pub fn ensure_is_thread(&self) -> Result<(), ApiError> {
+        if self.is_thread() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::InvalidThreadType))
+        }
     }
 
     pub fn has_members(&self) -> bool {
@@ -926,6 +1025,14 @@ impl ChannelType {
                 | ChannelType::Voice
                 | ChannelType::Broadcast
         )
+    }
+
+    pub fn ensure_has_text(&self) -> Result<(), ApiError> {
+        if self.has_text() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveText))
+        }
     }
 
     /// whether public threads can be created inside this channel
@@ -957,12 +1064,36 @@ impl ChannelType {
         self.has_public_threads() || self.has_private_threads() || self.has_forum2_threads()
     }
 
+    pub fn ensure_has_threads(&self) -> Result<(), ApiError> {
+        if self.has_threads() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::InvalidData))
+        }
+    }
+
     pub fn has_voice(&self) -> bool {
         matches!(self, ChannelType::Voice | ChannelType::Broadcast)
     }
 
+    pub fn ensure_has_voice(&self) -> Result<(), ApiError> {
+        if self.has_voice() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::ChannelDoesntHaveVoice))
+        }
+    }
+
     pub fn has_url(&self) -> bool {
         matches!(self, ChannelType::Info)
+    }
+
+    pub fn ensure_has_url(&self) -> Result<(), ApiError> {
+        if self.has_url() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::InvalidData))
+        }
     }
 
     /// for a thread to be taggable, it must be in a channel with has_tags
@@ -984,13 +1115,38 @@ impl ChannelType {
         matches!(self, ChannelType::Gdm)
     }
 
+    pub fn ensure_has_icon(&self) -> Result<(), ApiError> {
+        if self.has_icon() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::OnlyGdmCanHaveIcons))
+        }
+    }
+
     /// if voice connections in this channel act like calls
     pub fn has_call(&self) -> bool {
         matches!(self, ChannelType::Dm | ChannelType::Gdm)
     }
 
+    pub fn has_document(&self) -> bool {
+        matches!(self, ChannelType::Document)
+    }
+
+    pub fn has_wiki(&self) -> bool {
+        matches!(self, ChannelType::Wiki)
+    }
+
     pub fn has_calendar(&self) -> bool {
         matches!(self, ChannelType::Calendar)
+    }
+
+    pub fn ensure_has_calendar(&self) -> Result<(), ApiError> {
+        if self.has_calendar() {
+            Ok(())
+        } else {
+            // NOTE: Using a generic error as there isn't a specific one for calendar yet
+            Err(ApiError::from_code(ErrorCode::InvalidData))
+        }
     }
 
     pub fn has_permission_overwrites(&self) -> bool {
