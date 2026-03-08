@@ -4,6 +4,7 @@ import {
 	MessageReady,
 	MessageSync,
 	Session,
+    Preferences,
 } from "sdk";
 import { Accessor, createSignal } from "solid-js";
 import { RoomsService } from "../services/RoomsService";
@@ -14,6 +15,7 @@ import { SessionsService } from "../services/SessionsService";
 import { RoomMembersService } from "../services/RoomMembersService";
 import { ThreadMembersService } from "../services/ThreadMembersService";
 import { MessagesService } from "../services/MessagesService";
+import { NotificationService } from "../services/NotificationService";
 import { Emitter } from "@solid-primitives/event-bus";
 
 export class RootStore {
@@ -26,9 +28,13 @@ export class RootStore {
 	roomMembers: RoomMembersService;
 	threadMembers: ThreadMembersService;
 	messages: MessagesService;
+    notifications: NotificationService;
 
 	session: Accessor<Session | null>;
 	setSession: (s: Session | null) => void;
+    
+    preferences?: Accessor<Preferences>;
+    setPreferences?: (p: Preferences) => void;
 
 	constructor(
 		client: Client,
@@ -36,8 +42,13 @@ export class RootStore {
 			sync: [MessageSync, MessageEnvelope];
 			ready: MessageReady;
 		}>,
+        preferences?: Accessor<Preferences>,
+        setPreferences?: (p: Preferences) => void
 	) {
 		this.client = client;
+        this.preferences = preferences;
+        this.setPreferences = setPreferences;
+        
 		const [session, setSession] = createSignal<Session | null>(null);
 		this.session = session;
 		this.setSession = setSession;
@@ -50,6 +61,7 @@ export class RootStore {
 		this.roomMembers = new RoomMembersService(this);
 		this.threadMembers = new ThreadMembersService(this);
 		this.messages = new MessagesService(this);
+        this.notifications = new NotificationService(this);
 
 		events.on("sync", ([msg, raw]) => this.handleSync(msg, raw));
 		events.on("ready", (msg) => this.handleReady(msg));
@@ -76,9 +88,12 @@ export class RootStore {
 			for (const role of msg.roles) {
 				this.roles.upsert(role);
 			}
-			for (const member of msg.room_members) {
-				this.roomMembers.upsert(member);
-			}
+            for (const member of msg.room_members) {
+                this.roomMembers.upsert(member);
+            }
+            if (msg.config && this.setPreferences) {
+                this.setPreferences(msg.config);
+            }
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			this.rooms.upsert(msg.room);
 		} else if (
@@ -111,55 +126,45 @@ export class RootStore {
 			if (msg.session?.id === this.session()?.id) {
 				this.setSession(msg.session);
 			}
-		} else if (
-			msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate"
-		) {
-			this.roomMembers.upsert(msg.member);
-		} else if (msg.type === "RoomMemberDelete") {
-			// RoomMember doesn't have a simple ID to delete, but we can assume we might want to remove it
-			// if we were tracking it. However, the cache uses `room_id:user_id`.
-			const key = this.roomMembers.getKey(
-				msg.room_id as any,
-				msg.user_id as any,
-			); // hack or use helper
-			// Actually BaseService key generator for RoomMember uses item properties.
-			// We can construct a fake item or expose getKey helper.
-			this.roomMembers.cache.delete(`${msg.room_id}:${msg.user_id}`);
-		} else if (msg.type === "ThreadMemberUpsert") {
-			for (const member of msg.added) {
-				this.threadMembers.upsert(member);
-			}
-			for (const user_id of msg.removed) {
-				this.threadMembers.cache.delete(`${msg.thread_id}:${user_id}`);
-			}
-		} else if (msg.type === "MessageCreate") {
-			// Need to pass to MessagesService to update ranges
-			this.messages.upsert(msg.message as any); // Cast because SDK type mismatch?
-			// Actually MessagesService expects Message.
-			const m = msg.message as any;
-			if (raw.op === "Sync") m.nonce = raw.nonce;
-
-			// Check mentions etc (logic from api.tsx) - Skipping for now to focus on data sync
-
-			const ranges = this.messages.cacheRanges.get(m.channel_id);
-			if (ranges) {
-				if (m.nonce) {
-					// Local echo handling - specialized logic inside MessagesService or here?
-					// Ideally MessagesService handles this.
-				}
-				ranges.live.items.push(m);
-				this.messages.updateMutators(m.channel_id);
-			}
-		} else if (msg.type === "MessageUpdate") {
-			const m = msg.message as any;
-			this.messages.upsert(m);
-			const ranges = this.messages.cacheRanges.get(m.channel_id);
-			if (ranges) {
-				const idx = ranges.live.items.findIndex((i) => i.id === m.id);
-				if (idx !== -1) ranges.live.items[idx] = m;
-				this.messages.updateMutators(m.channel_id);
-			}
-		}
-		// TODO: MessageDelete, etc.
+		} else if (msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate") {
+            this.roomMembers.upsert(msg.member);
+        } else if (msg.type === "RoomMemberDelete") {
+            this.roomMembers.cache.delete(`${msg.room_id}:${msg.user_id}`);
+        } else if (msg.type === "ThreadMemberUpsert") {
+            for (const member of msg.added) {
+                this.threadMembers.upsert(member);
+            }
+            for (const user_id of msg.removed) {
+                this.threadMembers.cache.delete(`${msg.thread_id}:${user_id}`);
+            }
+        } else if (msg.type === "MessageCreate") {
+            const m = msg.message as any;
+            if (raw.op === "Sync") m.nonce = raw.nonce;
+            
+            this.messages.upsert(m);
+            const ranges = this.messages.cacheRanges.get(m.channel_id);
+            if (ranges) {
+                if (m.nonce) {
+                     // Local echo handling - specialized logic inside MessagesService or here?
+                     // Ideally MessagesService handles this.
+                }
+                ranges.live.items.push(m);
+                this.messages.updateMutators(m.channel_id);
+            }
+            this.notifications.handleMessageCreate(m);
+        } else if (msg.type === "MessageUpdate") {
+            const m = msg.message as any;
+            this.messages.upsert(m);
+            const ranges = this.messages.cacheRanges.get(m.channel_id);
+            if (ranges) {
+                const idx = ranges.live.items.findIndex((i) => i.id === m.id);
+                if (idx !== -1) ranges.live.items[idx] = m;
+                this.messages.updateMutators(m.channel_id);
+            }
+        } else if (msg.type === "PreferencesGlobal") {
+            if (msg.user_id === this.session()?.user_id && this.setPreferences) {
+                this.setPreferences(msg.config);
+            }
+        }
 	}
 }

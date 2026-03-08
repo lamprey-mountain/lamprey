@@ -140,7 +140,6 @@ export class MessagesService extends BaseService<Message> {
 	private _mutators = new Set<MessageMutator>();
 
 	async fetch(id: string): Promise<Message> {
-		// Usually we don't fetch single messages by ID without thread_id context in current API
 		throw new Error("Use fetchInThread(thread_id, message_id)");
 	}
 
@@ -157,8 +156,10 @@ export class MessagesService extends BaseService<Message> {
 		return data as Message;
 	}
 
-	// This is the main "list" method used by the chat view
-	list(
+	/**
+	 * Reactively fetch and list messages.
+	 */
+	useList(
 		thread_id_signal: Accessor<string>,
 		dir_signal: Accessor<MessageListAnchor>,
 	): Resource<MessageRange> {
@@ -186,10 +187,6 @@ export class MessagesService extends BaseService<Message> {
 					this.cacheRanges.set(thread_id, ranges);
 				}
 
-				// The logic here is identical to api/messages.ts `list` method
-				// Simplified for brevity in this first pass, but ideally we copy the logic exactly
-				// to maintain behavior.
-
 				return await this.resolveRange(thread_id, dir, ranges);
 			},
 		);
@@ -208,12 +205,51 @@ export class MessagesService extends BaseService<Message> {
 		return resource;
 	}
 
+	private getSlice(ranges: MessageRanges, dir: MessageListAnchor): MessageRange | undefined {
+		if (dir.type === "forwards") {
+			if (dir.message_id) {
+				const r = ranges.find(dir.message_id);
+				if (!r) return undefined;
+				const idx = r.items.findIndex((i) => i.id === dir.message_id);
+				if (idx === -1) return undefined;
+				return r.slice(idx, Math.min(idx + dir.limit, r.len));
+			} else {
+				const r = Array.from(ranges.ranges).find((r) => !r.has_backwards);
+				if (!r) return undefined;
+				return r.slice(0, Math.min(dir.limit, r.len));
+			}
+		} else if (dir.type === "backwards") {
+			if (dir.message_id) {
+				const r = ranges.find(dir.message_id);
+				if (!r) return undefined;
+				const idx = r.items.findIndex((i) => i.id === dir.message_id);
+				if (idx === -1) return undefined;
+				const end = idx + 1;
+				return r.slice(Math.max(end - dir.limit, 0), end);
+			} else {
+				const r = ranges.live;
+				const start = Math.max(r.len - dir.limit, 0);
+				return r.slice(start, Math.min(start + dir.limit, r.len));
+			}
+		} else { // context
+			const r = ranges.findNearest(dir.message_id);
+			if (!r) return undefined;
+			let idx = r.items.findIndex((i) => i.id === dir.message_id);
+			if (idx === -1) idx = r.items.findIndex((i) => i.id > dir.message_id);
+			if (idx === -1) return undefined;
+			return r.slice(
+				Math.max(idx - dir.limit, 0),
+				Math.min(idx + dir.limit, r.len),
+			);
+		}
+	}
+
 	private async resolveRange(
 		thread_id: string,
 		dir: MessageListAnchor,
 		ranges: MessageRanges,
 	): Promise<MessageRange> {
-		// Ported logic from api/messages.ts
+		// 1. Fetch Phase: Fill holes
 		if (dir.type === "forwards") {
 			if (dir.message_id) {
 				const r = ranges.find(dir.message_id);
@@ -376,36 +412,10 @@ export class MessagesService extends BaseService<Message> {
 			}
 		}
 
-		// Return slice
-		if (dir.type === "forwards") {
-			if (dir.message_id) {
-				const r = ranges.find(dir.message_id)!;
-				const idx = r.items.findIndex((i) => i.id === dir.message_id);
-				return r.slice(idx, Math.min(idx + dir.limit, r.len));
-			} else {
-				const r = Array.from(ranges.ranges).find((r) => !r.has_backwards)!;
-				return r.slice(0, Math.min(dir.limit, r.len));
-			}
-		} else if (dir.type === "backwards") {
-			if (dir.message_id) {
-				const r = ranges.find(dir.message_id)!;
-				const idx = r.items.findIndex((i) => i.id === dir.message_id);
-				const end = idx + 1;
-				return r.slice(Math.max(end - dir.limit, 0), end);
-			} else {
-				const r = ranges.live;
-				const start = Math.max(r.len - dir.limit, 0);
-				return r.slice(start, Math.min(start + dir.limit, r.len));
-			}
-		} else { // context
-			const r = ranges.findNearest(dir.message_id)!;
-			let idx = r.items.findIndex((i) => i.id === dir.message_id);
-			if (idx === -1) idx = r.items.findIndex((i) => i.id > dir.message_id);
-			return r.slice(
-				Math.max(idx - dir.limit, 0),
-				Math.min(idx + dir.limit, r.len),
-			);
-		}
+		// 2. Read Phase: Get slice
+        const slice = this.getSlice(ranges, dir);
+        if (!slice) throw new Error("Failed to resolve message range");
+        return slice;
 	}
 
 	// Update Mutators (Called by Store on sync events)
@@ -415,35 +425,10 @@ export class MessagesService extends BaseService<Message> {
 
 		for (const mut of this._mutators) {
 			if (mut.thread_id !== thread_id) continue;
-			// Simplified update logic - assumes logic similar to original implementation
-			if (mut.query.type === "backwards" && !mut.query.message_id) {
-				const start = Math.max(ranges.live.len - mut.query.limit, 0);
-				mut.mutate(ranges.live.slice(start, ranges.live.len));
-				continue;
-			}
-
-			if (mut.query.message_id) {
-				const range = ranges.find(mut.query.message_id);
-				if (range && !range.has_forward) {
-					const idx = range.items.findIndex((i) =>
-						i.id === mut.query.message_id
-					);
-					if (idx !== -1) {
-						let s = 0, e = 0;
-						if (mut.query.type === "forwards") {
-							s = idx;
-							e = Math.min(idx + mut.query.limit, range.len);
-						} else if (mut.query.type === "backwards") {
-							e = idx + 1;
-							s = Math.max(e - mut.query.limit, 0);
-						} else { // context
-							s = Math.max(idx - mut.query.limit, 0);
-							e = Math.min(idx + mut.query.limit, range.len);
-						}
-						mut.mutate(range.slice(s, e));
-					}
-				}
-			}
+            const slice = this.getSlice(ranges, mut.query);
+            if (slice) {
+                mut.mutate(slice);
+            }
 		}
 	}
 
@@ -483,6 +468,69 @@ export class MessagesService extends BaseService<Message> {
 			})
 		);
 		return data as Message;
+	}
+
+    async edit(thread_id: string, message_id: string, content: string) {
+		const originalMessage = this.cache.get(message_id);
+		if (originalMessage) {
+			const updatedMessage = {
+				...originalMessage,
+				latest_version: {
+					...originalMessage.latest_version,
+					content: content,
+					created_at: new Date().toISOString(),
+					version_id: uuidv7(),
+				},
+				is_local: true,
+			} as unknown as Message;
+			this.cache.set(message_id, updatedMessage);
+			const ranges = this.cacheRanges.get(thread_id);
+			if (ranges) {
+				const range = ranges.find(message_id);
+				if (range) {
+					const index = range.items.findIndex((m) => m.id === message_id);
+					if (index !== -1) {
+						range.items[index] = updatedMessage;
+						this.updateMutators(thread_id);
+					}
+				}
+			}
+		}
+
+		try {
+			const { data, error } = await this.client.http.PATCH(
+				"/api/v1/channel/{channel_id}/message/{message_id}",
+				{
+					params: { path: { channel_id: thread_id, message_id } },
+					body: { content },
+				},
+			);
+			if (error) throw error;
+			return data as Message;
+		} catch (e) {
+			if (originalMessage) {
+				this.cache.set(message_id, originalMessage);
+				const ranges = this.cacheRanges.get(thread_id);
+				if (ranges) {
+					this.updateMutators(thread_id);
+				}
+			}
+			throw e;
+		}
+	}
+
+	async deleteBulk(thread_id: string, message_ids: string[]) {
+		await this.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+			params: { path: { channel_id: thread_id } },
+			body: { delete: message_ids },
+		});
+	}
+
+	async removeBulk(thread_id: string, message_ids: string[]) {
+		await this.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+			params: { path: { channel_id: thread_id } },
+			body: { remove: message_ids },
+		});
 	}
 
 	// Helpers

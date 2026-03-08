@@ -1,5 +1,5 @@
 import { createMemo, Match, Show, Switch } from "solid-js";
-import { useApi } from "./api.tsx";
+import { useApi, useRoomMembers2 } from "./api.tsx";
 import type { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
@@ -33,13 +33,12 @@ export function renderTimelineItem(
 	switch (item.type) {
 		case "message": {
 			const ctx = useCtx();
-			const api = useApi();
+			const roomMembersService = useRoomMembers2();
 			const [ch] = useChannel()!;
-			const room_member = createMemo(() => {
-				const me = currentUser();
-				if (!me || !thread.room_id) return null;
-				return api.room_members.fetch(() => thread.room_id!, () => me.id)();
-			});
+			const room_member = roomMembersService.useMember(
+				() => thread.room_id ?? "",
+				() => currentUser()?.id ?? "",
+			);
 
 			const is_mentioned = () => {
 				const me = currentUser();

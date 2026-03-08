@@ -72,7 +72,7 @@ export function useChatClient(config: Config) {
 		loadSavedPreferences() ?? DEFAULT_PREFERENCES,
 	);
 	const api = createApi(client, events, { preferences, setPreferences });
-	const store = new RootStore(client, events);
+	const store = new RootStore(client, events, preferences, setPreferences);
 
 	const cs = from(client.state);
 	createEffect(() => {

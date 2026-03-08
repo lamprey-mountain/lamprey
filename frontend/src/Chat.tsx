@@ -13,12 +13,12 @@ import { createList } from "./list.tsx";
 import type { Channel, Room } from "sdk";
 import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
-import { useApi } from "./api.tsx";
+import { useApi, useMessages2 } from "./api.tsx";
 import { createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import type { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
-import type { MessageListAnchor } from "./api/messages.ts";
+import type { MessageListAnchor } from "./api/services/MessagesService.ts";
 import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
 import { uuidv7 } from "uuidv7";
 import { Portal } from "solid-js/web";
@@ -42,6 +42,7 @@ type ChatProps = {
 export const ChatMain = (props: ChatProps) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const { t } = useCtx();
 	const { markChannelRead } = useReadTracking();
 	const [channelState, setChannelState] = useChannel()!;
@@ -56,7 +57,7 @@ export const ChatMain = (props: ChatProps) => {
 		return { type: "backwards", limit: 50 };
 	};
 
-	const messages = api.messages.list(() => props.channel.id, anchor);
+	const messages = messagesService.useList(() => props.channel.id, anchor);
 	const [tl, setTl] = createStore<Array<TimelineItemT>>([]);
 
 	createEffect(() =>
@@ -286,7 +287,7 @@ export const ChatMain = (props: ChatProps) => {
 					});
 
 					const version_id =
-						api.messages.cacheRanges.get(channel_id)?.live.end ??
+						messagesService.cacheRanges.get(channel_id)?.live.end ??
 							props.channel.last_version_id;
 
 					if (version_id) {
@@ -375,6 +376,7 @@ export const ChatHeader = (
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
 	const [hovered, setHovered] = createSignal(false);
@@ -401,7 +403,7 @@ export const ChatHeader = (
 			`Are you sure you want to delete ${selected().length} messages?`,
 			(confirmed) => {
 				if (!confirmed) return;
-				api.messages.deleteBulk(props.channel.id, selected());
+				messagesService.deleteBulk(props.channel.id, selected());
 				exitSelectMode();
 			},
 		);
@@ -412,7 +414,7 @@ export const ChatHeader = (
 			`Are you sure you want to remove ${selected().length} messages?`,
 			(confirmed) => {
 				if (!confirmed) return;
-				api.messages.removeBulk(props.channel.id, selected());
+				messagesService.removeBulk(props.channel.id, selected());
 				exitSelectMode();
 			},
 		);
