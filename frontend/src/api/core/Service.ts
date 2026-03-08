@@ -1,15 +1,9 @@
 import { Client } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import {
-	Accessor,
-	createEffect,
-	createResource,
-	onCleanup,
-	Resource,
-} from "solid-js";
+import { Accessor, createEffect, createResource, Resource } from "solid-js";
 import type { RootStore } from "./Store";
 
-export abstract class BaseService<T extends { id: string }> {
+export abstract class BaseService<T> {
 	protected client: Client;
 	protected store: RootStore;
 	cache = new ReactiveMap<string, T>();
@@ -19,6 +13,13 @@ export abstract class BaseService<T extends { id: string }> {
 		this.store = store;
 		this.client = store.client;
 	}
+
+	/**
+	 * Defines how to derive the unique cache key from an item.
+	 * For simple entities, this is usually just `item.id`.
+	 * For compound entities (like members), this might be `${room_id}:${user_id}`.
+	 */
+	abstract getKey(item: T): string;
 
 	abstract fetch(id: string): Promise<T>;
 
@@ -77,7 +78,7 @@ export abstract class BaseService<T extends { id: string }> {
 	}
 
 	upsert(item: T) {
-		this.cache.set(item.id, item);
+		this.cache.set(this.getKey(item), item);
 	}
 
 	delete(id: string) {

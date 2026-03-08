@@ -3,6 +3,10 @@ import { BaseService } from "../core/Service";
 import { fetchWithRetry } from "../util";
 
 export class RoomsService extends BaseService<Room> {
+	getKey(item: Room): string {
+		return item.id;
+	}
+
 	async fetch(id: string): Promise<Room> {
 		return await fetchWithRetry(() =>
 			this.client.http.GET("/api/v1/room/{room_id}", {

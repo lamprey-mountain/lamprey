@@ -101,6 +101,26 @@ export function useUsers2() {
 	return useApi2().users;
 }
 
+export function useRoles2() {
+	return useApi2().roles;
+}
+
+export function useSessions2() {
+	return useApi2().sessions;
+}
+
+export function useMessages2() {
+	return useApi2().messages;
+}
+
+export function useRoomMembers2() {
+	return useApi2().roomMembers;
+}
+
+export function useThreadMembers2() {
+	return useApi2().threadMembers;
+}
+
 export type MemberList = {
 	groups: MemberListGroup[];
 	items: {

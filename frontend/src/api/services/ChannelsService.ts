@@ -3,6 +3,10 @@ import { BaseService } from "../core/Service";
 import { fetchWithRetry } from "../util";
 
 export class ChannelsService extends BaseService<Channel> {
+	getKey(item: Channel): string {
+		return item.id;
+	}
+
 	async fetch(id: string): Promise<Channel> {
 		return await fetchWithRetry(() =>
 			this.client.http.GET("/api/v1/channel/{channel_id}", {

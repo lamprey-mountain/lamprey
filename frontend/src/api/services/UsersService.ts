@@ -3,6 +3,10 @@ import { BaseService } from "../core/Service";
 import { fetchWithRetry } from "../util";
 
 export class UsersService extends BaseService<UserWithRelationship> {
+	getKey(item: User | UserWithRelationship): string {
+		return item.id;
+	}
+
 	async fetch(id: string): Promise<UserWithRelationship> {
 		return await fetchWithRetry(() =>
 			this.client.http.GET("/api/v1/user/{user_id}", {
