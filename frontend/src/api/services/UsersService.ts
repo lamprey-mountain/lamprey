@@ -3,9 +3,9 @@ import { BaseService } from "../core/Service";
 import { fetchWithRetry } from "../util";
 
 export class UsersService extends BaseService<UserWithRelationship> {
-    getKey(item: User | UserWithRelationship): string {
-        return item.id;
-    }
+	getKey(item: User | UserWithRelationship): string {
+		return item.id;
+	}
 
 	async fetch(id: string): Promise<UserWithRelationship> {
 		return await fetchWithRetry(() =>
@@ -30,7 +30,7 @@ export class UsersService extends BaseService<UserWithRelationship> {
 		};
 		super.upsert(updatedUser);
 
-        // If this user is ourself, update the @self alias
+		// If this user is ourself, update the @self alias
 		if (user.id === this.store.session()?.user_id) {
 			this.cache.set("@self", updatedUser);
 		}

@@ -280,13 +280,14 @@ export function Input(props: InputProps) {
 		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
-	const anchor = (): import("./api/services/MessagesService.ts").MessageListAnchor => {
-		const a = ch.anchor;
-		const r = ch.read_marker_id;
-		if (a) return a;
-		if (r) return { type: "context", limit: 50, message_id: r };
-		return { type: "backwards", limit: 50 };
-	};
+	const anchor =
+		(): import("./api/services/MessagesService.ts").MessageListAnchor => {
+			const a = ch.anchor;
+			const r = ch.read_marker_id;
+			if (a) return a;
+			if (r) return { type: "context", limit: 50, message_id: r };
+			return { type: "backwards", limit: 50 };
+		};
 	const messages = messagesService.useList(() => props.channel.id, anchor);
 
 	const jumpToLatest = () => {

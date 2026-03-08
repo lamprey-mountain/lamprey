@@ -12,7 +12,7 @@ export class NotificationService {
 		let is_mentioned = false;
 		const mentions = m.latest_version.mentions;
 
-        // Determine if mentioned
+		// Determine if mentioned
 		if (
 			me && m.author_id !== me.id &&
 			m.latest_version.type === "DefaultMarkdown" && mentions
@@ -26,7 +26,9 @@ export class NotificationService {
 			if (!is_mentioned && mentions.roles && mentions.roles.length > 0) {
 				const channel = this.store.channels.get(m.channel_id);
 				if (channel?.room_id) {
-                    const room_member = this.store.roomMembers.get(this.store.roomMembers.getKey(channel.room_id, me.id));
+					const room_member = this.store.roomMembers.get(
+						this.store.roomMembers.getKey(channel.room_id, me.id),
+					);
 					if (room_member && mentions.roles) {
 						for (const role of mentions.roles) {
 							if (room_member.roles.some((r) => r === role.id)) {
@@ -39,13 +41,13 @@ export class NotificationService {
 			}
 		}
 
-        // We need access to preferences. For now, assume we can get them from store or global
-        // Since we haven't fully refactored preferences into RootStore, we might need a bridge
-        // or just read from the legacy location if available? 
-        // Or better, let's inject a preferences accessor into RootStore.
-        
-        const preferences = this.store.preferences?.();
-        if (!preferences) return;
+		// We need access to preferences. For now, assume we can get them from store or global
+		// Since we haven't fully refactored preferences into RootStore, we might need a bridge
+		// or just read from the legacy location if available?
+		// Or better, let's inject a preferences accessor into RootStore.
+
+		const preferences = this.store.preferences?.();
+		if (!preferences) return;
 
 		if (
 			is_mentioned &&
@@ -60,12 +62,12 @@ export class NotificationService {
 			const rawContent = m.latest_version.type === "DefaultMarkdown"
 				? m.latest_version.content ?? ""
 				: "";
-            
-            // Helper wrapper for the util
+
+			// Helper wrapper for the util
 			const processedContent = await stripMarkdownAndResolveMentionsOriginal(
 				rawContent,
 				m.channel_id,
-                this.store as any, // HACK: The util expects 'Api' but RootStore is close enough or we fix util
+				this.store as any, // HACK: The util expects 'Api' but RootStore is close enough or we fix util
 				m.latest_version.mentions,
 			);
 			const body = processedContent.substring(0, 200);
@@ -115,7 +117,7 @@ export class NotificationService {
 			const processedContent = await stripMarkdownAndResolveMentionsOriginal(
 				rawContent,
 				m.channel_id,
-                this.store as any,
+				this.store as any,
 				m.latest_version.mentions,
 			);
 			const text = processedContent.substring(0, 200);

@@ -19,7 +19,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi } from "./api.tsx";
+import { useApi, useMessages2 } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { useMenu, useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
@@ -92,7 +92,7 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 function MessageEditor(
 	props: { message: MessageT },
 ) {
-	const api = useApi();
+	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 
 	// TODO: save edit draft per message?
@@ -114,7 +114,9 @@ function MessageEditor(
 			ArrowUp: (state) => {
 				if (state.selection.from !== 1) return false;
 
-				const ranges = api.messages.cacheRanges.get(props.message.channel_id);
+				const ranges = messagesService.cacheRanges.get(
+					props.message.channel_id,
+				);
 				if (!ranges) return false;
 
 				const messages = ranges.live.items;
@@ -139,7 +141,9 @@ function MessageEditor(
 			ArrowDown: (state) => {
 				if (state.selection.to !== state.doc.content.size - 1) return false;
 
-				const ranges = api.messages.cacheRanges.get(props.message.channel_id);
+				const ranges = messagesService.cacheRanges.get(
+					props.message.channel_id,
+				);
 				if (!ranges) return false;
 
 				const messages = ranges.live.items;
@@ -180,7 +184,7 @@ function MessageEditor(
 			return;
 		}
 		try {
-			await api.messages.edit(
+			await messagesService.edit(
 				props.message.channel_id,
 				props.message.id,
 				content,
@@ -233,6 +237,7 @@ function MessageEditor(
 
 export function MessageView(props: MessageProps) {
 	const api = useApi();
+	const messagesService = useMessages2();
 	const ctx = useCtx();
 	const { menu } = useMenu();
 	const { userView, setUserView } = useUserPopout();
@@ -275,7 +280,8 @@ export function MessageView(props: MessageProps) {
 
 		const thread_id = props.message.channel_id;
 		const message_id = props.message.id;
-		const messages = api.messages.cacheRanges.get(thread_id)?.live.items ?? [];
+		const messages = messagesService.cacheRanges.get(thread_id)?.live.items ??
+			[];
 		const currentIndex = messages.findIndex((m) => m.id === message_id);
 
 		if (currentIndex === -1) return;
@@ -301,7 +307,7 @@ export function MessageView(props: MessageProps) {
 
 		if (e.shiftKey && selected.length > 0) {
 			const lastSelected = selected[selected.length - 1];
-			const messages = api.messages.cacheRanges.get(thread_id)?.live.items ??
+			const messages = messagesService.cacheRanges.get(thread_id)?.live.items ??
 				[];
 			const lastIndex = messages.findIndex((m) => m.id === lastSelected);
 			const currentIndex = messages.findIndex((m) => m.id === message_id);
@@ -861,8 +867,11 @@ type ReplyProps = {
 function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const { setUserView } = useUserPopout();
-	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
+	const reply = messagesService.use(
+		() => props.reply_id,
+	);
 	const thread = api.channels.fetch(() => props.thread_id);
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 
@@ -1068,6 +1077,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
 

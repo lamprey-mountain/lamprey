@@ -11,7 +11,11 @@ import { useCtx } from "./context.ts";
 import type { ChannelSearch } from "./context.ts";
 import { createList } from "./list.tsx";
 import type { Channel, Room } from "sdk";
-import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
+import {
+	renderTimeline,
+	TimelineItem,
+	type TimelineItemT,
+} from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi, useMessages2 } from "./api.tsx";
 import { createSignal } from "solid-js";
@@ -19,7 +23,6 @@ import { createStore, reconcile } from "solid-js/store";
 import type { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import type { MessageListAnchor } from "./api/services/MessagesService.ts";
-import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
 import { uuidv7 } from "uuidv7";
 import { Portal } from "solid-js/web";
 import { useNavigate } from "@solidjs/router";
@@ -171,29 +174,17 @@ export const ChatMain = (props: ChatProps) => {
 		},
 	});
 
-	// TODO: all of these effects are kind of annoying to work with - there has to be a better way
-	// its also quite brittle...
-
 	// effect to update timeline
 	createRenderEffect(
 		on(() => [messages(), read_marker_id()] as const, ([m, rid]) => {
-			console.log(m);
 			if (m?.items) {
-				console.log("render timeline", m.items, rid);
-				console.time("rendertimeline");
 				const rendered = renderTimeline({
 					items: m.items,
 					has_after: m.has_forward,
 					has_before: m.has_backwards,
 					read_marker_id: rid ?? null,
-					// slice: { start: 0, end: 50 },
 				});
-				setTl(reconcile(rendered));
-				anchor();
-				console.log("reconciled", tl);
-				console.timeEnd("rendertimeline");
-			} else {
-				console.log("tried to render empty timeline");
+				setTl(reconcile(rendered, { key: "id", merge: true }));
 			}
 		}),
 	);
@@ -219,19 +210,7 @@ export const ChatMain = (props: ChatProps) => {
 		const target = chatRef?.querySelector(
 			`li:has(article.message[data-message-id="${hl}"])`,
 		);
-		console.log("scroll highlight", hl, target);
-		if (!target) {
-			// console.warn("couldn't find target to scroll to");
-			return;
-		}
-		// target.scrollIntoView({
-		// 	behavior: "instant",
-		// 	block: "nearest",
-		// });
-		// target.scrollIntoView({
-		// 	behavior: "smooth",
-		// 	block: "center",
-		// });
+		if (!target) return;
 		target.scrollIntoView({
 			behavior: "instant",
 			block: "center",
@@ -274,11 +253,8 @@ export const ChatMain = (props: ChatProps) => {
 			data-channel-id={props.channel.id}
 			role="log"
 			onKeyDown={(e) => {
-				// console.log(e);
 				if (e.key === "Escape") {
 					const channel_id = props.channel.id;
-
-					// messages are approx. 20 px high, show 3 pages of messages
 					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
 
 					setChannelState("anchor", {
@@ -294,7 +270,6 @@ export const ChatMain = (props: ChatProps) => {
 						markChannelRead(channel_id, version_id, true, false);
 					}
 
-					// HACK: i need to make the update order less jank
 					setTimeout(() => {
 						list.scrollTo(99999999);
 					});
@@ -320,7 +295,6 @@ export const ChatMain = (props: ChatProps) => {
 				e.preventDefault();
 				setDragging(false);
 				for (const file of Array.from(e.dataTransfer?.files ?? [])) {
-					console.log(file);
 					const local_id = uuidv7();
 					uploads.init(local_id, props.channel.id, file);
 				}
@@ -343,7 +317,13 @@ export const ChatMain = (props: ChatProps) => {
 				when={messages.loading}
 				fallback={
 					<list.List>
-						{(item) => renderTimelineItem(props.channel, item, currentUser)}
+						{(item) => (
+							<TimelineItem
+								thread={props.channel}
+								item={item}
+								currentUser={currentUser}
+							/>
+						)}
 					</list.List>
 				}
 			>
@@ -692,65 +672,6 @@ export const SearchResults = (props: {
 	);
 };
 
-type RenderTimelineParams = {
-	items: Array<Message>;
-	read_marker_id: string | null;
-	has_before: boolean;
-	has_after: boolean;
-};
-
-export function renderTimeline(
-	{ items, read_marker_id, has_before, has_after }: RenderTimelineParams,
-): Array<TimelineItemT> {
-	const newItems: Array<TimelineItemT> = [];
-	if (has_before) {
-		newItems.push({
-			type: "spacer",
-			id: "spacer-top",
-		});
-	} else {
-		newItems.push({
-			type: "info",
-			id: "thread-header",
-			header: true,
-		});
-	}
-	for (let i = 0; i < items.length; i++) {
-		const msg = items[i];
-		const prev = items[i - 1] as Message | undefined;
-		const markerTime = prev &&
-			get_msg_ts(msg).getDay() !== get_msg_ts(prev).getDay();
-		const markerUnread = prev?.id === read_marker_id;
-		if (markerTime || markerUnread) {
-			newItems.push({
-				type: "divider",
-				id: `divider-${msg.id}-${markerUnread}`,
-				date: markerTime ? get_msg_ts(msg) : undefined,
-				unread: markerUnread,
-			});
-		}
-		newItems.push({
-			type: "message",
-			id: msg.id,
-			message: msg,
-			separate: prev ? shouldSplit(msg, prev) : true,
-		});
-	}
-	if (has_after) {
-		newItems.push({
-			type: "spacer",
-			id: "spacer-bottom",
-		});
-	} else {
-		newItems.push({
-			type: "spacer-mini",
-			id: "spacer-bottom-mini",
-		});
-	}
-	console.log("newItems", newItems);
-	return newItems;
-}
-
 function highlight(el: Element) {
 	el.animate([
 		{
@@ -771,24 +692,4 @@ function highlight(el: Element) {
 	], {
 		duration: 1000,
 	});
-}
-
-const shouldSplitMemo = new WeakMap();
-function shouldSplit(a: Message, b: Message) {
-	const s1 = shouldSplitMemo.get(a);
-	if (s1) return s1;
-	const s2 = shouldSplitInner(a, b);
-	shouldSplitMemo.set(a, s2);
-	return s2;
-}
-
-function shouldSplitInner(a: Message, b: Message) {
-	if (a.latest_version.type !== "DefaultMarkdown") return true;
-	if (b.latest_version.type !== "DefaultMarkdown") return true;
-	if (a.author_id !== b.author_id) return true;
-	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true;
-	const ts_a = get_msg_ts(a);
-	const ts_b = get_msg_ts(b);
-	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;
-	return false;
 }

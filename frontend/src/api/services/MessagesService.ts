@@ -100,10 +100,11 @@ export class MessageRanges {
 			a.has_forward && b.has_forward,
 			a.has_backwards && b.has_backwards,
 			[...new Set([...a.items.map((i) => i.id), ...b.items.map((i) => i.id)])]
-				.sort((a, b) => a > b ? 1 : -1)
-				.map((i) =>
-					a.items.find((j) => i === j.id) ??
-						b.items.find((j) => i === j.id)!
+				.sort((a, b) => (a > b ? 1 : -1))
+				.map(
+					(i) =>
+						a.items.find((j) => i === j.id) ??
+							b.items.find((j) => i === j.id)!,
 				),
 		);
 		this.ranges.delete(a);
@@ -152,8 +153,9 @@ export class MessagesService extends BaseService<Message> {
 				},
 			)
 		);
-		this.upsert(data as Message);
-		return data as Message;
+		const m = data as Message;
+		this.upsert(m);
+		return m;
 	}
 
 	/**
@@ -175,10 +177,15 @@ export class MessagesService extends BaseService<Message> {
 			async ({ thread_id, dir }, { value: oldValue }) => {
 				// Dedup check
 				if (
-					old && old.thread_id === thread_id && old.dir.limit === dir.limit &&
-					old.dir.type === dir.type && old.dir.message_id === dir.message_id &&
+					old &&
+					old.thread_id === thread_id &&
+					old.dir.limit === dir.limit &&
+					old.dir.type === dir.type &&
+					old.dir.message_id === dir.message_id &&
 					oldValue
-				) return oldValue!;
+				) {
+					return oldValue!;
+				}
 				old = { thread_id, dir };
 
 				let ranges = this.cacheRanges.get(thread_id);
@@ -192,7 +199,7 @@ export class MessagesService extends BaseService<Message> {
 		);
 
 		// Mutator registration
-		const mut = { mutate } as unknown as MessageMutator;
+		const mut = ({ mutate } as unknown) as MessageMutator;
 		createComputed(() => {
 			mut.query = dir_signal();
 			mut.thread_id = thread_id_signal();
@@ -205,7 +212,10 @@ export class MessagesService extends BaseService<Message> {
 		return resource;
 	}
 
-	private getSlice(ranges: MessageRanges, dir: MessageListAnchor): MessageRange | undefined {
+	private getSlice(
+		ranges: MessageRanges,
+		dir: MessageListAnchor,
+	): MessageRange | undefined {
 		if (dir.type === "forwards") {
 			if (dir.message_id) {
 				const r = ranges.find(dir.message_id);
@@ -231,7 +241,8 @@ export class MessagesService extends BaseService<Message> {
 				const start = Math.max(r.len - dir.limit, 0);
 				return r.slice(start, Math.min(start + dir.limit, r.len));
 			}
-		} else { // context
+		} else {
+			// context
 			const r = ranges.findNearest(dir.message_id);
 			if (!r) return undefined;
 			let idx = r.items.findIndex((i) => i.id === dir.message_id);
@@ -352,9 +363,8 @@ export class MessagesService extends BaseService<Message> {
 			if (r) {
 				const idx = r.items.findIndex((i) => i.id === dir.message_id);
 				if (idx !== -1) {
-					const hasEnoughForwards = (idx <= r.len - dir.limit) ||
-						!r.has_forward;
-					const hasEnoughBackwards = (idx >= dir.limit) || !r.has_backwards;
+					const hasEnoughForwards = idx <= r.len - dir.limit || !r.has_forward;
+					const hasEnoughBackwards = idx >= dir.limit || !r.has_backwards;
 					if (!hasEnoughBackwards || !hasEnoughForwards) {
 						let dataBefore, dataAfter;
 						if (!hasEnoughBackwards) {
@@ -386,7 +396,7 @@ export class MessagesService extends BaseService<Message> {
 						const range = this.mergeAfter(
 							ranges,
 							new MessageRange(false, false, []),
-							{ items: data.items as Message[] },
+							{ items: (data.items as Message[]) },
 						);
 						range.has_backwards = data.has_before;
 						range.has_forward = data.has_after;
@@ -403,7 +413,7 @@ export class MessagesService extends BaseService<Message> {
 					const range = this.mergeAfter(
 						ranges,
 						new MessageRange(false, false, []),
-						{ items: data.items as Message[] },
+						{ items: (data.items as Message[]) },
 					);
 					range.has_backwards = data.has_before;
 					range.has_forward = data.has_after;
@@ -413,9 +423,9 @@ export class MessagesService extends BaseService<Message> {
 		}
 
 		// 2. Read Phase: Get slice
-        const slice = this.getSlice(ranges, dir);
-        if (!slice) throw new Error("Failed to resolve message range");
-        return slice;
+		const slice = this.getSlice(ranges, dir);
+		if (!slice) throw new Error("Failed to resolve message range");
+		return slice;
 	}
 
 	// Update Mutators (Called by Store on sync events)
@@ -425,74 +435,86 @@ export class MessagesService extends BaseService<Message> {
 
 		for (const mut of this._mutators) {
 			if (mut.thread_id !== thread_id) continue;
-            const slice = this.getSlice(ranges, mut.query);
-            if (slice) {
-                mut.mutate(slice);
-            }
+			const slice = this.getSlice(ranges, mut.query);
+			if (slice) {
+				mut.mutate(slice);
+			}
 		}
 	}
 
-    handleMessageCreate(m: Message) {
-        batch(() => {
-            this.upsert(m);
-            const ranges = this.cacheRanges.get(m.channel_id);
-            if (ranges) {
-                if (m.nonce) {
-                    // Local echo replacement
-                    const idx = ranges.live.items.findIndex(i => i.nonce === m.nonce);
-                    if (idx !== -1) {
-                        ranges.live.items.splice(idx, 1, m);
-                    } else {
-                        const id_idx = ranges.live.items.findIndex(i => i.id === m.id);
-                        if (id_idx === -1) {
-                            ranges.live.items.push(m);
-                        }
-                    }
-                } else {
-                    const id_idx = ranges.live.items.findIndex(i => i.id === m.id);
-                    if (id_idx === -1) {
-                        ranges.live.items.push(m);
-                    }
-                }
-                ranges.live.items.sort((a, b) => a.id > b.id ? 1 : -1);
-                this.updateMutators(m.channel_id);
-            }
-        });
-    }
+	private updateRangeItem(range: MessageRange, item: Message, nonce?: string) {
+		if (nonce) {
+			const idx = range.items.findIndex((i) =>
+				(i as any).nonce === nonce || i.id === nonce
+			);
+			if (idx !== -1) {
+				range.items[idx] = item;
+				return true;
+			}
+		}
+		const id_idx = range.items.findIndex((i) => i.id === item.id);
+		if (id_idx !== -1) {
+			range.items[id_idx] = item;
+			return true;
+		}
+		return false;
+	}
 
-    handleMessageUpdate(m: Message) {
-        batch(() => {
-            this.upsert(m);
-            const ranges = this.cacheRanges.get(m.channel_id);
-            if (ranges) {
-                const range = ranges.find(m.id);
-                if (range) {
-                    const idx = range.items.findIndex(i => i.id === m.id);
-                    if (idx !== -1) range.items[idx] = m;
-                }
-                this.updateMutators(m.channel_id);
-            }
-        });
-    }
+	handleMessageCreate(m: Message) {
+		batch(() => {
+			const ranges = this.cacheRanges.get(m.channel_id);
+			if (ranges) {
+				for (const range of ranges.ranges) {
+					if (!this.updateRangeItem(range, m, (m as any).nonce)) {
+						if (range === ranges.live || range.contains(m.id)) {
+							range.items.push(m);
+						}
+					}
+					range.items.sort((a, b) => (a.id > b.id ? 1 : -1));
+				}
+				this.updateMutators(m.channel_id);
+			}
 
-    handleMessageDelete(channel_id: string, message_id: string) {
-        batch(() => {
-            this.delete(message_id);
-            const ranges = this.cacheRanges.get(channel_id);
-            if (ranges) {
-                const range = ranges.find(message_id);
-                if (range) {
-                    const idx = range.items.findIndex(i => i.id === message_id);
-                    if (idx !== -1) range.items.splice(idx, 1);
-                }
-                this.updateMutators(channel_id);
-            }
-        });
-    }
+			if ((m as any).nonce) {
+				this.cache.delete((m as any).nonce);
+			}
+			this.upsert(m);
+		});
+	}
+
+	handleMessageUpdate(m: Message) {
+		batch(() => {
+			this.upsert(m);
+			const ranges = this.cacheRanges.get(m.channel_id);
+			if (ranges) {
+				for (const range of ranges.ranges) {
+					this.updateRangeItem(range, m);
+				}
+				this.updateMutators(m.channel_id);
+			}
+		});
+	}
+
+	handleMessageDelete(channel_id: string, message_id: string) {
+		batch(() => {
+			this.delete(message_id);
+			const ranges = this.cacheRanges.get(channel_id);
+			if (ranges) {
+				for (const range of ranges.ranges) {
+					const idx = range.items.findIndex((i) =>
+						i.id === message_id ||
+						((i as any).nonce && (i as any).nonce === message_id)
+					);
+					if (idx !== -1) range.items.splice(idx, 1);
+				}
+				this.updateMutators(channel_id);
+			}
+		});
+	}
 
 	async send(channel_id: string, body: MessageSendReq): Promise<Message> {
 		const id = uuidv7();
-		const local = {
+		const local = ({
 			id,
 			channel_id,
 			author_id: this.store.session()?.user_id ?? "",
@@ -504,18 +526,18 @@ export class MessagesService extends BaseService<Message> {
 				attachments: [],
 				embeds: body.embeds ?? [],
 				created_at: new Date().toISOString(),
-                mentions: { users: [], roles: [], everyone: false }
+				mentions: { users: [], roles: [], everyone: false },
 			},
 			nonce: id,
 			is_local: true,
-		} as unknown as Message;
+		} as unknown) as Message;
 
 		batch(() => {
 			this.upsert(local);
 			const r = this.cacheRanges.get(channel_id);
 			if (r) {
 				r.live.items.push(local);
-                r.live.items.sort((a, b) => a.id > b.id ? 1 : -1);
+				r.live.items.sort((a, b) => (a.id > b.id ? 1 : -1));
 				this.updateMutators(channel_id);
 			}
 		});
@@ -527,13 +549,19 @@ export class MessagesService extends BaseService<Message> {
 				headers: { "Idempotency-Key": id },
 			})
 		);
-		return data as Message;
+		const m = data as Message;
+		(m as any).nonce = id;
+
+		// Final update to replace local echo
+		this.handleMessageCreate(m);
+
+		return m;
 	}
 
-    async edit(thread_id: string, message_id: string, content: string) {
+	async edit(thread_id: string, message_id: string, content: string) {
 		const originalMessage = this.cache.get(message_id);
 		if (originalMessage) {
-			const updatedMessage = {
+			const updatedMessage = ({
 				...originalMessage,
 				latest_version: {
 					...originalMessage.latest_version,
@@ -542,8 +570,8 @@ export class MessagesService extends BaseService<Message> {
 					version_id: uuidv7(),
 				},
 				is_local: true,
-			} as unknown as Message;
-            this.handleMessageUpdate(updatedMessage);
+			} as unknown) as Message;
+			this.handleMessageUpdate(updatedMessage);
 		}
 
 		try {
@@ -555,10 +583,12 @@ export class MessagesService extends BaseService<Message> {
 				},
 			);
 			if (error) throw error;
-			return data as Message;
+			const m = data as Message;
+			this.handleMessageUpdate(m);
+			return m;
 		} catch (e) {
 			if (originalMessage) {
-                this.handleMessageUpdate(originalMessage);
+				this.handleMessageUpdate(originalMessage);
 			}
 			throw e;
 		}
@@ -587,7 +617,7 @@ export class MessagesService extends BaseService<Message> {
 			},
 		);
 		if (error) throw error;
-		return data as Pagination<Message>;
+		return (data as unknown) as Pagination<Message>;
 	}
 
 	private async fetchContext(
@@ -613,10 +643,14 @@ export class MessagesService extends BaseService<Message> {
 		range: MessageRange,
 		data: { items: any[] },
 	): MessageRange {
-		const items = data.items as Message[];
-		for (const item of items) this.upsert(item);
-		range.items.push(...items);
-		range.items.sort((a, b) => a.id > b.id ? 1 : -1);
+		const items = (data.items as unknown) as Message[];
+		for (const item of items) {
+			this.upsert(item);
+			if (!this.updateRangeItem(range, item, (item as any).nonce)) {
+				range.items.push(item);
+			}
+		}
+		range.items.sort((a, b) => (a.id > b.id ? 1 : -1));
 		return range;
 	}
 
@@ -625,10 +659,14 @@ export class MessagesService extends BaseService<Message> {
 		range: MessageRange,
 		data: { items: any[] },
 	): MessageRange {
-		const items = data.items as Message[];
-		for (const item of items) this.upsert(item);
-		range.items.unshift(...items);
-		range.items.sort((a, b) => a.id > b.id ? 1 : -1);
+		const items = (data.items as unknown) as Message[];
+		for (const item of items) {
+			this.upsert(item);
+			if (!this.updateRangeItem(range, item, (item as any).nonce)) {
+				range.items.unshift(item);
+			}
+		}
+		range.items.sort((a, b) => (a.id > b.id ? 1 : -1));
 		return range;
 	}
 }

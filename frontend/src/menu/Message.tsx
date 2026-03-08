@@ -1,6 +1,6 @@
 // the context menu for messages
 
-import { useApi } from "../api.tsx";
+import { useApi, useMessages2 } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
@@ -49,15 +49,27 @@ export function MessageMenu(props: MessageMenuProps) {
 		chUpdate("reply_id", props.message_id);
 	};
 
+	const messagesService = useMessages2();
+
 	function markUnread() {
-		const r = api.messages.cacheRanges.get(props.channel_id)!;
-		const tl = r.find(props.message_id)?.items!;
+		const r = messagesService.cacheRanges.get(props.channel_id);
+		if (!r) return;
+		const tl = r.find(props.message_id)?.items;
+		if (!tl) return;
 		const index = tl.findIndex((i) => i.id === props.message_id && !i.is_local);
-		const next = tl[index - 1];
-		const next_id = next?.id ?? props.message_id;
-		const next_version_id = ((next as any)?.version_id as string) ??
-			props.version_id;
-		markThreadRead(props.channel_id, next_version_id, true);
+		if (index === -1) return;
+
+		const prev = tl[index - 1];
+		if (prev) {
+			const prev_version_id = prev.latest_version.version_id;
+			markThreadRead(props.channel_id, prev_version_id, true);
+		} else {
+			// If no previous message, we mark everything as unread
+			// In our current system, setting it to undefined or a very old ID might work.
+			// Clearing the local marker makes it look unread until next sync.
+			chUpdate("read_marker_id", undefined);
+			// We might need an API call to truly clear it on server, but 'ack' usually takes an ID.
+		}
 	}
 
 	const togglePin = () => {

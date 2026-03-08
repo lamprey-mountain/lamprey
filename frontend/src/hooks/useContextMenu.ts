@@ -1,9 +1,10 @@
 import type { Setter } from "solid-js";
-import { useApi } from "../api.tsx";
+import { useApi, useApi2 } from "../api.tsx";
 import type { Menu } from "../context.ts";
 
 export function useContextMenu(setMenu: Setter<Menu | null>) {
 	const api = useApi();
+	const store = useApi2();
 
 	const handleContextMenu = (e: MouseEvent) => {
 		console.log("[menu] open context menu");
@@ -60,9 +61,12 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 				channel_id: thread_id,
 			};
 		} else if (menuEl.classList.contains("menu-message")) {
-			const message = api.messages.cache.get(message_id!);
+			const message = store.messages.cache.get(message_id!) ??
+				api.messages.cache.get(message_id!);
 			if (!message) return;
-			const { channel_id, version_id } = message as Record<string, unknown>;
+			const channel_id = (message as any).channel_id;
+			const version_id = (message as any).latest_version?.version_id ??
+				(message as any).version_id;
 			menu = {
 				type: "message",
 				channel_id,

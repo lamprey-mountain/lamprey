@@ -3,8 +3,8 @@ import {
 	MessageEnvelope,
 	MessageReady,
 	MessageSync,
+	Preferences,
 	Session,
-    Preferences,
 } from "sdk";
 import { Accessor, createSignal } from "solid-js";
 import { RoomsService } from "../services/RoomsService";
@@ -29,14 +29,14 @@ export class RootStore {
 	roomMembers: RoomMembersService;
 	threadMembers: ThreadMembersService;
 	messages: MessagesService;
-    notifications: NotificationService;
-    memberLists: MemberListService;
+	notifications: NotificationService;
+	memberLists: MemberListService;
 
 	session: Accessor<Session | null>;
 	setSession: (s: Session | null) => void;
-    
-    preferences?: Accessor<Preferences>;
-    setPreferences?: (p: Preferences) => void;
+
+	preferences?: Accessor<Preferences>;
+	setPreferences?: (p: Preferences) => void;
 
 	constructor(
 		client: Client,
@@ -44,13 +44,13 @@ export class RootStore {
 			sync: [MessageSync, MessageEnvelope];
 			ready: MessageReady;
 		}>,
-        preferences?: Accessor<Preferences>,
-        setPreferences?: (p: Preferences) => void
+		preferences?: Accessor<Preferences>,
+		setPreferences?: (p: Preferences) => void,
 	) {
 		this.client = client;
-        this.preferences = preferences;
-        this.setPreferences = setPreferences;
-        
+		this.preferences = preferences;
+		this.setPreferences = setPreferences;
+
 		const [session, setSession] = createSignal<Session | null>(null);
 		this.session = session;
 		this.setSession = setSession;
@@ -63,8 +63,8 @@ export class RootStore {
 		this.roomMembers = new RoomMembersService(this);
 		this.threadMembers = new ThreadMembersService(this);
 		this.messages = new MessagesService(this);
-        this.notifications = new NotificationService(this);
-        this.memberLists = new MemberListService(this);
+		this.notifications = new NotificationService(this);
+		this.memberLists = new MemberListService(this);
 
 		events.on("sync", ([msg, raw]) => this.handleSync(msg, raw));
 		events.on("ready", (msg) => this.handleReady(msg));
@@ -91,12 +91,12 @@ export class RootStore {
 			for (const role of msg.roles) {
 				this.roles.upsert(role);
 			}
-            for (const member of msg.room_members) {
-                this.roomMembers.upsert(member);
-            }
-            if (msg.config && this.setPreferences) {
-                this.setPreferences(msg.config);
-            }
+			for (const member of msg.room_members) {
+				this.roomMembers.upsert(member);
+			}
+			if (msg.config && this.setPreferences) {
+				this.setPreferences(msg.config);
+			}
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			this.rooms.upsert(msg.room);
 		} else if (
@@ -107,14 +107,14 @@ export class RootStore {
 			}
 		} else if (msg.type === "UserCreate" || msg.type === "UserUpdate") {
 			this.users.upsert(msg.user);
-            this.memberLists.updateUser(msg.user as any);
+			this.memberLists.updateUser(msg.user as any);
 		} else if (msg.type === "PresenceUpdate") {
 			const { user_id, presence } = msg;
 			const user = this.users.get(user_id);
 			if (user) {
 				const updatedUser = { ...user, presence };
 				this.users.upsert(updatedUser);
-                this.memberLists.updateUser(updatedUser as any);
+				this.memberLists.updateUser(updatedUser as any);
 			}
 		} else if (msg.type === "RoleCreate" || msg.type === "RoleUpdate") {
 			this.roles.upsert(msg.role);
@@ -132,36 +132,42 @@ export class RootStore {
 			if (msg.session?.id === this.session()?.id) {
 				this.setSession(msg.session);
 			}
-		} else if (msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate") {
-            this.roomMembers.upsert(msg.member);
-            this.memberLists.updateMember(msg.member.user_id, msg.member.room_id);
-        } else if (msg.type === "RoomMemberDelete") {
-            this.roomMembers.cache.delete(`${msg.room_id}:${msg.user_id}`);
-            // TODO: MemberList delete logic
-        } else if (msg.type === "ThreadMemberUpsert") {
-            for (const member of msg.added) {
-                this.threadMembers.upsert(member);
-                this.memberLists.updateMember(member.user_id, undefined, member.thread_id);
-            }
-            for (const user_id of msg.removed) {
-                this.threadMembers.cache.delete(`${msg.thread_id}:${user_id}`);
-                this.memberLists.updateMember(user_id, undefined, msg.thread_id);
-            }
-        } else if (msg.type === "MessageCreate") {
-            const m = msg.message as any;
-            if (raw.op === "Sync") m.nonce = raw.nonce;
-            this.messages.handleMessageCreate(m);
-            this.notifications.handleMessageCreate(m);
-        } else if (msg.type === "MessageUpdate") {
-            this.messages.handleMessageUpdate(msg.message as any);
-        } else if (msg.type === "MessageDelete") {
-            this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
-        } else if (msg.type === "PreferencesGlobal") {
-            if (msg.user_id === this.session()?.user_id && this.setPreferences) {
-                this.setPreferences(msg.config);
-            }
-        } else if (msg.type === "MemberListSync") {
-            this.memberLists.handleSync(msg);
-        }
+		} else if (
+			msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate"
+		) {
+			this.roomMembers.upsert(msg.member);
+			this.memberLists.updateMember(msg.member.user_id, msg.member.room_id);
+		} else if (msg.type === "RoomMemberDelete") {
+			this.roomMembers.cache.delete(`${msg.room_id}:${msg.user_id}`);
+			// TODO: MemberList delete logic
+		} else if (msg.type === "ThreadMemberUpsert") {
+			for (const member of msg.added) {
+				this.threadMembers.upsert(member);
+				this.memberLists.updateMember(
+					member.user_id,
+					undefined,
+					member.thread_id,
+				);
+			}
+			for (const user_id of msg.removed) {
+				this.threadMembers.cache.delete(`${msg.thread_id}:${user_id}`);
+				this.memberLists.updateMember(user_id, undefined, msg.thread_id);
+			}
+		} else if (msg.type === "MessageCreate") {
+			const m = msg.message as any;
+			if (raw.op === "Sync") m.nonce = raw.nonce;
+			this.messages.handleMessageCreate(m);
+			this.notifications.handleMessageCreate(m);
+		} else if (msg.type === "MessageUpdate") {
+			this.messages.handleMessageUpdate(msg.message as any);
+		} else if (msg.type === "MessageDelete") {
+			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
+		} else if (msg.type === "PreferencesGlobal") {
+			if (msg.user_id === this.session()?.user_id && this.setPreferences) {
+				this.setPreferences(msg.config);
+			}
+		} else if (msg.type === "MemberListSync") {
+			this.memberLists.handleSync(msg);
+		}
 	}
 }

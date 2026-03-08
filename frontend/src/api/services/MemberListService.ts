@@ -33,8 +33,8 @@ export class MemberListService {
 				this.lists.set(id, list);
 			}
 
-            // Copy items to a new array for manipulation
-            const newItems = [...list.items];
+			// Copy items to a new array for manipulation
+			const newItems = [...list.items];
 
 			for (const op of ops) {
 				if (op.type === "Sync") {
@@ -100,51 +100,55 @@ export class MemberListService {
 					newItems.splice(Number(op.position), Number(op.count));
 				}
 			}
-			
-            this.lists.set(id, { 
-                groups: groups, 
-                items: newItems 
-            });
+
+			this.lists.set(id, {
+				groups: groups,
+				items: newItems,
+			});
 		}
 	}
 
-    // Reactively update lists when entities update
-    updateMember(user_id: string, room_id?: string, thread_id?: string) {
-        if (room_id) {
-            const list = this.lists.get(room_id);
-            if (list) {
-                const member = this.store.roomMembers.get(`${room_id}:${user_id}`);
-                const newItems = list.items.map(item => 
-                    item.user.id === user_id ? { ...item, room_member: member ?? null } : item
-                );
-                this.lists.set(room_id, { ...list, items: newItems });
-            }
-        }
-        if (thread_id) {
-            const list = this.lists.get(thread_id);
-            if (list) {
-                const member = this.store.threadMembers.get(`${thread_id}:${user_id}`);
-                const newItems = list.items.map(item => 
-                    item.user.id === user_id ? { ...item, thread_member: member ?? null } : item
-                );
-                this.lists.set(thread_id, { ...list, items: newItems });
-            }
-        }
-    }
+	// Reactively update lists when entities update
+	updateMember(user_id: string, room_id?: string, thread_id?: string) {
+		if (room_id) {
+			const list = this.lists.get(room_id);
+			if (list) {
+				const member = this.store.roomMembers.get(`${room_id}:${user_id}`);
+				const newItems = list.items.map((item) =>
+					item.user.id === user_id
+						? { ...item, room_member: member ?? null }
+						: item
+				);
+				this.lists.set(room_id, { ...list, items: newItems });
+			}
+		}
+		if (thread_id) {
+			const list = this.lists.get(thread_id);
+			if (list) {
+				const member = this.store.threadMembers.get(`${thread_id}:${user_id}`);
+				const newItems = list.items.map((item) =>
+					item.user.id === user_id
+						? { ...item, thread_member: member ?? null }
+						: item
+				);
+				this.lists.set(thread_id, { ...list, items: newItems });
+			}
+		}
+	}
 
-    updateUser(user: User) {
-        for (const [id, list] of this.lists.entries()) {
-            let changed = false;
-            const newItems = list.items.map(item => {
-                if (item.user.id === user.id) {
-                    changed = true;
-                    return { ...item, user };
-                }
-                return item;
-            });
-            if (changed) {
-                this.lists.set(id, { ...list, items: newItems });
-            }
-        }
-    }
+	updateUser(user: User) {
+		for (const [id, list] of this.lists.entries()) {
+			let changed = false;
+			const newItems = list.items.map((item) => {
+				if (item.user.id === user.id) {
+					changed = true;
+					return { ...item, user };
+				}
+				return item;
+			});
+			if (changed) {
+				this.lists.set(id, { ...list, items: newItems });
+			}
+		}
+	}
 }

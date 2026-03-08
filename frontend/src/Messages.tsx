@@ -1,13 +1,12 @@
 import { createMemo, Match, Show, Switch } from "solid-js";
-import { useApi, useRoomMembers2 } from "./api.tsx";
+import { useApi, useMessages2, useRoomMembers2 } from "./api.tsx";
 import type { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
 import { MessageView } from "./Message.tsx";
 import { useChannel } from "./channelctx.tsx";
-import { UserWithRelationship } from "sdk";
-
-// const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
+import { Message, UserWithRelationship } from "sdk";
+import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
 
 export type TimelineItemT =
 	& { id: string; class?: string }
@@ -25,25 +24,25 @@ export type TimelineItemT =
 		}
 	);
 
-export function renderTimelineItem(
-	thread: ThreadT,
-	item: TimelineItemT,
-	currentUser: () => UserWithRelationship | undefined,
-) {
-	switch (item.type) {
+export const TimelineItem = (props: {
+	thread: ThreadT;
+	item: TimelineItemT;
+	currentUser: () => UserWithRelationship | undefined;
+}) => {
+	switch (props.item.type) {
 		case "message": {
 			const ctx = useCtx();
 			const roomMembersService = useRoomMembers2();
 			const [ch] = useChannel()!;
 			const room_member = roomMembersService.useMember(
-				() => thread.room_id ?? "",
-				() => currentUser()?.id ?? "",
+				() => props.thread.room_id ?? "",
+				() => props.currentUser()?.id ?? "",
 			);
 
-			const is_mentioned = () => {
-				const me = currentUser();
+			const is_mentioned = createMemo(() => {
+				const me = props.currentUser();
 				if (!me) return false;
-				const mentions = (item.message as any).mentions as any;
+				const mentions = (props.item.message as any).mentions as any;
 				if (!mentions) return false;
 
 				if (mentions.users.some((u: any) => u.id === me.id)) {
@@ -61,21 +60,26 @@ export function renderTimelineItem(
 					}
 				}
 				return false;
-			};
-			const isSelected = () => {
+			});
+
+			const isSelected = createMemo(() => {
 				const selected = ch.selectedMessages;
-				return selected?.includes(item.message.id) ?? false;
-			};
+				return selected?.includes(props.item.message.id) ?? false;
+			});
+
 			return (
 				<li
 					class="message"
 					classList={{
-						selected: item.message.id === ch.reply_id,
+						selected: props.item.message.id === ch.reply_id,
 						"message-selected": isSelected(),
 						mentioned: is_mentioned(),
 					}}
 				>
-					<MessageView message={item.message} separate={item.separate} />
+					<MessageView
+						message={props.item.message}
+						separate={props.item.separate}
+					/>
 				</li>
 			);
 		}
@@ -83,12 +87,12 @@ export function renderTimelineItem(
 			return (
 				<li class="header">
 					<header>
-						<h1>{thread.name}</h1>
+						<h1>{props.thread.name}</h1>
 						<p>
-							This is the start of {thread.name}.{" "}
+							This is the start of {props.thread.name}.{" "}
 							<span
 								class="markdown"
-								innerHTML={md(thread.description ?? "") as string}
+								innerHTML={md(props.thread.description ?? "") as string}
 							>
 							</span>
 						</p>
@@ -109,13 +113,13 @@ export function renderTimelineItem(
 			return (
 				<li
 					class="divider"
-					classList={{ unread: item.unread, time: !!item.date }}
+					classList={{ unread: props.item.unread, time: !!props.item.date }}
 				>
-					<Show when={item.unread}>
+					<Show when={props.item.unread}>
 						<div class="new">new</div>
 					</Show>
 					<hr />
-					<Show when={item.date}>
+					<Show when={props.item.date}>
 						{(d) => (
 							<>
 								<time datetime={d().toISOString()}>
@@ -125,11 +129,100 @@ export function renderTimelineItem(
 							</>
 						)}
 					</Show>
-					<Show when={item.unread}>
+					<Show when={props.item.unread}>
 						<div class="new hidden">new</div>
 					</Show>
 				</li>
 			);
 		}
+		default:
+			return null;
 	}
+};
+
+/** @deprecated use TimelineItem component instead */
+export function renderTimelineItem(
+	thread: ThreadT,
+	item: TimelineItemT,
+	currentUser: () => UserWithRelationship | undefined,
+) {
+	return <TimelineItem thread={thread} item={item} currentUser={currentUser} />;
+}
+
+type RenderTimelineParams = {
+	items: Array<Message>;
+	read_marker_id: string | null;
+	has_before: boolean;
+	has_after: boolean;
+};
+
+export function renderTimeline(
+	{ items, read_marker_id, has_before, has_after }: RenderTimelineParams,
+): Array<TimelineItemT> {
+	const newItems: Array<TimelineItemT> = [];
+	if (has_before) {
+		newItems.push({
+			type: "spacer",
+			id: "spacer-top",
+		});
+	} else {
+		newItems.push({
+			type: "info",
+			id: "thread-header",
+			header: true,
+		});
+	}
+	for (let i = 0; i < items.length; i++) {
+		const msg = items[i];
+		const prev = items[i - 1] as Message | undefined;
+		const markerTime = prev &&
+			get_msg_ts(msg).getDay() !== get_msg_ts(prev).getDay();
+		const markerUnread = prev?.id === read_marker_id;
+		if (markerTime || markerUnread) {
+			newItems.push({
+				type: "divider",
+				id: `divider-${msg.id}-${markerUnread}`,
+				date: markerTime ? get_msg_ts(msg) : undefined,
+				unread: markerUnread,
+			});
+		}
+		newItems.push({
+			type: "message",
+			id: msg.id,
+			message: msg as any,
+			separate: prev ? shouldSplit(msg, prev) : true,
+		});
+	}
+	if (has_after) {
+		newItems.push({
+			type: "spacer",
+			id: "spacer-bottom",
+		});
+	} else {
+		newItems.push({
+			type: "spacer-mini",
+			id: "spacer-bottom-mini",
+		});
+	}
+	return newItems;
+}
+
+const shouldSplitMemo = new WeakMap();
+function shouldSplit(a: Message, b: Message) {
+	const s1 = shouldSplitMemo.get(a);
+	if (s1) return s1;
+	const s2 = shouldSplitInner(a, b);
+	shouldSplitMemo.set(a, s2);
+	return s2;
+}
+
+function shouldSplitInner(a: Message, b: Message) {
+	if (a.latest_version.type !== "DefaultMarkdown") return true;
+	if (b.latest_version.type !== "DefaultMarkdown") return true;
+	if (a.author_id !== b.author_id) return true;
+	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true;
+	const ts_a = get_msg_ts(a);
+	const ts_b = get_msg_ts(b);
+	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;
+	return false;
 }

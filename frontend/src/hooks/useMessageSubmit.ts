@@ -35,7 +35,9 @@ export function useMessageSubmit(channel_id: string) {
 
 		if (channel?.slowmode_message && !bypassSlowmode) {
 			const now = new Date();
-			const expireAt = new Date(now.getTime() + channel.slowmode_message * 1000);
+			const expireAt = new Date(
+				now.getTime() + channel.slowmode_message * 1000,
+			);
 			chUpdate("slowmode_expire_at", expireAt);
 		}
 

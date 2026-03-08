@@ -8,7 +8,7 @@ const MemberListContext = createContext<ReactiveMap<string, MemberList>>();
 
 export const MemberListProvider = (props: ParentProps) => {
 	const store = useApi2();
-    const service = useMemberList2();
+	const service = useMemberList2();
 	const location = useLocation();
 
 	let currentSubscription: string | null = null;
