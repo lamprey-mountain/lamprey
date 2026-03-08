@@ -7,6 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::room_template::{
     RoomTemplate, RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch,
 };
@@ -182,7 +183,11 @@ async fn room_template_sync(
         return Err(Error::MissingPermissions);
     }
 
-    let source_room_id = template.source_room_id.ok_or(Error::NotFound)?;
+    let source_room_id = template
+        .source_room_id
+        .ok_or(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownRoomTemplate,
+        )))?;
 
     let perms = s
         .services()

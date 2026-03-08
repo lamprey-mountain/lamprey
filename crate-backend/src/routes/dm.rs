@@ -114,7 +114,7 @@ async fn dm_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let Some(thread_id) = data.dm_get(auth.user.id, target_user_id).await? else {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownDm)));
     };
     let srv = s.services();
     let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;

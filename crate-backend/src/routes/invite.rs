@@ -464,7 +464,7 @@ async fn invite_room_create(
             let room = s.services().rooms.get(room_id, None).await?;
             let roles = d.role_get_many(room_id, role_ids).await?;
             if roles.len() != role_ids.len() {
-                return Err(Error::NotFound);
+                return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)));
             }
             for role in roles {
                 if rank <= role.position && room.owner_id != Some(auth.user.id) {
@@ -626,7 +626,7 @@ async fn invite_channel_create(
                 let room = s.services().rooms.get(room_id, None).await?;
                 let roles = d.role_get_many(room_id, role_ids).await?;
                 if roles.len() != role_ids.len() {
-                    return Err(Error::NotFound);
+                    return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)));
                 }
                 for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
@@ -827,7 +827,7 @@ async fn invite_patch(
                 let room = s.services().rooms.get(room_id, None).await?;
                 let roles = d.role_get_many(room_id, role_ids).await?;
                 if roles.len() != role_ids.len() {
-                    return Err(Error::NotFound);
+                    return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)));
                 }
                 for role in roles {
                     if rank <= role.position && room.owner_id != Some(auth.user.id) {
@@ -1005,7 +1005,7 @@ async fn invite_user_create(
     };
 
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let d = s.data();
@@ -1068,7 +1068,7 @@ async fn invite_user_list(
     };
 
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let d = s.data();

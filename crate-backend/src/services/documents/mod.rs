@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use common::v1::types::document::serialized::{Serdoc, SerdocBlock};
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
     ChannelId, ConnectionId, DocumentBranchId, MessageSync, UserId,
@@ -181,7 +182,10 @@ impl ServiceDocuments {
                     last_active: Instant::now(),
                 }))
             }
-            Err(Error::NotFound) => {
+            Err(Error::ApiError(ApiError {
+                code: ErrorCode::UnknownDocumentBranch,
+                ..
+            })) => {
                 if let Some(author_id) = maybe_author {
                     let doc = Doc::new();
                     doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
@@ -207,7 +211,9 @@ impl ServiceDocuments {
                         last_active: Instant::now(),
                     }))
                 } else {
-                    return Err(Error::NotFound);
+                    return Err(Error::ApiError(ApiError::from_code(
+                        ErrorCode::UnknownDocumentBranch,
+                    )));
                 }
             }
             Err(e) => return Err(e),

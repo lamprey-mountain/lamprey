@@ -138,7 +138,10 @@ async fn auth_oauth_redirect(
                     }
                     user_id
                 }
-                Err(Error::NotFound) => {
+                Err(Error::ApiError(ApiError {
+                    code: ErrorCode::UnknownUser,
+                    ..
+                })) => {
                     let registered_at = if provider_config.autoregister {
                         Some(Time::now_utc())
                     } else {
@@ -268,7 +271,10 @@ async fn auth_oauth_redirect(
                     }
                     user_id
                 }
-                Err(Error::NotFound) => {
+                Err(Error::ApiError(ApiError {
+                    code: ErrorCode::UnknownUser,
+                    ..
+                })) => {
                     let registered_at = if provider_config.autoregister {
                         Some(Time::now_utc())
                     } else {
@@ -964,9 +970,9 @@ async fn auth_password_exec(
     let (hash, salt) = data
         .auth_password_get(user_id)
         .await?
-        .ok_or(Error::NotFound)?;
+        .ok_or(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
     let valid = argon2::verify_raw(json.password.as_bytes(), &salt, &hash, &config)
-        .map_err(|_| Error::NotFound)?;
+        .map_err(|_| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
     if valid {
         // TODO: allow entering sudo mode via password
         data.session_set_status(auth.session.id, SessionStatus::Authorized { user_id })
@@ -992,7 +998,7 @@ async fn auth_password_exec(
         .await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
-        Err(Error::NotFound)
+        Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))
     }
 }
 

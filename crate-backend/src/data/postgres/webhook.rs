@@ -386,7 +386,9 @@ impl DataWebhook for Postgres {
                 sqlx::query!("SELECT room_id FROM channel WHERE id = $1", *channel_id)
                     .fetch_optional(&mut *tx)
                     .await?
-                    .ok_or(Error::NotFound)?;
+                    .ok_or(Error::ApiError(ApiError::from_code(
+                        ErrorCode::UnknownChannel,
+                    )))?;
 
             // Ensure the new channel is in the same room as the webhook's current room
             if original.room_id != new_channel_room.room_id {

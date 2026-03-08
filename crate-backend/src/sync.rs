@@ -12,7 +12,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
 use common::v1::types::emoji::EmojiOwner;
-use common::v1::types::error::SyncError;
+use common::v1::types::error::{ApiError, ErrorCode, SyncError};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
@@ -694,14 +694,18 @@ impl Connection {
         match branch {
             Ok(branch) => {
                 if branch.private && branch.creator_id != user_id {
-                    return Err(Error::NotFound);
+                    return Err(Error::ApiError(ApiError::from_code(
+                        ErrorCode::UnknownDocumentBranch,
+                    )));
                 }
             }
             Err(_) if *branch_id == *channel_id => {
                 // this is the default branch
             }
             Err(_) => {
-                return Err(Error::NotFound);
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownDocumentBranch,
+                )));
             }
         }
 

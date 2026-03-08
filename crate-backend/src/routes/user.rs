@@ -351,7 +351,7 @@ async fn user_audit_logs(
     };
 
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let logs = s

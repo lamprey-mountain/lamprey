@@ -175,7 +175,9 @@ async fn media_done(
                 ErrorCode::UnknownMedia,
             )))?;
     if up.user_id != auth.user.id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )));
     }
     let user_id = up.user_id;
 
@@ -275,7 +277,9 @@ async fn media_upload(
                 ErrorCode::UnknownMedia,
             )))?;
     if up.user_id != auth.user.id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )));
     }
     let user_id = up.user_id;
 

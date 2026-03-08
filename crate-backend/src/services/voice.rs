@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{
@@ -158,7 +159,9 @@ impl ServiceVoice {
         self.calls
             .get(&channel_id)
             .map(|s| s.clone())
-            .ok_or(Error::NotFound)
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownVoiceChannel,
+            )))
     }
 
     pub async fn call_create(&self, params: CallCreate) -> Result<()> {

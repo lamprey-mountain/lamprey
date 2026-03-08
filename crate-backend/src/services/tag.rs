@@ -112,7 +112,7 @@ impl ServiceTags {
 
         let tag_channel_id = data.tag_get_forum_id(tag_id).await?;
         if channel_id != tag_channel_id {
-            return Err(Error::NotFound);
+            return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
         }
 
         let tag_old = data.tag_get(tag_id).await?;
@@ -158,7 +158,7 @@ impl ServiceTags {
 
         let tag_channel_id = data.tag_get_forum_id(tag_id).await?;
         if channel_id != tag_channel_id {
-            return Err(Error::NotFound);
+            return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
         }
 
         let tag = data.tag_get(tag_id).await?;

@@ -6,6 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::SessionId;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -121,7 +122,9 @@ impl ServiceOauth {
             .config
             .oauth_provider
             .get(provider)
-            .ok_or(Error::NotFound)?;
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownOauth2Client,
+            )))?;
         let state = Uuid::new_v4();
         self.oauth_states
             .insert(state, OauthState::new(provider.to_string(), session_id));
@@ -162,7 +165,9 @@ impl ServiceOauth {
             .config
             .oauth_provider
             .get(&s.provider)
-            .ok_or(Error::NotFound)?;
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownOauth2Client,
+            )))?;
         let redirect_uri: Url = self
             .state
             .config
@@ -195,7 +200,9 @@ impl ServiceOauth {
             .config
             .oauth_provider
             .get(provider)
-            .ok_or(Error::NotFound)?;
+            .ok_or(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownOauth2Client,
+            )))?;
         let client = reqwest::Client::new();
         let body = OauthTokenRevoke {
             token_type_hint: "access_token".to_string(),

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use common::v1::types::defaults::{ADMIN_ROOM, EVERYONE_TRUSTED, EVERYONE_UNTRUSTED, MODERATOR};
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::room_template::{
     RoomTemplate, RoomTemplateChannel, RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch,
     RoomTemplateRole, RoomTemplateSnapshot,
@@ -194,7 +195,12 @@ impl ServiceRoomTemplates {
     /// Sync a room template with its source room
     pub async fn sync(&self, code: RoomTemplateCode) -> Result<RoomTemplate> {
         let template = self.state.data().room_template_get(code.clone()).await?;
-        let source_room_id = template.source_room_id.ok_or(Error::NotFound)?;
+        let source_room_id =
+            template
+                .source_room_id
+                .ok_or(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownRoomTemplate,
+                )))?;
 
         let snapshot = self.generate_room_snapshot(source_room_id.into()).await?;
         let snapshot_json = serde_json::to_value(snapshot)?;

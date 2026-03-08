@@ -81,7 +81,7 @@ async fn email_add(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let email_info = EmailInfo {
@@ -173,7 +173,7 @@ async fn email_delete(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let emails = s.data().user_email_list(target_user_id).await?;
@@ -230,7 +230,7 @@ async fn email_list(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let emails = s.data().user_email_list(target_user_id).await?;
@@ -262,7 +262,7 @@ async fn email_update(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let emails = s.data().user_email_list(target_user_id).await?;
@@ -340,7 +340,7 @@ async fn email_verification_resend(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     let emails = s.data().user_email_list(target_user_id).await?;
@@ -410,7 +410,7 @@ async fn email_verification_finish(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     if auth.user.id != target_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
     s.data()

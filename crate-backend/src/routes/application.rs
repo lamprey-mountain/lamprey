@@ -144,7 +144,9 @@ async fn app_get(
     if app.owner_id == auth.user.id || app.public || *app.id == *auth.user.id {
         Ok(Json(app))
     } else {
-        Err(Error::NotFound)
+        Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownApplication,
+        )))
     }
 }
 

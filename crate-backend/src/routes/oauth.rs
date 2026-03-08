@@ -45,7 +45,9 @@ async fn oauth_info(
     let srv = s.services();
     let app = data.application_get(q.client_id).await?;
     if app.owner_id != auth.user.id && !app.public {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownApplication,
+        )));
     }
     if q.response_type != "code" {
         return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
@@ -94,7 +96,9 @@ async fn oauth_authorize(
     let data = s.data();
     let app = data.application_get(q.client_id).await?;
     if app.owner_id != auth.user.id && !app.public {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownApplication,
+        )));
     }
     if q.response_type != "code" {
         return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());

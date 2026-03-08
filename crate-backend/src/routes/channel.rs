@@ -481,7 +481,9 @@ async fn channel_update(
     if let Some(room_id) = chan_pre.room_id {
         let room_perms = srv.perms.for_room(auth.user.id, room_id).await?;
         if !room_perms.is_member() {
-            return Err(Error::NotFound);
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownChannel,
+            )));
         }
     }
 

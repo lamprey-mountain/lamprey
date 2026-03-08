@@ -5,6 +5,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate,
@@ -127,7 +128,9 @@ pub async fn session_update(
     }
 
     if !allowed {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownSession,
+        )));
     }
 
     if !json.changes(&target_session) {
@@ -176,7 +179,9 @@ pub async fn session_delete(
         SessionIdReq::SessionId(target_session_id) => target_session_id,
     };
     if auth.session.status == SessionStatus::Unauthorized && auth.session.id != target_session_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownSession,
+        )));
     }
     let data = s.data();
     let srv = s.services();
@@ -203,7 +208,9 @@ pub async fn session_delete(
     }
 
     if !allowed {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownSession,
+        )));
     }
 
     // TODO: should i restrict deleting other sessions to sudo mode?
@@ -281,7 +288,9 @@ pub async fn session_get(
     let srv = s.services();
     let target_session = srv.sessions.get(session_id).await?;
     if !auth.session.can_see(&target_session) {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownSession,
+        )));
     }
     Ok(Json(target_session))
 }

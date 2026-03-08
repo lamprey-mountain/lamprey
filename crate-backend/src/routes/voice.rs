@@ -54,7 +54,7 @@ async fn voice_state_get(
     if let Some(state) = state {
         Ok(Json(state))
     } else {
-        Err(Error::NotFound)
+        Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))
     }
 }
 
@@ -87,7 +87,7 @@ async fn voice_state_patch(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let Some(mut old_state) = srv.voice.state_get(target_user_id) else {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     };
     let chan = srv.channels.get(channel_id, None).await?;
     if !chan.ty.has_voice() {

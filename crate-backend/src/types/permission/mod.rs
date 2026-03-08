@@ -183,7 +183,9 @@ impl Permissions {
             Ok(())
         } else {
             if perm == Permission::ViewChannel {
-                return Err(Error::NotFound);
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownChannel,
+                )));
             }
             Err(Error::ApiError(ApiError {
                 required_permissions: vec![perm],
@@ -198,7 +200,9 @@ impl Permissions {
             Ok(())
         } else {
             if perm == Permission::ViewChannel {
-                return Err(Error::NotFound);
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownChannel,
+                )));
             }
             Err(Error::ApiError(ApiError {
                 required_permissions_server: vec![perm],

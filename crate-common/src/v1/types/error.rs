@@ -375,6 +375,18 @@ pub enum ErrorCode {
     #[error("unknown connection")]
     UnknownConnection,
 
+    /// unknown oauth2 client
+    #[error("unknown oauth2 client")]
+    UnknownOauth2Client,
+
+    /// unknown voice channel
+    #[error("unknown voice channel")]
+    UnknownVoiceChannel,
+
+    /// unknown dm
+    #[error("unknown dm")]
+    UnknownDm,
+
     /// cannot set strip_exif to false once it has been set to true
     #[error("cannot set strip_exif to false once it has been set to true")]
     CannotUnsetStripExif,
@@ -889,6 +901,9 @@ impl ErrorCode {
             ErrorCode::UnknownNotification => 404,
             ErrorCode::UnknownReaction => 404,
             ErrorCode::UnknownConnection => 404,
+            ErrorCode::UnknownOauth2Client => 404,
+            ErrorCode::UnknownVoiceChannel => 404,
+            ErrorCode::UnknownDm => 404,
             ErrorCode::Automod => 403,
             ErrorCode::MissingPermissions => 403,
             ErrorCode::CannotUnsetStripExif => 400,

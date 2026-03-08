@@ -774,7 +774,9 @@ impl ServiceMessages {
             Ok(m) => m,
             Err(e) => {
                 if is_webhook {
-                    return Err(Error::NotFound);
+                    return Err(Error::ApiError(ApiError::from_code(
+                        ErrorCode::UnknownMessage,
+                    )));
                 }
                 return Err(e);
             }
@@ -785,7 +787,9 @@ impl ServiceMessages {
         }
         if message.author_id != user_id {
             if is_webhook {
-                return Err(Error::NotFound);
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownMessage,
+                )));
             }
             return Err(ApiError::from_code(ErrorCode::MissingPermissions).into());
         }

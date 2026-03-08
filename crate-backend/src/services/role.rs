@@ -13,7 +13,7 @@ use common::v1::types::{
 use moka::future::Cache;
 use validator::Validate;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::routes::util::Auth;
 use crate::types::DbRoleCreate;
 use crate::ServerStateInner;
@@ -144,7 +144,10 @@ impl ServiceRoles {
 
     pub async fn get(&self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
         let roles = self.state.data().role_get_many(room_id, &[role_id]).await?;
-        roles.into_iter().next().ok_or(crate::Error::NotFound)
+        roles
+            .into_iter()
+            .next()
+            .ok_or(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)))
     }
 
     pub async fn update(
@@ -177,11 +180,14 @@ impl ServiceRoles {
         let role_before = role_before
             .into_iter()
             .next()
-            .ok_or(crate::Error::NotFound)?;
+            .ok_or(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)))?;
         data.role_update(room_id, role_id, json).await?;
         data.room_template_mark_dirty(room_id).await?;
         let role = data.role_get_many(room_id, &[role_id]).await?;
-        let role = role.into_iter().next().ok_or(crate::Error::NotFound)?;
+        let role = role
+            .into_iter()
+            .next()
+            .ok_or(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)))?;
 
         let changes = Changes::new()
             .change("name", &role_before.name, &role.name)
@@ -237,7 +243,10 @@ impl ServiceRoles {
         perms.ensure(Permission::RoleManage)?;
 
         let roles = data.role_get_many(room_id, &[role_id]).await?;
-        let role = roles.into_iter().next().ok_or(crate::Error::NotFound)?;
+        let role = roles
+            .into_iter()
+            .next()
+            .ok_or(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)))?;
 
         data.role_delete(room_id, role_id).await?;
         data.room_template_mark_dirty(room_id).await?;

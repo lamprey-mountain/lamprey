@@ -451,7 +451,9 @@ async fn webhook_message_get(
         .await?;
 
     if message.author_id != webhook_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMessage,
+        )));
     }
 
     s.presign_message(&mut message).await?;
@@ -531,7 +533,9 @@ async fn webhook_message_delete(
         .await?;
 
     if message.author_id != webhook_user_id {
-        return Err(Error::NotFound);
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMessage,
+        )));
     }
 
     if !message.latest_version.message_type.is_deletable() {
