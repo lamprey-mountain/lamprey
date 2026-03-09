@@ -37,6 +37,7 @@ use super::util::Auth;
     post,
     path = "/media",
     tags = ["media", "badge.scope.full"],
+    request_body = MediaCreate,
     responses(
         (status = StatusCode::CREATED, description = "Create media success", body = MediaCreated)
     )
@@ -104,7 +105,10 @@ async fn media_create(
     patch,
     path = "/media/{media_id}",
     tags = ["media", "badge.scope.full"],
-    params(("media_id", description = "Media id")),
+    params(
+        ("media_id" = MediaId, Path, description = "Media id"),
+    ),
+    request_body = MediaPatch,
     responses((status = OK, body = Media, description = "Success")),
 )]
 async fn media_patch(

@@ -161,11 +161,12 @@ async fn document_branch_get(
 #[utoipa::path(
     patch,
     path = "/document/{channel_id}/branch/{branch_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("branch_id", description = "Branch id"),
-    ),
     tags = ["document", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("branch_id" = DocumentBranchId, Path, description = "Branch id"),
+    ),
+    request_body = DocumentBranchPatch,
     responses(
         (status = OK, description = "ok", body = DocumentBranch),
     )
@@ -267,8 +268,12 @@ async fn document_branch_close(
 #[utoipa::path(
     post,
     path = "/document/{channel_id}/branch/{parent_id}/fork",
-    params(("channel_id", description = "Channel id"), ("parent_id", description = "Parent branch id")),
     tags = ["document", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("parent_id" = DocumentBranchId, Path, description = "Parent branch id"),
+    ),
+    request_body = DocumentBranchCreate,
     responses(
         (status = OK, description = "ok"),
     )
@@ -407,8 +412,11 @@ async fn document_branch_merge(
 #[utoipa::path(
     post,
     path = "/document/{channel_id}/tag",
-    params(("channel_id", description = "Channel id")),
     tags = ["document", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
+    request_body = DocumentTagCreate,
     responses(
         (status = OK, description = "ok"),
     )
@@ -846,11 +854,12 @@ async fn document_content_get(
 #[utoipa::path(
     put,
     path = "/document/{channel_id}/branch/{branch_id}/content",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("branch_id", description = "Branch id"),
-    ),
     tags = ["document", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("branch_id" = DocumentBranchId, Path, description = "Branch id"),
+    ),
+    request_body = SerdocPut,
     responses(
         (status = OK, description = "ok"),
     )

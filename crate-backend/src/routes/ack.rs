@@ -19,6 +19,7 @@ use crate::error::Result;
     post,
     path = "/ack",
     tags = ["ack", "badge.scope.full"],
+    request_body = AckBulk,
     responses(
         (status = NO_CONTENT, description = "ok"),
     )

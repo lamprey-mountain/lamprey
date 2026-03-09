@@ -16,6 +16,7 @@ use crate::ServerState;
     post,
     path = "/server/report",
     tags = ["moderation", "badge.scope.full"],
+    request_body = ReportCreate,
     responses((status = OK, body = Report, description = "success"))
 )]
 async fn report_create_server(
@@ -32,8 +33,11 @@ async fn report_create_server(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/report",
-    params(("room_id", description = "Room id")),
     tags = ["moderation", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = ReportCreate,
     responses((status = OK, body = Report, description = "success"))
 )]
 async fn report_create_room(

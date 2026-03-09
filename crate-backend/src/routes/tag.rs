@@ -25,8 +25,11 @@ use super::util::HeaderIdempotencyKey;
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/tag",
-    params(("channel_id", description = "The ID of the forum channel to create the tag in.")),
     tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel to create the tag in."),
+    ),
+    request_body = TagCreate,
     responses(
         (status = CREATED, body = Tag, description = "Create tag success"),
     )
@@ -51,11 +54,12 @@ async fn tag_create(
 #[utoipa::path(
     patch,
     path = "/channel/{channel_id}/tag/{tag_id}",
-    params(
-        ("channel_id", description = "The ID of the forum channel the tag belongs to."),
-        ("tag_id", description = "The ID of the tag to update.")
-    ),
     tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel the tag belongs to."),
+        ("tag_id" = TagId, Path, description = "The ID of the tag to update.")
+    ),
+    request_body = TagPatch,
     responses(
         (status = OK, body = Tag, description = "Update tag success"),
     )
@@ -115,11 +119,11 @@ async fn tag_update(
 #[utoipa::path(
     delete,
     path = "/channel/{channel_id}/tag/{tag_id}",
-    params(
-        ("channel_id", description = "The ID of the forum channel the tag belongs to."),
-        ("tag_id", description = "The ID of the tag to delete.")
-    ),
     tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel the tag belongs to."),
+        ("tag_id" = TagId, Path, description = "The ID of the tag to delete.")
+    ),
     responses(
         (status = NO_CONTENT, description = "Delete tag success"),
     )
@@ -181,12 +185,12 @@ async fn tag_delete(
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/tag/search",
+    tags = ["tag", "badge.scope.full"],
     params(
-        ("channel_id", description = "The ID of the forum channel to search for tags in."),
+        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel to search for tags in."),
         TagSearchQuery,
         PaginationQuery<TagId>,
     ),
-    tags = ["tag", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Tag>, description = "success"),
     )
@@ -222,12 +226,12 @@ async fn tag_search(
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/tag",
+    tags = ["tag", "badge.scope.full"],
     params(
-        ("channel_id", description = "The ID of the forum channel to list tags from."),
+        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel to list tags from."),
         TagListQuery,
         PaginationQuery<TagId>,
     ),
-    tags = ["tag", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Tag>, description = "success"),
     )

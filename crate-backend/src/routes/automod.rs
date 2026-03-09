@@ -28,8 +28,10 @@ use common::v1::types::{AuditLogEntryType, MessageSync, Permission};
 #[utoipa::path(
     get,
     path = "/room/{room_id}/automod/rule",
-    params(("room_id", description = "Room id")),
     tags = ["automod", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     responses(
         (status = OK, body = Vec<AutomodRule>, description = "List automod rules success"),
     )
@@ -52,8 +54,11 @@ async fn automod_rule_list(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/automod/rule",
-    params(("room_id", description = "Room id")),
     tags = ["automod", "badge.scope.full", "badge.audit-log.AutomodRuleCreate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = AutomodRuleCreate,
     responses(
         (status = CREATED, body = AutomodRule, description = "Create automod rule success"),
     )
@@ -104,11 +109,11 @@ async fn automod_rule_create(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/automod/rule/{rule_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("rule_id", description = "Rule id")
-    ),
     tags = ["automod", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+        ("rule_id" = AutomodRuleId, Path, description = "Rule id"),
+    ),
     responses(
         (status = OK, body = AutomodRule, description = "Get automod rule success"),
     )
@@ -137,11 +142,12 @@ async fn automod_rule_get(
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/automod/rule/{rule_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("rule_id", description = "Rule id")
-    ),
     tags = ["automod", "badge.scope.full", "badge.audit-log.AutomodRuleUpdate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+        ("rule_id" = AutomodRuleId, Path, description = "Rule id"),
+    ),
+    request_body = AutomodRuleUpdate,
     responses(
         (status = OK, body = AutomodRule, description = "Update automod rule success"),
     )
@@ -203,11 +209,11 @@ async fn automod_rule_update(
 #[utoipa::path(
     delete,
     path = "/room/{room_id}/automod/rule/{rule_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("rule_id", description = "Rule id")
-    ),
     tags = ["automod", "badge.scope.full", "badge.audit-log.AutomodRuleDelete"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+        ("rule_id" = AutomodRuleId, Path, description = "Rule id"),
+    ),
     responses(
         (status = NO_CONTENT, description = "Delete automod rule success"),
     )
@@ -263,10 +269,10 @@ async fn automod_rule_delete(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/automod/rule/test",
-    params(
-        ("room_id", description = "Room id"),
-    ),
     tags = ["automod", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     request_body = AutomodRuleTestRequest,
     responses(
         (status = OK, body = AutomodRuleTest, description = "Test automod rules success"),

@@ -33,8 +33,9 @@ use crate::ServerState;
         "badge.audit-log.EmojiCreate",
     ],
     params(
-        ("room_id", description = "Room id"),
+        ("room_id" = RoomId, Path, description = "Room id"),
     ),
+    request_body = EmojiCustomCreate,
     responses(
         (status = CREATED, body = EmojiCustom, description = "new emoji created"),
     )
@@ -62,11 +63,11 @@ async fn emoji_create(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/emoji/{emoji_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("emoji_id", description = "Emoji id"),
-    ),
     tags = ["emoji", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
+    ),
     responses(
         (status = OK,  body = EmojiCustom, description = "success"),
     )
@@ -88,16 +89,16 @@ async fn emoji_get(
 #[utoipa::path(
     delete,
     path = "/room/{room_id}/emoji/{emoji_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("emoji_id", description = "Emoji id"),
-    ),
     tags = [
         "emoji",
         "badge.scope.full",
         "badge.perm.EmojiAdd",
         "badge.audit-log.EmojiDelete",
     ],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
+    ),
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -147,11 +148,12 @@ async fn emoji_delete(
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/emoji/{emoji_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("emoji_id", description = "Emoji id"),
-    ),
     tags = ["emoji", "badge.scope.full", "badge.audit-log.EmojiUpdate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
+    ),
+    request_body = EmojiCustomPatch,
     responses(
         (status = NOT_MODIFIED, description = "not modified"),
         (status = OK, body = EmojiCustom, description = "success"),
@@ -206,11 +208,11 @@ async fn emoji_update(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/emoji",
+    tags = ["emoji", "badge.scope.full"],
     params(
         PaginationQuery<EmojiId>,
-        ("room_id", description = "Room id"),
+        ("room_id" = RoomId, Path, description = "Room id"),
     ),
-    tags = ["emoji", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
     )
@@ -236,8 +238,10 @@ async fn emoji_list(
 #[utoipa::path(
     get,
     path = "/emoji/{emoji_id}",
-    params(("emoji_id", description = "Emoji id")),
     tags = ["emoji", "badge.scope.full"],
+    params(
+        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
+    ),
     responses(
         (status = OK, body = EmojiCustom, description = "success"),
     )

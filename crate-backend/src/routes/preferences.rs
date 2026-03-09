@@ -20,6 +20,7 @@ use crate::ServerState;
     put,
     path = "/preferences",
     tags = ["preferences", "badge.scope.full"],
+    request_body = PreferencesGlobal,
     responses((status = OK, body = PreferencesGlobal, description = "success"))
 )]
 async fn preferences_global_put(
@@ -44,8 +45,11 @@ async fn preferences_global_put(
 #[utoipa::path(
     put,
     path = "/preferences/room/{room_id}",
-    params(("room_id", description = "Room id")),
     tags = ["preferences", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = PreferencesRoom,
     responses((status = OK, body = PreferencesRoom, description = "success"))
 )]
 async fn preferences_room_put(
@@ -74,8 +78,11 @@ async fn preferences_room_put(
 #[utoipa::path(
     put,
     path = "/preferences/channel/{channel_id}",
-    params(("channel_id", description = "Channel id")),
     tags = ["preferences", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
+    request_body = PreferencesChannel,
     responses((status = OK, body = PreferencesChannel, description = "success"))
 )]
 async fn preferences_channel_put(
@@ -104,8 +111,11 @@ async fn preferences_channel_put(
 #[utoipa::path(
     put,
     path = "/preferences/user/{user_id}",
-    params(("user_id", description = "User id")),
     tags = ["preferences", "badge.scope.full"],
+    params(
+        ("user_id" = UserId, Path, description = "User id"),
+    ),
+    request_body = PreferencesUser,
     responses((status = OK, body = PreferencesUser, description = "success"))
 )]
 async fn preferences_user_put(

@@ -852,8 +852,11 @@ async fn room_member_search_advanced(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/prune",
-    request_body = PruneBegin,
     tags = ["room_member", "badge.scope.full", "badge.perm.MemberKick", "badge.perm.RoomManage", "badge.room-mfa"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = PruneBegin,
     responses(
         (status = OK, body = PruneResponse, description = "success"),
         (status = ACCEPTED, description = "prune started"),

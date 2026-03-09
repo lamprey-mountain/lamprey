@@ -25,11 +25,11 @@ use crate::error::{Error, Result};
 #[utoipa::path(
     get,
     path = "/user/{user_id}/friend",
+    tags = ["relationship", "badge.scope.full"],
     params(
         PaginationQuery<UserId>,
-        ("user_id", description = "User id to list friends from"),
+        ("user_id" = UserId, Path, description = "User id to list friends from"),
     ),
-    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -51,11 +51,11 @@ async fn friend_list(
 #[utoipa::path(
     get,
     path = "/user/{user_id}/friend/pending",
+    tags = ["relationship", "badge.scope.full"],
     params(
         PaginationQuery<UserId>,
-        ("user_id", description = "User id to list friends from"),
+        ("user_id" = UserId, Path, description = "User id to list friends from"),
     ),
-    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -77,8 +77,10 @@ async fn friend_list_pending(
 #[utoipa::path(
     put,
     path = "/user/@self/friend/{target_id}",
-    params(("target_id", description = "Target user's id")),
     tags = ["relationship", "badge.scope.full", "badge.audit-log.FriendRequest", "badge.audit-log.FriendAccept"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn friend_add(
@@ -251,8 +253,10 @@ async fn friend_add(
 #[utoipa::path(
     delete,
     path = "/user/@self/friend/{target_id}",
-    params(("target_id", description = "Target user's id")),
     tags = ["relationship", "badge.scope.full", "badge.audit-log.FriendDelete"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn friend_remove(
@@ -320,11 +324,11 @@ async fn friend_remove(
 #[utoipa::path(
     get,
     path = "/user/{user_id}/block",
+    tags = ["relationship", "badge.scope.full"],
     params(
         PaginationQuery<UserId>,
-        ("user_id", description = "User id to list blocks from"),
+        ("user_id" = UserId, Path, description = "User id to list blocks from"),
     ),
-    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -346,8 +350,10 @@ async fn block_list(
 #[utoipa::path(
     put,
     path = "/user/@self/block/{target_id}",
-    params(("target_id", description = "Target user's id")),
     tags = ["relationship", "badge.scope.full", "badge.audit-log.BlockCreate"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn block_add(
@@ -411,8 +417,10 @@ async fn block_add(
 #[utoipa::path(
     delete,
     path = "/user/@self/block/{target_id}",
-    params(("target_id", description = "Target user's id")),
     tags = ["relationship", "badge.scope.full", "badge.audit-log.BlockDelete"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn block_remove(
@@ -455,11 +463,11 @@ async fn block_remove(
 #[utoipa::path(
     get,
     path = "/user/{user_id}/ignore",
+    tags = ["relationship", "badge.scope.full"],
     params(
         PaginationQuery<UserId>,
-        ("user_id", description = "User id to list ignored users from"),
+        ("user_id" = UserId, Path, description = "User id to list ignored users from"),
     ),
-    tags = ["relationship", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
@@ -481,8 +489,11 @@ async fn ignore_list(
 #[utoipa::path(
     put,
     path = "/user/@self/ignore/{target_id}",
-    params(("target_id", description = "Target user's id")),
     tags = ["relationship", "badge.scope.full", "badge.audit-log.IgnoreAdd"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
+    request_body = Ignore,
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn ignore_add(
@@ -530,8 +541,10 @@ async fn ignore_add(
 #[utoipa::path(
     delete,
     path = "/user/@self/ignore/{target_id}",
-    params(("target_id", description = "Target user's id")),
     tags = ["relationship", "badge.scope.full", "badge.audit-log.IgnoreRemove"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn ignore_remove(

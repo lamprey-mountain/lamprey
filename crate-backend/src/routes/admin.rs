@@ -26,6 +26,7 @@ use common::v1::types::ChannelId;
     post,
     path = "/admin/whisper",
     tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.AdminWhisper"],
+    request_body = AdminWhisper,
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_whisper(
@@ -74,6 +75,7 @@ async fn admin_whisper(
     post,
     path = "/admin/broadcast",
     tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.AdminBroadcast"],
+    request_body = AdminBroadcast,
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_broadcast(
@@ -244,7 +246,9 @@ async fn admin_collect_garbage(
     post,
     path = "/admin/reindex-channel/{channel_id}",
     tags = ["admin", "badge.admin_only", "badge.server-perm.Admin", "badge.audit-log.ChannelReindex"],
-    params(("channel_id" = String, Path, description = "Channel id to reindex")),
+    params(
+        ("channel_id" = String, Path, description = "Channel id to reindex"),
+    ),
     responses(
         (status = ACCEPTED, description = "Channel reindexing queued"),
     )
@@ -277,7 +281,9 @@ async fn admin_reindex_channel(
     get,
     path = "/admin/channel-search-index-stats/{channel_id}",
     tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
-    params(("channel_id" = String, Path, description = "Channel id to get stats for")),
+    params(
+        ("channel_id" = String, Path, description = "Channel id to get stats for"),
+    ),
     responses(
         (status = OK, body = SearchIndexStats, description = "Search index statistics for the channel"),
     )

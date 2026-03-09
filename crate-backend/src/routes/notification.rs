@@ -102,6 +102,7 @@ async fn inbox_get(
     post,
     path = "/inbox",
     tags = ["inbox", "badge.scope.full"],
+    request_body = NotificationCreate,
     responses((status = CREATED, body = Notification, description = "success"))
 )]
 async fn inbox_post(
@@ -151,6 +152,7 @@ async fn inbox_post(
     post,
     path = "/inbox/mark-read",
     tags = ["inbox", "badge.scope.full"],
+    request_body = NotificationMarkRead,
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_read(
@@ -168,6 +170,7 @@ async fn inbox_mark_read(
     post,
     path = "/inbox/mark-unread",
     tags = ["inbox", "badge.scope.full"],
+    request_body = NotificationMarkRead,
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_unread(
@@ -189,6 +192,7 @@ async fn inbox_mark_unread(
     post,
     path = "/inbox/flush",
     tags = ["inbox", "badge.scope.full"],
+    request_body = NotificationFlush,
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_flush(

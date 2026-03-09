@@ -38,7 +38,6 @@ use crate::error::Result;
 #[utoipa::path(
     post,
     path = "/room/{room_id}/channel",
-    params(("room_id", description = "Room id")),
     tags = [
         "channel",
         "badge.scope.full",
@@ -46,6 +45,10 @@ use crate::error::Result;
         "badge.perm-opt.ThreadCreatePublic",
         "badge.perm-opt.ThreadCreatePrivate",
     ],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = ChannelCreate,
     responses(
         (status = CREATED, body = Channel, description = "Create thread success"),
     )
@@ -376,8 +379,11 @@ async fn channel_list_removed(
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/channel",
-    params(("room_id", description = "Room id")),
     tags = ["channel", "badge.scope.full", "badge.perm.ChannelManage", "badge.audit-log.ChannelReorder"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = ChannelReorder,
     responses(
         (status = OK, body = (), description = "Reorder channels success"),
     )
@@ -452,10 +458,11 @@ async fn channel_reorder(
 #[utoipa::path(
     patch,
     path = "/channel/{channel_id}",
-    params(
-        ("channel_id", description = "channel id"),
-    ),
     tags = ["channel", "badge.scope.full", "badge.perm-opt.ChannelEdit", "badge.perm-opt.ThreadEdit", "badge.audit-log.ChannelUpdate"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+    ),
+    request_body = ChannelPatch,
     responses(
         (status = OK, body = Channel, description = "edit message success"),
         (status = NOT_MODIFIED, body = Channel, description = "no change"),
@@ -507,10 +514,11 @@ async fn channel_update(
 #[utoipa::path(
     put,
     path = "/channel/{channel_id}/ack",
-    params(
-        ("channel_id", description = "channel id"),
-    ),
     tags = ["channel", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+    ),
+    request_body = AckReq,
     responses(
         (status = OK, description = "success"),
     )
@@ -910,8 +918,11 @@ struct TransferOwnership {
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/transfer-ownership",
-    params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.scope.full", "badge.sudo"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+    ),
+    request_body = TransferOwnership,
     responses((status = OK, description = "success"))
 )]
 async fn channel_transfer_ownership(
@@ -1101,11 +1112,6 @@ async fn channel_ratelimit_delete_all(
 #[utoipa::path(
     put,
     path = "/channel/{channel_id}/ratelimit/{user_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("user_id", description = "User id")
-    ),
-    request_body = RatelimitPut,
     tags = [
         "channel",
         "badge.scope.full",
@@ -1113,6 +1119,11 @@ async fn channel_ratelimit_delete_all(
         "badge.perm-opt.ThreadManage",
         "badge.perm-opt.MemberTimeout",
     ],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("user_id" = UserId, Path, description = "User id")
+    ),
+    request_body = RatelimitPut,
     responses(
         (status = OK, description = "Rate limit updated"),
     )

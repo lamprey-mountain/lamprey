@@ -26,8 +26,10 @@ use crate::{Error, ServerState};
 #[utoipa::path(
     post,
     path = "/server/{hostname}",
-    params(("hostname", description = "Server hostname")),
     tags = ["federation", "badge.scope.full"],
+    params(
+        ("hostname" = ServerReq, Path, description = "Server hostname"),
+    ),
     responses(
         (status = OK, body = ServerKeys, description = "ok"),
     )
@@ -55,8 +57,11 @@ async fn server_keys_get(
 #[utoipa::path(
     post,
     path = "/server/{hostname}/user",
-    params(("hostname", description = "Server hostname")),
     tags = ["federation", "badge.scope.full"],
+    params(
+        ("hostname" = ServerReq, Path, description = "Server hostname"),
+    ),
+    request_body = ServerUserCreateRequest,
     responses(
         (status = OK, body = ServerUserCreate, description = "ok"),
     )
@@ -88,8 +93,11 @@ async fn server_user_ensure(
 #[utoipa::path(
     post,
     path = "/server/{hostname}/sync",
-    params(("hostname", description = "Server hostname")),
     tags = ["federation", "badge.scope.full"],
+    params(
+        ("hostname" = ServerReq, Path, description = "Server hostname"),
+    ),
+    request_body = ServerUserCreateRequest,
     responses((status = ACCEPTED, description = "ok")),
 )]
 async fn server_sync_handle(

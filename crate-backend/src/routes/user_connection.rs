@@ -19,11 +19,11 @@ use crate::{Error, Result, ServerState};
 #[utoipa::path(
     get,
     path = "/user/{user_id}/connection",
+    tags = ["user_connection"],
     params(
-        ("user_id", description = "User id"),
+        ("user_id" = UserIdReq, Path, description = "User id"),
         PaginationQuery<ApplicationId>
     ),
-    tags = ["user_connection"],
     responses(
         (status = OK, body = PaginationResponse<Connection>, description = "success"),
     )
@@ -51,11 +51,12 @@ async fn user_connection_list(
 #[utoipa::path(
     patch,
     path = "/user/{user_id}/connection/{app_id}",
-    params(
-        ("user_id", description = "User id"),
-        ("app_id", description = "Application id"),
-    ),
     tags = ["user_connection"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+        ("app_id" = ApplicationId, Path, description = "Application id"),
+    ),
+    request_body = ConnectionPatch,
     responses(
         (status = OK, body = Connection, description = "success"),
     )
@@ -73,11 +74,11 @@ async fn user_connection_update(
 #[utoipa::path(
     delete,
     path = "/user/{user_id}/connection/{app_id}",
-    params(
-        ("user_id", description = "User id"),
-        ("app_id", description = "Application id")
-    ),
     tags = ["user_connection", "badge.audit-log.ConnectionDelete"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+        ("app_id" = ApplicationId, Path, description = "Application id")
+    ),
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn user_connection_delete(
@@ -113,10 +114,10 @@ async fn user_connection_delete(
 #[utoipa::path(
     get,
     path = "/user/@self/app/{app_id}/connection-metadata",
-    params(
-        ("app_id", description = "Application id"),
-    ),
     tags = ["user_connection"],
+    params(
+        ("app_id" = ApplicationId, Path, description = "Application id"),
+    ),
     responses(
         (status = OK, body = ConnectionMetadata, description = "success"),
     )
@@ -133,10 +134,11 @@ async fn user_app_connection_metadata_get(
 #[utoipa::path(
     put,
     path = "/user/@self/app/{app_id}/connection-metadata",
-    params(
-        ("app_id", description = "Application id"),
-    ),
     tags = ["user_connection"],
+    params(
+        ("app_id" = ApplicationId, Path, description = "Application id"),
+    ),
+    request_body = ConnectionMetadata,
     responses(
         (status = OK, body = ConnectionMetadata, description = "success"),
     )

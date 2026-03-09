@@ -25,10 +25,11 @@ use crate::error::Result;
 #[utoipa::path(
     post,
     path = "/room/{room_id}/role",
-    params(
-        ("room_id", description = "Room id"),
-    ),
     tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleCreate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = RoleCreate,
     responses(
         (status = CREATED, body = Role, description = "success"),
     )
@@ -54,11 +55,12 @@ async fn role_create(
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/role/{role_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("role_id", description = "Role id"),
-    ),
     tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleUpdate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+        ("role_id" = RoleId, Path, description = "Role id"),
+    ),
+    request_body = RolePatch,
     responses(
         (status = OK, body = Role, description = "success"),
         (status = NOT_MODIFIED, description = "success"),

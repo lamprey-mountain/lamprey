@@ -58,11 +58,11 @@ async fn ensure_can_still_login_after_email_removal(
 #[utoipa::path(
     put,
     path = "/user/{user_id}/email/{addr}",
-    params(
-        ("user_id", description = "User id"),
-        ("addr", description = "email address"),
-    ),
     tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailCreate"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+        ("addr" = String, Path, description = "email address"),
+    ),
     responses(
         (status = CREATED, description = "success"),
         (status = OK, description = "already exists"),
@@ -151,11 +151,11 @@ async fn email_add(
 #[utoipa::path(
     delete,
     path = "/user/{user_id}/email/{addr}",
-    params(
-        ("user_id", description = "User id"),
-        ("addr", description = "email address"),
-    ),
     tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailDelete"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+        ("addr" = String, Path, description = "email address"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_delete(
@@ -215,8 +215,10 @@ async fn email_delete(
 #[utoipa::path(
     get,
     path = "/user/{user_id}/email",
-    params(("user_id", description = "User id")),
     tags = ["user_email", "badge.scope.full"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
     responses((status = OK, body = Vec<EmailInfo>, description = "success"))
 )]
 async fn email_list(
@@ -242,11 +244,12 @@ async fn email_list(
 #[utoipa::path(
     patch,
     path = "/user/{user_id}/email/{addr}",
-    params(
-        ("user_id", description = "User id"),
-        ("addr", description = "email address"),
-    ),
     tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailUpdate"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+        ("addr" = String, Path, description = "email address"),
+    ),
+    request_body = EmailInfoPatch,
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_update(
@@ -320,11 +323,11 @@ async fn email_update(
 #[utoipa::path(
     post,
     path = "/user/{user_id}/email/{addr}/resend-verification",
-    params(
-        ("user_id", description = "User id"),
-        ("addr", description = "email address"),
-    ),
     tags = ["user_email", "badge.scope.full"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+        ("addr" = String, Path, description = "email address"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_verification_resend(
@@ -389,12 +392,12 @@ async fn email_verification_resend(
 #[utoipa::path(
     post,
     path = "/user/{user_id}/email/{addr}/verify/{code}",
-    params(
-        ("user_id", description = "User id"),
-        ("addr", description = "email address"),
-        ("code", description = "Verification code"),
-    ),
     tags = ["user_email", "badge.scope.full"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+        ("addr" = String, Path, description = "email address"),
+        ("code" = String, Path, description = "Verification code"),
+    ),
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_verification_finish(

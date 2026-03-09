@@ -25,8 +25,10 @@ use crate::error::{Error, Result};
 #[utoipa::path(
     post,
     path = "/user/@self/dm/{target_id}",
-    params(("target_id", description = "Target user's id")),
     tags = ["dm", "badge.scope.full"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
     responses(
         (status = CREATED, description = "new dm created"),
         (status = OK, description = "already exists"),
@@ -98,10 +100,10 @@ async fn dm_init(
 #[utoipa::path(
     get,
     path = "/user/@self/dm/{target_id}",
-    params(
-        ("target_id", description = "Target user's id"),
-    ),
     tags = ["dm", "badge.scope.full"],
+    params(
+        ("target_id" = UserId, Path, description = "Target user's id"),
+    ),
     responses(
         (status = OK, description = "success"),
     )
@@ -130,11 +132,11 @@ async fn dm_get(
 #[utoipa::path(
     get,
     path = "/user/{user_id}/dm",
+    tags = ["dm", "badge.scope.full"],
     params(
         PaginationQuery<MessageVerId>,
-        ("user_id", description = "user id"),
+        ("user_id" = UserIdReq, Path, description = "user id"),
     ),
-    tags = ["dm", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<Channel>, description = "success"),
     )

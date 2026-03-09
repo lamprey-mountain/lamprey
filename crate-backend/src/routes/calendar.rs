@@ -53,7 +53,9 @@ async fn calendar_event_list_user(
     get,
     path = "/calendar/{channel_id}/event",
     tags = ["calendar", "badge.scope.full"],
-    params(("channel_id" = ChannelId, description = "Channel id")),
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_event_list(
@@ -84,7 +86,9 @@ async fn calendar_event_list(
     post,
     path = "/calendar/{channel_id}/event",
     tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarEventCreate"],
-    params(("channel_id" = ChannelId, description = "Channel id")),
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
     request_body = CalendarEventCreate,
     responses((status = CREATED, body = CalendarEvent, description = "Create calendar event success"))
 )]
@@ -148,8 +152,8 @@ async fn calendar_event_create(
     path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar", "badge.scope.full"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id")
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id")
     ),
     responses((status = OK, body = CalendarEvent, description = "Get calendar event success"))
 )]
@@ -185,8 +189,8 @@ async fn calendar_event_get(
     path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarEventUpdate"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id")
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id")
     ),
     request_body = CalendarEventPatch,
     responses((status = OK, body = CalendarEvent, description = "Update calendar event success"))
@@ -267,8 +271,8 @@ async fn calendar_event_update(
     path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarEventDelete"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id")
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id")
     ),
     responses((status = NO_CONTENT, description = "Delete calendar event success"))
 )]
@@ -340,8 +344,8 @@ async fn calendar_event_delete(
     path = "/calendar/{channel_id}/event/{event_id}/overwrite",
     tags = ["calendar", "badge.scope.full"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id")
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id")
     ),
     responses((status = OK, body = Vec<CalendarOverwrite>, description = "List calendar overwrites success"))
 )]
@@ -376,9 +380,9 @@ async fn calendar_overwrite_list(
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
     tags = ["calendar", "badge.scope.full"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("seq" = u64, description = "Sequence number")
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("seq" = u64, Path, description = "Sequence number")
     ),
     responses((status = OK, body = CalendarOverwrite, description = "Get calendar overwrite success"))
 )]
@@ -413,9 +417,9 @@ async fn calendar_overwrite_get(
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
     tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarOverwriteUpdate", "badge.audit-log.CalendarOverwriteCreate"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("seq" = u64, description = "Sequence number")
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("seq" = u64, Path, description = "Sequence number")
     ),
     request_body = CalendarOverwritePut,
     responses((status = OK, body = CalendarOverwrite, description = "Update calendar overwrite success"))
@@ -512,9 +516,9 @@ async fn calendar_overwrite_update(
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
     tags = ["calendar", "badge.scope.full", "badge.audit-log.CalendarOverwriteDelete"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("seq" = u64, description = "Sequence number")
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("seq" = u64, Path, description = "Sequence number")
     ),
     responses((status = NO_CONTENT, description = "Delete calendar overwrite success"))
 )]
@@ -585,8 +589,8 @@ use std::collections::HashMap;
     path = "/calendar/{channel_id}/event/{event_id}/rsvp",
     tags = ["calendar", "badge.scope.full"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
         CalendarEventParticipantQuery
     ),
     responses((status = OK, body = Vec<CalendarEventParticipant>, description = "ok"))
@@ -650,9 +654,9 @@ async fn calendar_event_rsvp_list(
     path = "/calendar/{channel_id}/event/{event_id}/rsvp/{user_id}",
     tags = ["calendar", "badge.scope.full"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("user_id" = UserIdReq, description = "@self or user id"),
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("user_id" = UserIdReq, Path, description = "@self or user id"),
     ),
     responses((status = OK, body = CalendarEventParticipant, description = "ok"))
 )]
@@ -693,9 +697,9 @@ async fn calendar_event_rsvp_get(
     path = "/calendar/{channel_id}/event/{event_id}/rsvp/{user_id}",
     tags = ["calendar", "badge.scope.full"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("user_id" = UserIdReq, description = "@self or user id"),
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("user_id" = UserIdReq, Path, description = "@self or user id"),
     ),
     request_body = CalendarEventParticipantPut,
     responses((status = OK, description = "ok"))
@@ -787,9 +791,9 @@ async fn calendar_event_rsvp_put(
     path = "/calendar/{channel_id}/event/{event_id}/rsvp/{user_id}",
     tags = ["calendar", "badge.audit-log.CalendarRsvpDelete"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("user_id" = inline(UserIdReq), description = "@self or user id"),
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("user_id" = inline(UserIdReq), Path, description = "@self or user id"),
     ),
     responses((status = NO_CONTENT, description = "Delete calendar event RSVP success"))
 )]
@@ -863,9 +867,9 @@ async fn calendar_event_rsvp_delete(
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp",
     tags = ["calendar"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("seq" = u64, description = "Sequence number"),
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("seq" = u64, Path, description = "Sequence number"),
         CalendarEventParticipantQuery
     ),
     responses((status = OK, body = Vec<CalendarEventParticipant>, description = "ok"))
@@ -928,10 +932,10 @@ async fn calendar_overwrite_rsvp_list(
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("seq" = u64, description = "Sequence number"),
-        ("user_id" = UserIdReq, description = "@self or user id"),
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("seq" = u64, Path, description = "Sequence number"),
+        ("user_id" = UserIdReq, Path, description = "@self or user id"),
     ),
     request_body = CalendarEventParticipantPut,
     responses((status = OK, description = "ok"))
@@ -1031,10 +1035,10 @@ async fn calendar_overwrite_rsvp_put(
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
-        ("channel_id" = ChannelId, description = "Channel id"),
-        ("event_id" = CalendarEventId, description = "Calendar event id"),
-        ("seq" = u64, description = "Sequence number"),
-        ("user_id" = inline(UserIdReq), description = "@self or user id"),
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("event_id" = CalendarEventId, Path, description = "Calendar event id"),
+        ("seq" = u64, Path, description = "Sequence number"),
+        ("user_id" = inline(UserIdReq), Path, description = "@self or user id"),
     ),
     responses((status = NO_CONTENT, description = "Delete calendar overwrite RSVP success"))
 )]

@@ -62,11 +62,12 @@ async fn voice_state_get(
 #[utoipa::path(
     patch,
     path = "/voice/{channel_id}/member/{user_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("user_id", description = "User id"),
-    ),
     tags = ["voice", "badge.scope.full", "badge.perm-opt.VoiceMute", "badge.perm-opt.VoiceDeafen", "badge.perm-opt.VoiceRequest", "badge.perm-opt.VoiceMove", "badge.audit-log.MemberMove", "badge.audit-log.MemberUpdate"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
+    request_body = VoiceStatePatch,
     responses(
         (status = OK, body = VoiceState, description = "ok"),
     )
@@ -334,11 +335,12 @@ async fn voice_state_disconnect_all(
 #[utoipa::path(
     post,
     path = "/voice/{channel_id}/member/{user_id}/move",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("user_id", description = "User id"),
-    ),
     tags = ["voice", "badge.scope.full", "badge.perm.VoiceMove", "badge.audit-log.MemberMove"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
+    request_body = VoiceStateMove,
     responses(
         (status = OK, body = (), description = "ok"),
     )
@@ -479,6 +481,7 @@ async fn voice_state_list(
     post,
     path = "/voice",
     tags = ["voice", "badge.scope.full"],
+    request_body = CallCreate,
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -574,8 +577,11 @@ async fn voice_call_get(
 #[utoipa::path(
     patch,
     path = "/voice/{channel_id}",
-    params(("channel_id", description = "Channel id")),
     tags = ["voice", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
+    request_body = CallPatch,
     responses(
         (status = OK, body = (), description = "ok"),
     )

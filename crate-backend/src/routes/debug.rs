@@ -247,6 +247,7 @@ async fn debug_version() -> Result<impl IntoResponse> {
     post,
     path = "/debug/embed-url",
     tags = ["debug", "badge.scope.full"],
+    request_body = EmbedRequest,
     responses(
         (status = ACCEPTED, description = "success"),
     )
@@ -289,6 +290,7 @@ async fn debug_panic() {
     post,
     path = "/debug/test-permissions",
     tags = ["debug", "badge.scope.full"],
+    request_body = TestPermissionsRequest,
     responses((status = OK, body = TestPermissionsResponse, description = "success")),
 )]
 async fn debug_test_permissions(

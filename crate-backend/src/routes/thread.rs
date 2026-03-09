@@ -88,11 +88,12 @@ async fn thread_member_get(
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/member/{user_id}",
-    params(
-        ("thread_id" = ChannelId, description = "Thread id"),
-        ("user_id" = String, description = "User id"),
-    ),
     tags = ["thread", "badge.perm-opt.MemberKick", "badge.audit-log.ThreadMemberAdd"],
+    params(
+        ("thread_id" = ChannelId, Path, description = "Thread id"),
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
+    request_body = ThreadMemberPut,
     responses(
         (status = OK, body = ThreadMember, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -517,15 +518,15 @@ async fn thread_create(
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/message/{message_id}/thread",
-    params(
-        ("channel_id", description = "Parent channel id"),
-        ("message_id", description = "Source message id")
-    ),
-    request_body = ChannelCreate,
     tags = [
         "thread",
         "badge.perm.ThreadCreatePublic",
     ],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Parent channel id"),
+        ("message_id" = MessageId, Path, description = "Source message id")
+    ),
+    request_body = ChannelCreate,
     responses(
         (status = CREATED, body = Channel, description = "Create thread success"),
         (status = CONFLICT, description = "A thread for this message already exists"),

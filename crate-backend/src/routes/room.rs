@@ -32,6 +32,7 @@ use super::util::{Auth, HeaderIdempotencyKey};
     post,
     path = "/room",
     tags = ["room", "badge.scope.full"],
+    request_body = RoomCreate,
 )]
 async fn room_create(
     auth: Auth,
@@ -171,10 +172,11 @@ async fn room_search(
 #[utoipa::path(
     patch,
     path = "/room/{room_id}",
-    params(
-        ("room_id", description = "Room id"),
-    ),
     tags = ["room", "badge.scope.full", "badge.perm.RoomManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoomUpdate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = RoomPatch,
     responses(
         (status = OK, description = "edit success"),
         (status = NOT_MODIFIED, description = "no change"),
@@ -410,8 +412,11 @@ async fn room_ack(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/transfer-ownership",
-    params(("room_id", description = "Room id")),
     tags = ["room", "badge.scope.full", "badge.sudo"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = TransferOwnership,
     responses((status = OK, description = "success"))
 )]
 async fn room_transfer_ownership(
@@ -584,9 +589,11 @@ async fn room_unquarantine(
 #[utoipa::path(
     put,
     path = "/room/{room_id}/security",
-    params(("room_id", description = "Room id")),
-    request_body = RoomSecurityUpdate,
     tags = ["room", "badge.scope.full", "badge.sudo", "badge.audit-log.RoomUpdate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = RoomSecurityUpdate,
     responses(
         (status = OK, description = "success", body = Room),
     )

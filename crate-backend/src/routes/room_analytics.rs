@@ -28,6 +28,9 @@ use super::util::Auth;
     get,
     path = "/room/{room_id}/analytics/members-count",
     tags = ["room_analytics", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersCount>)),
 )]
 async fn room_analytics_members_count(
@@ -54,6 +57,9 @@ async fn room_analytics_members_count(
     get,
     path = "/room/{room_id}/analytics/members-join",
     tags = ["room_analytics", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersJoin>)),
 )]
 async fn room_analytics_members_join(
@@ -75,6 +81,9 @@ async fn room_analytics_members_join(
     get,
     path = "/room/{room_id}/analytics/members-leave",
     tags = ["room_analytics", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersLeave>)),
 )]
 async fn room_analytics_members_leave(
@@ -96,6 +105,9 @@ async fn room_analytics_members_leave(
     get,
     path = "/room/{room_id}/analytics/channels",
     tags = ["room_analytics", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsChannel>)),
 )]
 async fn room_analytics_channels(
@@ -120,6 +132,9 @@ async fn room_analytics_channels(
     get,
     path = "/room/{room_id}/analytics/overview",
     tags = ["room_analytics", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsOverview>)),
 )]
 async fn room_analytics_overview(
@@ -141,6 +156,9 @@ async fn room_analytics_overview(
     get,
     path = "/room/{room_id}/analytics/invites",
     tags = ["room_analytics", "badge.scope.full"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
     responses((status = 200, description = "success", body = Vec<RoomAnalyticsInvites>)),
 )]
 async fn room_analytics_invites(

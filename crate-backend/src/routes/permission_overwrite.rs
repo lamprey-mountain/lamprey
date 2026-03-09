@@ -23,11 +23,12 @@ use crate::ServerState;
 #[utoipa::path(
     put,
     path = "/channel/{channel_id}/permission/{overwrite_id}",
-    params(
-        ("channel_id", description = "channel id"),
-        ("overwrite_id", description = "Role or user id"),
-    ),
     tags = ["channel", "badge.scope.full", "badge.perm.RoleManage"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+        ("overwrite_id" = Uuid, Path, description = "Role or user id"),
+    ),
+    request_body = PermissionOverwriteSet,
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_overwrite(

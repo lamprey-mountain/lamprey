@@ -476,8 +476,11 @@ async fn auth_email_reset(
 #[utoipa::path(
     post,
     path = "/auth/email/{addr}/complete",
-    params(("addr", description = "Email address")),
     tags = ["auth", "badge.audit-log.SessionLogin", "badge.audit-log.AuthSudo"],
+    params(
+        ("addr" = EmailAddr, Path, description = "Email address"),
+    ),
+    request_body = AuthEmailComplete,
     responses((status = ACCEPTED, description = "success")),
 )]
 async fn auth_email_complete(
@@ -880,6 +883,7 @@ async fn auth_totp_recovery_exec(
     put,
     path = "/auth/password",
     tags = ["auth", "badge.sudo", "badge.audit-log.AuthUpdate"],
+    request_body = PasswordSet,
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_set(
@@ -954,6 +958,7 @@ async fn auth_password_delete(
     post,
     path = "/auth/password",
     tags = ["auth", "badge.audit-log.SessionLogin"],
+    request_body = PasswordExec,
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_exec(

@@ -428,10 +428,11 @@ async fn invite_use(
 #[utoipa::path(
     post,
     path = "/room/{room_id}/invite",
-    params(
-        ("room_id", description = "Room id"),
-    ),
     tags = ["invite", "badge.scope.full", "badge.perm.InviteCreate", "badge.audit-log.InviteCreate"],
+    params(
+        ("room_id" = RoomId, Path, description = "Room id"),
+    ),
+    request_body = InviteCreate,
     responses(
         (status = OK, body = Invite, description = "success"),
     )
@@ -577,10 +578,11 @@ async fn invite_room_list(
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/invite",
-    params(
-        ("channel_id", description = "Channel id"),
-    ),
     tags = ["invite", "badge.scope.full", "badge.perm-opt.InviteCreate", "badge.audit-log.InviteCreate"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
+    request_body = InviteCreate,
     responses(
         (status = OK, body = Invite, description = "success"),
     )
@@ -893,6 +895,7 @@ async fn invite_patch(
     post,
     path = "/server/invite",
     tags = ["invite", "badge.scope.full", "badge.perm.InviteCreate"],
+    request_body = InviteCreate,
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_server_create(
@@ -986,8 +989,11 @@ async fn invite_server_list(
 #[utoipa::path(
     post,
     path = "/user/{user_id}/invite",
-    params(("user_id", description = "User id")),
     tags = ["invite", "badge.scope.full"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
+    request_body = InviteCreate,
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_user_create(

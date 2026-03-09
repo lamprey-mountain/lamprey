@@ -35,8 +35,11 @@ mod slack;
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/webhook",
-    params(("channel_id", description = "channel id")),
     tags = ["webhook", "badge.scope.full", "badge.audit-log.WebhookCreate"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+    ),
+    request_body = WebhookCreate,
     responses(
         (status = CREATED, body = Webhook, description = "Create webhook success"),
     )
@@ -260,8 +263,11 @@ async fn webhook_delete_with_token(
 #[utoipa::path(
     patch,
     path = "/webhook/{webhook_id}",
-    params(("webhook_id", description = "Webhook id")),
     tags = ["webhook", "badge.scope.full", "badge.audit-log.WebhookUpdate"],
+    params(
+        ("webhook_id" = WebhookId, Path, description = "Webhook id"),
+    ),
+    request_body = WebhookUpdate,
     responses(
         (status = OK, body = Webhook, description = "Update webhook success"),
     )
@@ -327,11 +333,12 @@ async fn webhook_update(
 #[utoipa::path(
     patch,
     path = "/webhook/{webhook_id}/{token}",
-    params(
-        ("webhook_id", description = "Webhook id"),
-        ("token", description = "Webhook token")
-    ),
     tags = ["webhook"],
+    params(
+        ("webhook_id" = WebhookId, Path, description = "Webhook id"),
+        ("token" = String, Path, description = "Webhook token")
+    ),
+    request_body = WebhookUpdate,
     responses(
         (status = OK, body = Webhook, description = "Update webhook success"),
     )
@@ -377,12 +384,12 @@ async fn webhook_update_with_token(
 #[utoipa::path(
     post,
     path = "/webhook/{webhook_id}/{token}",
+    tags = ["webhook"],
     params(
-        ("webhook_id", description = "Webhook id"),
-        ("token", description = "Webhook token")
+        ("webhook_id" = WebhookId, Path, description = "Webhook id"),
+        ("token" = String, Path, description = "Webhook token")
     ),
     request_body = MessageCreate,
-    tags = ["webhook"],
     responses(
         (status = CREATED, body = Message, description = "Execute webhook success, returns created message"),
     )
@@ -455,12 +462,13 @@ async fn webhook_message_get(
 #[utoipa::path(
     patch,
     path = "/webhook/{webhook_id}/{token}/message/{message_id}",
-    params(
-        ("webhook_id", description = "Webhook id"),
-        ("token", description = "Webhook token"),
-        ("message_id", description = "Message id")
-    ),
     tags = ["webhook"],
+    params(
+        ("webhook_id" = WebhookId, Path, description = "Webhook id"),
+        ("token" = String, Path, description = "Webhook token"),
+        ("message_id" = MessageId, Path, description = "Message id")
+    ),
+    request_body = MessagePatch,
     responses(
         (status = OK, body = Message, description = "Edit webhook message success"),
     )

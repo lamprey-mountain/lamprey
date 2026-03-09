@@ -24,13 +24,13 @@ use crate::ServerState;
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}",
+    tags = ["reaction", "badge.scope.full"],
     params(
         PaginationQuery<UserId>,
-        ("channel_id", description = "channel id"),
-        ("message_id", description = "Message id"),
-        ("reaction_key", description = "Reaction key"),
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+        ("message_id" = MessageId, Path, description = "Message id"),
+        ("reaction_key" = ReactionKeyParam, Path, description = "Reaction key"),
     ),
-    tags = ["reaction", "badge.scope.full"],
     responses(
         (status = OK, body = PaginationResponse<ReactionListItem>, description = "success"),
     )
@@ -58,13 +58,13 @@ async fn reaction_list(
 #[utoipa::path(
     put,
     path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
-    params(
-        ("channel_id", description = "channel id"),
-        ("message_id", description = "Message id"),
-        ("reaction_key", description = "Reaction key"),
-        ("user_id", description = "User id"),
-    ),
     tags = ["reaction", "badge.scope.full", "badge.perm.ReactionAdd"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+        ("message_id" = MessageId, Path, description = "Message id"),
+        ("reaction_key" = ReactionKeyParam, Path, description = "Reaction key"),
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
     responses(
         (status = CREATED, description = "new reaction created"),
         (status = OK, description = "already exists"),
@@ -139,13 +139,13 @@ async fn reaction_add(
 #[utoipa::path(
     delete,
     path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
-    params(
-        ("channel_id", description = "channel id"),
-        ("message_id", description = "Message id"),
-        ("reaction_key", description = "Reaction key"),
-        ("user_id", description = "User id"),
-    ),
     tags = ["reaction", "badge.scope.full", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteUser"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+        ("message_id" = MessageId, Path, description = "Message id"),
+        ("reaction_key" = ReactionKeyParam, Path, description = "Reaction key"),
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -228,12 +228,12 @@ async fn reaction_remove(
 #[utoipa::path(
     delete,
     path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}",
-    params(
-        ("channel_id", description = "channel id"),
-        ("message_id", description = "Message id"),
-        ("reaction_key", description = "Reaction key"),
-    ),
     tags = ["reaction", "badge.scope.full", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteKey"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+        ("message_id" = MessageId, Path, description = "Message id"),
+        ("reaction_key" = ReactionKeyParam, Path, description = "Reaction key"),
+    ),
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -297,11 +297,11 @@ async fn reaction_remove_key(
 #[utoipa::path(
     delete,
     path = "/channel/{channel_id}/message/{message_id}/reaction",
-    params(
-        ("channel_id", description = "channel id"),
-        ("message_id", description = "Message id"),
-    ),
     tags = ["reaction", "badge.scope.full", "badge.perm.ReactionPurge", "badge.audit-log.ReactionDeleteAll"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "channel id"),
+        ("message_id" = MessageId, Path, description = "Message id"),
+    ),
     responses(
         (status = NO_CONTENT, description = "success"),
     )

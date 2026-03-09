@@ -444,8 +444,11 @@ async fn guest_create(
 #[utoipa::path(
     post,
     path = "/user/{user_id}/suspend",
-    params(("user_id", description = "User id")),
     tags = ["user", "badge.audit-log.UserSuspend"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
+    request_body = SuspendRequest,
     responses((status = OK, body = User, description = "success")),
 )]
 async fn user_suspend(
@@ -527,8 +530,11 @@ async fn user_unsuspend(
 #[utoipa::path(
     post,
     path = "/user/{user_id}/presence",
-    params(("user_id", description = "User id")),
     tags = ["user"],
+    params(
+        ("user_id" = UserIdReq, Path, description = "User id"),
+    ),
+    request_body = Presence,
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn user_presence_set(

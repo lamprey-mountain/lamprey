@@ -125,6 +125,9 @@ async fn app_list(
     get,
     path = "/app/{app_id}",
     tags = ["application"],
+    params(
+        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
+    ),
     responses(
         (status = OK, description = "success", body = Application)
     )
@@ -155,6 +158,9 @@ async fn app_get(
     patch,
     path = "/app/{app_id}",
     tags = ["application", "badge.audit-log.ApplicationUpdate"],
+    params(
+        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
+    ),
     request_body = ApplicationPatch,
     responses(
         (status = OK, description = "success", body = Application)
@@ -228,6 +234,9 @@ async fn app_patch(
     delete,
     path = "/app/{app_id}",
     tags = ["application", "badge.audit-log.ApplicationDelete"],
+    params(
+        ("app_id" = ApplicationId, Path, description = "Application id"),
+    ),
     responses(
         (status = NO_CONTENT, description = "success")
     )
@@ -263,6 +272,9 @@ async fn app_delete(
     post,
     path = "/app/{app_id}/session",
     tags = ["application", "badge.audit-log.SessionLogin"],
+    params(
+        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
+    ),
     request_body = SessionCreate,
     responses(
         (status = CREATED, description = "success", body = SessionWithToken)
@@ -328,6 +340,9 @@ struct AppInviteBot {
     post,
     path = "/app/{app_id}/invite",
     tags = ["application", "badge.perm.BotsAdd", "badge.audit-log.BotAdd"],
+    params(
+        ("app_id" = ApplicationId, Path, description = "Application id"),
+    ),
     request_body = AppInviteBot,
     responses(
         (status = NO_CONTENT, description = "success")
@@ -399,6 +414,10 @@ async fn app_invite_bot(
     put,
     path = "/app/{app_id}/puppet/{puppet_id}",
     tags = ["application"],
+    params(
+        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
+        ("puppet_id" = String, Path, description = "Puppet id"),
+    ),
     request_body = PuppetCreate,
     responses(
         (status = OK, description = "success", body = User),

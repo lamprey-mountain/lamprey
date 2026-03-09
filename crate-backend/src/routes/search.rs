@@ -43,6 +43,7 @@ pub async fn search_messages(
     post,
     path = "/search/channels",
     tags = ["search"],
+    request_body = ChannelSearchRequest,
     responses(
         (status = OK, body = PaginationResponse<Channel>, description = "success"),
     )

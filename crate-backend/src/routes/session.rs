@@ -26,6 +26,7 @@ use crate::error::{Error, Result};
     post,
     path = "/session",
     tags = ["session"],
+    request_body = SessionCreate,
     responses(
         (status = CREATED, body = SessionWithToken, description = "success"),
     )
@@ -82,10 +83,11 @@ pub async fn session_list(
 #[utoipa::path(
     patch,
     path = "/session/{session_id}",
-    params(
-        ("session_id", description = "Session id"),
-    ),
     tags = ["session", "badge.scope.full", "badge.audit-log.SessionUpdate"],
+    params(
+        ("session_id" = SessionIdReq, Path, description = "Session id"),
+    ),
+    request_body = SessionPatch,
     responses(
         (status = OK, body = Session, description = "success"),
         (status = NOT_MODIFIED, body = Session, description = "not modified"),

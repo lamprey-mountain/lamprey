@@ -34,7 +34,6 @@ use crate::error::Result;
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/message",
-    params(("channel_id", description = "Channel id")),
     tags = [
         "message",
         "badge.scope.full",
@@ -43,6 +42,10 @@ use crate::error::Result;
         "badge.perm-opt.MessageEmbeds",
         "badge.perm-opt.MemberBridge",
     ],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
+    request_body = MessageCreate,
     responses(
         (status = CREATED, body = Message, description = "Create message success"),
     )
@@ -160,11 +163,12 @@ async fn message_get(
 #[utoipa::path(
     patch,
     path = "/channel/{channel_id}/message/{message_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id")
-    ),
     tags = ["message", "badge.scope.full"],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+        ("message_id" = MessageId, Path, description = "Message id")
+    ),
+    request_body = MessagePatch,
     responses(
         (status = OK, body = Message, description = "edit message success"),
         (status = NOT_MODIFIED, description = "no change"),
@@ -473,7 +477,6 @@ async fn message_version_delete(
 #[utoipa::path(
     patch,
     path = "/channel/{channel_id}/message",
-    params(("channel_id", description = "Channel id")),
     tags = [
         "message",
         "badge.scope.full",
@@ -484,6 +487,10 @@ async fn message_version_delete(
         "badge.audit-log.MessageRemove",
         "badge.audit-log.MessageRestore",
     ],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
+    request_body = MessageModerate,
     responses((status = OK, description = "success")),
 )]
 async fn message_moderate(
@@ -940,9 +947,6 @@ async fn message_pin_delete(
 #[utoipa::path(
     patch,
     path = "/channel/{channel_id}/pin",
-    params(
-        ("channel_id", description = "Channel id"),
-    ),
     tags = [
         "message",
         "badge.scope.full",
@@ -950,6 +954,10 @@ async fn message_pin_delete(
         "badge.room-mfa",
         "badge.audit-log.MessagePinReorder",
     ],
+    params(
+        ("channel_id" = ChannelId, Path, description = "Channel id"),
+    ),
+    request_body = PinsReorder,
     responses(
         (status = OK, description = "Reorder pinned messages success"),
     ),
