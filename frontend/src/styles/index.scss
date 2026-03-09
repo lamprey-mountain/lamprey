@@ -777,8 +777,14 @@ em {
 input[type="text"],
 input[type="search"],
 input[type="url"] {
-	background-color: $bg-300;
-	border: solid 1px $sep-500;
+	background-color: $bg-150;
+	border: solid 1px $sep-300;
+	padding: 4px 8px;
+	border-radius: 4px;
+
+	&:focus {
+		border: solid 1px $link-500;
+	}
 }
 
 .settings {
@@ -1106,9 +1112,14 @@ article.message {
 			width: 100%;
 			min-height: 80px;
 			background-color: $bg-100;
-			border: solid 1px $sep-500;
+			border: solid 1px $sep-300;
 			padding: 8px;
+			border-radius: 4px;
 			resize: vertical;
+
+			&:focus {
+				border: solid 1px $link-500;
+			}
 		}
 	}
 }
@@ -1372,9 +1383,14 @@ summary {
 
 		& textarea,
 		input[type="text"] {
-			border: solid $sep-500 1px;
+			border: solid $sep-300 1px;
 			background: $bg-200;
-			padding: 0 2px;
+			padding: 4px 8px;
+			border-radius: 4px;
+
+			&:focus {
+				border: solid $link-500 1px;
+			}
 		}
 
 		& button[disabled] {
@@ -1514,11 +1530,15 @@ code {
 input[type="text"].dropdown {
 	display: inline-block;
 	background: $bg-150;
-	border: solid $sep-400 1px;
+	border: solid $sep-300 1px;
 	padding: 4px 8px;
 	border-radius: 4px;
 	outline: none;
 	cursor: pointer;
+
+	&:focus {
+		border: solid $link-500 1px;
+	}
 
 	&[aria-expanded="true"] {
 		border-bottom-left-radius: 0;
@@ -1774,12 +1794,6 @@ button[disabled] {
 		& > summary {
 			list-style: none;
 		}
-	}
-
-	& textarea,
-	input[type="text"] {
-		border: solid $sep-500 1px;
-		background: $bg-300;
 	}
 }
 
@@ -2679,12 +2693,6 @@ del {
 	}
 }
 
-textarea,
-input[type="text"] {
-	border: solid $sep-500 1px;
-	background: $bg-300;
-}
-
 .blocked-users-list {
 	list-style: none;
 	padding: 0;
@@ -3149,7 +3157,7 @@ button.link {
 }
 
 .permission-search-input {
-	padding: 0.25rem 0.5rem;
+	padding: 4px 8px;
 	margin-bottom: 0.5rem;
 	margin-top: 0.5rem;
 }
@@ -3927,6 +3935,12 @@ input[type="search"].tags-search {
 	margin: 4px;
 	padding: 2px 4px;
 	background: $bg-150;
+	border: solid $sep-300 1px;
+	border-radius: 4px;
+
+	&:focus {
+		border: solid $link-500 1px;
+	}
 }
 
 .contextmenu button[disabled] {

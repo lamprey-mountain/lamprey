@@ -66,8 +66,15 @@
 	}
 
 	input[type="search"] {
-		padding: 0 4px;
+		background: $bg-150;
+		border: solid $sep-300 1px;
+		padding: 4px 8px;
+		border-radius: 4px;
 		flex: 1;
+
+		&:focus {
+			border: solid $link-500 1px;
+		}
 	}
 
 	.emojis .label {
