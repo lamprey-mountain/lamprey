@@ -9,14 +9,11 @@ use axum::{
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
-use common::{
-    v1::types::{
-        error::{ApiError, ErrorCode},
-        misc::ApplicationIdReq,
-        util::Time,
-        AuditLogEntry, AuditLogEntryType,
-    },
-    v2::types::media::Media,
+use common::v1::types::{
+    error::{ApiError, ErrorCode},
+    misc::ApplicationIdReq,
+    util::Time,
+    AuditLogEntry, AuditLogEntryType,
 };
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
@@ -154,8 +151,6 @@ async fn main() -> Result<()> {
         .connect(&config.database_url)
         .await?;
 
-    sqlx::migrate!("./migrations").run(&pool).await?;
-
     let blobs = match &config.blobs {
         config::ConfigBlobs::S3(s3) => {
             let builder = opendal::services::S3::default()
@@ -195,6 +190,8 @@ async fn main() -> Result<()> {
     };
 
     let state = Arc::new(ServerState::init(config, pool, blobs, nats).await);
+
+    state.data().migrate().await?;
 
     let srv = state.services();
     let data = state.data();
@@ -418,43 +415,11 @@ async fn migrate_media(state: Arc<ServerState>) -> Result<()> {
         state.config()
     );
 
-    use lamprey_backend::data::postgres::{DbMediaData, DbMediaWithId};
-
     loop {
-        let mut tx = state.pool.begin().await?;
-        let rows = sqlx::query_as!(
-            DbMediaWithId,
-            r#"
-            select id, user_id, data, deleted_at
-            from media
-            where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null
-            limit 50
-            for update
-            "#
-        )
-        .fetch_all(&mut *tx)
-        .await?;
-        if rows.is_empty() {
+        let count = state.data().media_migrate_batch(50).await?;
+        if count == 0 {
             break;
         }
-        for row in rows {
-            let media: DbMediaData = match serde_json::from_value(row.data) {
-                Ok(media) => media,
-                Err(err) => {
-                    warn!(media_id = ?row.id, "unreadable data in db {err:?}");
-                    continue;
-                }
-            };
-            let media: Media = media.into();
-            let media_id = media.id;
-            let data =
-                serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
-            sqlx::query!("update media set data = $1 where id = $2", data, *media_id)
-                .execute(&mut *tx)
-                .await?;
-            info!("migrate {}", media_id);
-        }
-        tx.commit().await?;
     }
 
     Ok(())
@@ -464,23 +429,18 @@ async fn gc_media(state: Arc<ServerState>) -> Result<()> {
     info!("starting media garbage collection");
 
     info!("finding items...");
-    let result = sqlx::query_file!("sql/gc_media.sql")
-        .execute(&state.pool)
-        .await?;
-    info!("found {} items to delete", result.rows_affected());
+    let rows_affected = state.data().gc_media_mark().await?;
+    info!("found {} items to delete", rows_affected);
 
     loop {
-        let rows = sqlx::query!("select id from media where deleted_at is not null limit 50")
-            .fetch_all(&state.pool)
-            .await?;
-        let mut tx = state.pool.begin().await?;
+        let rows = state.data().gc_media_get_sweep_candidates(50).await?;
         if rows.is_empty() {
             break;
         }
-        for row in rows {
+        for media_id in &rows {
             let items = state
                 .blobs
-                .list_with(&format!("media/{}/", row.id))
+                .list_with(&format!("media/{}/", media_id))
                 .recursive(true)
                 .await?;
             for item in items {
@@ -488,12 +448,9 @@ async fn gc_media(state: Arc<ServerState>) -> Result<()> {
                     state.blobs.delete(item.path()).await?;
                 }
             }
-            sqlx::query!("delete from media where id = $1", row.id)
-                .execute(&mut *tx)
-                .await?;
-            info!("delete {}", row.id);
+            info!("delete {}", media_id);
         }
-        tx.commit().await?;
+        state.data().gc_media_delete_swept(&rows).await?;
     }
 
     Ok(())
@@ -502,10 +459,11 @@ async fn gc_media(state: Arc<ServerState>) -> Result<()> {
 async fn gc_messages(state: Arc<ServerState>) -> Result<()> {
     info!("starting message garbage collection job");
 
-    let result = sqlx::raw_sql(include_str!("../sql/purge_messages.sql"))
-        .execute(&state.pool)
+    let rows_affected = state
+        .data()
+        .gc_messages(AdminCollectGarbageMode::Sweep)
         .await?;
-    info!("done; {} rows affected", result.rows_affected());
+    info!("done; {} rows affected", rows_affected);
 
     Ok(())
 }
@@ -513,10 +471,11 @@ async fn gc_messages(state: Arc<ServerState>) -> Result<()> {
 async fn gc_sessions(state: Arc<ServerState>) -> Result<()> {
     info!("starting session garbage collection job");
 
-    let result = sqlx::raw_sql(include_str!("../sql/purge_sessions.sql"))
-        .execute(&state.pool)
+    let rows_affected = state
+        .data()
+        .gc_sessions(AdminCollectGarbageMode::Sweep)
         .await?;
-    info!("done; {} rows affected", result.rows_affected());
+    info!("done; {} rows affected", rows_affected);
 
     Ok(())
 }

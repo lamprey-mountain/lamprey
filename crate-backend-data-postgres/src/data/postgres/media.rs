@@ -434,4 +434,46 @@ impl DataMedia for Postgres {
         tx.commit().await?;
         Ok(())
     }
+
+    async fn media_migrate_batch(&self, limit: u32) -> Result<u64> {
+        let mut tx = self.pool.begin().await?;
+        let rows = query_as!(
+            DbMediaWithId,
+            r#"
+            select id, user_id, data, deleted_at
+            from media
+            where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null
+            limit $1
+            for update
+            "#,
+            limit as i64
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        if rows.is_empty() {
+            return Ok(0);
+        }
+
+        let count = rows.len() as u64;
+        for row in rows {
+            let media: DbMediaData = match serde_json::from_value(row.data) {
+                Ok(media) => media,
+                Err(err) => {
+                    warn!(media_id = ?row.id, "unreadable data in db {err:?}");
+                    continue;
+                }
+            };
+            let media: MediaV2 = media.into();
+            let media_id = media.id;
+            let data =
+                serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
+            query!("update media set data = $1 where id = $2", data, *media_id)
+                .execute(&mut *tx)
+                .await?;
+            info!("migrate {}", media_id);
+        }
+        tx.commit().await?;
+        Ok(count)
+    }
 }

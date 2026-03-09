@@ -420,10 +420,7 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::Admin)?;
 
-    let database_ok = sqlx::query_scalar::<_, bool>("SELECT true")
-        .fetch_one(&s.pool)
-        .await
-        .is_ok();
+    let database_ok = s.data().check_database().await.is_ok();
 
     let object_store_ok = s.blobs.check().await.is_ok();
 

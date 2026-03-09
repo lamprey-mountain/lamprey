@@ -1,4 +1,5 @@
-// TODO: rename foo_select to foo_get
+pub mod postgres;
+use crate::EditContextId;
 
 use async_trait::async_trait;
 use common::v1::types::calendar::{Calendar, CalendarPatch};
@@ -10,7 +11,6 @@ use common::v1::types::email::EmailAddr;
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
 use common::v1::types::util::Time;
-
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
     DocumentBranchId, DocumentTagId, MediaId, PaginationQuery, PaginationResponse, PinsReorder,
@@ -18,12 +18,10 @@ use common::v1::types::{
     RoomVerId, Session, SessionId, SessionPatch, SessionStatus, SessionToken, Suspended, User,
     UserId, UserListFilter,
 };
-
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
 use common::v2::types::message::{Message, MessageVersion};
-
-use lamprey_backend_core::data::{
+pub use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
     DataConnection, DataDm, DataEmoji, DataInvite, DataMetrics, DataNotification, DataPermission,
     DataPreferences, DataReaction, DataRoleMember, DataRoomAnalytics, DataRoomMember, DataSearch,
@@ -33,7 +31,6 @@ use lamprey_backend_core::data::{
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::services::documents::EditContextId;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbMessageUpdate,
     DbRoleCreate, DbRoomCreate, DbRoomTemplate, DbSessionCreate, DbUserCreate, DehydratedDocument,
@@ -41,9 +38,8 @@ use crate::types::{
     MessageRef, MessageVerId, PushData, UrlEmbedQueue, UserPatch, UserVerId,
 };
 
-pub mod postgres;
-
-// #[async_trait]
+// Data super-trait
+#[async_trait]
 pub trait Data:
     DataRoom
     + DataRoomMember
@@ -88,10 +84,14 @@ pub trait Data:
     + Send
     + Sync
 {
+    async fn migrate(&self) -> Result<()>;
+    async fn check_database(&self) -> Result<bool>;
     // async fn commit(self) -> Result<()>;
-    // async fn rollback(self) -> Result<()>;
 }
 
+// Blanket implementation for Postgres
+
+// DataRoom trait
 #[async_trait]
 pub trait DataRoom {
     async fn room_create(&self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room>;
@@ -128,10 +128,10 @@ pub trait DataRoom {
     async fn user_owns_room_requiring_mfa(&self, user_id: UserId) -> Result<bool>;
 }
 
+// DataRole trait
 #[async_trait]
 pub trait DataRole {
     async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role>;
-    // TODO(#998): make this return all roles, paginate in server logic
     async fn role_list(
         &self,
         room_id: RoomId,
@@ -150,6 +150,7 @@ pub trait DataRole {
     async fn role_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64>;
 }
 
+// DataMedia trait
 #[async_trait]
 pub trait DataMedia {
     async fn media_insert(&self, media: Media) -> Result<()>;
@@ -172,8 +173,10 @@ pub trait DataMedia {
         target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()>;
+    async fn media_migrate_batch(&self, limit: u32) -> Result<u64>;
 }
 
+// DataMessage trait
 #[async_trait]
 pub trait DataMessage {
     async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId>;
@@ -304,6 +307,7 @@ pub trait DataMessage {
     ) -> Result<MessageId>;
 }
 
+// DataSession trait
 #[async_trait]
 pub trait DataSession {
     async fn session_create(&self, create: DbSessionCreate) -> Result<Session>;
@@ -318,12 +322,10 @@ pub trait DataSession {
     async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
     async fn session_delete(&self, session_id: SessionId) -> Result<()>;
     async fn session_delete_all(&self, user_id: UserId) -> Result<()>;
-    // TODO(#999): replace session_set_last_seen_at with session_heartbeat
     async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()>;
-    // /// update last seen at and other metadata
-    // async fn session_heartbeat(&self, session_id: SessionId, ip_addr: IpAddr, user_agent: String) -> Result<()>;
 }
 
+// DataChannel trait
 #[async_trait]
 pub trait DataChannel {
     async fn channel_create(&self, create: DbChannelCreate) -> Result<ChannelId>;
@@ -335,8 +337,6 @@ pub trait DataChannel {
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<DbChannelPrivate>;
-
-    /// list all (non-thread) channels in this room that have been removed
     async fn channel_list(&self, room_id: RoomId) -> Result<Vec<Channel>>;
     async fn channel_list_removed(
         &self,
@@ -344,7 +344,6 @@ pub trait DataChannel {
         pagination: PaginationQuery<ChannelId>,
         parent_id: Option<ChannelId>,
     ) -> Result<PaginationResponse<Channel>>;
-
     async fn channel_update(
         &self,
         channel_id: ChannelId,
@@ -354,7 +353,6 @@ pub trait DataChannel {
     async fn channel_undelete(&self, channel_id: ChannelId) -> Result<()>;
     async fn channel_reorder(&self, data: ChannelReorder) -> Result<()>;
     async fn channel_upgrade_gdm(&self, channel_id: ChannelId, room_id: RoomId) -> Result<()>;
-
     async fn channel_get_message_slowmode_expire_at(
         &self,
         channel_id: ChannelId,
@@ -378,7 +376,6 @@ pub trait DataChannel {
         expires_at: Time,
     ) -> Result<()>;
     async fn channel_ratelimit_delete_all(&self, channel_id: ChannelId) -> Result<()>;
-
     async fn channel_document_insert(
         &self,
         channel_id: ChannelId,
@@ -390,7 +387,6 @@ pub trait DataChannel {
         channel_id: ChannelId,
         document_patch: &DocumentPatch,
     ) -> Result<()>;
-
     async fn channel_wiki_insert(&self, channel_id: ChannelId, wiki: &Wiki) -> Result<()>;
     async fn channel_wiki_get(&self, channel_id: ChannelId) -> Result<Option<Wiki>>;
     async fn channel_wiki_update(
@@ -398,7 +394,6 @@ pub trait DataChannel {
         channel_id: ChannelId,
         wiki_patch: &WikiPatch,
     ) -> Result<()>;
-
     async fn channel_calendar_insert(
         &self,
         channel_id: ChannelId,
@@ -412,6 +407,7 @@ pub trait DataChannel {
     ) -> Result<()>;
 }
 
+// DataUser trait
 #[async_trait]
 pub trait DataUser {
     async fn user_create(&self, patch: DbUserCreate) -> Result<User>;
@@ -443,6 +439,7 @@ pub trait DataUser {
     ) -> Result<UserVerId>;
 }
 
+// DataAuth trait
 #[async_trait]
 pub trait DataAuth {
     async fn auth_oauth_put(
@@ -480,8 +477,6 @@ pub trait DataAuth {
     ) -> Result<Vec<(String, Option<Time>)>>;
     async fn auth_totp_recovery_use(&self, user_id: UserId, code: &str) -> Result<()>;
     async fn auth_totp_recovery_delete_all(&self, user_id: UserId) -> Result<()>;
-
-    // TODO(#999): move these into a new DataOauth trait?
     async fn oauth_auth_code_create(
         &self,
         code: String,
@@ -507,6 +502,7 @@ pub trait DataAuth {
     async fn oauth_refresh_token_use(&self, token: String) -> Result<SessionId>;
 }
 
+// DataEmbed trait
 #[async_trait]
 pub trait DataEmbed {
     async fn url_embed_queue_insert(
@@ -519,6 +515,7 @@ pub trait DataEmbed {
     async fn url_embed_queue_finish(&self, id: Uuid, embed: Option<&Embed>) -> Result<()>;
 }
 
+// DataEmailQueue trait
 #[async_trait]
 pub trait DataEmailQueue {
     async fn email_queue_insert(
@@ -534,9 +531,9 @@ pub trait DataEmailQueue {
     async fn email_queue_fail(&self, error_message: String, id: Uuid) -> Result<()>;
 }
 
+// DataDocument trait
 #[async_trait]
 pub trait DataDocument {
-    /// save a new snapshot
     async fn document_compact(
         &self,
         context_id: EditContextId,
@@ -544,19 +541,13 @@ pub trait DataDocument {
         last_seq: u32,
         snapshot: Vec<u8>,
     ) -> Result<()>;
-
-    /// loads the latest snapshot of a document, along with the last changes applied to it
     async fn document_load(&self, context_id: EditContextId) -> Result<DehydratedDocument>;
-
-    /// attempts to create a new document if it doesnt already exist (create default branch, create initial snapshot)
     async fn document_create(
         &self,
         context_id: EditContextId,
         creator_id: UserId,
         snapshot: Vec<u8>,
     ) -> Result<()>;
-
-    /// save an update. uses latest snapshot_id and increments seq. returns the update's seq number.
     async fn document_update(
         &self,
         context_id: EditContextId,
@@ -565,42 +556,30 @@ pub trait DataDocument {
         stat_added: u32,
         stat_removed: u32,
     ) -> Result<u32>;
-
-    /// create a new branch
     async fn document_fork(
         &self,
         context_id: EditContextId,
         creator_id: UserId,
         create: DocumentBranchCreate,
     ) -> Result<DocumentBranchId>;
-
-    /// get a branch
     async fn document_branch_get(
         &self,
         document_id: ChannelId,
         branch_id: DocumentBranchId,
     ) -> Result<DocumentBranch>;
-
-    /// update a branch
     async fn document_branch_update(
         &self,
         document_id: ChannelId,
         branch_id: DocumentBranchId,
         patch: DocumentBranchPatch,
     ) -> Result<()>;
-
-    /// set a branch's state
     async fn document_branch_set_state(
         &self,
         document_id: ChannelId,
         branch_id: DocumentBranchId,
         status: DocumentBranchState,
     ) -> Result<()>;
-
-    /// list all active branches
     async fn document_branch_list(&self, document_id: ChannelId) -> Result<Vec<DocumentBranch>>;
-
-    /// paginate through branches
     async fn document_branch_paginate(
         &self,
         document_id: ChannelId,
@@ -608,8 +587,6 @@ pub trait DataDocument {
         filter: DocumentBranchListParams,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>>;
-
-    /// create a document tag
     async fn document_tag_create(
         &self,
         branch_id: DocumentBranchId,
@@ -618,63 +595,41 @@ pub trait DataDocument {
         description: Option<String>,
         revision_seq: u64,
     ) -> Result<DocumentTagId>;
-
-    /// get a document tag
     async fn document_tag_get(&self, tag_id: DocumentTagId) -> Result<DocumentTag>;
-
-    /// update a document tag
     async fn document_tag_update(
         &self,
         tag_id: DocumentTagId,
         summary: Option<String>,
         description: Option<Option<String>>,
     ) -> Result<()>;
-
-    /// delete a document tag
     async fn document_tag_delete(&self, tag_id: DocumentTagId) -> Result<()>;
-
-    /// list document tags for a branch
     async fn document_tag_list(&self, branch_id: DocumentBranchId) -> Result<Vec<DocumentTag>>;
-
-    /// list document tags for a document (all branches)
     async fn document_tag_list_by_document(
         &self,
         document_id: ChannelId,
         user_id: UserId,
     ) -> Result<Vec<DocumentTag>>;
-
-    /// fetch history for a document
-    // TEMP: fetch ALL changes and tags for a document; this will be optimized later
     async fn document_history(
         &self,
         context_id: EditContextId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
-
-    /// fetch history for a wiki
     async fn wiki_history(
         &self,
         wiki_id: ChannelId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
 }
 
+// DataPush trait
 #[async_trait]
 pub trait DataPush {
-    /// insert a web push api subscription
     async fn push_insert(&self, push: PushData) -> Result<()>;
-
-    /// get a web push api subscription for a session
     async fn push_get(&self, session_id: SessionId) -> Result<PushData>;
-
-    /// delete a web push api subscription for a session
     async fn push_delete(&self, session_id: SessionId) -> Result<()>;
-
-    /// list all web push subscriptions for a user
     async fn push_list_for_user(&self, user_id: UserId) -> Result<Vec<PushData>>;
-
-    /// delete all web push subscriptions for a user
     async fn push_delete_for_user(&self, user_id: UserId) -> Result<()>;
 }
 
+// DataRoomTemplate trait
 #[async_trait]
 pub trait DataRoomTemplate {
     async fn room_template_create(
@@ -683,28 +638,22 @@ pub trait DataRoomTemplate {
         snapshot: serde_json::Value,
         create: RoomTemplateCreate,
     ) -> Result<DbRoomTemplate>;
-
     async fn room_template_get(&self, code: RoomTemplateCode) -> Result<DbRoomTemplate>;
-
     async fn room_template_list(
         &self,
         creator_id: UserId,
         pagination: PaginationQuery<RoomTemplateCode>,
     ) -> Result<PaginationResponse<DbRoomTemplate>>;
-
     async fn room_template_update(
         &self,
         code: RoomTemplateCode,
         patch: RoomTemplatePatch,
     ) -> Result<DbRoomTemplate>;
-
     async fn room_template_update_snapshot(
         &self,
         code: RoomTemplateCode,
         snapshot: serde_json::Value,
     ) -> Result<DbRoomTemplate>;
-
     async fn room_template_mark_dirty(&self, source_room_id: RoomId) -> Result<()>;
-
     async fn room_template_delete(&self, code: RoomTemplateCode) -> Result<()>;
 }

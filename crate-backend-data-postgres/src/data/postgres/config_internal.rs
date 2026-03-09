@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use sqlx::query;
 
-use crate::config::ConfigInternal;
 use crate::data::DataConfigInternal;
 use crate::error::Result;
+use lamprey_backend_core::config::ConfigInternal;
 
 use super::Postgres;
 

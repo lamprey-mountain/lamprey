@@ -4,7 +4,7 @@ use std::time::Duration;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogEntryType, ChannelType, MessageSync, MessageType, Room,
-    RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut, User, UserId,
+    RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut, UserId,
 };
 use moka::future::Cache;
 use validator::Validate;

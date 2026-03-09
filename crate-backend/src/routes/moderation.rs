@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use common::v1::types::RoomId;
+use std::sync::Arc;
 
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};

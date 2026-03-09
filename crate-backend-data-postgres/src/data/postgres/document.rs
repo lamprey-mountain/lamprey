@@ -1,8 +1,8 @@
 use crate::data::postgres::{Pagination, Postgres};
 use crate::data::DataDocument;
 use crate::error::{Error, Result};
-use crate::services::documents::EditContextId;
 use crate::types::{DehydratedDocument, DocumentUpdateSummary, PaginationDirection};
+use crate::EditContextId;
 use async_trait::async_trait;
 use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,

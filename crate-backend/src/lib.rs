@@ -1,7 +1,7 @@
 pub mod cli;
 pub mod config;
 pub mod consts;
-pub mod data;
+pub use lamprey_backend_data_postgres as data;
 pub mod error;
 pub mod metrics;
 pub mod routes;

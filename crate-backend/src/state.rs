@@ -19,7 +19,7 @@ use url::Url;
 
 use crate::{
     config::{self, Config},
-    data::{postgres::Postgres, Data},
+    data::{Data, Postgres},
     services::Services,
     sync::Connection,
     Result,
@@ -79,9 +79,7 @@ pub struct ServerState {
 
 impl ServerStateInner {
     pub fn data(&self) -> Box<dyn Data> {
-        Box::new(Postgres {
-            pool: self.pool.clone(),
-        })
+        Box::new(Postgres::new(self.pool.clone()))
     }
 
     pub fn services(&self) -> Arc<Services> {
