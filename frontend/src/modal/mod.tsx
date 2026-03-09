@@ -19,6 +19,7 @@ import { ModalKick } from "./ModalKick.tsx";
 import { ModalBan } from "./ModalBan.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
 import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
+import { ModalRoomCreate } from "./ModalRoomCreate";
 import { useApi } from "../api";
 
 export const Modal = (
@@ -172,6 +173,13 @@ export function getModal(modal: ContextModal) {
 			return (
 				<ModalCameraPreview
 					stream={(modal as any).stream}
+				/>
+			);
+		}
+		case "room_create": {
+			return (
+				<ModalRoomCreate
+					cont={(modal as any).cont}
 				/>
 			);
 		}

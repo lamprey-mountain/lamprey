@@ -1,4 +1,5 @@
 import { type JSX, type ParentProps } from "solid-js";
+import { Checkbox } from "../icons";
 
 type CheckboxOptionProps = {
 	id: string;
@@ -52,7 +53,6 @@ type CheckboxOptionWithLabelProps = {
 export const CheckboxOptionWithLabel = (
 	props: CheckboxOptionWithLabelProps,
 ) => {
-	const Checkbox = (window as any).Checkbox;
 	return (
 		<CheckboxOption
 			id={props.id}

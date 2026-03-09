@@ -15,9 +15,12 @@ export const Home = () => {
 	const [, modalctl] = useModals();
 
 	function createRoom() {
-		modalctl.prompt("name?", (name: string | null) => {
-			if (!name) return;
-			api.rooms.create({ name });
+		modalctl.open({
+			type: "room_create",
+			cont: (data: { name: string; public: boolean } | null) => {
+				if (!data) return;
+				api.rooms.create({ name: data.name, public: data.public });
+			},
 		});
 	}
 

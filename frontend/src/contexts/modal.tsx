@@ -96,6 +96,12 @@ export type Modal =
 	| {
 		type: "camera_preview";
 		stream: MediaStream;
+	}
+	| {
+		type: "room_create";
+		cont: (
+			data: { name: string; public: boolean } | null,
+		) => void;
 	};
 
 export type ModalsController = {
