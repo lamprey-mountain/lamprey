@@ -12,7 +12,7 @@ pub mod bits;
 pub use bits::PermissionBits;
 
 /// permission calculator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Permissions {
     /// the set of permissions this user has
     p: PermissionBits,
@@ -20,23 +20,29 @@ pub struct Permissions {
     /// whether this user is timed out
     ///
     /// used to determine if they can react with existing reactions or not
+    #[serde(default)]
     timed_out: bool,
 
     /// whether this user is quarantined by automod
+    #[serde(default)]
     quarantined: bool,
 
     /// whether this user can bypass channel/thread locks
+    #[serde(default)]
     locked_bypass: bool,
 
     /// whether this user is trying to access a locked channel/thread
+    #[serde(default)]
     channel_locked: bool,
 
     /// whether the user is lurking a public channel/room (not yet a room member)
     ///
     /// used to determine if they can join voice channels
+    #[serde(default)]
     lurker: bool,
 
     /// whether the user is a member of the room
+    #[serde(default)]
     is_room_member: bool,
 }
 

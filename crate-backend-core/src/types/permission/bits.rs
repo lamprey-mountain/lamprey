@@ -1,7 +1,7 @@
 use common::v1::types::Permission;
 
 /// compressed representation of permissions, for faster perm checks
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PermissionBits(u128);
 
 impl PermissionBits {

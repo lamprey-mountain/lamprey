@@ -1,5 +1,8 @@
 mod data;
-pub mod permission;
+pub mod permission {
+    pub use lamprey_backend_core::types::permission::*;
+}
+pub use permission::*;
 
 // Pagination types - re-export from common
 pub use common::v1::types::{PaginationDirection, PaginationQuery, PaginationResponse};
