@@ -11,8 +11,8 @@ export class RoomMembersService extends BaseService<RoomMember> {
 	// For now, let's use the key convention "room_id:user_id" for the main cache
 	// so `use()` works with a composite ID.
 
-	getKey(room_id: string, user_id: string) {
-		return `${room_id}:${user_id}`;
+	getKey(item: RoomMember): string {
+		return `${item.room_id}:${item.user_id}`;
 	}
 
 	async fetch(id: string): Promise<RoomMember> {
@@ -34,10 +34,11 @@ export class RoomMembersService extends BaseService<RoomMember> {
 					membership: "Leave" as const,
 					room_id,
 					user_id,
-					deaf: false,
 					mute: false,
+					deaf: false,
 					roles: [] as string[],
 					joined_at: new Date().toISOString(),
+					quarantined: false,
 				};
 			}
 			throw error;
@@ -45,7 +46,7 @@ export class RoomMembersService extends BaseService<RoomMember> {
 	}
 
 	override upsert(item: RoomMember) {
-		this.cache.set(this.getKey(item.room_id, item.user_id), item);
+		this.cache.set(this.getKey(item), item);
 	}
 
 	useMember(

@@ -17,6 +17,12 @@ export const CheckboxOption = (props: ParentProps<CheckboxOptionProps>) => {
 			class={`option ${props.class ?? ""}`}
 			tabindex="0"
 			style={props.style}
+			onClick={(e) => {
+				if (props.disabled) return;
+				if (e.target.tagName === "INPUT") return;
+				if (e.target.closest("label")) return;
+				props.onChange(!props.checked);
+			}}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {
 					e.preventDefault();
@@ -63,7 +69,7 @@ export const CheckboxOptionWithLabel = (
 			disabled={props.disabled}
 		>
 			<Checkbox checked={props.checked} seed={props.seed} />
-			<label for={props.id}>
+			<label for={props.id} style="display: block">
 				<div>{props.label}</div>
 				{props.description && <div class="dim">{props.description}</div>}
 			</label>

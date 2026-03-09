@@ -24,10 +24,10 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 			if (error?.error === "not found") {
 				// Placeholder
 				return {
-					membership: "Leave",
+					membership: "Leave" as any,
 					thread_id,
 					user_id,
-					membership_updated_at: new Date().toISOString(),
+					joined_at: new Date().toISOString(),
 				};
 			}
 			throw error;

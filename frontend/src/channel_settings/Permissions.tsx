@@ -26,12 +26,12 @@ import { useCtx } from "../context.ts";
 import { Savebar } from "../atoms/Savebar";
 
 function filterPermissionsByChannelType(
-	permissions: typeof permissions,
+	permList: typeof permissions,
 	channelType?: ChannelType,
 ): typeof permissions {
-	if (!channelType) return permissions;
+	if (!channelType) return permList;
 
-	return permissions.filter((perm) => {
+	return permList.filter((perm) => {
 		if (!perm.types) return true;
 		return perm.types.includes(channelType);
 	});
@@ -91,8 +91,8 @@ const createDefaultOverwrite = (id: string): PermissionOverwrite => ({
 
 export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();
-	const roles = api.roles.list(() => props.channel.room_id);
-	const room = api.rooms.fetch(() => props.channel.room_id);
+	const roles = api.roles.list(() => props.channel.room_id ?? "");
+	const room = api.rooms.fetch(() => props.channel.room_id ?? "");
 
 	const [overwrites, setOverwrites] = createStore(
 		structuredClone(props.channel.permission_overwrites),
@@ -189,7 +189,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		const overwrite = overwrites.find((o) => o.id === id);
 		if (overwrite) return overwrite;
 
-		if (isEveryoneRole(id, props.channel.room_id)) {
+		if (isEveryoneRole(id, props.channel.room_id ?? "")) {
 			return createDefaultOverwrite(id);
 		}
 
@@ -214,7 +214,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 			deny: newDeny,
 		};
 
-		const isEveryone = isEveryoneRole(id, props.channel.room_id);
+		const isEveryone = isEveryoneRole(id, props.channel.room_id ?? "");
 		const channelPerms = permissions.filter((p) => p.overwrite_group);
 		const shouldBeRemoved = isEveryone &&
 			isAllInherit(updatedOverwrite, channelPerms.map((p) => p.id));
@@ -307,7 +307,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		queueMicrotask(() => updateChangeState(id));
 
 		if (editingId() === id) {
-			setEditingId(props.channel.room_id);
+			setEditingId(props.channel.room_id ?? "");
 		}
 	};
 
@@ -343,7 +343,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		return filterPermissionsByChannelType(
 			permissions,
 			props.channel.type,
-		).filter((p) => p.overwrite_group);
+		).filter((p: typeof permissions[number]) => p.overwrite_group);
 	});
 
 	return (
@@ -420,10 +420,16 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 								onSearch={setPermSearch}
 								seed={props.channel.id + overwrite.id}
 								permissions={filteredPermissions()}
-								permStates={filteredPermissions().reduce((acc, p) => {
-									acc[p.id] = getPermState(overwrite, p.id);
-									return acc;
-								}, {} as Record<Permission, PermState>)}
+								permStates={filteredPermissions().reduce(
+									(
+										acc: Record<Permission, PermState>,
+										p: typeof permissions[number],
+									) => {
+										acc[p.id as Permission] = getPermState(overwrite, p.id);
+										return acc;
+									},
+									{} as Record<Permission, PermState>,
+								)}
 								onPermChange={setPerm}
 								showDescriptions={true}
 								roomType={room()?.type || "Default"}

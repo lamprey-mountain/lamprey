@@ -41,7 +41,7 @@ export const TimelineItem = (props: {
 
 			const is_mentioned = createMemo(() => {
 				const me = props.currentUser();
-				if (!me) return false;
+				if (!me || props.item.type !== "message") return false;
 				const mentions = (props.item.message as any).mentions as any;
 				if (!mentions) return false;
 
@@ -63,6 +63,7 @@ export const TimelineItem = (props: {
 			});
 
 			const isSelected = createMemo(() => {
+				if (props.item.type !== "message") return false;
 				const selected = ch.selectedMessages;
 				return selected?.includes(props.item.message.id) ?? false;
 			});

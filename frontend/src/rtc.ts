@@ -486,7 +486,7 @@ export const createVoiceClient = () => {
 			send({
 				type: "VoiceState",
 				state: {
-					thread_id: existing.thread_id,
+					...(existing.thread_id && { thread_id: existing.thread_id }),
 					...indicators,
 				},
 			});

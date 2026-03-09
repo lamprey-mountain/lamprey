@@ -23,7 +23,6 @@ export class UsersService extends BaseService<UserWithRelationship> {
 					note: null,
 					relation: null,
 					petname: null,
-					ignore: null,
 				},
 			}),
 			...user,

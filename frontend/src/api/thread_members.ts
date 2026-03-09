@@ -65,10 +65,10 @@ export class ThreadMembers {
 						// HACK: handle 404s
 						if (error?.error === "not found") {
 							const placeholder: ThreadMember = {
-								membership: "Leave",
+								membership: "Leave" as any,
 								thread_id,
 								user_id,
-								membership_updated_at: new Date().toISOString(),
+								joined_at: new Date().toISOString(),
 							};
 							return placeholder;
 						}

@@ -125,7 +125,6 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 								version_id: "",
 								flags: 0,
 								presence: { status: "Offline" as const, activities: [] },
-								relationship: null,
 								preferences: null,
 							});
 

@@ -414,7 +414,7 @@ export const createEditor = (
 			return (
 				<>
 					<editor.View {...props} />
-					<EditorWithToolbar getView={() => editor.view} />
+					<EditorWithToolbar getView={() => editor.view!} />
 				</>
 			);
 		},

@@ -779,8 +779,8 @@ input[type="search"],
 input[type="url"] {
 	background-color: $bg-150;
 	border: solid 1px $sep-300;
-	padding: 4px 8px;
-	border-radius: 4px;
+	padding: 2px 4px;
+	border-radius: 2px;
 
 	&:focus {
 		border: solid 1px $link-500;
@@ -1385,8 +1385,8 @@ summary {
 		input[type="text"] {
 			border: solid $sep-300 1px;
 			background: $bg-200;
-			padding: 4px 8px;
-			border-radius: 4px;
+			padding: 2px 4px;
+			border-radius: 2px;
 
 			&:focus {
 				border: solid $link-500 1px;

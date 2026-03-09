@@ -123,7 +123,6 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 								version_id: "",
 								flags: 0,
 								presence: { status: "Offline" as const, activities: [] },
-								relationship: null,
 								preferences: null,
 							});
 

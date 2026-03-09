@@ -121,7 +121,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 			await api.client.http.POST("/api/v1/app", {
 				body: {
 					name,
-					bridge: false,
+					bridge: null,
 					public: false,
 				},
 			});
@@ -263,9 +263,11 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 									avatar: app.avatar ?? null,
 									banner: null,
 									description: null,
+									bot: false,
+									system: false,
+									version_id: "",
 									flags: 0,
 									presence: { status: "Offline" as const, activities: [] },
-									relationship: null,
 									preferences: null,
 								});
 
@@ -425,9 +427,11 @@ const AppEditor = (
 		avatar: props.edit.avatar(),
 		banner: null,
 		description: null,
+		bot: false,
+		system: false,
+		version_id: "",
 		flags: 0,
 		presence: { status: "Offline" as const, activities: [] },
-		relationship: null,
 		preferences: null,
 	});
 
@@ -535,21 +539,62 @@ const AppEditor = (
 				<div style="height: 8px" />
 				<CheckboxOption
 					id={`app-${props.edit.app.id}-bridge`}
-					checked={props.edit.app.bridge}
+					checked={!!props.edit.app.bridge}
 					onChange={(checked) => {
-						props.edit.setApp("bridge", checked);
+						props.edit.setApp("bridge", checked ? {} : null);
 					}}
 					seed={`app-${props.edit.app.id}-bridge`}
 				>
 					<Checkbox
-						checked={props.edit.app.bridge}
+						checked={!!props.edit.app.bridge}
 						seed={`app-${props.edit.app.id}-bridge`}
 					/>
-					<div>
+					<label for={`app-${props.edit.app.id}-bridge`} style="display: block">
 						<div>bridge</div>
 						<div class="dim">can create puppets</div>
-					</div>
+					</label>
 				</CheckboxOption>
+				<Show when={props.edit.app.bridge}>
+					{(bridge) => (
+						<div class="bridge-details" style="padding-left: 24px;">
+							<h3>platform name</h3>
+							<input
+								type="text"
+								value={bridge().platform_name ?? ""}
+								onInput={(e) => {
+									props.edit.setApp("bridge", {
+										...bridge(),
+										platform_name: e.currentTarget.value || null,
+									});
+								}}
+							/>
+							<div style="height: 8px" />
+							<h3>platform url</h3>
+							<input
+								type="text"
+								value={bridge().platform_url ?? ""}
+								onInput={(e) => {
+									props.edit.setApp("bridge", {
+										...bridge(),
+										platform_url: e.currentTarget.value || null,
+									});
+								}}
+							/>
+							<div style="height: 8px" />
+							<h3>platform description</h3>
+							<textarea
+								onInput={(e) => {
+									props.edit.setApp("bridge", {
+										...bridge(),
+										platform_description: e.currentTarget.value || null,
+									});
+								}}
+							>
+								{bridge().platform_description ?? ""}
+							</textarea>
+						</div>
+					)}
+				</Show>
 				<CheckboxOption
 					id={`app-${props.edit.app.id}-public`}
 					checked={props.edit.app.public}
@@ -562,10 +607,10 @@ const AppEditor = (
 						checked={props.edit.app.public}
 						seed={`app-${props.edit.app.id}-public`}
 					/>
-					<div>
+					<label for={`app-${props.edit.app.id}-public`} style="display: block">
 						<div>public</div>
 						<div class="dim">anyone can add and use this bot</div>
-					</div>
+					</label>
 				</CheckboxOption>
 				<button
 					style="margin-left:4px"

@@ -1,4 +1,4 @@
-import type { Pagination, RoomMember } from "sdk";
+import type { Pagination, RoomMember, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
@@ -85,10 +85,11 @@ export class RoomMembers {
 								membership: "Leave" as const,
 								room_id,
 								user_id,
-								deaf: false,
 								mute: false,
+								deaf: false,
 								roles: [] as string[],
 								joined_at: new Date().toISOString(),
+								quarantined: false,
 							};
 							return placeholder;
 						}
@@ -219,7 +220,7 @@ export class RoomMembers {
 				cache.set(member.user_id, member);
 			}
 			for (const user of data.users) {
-				this.api.users.cache.set(user.id, user);
+				this.api.users.cache.set(user.id, user as UserWithRelationship);
 			}
 		});
 

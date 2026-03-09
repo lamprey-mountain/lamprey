@@ -23,7 +23,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 		() => [props.user?.id, pfpsLoaded()],
 		async ([userId, loaded]) => {
 			if (!userId || !loaded) return "";
-			return generatePfp(userId);
+			return generatePfp(userId as string);
 		},
 	);
 
@@ -94,7 +94,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 		() => [props.user?.id, pfpsLoaded()],
 		async ([userId, loaded]) => {
 			if (!userId || !loaded) return "";
-			return generatePfp(userId);
+			return generatePfp(userId as string);
 		},
 	);
 

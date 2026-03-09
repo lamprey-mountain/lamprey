@@ -18,7 +18,6 @@ export class Users {
 					note: null,
 					relation: null,
 					petname: null,
-					ignore: null,
 				},
 			}),
 			...user,

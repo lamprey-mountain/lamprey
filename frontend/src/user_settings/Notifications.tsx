@@ -65,9 +65,12 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					const serverInfo = await api.client.http.GET("/api/v1/server/@self")
 						.then((res) => res.data);
 
-					const vapidKey = serverInfo && "features" in serverInfo &&
-						serverInfo.features && "web_push" in serverInfo.features &&
+					const vapidKey = serverInfo && typeof serverInfo === "object" &&
+						"features" in serverInfo &&
+						serverInfo.features && typeof serverInfo.features === "object" &&
+						"web_push" in serverInfo.features &&
 						serverInfo.features.web_push &&
+						typeof serverInfo.features.web_push === "object" &&
 						"vapid_public_key" in serverInfo.features.web_push &&
 						serverInfo.features.web_push.vapid_public_key;
 

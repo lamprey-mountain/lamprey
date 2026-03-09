@@ -1,6 +1,7 @@
 import type { components } from "./schema.d.ts";
 
 export type Room = components["schemas"]["Room"];
+export type RolePatch = components["schemas"]["RolePatch"];
 export type Channel = components["schemas"]["Channel"];
 export type ChannelType = components["schemas"]["ChannelType"];
 export type User = components["schemas"]["User"] & {
@@ -29,8 +30,6 @@ export type RoomMemberSearchResponse =
 export type ThreadMember = components["schemas"]["ThreadMember"] & {
 	/** @description membership status (client-side only, not in canonical schema) */
 	membership?: "Join" | "Leave" | "Pending";
-	/** @description when membership was updated (client-side only) */
-	membership_updated_at?: string;
 };
 export type Media = components["schemas"]["Media"];
 export type MessageCreate = components["schemas"]["MessageCreate"];

@@ -449,7 +449,7 @@ function Chart<T extends { bucket: string }>(props: ChartProps<T>) {
 											y="15"
 											fill="oklch(var(--color-fg5))"
 											font-size="10"
-											text-anchor={tick.anchor}
+											text-anchor={tick.anchor as "start" | "end" | "middle"}
 										>
 											{tick.label}
 										</text>

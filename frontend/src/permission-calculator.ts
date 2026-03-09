@@ -186,14 +186,26 @@ export function calculatePermissions(
 			"VoiceSpeak",
 			"VoiceVideo",
 		];
-		return { permissions: new Set(defaultPermissions), rank: 0 };
+		return {
+			permissions: new Set(defaultPermissions),
+			rank: 0,
+			timedOut: false,
+			quarantined: false,
+			lurker: false,
+		};
 	}
 
 	const room = ctx.api.rooms.fetch(() => ctx.room_id!)();
 	if (room?.owner_id === user_id) {
 		// owners have full permissions (ViewChannel and Admin)
 		const ownerPerms = new Set<Permission>(adminPerms);
-		return { permissions: ownerPerms, rank: Infinity };
+		return {
+			permissions: ownerPerms,
+			rank: Infinity,
+			timedOut: false,
+			quarantined: false,
+			lurker: false,
+		};
 	}
 
 	const member = ctx.api.room_members.fetch(
@@ -213,7 +225,7 @@ export function calculatePermissions(
 				for (const p of everyoneRole.allow) {
 					perms.add(p);
 				}
-				for (const p of everyoneRole.deny) {
+				for (const p of everyoneRole.deny ?? []) {
 					perms.delete(p);
 				}
 				// Apply lurker restrictions for non-members
@@ -255,7 +267,7 @@ export function calculatePermissions(
 	for (const role of roles) {
 		if (role.id === everyoneRoleId || member.roles.includes(role.id)) {
 			allowed.push(...role.allow);
-			denied.push(...role.deny);
+			denied.push(...(role.deny ?? []));
 		}
 	}
 

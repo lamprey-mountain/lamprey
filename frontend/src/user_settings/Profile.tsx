@@ -77,7 +77,6 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		version_id: "",
 		flags: 0,
 		presence: { status: "Offline" as const, activities: [] },
-		relationship: null,
 		preferences: null,
 	});
 

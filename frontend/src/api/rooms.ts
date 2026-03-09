@@ -137,7 +137,7 @@ export class Rooms {
 		return resource;
 	}
 
-	async create(body: { name: string }): Promise<Room> {
+	async create(body: { name: string; public?: boolean | null }): Promise<Room> {
 		const { data, error } = await this.api.client.http.POST("/api/v1/room", {
 			body,
 		});

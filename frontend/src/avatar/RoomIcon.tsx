@@ -18,7 +18,7 @@ export const RoomIcon = (
 		async ([roomId, loaded]) => {
 			if (!roomId || !loaded) return "";
 			// TODO: generated room icons
-			return generatePfp(roomId);
+			return generatePfp(roomId as string);
 		},
 	);
 

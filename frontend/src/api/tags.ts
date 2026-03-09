@@ -64,7 +64,7 @@ export class Tags {
 		data: {
 			name: string;
 			description?: string;
-			color?: { r: number; g: number; b: number; a: number };
+			color?: string;
 			restricted?: boolean;
 		},
 	): Promise<Tag> {
@@ -90,7 +90,7 @@ export class Tags {
 		data: {
 			name?: string;
 			description?: string | null;
-			color?: { r: number; g: number; b: number; a: number } | null;
+			color?: string | null;
 			archived?: boolean;
 			restricted?: boolean;
 		},
@@ -121,7 +121,7 @@ export class Tags {
 			{
 				params: {
 					path: { channel_id, tag_id },
-					query: force ? { force: true } : {},
+					...(force ? { query: { force: true } } : {}),
 				},
 			},
 		);

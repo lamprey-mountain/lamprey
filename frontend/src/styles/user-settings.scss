@@ -386,9 +386,11 @@
 		gap: 4px;
 		padding: 4px;
 		cursor: pointer;
+		background: $bg-100;
 
-		&:hover {
-			background: $bg-100;
+		&:hover,
+		&:focus-within {
+			background: $bg-200;
 		}
 	}
 }

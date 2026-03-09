@@ -21,7 +21,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 	const currentUser = useCurrentUser();
 	const perms = usePermissions(
 		() => currentUser()?.id,
-		() => props.channel.room_id,
+		() => props.channel.room_id ?? undefined,
 		() => props.channel.id,
 	);
 
