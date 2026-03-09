@@ -7,7 +7,7 @@ use axum::{
 };
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{
-    application::{Scope, Scopes},
+    application::{Application, Scope, Scopes},
     oauth::{
         Autoconfig, OauthAuthorizeInfo, OauthAuthorizeParams, OauthAuthorizeResponse,
         OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
@@ -41,28 +41,9 @@ async fn oauth_info(
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
 ) -> Result<impl IntoResponse> {
+    let (app, _redirect_uri, scopes) = validate_authorize(&s, &auth, &q).await?;
     let data = s.data();
     let srv = s.services();
-    let app = data.application_get(q.client_id).await?;
-    if app.owner_id != auth.user.id && !app.public {
-        return Err(Error::ApiError(ApiError::from_code(
-            ErrorCode::UnknownApplication,
-        )));
-    }
-    if q.response_type != "code" {
-        return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
-    }
-    if q.redirect_uri
-        .is_none_or(|u| !app.oauth_redirect_uris.iter().any(|a| a == u.as_str()))
-    {
-        return Err(ApiError::from_code(ErrorCode::BadRedirectUri).into());
-    }
-    let mut scopes = HashSet::new();
-    for scope in q.scope.split(' ') {
-        scopes.insert(
-            Scope::from_str(scope).map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
-        );
-    }
     let auth_user = srv.users.get(auth.user.id, None).await?;
     let bot_user = srv.users.get(app.id.into_inner().into(), None).await?;
     let authorized = if let Ok(existing) = data.connection_get(auth.user.id, app.id).await {
@@ -93,87 +74,8 @@ async fn oauth_authorize(
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
 ) -> Result<impl IntoResponse> {
+    let (app, redirect_uri, scopes) = validate_authorize(&s, &auth, &q).await?;
     let data = s.data();
-    let srv = s.services();
-    let app = data.application_get(q.client_id).await?;
-    if app.owner_id != auth.user.id && !app.public {
-        return Err(Error::ApiError(ApiError::from_code(
-            ErrorCode::UnknownApplication,
-        )));
-    }
-    if q.response_type != "code" {
-        return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
-    }
-    if q.redirect_uri
-        .is_none_or(|u| !app.oauth_redirect_uris.iter().any(|a| a == u.as_str()))
-    {
-        return Err(ApiError::from_code(ErrorCode::BadRedirectUri).into());
-    }
-    let mut scopes = HashSet::new();
-    for scope in q.scope.split(' ') {
-        scopes.insert(
-            Scope::from_str(scope).map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
-        );
-    }
-    let auth_user = srv.users.get(auth.user.id, None).await?;
-    let bot_user = srv.users.get(app.id.into_inner().into(), None).await?;
-    let authorized = if let Ok(existing) = data.connection_get(auth.user.id, app.id).await {
-        HashSet::from_iter(existing.scopes).is_superset(&scopes)
-    } else {
-        false
-    };
-    Ok(Json(OauthAuthorizeInfo {
-        application: app,
-        bot_user,
-        auth_user,
-        authorized,
-    }))
-}
-
-/// Oauth authorize
-#[utoipa::path(
-    post,
-    path = "/oauth/authorize",
-    tags = ["oauth", "badge.scope.identify", "badge.audit-log.ConnectionCreate"],
-    params(OauthAuthorizeParams),
-    responses(
-        (status = OK, description = "success", body = OauthAuthorizeResponse)
-    )
-)]
-async fn oauth_authorize(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    Query(q): Query<OauthAuthorizeParams>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let app = data.application_get(q.client_id).await?;
-    if app.owner_id != auth.user.id && !app.public {
-        return Err(Error::ApiError(ApiError::from_code(
-            ErrorCode::UnknownApplication,
-        )));
-    }
-    if q.response_type != "code" {
-        return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
-    }
-
-    let redirect_uri = if let Some(uri) = &q.redirect_uri {
-        if !app.oauth_redirect_uris.iter().any(|u| u == uri.as_str()) {
-            return Err(ApiError::from_code(ErrorCode::BadRedirectUri).into());
-        }
-        uri.clone()
-    } else {
-        app.oauth_redirect_uris
-            .get(0)
-            .ok_or(ApiError::from_code(ErrorCode::NoRedirectUriConfigured))?
-            .parse()?
-    };
-
-    let mut scopes = HashSet::new();
-    for scope in q.scope.split(' ') {
-        scopes.insert(
-            Scope::from_str(scope).map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
-        );
-    }
     let scopes = Scopes(scopes.into_iter().collect());
     data.connection_create(auth.user.id, app.id, scopes.clone())
         .await?;
@@ -203,6 +105,44 @@ async fn oauth_authorize(
     }
 
     Ok(Json(OauthAuthorizeResponse { redirect_uri }))
+}
+
+async fn validate_authorize(
+    s: &Arc<ServerState>,
+    auth: &Auth,
+    q: &OauthAuthorizeParams,
+) -> Result<(Application, url::Url, HashSet<Scope>)> {
+    let data = s.data();
+    let app = data.application_get(q.client_id).await?;
+    if app.owner_id != auth.user.id && !app.public {
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownApplication,
+        )));
+    }
+    if q.response_type != "code" {
+        return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
+    }
+
+    let redirect_uri = if let Some(uri) = &q.redirect_uri {
+        if !app.oauth_redirect_uris.iter().any(|u| u == uri.as_str()) {
+            return Err(ApiError::from_code(ErrorCode::BadRedirectUri).into());
+        }
+        uri.clone()
+    } else {
+        app.oauth_redirect_uris
+            .get(0)
+            .ok_or(ApiError::from_code(ErrorCode::NoRedirectUriConfigured))?
+            .parse()?
+    };
+
+    let mut scopes = HashSet::new();
+    for scope in q.scope.split(' ') {
+        scopes.insert(
+            Scope::from_str(scope).map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
+        );
+    }
+
+    Ok((app, redirect_uri, scopes))
 }
 
 /// Oauth exchange token
