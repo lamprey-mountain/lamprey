@@ -136,6 +136,47 @@ impl From<ReactionKey> for ReactionKeyParam {
 }
 
 impl ReactionKey {
+    /// check if this key is a custom emoji
+    pub fn is_custom_emoji(&self) -> bool {
+        matches!(self, ReactionKey::Custom(_))
+    }
+
+    /// check if this key is a single unicode emoji
+    ///
+    /// this only returns true if the content is a single visual emoji,
+    /// including modifiers like skin tones or hair colors.
+    pub fn is_unicode_emoji(&self) -> bool {
+        match self {
+            ReactionKey::Text { content } => {
+                use unicode_properties::UnicodeEmoji;
+                use unicode_segmentation::UnicodeSegmentation;
+
+                let mut graphemes = content.graphemes(true);
+                let Some(g) = graphemes.next() else {
+                    return false;
+                };
+
+                // must be exactly one grapheme cluster
+                if graphemes.next().is_some() {
+                    return false;
+                }
+
+                // an emoji grapheme cluster should contain at least one emoji character.
+                // we use is_emoji_char_or_emoji_component() to catch base emojis and their modifiers.
+                // we also ensure it's not just a plain alphanumeric string (like "1" or "A")
+                // that happens to be a single grapheme.
+                g.chars().any(|c| c.is_emoji_char_or_emoji_component())
+                    && !g.chars().all(|c| c.is_ascii_alphanumeric())
+            }
+            ReactionKey::Custom(_) => false,
+        }
+    }
+
+    /// check if this key is an emoji (custom or unicode)
+    pub fn is_emoji(&self) -> bool {
+        self.is_custom_emoji() || self.is_unicode_emoji()
+    }
+
     /// get this key as a ReactionKeyParam
     pub fn to_param(&self) -> ReactionKeyParam {
         match self {
@@ -147,5 +188,38 @@ impl ReactionKey {
     /// get this key as a ReactionKeyParam string
     pub fn to_key_str(&self) -> String {
         self.to_param().to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_unicode_emoji() {
+        let cases = [
+            ("👍", true),
+            ("👍🏽", true), // skin tone
+            ("👨‍👩‍👧‍👦", true), // ZWJ sequence
+            ("A", false),
+            ("1", false),
+            ("1️⃣", true), // keycap
+            ("🤔", true),
+            ("hello", false),
+            ("!!", false),
+            ("❤️", true), // variant selector
+            ("♥️", true),
+        ];
+
+        for (content, expected) in cases {
+            let key = ReactionKey::Text {
+                content: content.to_string(),
+            };
+            assert_eq!(
+                key.is_unicode_emoji(),
+                expected,
+                "failed for: {content} (expected: {expected})"
+            );
+        }
     }
 }
