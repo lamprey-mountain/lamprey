@@ -41,7 +41,7 @@ import { ThreadPopout } from "../ThreadPopout.tsx";
 import { Autocomplete } from "../Autocomplete.tsx";
 import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
 import { getModal } from "../modal/mod.tsx";
-import { useModals } from "./modal.tsx";
+import { Modal, useModals } from "./modal.tsx";
 
 export function OverlayProvider(props: ParentProps) {
 	const ctx = useCtx();
@@ -85,7 +85,7 @@ export function OverlayProvider(props: ParentProps) {
 						shift({ padding: 8 }),
 					],
 				}).then(({ x, y, strategy }) => {
-					setToolbarFloating({ x, y, strategy });
+					setToolbarFloating({ x, y, strategy: strategy as any });
 				});
 			},
 		);
@@ -106,7 +106,7 @@ export function OverlayProvider(props: ParentProps) {
 					shift({ mainAxis: true, crossAxis: true, padding: 8 }),
 				],
 			}).then(({ x, y, strategy }) => {
-				setPopupFloating({ x, y, strategy });
+				setPopupFloating({ x, y, strategy: strategy as any });
 			});
 		});
 		onCleanup(cleanup);
@@ -132,7 +132,7 @@ export function OverlayProvider(props: ParentProps) {
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: "right-start",
 				}).then(({ x, y, strategy }) => {
-					setMenuFloating({ x, y, strategy });
+					setMenuFloating({ x, y, strategy: strategy as any });
 				});
 			},
 		);
@@ -157,7 +157,7 @@ export function OverlayProvider(props: ParentProps) {
 				computePosition(reference, floating, {
 					placement: "top-start",
 				}).then(({ x, y, strategy }) => {
-					setAutocompleteFloating({ x, y, strategy });
+					setAutocompleteFloating({ x, y, strategy: strategy as any });
 				});
 			},
 		);
@@ -185,7 +185,7 @@ export function OverlayProvider(props: ParentProps) {
 						? "right-start"
 						: "left-start",
 				}).then(({ x, y, strategy }) => {
-					setUserViewFloating({ x, y, strategy });
+					setUserViewFloating({ x, y, strategy: strategy as any });
 				});
 			},
 		);
@@ -211,7 +211,7 @@ export function OverlayProvider(props: ParentProps) {
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: "bottom-end",
 				}).then(({ x, y, strategy }) => {
-					setThreadsViewFloating({ x, y, strategy });
+					setThreadsViewFloating({ x, y, strategy: strategy as any });
 				});
 			},
 		);
@@ -237,7 +237,7 @@ export function OverlayProvider(props: ParentProps) {
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: ctx.popout()?.placement ?? "top",
 				}).then(({ x, y, strategy }) => {
-					setPopoutFloating({ x, y, strategy });
+					setPopoutFloating({ x, y, strategy: strategy as any });
 				});
 			},
 		);
@@ -315,7 +315,7 @@ export function OverlayProvider(props: ParentProps) {
 		<>
 			{props.children}
 			<Portal mount={document.getElementById("overlay")!}>
-				<For each={modals}>{(modal) => getModal(modal)}</For>
+				<For each={modals}>{(modal) => getModal(modal as any)}</For>
 				<Show when={menu()}>
 					<div class="contextmenu">
 						<div
@@ -332,7 +332,7 @@ export function OverlayProvider(props: ParentProps) {
 						</div>
 					</div>
 				</Show>
-				<Show when={ctx.popout()?.id === "emoji" && ctx.popout().ref}>
+				<Show when={ctx.popout()?.id === "emoji" && ctx.popout()?.ref}>
 					<div
 						ref={setPopoutRef}
 						style={{
@@ -343,7 +343,7 @@ export function OverlayProvider(props: ParentProps) {
 							"z-index": 100,
 						}}
 					>
-						<EmojiPicker {...ctx.popout().props} />
+						<EmojiPicker {...ctx.popout()?.props} />
 					</div>
 				</Show>
 				<Show when={userViewData()?.user()}>

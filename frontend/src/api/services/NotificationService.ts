@@ -10,14 +10,14 @@ export class NotificationService {
 	async handleMessageCreate(m: Message) {
 		const me = this.store.users.get("@self");
 		let is_mentioned = false;
-		const mentions = m.latest_version.mentions;
+		const mentions = (m.latest_version as any).mentions;
 
 		// Determine if mentioned
 		if (
 			me && m.author_id !== me.id &&
-			m.latest_version.type === "DefaultMarkdown" && mentions
+			(m.latest_version as any).type === "DefaultMarkdown" && mentions
 		) {
-			if (mentions.users?.some((u) => u.id === me.id)) {
+			if (mentions.users?.some((u: any) => u.id === me.id)) {
 				is_mentioned = true;
 			}
 			if (!is_mentioned && mentions.everyone) {
@@ -59,8 +59,8 @@ export class NotificationService {
 			const title = `${author?.name ?? "Someone"} in #${
 				channel?.name ?? "channel"
 			}`;
-			const rawContent = m.latest_version.type === "DefaultMarkdown"
-				? m.latest_version.content ?? ""
+			const rawContent = (m.latest_version as any).type === "DefaultMarkdown"
+				? (m.latest_version as any).content ?? ""
 				: "";
 
 			// Helper wrapper for the util
@@ -68,7 +68,7 @@ export class NotificationService {
 				rawContent,
 				m.channel_id,
 				this.store as any, // HACK: The util expects 'Api' but RootStore is close enough or we fix util
-				m.latest_version.mentions,
+				(m.latest_version as any).mentions,
 			);
 			const body = processedContent.substring(0, 200);
 
@@ -109,16 +109,16 @@ export class NotificationService {
 
 		if (
 			shouldSpeak && !isOwnMessage &&
-			m.latest_version.type === "DefaultMarkdown"
+			(m.latest_version as any).type === "DefaultMarkdown"
 		) {
 			const author = this.store.users.get(m.author_id);
 			const channel = this.store.channels.get(m.channel_id);
-			const rawContent = m.latest_version.content ?? "";
+			const rawContent = (m.latest_version as any).content ?? "";
 			const processedContent = await stripMarkdownAndResolveMentionsOriginal(
 				rawContent,
 				m.channel_id,
 				this.store as any,
-				m.latest_version.mentions,
+				(m.latest_version as any).mentions,
 			);
 			const text = processedContent.substring(0, 200);
 

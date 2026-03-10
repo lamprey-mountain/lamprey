@@ -68,11 +68,11 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 			const i18nKey = isOverwriteContext()
 				? "permission_overwrites"
 				: "permissions";
-			const name = t(`${i18nKey}.${p.id}.name`) ?? p.id;
-			const description = t(`${i18nKey}.${p.id}.description`) ?? "";
+			const name = (t as any)(`${i18nKey}.${p.id}.name`) ?? p.id;
+			const description = (t as any)(`${i18nKey}.${p.id}.description`) ?? "";
 			return (
-				name.toLowerCase().includes(searchTerm) ||
-				description.toLowerCase().includes(searchTerm) ||
+				(name as any).toLowerCase().includes(searchTerm) ||
+				(description as any).toLowerCase().includes(searchTerm) ||
 				p.id.toLowerCase().includes(searchTerm)
 			);
 		});
@@ -144,7 +144,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 					{({ group, perms }) => {
 						return (
 							<div class="permission-group">
-								<h3>{t(`permissions_group.${group}`) ?? group}</h3>
+								<h3>{(t as any)(`permissions_group.${group}`) ?? group}</h3>
 								<ul>
 									<For each={perms}>
 										{(p) => {
@@ -154,11 +154,14 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 											const [isExpanded, setIsExpanded] = createSignal(false);
 
 											const name = isOverwriteContext()
-												? (t(`permission_overwrites.${p.id}.name`) ?? p.id)
-												: (t(`permissions.${p.id}.name`) ?? p.id);
+												? ((t as any)(`permission_overwrites.${p.id}.name`) ??
+													p.id)
+												: ((t as any)(`permissions.${p.id}.name`) ?? p.id);
 											const description = isOverwriteContext()
-												? (t(`permission_overwrites.${p.id}.description`) ?? "")
-												: (t(`permissions.${p.id}.description`) ?? "");
+												? ((t as any)(
+													`permission_overwrites.${p.id}.description`,
+												) ?? "")
+												: ((t as any)(`permissions.${p.id}.description`) ?? "");
 
 											return (
 												<li class="permission-item">
@@ -170,9 +173,11 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 																onClick={() => setIsExpanded(!isExpanded())}
 															>
 																{isExpanded()
-																	? description
-																	: description.substring(0, 100) +
-																		(description.length > 100 ? "..." : "")}
+																	? (description as any)
+																	: (description as any).substring(0, 100) +
+																		((description as any).length > 100
+																			? "..."
+																			: "")}
 															</div>
 														)}
 													</div>

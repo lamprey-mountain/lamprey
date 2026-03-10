@@ -1,6 +1,6 @@
 import { Channel } from "sdk";
-import type { Api } from "./api.tsx";
-import type { ChatCtx } from "./context.ts";
+import type { Api } from "../api.tsx";
+import type { ChatCtx } from "../context.ts";
 import { createContext, type ParentProps, useContext } from "solid-js";
 
 export type CommandOption = {

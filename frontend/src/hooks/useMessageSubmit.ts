@@ -8,12 +8,18 @@ export function useMessageSubmit(channel_id: string) {
 	const store = useApi2();
 	const channelContext = useChannel();
 
-	return async (text: string, bypassSlowmode?: boolean) => {
+	return async (
+		text: string,
+		bypassSlowmode?: boolean,
+		target_channel_id?: string,
+	) => {
 		if (!channelContext) return false;
 		const [ch, chUpdate] = channelContext;
 
+		const dest = target_channel_id ?? channel_id;
+
 		if (text.startsWith("/")) {
-			await ctx.slashCommands.run(ctx, api, channel_id, text);
+			await ctx.slashCommands.run(ctx, api, dest, text);
 			return true;
 		}
 
@@ -21,12 +27,18 @@ export function useMessageSubmit(channel_id: string) {
 		const reply_id = ch.reply_id;
 		if (text.length === 0 && atts.length === 0) return false;
 		if (!atts.every((i) => i.status === "uploaded")) return false;
-		const attachments = atts.map((i) => i.media);
 
-		const channel = api.channels.cache.get(channel_id);
+		const attachments = atts.map((i) => ({
+			type: "Media" as const,
+			media_id: i.media!.id,
+			media: i.media, // ADDED for optimistic update
+			spoiler: i.spoiler,
+		})) as any;
+
+		const channel = api.channels.cache.get(dest);
 		const messagesService = store?.messages ?? api.messages;
 
-		messagesService.send(channel_id, {
+		messagesService.send(dest, {
 			content: text || null,
 			reply_id,
 			attachments,

@@ -11,7 +11,10 @@ export class RoomMembersService extends BaseService<RoomMember> {
 	// For now, let's use the key convention "room_id:user_id" for the main cache
 	// so `use()` works with a composite ID.
 
-	getKey(item: RoomMember): string {
+	getKey(item: RoomMember | string, user_id?: string): string {
+		if (typeof item === "string") {
+			return `${item}:${user_id}`;
+		}
 		return `${item.room_id}:${item.user_id}`;
 	}
 

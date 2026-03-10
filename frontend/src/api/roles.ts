@@ -157,7 +157,7 @@ export class Roles {
 		const paginate = async (pagination?: Pagination<RoomMember>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET(
+			const { data, error } = await (this.api.client.http as any).GET(
 				"/api/v1/room/{room_id}/role/{role_id}/member",
 				{
 					params: {
@@ -178,10 +178,7 @@ export class Roles {
 
 			batch(() => {
 				for (const item of data.items) {
-					this.api.room_members.cache.set(
-						`${room_id_sig()}:${item.user_id}`,
-						item,
-					);
+					this.api.room_members.upsert(item);
 				}
 			});
 

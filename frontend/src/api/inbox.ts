@@ -16,7 +16,7 @@ import type { Api } from "../api.tsx";
 import type { Message } from "sdk";
 
 export interface NotificationPagination extends Pagination<Notification> {
-	threads: Channel[];
+	channels: Channel[];
 	messages: Message[];
 	rooms: Room[];
 }
@@ -54,24 +54,28 @@ export class Inbox {
 			}
 
 			batch(() => {
-				for (const item of data.items) {
+				for (const item of data.notifications) {
 					this.cache.set(item.id, item);
 				}
-				for (const thread of data.channels) {
-					this.api.channels.cache.set(thread.id, thread);
+				for (const channel of data.channels) {
+					this.api.channels.cache.set(channel.id, channel as any);
 				}
 				for (const message of data.messages) {
-					this.api.messages.cache.set(message.id, message);
+					this.api.messages.cache.set(message.id, message as any);
 				}
 				for (const room of data.rooms) {
-					this.api.rooms.cache.set(room.id, room);
+					this.api.rooms.cache.set(room.id, room as any);
 				}
 			});
 
+			const prevP = pagination as NotificationPagination | undefined;
 			return {
 				...data,
-				items: [...(pagination?.items ?? []), ...data.items],
-			};
+				items: [...(pagination?.items ?? []), ...data.notifications],
+				channels: [...(prevP?.channels ?? []), ...data.channels as any],
+				messages: [...(prevP?.messages ?? []), ...data.messages as any],
+				rooms: [...(prevP?.rooms ?? []), ...data.rooms as any],
+			} as NotificationPagination;
 		};
 
 		const [resource, { refetch }] = createResource(

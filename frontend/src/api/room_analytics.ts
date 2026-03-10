@@ -25,7 +25,7 @@ export class RoomAnalytics {
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsOverview[]> {
-		const { data, error } = await this.api.client.http.GET(
+		const { data, error } = await (this.api.client.http as any).GET(
 			"/api/v1/room/{room_id}/analytics/overview",
 			{
 				params: {
@@ -47,7 +47,7 @@ export class RoomAnalytics {
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsMembersCount[]> {
-		const { data, error } = await this.api.client.http.GET(
+		const { data, error } = await (this.api.client.http as any).GET(
 			"/api/v1/room/{room_id}/analytics/members-count",
 			{
 				params: {
@@ -69,7 +69,7 @@ export class RoomAnalytics {
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsMembersJoin[]> {
-		const { data, error } = await this.api.client.http.GET(
+		const { data, error } = await (this.api.client.http as any).GET(
 			"/api/v1/room/{room_id}/analytics/members-join",
 			{
 				params: {
@@ -91,7 +91,7 @@ export class RoomAnalytics {
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsMembersLeave[]> {
-		const { data, error } = await this.api.client.http.GET(
+		const { data, error } = await (this.api.client.http as any).GET(
 			"/api/v1/room/{room_id}/analytics/members-leave",
 			{
 				params: {
@@ -114,7 +114,7 @@ export class RoomAnalytics {
 		query: RoomAnalyticsParams,
 		channel_id?: string,
 	): Promise<RoomAnalyticsChannel[]> {
-		const { data, error } = await this.api.client.http.GET(
+		const { data, error } = await (this.api.client.http as any).GET(
 			"/api/v1/room/{room_id}/analytics/channels",
 			{
 				params: {

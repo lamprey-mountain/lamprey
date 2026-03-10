@@ -11,6 +11,7 @@ import { createStore } from "solid-js/store";
 import { useApi } from "../api";
 import { createVoiceClient } from "../rtc";
 import { ReactiveMap } from "@solid-primitives/map";
+// @ts-ignore
 import vadProcessorUrl from "../vad-processor?url";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 
@@ -99,12 +100,12 @@ export const VoiceProvider = (props: ParentProps) => {
 				const rtc = state.rtc;
 				if (!rtc) return;
 
-				update("threadId", e.state.thread_id);
+				update("threadId", e.state.channel_id);
 
 				update("muted", e.state.self_mute);
 				update("deafened", e.state.self_deaf);
 				update("cameraHidden", !e.state.self_video);
-				update("screenshareEnabled", e.state.self_screen);
+				update("screenshareEnabled", !!e.state.screenshare);
 
 				if (!rtcCreated) {
 					rtc.createStream("user");

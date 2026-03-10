@@ -72,7 +72,7 @@ export abstract class BaseService<T> {
 				const item = this.cache.get(itemId);
 				// Mutate the resource to match the cache
 				if (resource() !== item) {
-					mutate(item);
+					mutate(item as any);
 				}
 			}
 		});

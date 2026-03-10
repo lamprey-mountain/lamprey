@@ -73,9 +73,10 @@ export class Rooms {
 			try {
 				const data = await fetchWithRetry(() =>
 					this.api.client.http.GET(
-						"/api/v1/user/@self/room",
+						"/api/v1/user/{user_id}/room",
 						{
 							params: {
+								path: { user_id: "@self" },
 								query: {
 									dir: "f",
 									limit: 100,

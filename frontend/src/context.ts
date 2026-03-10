@@ -45,6 +45,7 @@ export type Attachment =
 
 export type Data = {
 	cursor: Cursor;
+	channels: { [channel_id: string]: { read_marker_id?: string } };
 };
 
 export type Cursor = {
@@ -76,7 +77,7 @@ export type Popout = {
 	ref?: HTMLElement;
 	props?: any;
 	placement?: Placement;
-} | {};
+};
 
 import type { ChannelContextT } from "./channelctx";
 import type { RoomContextT } from "./contexts/room.tsx";
@@ -92,8 +93,8 @@ export type ChatCtx = {
 
 	t: i18n.Translator<i18n.Flatten<typeof en>>;
 	events: Emitter<Events>;
-	popout: Accessor<Popout>;
-	setPopout: Setter<Popout>;
+	popout: Accessor<Popout | null>;
+	setPopout: Setter<Popout | null>;
 
 	threadsView: Accessor<ThreadsViewData | null>;
 	setThreadsView: Setter<ThreadsViewData | null>;
@@ -130,16 +131,8 @@ export type Events = {
 	ready: MessageReady;
 };
 
-export type Menu = {
-	ref?: HTMLElement;
-	props?: any;
-	placement?: Placement;
-} | {};
-
-export type Modal = {
-	id?: string;
-	props?: any;
-} | {};
+export type { Menu } from "./contexts/menu.tsx";
+export type { Modal } from "./contexts/modal.tsx";
 
 export const chatctx = createContext<ChatCtx>();
 export const useCtx = () => useContext(chatctx)!;

@@ -173,7 +173,10 @@ export class Messages {
 		});
 
 		let old: { thread_id: string; dir: MessageListAnchor };
-		const [resource, { mutate }] = createResource(
+		const [resource, { mutate }] = createResource<
+			MessageRange,
+			{ thread_id: string; dir: MessageListAnchor }
+		>(
 			query,
 			async ({ thread_id, dir }, { value: oldValue }) => {
 				// ugly, but seems to work
@@ -476,14 +479,13 @@ export class Messages {
 				version_id: id,
 				type: "DefaultMarkdown",
 				content: body.content,
-				attachments: body.attachments.map((a) => {
+				attachments: body.attachments.map((a: any) => {
 					// Extract media_id from the attachment
-					const media_id = "media_id" in a ? a.media_id : null;
+					const media_id = a.media_id ?? a.id;
 					return {
 						type: "Media",
-						media: media_id
-							? this.api.media.cacheInfo.get(media_id)
-							: undefined,
+						media: a.media ??
+							(media_id ? this.api.media.cacheInfo.get(media_id) : undefined),
 						spoiler: a.spoiler ?? false,
 					};
 				}),
@@ -512,14 +514,14 @@ export class Messages {
 				},
 				body: {
 					...body,
-					attachments: body.attachments.map((a) => {
-						// Only include media_id if it's a media reference
-						return "media_id" in a
-							? { type: "Media", media_id: a.media_id }
-							: null;
-					}).filter((a): a is { type: "Media"; media_id: string } =>
-						a !== null
-					),
+					attachments: body.attachments.map((a: any) => {
+						const media_id = a.media_id ?? a.id;
+						return {
+							type: "Media",
+							media_id,
+							spoiler: a.spoiler ?? false,
+						};
+					}),
 				},
 				headers: {
 					"Idempotency-Key": id,

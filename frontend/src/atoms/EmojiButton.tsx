@@ -36,8 +36,12 @@ export const EmojiButton = (props: EmojiButtonProps) => {
 				},
 			});
 		} else {
-			if (ctx.popout().id === "emoji" && ctx.popout().ref === wrapperEl) {
-				ctx.setPopout({});
+			const popout = ctx.popout();
+			if (
+				popout && "id" in popout && popout.id === "emoji" &&
+				popout.ref === wrapperEl
+			) {
+				ctx.setPopout(null);
 			}
 		}
 	});

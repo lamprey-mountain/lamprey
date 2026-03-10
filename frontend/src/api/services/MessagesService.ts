@@ -172,7 +172,10 @@ export class MessagesService extends BaseService<Message> {
 
 		let old: { thread_id: string; dir: MessageListAnchor };
 
-		const [resource, { mutate }] = createResource(
+		const [resource, { mutate }] = createResource<
+			MessageRange,
+			{ thread_id: string; dir: MessageListAnchor }
+		>(
 			query,
 			async ({ thread_id, dir }, { value: oldValue }) => {
 				// Dedup check
@@ -366,7 +369,8 @@ export class MessagesService extends BaseService<Message> {
 					const hasEnoughForwards = idx <= r.len - dir.limit || !r.has_forward;
 					const hasEnoughBackwards = idx >= dir.limit || !r.has_backwards;
 					if (!hasEnoughBackwards || !hasEnoughForwards) {
-						let dataBefore, dataAfter;
+						let dataBefore: Pagination<Message> | undefined;
+						let dataAfter: Pagination<Message> | undefined;
 						if (!hasEnoughBackwards) {
 							dataBefore = await this.fetchList(thread_id, {
 								dir: "b",
@@ -517,13 +521,13 @@ export class MessagesService extends BaseService<Message> {
 		const local = ({
 			id,
 			channel_id,
-			author_id: this.store.session()?.user_id ?? "",
+			author_id: (this.store.session() as any)?.user_id ?? "",
 			created_at: new Date().toISOString(),
 			latest_version: {
 				version_id: id,
 				type: "DefaultMarkdown",
 				content: body.content,
-				attachments: [],
+				attachments: body.attachments,
 				embeds: body.embeds ?? [],
 				created_at: new Date().toISOString(),
 				mentions: { users: [], roles: [], everyone: false },
@@ -545,7 +549,14 @@ export class MessagesService extends BaseService<Message> {
 		const data = await fetchWithRetry(() =>
 			this.client.http.POST("/api/v1/channel/{channel_id}/message", {
 				params: { path: { channel_id } },
-				body: { ...body, attachments: [] },
+				body: {
+					...body,
+					attachments: body.attachments.map((a: any) => ({
+						type: "Media",
+						media_id: a.media_id ?? a.id,
+						spoiler: a.spoiler ?? false,
+					})),
+				},
 				headers: { "Idempotency-Key": id },
 			})
 		);

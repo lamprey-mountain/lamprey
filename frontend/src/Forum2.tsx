@@ -53,7 +53,7 @@ import {
 	useChannel,
 } from "./channelctx";
 import { createStore } from "solid-js/store";
-import { handleSubmit } from "./contexts/submit";
+import { useMessageSubmit } from "./hooks/useMessageSubmit";
 import { createEditor } from "./editor/Editor";
 import type { EditorState } from "prosemirror-state";
 
@@ -536,6 +536,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const [ch, chUpdate] = useChannel()!;
+	const submit = useMessageSubmit(props.channel.id);
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
 	const reply_id = () => ch.reply_id;
@@ -642,16 +643,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 			slowmodeShake();
 			return false;
 		}
-		handleSubmit(
-			ctx,
-			[ch, chUpdate],
-			props.channel.id,
-			text,
-			null as any,
-			api,
-			undefined,
-			bypassSlowmode(),
-		);
+		submit(text, bypassSlowmode());
 		localStorage.removeItem(storageKey());
 		return true;
 	};
@@ -1263,8 +1255,9 @@ const Comment = (
 						}
 					>
 						<Markdown
-							content={message().latest_version.type === "DefaultMarkdown"
-								? message().latest_version.content ?? ""
+							content={(message().latest_version as any).type ===
+									"DefaultMarkdown"
+								? (message().latest_version as any).content ?? ""
 								: ""}
 							channel_id={message().channel_id}
 							class="content"

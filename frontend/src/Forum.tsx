@@ -9,7 +9,6 @@ import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
 import { RenderUploadItem } from "./Input.tsx";
-import { handleSubmit } from "./contexts/submit.ts";
 import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -18,6 +17,7 @@ import { md } from "./markdown_utils.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
 
 export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -189,6 +189,7 @@ const QuickCreate = (
 	const n = useNavigate();
 	const [ch, chUpdate] = useChannel()!;
 	const uploads = useUploads();
+	const submit = useMessageSubmit(props.channel.id);
 
 	const editor = createEditor({});
 
@@ -213,15 +214,7 @@ const QuickCreate = (
 			parent_id: props.channel.id,
 		}).then((t) => {
 			if (!t) return;
-			handleSubmit(
-				ctx,
-				[ch, chUpdate],
-				t.id,
-				text,
-				null as any,
-				api,
-				props.channel.id,
-			);
+			submit(text, false, t.id);
 			n(`/channel/${t.id}`);
 		});
 		return true;

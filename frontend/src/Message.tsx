@@ -256,7 +256,7 @@ export function MessageView(props: MessageProps) {
 	const isReactionPickerOpen = () => {
 		const popout = ctx.popout();
 		if (
-			!("id" in popout) || popout.id !== "emoji" || !popout.ref ||
+			!popout || !("id" in popout) || popout.id !== "emoji" || !popout.ref ||
 			!messageArticleRef
 		) {
 			return false;
@@ -957,41 +957,41 @@ function ReplyView(props: ReplyProps) {
 export function AttachmentView(
 	props: { att: Attachment },
 ) {
-	if (props.att.type !== "Media") return null;
-	const b = () => props.att.media.content_type.split("/")[0];
+	if (props.att.type !== "Media" || !props.att.media) return null;
+	const b = () => props.att.media!.content_type.split("/")[0];
 	if (b() === "image") {
 		return (
 			<li class="raw">
 				<ImageView
-					media={props.att.media}
+					media={props.att.media!}
 				/>
 			</li>
 		);
 	} else if (b() === "video") {
 		return (
 			<li class="raw">
-				<VideoView media={props.att.media} />
+				<VideoView media={props.att.media!} />
 			</li>
 		);
 	} else if (b() === "audio") {
 		return (
 			<li class="raw">
-				<AudioView media={props.att.media} />
+				<AudioView media={props.att.media!} />
 			</li>
 		);
 	} else if (
 		b() === "text" ||
-		/^application\/json\b/.test(props.att.media.content_type)
+		/^application\/json\b/.test(props.att.media!.content_type)
 	) {
 		return (
 			<li class="raw">
-				<TextView media={props.att.media} />
+				<TextView media={props.att.media!} />
 			</li>
 		);
 	} else {
 		return (
 			<li>
-				<FileView media={props.att.media} />
+				<FileView media={props.att.media!} />
 			</li>
 		);
 	}
@@ -1115,10 +1115,10 @@ export const MessageToolbar = (props: { message: Message }) => {
 		} else {
 			const popout = ctx.popout();
 			if (
-				"id" in popout && popout.id === "emoji" &&
+				popout && "id" in popout && popout.id === "emoji" &&
 				popout.ref === reactionButtonRef
 			) {
-				ctx.setPopout({});
+				ctx.setPopout(null);
 			}
 		}
 	});

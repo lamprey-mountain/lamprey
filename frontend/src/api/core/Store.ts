@@ -163,7 +163,9 @@ export class RootStore {
 		} else if (msg.type === "MessageDelete") {
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "PreferencesGlobal") {
-			if (msg.user_id === this.session()?.user_id && this.setPreferences) {
+			if (
+				msg.user_id === (this.session() as any)?.user_id && this.setPreferences
+			) {
 				this.setPreferences(msg.config);
 			}
 		} else if (msg.type === "MemberListSync") {

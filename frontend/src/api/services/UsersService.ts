@@ -30,7 +30,7 @@ export class UsersService extends BaseService<UserWithRelationship> {
 		super.upsert(updatedUser);
 
 		// If this user is ourself, update the @self alias
-		if (user.id === this.store.session()?.user_id) {
+		if (user.id === (this.store.session() as any)?.user_id) {
 			this.cache.set("@self", updatedUser);
 		}
 	}

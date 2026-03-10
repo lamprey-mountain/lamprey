@@ -1,4 +1,11 @@
-import type { Channel, ChannelPatch, Pagination, Tag, TagCreate } from "sdk";
+import type {
+	Channel,
+	ChannelPatch,
+	ChannelType,
+	Pagination,
+	Tag,
+	TagCreate,
+} from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
@@ -204,14 +211,14 @@ export class Channels {
 	async createThreadFromMessage(
 		channel_id: string,
 		message_id: string,
-		body: { name: string; type?: string },
+		body: { name: string; type?: ChannelType },
 	): Promise<Channel> {
 		return await fetchWithRetry(() =>
 			this.api.client.http.POST(
 				"/api/v1/channel/{channel_id}/message/{message_id}/thread",
 				{
 					params: { path: { channel_id, message_id } },
-					body: body,
+					body: body as any,
 				},
 			)
 		);
@@ -237,16 +244,14 @@ export class Channels {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const data = await fetchWithRetry(() =>
-				this.api.client.http.GET(
-					"/api/v1/room/{room_id}/channel/archived",
+				this.api.client.http.POST(
+					"/api/v1/search/channels",
 					{
-						params: {
-							path: { room_id: room_id_signal() },
-							query: {
-								dir: "f",
-								limit: 1024,
-								from: pagination?.items.at(-1)?.id,
-							},
+						body: {
+							room_id: [room_id_signal()],
+							archived: true,
+							limit: 100,
+							offset: pagination?.items.length ?? 0,
 						},
 					},
 				)
@@ -254,14 +259,14 @@ export class Channels {
 
 			batch(() => {
 				for (const item of data.items) {
-					this.normalize(item);
-					this.cache.set(item.id, item);
+					this.normalize(item as Channel);
+					this.cache.set(item.id, item as Channel);
 				}
 			});
 
 			return {
 				...data,
-				items: [...pagination?.items ?? [], ...data.items],
+				items: [...(pagination?.items ?? []), ...(data.items as Channel[])],
 			};
 		};
 
@@ -487,7 +492,7 @@ export class Channels {
 		await fetchWithRetry(() =>
 			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
 				params: { path: { channel_id: channel_id } },
-				body: { locked: true },
+				body: { locked: { allow_roles: [] } },
 			})
 		);
 	}
@@ -496,7 +501,7 @@ export class Channels {
 		await fetchWithRetry(() =>
 			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
 				params: { path: { channel_id: channel_id } },
-				body: { locked: false },
+				body: { locked: null },
 			})
 		);
 	}

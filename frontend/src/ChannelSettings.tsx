@@ -23,6 +23,7 @@ const tabs: Array<{
 	// component: Component,
 	component: any;
 	action?: "remove";
+	style?: string;
 	permissionCheck?: (p: Set<Permission>) => boolean;
 	channelTypes?: string[];
 }> = [

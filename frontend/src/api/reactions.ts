@@ -11,11 +11,11 @@ export class Reactions {
 		query: { limit?: number; after?: string },
 	) {
 		const { data } = await this.api.client.http.GET(
-			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{key}",
+			"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}",
 			{
 				params: {
 					path: {
-						key,
+						reaction_key: key,
 						message_id,
 						channel_id,
 					},

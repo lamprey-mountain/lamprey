@@ -84,6 +84,7 @@ export function useChatClient(config: Config) {
 			pos: [],
 			vel: 0,
 		},
+		channels: {},
 	});
 
 	type Lang = "en";
@@ -94,7 +95,7 @@ export function useChatClient(config: Config) {
 	});
 
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
-	const [popout, setPopout] = createSignal({});
+	const [popout, setPopout] = createSignal<Popout | null>(null);
 	const [threadsView, setThreadsView] = createSignal<ThreadsViewData | null>(
 		null,
 	);

@@ -81,9 +81,9 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 
 		props.ctx.events.on("sync", ([msg]) => {
 			if (msg.type === "MediaProcessed") {
-				handleMediaProcessed(msg.media);
+				handleMediaProcessed((msg as any).media);
 			} else if (msg.type === "MediaUpdate") {
-				handleMediaUpdate(msg.media);
+				handleMediaUpdate((msg as any).media);
 			}
 		});
 	});
@@ -140,8 +140,7 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 				const att: Attachment = {
 					status: "uploaded",
 					media,
-					local_id,
-					file,
+					local_id: local_id,
 				};
 				chUpdate("attachments", [
 					...atts.slice(0, idx),

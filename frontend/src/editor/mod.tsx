@@ -28,7 +28,7 @@ export type EditorViewProps = {
 	placeholder?: string;
 	disabled?: boolean;
 	onUpload?: (file: File) => void;
-	onSubmit?: (text: string) => boolean;
+	onSubmit?: (text: string) => boolean | Promise<boolean>;
 	onChange?: (state: EditorState) => void;
 	channelId?: string; // Needed for autocomplete
 	submitOnEnter?: boolean;
@@ -56,8 +56,16 @@ export const createEditor = (opts: EditorOptions) => {
 	let currentProps: EditorViewProps = {};
 
 	const submitCommand: Command = (state, dispatch) => {
-		const shouldClear = currentProps.onSubmit?.(state.doc.textContent.trim());
-		if (shouldClear) {
+		const res = currentProps.onSubmit?.(state.doc.textContent.trim());
+		if (res instanceof Promise) {
+			res.then((shouldClear) => {
+				if (shouldClear) {
+					view?.dispatch(
+						view.state.tr.deleteRange(0, view.state.doc.nodeSize - 2),
+					);
+				}
+			});
+		} else if (res) {
 			dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
 		}
 		return true;
