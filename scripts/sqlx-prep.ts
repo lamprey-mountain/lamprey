@@ -1,4 +1,9 @@
-const crates = ["crate-backend", "crate-bridge", "crate-media"];
+const crates = [
+	"crate-backend",
+	"crate-backend-data-postgres",
+	"crate-bridge",
+	"crate-media",
+];
 
 for (const crate of crates) {
 	const process = Deno.run({

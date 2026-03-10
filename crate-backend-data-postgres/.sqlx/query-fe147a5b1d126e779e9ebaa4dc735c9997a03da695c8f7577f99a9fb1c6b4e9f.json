@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            select id, user_id, data, deleted_at\n            from media\n            where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null\n            limit 50\n            for update\n            ",
+  "query": "\n            select id, user_id, data, deleted_at\n            from media\n            where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null\n            limit $1\n            for update\n            ",
   "describe": {
     "columns": [
       {
@@ -25,7 +25,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int8"
+      ]
     },
     "nullable": [
       false,
@@ -34,5 +36,5 @@
       true
     ]
   },
-  "hash": "9b107cc764883f66b7531b37f30f9559da0c0393ea865fb43e226e943b17f888"
+  "hash": "fe147a5b1d126e779e9ebaa4dc735c9997a03da695c8f7577f99a9fb1c6b4e9f"
 }
