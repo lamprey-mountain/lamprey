@@ -12,7 +12,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rustc-env=RUST_EMBED_FRONTEND_PATH={}", frontend_dist);
     }
 
-    let build = BuildBuilder::default().build_timestamp(true).build()?;
     let cargo = CargoBuilder::default()
         .opt_level(true)
         .debug(true)
@@ -30,7 +29,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     Emitter::default()
-        .add_instructions(&build)?
         .add_instructions(&cargo)?
         .add_instructions(&git)?
         .add_instructions(&rustc)?
