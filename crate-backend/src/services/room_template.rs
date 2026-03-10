@@ -354,16 +354,17 @@ impl ServiceRoomTemplates {
         use common::v1::types::channel::ChannelType;
 
         let snapshot = self.state.services().cache.load_room(room_id).await?;
+        let data = snapshot.get_data().unwrap();
 
         let mut template_channels: Vec<RoomTemplateChannel> = Vec::new();
         let mut channel_map: HashMap<ChannelId, Uuid> = HashMap::new();
 
-        for channel_id in snapshot.channels.keys() {
+        for channel_id in data.channels.keys() {
             let temp_id = Uuid::now_v7();
             channel_map.insert(*channel_id, temp_id);
         }
 
-        for cc in snapshot.channels.values() {
+        for cc in data.channels.values() {
             let channel = &cc.inner;
 
             if matches!(
@@ -393,7 +394,7 @@ impl ServiceRoomTemplates {
 
         let mut template_roles: Vec<RoomTemplateRole> = Vec::new();
 
-        for cr in snapshot.roles.values() {
+        for cr in data.roles.values() {
             let role = &cr.inner;
 
             if role.room_id != room_id {
@@ -422,11 +423,11 @@ impl ServiceRoomTemplates {
             });
         }
 
-        let welcome_channel_id = snapshot
+        let welcome_channel_id = data
             .channels
             .values()
             .find(|cc| {
-                if let Some(wc) = snapshot.room.welcome_channel_id {
+                if let Some(wc) = data.room.welcome_channel_id {
                     cc.inner.id == wc
                 } else {
                     false

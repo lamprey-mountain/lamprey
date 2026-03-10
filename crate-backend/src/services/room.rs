@@ -34,7 +34,7 @@ impl ServiceRooms {
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
         let srv = self.state.services();
         let snapshot = srv.cache.load_room(room_id).await?;
-        let mut room = snapshot.room.clone();
+        let mut room = snapshot.get_data().unwrap().room.clone();
 
         if let Some(user_id) = user_id {
             let preferences = self
@@ -120,8 +120,9 @@ impl ServiceRooms {
         }
 
         let snapshot = self.state.services().cache.load_room(room_id).await?;
-        end.online_count = snapshot.room.online_count;
-        end.member_count = snapshot.room.member_count;
+        let data = snapshot.get_data().unwrap();
+        end.online_count = data.room.online_count;
+        end.member_count = data.room.member_count;
 
         let changes = Changes::new()
             .change("name", &start.name, &end.name)

@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
+use tokio::time::Instant;
 
 use common::v1::types::{
     MemberListGroup, MemberListOp, MessageSync, Permission, RoleId, RoomMember, User, UserId,
@@ -7,8 +8,9 @@ use common::v1::types::{
 use tokio::sync::{broadcast, oneshot};
 use uuid::Uuid;
 
+use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::services::cache::permissions::PermissionsCalculator;
-use crate::services::cache::room::RoomSnapshot;
+use crate::services::cache::room::{RoomData, RoomSnapshot};
 use crate::{
     services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey},
     Result, ServerStateInner,
@@ -29,6 +31,8 @@ pub struct MemberList {
     pub(super) groups: Vec<MemberListGroup>,
 
     pub(super) events_tx: broadcast::Sender<MemberListEvent>,
+
+    pub(super) last_active: Instant,
 }
 
 pub enum MemberListCommand {
@@ -58,10 +62,19 @@ impl MemberList {
             user_to_key: HashMap::new(),
             groups: Vec::new(),
             events_tx,
+            last_active: Instant::now(),
         }
     }
 
-    pub async fn initialize(&mut self, snapshot: &RoomSnapshot) -> Result<()> {
+    pub fn is_idle(&self) -> bool {
+        self.last_active.elapsed().as_secs() >= IDLE_TIMEOUT_MEMBER_LIST
+    }
+
+    pub async fn initialize(&mut self, snapshot: Arc<RoomSnapshot>) -> Result<()> {
+        let Some(data) = snapshot.get_data() else {
+            return Ok(());
+        };
+
         let room_id = match &self.key {
             MemberListKey::Room(id) => Some(*id),
             MemberListKey::RoomChannel(id, _) => Some(*id),
@@ -84,7 +97,7 @@ impl MemberList {
             let user_ids: Vec<_> = if let Some(ref tm) = thread_members {
                 tm.keys().copied().collect()
             } else {
-                snapshot.members.keys().copied().collect()
+                data.members.keys().copied().collect()
             };
 
             // fetch all users in the room to get presences and names
@@ -92,10 +105,10 @@ impl MemberList {
             let users_map: HashMap<_, _> = users.into_iter().map(|u| (u.id, u)).collect();
 
             let perms_calc = PermissionsCalculator {
-                room_id: snapshot.room.id,
-                owner_id: snapshot.room.owner_id,
-                public: snapshot.room.public,
-                room: Arc::new(snapshot.clone()),
+                room_id: data.room.id,
+                owner_id: data.room.owner_id,
+                public: data.room.public,
+                room: Arc::clone(&snapshot),
             };
 
             self.members.clear();
@@ -103,7 +116,7 @@ impl MemberList {
 
             for user_id in user_ids {
                 if let Some(_user) = users_map.get(&user_id) {
-                    if let Some(cached_member) = snapshot.members.get(&user_id) {
+                    if let Some(cached_member) = data.members.get(&user_id) {
                         let is_thread_member = thread_members
                             .as_ref()
                             .map_or(true, |tm| tm.contains_key(&user_id));
@@ -112,14 +125,14 @@ impl MemberList {
                                 &user_id,
                                 &cached_member.member,
                                 &perms_calc,
-                                snapshot,
+                                data,
                             )
                         {
                             let key = self.calculate_key(
                                 &user_id,
                                 &cached_member.member,
                                 &users_map,
-                                snapshot,
+                                data,
                             );
                             self.members.insert(key.clone(), user_id);
                             self.user_to_key.insert(user_id, key);
@@ -138,7 +151,7 @@ impl MemberList {
         user_id: &UserId,
         member: &RoomMember,
         perms_calc: &PermissionsCalculator,
-        snapshot: &RoomSnapshot,
+        data: &RoomData,
     ) -> bool {
         match &self.key {
             MemberListKey::Room(_) => true,
@@ -146,7 +159,7 @@ impl MemberList {
                 if Some(*user_id) == perms_calc.owner_id {
                     return true;
                 }
-                let (has_admin, has_view) = self.calc_view_base(member, perms_calc);
+                let (has_admin, has_view) = self.calc_view_base(member, perms_calc, data);
                 if has_admin {
                     return true;
                 }
@@ -154,8 +167,7 @@ impl MemberList {
             }
             MemberListKey::RoomThread(_, _, channel_id) => {
                 // for threads, usually only thread members are shown
-                snapshot
-                    .threads
+                data.threads
                     .get(channel_id)
                     .map_or(false, |t| t.members.contains_key(user_id))
             }
@@ -167,6 +179,7 @@ impl MemberList {
         &self,
         member: &RoomMember,
         perms_calc: &PermissionsCalculator,
+        data: &RoomData,
     ) -> (bool, bool) {
         let mut has_admin = false;
         let mut has_view_allow = false;
@@ -174,7 +187,7 @@ impl MemberList {
 
         let everyone_role_id = perms_calc.room_id.into_inner().into();
 
-        for role in perms_calc.room.roles.values() {
+        for role in data.roles.values() {
             if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
                 if role.allow.has(Permission::Admin) {
                     has_admin = true;
@@ -203,7 +216,7 @@ impl MemberList {
         user_id: &UserId,
         member: &RoomMember,
         users: &HashMap<UserId, User>,
-        snapshot: &RoomSnapshot,
+        data: &RoomData,
     ) -> MemberKey {
         let user = users.get(user_id).unwrap();
         let is_online = user.presence.is_online();
@@ -212,7 +225,7 @@ impl MemberList {
             // find highest hoisted role
             let mut best_role: Option<(RoleId, u64)> = None;
             for role_id in &member.roles {
-                if let Some(role) = snapshot.roles.get(role_id) {
+                if let Some(role) = data.roles.get(role_id) {
                     if role.inner.hoist {
                         if best_role.is_none() || role.inner.position < best_role.unwrap().1 {
                             best_role = Some((*role_id, role.inner.position as u64));
@@ -280,14 +293,19 @@ impl MemberList {
         self.groups = new_groups;
     }
 
-    pub async fn handle_command(&mut self, cmd: MemberListCommand, snapshot: &RoomSnapshot) {
+    pub async fn handle_command(&mut self, cmd: MemberListCommand, snapshot: &Arc<RoomSnapshot>) {
+        self.last_active = Instant::now();
+        let Some(data) = snapshot.get_data() else {
+            return;
+        };
+
         match cmd {
             MemberListCommand::GetInitialRanges {
                 ranges,
                 conn_id: _,
                 callback,
             } => {
-                let ops = self.get_initial_ranges(&ranges, snapshot).await;
+                let ops = self.get_initial_ranges(&ranges, data).await;
                 let _ = callback.send(MessageSync::MemberListSync {
                     user_id: UserId::new(), // dummy
 
@@ -310,15 +328,25 @@ impl MemberList {
         }
     }
 
-    pub async fn handle_sync(&mut self, event: MessageSync, snapshot: &RoomSnapshot) {
+    pub async fn handle_sync(&mut self, event: MessageSync, snapshot: Arc<RoomSnapshot>) {
+        self.last_active = Instant::now();
+        let Some(data) = snapshot.get_data() else {
+            return;
+        };
+
         match event {
             MessageSync::RoomMemberCreate { member, user }
             | MessageSync::RoomMemberUpdate { member, user } => {
                 if self.key.room_id() == Some(member.room_id) {
                     let mut users_map = HashMap::new();
                     users_map.insert(user.id, user);
-                    self.recalculate_member(member.user_id, &member, &users_map, snapshot)
-                        .await;
+                    self.recalculate_member(
+                        member.user_id,
+                        &member,
+                        &users_map,
+                        Arc::clone(&snapshot),
+                    )
+                    .await;
                 }
             }
             MessageSync::RoomMemberDelete { room_id, user_id } => {
@@ -344,12 +372,12 @@ impl MemberList {
                                 {
                                     let mut users_map = HashMap::new();
                                     users_map.insert(user.id, user);
-                                    if let Some(rm) = snapshot.members.get(&member.user_id) {
+                                    if let Some(rm) = data.members.get(&member.user_id) {
                                         self.recalculate_member(
                                             member.user_id,
                                             &rm.member,
                                             &users_map,
-                                            snapshot,
+                                            Arc::clone(&snapshot),
                                         )
                                         .await;
                                     }
@@ -370,14 +398,14 @@ impl MemberList {
                     if let Ok(mut user) = self.s.services().cache.user_get(user_id).await {
                         user.presence = presence.clone();
                         if let Some(_room_id) = self.key.room_id() {
-                            if let Some(member) = snapshot.members.get(&user_id) {
+                            if let Some(member) = data.members.get(&user_id) {
                                 let mut users_map = HashMap::new();
                                 users_map.insert(user_id, user);
                                 self.recalculate_member(
                                     user_id,
                                     &member.member,
                                     &users_map,
-                                    snapshot,
+                                    Arc::clone(&snapshot),
                                 )
                                 .await;
                             }
@@ -390,14 +418,14 @@ impl MemberList {
                 if let Some(old_key) = self.user_to_key.get(&user_id) {
                     if old_key.name.as_ref() != user.name.as_str() {
                         if let Some(_room_id) = self.key.room_id() {
-                            if let Some(member) = snapshot.members.get(&user_id) {
+                            if let Some(member) = data.members.get(&user_id) {
                                 let mut users_map = HashMap::new();
                                 users_map.insert(user_id, user.clone());
                                 self.recalculate_member(
                                     user_id,
                                     &member.member,
                                     &users_map,
-                                    snapshot,
+                                    Arc::clone(&snapshot),
                                 )
                                 .await;
                             }
@@ -407,22 +435,22 @@ impl MemberList {
             }
             MessageSync::RoleUpdate { role } => {
                 if self.key.room_id() == Some(role.room_id) {
-                    let _ = self.initialize(snapshot).await;
+                    let _ = self.initialize(Arc::clone(&snapshot)).await;
                 }
             }
             MessageSync::RoleDelete { room_id, .. } => {
                 if self.key.room_id() == Some(room_id) {
-                    let _ = self.initialize(snapshot).await;
+                    let _ = self.initialize(Arc::clone(&snapshot)).await;
                 }
             }
             MessageSync::RoleReorder { room_id, .. } => {
                 if self.key.room_id() == Some(room_id) {
-                    let _ = self.initialize(snapshot).await;
+                    let _ = self.initialize(Arc::clone(&snapshot)).await;
                 }
             }
             MessageSync::ChannelUpdate { channel } => {
                 if self.key.room_id() == channel.room_id {
-                    let _ = self.initialize(snapshot).await;
+                    let _ = self.initialize(Arc::clone(&snapshot)).await;
                 }
             }
             _ => {}
@@ -434,21 +462,25 @@ impl MemberList {
         user_id: UserId,
         member: &RoomMember,
         users_map: &HashMap<UserId, User>,
-        snapshot: &RoomSnapshot,
+        snapshot: Arc<RoomSnapshot>,
     ) {
+        let Some(data) = snapshot.get_data() else {
+            return;
+        };
+
         if let Some(_room_id) = self.key.room_id() {
             let perms_calc = PermissionsCalculator {
-                room_id: snapshot.room.id,
-                owner_id: snapshot.room.owner_id,
-                public: snapshot.room.public,
-                room: Arc::new(snapshot.clone()),
+                room_id: data.room.id,
+                owner_id: data.room.owner_id,
+                public: data.room.public,
+                room: Arc::clone(&snapshot),
             };
-            let included = self.should_include(&user_id, member, &perms_calc, snapshot);
+            let included = self.should_include(&user_id, member, &perms_calc, data);
 
             let old_key = self.user_to_key.get(&user_id).cloned();
 
             if included {
-                let new_key = self.calculate_key(&user_id, member, users_map, snapshot);
+                let new_key = self.calculate_key(&user_id, member, users_map, data);
                 let mut ops = Vec::new();
 
                 if let Some(ok) = old_key {
@@ -521,7 +553,7 @@ impl MemberList {
     async fn get_initial_ranges(
         &self,
         ranges: &[(u64, u64)],
-        snapshot: &RoomSnapshot,
+        data: &RoomData,
     ) -> Vec<MemberListOp> {
         let srv = self.s.services();
 
@@ -546,7 +578,7 @@ impl MemberList {
                     users.push(u);
                 }
                 if let Some(_room_id) = self.key.room_id() {
-                    if let Some(m) = snapshot.members.get(user_id) {
+                    if let Some(m) = data.members.get(user_id) {
                         room_members.push(m.member.clone());
                     }
                 }

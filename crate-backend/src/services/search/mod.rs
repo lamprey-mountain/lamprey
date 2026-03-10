@@ -138,9 +138,11 @@ impl ServiceSearch {
 
         for (room_id, user_ids) in room_users_map {
             if let Ok(cached_room) = srv.cache.load_room(room_id).await {
-                for user_id in user_ids {
-                    if let Some(member) = cached_room.members.get(&user_id) {
-                        room_members.push(member.member.clone());
+                if let Some(data) = cached_room.get_data() {
+                    for user_id in user_ids {
+                        if let Some(member) = data.members.get(&user_id) {
+                            room_members.push(member.member.clone());
+                        }
                     }
                 }
             }

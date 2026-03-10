@@ -3,7 +3,7 @@ use std::num::{ParseFloatError, ParseIntError};
 use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scopes;
-use common::v1::types::error::{ApiError, SyncError};
+use common::v1::types::error::{ApiError, ErrorCode, SyncError};
 use common::v1::types::{MessageEnvelope, MessagePayload, MessageSync};
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
@@ -151,6 +151,9 @@ pub enum Error {
 
     #[error("nats jetstream error: {0}")]
     NatsJetstream(String),
+
+    #[error("service unavailable")]
+    ServiceUnavailable,
 }
 
 impl From<sqlx::Error> for Error {
@@ -188,7 +191,14 @@ impl Error {
             Error::Unimplemented => StatusCode::NOT_IMPLEMENTED,
             Error::NotModified => StatusCode::NOT_MODIFIED,
             Error::Validation(_) => StatusCode::BAD_REQUEST,
-            Error::ApiError(err) => StatusCode::from_u16(err.code.status()).unwrap(),
+            Error::ServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+            Error::ApiError(err) => {
+                if err.code == ErrorCode::UnknownRoom {
+                    StatusCode::NOT_FOUND
+                } else {
+                    StatusCode::from_u16(err.code.status()).unwrap()
+                }
+            }
             Error::SyncError(err) => match err {
                 SyncError::InvalidSeq => StatusCode::BAD_REQUEST,
                 SyncError::Timeout => StatusCode::BAD_REQUEST,
@@ -235,6 +245,7 @@ impl Error {
             Error::MissingScopes(s) => Error::MissingScopes(s.clone()),
             Error::Tantivy(t) => Error::Tantivy(t.clone()),
             Error::TantivyQuery(s) => Error::TantivyQuery(s.clone()),
+            Error::ServiceUnavailable => Error::ServiceUnavailable,
             _ => Error::GenericError(self.to_string()),
         }
     }

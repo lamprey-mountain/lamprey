@@ -42,10 +42,10 @@ impl ServiceAuditLogs {
 
         if let Some(snapshot) = &cached_room {
             for thread_id in &resolve.threads {
-                if let Some(chan) = snapshot.channels.get(thread_id) {
+                if let Some(chan) = snapshot.get_data().unwrap().channels.get(thread_id) {
                     threads.push(chan.inner.clone());
-                } else if let Some(thread) = snapshot.threads.get(thread_id) {
-                    threads.push(thread.thread.as_ref().clone());
+                } else if let Some(thread) = snapshot.get_data().unwrap().threads.get(thread_id) {
+                    threads.push(thread.thread.clone());
                 } else {
                     missing_threads.push(*thread_id);
                 }
@@ -69,7 +69,7 @@ impl ServiceAuditLogs {
         let mut room_members = Vec::new();
         if let Some(cached_room) = &cached_room {
             for user_id in &resolve.users {
-                if let Some(member) = cached_room.members.get(user_id) {
+                if let Some(member) = cached_room.get_data().unwrap().members.get(user_id) {
                     room_members.push(member.member.clone());
                 }
             }

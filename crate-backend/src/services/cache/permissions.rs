@@ -24,7 +24,11 @@ pub struct PermissionsCalculator {
 impl PermissionsCalculator {
     /// query permissions for a room member, optionally in a specific channel
     pub fn query(&self, user_id: UserId, channel: Option<&Channel>) -> Permissions {
-        let member = self.room.members.get(&user_id).map(|m| &m.member);
+        let Some(data) = self.room.get_data() else {
+            return Permissions::empty();
+        };
+
+        let member = data.members.get(&user_id).map(|m| &m.member);
 
         // calculate base perms
         let mut perms = self.calculate_room_permissions(user_id, member);
@@ -34,7 +38,7 @@ impl PermissionsCalculator {
             if let Some(channel) = channel {
                 // only calculate channel permissions if the channel exists in cache
                 // (channels not in cache have no overwrites)
-                if let Some(cached_channel) = self.room.channels.get(&channel.id) {
+                if let Some(cached_channel) = data.channels.get(&channel.id) {
                     self.calculate_channel_permissions(&mut perms, cached_channel, member);
                 }
             }
@@ -58,6 +62,10 @@ impl PermissionsCalculator {
             return p;
         }
 
+        let Some(data) = self.room.get_data() else {
+            return Permissions::empty();
+        };
+
         let Some(member) = member else {
             if self.public {
                 // use public/default perms
@@ -65,7 +73,7 @@ impl PermissionsCalculator {
                 let mut perms = Permissions::empty();
                 perms.set_is_room_member(false);
 
-                if let Some(role) = self.room.roles.get(&everyone_role_id) {
+                if let Some(role) = data.roles.get(&everyone_role_id) {
                     perms.add_bits(role.allow);
                     perms.remove_bits(role.deny);
                 }
@@ -85,7 +93,7 @@ impl PermissionsCalculator {
 
         let everyone_role_id = self.room_id.into_inner().into();
 
-        for role in self.room.roles.values() {
+        for role in data.roles.values() {
             if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
                 allowed_bits.add_all(role.allow);
                 denied_bits.add_all(role.deny);
@@ -128,14 +136,16 @@ impl PermissionsCalculator {
         member: Option<&RoomMember>,
     ) {
         if let Some(parent_id) = cc.inner.parent_id {
-            if let Some(parent) = self.room.channels.get(&parent_id) {
-                self.calculate_channel_permissions(perms, parent, member);
-            } else {
-                warn!(
-                    channel_id = ?cc.inner.id,
-                    parent_id = ?parent_id,
-                    "channel has a parent_id that doesn't exist"
-                );
+            if let Some(data) = self.room.get_data() {
+                if let Some(parent) = data.channels.get(&parent_id) {
+                    self.calculate_channel_permissions(perms, parent, member);
+                } else {
+                    warn!(
+                        channel_id = ?cc.inner.id,
+                        parent_id = ?parent_id,
+                        "channel has a parent_id that doesn't exist"
+                    );
+                }
             }
         }
 
@@ -222,7 +232,11 @@ impl PermissionsCalculator {
             return u64::MAX;
         }
 
-        let member = self.room.members.get(&user_id).map(|m| &m.member);
+        let Some(data) = self.room.get_data() else {
+            return 0;
+        };
+
+        let member = data.members.get(&user_id).map(|m| &m.member);
         let Some(member) = member else {
             // user is not a member, return 0
             return 0;
@@ -230,7 +244,7 @@ impl PermissionsCalculator {
 
         let mut rank = 0u64;
         for role_id in &member.roles {
-            if let Some(role) = self.room.roles.get(role_id) {
+            if let Some(role) = data.roles.get(role_id) {
                 rank = rank.max(role.inner.position as u64);
             } else {
                 warn!(user_id = ?user_id, role_id = ?role_id, "user has role that doesnt exist");

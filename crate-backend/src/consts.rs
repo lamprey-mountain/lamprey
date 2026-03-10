@@ -38,6 +38,15 @@ pub const RETENTION_ROOM_ANALYTICS: u32 = 180;
 /// how long to retain calls without any users for, in seconds (for Broadcast channels)
 pub const EMPTY_CALL_TIMEOUT: u64 = 300;
 
+/// how long to retain an inactive room in memory, in seconds.
+pub const IDLE_TIMEOUT_ROOM: u64 = 900;
+
+/// how long to retain an inactive member list in memory, in seconds.
+pub const IDLE_TIMEOUT_MEMBER_LIST: u64 = 900;
+
+/// the maximum number of messages to process in a single actor tick before yielding.
+pub const ROOM_ACTOR_MESSAGE_BUDGET: usize = 50;
+
 /// the maximum number of public connections a user can have
 ///
 /// ie. connections with not ConnectionVisibility::Private

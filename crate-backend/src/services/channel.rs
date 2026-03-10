@@ -1381,7 +1381,7 @@ impl ServiceChannels {
         let perms_calc = self.state.services().cache.permissions(room_id).await?;
         let mut out = vec![];
 
-        for ch in perms_calc.room.channels.values() {
+        for ch in perms_calc.room.get_data().unwrap().channels.values() {
             let p = perms_calc.query(user_id, Some(&ch.inner));
             if p.has(Permission::ViewChannel) {
                 out.push((ch.inner.id, p.has(Permission::ThreadManage)));

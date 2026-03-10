@@ -1,15 +1,17 @@
+use im::HashMap as ImMap;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
+use tokio::time::{Duration, Instant};
 
 use common::v1::types::error::ErrorCode;
-use common::v1::types::{MessageSync, RoomId};
+use common::v1::types::{MessageSync, RoomId, UserId};
 use tokio::sync::{mpsc, watch};
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
+use crate::consts::{IDLE_TIMEOUT_ROOM, ROOM_ACTOR_MESSAGE_BUDGET};
 use crate::services::cache::room::{
-    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomHandle,
-    RoomSnapshot, RoomStatus,
+    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomData,
+    RoomHandle, RoomSnapshot,
 };
 use crate::services::member_lists::actor::MemberList;
 use crate::services::member_lists::util::MemberListKey;
@@ -20,24 +22,27 @@ use crate::{Error, Result, ServerStateInner};
 pub struct RoomActor {
     state: Arc<ServerStateInner>,
     room_id: RoomId,
-    snapshot: RoomSnapshot,
+    snapshot: Arc<RoomSnapshot>,
     rx: mpsc::Receiver<RoomCommand>,
-    snap_tx: watch::Sender<Arc<RoomSnapshot>>,
+    snapshot_tx: watch::Sender<Arc<RoomSnapshot>>,
     member_lists: HashMap<MemberListKey, MemberList>,
+    last_active: Instant,
 }
 
 impl RoomActor {
     pub fn spawn(room_id: RoomId, state: Arc<ServerStateInner>) -> RoomHandle {
         let (tx, rx) = mpsc::channel(1024);
-        let (snap_tx, snap_rx) = watch::channel(Arc::new(RoomSnapshot::default_with_id(room_id)));
+        let snapshot = Arc::new(RoomSnapshot::Loading);
+        let (snapshot_tx, snapshot_rx) = watch::channel(snapshot.clone());
 
         let actor = Self {
             state: state.clone(),
             room_id,
-            snapshot: RoomSnapshot::default_with_id(room_id),
+            snapshot,
             rx,
-            snap_tx,
+            snapshot_tx,
             member_lists: HashMap::new(),
+            last_active: Instant::now(),
         };
 
         tokio::spawn(async move {
@@ -49,7 +54,7 @@ impl RoomActor {
         RoomHandle {
             room_id,
             tx,
-            snapshot: snap_rx,
+            snapshot_rx,
         }
     }
 
@@ -78,6 +83,14 @@ impl RoomActor {
             backoff = (backoff * 2).min(Duration::from_secs(30));
         }
 
+        // Cleanup: unregister all members from the cache
+        if let RoomSnapshot::Ready(data) = self.snapshot.as_ref() {
+            let cache = self.state.services().cache.clone();
+            for user_id in data.members.keys() {
+                cache.member_unregister(*user_id, self.room_id);
+            }
+        }
+
         Ok(())
     }
 
@@ -85,52 +98,48 @@ impl RoomActor {
         if let Err(e) = self.load_initial_state().await {
             if let Error::ApiError(ae) = &e {
                 if ae.code == ErrorCode::UnknownRoom {
-                    self.snapshot.status = RoomStatus::NotFound;
-                    self.publish_snapshot();
+                    self.snapshot = Arc::new(RoomSnapshot::NotFound);
+                    let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
                     return Ok(());
                 }
             }
             return Err(e);
         }
 
-        self.snapshot.status = RoomStatus::Ready;
-        self.publish_snapshot();
+        let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
 
-        let mut idle_timeout = tokio::time::interval(Duration::from_secs(60 * 15));
+        let mut idle_timeout = tokio::time::interval(Duration::from_secs(60));
         idle_timeout.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
+        let mut processed = 0;
         loop {
-            // Message budgeting: Process up to 50 messages before yielding
-            let mut processed = 0;
-            while processed < 50 {
-                match self.rx.try_recv() {
-                    Ok(cmd) => {
-                        if !self.handle_command_internal(cmd).await? {
-                            return Ok(());
-                        }
-                        processed += 1;
-                    }
-                    Err(mpsc::error::TryRecvError::Empty) => break,
-                    Err(mpsc::error::TryRecvError::Disconnected) => return Ok(()),
-                }
-            }
-
-            if processed > 0 {
-                tokio::task::yield_now().await;
-            }
-
             tokio::select! {
                 _ = idle_timeout.tick() => {
-                    // TODO: implement idle check
-                }
-                cmd = self.rx.recv() => {
-                    match cmd {
-                        Some(cmd) => {
-                            if !self.handle_command_internal(cmd).await? {
-                                return Ok(());
-                            }
+                    if self.last_active.elapsed().as_secs() >= IDLE_TIMEOUT_ROOM {
+                        info!(room_id = ?self.room_id, "Room actor idle for too long, shutting down");
+                        return Ok(());
+                    }
+
+                    // Remove idle member lists
+                    self.member_lists.retain(|key, list| {
+                        if list.is_idle() {
+                            trace!(room_id = ?self.room_id, ?key, "Removing idle member list");
+                            false
+                        } else {
+                            true
                         }
-                        None => return Ok(()),
+                    });
+                }
+                cmd_opt = self.rx.recv() => {
+                    let Some(cmd) = cmd_opt else { return Ok(()) };
+                    if !self.handle_command_internal(cmd).await? {
+                        return Ok(());
+                    }
+
+                    processed += 1;
+                    if processed >= ROOM_ACTOR_MESSAGE_BUDGET {
+                        tokio::task::yield_now().await;
+                        processed = 0;
                     }
                 }
             }
@@ -138,11 +147,12 @@ impl RoomActor {
     }
 
     async fn handle_command_internal(&mut self, cmd: RoomCommand) -> Result<bool> {
+        self.last_active = Instant::now();
         match cmd {
             RoomCommand::Sync(msg) => {
                 if matches!(msg, MessageSync::RoomDelete { room_id } if room_id == self.room_id) {
-                    self.snapshot.status = RoomStatus::NotFound;
-                    self.publish_snapshot();
+                    self.snapshot = Arc::new(RoomSnapshot::NotFound);
+                    let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
                     return Ok(false);
                 }
                 self.handle_sync(msg).await?;
@@ -155,13 +165,13 @@ impl RoomActor {
             RoomCommand::MemberListSubscribe(key, events_tx) => {
                 if !self.member_lists.contains_key(&key) {
                     let mut list = MemberList::new(self.state.clone(), key.clone(), events_tx);
-                    let _ = list.initialize(&self.snapshot).await;
+                    let _ = list.initialize(Arc::clone(&self.snapshot)).await;
                     self.member_lists.insert(key, list);
                 }
             }
             RoomCommand::Close => return Ok(false),
         }
-        self.publish_snapshot();
+        let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
         Ok(true)
     }
 
@@ -185,42 +195,45 @@ impl RoomActor {
 
         let roles_data = roles_data.items;
 
-        let mut members = HashMap::new();
+        let mut members = ImMap::new();
         let mut online_count = 0;
+        let cache = srv.cache.clone();
         for member in room_members {
-            let user = srv.users.get(member.user_id, None).await?;
+            let user_id = member.user_id;
+            let user = srv.users.get(user_id, None).await?;
             if user.presence.status.is_online() {
                 online_count += 1;
             }
             members.insert(
-                member.user_id,
-                Arc::new(CachedRoomMember {
+                user_id,
+                CachedRoomMember {
                     member,
                     user: Arc::new(user),
-                }),
+                },
             );
+            cache.member_register(user_id, self.room_id);
         }
 
-        let mut roles = HashMap::new();
+        let mut roles = ImMap::new();
         for role in roles_data {
             let allow = PermissionBits::from(&role.allow);
             let deny = PermissionBits::from(&role.deny);
             roles.insert(
                 role.id,
-                Arc::new(CachedRole {
+                CachedRole {
                     inner: role,
                     allow,
                     deny,
-                }),
+                },
             );
         }
 
-        let mut channels = HashMap::new();
+        let mut channels = ImMap::new();
         for channel in channels_data {
             if channel.is_thread() {
                 continue;
             }
-            let mut overwrites = HashMap::new();
+            let mut overwrites = ImMap::new();
             for ow in &channel.permission_overwrites {
                 overwrites.insert(
                     ow.id,
@@ -234,26 +247,30 @@ impl RoomActor {
             }
             channels.insert(
                 channel.id,
-                Arc::new(crate::services::cache::room::CachedChannel {
+                crate::services::cache::room::CachedChannel {
                     inner: channel,
                     overwrites,
-                }),
+                },
             );
         }
 
-        let mut threads = HashMap::new();
-        for thread in active_threads_vec {
-            let thread_members_vec = data.thread_member_list_all(thread.id).await?;
-            let mut members_map = HashMap::new();
+        let mut threads = ImMap::new();
+        let thread_member_futs = active_threads_vec
+            .iter()
+            .map(|t| data.thread_member_list_all(t.id));
+        let all_thread_members = futures::future::try_join_all(thread_member_futs).await?;
+
+        for (thread, thread_members_vec) in active_threads_vec.into_iter().zip(all_thread_members) {
+            let mut members_map = ImMap::new();
             for member in thread_members_vec {
                 members_map.insert(member.user_id, member);
             }
             threads.insert(
                 thread.id,
-                Arc::new(CachedThread {
-                    thread: Arc::new(thread),
+                CachedThread {
+                    thread,
                     members: members_map,
-                }),
+                },
             );
         }
 
@@ -261,32 +278,32 @@ impl RoomActor {
         room.member_count = members.len() as u64;
         room.online_count = online_count;
 
-        self.snapshot = RoomSnapshot {
+        self.snapshot = Arc::new(RoomSnapshot::Ready(Arc::new(RoomData {
             room,
-            status: RoomStatus::Ready,
             members,
             channels,
             roles,
             threads,
-        };
+        })));
 
         Ok(())
     }
 
-    fn publish_snapshot(&self) {
-        let _ = self.snap_tx.send(Arc::new(self.snapshot.clone()));
-    }
-
     async fn handle_sync(&mut self, event: MessageSync) -> Result<()> {
+        let mut snapshot_data = match self.snapshot.as_ref() {
+            RoomSnapshot::Ready(data) => data.as_ref().clone(),
+            _ => return Ok(()), // Don't process sync if not ready
+        };
+
         match &event {
             MessageSync::RoomUpdate { room } => {
-                self.snapshot.room = room.clone();
+                snapshot_data.room = room.clone();
             }
             MessageSync::ChannelCreate { channel } => {
                 if channel.room_id != Some(self.room_id) {
                     return Ok(());
                 }
-                let mut overwrites = HashMap::new();
+                let mut overwrites = ImMap::new();
                 for ow in &channel.permission_overwrites {
                     overwrites.insert(
                         ow.id,
@@ -299,20 +316,20 @@ impl RoomActor {
                     );
                 }
                 if channel.is_thread() {
-                    self.snapshot.threads.insert(
+                    snapshot_data.threads.insert(
                         channel.id,
-                        Arc::new(CachedThread {
-                            thread: Arc::new(*channel.clone()),
-                            members: HashMap::new(),
-                        }),
+                        CachedThread {
+                            thread: *channel.clone(),
+                            members: ImMap::new(),
+                        },
                     );
                 } else {
-                    self.snapshot.channels.insert(
+                    snapshot_data.channels.insert(
                         channel.id,
-                        Arc::new(crate::services::cache::room::CachedChannel {
+                        crate::services::cache::room::CachedChannel {
                             inner: *channel.clone(),
                             overwrites,
-                        }),
+                        },
                     );
                 }
             }
@@ -320,7 +337,7 @@ impl RoomActor {
                 if channel.room_id != Some(self.room_id) {
                     return Ok(());
                 }
-                let mut overwrites = HashMap::new();
+                let mut overwrites = ImMap::new();
                 for ow in &channel.permission_overwrites {
                     overwrites.insert(
                         ow.id,
@@ -334,32 +351,28 @@ impl RoomActor {
                 }
                 if channel.is_thread() {
                     if channel.is_removed() {
-                        self.snapshot.threads.remove(&channel.id);
+                        snapshot_data.threads.remove(&channel.id);
                     } else {
-                        self.snapshot
+                        snapshot_data
                             .threads
                             .entry(channel.id)
                             .and_modify(|t| {
-                                let mut updated = t.as_ref().clone();
-                                updated.thread = Arc::new(*channel.clone());
-                                *t = Arc::new(updated);
+                                t.thread = *channel.clone();
                             })
-                            .or_insert_with(|| {
-                                Arc::new(CachedThread {
-                                    thread: Arc::new(*channel.clone()),
-                                    members: HashMap::new(),
-                                })
+                            .or_insert_with(|| CachedThread {
+                                thread: *channel.clone(),
+                                members: ImMap::new(),
                             });
                     }
                 } else if channel.is_removed() {
-                    self.snapshot.channels.remove(&channel.id);
+                    snapshot_data.channels.remove(&channel.id);
                 } else {
-                    self.snapshot.channels.insert(
+                    snapshot_data.channels.insert(
                         channel.id,
-                        Arc::new(crate::services::cache::room::CachedChannel {
+                        crate::services::cache::room::CachedChannel {
                             inner: *channel.clone(),
                             overwrites,
-                        }),
+                        },
                     );
                 }
             }
@@ -369,13 +382,13 @@ impl RoomActor {
                 }
                 let allow = PermissionBits::from(&role.allow);
                 let deny = PermissionBits::from(&role.deny);
-                self.snapshot.roles.insert(
+                snapshot_data.roles.insert(
                     role.id,
-                    Arc::new(CachedRole {
+                    CachedRole {
                         inner: role.clone(),
                         allow,
                         deny,
-                    }),
+                    },
                 );
             }
             MessageSync::RoleUpdate { role } => {
@@ -384,35 +397,39 @@ impl RoomActor {
                 }
                 let allow = PermissionBits::from(&role.allow);
                 let deny = PermissionBits::from(&role.deny);
-                self.snapshot.roles.insert(
+                snapshot_data.roles.insert(
                     role.id,
-                    Arc::new(CachedRole {
+                    CachedRole {
                         inner: role.clone(),
                         allow,
                         deny,
-                    }),
+                    },
                 );
             }
             MessageSync::RoleDelete { role_id, room_id } => {
                 if *room_id != self.room_id {
                     return Ok(());
                 }
-                self.snapshot.roles.remove(role_id);
-                for member in self.snapshot.members.values_mut() {
-                    let mut m = member.as_ref().clone();
-                    m.member.roles.retain(|r| r != role_id);
-                    *member = Arc::new(m);
+                snapshot_data.roles.remove(role_id);
+
+                // For bulk updates, it's faster to use std::collections::HashMap and convert back
+                let mut members: HashMap<UserId, CachedRoomMember> =
+                    snapshot_data.members.into_iter().collect();
+
+                for member in members.values_mut() {
+                    member.member.roles.retain(|r| r != role_id);
                 }
+
+                snapshot_data.members = members.into_iter().collect();
             }
             MessageSync::RoleReorder { roles, room_id } => {
                 if *room_id != self.room_id {
                     return Ok(());
                 }
                 for item in roles {
-                    if let Some(role) = self.snapshot.roles.get_mut(&item.role_id) {
-                        let mut r = role.as_ref().clone();
-                        r.inner.position = item.position;
-                        *role = Arc::new(r);
+                    if let Some(mut role) = snapshot_data.roles.get(&item.role_id).cloned() {
+                        role.inner.position = item.position;
+                        snapshot_data.roles.insert(item.role_id, role);
                     }
                 }
             }
@@ -420,93 +437,107 @@ impl RoomActor {
                 if member.room_id != self.room_id {
                     return Ok(());
                 }
-                if !self.snapshot.members.contains_key(&member.user_id) {
-                    self.snapshot.room.member_count += 1;
+                if !snapshot_data.members.contains_key(&member.user_id) {
+                    snapshot_data.room.member_count += 1;
                     if user.presence.status.is_online() {
-                        self.snapshot.room.online_count += 1;
+                        snapshot_data.room.online_count += 1;
                     }
                 }
-                self.snapshot.members.insert(
+                snapshot_data.members.insert(
                     member.user_id,
-                    Arc::new(CachedRoomMember {
+                    CachedRoomMember {
                         member: member.clone(),
                         user: Arc::new(user.clone()),
-                    }),
+                    },
                 );
+                self.state
+                    .services()
+                    .cache
+                    .member_register(member.user_id, self.room_id);
             }
             MessageSync::RoomMemberUpdate { member, user } => {
                 if member.room_id != self.room_id {
                     return Ok(());
                 }
-                if let Some(old_member) = self.snapshot.members.get(&member.user_id) {
+                if let Some(old_member) = snapshot_data.members.get(&member.user_id) {
                     let old_online = old_member.user.presence.status.is_online();
                     let new_online = user.presence.status.is_online();
                     if old_online != new_online {
                         if new_online {
-                            self.snapshot.room.online_count += 1;
+                            snapshot_data.room.online_count += 1;
                         } else {
-                            self.snapshot.room.online_count =
-                                self.snapshot.room.online_count.saturating_sub(1);
+                            snapshot_data.room.online_count =
+                                snapshot_data.room.online_count.saturating_sub(1);
                         }
                     }
                 }
-                self.snapshot.members.insert(
+                snapshot_data.members.insert(
                     member.user_id,
-                    Arc::new(CachedRoomMember {
+                    CachedRoomMember {
                         member: member.clone(),
                         user: Arc::new(user.clone()),
-                    }),
+                    },
                 );
+                self.state
+                    .services()
+                    .cache
+                    .member_register(member.user_id, self.room_id);
             }
             MessageSync::RoomMemberDelete { user_id, room_id } => {
                 if *room_id != self.room_id {
                     return Ok(());
                 }
-                if let Some(member) = self.snapshot.members.remove(user_id) {
-                    self.snapshot.room.member_count =
-                        self.snapshot.room.member_count.saturating_sub(1);
+                if let Some(member) = snapshot_data.members.remove(user_id) {
+                    snapshot_data.room.member_count =
+                        snapshot_data.room.member_count.saturating_sub(1);
                     if member.user.presence.status.is_online() {
-                        self.snapshot.room.online_count =
-                            self.snapshot.room.online_count.saturating_sub(1);
+                        snapshot_data.room.online_count =
+                            snapshot_data.room.online_count.saturating_sub(1);
                     }
                 }
+                self.state
+                    .services()
+                    .cache
+                    .member_unregister(*user_id, self.room_id);
             }
             MessageSync::PresenceUpdate { user_id, presence } => {
-                if let Some(member) = self.snapshot.members.get_mut(user_id) {
+                if let Some(mut member) = snapshot_data.members.get(user_id).cloned() {
                     let old_online = member.user.presence.status.is_online();
                     let new_online = presence.status.is_online();
                     if old_online != new_online {
                         if new_online {
-                            self.snapshot.room.online_count += 1;
+                            snapshot_data.room.online_count += 1;
                         } else {
-                            self.snapshot.room.online_count =
-                                self.snapshot.room.online_count.saturating_sub(1);
+                            snapshot_data.room.online_count =
+                                snapshot_data.room.online_count.saturating_sub(1);
                         }
                     }
 
-                    let mut m = member.as_ref().clone();
-                    let mut u = m.user.as_ref().clone();
-                    u.presence = presence.clone();
-                    m.user = Arc::new(u);
-                    *member = Arc::new(m);
+                    member.user = Arc::new({
+                        let mut u = member.user.as_ref().clone();
+                        u.presence = presence.clone();
+                        u
+                    });
+
+                    snapshot_data.members.insert(*user_id, member);
                 }
             }
             MessageSync::UserUpdate { user } => {
-                if let Some(member) = self.snapshot.members.get_mut(&user.id) {
+                if let Some(mut member) = snapshot_data.members.get(&user.id).cloned() {
                     let old_online = member.user.presence.status.is_online();
                     let new_online = user.presence.status.is_online();
                     if old_online != new_online {
                         if new_online {
-                            self.snapshot.room.online_count += 1;
+                            snapshot_data.room.online_count += 1;
                         } else {
-                            self.snapshot.room.online_count =
-                                self.snapshot.room.online_count.saturating_sub(1);
+                            snapshot_data.room.online_count =
+                                snapshot_data.room.online_count.saturating_sub(1);
                         }
                     }
 
-                    let mut m = member.as_ref().clone();
-                    m.user = Arc::new(user.clone());
-                    *member = Arc::new(m);
+                    member.user = Arc::new(user.clone());
+
+                    snapshot_data.members.insert(user.id, member);
                 }
             }
             MessageSync::MessageCreate { message } | MessageSync::MessageUpdate { message } => {
@@ -515,35 +546,30 @@ impl RoomActor {
                 }
                 // We don't store messages in RoomSnapshot, but we might need to update member list etc.
             }
-            MessageSync::MessageDelete { .. }
-            | MessageSync::MessageDeleteBulk { .. }
-            | MessageSync::MessageRemove { .. }
-            | MessageSync::MessageRestore { .. } => {
-                // Messages are not in RoomSnapshot
-            }
             MessageSync::ThreadMemberUpsert {
                 thread_id,
                 added,
                 removed,
                 ..
             } => {
-                if let Some(thread) = self.snapshot.threads.get_mut(thread_id) {
-                    let mut t = thread.as_ref().clone();
+                if let Some(thread) = snapshot_data.threads.get_mut(thread_id) {
                     for member in added {
-                        t.members.insert(member.user_id, member.clone());
+                        thread.members.insert(member.user_id, member.clone());
                     }
                     for user_id in removed {
-                        t.members.remove(user_id);
+                        thread.members.remove(user_id);
                     }
-                    *thread = Arc::new(t);
                 }
             }
             _ => {}
         }
 
+        self.snapshot = Arc::new(RoomSnapshot::Ready(Arc::new(snapshot_data)));
+
         // Notify member lists of the event
         for list in self.member_lists.values_mut() {
-            list.handle_sync(event.clone(), &self.snapshot).await;
+            list.handle_sync(event.clone(), Arc::clone(&self.snapshot))
+                .await;
         }
 
         Ok(())

@@ -1,11 +1,11 @@
 //! cached/in memory rooms
 
-use std::collections::HashMap;
+use im::HashMap as ImMap;
 use std::sync::Arc;
 
 use common::v1::types::{
     Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomMember,
-    RoomSecurity, ThreadMember, User, UserId,
+    ThreadMember, User, UserId,
 };
 use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
@@ -17,21 +17,31 @@ use crate::Result;
 /// A snapshot of a room's state at a point in time.
 /// Used for zero-latency reads.
 #[derive(Debug, Clone)]
-pub struct RoomSnapshot {
-    pub room: Room,
-    pub status: RoomStatus,
-    pub members: HashMap<UserId, Arc<CachedRoomMember>>,
-    pub channels: HashMap<ChannelId, Arc<CachedChannel>>,
-    pub roles: HashMap<RoleId, Arc<CachedRole>>,
-    pub threads: HashMap<ChannelId, Arc<CachedThread>>,
+pub enum RoomSnapshot {
+    Loading,
+    Ready(Arc<RoomData>),
+    NotFound,
+    Unavailable(RoomUnavailable),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum RoomStatus {
-    #[default]
-    Loading,
-    Ready,
-    NotFound,
+#[derive(Debug, Clone, Copy)]
+pub struct RoomUnavailable {
+    pub reason: RoomUnavailableReason,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoomUnavailableReason {
+    /// too many events were received and the room actor is backlogged
+    Backlogged,
+}
+
+#[derive(Debug, Clone)]
+pub struct RoomData {
+    pub room: Room,
+    pub members: ImMap<UserId, CachedRoomMember>,
+    pub channels: ImMap<ChannelId, CachedChannel>,
+    pub roles: ImMap<RoleId, CachedRole>,
+    pub threads: ImMap<ChannelId, CachedThread>,
 }
 
 /// Commands that can be sent to a room actor.
@@ -60,7 +70,7 @@ pub enum RoomCommand {
 pub struct RoomHandle {
     pub room_id: crate::types::RoomId,
     pub tx: mpsc::Sender<RoomCommand>,
-    pub snapshot: watch::Receiver<Arc<RoomSnapshot>>,
+    pub snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,10 +85,10 @@ pub struct CachedRoomMember {
 #[derive(Debug, Clone)]
 pub struct CachedThread {
     /// the thread itself
-    pub thread: Arc<Channel>,
+    pub thread: Channel,
 
     /// thread members
-    pub members: HashMap<UserId, ThreadMember>,
+    pub members: ImMap<UserId, ThreadMember>,
 }
 
 #[derive(Clone, Debug)]
@@ -87,7 +97,7 @@ pub struct CachedChannel {
     pub inner: Channel,
 
     /// channel permission overwrites as bitfields
-    pub overwrites: HashMap<Uuid, CachedPermissionOverwrite>,
+    pub overwrites: ImMap<Uuid, CachedPermissionOverwrite>,
 }
 
 #[derive(Clone, Debug)]
@@ -118,63 +128,57 @@ pub struct CachedPermissionOverwrite {
 }
 
 impl RoomSnapshot {
-    pub fn default_with_id(room_id: common::v1::types::RoomId) -> Self {
-        Self {
-            room: Room {
-                id: room_id,
-                version_id: Uuid::nil(),
-                owner_id: None,
-                name: String::new(),
-                description: None,
-                icon: None,
-                banner: None,
-                room_type: common::v1::types::RoomType::Default,
-                member_count: 0,
-                online_count: 0,
-                channel_count: 0,
-                emoji_count: 0,
-                archived_at: None,
-                public: false,
-                deleted_at: None,
-                welcome_channel_id: None,
-                quarantined: false,
-                preferences: None,
-                security: RoomSecurity::default(),
-                afk_channel_id: None,
-                afk_channel_timeout: 0,
-            },
-            status: RoomStatus::Loading,
-            members: HashMap::new(),
-            channels: HashMap::new(),
-            roles: HashMap::new(),
-            threads: HashMap::new(),
+    pub fn get_data(&self) -> Option<&Arc<RoomData>> {
+        match self {
+            Self::Ready(data) => Some(data),
+            _ => None,
         }
     }
 
-    pub fn get_member(&self, user_id: &UserId) -> Option<&Arc<CachedRoomMember>> {
-        self.members.get(user_id)
+    pub fn is_ready(&self) -> bool {
+        matches!(self, Self::Ready(_))
     }
 
-    pub fn get_channel(&self, channel_id: &ChannelId) -> Option<&Arc<CachedChannel>> {
-        self.channels.get(channel_id)
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, Self::NotFound)
     }
 
-    pub fn get_role(&self, role_id: &RoleId) -> Option<&Arc<CachedRole>> {
-        self.roles.get(role_id)
+    pub fn is_loading(&self) -> bool {
+        matches!(self, Self::Loading)
+    }
+
+    pub fn is_unavailable(&self) -> bool {
+        matches!(self, Self::Unavailable(_))
+    }
+
+    pub fn get_member(&self, user_id: &UserId) -> Option<&CachedRoomMember> {
+        self.get_data()?.members.get(user_id)
+    }
+
+    pub fn get_channel(&self, channel_id: &ChannelId) -> Option<&CachedChannel> {
+        self.get_data()?.channels.get(channel_id)
+    }
+
+    pub fn get_role(&self, role_id: &RoleId) -> Option<&CachedRole> {
+        self.get_data()?.roles.get(role_id)
     }
 
     pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
-        if self.room.security.require_sudo {
-            auth.ensure_sudo()?;
+        if let Some(data) = self.get_data() {
+            if data.room.security.require_sudo {
+                auth.ensure_sudo()?;
+            }
         }
 
         Ok(())
     }
 
     pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
-        if self.room.security.require_mfa {
-            if !auth.user.has_mfa.unwrap_or_default() {
-                return Err(crate::Error::BadStatic("mfa required for this action"));
+        if let Some(data) = self.get_data() {
+            if data.room.security.require_mfa {
+                if !auth.user.has_mfa.unwrap_or_default() {
+                    return Err(crate::Error::BadStatic("mfa required for this action"));
+                }
             }
         }
 

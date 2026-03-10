@@ -999,6 +999,8 @@ impl ServiceMessages {
                     continue;
                 };
                 let resolved_name = room
+                    .get_data()
+                    .unwrap()
                     .members
                     .get(&user_id)
                     .and_then(|m| m.member.override_name.clone())
@@ -1011,7 +1013,7 @@ impl ServiceMessages {
             }
 
             for role_id in mentions_ids.roles {
-                if room.roles.contains_key(&role_id) {
+                if room.get_data().unwrap().roles.contains_key(&role_id) {
                     mentions.roles.push(MentionsRole { id: role_id });
                 }
             }
