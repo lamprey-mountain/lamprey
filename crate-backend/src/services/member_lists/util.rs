@@ -61,6 +61,17 @@ pub struct MemberKey {
     pub user_id: UserId,
 }
 
+impl MemberListKey {
+    pub fn room_id(&self) -> Option<RoomId> {
+        match self {
+            Self::Room(id) => Some(*id),
+            Self::RoomChannel(id, _) => Some(*id),
+            Self::RoomThread(id, _, _) => Some(*id),
+            Self::Dm(_) => None,
+        }
+    }
+}
+
 impl MemberListKey1 {
     /// Get the room ID if applicable
     pub fn room_id(&self) -> Option<RoomId> {

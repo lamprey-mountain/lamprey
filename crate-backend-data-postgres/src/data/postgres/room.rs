@@ -201,6 +201,21 @@ impl DataRoom for Postgres {
         )
     }
 
+    async fn room_list_user_all(&self, user_id: UserId) -> Result<Vec<RoomId>> {
+        let rooms = query_scalar!(
+            r#"
+            SELECT room_id
+            FROM room_member
+            WHERE user_id = $1 AND membership = 'Join'
+            "#,
+            *user_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rooms.into_iter().map(Into::into).collect())
+    }
+
     async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;

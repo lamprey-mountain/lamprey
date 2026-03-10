@@ -3,7 +3,7 @@
 use common::v1::types::notifications::preferences::NotifsMessages;
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, ChannelType, Message, Room, UserId};
+use common::v1::types::{ChannelType, UserId};
 
 use crate::{Result, ServerStateInner};
 
@@ -11,9 +11,6 @@ pub struct NotificationActionCalculator {
     state: std::sync::Arc<ServerStateInner>,
     user_id: UserId,
     notification: Notification,
-    channel: Option<Channel>,
-    room: Option<Room>,
-    message: Option<Message>,
     mentions_user: bool,
     mentions_role: bool,
     mentions_everyone: bool,
@@ -42,9 +39,6 @@ impl NotificationActionCalculator {
             state,
             user_id,
             notification,
-            channel: None,
-            room: None,
-            message: None,
             mentions_user: false,
             mentions_role: false,
             mentions_everyone: false,

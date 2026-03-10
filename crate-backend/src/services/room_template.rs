@@ -8,7 +8,7 @@ use common::v1::types::room_template::{
     RoomTemplateRole, RoomTemplateSnapshot,
 };
 use common::v1::types::{channel::ChannelCreate, role::RoleCreate, RoomId, RoomPatch, UserId};
-use common::v1::types::{Channel, ChannelType, PermissionOverwriteType, Role, RoleId};
+use common::v1::types::{Channel, ChannelId, ChannelType, PermissionOverwriteType, Role, RoleId};
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use uuid::Uuid;
 
@@ -272,7 +272,7 @@ impl ServiceRoomTemplates {
                         channel_map
                             .get(&p.into_inner())
                             .copied()
-                            .map(|id: common::v1::types::ChannelId| id.into_inner())
+                            .map(|id: ChannelId| id.into_inner())
                     }),
                     owner_id: None,
                     icon: template_channel.inner.icon.map(|i| *i),
@@ -353,19 +353,17 @@ impl ServiceRoomTemplates {
     async fn generate_room_snapshot(&self, room_id: RoomId) -> Result<RoomTemplateSnapshot> {
         use common::v1::types::channel::ChannelType;
 
-        let cached_room = self.state.services().cache.load_room(room_id).await?;
+        let snapshot = self.state.services().cache.load_room(room_id).await?;
 
         let mut template_channels: Vec<RoomTemplateChannel> = Vec::new();
-        let mut channel_map: std::collections::HashMap<common::v1::types::ChannelId, Uuid> =
-            std::collections::HashMap::new();
+        let mut channel_map: HashMap<ChannelId, Uuid> = HashMap::new();
 
-        for cached_channel in cached_room.channels.iter() {
+        for channel_id in snapshot.channels.keys() {
             let temp_id = Uuid::now_v7();
-            channel_map.insert(cached_channel.key().clone(), temp_id);
+            channel_map.insert(*channel_id, temp_id);
         }
 
-        for cached_channel in cached_room.channels.iter() {
-            let cc = cached_channel.value();
+        for cc in snapshot.channels.values() {
             let channel = &cc.inner;
 
             if matches!(
@@ -395,8 +393,7 @@ impl ServiceRoomTemplates {
 
         let mut template_roles: Vec<RoomTemplateRole> = Vec::new();
 
-        for cached_role in cached_room.roles.iter() {
-            let cr = cached_role.value();
+        for cr in snapshot.roles.values() {
             let role = &cr.inner;
 
             if role.room_id != room_id {
@@ -425,17 +422,17 @@ impl ServiceRoomTemplates {
             });
         }
 
-        let welcome_channel_id = cached_room
+        let welcome_channel_id = snapshot
             .channels
-            .iter()
+            .values()
             .find(|cc| {
-                if let Some(wc) = cached_room.inner.blocking_read().welcome_channel_id {
-                    cc.value().inner.id == wc
+                if let Some(wc) = snapshot.room.welcome_channel_id {
+                    cc.inner.id == wc
                 } else {
                     false
                 }
             })
-            .map(|cc| cc.key().clone());
+            .map(|cc| cc.inner.id);
 
         Ok(RoomTemplateSnapshot {
             channels: template_channels,

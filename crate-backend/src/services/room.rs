@@ -33,8 +33,8 @@ impl ServiceRooms {
     // TODO: make this not require writing room
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
         let srv = self.state.services();
-        let cached = srv.cache.load_room(room_id).await?;
-        let mut room = cached.inner.read().await.clone();
+        let snapshot = srv.cache.load_room(room_id).await?;
+        let mut room = snapshot.room.clone();
 
         if let Some(user_id) = user_id {
             let preferences = self
@@ -45,16 +45,7 @@ impl ServiceRooms {
             room.preferences = Some(preferences);
         }
 
-        let mut online_count = 0;
-        for member in &cached.members {
-            if srv.presence.get(*member.key()).status.is_online() {
-                online_count += 1;
-            }
-        }
-        room.online_count = online_count;
-        room.member_count = cached.members.len() as u64;
-
-        Ok(room.to_owned())
+        Ok(room)
     }
 
     pub async fn invalidate(&self, room_id: RoomId) {
@@ -112,8 +103,25 @@ impl ServiceRooms {
         data.room_template_mark_dirty(room_id).await?;
 
         let updated_room = data.room_get(room_id).await?;
-        self.state.services().cache.update_room(updated_room).await;
-        let end = self.get(room_id, Some(user_id)).await?;
+        self.state
+            .services()
+            .cache
+            .update_room(updated_room.clone())
+            .await;
+
+        let mut end = updated_room;
+        if let Some(user_id) = Some(user_id) {
+            let preferences = self
+                .state
+                .data()
+                .preferences_room_get(user_id, room_id)
+                .await?;
+            end.preferences = Some(preferences);
+        }
+
+        let snapshot = self.state.services().cache.load_room(room_id).await?;
+        end.online_count = snapshot.room.online_count;
+        end.member_count = snapshot.room.member_count;
 
         let changes = Changes::new()
             .change("name", &start.name, &end.name)
@@ -139,6 +147,14 @@ impl ServiceRooms {
             AuditLogEntryType::RoomUpdate { changes },
         )
         .await?;
+
+        self.state
+            .broadcast_room(
+                room_id,
+                user_id,
+                MessageSync::RoomUpdate { room: end.clone() },
+            )
+            .await?;
 
         Ok(end)
     }

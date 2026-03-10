@@ -40,12 +40,12 @@ impl ServiceAuditLogs {
         let mut threads = Vec::new();
         let mut missing_threads = Vec::new();
 
-        if let Some(cached_room) = &cached_room {
+        if let Some(snapshot) = &cached_room {
             for thread_id in &resolve.threads {
-                if let Some(chan) = cached_room.channels.get(thread_id) {
-                    threads.push(chan.value().inner.clone());
-                } else if let Some(thread) = cached_room.threads.get(thread_id) {
-                    threads.push(thread.thread.read().await.clone());
+                if let Some(chan) = snapshot.channels.get(thread_id) {
+                    threads.push(chan.inner.clone());
+                } else if let Some(thread) = snapshot.threads.get(thread_id) {
+                    threads.push(thread.thread.as_ref().clone());
                 } else {
                     missing_threads.push(*thread_id);
                 }

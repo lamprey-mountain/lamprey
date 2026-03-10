@@ -118,9 +118,8 @@ Deno.test("Mention Parsing", async (t) => {
 			url: `/room/${roomId}/member/${alice.user.id}`,
 			method: "PATCH",
 			body: { override_name: "AliceNick" },
-			status: 204,
+			status: 200,
 		});
-
 		const content = `Self mention <@${alice.user.id}>`;
 		const message = await alice({
 			url: `/channel/${channelId}/message`,

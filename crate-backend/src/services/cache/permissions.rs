@@ -9,25 +9,22 @@ use common::v1::types::{
 use tracing::{trace, warn};
 
 use crate::{
-    services::cache::{CachedChannel, CachedRoom},
+    services::cache::room::{CachedChannel, RoomSnapshot},
     types::{PermissionBits, Permissions},
 };
 
 /// a permission calculator for a room
-// NOTE: the only reason why this exists is because accessing a RwLock requires async or blocking_read, which i don't want
-// i'd rather be able to implement this directly on CachedRoom, but this works well enough i guess
 pub struct PermissionsCalculator {
     pub room_id: RoomId,
     pub owner_id: Option<UserId>,
     pub public: bool,
-    pub room: Arc<CachedRoom>,
+    pub room: Arc<RoomSnapshot>,
 }
 
 impl PermissionsCalculator {
     /// query permissions for a room member, optionally in a specific channel
     pub fn query(&self, user_id: UserId, channel: Option<&Channel>) -> Permissions {
-        let member_guard = self.room.members.get(&user_id);
-        let member = member_guard.as_deref().map(|m| &m.member);
+        let member = self.room.members.get(&user_id).map(|m| &m.member);
 
         // calculate base perms
         let mut perms = self.calculate_room_permissions(user_id, member);
@@ -38,7 +35,7 @@ impl PermissionsCalculator {
                 // only calculate channel permissions if the channel exists in cache
                 // (channels not in cache have no overwrites)
                 if let Some(cached_channel) = self.room.channels.get(&channel.id) {
-                    self.calculate_channel_permissions(&mut perms, &cached_channel, member);
+                    self.calculate_channel_permissions(&mut perms, cached_channel, member);
                 }
             }
         }
@@ -52,8 +49,8 @@ impl PermissionsCalculator {
         user_id: UserId,
         member: Option<&RoomMember>,
     ) -> Permissions {
-        // owners have full permissions
-        if self.owner_id == Some(user_id) {
+        // root user and owners have full permissions
+        if user_id == common::v1::types::SERVER_USER_ID || self.owner_id == Some(user_id) {
             let mut p = Permissions::empty();
             p.set_is_room_member(true);
             p.add(Permission::ViewChannel);
@@ -68,12 +65,7 @@ impl PermissionsCalculator {
                 let mut perms = Permissions::empty();
                 perms.set_is_room_member(false);
 
-                if let Some(role) = self
-                    .room
-                    .roles
-                    .iter()
-                    .find(|r| r.inner.id == everyone_role_id)
-                {
+                if let Some(role) = self.room.roles.get(&everyone_role_id) {
                     perms.add_bits(role.allow);
                     perms.remove_bits(role.deny);
                 }
@@ -93,7 +85,7 @@ impl PermissionsCalculator {
 
         let everyone_role_id = self.room_id.into_inner().into();
 
-        for role in &self.room.roles {
+        for role in self.room.roles.values() {
             if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
                 allowed_bits.add_all(role.allow);
                 denied_bits.add_all(role.deny);
@@ -137,7 +129,7 @@ impl PermissionsCalculator {
     ) {
         if let Some(parent_id) = cc.inner.parent_id {
             if let Some(parent) = self.room.channels.get(&parent_id) {
-                self.calculate_channel_permissions(perms, &parent, member);
+                self.calculate_channel_permissions(perms, parent, member);
             } else {
                 warn!(
                     channel_id = ?cc.inner.id,
@@ -177,66 +169,50 @@ impl PermissionsCalculator {
             return;
         }
 
+        let everyone_id = self.room_id.into_inner();
+
         // 1. apply everyone allows
-        for ow in &cc.overwrites {
-            if ow.id != *self.room_id {
-                continue;
-            }
+        if let Some(ow) = cc.overwrites.get(&everyone_id) {
             perms.add_bits(ow.allow);
         }
 
         // 2. apply everyone denies
-        for ow in &cc.overwrites {
-            if ow.id != *self.room_id {
-                continue;
-            }
+        if let Some(ow) = cc.overwrites.get(&everyone_id) {
             perms.remove_bits(ow.deny);
         }
 
         let Some(member) = member else { return };
 
         // 3. apply role allows
-        for ow in &cc.overwrites {
-            if ow.ty != PermissionOverwriteType::Role {
-                continue;
+        for role_id in &member.roles {
+            if let Some(ow) = cc.overwrites.get(&role_id.into_inner()) {
+                if ow.ty == PermissionOverwriteType::Role {
+                    perms.add_bits(ow.allow);
+                }
             }
-            if !member.roles.contains(&ow.id.into()) {
-                continue;
-            }
-            perms.add_bits(ow.allow);
         }
 
         // 4. apply role denies
-        for ow in &cc.overwrites {
-            if ow.ty != PermissionOverwriteType::Role {
-                continue;
+        for role_id in &member.roles {
+            if let Some(ow) = cc.overwrites.get(&role_id.into_inner()) {
+                if ow.ty == PermissionOverwriteType::Role {
+                    perms.remove_bits(ow.deny);
+                }
             }
-            if !member.roles.contains(&ow.id.into()) {
-                continue;
-            }
-            perms.remove_bits(ow.deny);
         }
 
         // 5. apply user allows
-        for ow in &cc.overwrites {
-            if ow.ty != PermissionOverwriteType::User {
-                continue;
+        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner()) {
+            if ow.ty == PermissionOverwriteType::User {
+                perms.add_bits(ow.allow);
             }
-            if ow.id != *member.user_id {
-                continue;
-            }
-            perms.add_bits(ow.allow);
         }
 
         // 6. apply user denies
-        for ow in &cc.overwrites {
-            if ow.ty != PermissionOverwriteType::User {
-                continue;
+        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner()) {
+            if ow.ty == PermissionOverwriteType::User {
+                perms.remove_bits(ow.deny);
             }
-            if ow.id != *member.user_id {
-                continue;
-            }
-            perms.remove_bits(ow.deny);
         }
     }
 
@@ -246,8 +222,8 @@ impl PermissionsCalculator {
             return u64::MAX;
         }
 
-        let member_guard = self.room.members.get(&user_id);
-        let Some(member) = member_guard.as_deref().map(|m| &m.member) else {
+        let member = self.room.members.get(&user_id).map(|m| &m.member);
+        let Some(member) = member else {
             // user is not a member, return 0
             return 0;
         };

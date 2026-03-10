@@ -106,6 +106,7 @@ pub trait DataRoom {
         &self,
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
+    async fn room_list_user_all(&self, user_id: UserId) -> Result<Vec<RoomId>>;
     async fn room_list_mutual(
         &self,
         user_a_id: UserId,

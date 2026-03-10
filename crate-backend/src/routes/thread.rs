@@ -571,14 +571,13 @@ async fn thread_list_room(
     let _perms = srv.perms.for_room(user_id, room_id).await?;
 
     // load room from cache
-    let cached_room = srv.cache.load_room(room_id).await?;
+    let snapshot = srv.cache.load_room(room_id).await?;
 
     // collect thread ids and thread members from cache
     let mut filtered_thread_ids = vec![];
 
-    for entry in cached_room.threads.iter() {
-        let thread = entry.value();
-        let thread_channel = thread.thread.read().await;
+    for thread in snapshot.threads.values() {
+        let thread_channel = &thread.thread;
         let thread_id = thread_channel.id;
 
         // check permissions

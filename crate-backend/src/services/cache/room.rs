@@ -1,37 +1,69 @@
 //! cached/in memory rooms
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use common::v1::types::{
-    Channel, ChannelId, PermissionOverwriteType, Role, RoleId, Room, RoomMember, RoomSecurity,
-    ThreadMember, User, UserId,
+    Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomMember,
+    RoomSecurity, ThreadMember, User, UserId,
 };
-use dashmap::DashMap;
-use tokio::sync::RwLock;
+use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
 
 use crate::routes::util::Auth;
-use crate::services::cache::permissions::PermissionsCalculator;
 use crate::types::PermissionBits;
-use crate::{Error, Result};
+use crate::Result;
 
-pub struct CachedRoom {
-    /// the data of the room itself
-    pub inner: RwLock<Room>,
-
-    /// every member in this room
-    pub members: DashMap<UserId, CachedRoomMember>,
-
-    /// every non-thread channel in this room
-    pub channels: DashMap<ChannelId, CachedChannel>,
-
-    /// all roles in the room
-    pub roles: DashMap<RoleId, CachedRole>,
-
-    /// all active threads in the room
-    pub threads: DashMap<ChannelId, CachedThread>,
+/// A snapshot of a room's state at a point in time.
+/// Used for zero-latency reads.
+#[derive(Debug, Clone)]
+pub struct RoomSnapshot {
+    pub room: Room,
+    pub status: RoomStatus,
+    pub members: HashMap<UserId, Arc<CachedRoomMember>>,
+    pub channels: HashMap<ChannelId, Arc<CachedChannel>>,
+    pub roles: HashMap<RoleId, Arc<CachedRole>>,
+    pub threads: HashMap<ChannelId, Arc<CachedThread>>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RoomStatus {
+    #[default]
+    Loading,
+    Ready,
+    NotFound,
+}
+
+/// Commands that can be sent to a room actor.
+pub enum RoomCommand {
+    /// Update the room state from a sync event.
+    Sync(MessageSync),
+
+    /// Member list command.
+    MemberList(
+        crate::services::member_lists::util::MemberListKey,
+        crate::services::member_lists::actor::MemberListCommand,
+    ),
+
+    /// Subscribe to member list events.
+    MemberListSubscribe(
+        crate::services::member_lists::util::MemberListKey,
+        tokio::sync::broadcast::Sender<crate::services::member_lists::actor::MemberListEvent>,
+    ),
+
+    /// Close the actor (usually due to idle timeout).
+    Close,
+}
+
+/// A handle to a room actor.
+#[derive(Clone)]
+pub struct RoomHandle {
+    pub room_id: crate::types::RoomId,
+    pub tx: mpsc::Sender<RoomCommand>,
+    pub snapshot: watch::Receiver<Arc<RoomSnapshot>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CachedRoomMember {
     /// the room member
     pub member: RoomMember,
@@ -40,23 +72,25 @@ pub struct CachedRoomMember {
     pub user: Arc<User>,
 }
 
+#[derive(Debug, Clone)]
 pub struct CachedThread {
     /// the thread itself
-    pub thread: RwLock<Channel>,
+    pub thread: Arc<Channel>,
 
     /// thread members
-    pub members: DashMap<UserId, ThreadMember>,
-    // maybe include first, last message?
+    pub members: HashMap<UserId, ThreadMember>,
 }
 
+#[derive(Clone, Debug)]
 pub struct CachedChannel {
     /// the channel itself
     pub inner: Channel,
 
     /// channel permission overwrites as bitfields
-    pub overwrites: Vec<CachedPermissionOverwrite>,
+    pub overwrites: HashMap<Uuid, CachedPermissionOverwrite>,
 }
 
+#[derive(Clone, Debug)]
 pub struct CachedRole {
     /// the role itself
     pub inner: Role,
@@ -68,6 +102,7 @@ pub struct CachedRole {
     pub deny: PermissionBits,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CachedPermissionOverwrite {
     /// id of role or user
     pub id: Uuid,
@@ -82,46 +117,54 @@ pub struct CachedPermissionOverwrite {
     pub deny: PermissionBits,
 }
 
-pub struct CachedRoomSecurity(RoomSecurity);
-
-impl CachedRoom {
-    /// update this room's metadata
-    pub async fn room_update(&self, room: Room) {
-        let mut inner = self.inner.write().await;
-        *inner = room;
-    }
-
-    // TODO: move more cache updating stuff here (eg. channel_create, channel_update, channel_delete, role_create, role_update, role_delete)
-
-    /// get the permission calculator for this room
-    pub async fn permissions(self: Arc<Self>) -> PermissionsCalculator {
-        let inner = self.inner.read().await;
-        let room_id = inner.id;
-        let owner_id = inner.owner_id;
-        let public = inner.public;
-        drop(inner);
-        PermissionsCalculator {
-            room_id,
-            owner_id,
-            public,
-            room: Arc::clone(&self),
+impl RoomSnapshot {
+    pub fn default_with_id(room_id: common::v1::types::RoomId) -> Self {
+        Self {
+            room: Room {
+                id: room_id,
+                version_id: Uuid::nil(),
+                owner_id: None,
+                name: String::new(),
+                description: None,
+                icon: None,
+                banner: None,
+                room_type: common::v1::types::RoomType::Default,
+                member_count: 0,
+                online_count: 0,
+                channel_count: 0,
+                emoji_count: 0,
+                archived_at: None,
+                public: false,
+                deleted_at: None,
+                welcome_channel_id: None,
+                quarantined: false,
+                preferences: None,
+                security: RoomSecurity::default(),
+                afk_channel_id: None,
+                afk_channel_timeout: 0,
+            },
+            status: RoomStatus::Loading,
+            members: HashMap::new(),
+            channels: HashMap::new(),
+            roles: HashMap::new(),
+            threads: HashMap::new(),
         }
     }
 
-    pub async fn security(&self) -> CachedRoomSecurity {
-        let inner = self.inner.read().await;
-        CachedRoomSecurity(inner.security.clone())
+    pub fn get_member(&self, user_id: &UserId) -> Option<&Arc<CachedRoomMember>> {
+        self.members.get(user_id)
     }
 
-    // /// list all channels a user can see
-    // pub async fn list_channels_for_user(&self, user_id: UserId) -> Vec<Channel> {
-    //     todo!()
-    // }
-}
+    pub fn get_channel(&self, channel_id: &ChannelId) -> Option<&Arc<CachedChannel>> {
+        self.channels.get(channel_id)
+    }
 
-impl CachedRoomSecurity {
+    pub fn get_role(&self, role_id: &RoleId) -> Option<&Arc<CachedRole>> {
+        self.roles.get(role_id)
+    }
+
     pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
-        if self.0.require_sudo {
+        if self.room.security.require_sudo {
             auth.ensure_sudo()?;
         }
 
@@ -129,9 +172,9 @@ impl CachedRoomSecurity {
     }
 
     pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
-        if self.0.require_mfa {
+        if self.room.security.require_mfa {
             if !auth.user.has_mfa.unwrap_or_default() {
-                return Err(Error::BadStatic("mfa required for this action"));
+                return Err(crate::Error::BadStatic("mfa required for this action"));
             }
         }
 

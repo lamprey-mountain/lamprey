@@ -55,16 +55,12 @@ impl MemberListSyncer {
         let list = srv.member_lists.ensure(key.clone()).await?;
 
         let (tx, rx) = oneshot::channel();
-        list.commands_tx
-            .send(MemberListCommand::GetInitialRanges {
-                ranges,
-                conn_id: self.conn_id,
-                callback: tx,
-            })
-            .await
-            .map_err(|_| {
-                Error::Internal("failed to send command to member list actor".to_string())
-            })?;
+        list.send_command(MemberListCommand::GetInitialRanges {
+            ranges,
+            conn_id: self.conn_id,
+            callback: tx,
+        })
+        .await?;
 
         let mut initial_sync = rx
             .await
