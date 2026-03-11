@@ -1,6 +1,5 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -8,11 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    search::{FilterRange, Order},
-    util::{Diff, Time},
-    MediaId, RoomId, UserId,
-};
+use crate::v1::types::{util::Time, MediaId, UserId};
 
 mod mime;
 mod track;
@@ -20,18 +15,7 @@ mod track;
 pub use mime::Mime;
 pub use track::*;
 
-/// A distinct logical item of media.
-// NOTE: it's so close to being immutable. i want to make it immutable, but feel
-// like i might break something...
-//
-// update: yeah, if i want to be able to change the thumbnail, subtitles,
-// etc of a video, then i need to be able to mutate this.
-// `MediaTrack` can be made immutable (...i think? unless i want to be able to
-// append to media...? i'm not planning on needing that (streaming would be done
-// with webrtc) but idk)
-//
-// `Media` in general is starting to seem like kind of a bad abstraction tbh
-// i also might want type safety, eg. "this is definitely an image" or "this is definitely a video"
+// TODO: rename to MediaV0
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -54,11 +38,9 @@ pub struct Media {
 
     /// The source (Uploaded, Downloaded)
     pub source: MediaTrack,
-    // /// extra metadata relevant to the media itself and not a track
-    // // NOTE: maybe derived could be its own MediaTrackInfo type. not sure how it would be to use though?
-    // pub derived: Option<MediaDerived>,
 }
 
+// TODO: rename to MediaV0WithAdmin
 /// media with extra metadata for admins
 // maybe make this a part of media? and make each field optional
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -74,230 +56,6 @@ pub struct MediaWithAdmin {
 
     /// if this media was deleted, and when it was deleted
     pub deleted_at: Option<Time>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MediaCreate {
-    /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub alt: Option<String>,
-
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    #[cfg_attr(feature = "validator", validate(nested))]
-    pub source: MediaCreateSource,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(untagged))]
-pub enum MediaCreateSource {
-    Upload {
-        /// The original filename
-        #[cfg_attr(
-            feature = "utoipa",
-            schema(required = false, min_length = 1, max_length = 256)
-        )]
-        filename: String,
-
-        /// The size (in bytes)
-        size: u64,
-    },
-    Download {
-        /// The original filename
-        #[cfg_attr(
-            feature = "utoipa",
-            schema(required = false, min_length = 1, max_length = 256)
-        )]
-        filename: Option<String>,
-
-        /// The size (in bytes)
-        size: Option<u64>,
-
-        /// A url to download this media from
-        source_url: Url,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MediaClone {
-    /// Set to override the filename
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 256)
-    )]
-    pub filename: Option<String>,
-
-    /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub alt: Option<String>,
-}
-
-#[cfg(feature = "validator")]
-mod val {
-    use super::MediaCreateSource;
-    use serde_json::json;
-    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
-
-    impl Validate for MediaCreateSource {
-        fn validate(&self) -> Result<(), ValidationErrors> {
-            let mut v = ValidationErrors::new();
-            if self
-                .filename()
-                .is_none_or(|n| n.validate_length(Some(1), Some(256), None))
-            {
-                Ok(())
-            } else {
-                let mut err = ValidationError::new("length");
-                err.add_param("max".into(), &json!(256));
-                err.add_param("min".into(), &json!(1));
-                v.add("filename", err);
-                Err(v)
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MediaCreated {
-    pub media_id: MediaId,
-
-    /// A url to download your media to
-    pub upload_url: Option<Url>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MediaPatch {
-    /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub alt: Option<Option<String>>,
-    // TODO: editing filename
-    // /// The original filename
-    // #[cfg_attr(feature = "utoipa", schema(required = false, min_length = 1, max_length = 256))]
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
-    // pub filename: Option<Option<String>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MediaRef {
-    pub id: MediaId,
-}
-
-// hmmm.... maybe copy this for v2?
-/// even more metadata about media
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MediaDerived {
-    /// name of this
-    pub title: Option<String>,
-
-    /// person who made this
-    pub artist: Option<String>,
-
-    /// collection this is in
-    pub album: Option<String>,
-
-    /// url this can be found at
-    pub url: Option<Url>,
-
-    /// short note about this
-    pub comment: Option<String>,
-
-    /// longer note about this, usually from the author
-    pub description: Option<String>,
-
-    /// when this was published
-    pub date: Option<Time>,
-}
-
-/// query for searching through media
-// TODO: use tantivy for this? then i can fancier search filters, eg. size>100, date<=yesterday
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MediaSearch {
-    /// include media uploaded by these users
-    pub user_id: Vec<UserId>,
-
-    /// include media linked in these rooms
-    pub room_id: Vec<RoomId>,
-
-    /// include media with these content types
-    ///
-    /// this field can be
-    /// - just the main type like `image` or `video`
-    /// - the full type like `image/png` or `video/mp4`
-    pub content_type: Vec<String>,
-
-    /// include media created in this time range
-    pub created_at: FilterRange<Time>,
-
-    /// include media in this size range
-    pub size: FilterRange<u64>,
-
-    /// what order to return results in
-    pub sort_order: Order,
-
-    /// field to sort by
-    pub sort_field: MediaSearchOrderField,
-    // TODO: media v2: is quarantined, is deleted, scans, hash
-}
-
-/// which field to order media search results by
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum MediaSearchOrderField {
-    /// sort by creation time
-    Created,
-
-    /// sort by file size
-    Size,
-}
-
-impl Diff<Media> for MediaPatch {
-    fn changes(&self, other: &Media) -> bool {
-        self.alt.changes(&other.alt)
-    }
-}
-
-impl MediaCreateSource {
-    pub fn size(&self) -> Option<u64> {
-        match self {
-            MediaCreateSource::Upload { size, .. } => Some(*size),
-            MediaCreateSource::Download { size, .. } => *size,
-        }
-    }
-
-    pub fn filename(&self) -> Option<&str> {
-        match self {
-            MediaCreateSource::Upload { filename, .. } => Some(filename.as_str()),
-            MediaCreateSource::Download { filename, .. } => filename.as_deref(),
-        }
-    }
 }
 
 impl Into<Media> for MediaWithAdmin {

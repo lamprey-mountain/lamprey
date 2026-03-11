@@ -1,42 +1,7 @@
 use std::collections::HashMap;
 
-use crate::v1::types::media::{
-    Media as V1Media, MediaCreate as V1MediaCreate, MediaCreateSource as V1MediaCreateSource,
-    MediaWithAdmin as V1MediaWithAdmin,
-};
-use crate::v2::types::media::{
-    Media, MediaCreate as V2MediaCreate, MediaCreateSource as V2MediaCreateSource, MediaMetadata,
-    MediaStatus,
-};
-
-impl From<V2MediaCreateSource> for V1MediaCreateSource {
-    fn from(v2: V2MediaCreateSource) -> Self {
-        match v2 {
-            V2MediaCreateSource::Upload { filename, size } => V1MediaCreateSource::Upload {
-                filename,
-                size: size.unwrap_or(0),
-            },
-            V2MediaCreateSource::Download {
-                filename,
-                size,
-                source_url,
-            } => V1MediaCreateSource::Download {
-                filename,
-                size,
-                source_url,
-            },
-        }
-    }
-}
-
-impl From<V2MediaCreate> for V1MediaCreate {
-    fn from(v2: V2MediaCreate) -> Self {
-        V1MediaCreate {
-            alt: v2.alt,
-            source: v2.source.into(),
-        }
-    }
-}
+use crate::v1::types::media::{Media as V1Media, MediaWithAdmin as V1MediaWithAdmin};
+use crate::v2::types::media::{Media, MediaMetadata, MediaStatus};
 
 impl Into<V1Media> for Media {
     fn into(self) -> V1Media {

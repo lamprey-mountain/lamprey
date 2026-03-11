@@ -50,8 +50,8 @@ pub mod webhook;
 pub mod interactions;
 
 pub use media::{
-    Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaTrack, MediaTrackInfo,
-    Mime, Mixed, Text, TimedText, TrackSource, Video,
+    Audio, Image, Media, MediaTrack, MediaTrackInfo, Mime, Mixed, Text, TimedText, TrackSource,
+    Video,
 };
 
 // TODO: probably should stop exporting *everything*
