@@ -40,7 +40,7 @@ export class ChannelsService extends BaseService<Channel> {
 		return data;
 	}
 
-	// Helper normalization method from original
+	// Helper normalization method
 	normalize(channel: Channel): Channel {
 		if (!channel.permission_overwrites) channel.permission_overwrites = [];
 		if (!channel.recipients) channel.recipients = [];

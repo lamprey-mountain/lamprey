@@ -10,6 +10,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
 import { fetchWithRetry } from "./util.ts";
+import { ChannelsService } from "./services/ChannelsService.ts";
 
 export class Channels {
 	api: Api = null as unknown as Api;
@@ -27,6 +28,17 @@ export class Channels {
 	_listingMutatorsRemoved = new Set<
 		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
+
+	// Internal service instance for new code
+	private _service: ChannelsService | null = null;
+
+	// Get or create the service instance
+	private getService(): ChannelsService {
+		if (!this._service) {
+			this._service = new ChannelsService(this.api.store);
+		}
+		return this._service;
+	}
 
 	_getOrCreateListing(
 		map: Map<string, Listing<Channel>>,
@@ -197,15 +209,8 @@ export class Channels {
 		room_id: string,
 		body: { name: string; parent_id?: string },
 	): Promise<Channel> {
-		return await fetchWithRetry(() =>
-			this.api.client.http.POST(
-				"/api/v1/room/{room_id}/channel",
-				{
-					params: { path: { room_id } },
-					body: body,
-				},
-			)
-		);
+		const service = this.getService();
+		return await service.create(room_id, body);
 	}
 
 	async createThreadFromMessage(
@@ -228,15 +233,8 @@ export class Channels {
 		channel_id: string,
 		body: ChannelPatch,
 	): Promise<Channel> {
-		return await fetchWithRetry(() =>
-			this.api.client.http.PATCH(
-				"/api/v1/channel/{channel_id}",
-				{
-					params: { path: { channel_id } },
-					body: body,
-				},
-			)
-		);
+		const service = this.getService();
+		return await service.update(channel_id, body);
 	}
 
 	listArchived(room_id_signal: () => string): Resource<Pagination<Channel>> {
@@ -489,39 +487,23 @@ export class Channels {
 	}
 
 	async lock(channel_id: string) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-				params: { path: { channel_id: channel_id } },
-				body: { locked: { allow_roles: [] } },
-			})
-		);
+		const service = this.getService();
+		await service.update(channel_id, { locked: { allow_roles: [] } });
 	}
 
 	async unlock(channel_id: string) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-				params: { path: { channel_id: channel_id } },
-				body: { locked: null },
-			})
-		);
+		const service = this.getService();
+		await service.update(channel_id, { locked: null });
 	}
 
 	async archive(channel_id: string) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-				params: { path: { channel_id: channel_id } },
-				body: { archived: true },
-			})
-		);
+		const service = this.getService();
+		await service.update(channel_id, { archived: true });
 	}
 
 	async unarchive(channel_id: string) {
-		await fetchWithRetry(() =>
-			this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-				params: { path: { channel_id: channel_id } },
-				body: { archived: false },
-			})
-		);
+		const service = this.getService();
+		await service.update(channel_id, { archived: false });
 	}
 
 	async createTag(

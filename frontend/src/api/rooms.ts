@@ -1,8 +1,9 @@
-import type { Pagination, Room } from "sdk";
+import type { Pagination, Room, RoomPatch } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
 import { fetchWithRetry } from "./util.ts";
+import { RoomsService } from "./services/RoomsService.ts";
 
 export class Rooms {
 	api: Api = null as unknown as Api;
@@ -26,6 +27,17 @@ export class Rooms {
 		prom: null,
 		pagination: null,
 	};
+
+	// Internal service instance for new code
+	private _service: RoomsService | null = null;
+
+	// Get or create the service instance
+	private getService(): RoomsService {
+		if (!this._service) {
+			this._service = new RoomsService(this.api.store);
+		}
+		return this._service;
+	}
 
 	fetch(room_id_sig: () => string): Resource<Room> {
 		const [resource, { mutate }] = createResource(room_id_sig, (room_id) => {
@@ -139,11 +151,13 @@ export class Rooms {
 	}
 
 	async create(body: { name: string; public?: boolean | null }): Promise<Room> {
-		const { data, error } = await this.api.client.http.POST("/api/v1/room", {
-			body,
-		});
-		if (error) throw error;
-		return data;
+		const service = this.getService();
+		return await service.create(body);
+	}
+
+	async update(room_id: string, body: RoomPatch): Promise<Room> {
+		const service = this.getService();
+		return await service.update(room_id, body);
 	}
 
 	list_all(): Resource<Pagination<Room>> {

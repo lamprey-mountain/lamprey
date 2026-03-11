@@ -169,9 +169,10 @@ export function createApi(
 		sync: [MessageSync, MessageEnvelope];
 		ready: MessageReady;
 	}>,
-	{ preferences, setPreferences }: {
+	{ preferences, setPreferences, store }: {
 		preferences: Accessor<Preferences>;
 		setPreferences: (c: Preferences) => void;
+		store: RootStore;
 	},
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
@@ -1386,6 +1387,7 @@ export function createApi(
 		voiceState,
 		stripMarkdownAndResolveMentions,
 		ctx: null as any,
+		store,
 		Provider(props: ParentProps) {
 			return (
 				<ApiContext.Provider value={api}>
@@ -1462,6 +1464,7 @@ export type Api = {
 	clientState: Accessor<ClientState>;
 	Provider: Component<ParentProps>;
 	ctx: any;
+	store: RootStore;
 
 	events: Emitter<{
 		sync: [MessageSync, MessageEnvelope];

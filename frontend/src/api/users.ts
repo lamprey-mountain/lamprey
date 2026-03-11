@@ -3,12 +3,24 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
 import { fetchWithRetry } from "./util.ts";
+import { UsersService } from "./services/UsersService.ts";
 
 export class Users {
 	api: Api = null as unknown as Api;
 	cache = new ReactiveMap<string, UserWithRelationship>();
 	requests = new Map<string, Promise<UserWithRelationship>>();
 	_cachedListing: Listing<User> | null = null;
+
+	// Internal service instance for new code
+	private _service: UsersService | null = null;
+
+	// Get or create the service instance
+	private getService(): UsersService {
+		if (!this._service) {
+			this._service = new UsersService(this.api.store);
+		}
+		return this._service;
+	}
 
 	upsert(user: User) {
 		const oldUser = this.cache.get(user.id);
@@ -148,5 +160,10 @@ export class Users {
 		await fetchWithRetry(() =>
 			this.api.client.http.PUT("/api/v1/preferences", { body: config })
 		);
+	}
+
+	async fetchUser(id: string): Promise<UserWithRelationship> {
+		const service = this.getService();
+		return await service.fetchOrQueue(id);
 	}
 }
