@@ -4,7 +4,10 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
-		"check": "tsc --noEmit"
+		"check": "tsc --noEmit",
+		"test": "playwright test",
+		"test:ui": "playwright test --ui",
+		"test:debug": "playwright test --debug"
 	},
 	"dependencies": {
 		"@floating-ui/dom": "^1.7.4",
@@ -43,6 +46,7 @@
 		"yjs": "^13.6.29"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.58.2",
 		"@types/node": "^22.18.1",
 		"@types/sanitize-html": "^2.16.0",
 		"@types/turndown": "^5.0.5",

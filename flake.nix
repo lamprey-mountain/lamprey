@@ -233,8 +233,11 @@
         };
 
         devShells.default = craneLib.devShell {
-          # Inherit inputs from checks.
-          # checks = self.checks.${system};
+          packages = with pkgs; [ nodejs pnpm chromium ];
+          env = {
+            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+            PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
+          };
         };
       });
 }
