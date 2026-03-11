@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     net::SocketAddr,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -9,6 +10,7 @@ use crate::{
     SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
+use bytes::Bytes;
 use common::v1::types::{
     voice::{
         SessionDescription, SfuPermissions, Speaking, SpeakingWithoutUserId, TrackId, TrackKey,
@@ -19,26 +21,23 @@ use common::v1::types::{
 use str0m::{
     channel::ChannelId,
     media::{Direction, MediaKind, Mid},
-    net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
 use tokio::{
     net::UdpSocket,
     select,
-    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
+    sync::mpsc::{self, Receiver, UnboundedReceiver, UnboundedSender},
     time::sleep_until,
 };
 use tracing::{debug, error, info, trace, warn};
 
-use crate::{PeerCommand, PeerEventEnvelope, TrackIn, TrackOut, TrackState};
+use crate::{PeerCommand, PeerEventEnvelope, PeerMedia, TrackIn, TrackOut, TrackState};
 
 #[derive(Debug)]
 pub struct Peer {
     rtc: Rtc,
-    socket_v4: UdpSocket,
-    socket_v6: UdpSocket,
-    packet_v4: [u8; 2000],
-    packet_v6: [u8; 2000],
+    socket_v4: Arc<UdpSocket>,
+    socket_v6: Arc<UdpSocket>,
     signalling: Signalling,
 
     /// media data we are receiving from the user
@@ -57,43 +56,53 @@ pub struct Peer {
     voice_state: VoiceState,
     permissions: PeerPermissions,
     commands: UnboundedReceiver<PeerCommand>,
+    media_rx: Receiver<PeerMedia>,
     events: UnboundedSender<PeerEventEnvelope>,
 
     /// the datachannel where speaking data is sent
     speaking_chan: Option<ChannelId>,
+
+    /// direct routing table to other peers (the data plane)
+    routing_table: HashMap<UserId, (UnboundedSender<PeerCommand>, mpsc::Sender<PeerMedia>)>,
+
+    /// packets from the shared worker socket
+    packet_rx: UnboundedReceiver<(SocketAddr, Bytes)>,
+
+    last_ufrag: Option<String>,
 }
 
 impl Peer {
-    pub async fn spawn(
+    pub async fn create(
         config: &Config,
         sfu_send: UnboundedSender<PeerEventEnvelope>,
         user_id: UserId,
         voice_state: VoiceState,
         permissions: SfuPermissions,
-    ) -> Result<UnboundedSender<PeerCommand>> {
+        socket_v4: Arc<UdpSocket>,
+        socket_v6: Arc<UdpSocket>,
+        packet_rx: UnboundedReceiver<(SocketAddr, Bytes)>,
+    ) -> Result<(Self, UnboundedSender<PeerCommand>, mpsc::Sender<PeerMedia>)> {
         info!("create new peer {user_id}");
 
-        let mut rtc = RtcConfig::new()
+        let mut rtc_config = RtcConfig::new()
             .set_ice_lite(true)
             .set_stats_interval(Some(Duration::from_secs(5)))
             .build();
 
-        let addr = crate::util::select_host_address_ipv4(config.host_ipv4.as_deref());
-        let socket_v4 = UdpSocket::bind(format!("{addr}:0")).await?;
-        let candidate = Candidate::host(socket_v4.local_addr()?, "udp")?;
-        debug!("listen on {}", socket_v4.local_addr().unwrap());
-        rtc.add_local_candidate(candidate.clone());
+        // Local candidate is now the shared worker port
+        let addr_v4 = crate::util::select_host_address_ipv4(config.host_ipv4.as_deref())?;
+        let candidate_v4 = Candidate::host(SocketAddr::new(addr_v4, config.udp_port), "udp")?;
+        rtc_config.add_local_candidate(candidate_v4);
 
-        let addr = crate::util::select_host_address_ipv6(config.host_ipv6.as_deref());
-        let socket_v6 = UdpSocket::bind(format!("[{addr}]:0")).await?;
-        let candidate = Candidate::host(socket_v6.local_addr()?, "udp")?;
-        debug!("listen on {}", socket_v6.local_addr().unwrap());
-        rtc.add_local_candidate(candidate.clone());
+        let addr_v6 = crate::util::select_host_address_ipv6(config.host_ipv6.as_deref())?;
+        let candidate_v6 = Candidate::host(SocketAddr::new(addr_v6, config.udp_port), "udp")?;
+        rtc_config.add_local_candidate(candidate_v6);
 
-        let (send, recv) = mpsc::unbounded_channel();
+        let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
+        let (media_tx, media_rx) = mpsc::channel(128); // Bounded media channel
 
-        let mut peer = Self {
-            rtc,
+        let peer = Self {
+            rtc: rtc_config,
             socket_v4,
             socket_v6,
             inbound: HashMap::new(),
@@ -101,25 +110,27 @@ impl Peer {
             user_id,
             voice_state,
             permissions: permissions.into(),
-            commands: recv,
+            commands: cmd_rx,
+            media_rx,
             events: sfu_send,
-            packet_v4: [0; 2000],
-            packet_v6: [0; 2000],
             tracks_metadata: vec![],
             have_queue: vec![],
             signalling: Signalling::new(),
             speaking_chan: None,
+            routing_table: HashMap::new(),
+            packet_rx,
+            last_ufrag: None,
         };
 
-        tokio::spawn(async move {
-            if let Err(err) = peer.run().await {
-                error!("while running peer: {err:?}");
-            }
-            debug!("dead!");
-            _ = peer.emit(PeerEvent::Dead);
-        });
+        Ok((peer, cmd_tx, media_tx))
+    }
 
-        Ok(send)
+    pub async fn run_loop(mut self) {
+        if let Err(err) = self.run().await {
+            error!("while running peer {}: {err:?}", self.user_id);
+        }
+        debug!("dead! {}", self.user_id);
+        _ = self.emit(PeerEvent::Dead);
     }
 
     #[tracing::instrument(skip(self), fields(user_id = %self.user_id))]
@@ -127,15 +138,26 @@ impl Peer {
         loop {
             self.negotiate_if_needed()?;
 
+            let ufrag = self
+                .rtc
+                .direct_api()
+                .local_ice_credentials()
+                .ufrag
+                .to_string();
+            if self.last_ufrag.as_ref() != Some(&ufrag) {
+                self.last_ufrag = Some(ufrag.clone());
+                _ = self.emit(PeerEvent::IceUfrag(ufrag));
+            }
+
             let timeout = match self.rtc.poll_output()? {
                 Output::Timeout(v) => v,
                 Output::Transmit(v) => {
                     match v.destination {
                         SocketAddr::V4(_) => {
-                            self.socket_v4.send_to(&v.contents, v.destination).await?;
+                            _ = self.socket_v4.send_to(&v.contents, v.destination).await;
                         }
                         SocketAddr::V6(_) => {
-                            self.socket_v6.send_to(&v.contents, v.destination).await?;
+                            _ = self.socket_v6.send_to(&v.contents, v.destination).await;
                         }
                     }
                     continue;
@@ -146,33 +168,22 @@ impl Peer {
                 }
             };
 
-            let input = select! {
+            let input_data = select! {
                 _ = sleep_until(timeout.into()) => {
-                    Input::Timeout(Instant::now())
+                    None
                 }
-                recv = self.socket_v4.recv_from(&mut self.packet_v4) => {
-                    let (n, source) = recv?;
-                    Input::Receive(
-                        Instant::now(),
-                        Receive {
-                            proto: Protocol::Udp,
-                            source,
-                            destination: self.socket_v4.local_addr()?,
-                            contents: self.packet_v4[..n].try_into()?,
-                        },
-                    )
+                recv = self.packet_rx.recv() => {
+                    if let Some((source, data)) = recv {
+                        Some((source, data))
+                    } else {
+                        break; // worker closed our packet channel
+                    }
                 }
-                recv = self.socket_v6.recv_from(&mut self.packet_v6) => {
-                    let (n, source) = recv?;
-                    Input::Receive(
-                        Instant::now(),
-                        Receive {
-                            proto: Protocol::Udp,
-                            source,
-                            destination: self.socket_v6.local_addr()?,
-                            contents: self.packet_v6[..n].try_into()?,
-                        },
-                    )
+                recv = self.media_rx.recv() => {
+                    if let Some(media) = recv {
+                        self.handle_remote_media(media).await?;
+                    }
+                    continue;
                 }
                 recv = self.commands.recv() => {
                     if let Some(recv) = recv {
@@ -190,6 +201,24 @@ impl Peer {
             if !self.rtc.is_alive() {
                 break;
             }
+
+            let input = if let Some((source, data)) = &input_data {
+                str0m::Input::Receive(
+                    Instant::now(),
+                    str0m::net::Receive {
+                        proto: str0m::net::Protocol::Udp,
+                        source: *source,
+                        destination: if source.is_ipv4() {
+                            self.socket_v4.local_addr().unwrap()
+                        } else {
+                            self.socket_v6.local_addr().unwrap()
+                        },
+                        contents: data.as_ref().try_into().unwrap(),
+                    },
+                )
+            } else {
+                Input::Timeout(Instant::now())
+            };
 
             if let Err(e) = self.rtc.handle_input(input) {
                 warn!("disconnected: {:?}", e);
@@ -245,36 +274,62 @@ impl Peer {
                 if self.speaking_chan == Some(data.id) {
                     if let Ok(data) = serde_json::from_slice::<SpeakingWithoutUserId>(&data.data) {
                         debug!("recv speaking {data:?}");
-                        self.emit(PeerEvent::Speaking(Speaking {
+                        let speaking = Speaking {
                             user_id: self.user_id,
                             flags: data.flags,
-                        }))?;
+                        };
+
+                        // Data Plane: broadcast directly to all other peers
+                        for (other_id, (_, media_tx)) in &self.routing_table {
+                            if let Err(e) = media_tx.try_send(PeerMedia::Speaking(speaking.clone()))
+                            {
+                                trace!("failed to send speaking to peer {other_id}: {e}");
+                            }
+                        }
+
+                        // Also emit to SFU for signaling-level tracking
+                        self.emit(PeerEvent::Speaking(speaking))?;
                     } else {
                         debug!("recv speaking invalid data");
                     }
                 }
             }
 
-            Event::PeerStats(_)
-            | Event::MediaIngressStats(_)
-            | Event::MediaEgressStats(_)
-            | Event::EgressBitrateEstimate(_) => {
-                debug!("{event:?}");
-            }
-
-            _ => {
-                trace!("{event:?}");
-            }
+            _ => {}
         };
 
+        Ok(())
+    }
+
+    async fn handle_remote_media(&mut self, media: PeerMedia) -> Result<()> {
+        match media {
+            PeerMedia::MediaData(d) => self.handle_remote_media_data(d),
+            PeerMedia::Speaking(speaking) => {
+                let chan = self.speaking_chan.and_then(|ch| self.rtc.channel(ch));
+                if let Some(mut chan) = chan {
+                    _ = chan.write(false, &serde_json::to_vec(&speaking)?);
+                }
+            }
+        }
         Ok(())
     }
 
     /// handle a command from the sfu
     async fn handle_sfu_command(&mut self, command: PeerCommand) -> Result<()> {
         match command {
+            PeerCommand::UpdateRoutingTable {
+                user_id,
+                signalling_sender,
+                media_sender,
+            } => {
+                self.routing_table
+                    .insert(user_id, (signalling_sender, media_sender));
+            }
             PeerCommand::Signalling(cmd) => {
                 self.handle_signalling(cmd).await?;
+            }
+            PeerCommand::Speaking(media) => {
+                self.handle_remote_media(media).await?;
             }
             PeerCommand::VoiceState(state) => {
                 self.voice_state = state;
@@ -292,12 +347,11 @@ impl Peer {
                     key: t.key,
                 });
             }
-            PeerCommand::MediaData(d) => self.handle_remote_media_data(d),
             PeerCommand::Kill => self.rtc.disconnect(),
             PeerCommand::GenerateKeyframe {
                 mid,
                 kind,
-                for_peer: _, // do i need this? how do i use this?
+                for_peer: _,
                 rid,
             } => {
                 let Some(mut writer) = self.rtc.writer(mid) else {
@@ -312,12 +366,6 @@ impl Peer {
             PeerCommand::Have { user_id, tracks } => {
                 if !self.process_haves(user_id, tracks)? {
                     self.have_queue.push(user_id);
-                }
-            }
-            PeerCommand::Speaking(speaking) => {
-                let chan = self.speaking_chan.and_then(|ch| self.rtc.channel(ch));
-                if let Some(mut chan) = chan {
-                    chan.write(false, &serde_json::to_vec(&speaking)?)?;
                 }
             }
             PeerCommand::Permissions(p) => {
@@ -368,7 +416,6 @@ impl Peer {
             .iter_mut()
             .find(|t| t.peer_id == d.peer_id && t.source_mid == d.mid)
         else {
-            debug!("track has no outbound entry");
             return;
         };
 
@@ -376,22 +423,18 @@ impl Peer {
             && track.kind == MediaKind::Audio
             && track.key == TrackKey::User
         {
-            trace!("user is deafened");
             return;
         }
 
         let Some(mid) = track.state.mid() else {
-            debug!("track has no mid");
             return;
         };
 
         let Some(writer) = self.rtc.writer(mid) else {
-            debug!("track has no writer");
             return;
         };
 
         let Some(pt) = writer.match_params(d.params) else {
-            debug!("track has no payload type");
             return;
         };
 
@@ -408,17 +451,14 @@ impl Peer {
             SignallingMessage::Answer { sdp } => self.handle_answer(sdp)?,
             SignallingMessage::Offer { sdp, tracks } => self.handle_offer(sdp, tracks)?,
             SignallingMessage::Candidate { candidate } => {
-                // str0m only supports some candidates right now, not sure if this causes problems
-                if let Ok(candidate) = Candidate::from_sdp_string(&candidate) {
+                if let Ok(candidate) = str0m::Candidate::from_sdp_string(&candidate) {
                     self.rtc.add_remote_candidate(candidate);
                 }
             }
-            SignallingMessage::Want { subscriptions: _ } => todo!(),
+            SignallingMessage::Want { .. } => todo!(),
             SignallingMessage::Have { .. } => return Err(Error::HaveServerOnly.into()),
             SignallingMessage::Reconnect => panic!("handled by sfu"),
-            SignallingMessage::VoiceState { .. } => {}
-            SignallingMessage::Ready { .. } => {}
-            SignallingMessage::Error { .. } => {}
+            _ => {}
         }
         Ok(())
     }
@@ -451,15 +491,8 @@ impl Peer {
                 error!("Error handling offer: {}", e);
                 return Err(e);
             }
-            Err(e) => {
-                let panic_msg = if let Some(s) = e.downcast_ref::<String>() {
-                    s.clone()
-                } else if let Some(s) = e.downcast_ref::<&str>() {
-                    s.to_string()
-                } else {
-                    "Unknown panic payload".to_string()
-                };
-                error!("Panic handling offer: {}. Disconnecting peer.", panic_msg);
+            Err(_e) => {
+                error!("Panic handling offer. Disconnecting peer.");
                 self.rtc.disconnect();
                 return Ok(());
             }
@@ -474,7 +507,7 @@ impl Peer {
 
         let inbound_old = std::mem::take(&mut self.inbound);
         for track in tracks {
-            let mid = Mid::from(&*track.mid);
+            let mid = str0m::media::Mid::from(&*track.mid);
             let state = inbound_old
                 .get(&mid)
                 .map(|t| t.state)
@@ -490,24 +523,7 @@ impl Peer {
             );
         }
 
-        // HACK: manually disable set port to 0 to disable media when the answer has no codecs
-        let sdp_str = answer
-            .to_sdp_string()
-            .lines()
-            .map(|line| {
-                if line.starts_with("m=") {
-                    let mut parts: Vec<&str> = line.split_whitespace().collect();
-                    if parts.len() == 3 {
-                        parts[1] = "0";
-                        return parts.join(" ");
-                    }
-                }
-                line.to_string()
-            })
-            .collect::<Vec<String>>()
-            .join("\r\n")
-            + "\r\n";
-
+        let sdp_str = answer.to_sdp_string();
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
             sdp: SessionDescription(sdp_str),
         }))?;
@@ -522,7 +538,6 @@ impl Peer {
     fn negotiate_if_needed(&mut self) -> Result<()> {
         let mut change = self.rtc.sdp_api();
 
-        // create pending outbound tracks
         for track in &mut self.outbound {
             if track.state == TrackState::Pending {
                 let mid = change.add_media(track.kind, Direction::SendOnly, None, None, None);
@@ -543,33 +558,26 @@ impl Peer {
     /// handle media data from the local peer
     fn handle_media_data(&self, data: str0m::media::MediaData) -> Result<()> {
         let Some(track) = self.inbound.get(&data.mid) else {
-            debug!("no inbound track");
             return Ok(());
         };
 
         if !matches!(track.state, TrackState::Open(_)) {
-            debug!("track not open");
             return Ok(());
         };
 
-        // enforce that user set appropriate flags and has appropriate permissions before forwarding media
         if self.voice_state.muted() && track.kind == MediaKind::Audio && track.key == TrackKey::User
         {
-            trace!("user is muted");
             return Ok(());
         }
 
         if !self.permissions.speak && track.kind == MediaKind::Audio && track.key == TrackKey::User
         {
-            trace!("user is missing speak permission");
             return Ok(());
         }
 
-        // video permission prevents user video and screenshare
         if !self.permissions.video
             && (track.kind == MediaKind::Video || track.key == TrackKey::Screen)
         {
-            trace!("user is missing video permission");
             return Ok(());
         }
 
@@ -577,7 +585,6 @@ impl Peer {
             && track.key == TrackKey::User
             && track.kind == MediaKind::Video
         {
-            trace!("user is not transmitting self_video");
             return Ok(());
         }
 
@@ -585,18 +592,24 @@ impl Peer {
             && track.key == TrackKey::Screen
             && track.kind == MediaKind::Video
         {
-            trace!("user is not transmitting self_screen");
             return Ok(());
         }
 
-        self.emit(PeerEvent::MediaData(MediaData {
+        let payload = MediaData {
             mid: data.mid,
             peer_id: self.user_id,
             network_time: data.network_time,
             time: data.time,
             data: data.data.into(),
             params: data.params,
-        }))?;
+        };
+
+        // Data Plane: broadcast directly to all other peers
+        for (user_id, (_, media_tx)) in &self.routing_table {
+            if let Err(e) = media_tx.try_send(PeerMedia::MediaData(payload.clone())) {
+                trace!("failed to send media to peer {user_id}: {e}");
+            }
+        }
 
         Ok(())
     }
@@ -622,14 +635,7 @@ impl Peer {
                     kind: track.kind.into(),
                     key: track.key.clone(),
                 });
-            } else {
-                warn!(
-                    "MediaAdded event for mid {mid} track state is {:?}",
-                    track.state
-                );
             }
-        } else {
-            warn!("MediaAdded event for mid {mid} we don't have the track metadata");
         }
 
         if !tracks_metadata.is_empty() {
@@ -649,10 +655,7 @@ impl Peer {
                         mid: TrackId(t.source_mid.to_string()),
                         kind: t.kind,
                         key: t.key.clone(),
-                        // FIXME: include at least one TrackLayer for video
-                        layers: vec![
-                            // TrackLayer { rid: todo!(), encoding: TrackEncoding::Source }
-                        ],
+                        layers: vec![],
                     })
                     .collect(),
             }));

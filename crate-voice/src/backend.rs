@@ -31,13 +31,18 @@ impl BackendConnection {
     }
 
     pub async fn spawn(mut self) {
+        let mut backoff = 1;
         loop {
             if let Err(e) = self.connect_and_run().await {
-                error!("Backend connection error: {}. Retrying in 5s.", e);
+                error!("Backend connection error: {}. Retrying with backoff.", e);
             } else {
-                warn!("Disconnected from backend. Reconnecting in 5s.");
+                warn!("Disconnected from backend. Reconnecting with backoff.");
             }
-            tokio::time::sleep(Duration::from_secs(5)).await;
+
+            // Exponential backoff with a cap of 30 seconds
+            let jitter = rand::random::<u64>() % 3;
+            tokio::time::sleep(Duration::from_secs(backoff + jitter)).await;
+            backoff = std::cmp::min(backoff * 2, 30);
         }
     }
 

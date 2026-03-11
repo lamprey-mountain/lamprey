@@ -1,4 +1,5 @@
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
+use tokio::sync::mpsc::UnboundedSender;
 
 use common::v1::types::{
     voice::{MediaKind, SfuPermissions, SignallingMessage, Speaking, TrackKey, VoiceState},
@@ -14,7 +15,6 @@ pub mod config;
 pub mod peer;
 pub mod sfu;
 pub mod signalling;
-pub mod state;
 pub mod util;
 
 /// an event emitted by the peer and handled by the sfu
@@ -41,6 +41,9 @@ pub enum PeerEvent {
         kind: KeyframeRequestKind,
     },
 
+    /// our local ice ufrag
+    IceUfrag(String),
+
     /// we have these tracks
     Have { tracks: Vec<TrackMetadataServer> },
 
@@ -63,9 +66,6 @@ pub enum PeerCommand {
     /// a remote peer created a new track
     MediaAdded(TrackMetadataSfu),
 
-    /// a remote peer sent some media data
-    MediaData(MediaData),
-
     /// tell the the peer to stop (and emit a Dead event)
     Kill,
 
@@ -84,10 +84,24 @@ pub enum PeerCommand {
     },
 
     /// a remote peer is speaking
-    Speaking(Speaking),
+    Speaking(PeerMedia),
 
     /// permissions
     Permissions(SfuPermissions),
+
+    /// update the routing table for direct media delivery
+    UpdateRoutingTable {
+        user_id: UserId,
+        signalling_sender: UnboundedSender<PeerCommand>,
+        media_sender: tokio::sync::mpsc::Sender<PeerMedia>,
+    },
+}
+
+/// high-frequency media data (the data plane)
+#[derive(Debug, Clone)]
+pub enum PeerMedia {
+    MediaData(MediaData),
+    Speaking(Speaking),
 }
 
 #[derive(Debug, Clone)]
@@ -162,7 +176,7 @@ pub struct MediaData {
     pub peer_id: UserId,
     pub network_time: Instant,
     pub time: MediaTime,
-    pub data: Arc<[u8]>,
+    pub data: bytes::Bytes,
     pub params: PayloadParams,
 }
 

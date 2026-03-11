@@ -26,3 +26,7 @@ figment = { version = "0.10.19", features = ["env", "json", "toml"] }
 tokio-tungstenite = { version = "0.27.0", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3.31"
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+num_cpus = "1.17.0"
+socket2 = { version = "0.6.3", features = ["all"] }
+bytes = "1.11.1"
+rand = "0.10.0"
