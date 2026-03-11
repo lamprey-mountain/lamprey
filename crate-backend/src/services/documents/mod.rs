@@ -13,7 +13,7 @@ use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use tokio::sync::{broadcast, RwLock};
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 use uuid::Uuid;
 use yrs::types::{Delta, Event};
 use yrs::updates::encoder::Encode;
@@ -422,6 +422,29 @@ impl ServiceDocuments {
         Ok(serdoc::doc_to_serdoc(&ctx.doc))
     }
 
+    pub async fn get_content_at_seq(&self, context_id: EditContextId, seq: u64) -> Result<Serdoc> {
+        let data = self.state.data();
+        let dehydrated = data.document_load_at_seq(context_id, seq as u32).await?;
+
+        let doc = yrs::Doc::new();
+        doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+
+        let mut txn = doc.transact_mut();
+
+        // start with the last snapshot
+        let snapshot = yrs::Update::decode_v1(&dehydrated.last_snapshot)?;
+        txn.apply_update(snapshot)?;
+
+        // replay updates
+        for update_data in dehydrated.changes {
+            let update = yrs::Update::decode_v1(&update_data)?;
+            txn.apply_update(update)?;
+        }
+        drop(txn);
+
+        Ok(serdoc::doc_to_serdoc(&doc))
+    }
+
     pub async fn set_content(
         &self,
         context_id: EditContextId,
@@ -703,6 +726,8 @@ impl ServiceDocuments {
         let mut current_end = updates[0].created_at;
         let mut current_count = 0;
         let mut current_document_id = updates[0].document_id;
+        let mut current_start_seq = updates[0].seq;
+        let mut current_end_seq = updates[0].seq;
 
         let mut tag_iter = tags.iter().peekable();
 
@@ -751,11 +776,14 @@ impl ServiceDocuments {
                     stat_added: current_added,
                     stat_removed: current_removed,
                     document_id: Some(current_document_id),
+                    start_seq: current_start_seq,
+                    end_seq: current_end_seq,
                 });
                 current_added = 0;
                 current_removed = 0;
                 current_count = 0;
                 current_start = update.created_at;
+                current_start_seq = update.seq;
                 current_document_id = update.document_id;
             }
 
@@ -763,6 +791,7 @@ impl ServiceDocuments {
             current_added += update.stat_added as u64;
             current_removed += update.stat_removed as u64;
             current_end = update.created_at;
+            current_end_seq = update.seq;
             current_count += 1;
         }
 
@@ -773,6 +802,8 @@ impl ServiceDocuments {
             stat_added: current_added,
             stat_removed: current_removed,
             document_id: Some(current_document_id),
+            start_seq: current_start_seq,
+            end_seq: current_end_seq,
         });
 
         changesets.reverse();

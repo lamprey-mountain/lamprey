@@ -3,8 +3,8 @@ use yrs::types::xml::{XmlElementPrelim, XmlIn};
 use yrs::{Doc, GetString, Transact, XmlFragment, XmlOut, XmlTextPrelim};
 
 pub fn doc_to_serdoc(doc: &Doc) -> Serdoc {
-    let txn = doc.transact();
     let root = doc.get_or_insert_xml_fragment("doc");
+    let txn = doc.transact();
     let mut blocks = Vec::new();
 
     for child in root.children(&txn) {

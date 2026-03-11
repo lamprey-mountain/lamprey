@@ -192,6 +192,7 @@ pub enum DocumentBranchMergeResultStatus {
 /// a version of a document at a point in time
 ///
 /// serialized as `branch-uuid@seq`
+// NOTE: this is kind of what yrs/yjs' StateVector is supposed to be for
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -420,11 +421,12 @@ pub struct Changeset {
     /// the document this changeset applies to
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub document_id: Option<ChannelId>,
-    // /// the sequence number of the first update in this changeset
-    // pub start_seq: u32,
 
-    // /// the sequence number of the last update in this changeset
-    // pub end_seq: u32,
+    /// the sequence number of the first update in this changeset
+    pub start_seq: u32,
+
+    /// the sequence number of the last update in this changeset
+    pub end_seq: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -453,6 +455,9 @@ pub struct HistoryPagination {
 #[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
 pub struct DocumentCrdtDiffParams {
     pub sv: Option<DocumentStateVector>,
+    // TODO: add these? probably would be mutually exclusive with sv
+    // pub from_rev: Option<DocumentRevisionId>,
+    // pub to_rev: Option<DocumentRevisionId>,
 }
 
 /// parameters for updating a crdt

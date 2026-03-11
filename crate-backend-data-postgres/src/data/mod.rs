@@ -543,6 +543,11 @@ pub trait DataDocument {
         snapshot: Vec<u8>,
     ) -> Result<()>;
     async fn document_load(&self, context_id: EditContextId) -> Result<DehydratedDocument>;
+    async fn document_load_at_seq(
+        &self,
+        context_id: EditContextId,
+        seq: u32,
+    ) -> Result<DehydratedDocument>;
     async fn document_create(
         &self,
         context_id: EditContextId,

@@ -173,6 +173,59 @@ impl DataDocument for Postgres {
         })
     }
 
+    async fn document_load_at_seq(
+        &self,
+        context_id: EditContextId,
+        target_seq: u32,
+    ) -> Result<DehydratedDocument> {
+        let (_, branch_id) = context_id;
+
+        // Find the latest snapshot at or before the target seq
+        let snapshot = query!(
+            r#"
+            SELECT id, snapshot, seq
+            FROM document_snapshot
+            WHERE branch_id = $1 AND seq <= $2
+            ORDER BY seq DESC
+            LIMIT 1
+            "#,
+            branch_id.into_inner(),
+            target_seq as i64
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let (last_snapshot, start_seq) = match snapshot {
+            Some(row) => (row.snapshot, row.seq),
+            None => {
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownDocumentRevision,
+                )))
+            }
+        };
+
+        // Load all updates from the snapshot up to and including the target seq
+        let updates = query!(
+            r#"
+            SELECT data
+            FROM document_update
+            WHERE branch_id = $1 AND seq > $2 AND seq <= $3
+            ORDER BY seq ASC
+            "#,
+            branch_id.into_inner(),
+            start_seq,
+            target_seq as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(DehydratedDocument {
+            last_snapshot,
+            snapshot_seq: start_seq as u32,
+            changes: updates.into_iter().map(|row| row.data).collect(),
+        })
+    }
+
     async fn document_create(
         &self,
         context_id: EditContextId,

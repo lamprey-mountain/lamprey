@@ -24,6 +24,7 @@ use common::v1::types::{
     ids::{DocumentBranchId, DocumentTagId},
     MessageSync,
 };
+use tracing::info;
 use uuid::Uuid;
 
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -832,9 +833,13 @@ async fn document_content_get(
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let branch_id = match revision_id {
-        DocumentRevisionId::Branch { branch_id } => branch_id,
-        _ => return Err(Error::Unimplemented),
+    let (branch_id, seq) = match revision_id {
+        DocumentRevisionId::Branch { branch_id } => (branch_id, None),
+        DocumentRevisionId::Revision { version_id } => (version_id.branch_id, Some(version_id.seq)),
+        DocumentRevisionId::Tag { tag_id } => {
+            let tag = data.document_tag_get(tag_id).await?;
+            (tag.branch_id, Some(tag.revision_seq as u64))
+        }
     };
 
     let branch = data.document_branch_get(channel_id, branch_id).await?;
@@ -844,7 +849,15 @@ async fn document_content_get(
         )));
     }
 
-    let serdoc = srv.documents.get_content((channel_id, branch_id)).await?;
+    let serdoc = match seq {
+        Some(seq) => {
+            srv.documents
+                .get_content_at_seq((channel_id, branch_id), seq)
+                .await?
+        }
+        None => srv.documents.get_content((channel_id, branch_id)).await?,
+    };
+
     Ok(Json(serdoc))
 }
 
