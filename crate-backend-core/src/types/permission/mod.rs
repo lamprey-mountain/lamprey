@@ -42,7 +42,6 @@ pub struct PermissionsBuilder {
 
 /// the kind of resource this permission is for
 #[derive(Debug, Clone, Default)]
-#[repr(u16)]
 pub enum PermissionsContext {
     /// this is for room-level permissions
     #[default]
@@ -173,7 +172,6 @@ impl Permissions {
     }
 
     #[inline]
-    // TODO: make this a flag?
     pub fn can_bypass_locked_channels(&self) -> bool {
         self.has(Permission::Admin)
             || self.has(Permission::ChannelManage)
@@ -181,18 +179,61 @@ impl Permissions {
     }
 
     /// ensure that the user has all permissions, returning an error if they don't
+    ///
+    /// Returns a 404 error (UnknownRoom/UnknownChannel) if ViewChannel is missing,
+    /// otherwise a 403 error (MissingPermissions). The error payload includes *all*
+    /// missing permissions.
     pub fn ensure_all(&self, perms: &[Permission]) -> Result<()> {
-        // TODO: improve performance
-        for perm in perms {
-            self.ensure(*perm)?;
-        }
-        Ok(())
+        self.ensure_all_impl(perms, false)
     }
 
-    // TODO: ensure_all_server
+    /// ensure that the user has all permissions (server variant)
+    ///
+    /// Like `ensure_all`, but uses `required_permissions_server` in the error response.
+    pub fn ensure_all_server(&self, perms: &[Permission]) -> Result<()> {
+        self.ensure_all_impl(perms, true)
+    }
+
+    fn ensure_all_impl(&self, perms: &[Permission], server: bool) -> Result<()> {
+        if perms.is_empty() {
+            return Ok(());
+        }
+
+        // admins have all permissions
+        if self.has(Permission::Admin) {
+            return Ok(());
+        }
+
+        let required_mask = PermissionBits::from_slice(perms);
+        let missing_bits = required_mask & !self.perms;
+
+        // no missing permissions
+        if missing_bits == PermissionBits::default() {
+            return Ok(());
+        }
+
+        // return 404 instead of 403 if a visibility check fails to prevent leaks
+        if missing_bits.has(Permission::ViewChannel) {
+            let code = match self.context {
+                PermissionsContext::Room => ErrorCode::UnknownRoom,
+                PermissionsContext::Channel => ErrorCode::UnknownChannel,
+            };
+            return Err(Error::ApiError(ApiError::from_code(code)));
+        }
+
+        let missing: Vec<Permission> = missing_bits.to_vec();
+
+        let mut err = ApiError::from_code(ErrorCode::MissingPermissions);
+        if server {
+            err.required_permissions_server = missing;
+        } else {
+            err.required_permissions = missing;
+        }
+
+        Err(Error::ApiError(err))
+    }
 
     /// whether this user has permissions to bypass slowmode in this channel
-    // TODO: make this a flag?
     pub fn can_bypass_slowmode(&self) -> bool {
         self.has(Permission::ChannelManage)
             || self.has(Permission::ThreadManage)
