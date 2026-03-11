@@ -100,9 +100,7 @@ async fn room_get(
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
     }
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    if !perms.is_member() {
-        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
-    }
+    perms.ensure_view()?;
     let headers = cache.compare_uuid(&room.version_id)?;
     Ok((headers, Json(room)))
 }

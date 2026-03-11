@@ -6,7 +6,7 @@ pub mod types;
 pub use consts::*;
 pub use data::postgres::{DbMedia, DbMediaData, DbMediaWithId, Pagination, Postgres};
 pub use error::{Error, Result};
-pub use types::permission::{PermissionBits, Permissions};
+pub use types::permission::PermissionBits;
 pub use types::*;
 
 // Re-export Data traits from data module

@@ -7,9 +7,9 @@
 /// - `1 << 4` quarantined by automod
 /// - `1 << 5` channel is locked
 #[derive(Debug, Clone, Default)]
-pub struct Permissions2Flags(u32);
+pub struct PermissionsFlags(u32);
 
-impl Permissions2Flags {
+impl PermissionsFlags {
     /// the user cannot view this resource
     ///
     /// this is used to return 404s instead of leaking that something exists

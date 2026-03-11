@@ -753,7 +753,7 @@ impl ServiceMessages {
         let perms = if is_webhook {
             None
         } else {
-            Some(s.services().perms.for_channel(user_id, thread_id).await?)
+            Some(srv.perms.for_channel(user_id, thread_id).await?)
         };
 
         if let Some(perms) = &perms {

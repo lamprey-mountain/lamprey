@@ -6,12 +6,12 @@ use common::v1::types::{
     ChannelId, Permission, PermissionOverwriteType, RoomId, UserId, SERVER_ROOM_ID,
 };
 use dashmap::DashMap;
+use lamprey_backend_core::types::permission::{Permissions, PermissionsContext};
 use moka::future::Cache;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::Permissions;
 use crate::ServerStateInner;
 
 // TODO(#995): remove much of this code?
@@ -21,10 +21,7 @@ use crate::ServerStateInner;
 
 pub struct ServicePermissions {
     state: Arc<ServerStateInner>,
-    cache_perm_room: Cache<(UserId, RoomId), Permissions>,
-    cache_perm_channel: Cache<(UserId, RoomId, ChannelId), Permissions>,
     cache_is_mutual: Cache<(UserId, UserId), bool>,
-    cache_user_rank: Cache<(RoomId, UserId), u64>,
     timeout_tasks: DashMap<(UserId, RoomId), JoinHandle<()>>,
 }
 
@@ -34,19 +31,7 @@ impl ServicePermissions {
         // (userid, roomid) seems a bit inefficient, maybe caching roles would be better
         Self {
             state,
-            cache_perm_room: Cache::builder()
-                .max_capacity(100_000)
-                .support_invalidation_closures()
-                .build(),
-            cache_perm_channel: Cache::builder()
-                .max_capacity(100_000)
-                .support_invalidation_closures()
-                .build(),
             cache_is_mutual: Cache::builder()
-                .max_capacity(100_000)
-                .support_invalidation_closures()
-                .build(),
-            cache_user_rank: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
@@ -55,10 +40,7 @@ impl ServicePermissions {
     }
 
     pub fn purge_cache(&self) {
-        self.cache_perm_room.invalidate_all();
-        self.cache_perm_channel.invalidate_all();
         self.cache_is_mutual.invalidate_all();
-        self.cache_user_rank.invalidate_all();
     }
 
     pub async fn update_timeout_task(
@@ -93,14 +75,8 @@ impl ServicePermissions {
     /// calculate the permissions a user has in a room
     pub async fn for_room(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
         let srv = self.state.services();
-
-        self.cache_perm_room
-            .try_get_with((user_id, room_id), async {
-                let calc = srv.cache.permissions(room_id, true).await?;
-                Result::Ok(calc.query(user_id, None))
-            })
-            .await
-            .map_err(|err| err.fake_clone())
+        let calc = srv.cache.permissions(room_id, true).await?;
+        calc.query(user_id, None)
     }
 
     /// calculate the permissions a user has on this server
@@ -119,46 +95,36 @@ impl ServicePermissions {
 
         if let Some(room_id) = chan.room_id {
             let calc = srv.cache.permissions(room_id, true).await?;
-            Ok(calc.query(user_id, Some(&chan)))
+            calc.query(user_id, Some(&chan))
         } else {
             if let Some(parent_id) = chan.parent_id {
                 Box::pin(self.for_channel(user_id, parent_id)).await
             } else {
-                let mut p = Permissions::empty();
+                // DMs/GDMs use Permissions2 builder directly
+                let mut p = Permissions::builder();
+                p.context = PermissionsContext::Channel;
 
                 // if its not in a room and doesnt have a parent, it must be a dm or gdm
                 let is_recipient = chan.recipients.iter().any(|r| r.id == user_id);
                 let is_owner = chan.owner_id == Some(user_id);
 
                 if is_recipient || is_owner {
-                    p.add(Permission::ViewChannel);
-                    for a in EVERYONE_TRUSTED {
-                        p.add(*a);
-                    }
+                    use lamprey_backend_core::types::permission::PermissionBits;
+                    p.perms = PermissionBits::from_slice(EVERYONE_TRUSTED);
+                    p.perms.add(Permission::ViewChannel);
+                } else {
+                    p.flags.set_cannot_view();
                 }
 
                 // permission overwrites dont exist outside of rooms
-                Ok(p)
+                Ok(p.build())
             }
         }
     }
 
     /// calculate the permissions a user has in a channel
     pub async fn for_channel(&self, user_id: UserId, thread_id: ChannelId) -> Result<Permissions> {
-        let srv = self.state.services();
-        let t = srv.channels.get(thread_id, Some(user_id)).await?;
-
-        self.cache_perm_channel
-            .try_get_with(
-                (
-                    user_id,
-                    t.room_id.unwrap_or_else(|| Uuid::nil().into()),
-                    thread_id,
-                ),
-                self.for_channel_inner(user_id, thread_id),
-            )
-            .await
-            .map_err(|err| err.fake_clone())
+        self.for_channel_inner(user_id, thread_id).await
     }
 
     pub async fn invalidate_room(&self, user_id: UserId, room_id: RoomId) {
@@ -168,27 +134,15 @@ impl ServicePermissions {
             .cache
             .reload_member(room_id, user_id)
             .await;
-        self.cache_perm_room.invalidate(&(user_id, room_id)).await;
-        self.cache_perm_channel
-            .invalidate_entries_if(move |(uid, rid, _), _| room_id == *rid && user_id == *uid)
-            .expect("failed to invalidate");
-        self.cache_user_rank.invalidate(&(room_id, user_id)).await;
+        // Permission caches removed - permissions are recalculated on-demand
     }
 
     // NOTE: might be a good idea to be able to invalidate per role
-    pub async fn invalidate_room_all(&self, room_id: RoomId) {
-        self.cache_perm_room
-            .invalidate_entries_if(move |(_, rid), _| room_id == *rid)
-            .expect("failed to invalidate");
-        self.cache_perm_channel
-            .invalidate_entries_if(move |(_, rid, _), _| room_id == *rid)
-            .expect("failed to invalidate");
-        self.cache_user_rank
-            .invalidate_entries_if(move |(rid, _), _| room_id == *rid)
-            .expect("failed to invalidate");
+    pub async fn invalidate_room_all(&self, _room_id: RoomId) {
+        // Permission caches removed - permissions are recalculated on-demand
     }
 
-    pub async fn invalidate_thread(&self, user_id: UserId, thread_id: ChannelId) {
+    pub async fn invalidate_thread(&self, _user_id: UserId, thread_id: ChannelId) {
         if let Ok(c) = self.state.services().channels.get(thread_id, None).await {
             if let Some(rid) = c.room_id {
                 let _ = self
@@ -199,15 +153,11 @@ impl ServicePermissions {
                     .await;
             }
         }
-        self.cache_perm_channel
-            .invalidate_entries_if(move |(uid, _, tid), _| thread_id == *tid && user_id == *uid)
-            .expect("failed to invalidate");
+        // Permission caches removed - permissions are recalculated on-demand
     }
 
-    pub fn invalidate_user_ranks(&self, room_id: RoomId) {
-        self.cache_user_rank
-            .invalidate_entries_if(move |(rid, _), _| room_id == *rid)
-            .expect("failed to invalidate");
+    pub fn invalidate_user_ranks(&self, _room_id: RoomId) {
+        // Rank cache removed - ranks are recalculated on-demand
     }
 
     /// check if two users share a common room
@@ -261,9 +211,7 @@ impl ServicePermissions {
     }
 
     async fn invalidate_thread_all(&self, thread_id: ChannelId) {
-        self.cache_perm_channel
-            .invalidate_entries_if(move |(_, _, tid), _| thread_id == *tid)
-            .expect("failed to invalidate");
+        // Permission caches removed - permissions are recalculated on-demand
 
         if let Ok(t) = self.state.services().channels.get(thread_id, None).await {
             if let Some(room_id) = t.room_id {
@@ -279,14 +227,9 @@ impl ServicePermissions {
     }
 
     pub async fn get_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64> {
-        self.cache_user_rank
-            .try_get_with((room_id, user_id), async {
-                let d = self.state.data();
-                let rank = d.role_user_rank(room_id, user_id).await?;
-                Result::Ok(rank)
-            })
-            .await
-            .map_err(|err| err.fake_clone())
+        let srv = self.state.services();
+        let calc = srv.cache.permissions(room_id, true).await?;
+        Ok(calc.rank(user_id))
     }
 
     /// get default permissions for the @everyone role
@@ -297,15 +240,15 @@ impl ServicePermissions {
 
         let everyone_role_id = room_id.into_inner().into();
         let role = data.role_select(room_id, everyone_role_id).await?;
-        let mut perms = Permissions::empty();
-        for p in role.allow {
-            perms.add(p);
-        }
-        for p in role.deny {
-            perms.remove(p);
-        }
+        use lamprey_backend_core::types::permission::PermissionBits;
+        let mut perms = PermissionBits::default();
+        perms.add_all(role.allow.into());
+        perms.remove_all(role.deny.into());
 
-        Ok(perms)
+        // Convert to Permissions2
+        let mut p = Permissions::builder();
+        p.perms = perms;
+        Ok(p.build())
     }
 
     /// Check if target user allows DMs from source user

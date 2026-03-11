@@ -18,7 +18,7 @@ pub const BROADCAST_LURKER_PERMS: PermissionBits = PermissionBits(
     (1u128 << 42) | // ViewAnalytics
     (1u128 << 43) | // VoiceConnect
     (1u128 << 52) | // VoiceRequest
-    (1u128 << 51),  // VoiceVad
+    (1u128 << 51), // VoiceVad
 );
 
 /// permissions for quarantined users (view + nickname)
@@ -26,7 +26,7 @@ pub const QUARANTINE_PERMS: PermissionBits = PermissionBits(
     (1u128 << 40) | // ViewChannel
     (1u128 << 41) | // ViewAuditLog
     (1u128 << 42) | // ViewAnalytics
-    (1u128 << 10),  // MemberNickname
+    (1u128 << 10), // MemberNickname
 );
 
 impl PermissionBits {

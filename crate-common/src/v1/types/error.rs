@@ -216,6 +216,10 @@ pub enum ErrorCode {
     #[error("thread is removed")]
     ThreadRemoved,
 
+    /// thread is locked
+    #[error("thread is locked")]
+    ThreadLocked,
+
     /// channel is archived
     #[error("channel is archived")]
     ChannelArchived,
@@ -918,6 +922,7 @@ impl ErrorCode {
             ErrorCode::CannotActOnBehalfOfOthers => 403,
             ErrorCode::ThreadArchived => 400,
             ErrorCode::ThreadRemoved => 404,
+            ErrorCode::ThreadLocked => 403,
             ErrorCode::ChannelArchived => 400,
             ErrorCode::ChannelRemoved => 404,
             ErrorCode::MfaRequired => 403,

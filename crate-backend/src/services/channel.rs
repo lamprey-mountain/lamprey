@@ -27,22 +27,12 @@ use crate::ServerStateInner;
 // then only invalidate (or directly update) that one part of the cache at a time
 pub struct ServiceChannels {
     state: Arc<ServerStateInner>,
-    cache_thread: Cache<ChannelId, Channel>,
+    cache_thread: Cache<ChannelId, Channel>, // TODO: remove
     cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_thread_recipients: Cache<ChannelId, Vec<User>>,
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
     idempotency_keys: Cache<String, Channel>,
 }
-
-// #[derive(Debug)]
-// pub struct ChannelPrivate {
-//     pub is_unread: Option<bool>,
-//     pub last_read_id: Option<MessageVerId>,
-//     pub mention_count: Option<u64>,
-//     pub user_config: Option<UserConfigChannel>,
-//     pub slowmode_thread_expire_at: Option<Time>,
-//     pub slowmode_message_expire_at: Option<Time>,
-// }
 
 impl ServiceChannels {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
@@ -93,6 +83,7 @@ impl ServiceChannels {
             .map(|c| c.id)
             .collect();
 
+        // PERF: n+1 query
         let thread_member_map = if !thread_channels.is_empty() {
             let mut map = HashMap::new();
             for thread_id in &thread_channels {
@@ -107,6 +98,7 @@ impl ServiceChannels {
 
         // populate each channel with private data
         for channel in channels {
+            // PERF: n+1 query
             // fetch private data for this channel
             if let Ok(private) = data.channel_get_private(channel.id, user_id).await {
                 channel.is_unread = Some(private.is_unread);
@@ -220,6 +212,7 @@ impl ServiceChannels {
         self.populate_recipients(&mut channels).await?;
 
         for channel in &mut channels {
+            // PERF: n+1 query
             let members = self.state.data().thread_member_list_all(channel.id).await?;
             let mut online_count = 0;
             for member in members {
@@ -1387,9 +1380,10 @@ impl ServiceChannels {
         let mut out = vec![];
 
         for ch in perms_calc.room.get_data().unwrap().channels.values() {
-            let p = perms_calc.query(user_id, Some(&ch.inner));
-            if p.has(Permission::ViewChannel) {
-                out.push((ch.inner.id, p.has(Permission::ThreadManage)));
+            if let Ok(p) = perms_calc.query(user_id, Some(&ch.inner)) {
+                if p.has(Permission::ViewChannel) {
+                    out.push((ch.inner.id, p.has(Permission::ThreadManage)));
+                }
             }
         }
 
@@ -1446,5 +1440,92 @@ impl ServiceChannels {
         }
         overwrites.reverse();
         Ok(overwrites)
+    }
+}
+
+#[cfg(any())]
+mod next {
+    use std::{collections::HashMap, sync::Arc};
+
+    use common::v1::types::{
+        preferences::PreferencesChannel, util::Time, ChannelId, MessageId, MessageVerId, UserId,
+    };
+    use moka::future::Cache;
+
+    use crate::ServerStateInner;
+
+    pub struct ServiceChannels {
+        state: Arc<ServerStateInner>,
+
+        /// private user data
+        cache_private: Cache<(ChannelId, UserId), ChannelPrivate>,
+
+        /// dm and gdm channels
+        // other channel exist in room actors, but dms don't exist in rooms
+        // merge recipients here
+        cache_dms: Cache<ChannelId, Channel>,
+
+        /// typing indicators
+        typing: Cache<(ChannelId, UserId), TypingUser>,
+
+        /// deduplicating channel create requests
+        idempotency_keys: Cache<String, ChannelId>,
+
+        slowmode_expire: Cache<(ChannelId, UserId, SlowmodeKind), Time>,
+    }
+
+    /// channel data for a user
+    #[derive(Debug)]
+    pub struct ChannelPrivate {
+        pub unread_state: Option<AckState>,
+        pub preferences: Option<PreferencesChannel>,
+        pub slowmode_thread_expire_at: Option<Time>,
+        pub slowmode_message_expire_at: Option<Time>,
+        // does thread_member go here?
+    }
+
+    #[derive(Debug)]
+    pub struct AckState {
+        /// if this channel is unread
+        // NOTE: this is separate because i might want to filter ignored/blocked users server side
+        pub unread: bool,
+
+        /// the id of the last message this user has read
+        pub read_marker_id: Option<MessageId>,
+
+        /// the version id of the last message this user has read
+        pub read_marker_version: Option<MessageVerId>,
+
+        /// the total number of mentions for this user in this channel
+        pub mention_count: Option<u64>,
+
+        /// the total number of unread messages for private channels
+        pub unread_count: Option<u64>,
+
+        /// when this user read the pins
+        pub pins_read_at: Option<Time>,
+        // how do unreads work with {calendar,wiki,document}?
+        // calendar events could have their own ack state
+    }
+
+    // add these fields
+    pub struct Channel {
+        /// the id of the last message
+        // TODO: use this instead of last_version_id in ui?
+        pub last_message_id: Option<MessageId>,
+
+        /// when a message was last pinned to this channel
+        pub last_pin_timestamp: Option<Time>,
+        // remove is_unread, last_read_id, mention_count, preferences, slowmode_thread_expire_at, slowmode_message_expire_at
+    }
+
+    pub struct TypingUser {
+        pub expires_at: Time,
+        // maybe later i can have "typing notification kinds", eg. "recording voice message"
+    }
+
+    pub enum SlowmodeKind {
+        Message,
+        Thread,
     }
 }

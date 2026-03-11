@@ -231,7 +231,7 @@ async fn message_delete(
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
-    let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     let message = data
         .message_get(channel_id, message_id, auth.user.id)
@@ -239,10 +239,13 @@ async fn message_delete(
     if !message.latest_version.message_type.is_deletable() {
         return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
     }
-    if message.author_id == auth.user.id {
-        perms.add(Permission::MessageDelete);
+    let is_author = message.author_id == auth.user.id;
+    if !perms.has_or(Permission::MessageDelete, is_author) {
+        return Err(Error::ApiError(ApiError {
+            required_permissions: vec![Permission::MessageDelete],
+            ..ApiError::from_code(ErrorCode::MissingPermissions)
+        }));
     }
-    perms.ensure(Permission::MessageDelete)?;
 
     // Require MFA only if user is not the message author
     if message.author_id != auth.user.id {
@@ -386,7 +389,7 @@ async fn message_version_delete(
 
     thread.ensure_has_text()?;
 
-    let mut perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure_unlocked()?;
     perms.ensure(Permission::ViewChannel)?;
 
@@ -409,10 +412,13 @@ async fn message_version_delete(
         return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessageType).into());
     }
 
-    if message.author_id == auth.user.id {
-        perms.add(Permission::MessageDelete);
+    let is_author = message.author_id == auth.user.id;
+    if !perms.has_or(Permission::MessageDelete, is_author) {
+        return Err(Error::ApiError(ApiError {
+            required_permissions: vec![Permission::MessageDelete],
+            ..ApiError::from_code(ErrorCode::MissingPermissions)
+        }));
     }
-    perms.ensure(Permission::MessageDelete)?;
 
     // Require MFA only if user is not the message author
     if message.author_id != auth.user.id {

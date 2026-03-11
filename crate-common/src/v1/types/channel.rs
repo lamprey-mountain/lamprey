@@ -87,11 +87,14 @@ pub struct Channel {
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
 
-    // NOTE: this is the old property, this will be removed
-    // /// a locked channel can only be interacted with (sending messages,
-    // /// (un)archiving, etc) by people with the `ThreadLock` permission
-    // pub locked: bool,
     /// whether this channel is locked and has restricted permissions
+    ///
+    /// a locked channel can only be interacted with (sending messages,
+    /// (un)archiving, etc) by anyone who has any of
+    ///
+    /// - a role in allowed_roles
+    /// - the `ChannelManage` permission
+    /// - the `ThreadLock` or `ThreadManage` permission IF this channel is a thread
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub locked: Option<Locked>,
 
@@ -162,20 +165,18 @@ pub struct Channel {
     pub default_auto_archive_duration: Option<u64>,
 
     /// minimum delay in seconds between creating new threads
-    // can only be set on channels with has_threads
-    // must have ChannelManage/ThreadManage to change
+    ///
+    /// can only be set on channels with has_threads. must have ChannelManage permission to change.
     pub slowmode_thread: Option<u64>,
 
     /// minimum delay in seconds between creating new messages
-    // can only be set on channels with has_text
-    // must have ChannelManage/ThreadManage to change
+    ///
+    /// can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
     pub slowmode_message: Option<u64>,
 
     /// default slowmode_message for new threads
     ///
-    /// this value is copied, changing this wont change old threads
-    // can only be set on channels with has_threads
-    // must have ChannelManage/ThreadManage to change
+    /// this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
     pub default_slowmode_message: Option<u64>,
 
     /// when the current user can create a new thread

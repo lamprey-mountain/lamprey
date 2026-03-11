@@ -8,8 +8,8 @@ use common::v1::types::{
     SERVER_USER_ID,
 };
 use lamprey_backend_core::types::permission::{
-    PermissionBits, Permissions, Permissions2, Permissions2Builder, Permissions2Context,
-    BROADCAST_LURKER_PERMS, QUARANTINE_PERMS, VIEW_PERMS,
+    PermissionBits, Permissions, PermissionsBuilder, PermissionsContext, BROADCAST_LURKER_PERMS,
+    QUARANTINE_PERMS, VIEW_PERMS,
 };
 use tracing::warn;
 
@@ -28,12 +28,12 @@ pub struct PermissionsCalculator {
 
 impl PermissionsCalculator {
     /// query permissions for a room member, optionally in a specific channel
-    pub fn query(&self, user_id: UserId, channel: Option<&Channel>) -> Permissions {
-        self.query_inner(user_id, channel).unwrap().into()
+    pub fn query(&self, user_id: UserId, channel: Option<&Channel>) -> Result<Permissions> {
+        self.query_inner(user_id, channel)
     }
 
-    fn query_inner(&self, user_id: UserId, channel: Option<&Channel>) -> Result<Permissions2> {
-        let mut p = Permissions2::builder();
+    fn query_inner(&self, user_id: UserId, channel: Option<&Channel>) -> Result<Permissions> {
+        let mut p = Permissions::builder();
 
         let Some(data) = self.room.get_data() else {
             return Err(Error::ServiceUnavailable);
@@ -51,7 +51,7 @@ impl PermissionsCalculator {
         // admins have full permissions
         if !p.perms.has(Permission::Admin) {
             if let Some(channel) = channel {
-                p.context = Permissions2Context::Channel;
+                p.context = PermissionsContext::Channel;
                 // only calculate channel permissions if the channel exists in cache
                 // (channels not in cache have no overwrites)
                 if let Some(cached_channel) = data.channels.get(&channel.id) {
@@ -83,7 +83,7 @@ impl PermissionsCalculator {
     /// calculate base permissions for a member in a room
     fn calculate_room_permissions(
         &self,
-        p: &mut Permissions2Builder,
+        p: &mut PermissionsBuilder,
         user_id: UserId,
         member: Option<&RoomMember>,
     ) -> Result<()> {
@@ -163,7 +163,7 @@ impl PermissionsCalculator {
     /// recursively calculate channel permissions
     fn calculate_channel_permissions(
         &self,
-        p: &mut Permissions2Builder,
+        p: &mut PermissionsBuilder,
         cc: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
@@ -187,7 +187,7 @@ impl PermissionsCalculator {
     /// apply the permission overwrites for a channel to a permissions set
     fn apply_channel_overwrites(
         &self,
-        p: &mut Permissions2Builder,
+        p: &mut PermissionsBuilder,
         cc: &CachedChannel,
         member: Option<&RoomMember>,
     ) {

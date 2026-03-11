@@ -106,7 +106,10 @@ Deno.test("Emoji Use External Permission", async (t) => {
 	await alice({
 		url: `/room/${roomBId}/role/${roomBId}`,
 		method: "PATCH",
-		body: { allow: ["EmojiUseExternal"], deny: [] },
+		body: {
+			allow: ["EmojiUseExternal", "MessageCreate", "ViewChannel"],
+			deny: [],
+		},
 		status: 200,
 	});
 
