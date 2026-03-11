@@ -37,6 +37,7 @@ use super::{
 
 // TODO: encode binary data as base64 for json, binary for msgpack
 
+// TODO: include nonce/seq for MessageClient too, so theres some way to associate an error response to a request
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

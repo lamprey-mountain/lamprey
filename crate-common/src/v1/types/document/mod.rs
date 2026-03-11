@@ -420,6 +420,11 @@ pub struct Changeset {
     /// the document this changeset applies to
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub document_id: Option<ChannelId>,
+    // /// the sequence number of the first update in this changeset
+    // pub start_seq: u32,
+
+    // /// the sequence number of the last update in this changeset
+    // pub end_seq: u32,
 }
 
 #[derive(Debug, Clone)]

@@ -605,7 +605,11 @@ impl ServiceDocuments {
         maybe_author: Option<UserId>,
         state_vector: &[u8],
     ) -> Result<Vec<u8>> {
-        let s = StateVector::decode_v1(state_vector)?;
+        let s = if state_vector.is_empty() {
+            StateVector::default()
+        } else {
+            StateVector::decode_v1(state_vector)?
+        };
         let ctx = self.load(context_id, maybe_author).await?;
         let ctx = ctx.read().await;
         let serialized = ctx.doc.transact().encode_diff_v1(&s);
