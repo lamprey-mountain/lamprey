@@ -4,6 +4,9 @@ import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
 import { fetchWithRetry } from "./util.ts";
 import { RoomsService } from "./services/RoomsService.ts";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/rooms");
 
 export class Rooms {
 	api: Api = null as unknown as Api;
@@ -110,7 +113,7 @@ export class Rooms {
 					items: [...(pagination?.items ?? []), ...data.items],
 				};
 			} catch (error) {
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 		};
@@ -193,7 +196,7 @@ export class Rooms {
 					items: [...(pagination?.items ?? []), ...data.items],
 				};
 			} catch (error) {
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 		};
@@ -252,7 +255,7 @@ export class Rooms {
 					)
 				);
 			} catch (error) {
-				console.error("Failed to fetch threads for room", error);
+				log.error("Failed to fetch threads for room", error);
 				break;
 			}
 

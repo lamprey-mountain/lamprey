@@ -11,6 +11,9 @@ import type {
 import { createEffect, createResource, type Resource, untrack } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 import type { Api, Listing } from "../api.tsx";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/audit_log");
 
 interface AuditLogPaginationResponse {
 	audit_log_entries: AuditLogEntry[];
@@ -50,7 +53,7 @@ export class AuditLogs {
 
 			if (error) {
 				// TODO: handle unauthenticated
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 

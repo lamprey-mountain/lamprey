@@ -20,6 +20,9 @@ import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
 import type { Api } from "../api.tsx";
 import { fetchWithRetry } from "./util.ts";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/messages");
 
 export type MessageMutator = {
 	mutate: (r: MessageRange) => void;
@@ -115,7 +118,7 @@ export class MessageRanges {
 						b.items.find((j) => i === j.id)!
 				),
 		);
-		console.log("mergeRanges", a, b, c);
+		log.debug("mergeRanges", a, b, c);
 		this.ranges.delete(a);
 		this.ranges.delete(b);
 		this.ranges.add(c);
@@ -193,7 +196,7 @@ export class Messages {
 					this.cacheRanges.set(thread_id, ranges);
 				}
 
-				console.log("recalculate message list", {
+				log.debug("recalculate message list", {
 					thread_id,
 					dir,
 					ranges,
@@ -209,9 +212,9 @@ export class Messages {
 							const idx = r.items.findIndex((i) => i.id === dir.message_id);
 							if (idx !== -1) {
 								if (idx + dir.limit < r.len || !r.has_forward) {
-									console.log("messages reuse range for forwards");
+									log.debug("messages reuse range for forwards");
 								} else {
-									console.log("messages fetch more for forwards");
+									log.debug("messages fetch more for forwards");
 									const data = await this.fetchList(thread_id, {
 										dir: "f",
 										limit: 100,
@@ -224,7 +227,7 @@ export class Messages {
 								throw new Error("unreachable");
 							}
 						} else {
-							console.log("messages fetch initial for forwards");
+							log.debug("messages fetch initial for forwards");
 							const data = await this.fetchList(thread_id, {
 								dir: "f",
 								limit: 100,
@@ -241,7 +244,7 @@ export class Messages {
 							});
 						}
 					} else {
-						console.log("messages fetch start for forwards");
+						log.debug("messages fetch start for forwards");
 						// find a range that starts at the beginning
 						let r = Array.from(ranges.ranges).find((r) => !r.has_backwards);
 						if (!r) {
@@ -267,7 +270,7 @@ export class Messages {
 							const idx = r.items.findIndex((i) => i.id === dir.message_id);
 							if (idx !== -1) {
 								if (idx >= dir.limit) {
-									console.log("messages reuse range for backwards");
+									log.debug("messages reuse range for backwards");
 								} else if (r.has_backwards) {
 									// fetch more
 									const data = await this.fetchList(thread_id, {
@@ -283,7 +286,7 @@ export class Messages {
 							}
 						} else {
 							// new range
-							console.log("messages fetch initial for backwards");
+							log.debug("messages fetch initial for backwards");
 							const data = await this.fetchList(thread_id, {
 								dir: "b",
 								limit: 100,
@@ -323,9 +326,9 @@ export class Messages {
 							const hasEnoughBackwards = (idx >= dir.limit) || !r.has_backwards;
 
 							if (hasEnoughBackwards && hasEnoughForwards) {
-								console.log("messages reuse range for context");
+								log.debug("messages reuse range for context");
 							} else {
-								console.log("messages fetch more for context");
+								log.debug("messages fetch more for context");
 								let dataBefore: Pagination<Message> | undefined;
 								let dataAfter: Pagination<Message> | undefined;
 
@@ -352,7 +355,7 @@ export class Messages {
 							}
 						} else {
 							// fetch thread (or hole)
-							console.log("messages fetch context (hole)");
+							log.debug("messages fetch context (hole)");
 							const data = await this.fetchContext(
 								thread_id,
 								dir.message_id,
@@ -373,13 +376,13 @@ export class Messages {
 						}
 					} else {
 						// new range
-						console.log("messages fetch context");
+						log.debug("messages fetch context");
 						const data = await this.fetchContext(
 							thread_id,
 							dir.message_id,
 							dir.limit,
 						);
-						console.log("messages done fetching context");
+						log.debug("messages done fetching context");
 						batch(() => {
 							const range = this.mergeAfter(
 								ranges!,
@@ -496,7 +499,7 @@ export class Messages {
 			is_local: true,
 		} as unknown as Message;
 
-		console.log("[message:send] local message", local);
+		log.debug("send", "local message", local);
 
 		batch(() => {
 			this.cache.set(id, local);
@@ -561,7 +564,7 @@ export class Messages {
 	}
 
 	_updateMutators(r: MessageRanges, thread_id: string) {
-		console.log("update mutators", this._mutators);
+		log.debug("update mutators", this._mutators);
 		for (const mut of this._mutators) {
 			if (mut.thread_id !== thread_id) continue;
 
@@ -930,7 +933,7 @@ export class Messages {
 			const existing = ranges.find(convertedItem.id);
 			if (existing) {
 				if (existing !== range) {
-					console.log("merge (after)!");
+					log.debug("merge (after)!");
 					range.items.push(...items);
 					items = [];
 					range = ranges.merge(range, existing);
@@ -959,7 +962,7 @@ export class Messages {
 			const existing = ranges.find(convertedItem.id);
 			if (existing) {
 				if (existing !== range) {
-					console.log("merge (before)!");
+					log.debug("merge (before)!");
 					range.items.unshift(...items);
 					items = [];
 					range = ranges.merge(range, existing);

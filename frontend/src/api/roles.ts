@@ -8,6 +8,9 @@ import {
 	untrack,
 } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/roles");
 
 export class Roles {
 	api: Api = null as unknown as Api;
@@ -96,7 +99,7 @@ export class Roles {
 
 			if (error) {
 				// TODO: handle unauthenticated
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 
@@ -172,7 +175,7 @@ export class Roles {
 			);
 
 			if (error) {
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 

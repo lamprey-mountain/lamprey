@@ -51,6 +51,7 @@ const DEFAULT_PREFERENCES: Preferences = {
 };
 
 import { RootStore } from "../api/core/Store.ts";
+import { colors, logger } from "../logger.ts";
 
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
@@ -58,12 +59,24 @@ export function useChatClient(config: Config) {
 		ready: import("sdk").MessageReady;
 	}>();
 	const useMsgpack = flags.has("msgpack");
+	const recvLog = logger.for("sync").create("debug", colors.blue);
+	const sendLog = logger.for("sync").create("debug", colors.teal);
+	const errorLog = logger.for("sync").error;
 	const client = createClient({
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
 		format: useMsgpack ? "msgpack" : "json",
+		onMessage(raw) {
+			const op = raw.op === "Sync" ? `Sync (${raw.data.type})` : raw.op;
+			recvLog("recv 🢃", `got op ${op}`, raw);
+		},
+		onSend(data) {
+			sendLog("send 🢁", `sent op ${data.type}`, data);
+		},
+		onError(error) {
+			errorLog("error", error.message, error);
+		},
 		onSync(msg, raw) {
-			console.log("recv", msg, raw);
 			events.emit("sync", [msg, raw as import("sdk").MessageEnvelope]);
 		},
 		onReady(msg) {

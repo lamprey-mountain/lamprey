@@ -1,6 +1,9 @@
 import type { Channel, Pagination } from "sdk";
 import { batch, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/threads");
 
 export class Threads {
 	api: Api = null as unknown as Api;
@@ -32,7 +35,7 @@ export class Threads {
 			});
 
 			if (error) {
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 

@@ -1,6 +1,9 @@
 import type { Channel, Pagination } from "sdk";
 import { batch, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/dms");
 
 export class Dms {
 	api: Api = null as unknown as Api;
@@ -26,7 +29,7 @@ export class Dms {
 
 			if (error) {
 				// TODO: handle unauthenticated
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 

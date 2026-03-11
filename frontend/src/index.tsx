@@ -4,6 +4,9 @@
 import "./styles/index.scss";
 import { render } from "solid-js/web";
 import App from "./App.tsx";
+import { logger } from "./logger.ts";
+
+const log = logger.for("sw");
 
 // @ts-ignore
 const gitCommit = __VITE_GIT_COMMIT__;
@@ -12,7 +15,7 @@ const gitCommit = __VITE_GIT_COMMIT__;
 	if (!("serviceWorker" in navigator)) return;
 
 	try {
-		console.log("[sw:host] registering service worker");
+		log.info("host", "registering service worker", {});
 
 		const registration = await navigator.serviceWorker.register("/sw.js", {
 			scope: "/",
@@ -22,16 +25,16 @@ const gitCommit = __VITE_GIT_COMMIT__;
 		const existingSwCommit = localStorage.getItem("swCommit");
 
 		if (existingSwCommit && existingSwCommit !== gitCommit) {
-			console.log("[sw:host] new version detected, updating service worker");
+			log.info("host", "new version detected, updating service worker", {});
 			await registration.update();
-			console.log("[sw:host] updated");
+			log.info("host", "updated", {});
 		} else {
-			console.log("[sw:host] registered");
+			log.info("host", "registered", {});
 		}
 
 		localStorage.setItem("swCommit", gitCommit);
 	} catch (error) {
-		console.error("[sw:host] registration failed", error);
+		log.error("host", "registration failed", { error });
 	}
 })();
 

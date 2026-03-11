@@ -1,3 +1,5 @@
+// TODO: remove? this isnt really needed with solidjs signals
+
 export type Observable<T> = {
 	set(val: T): void;
 	get(): T;
@@ -27,7 +29,6 @@ export function createObservable<T>(
 		observable: {
 			subscribe(fn: (val: T) => void) {
 				listeners.add(fn);
-				console.log("emit");
 				fn(current);
 				onListenerChange?.(listeners.size);
 				return () => {
@@ -59,7 +60,7 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 
 	const cleanup = (key: K, size: number) => {
 		if (size !== 0) return;
-		console.log(`cleanup ${key} ${size}`);
+		// console.log(`cleanup ${key} ${size}`);
 		if (entries.get(key) === empty) entries.delete(key);
 	};
 
@@ -98,7 +99,7 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 		},
 		write: {
 			set(key: K, value: V) {
-				console.log(`write ${key}`);
+				// console.log(`write ${key}`);
 				const exists = has(key);
 				init(key).set(value);
 				if (!exists) {

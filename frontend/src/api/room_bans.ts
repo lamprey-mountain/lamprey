@@ -8,6 +8,9 @@ import {
 	untrack,
 } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/room_bans");
 
 export class RoomBans {
 	api: Api = null as unknown as Api;
@@ -86,7 +89,7 @@ export class RoomBans {
 
 			if (error) {
 				// TODO: handle unauthenticated
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 

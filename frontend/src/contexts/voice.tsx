@@ -14,6 +14,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 // @ts-ignore
 import vadProcessorUrl from "../vad-processor?url";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { colors, logger } from "../logger.ts";
 
 type VoiceClient = ReturnType<typeof createVoiceClient>;
 
@@ -48,6 +49,9 @@ export type VoiceActions = {
 const VoiceCtx = createContext<[VoiceProviderState, VoiceActions]>();
 
 export const useVoice = () => useContext(VoiceCtx)!;
+
+const voiceLog = logger.for("voice");
+const rtcLog = logger.for("rtc");
 
 export const VoiceProvider = (props: ParentProps) => {
 	const api = useApi();
@@ -116,7 +120,7 @@ export const VoiceProvider = (props: ParentProps) => {
 
 				// if we have an existing microphone stream, use it
 				if (streamMic && !state.muted) {
-					console.log("[voice] restore microphone stream");
+					voiceLog.debug("restore microphone stream");
 					if (!micTn) {
 						micTn = rtc.createTransceiver("user", "audio");
 					}
@@ -129,7 +133,7 @@ export const VoiceProvider = (props: ParentProps) => {
 
 				// if we have an existing camera stream, use it
 				if (streamCam && !state.cameraHidden) {
-					console.log("[voice] restore camera stream");
+					voiceLog.debug("restore camera stream");
 					if (!camTn) {
 						camTn = rtc.createTransceiver("user", "video");
 					}
@@ -140,7 +144,7 @@ export const VoiceProvider = (props: ParentProps) => {
 					}
 				}
 			} else {
-				console.log("[rtc] our voice state was deleted, cleanup");
+				rtcLog.debug("our voice state was deleted, cleanup");
 				disconnect();
 			}
 		}
@@ -155,7 +159,7 @@ export const VoiceProvider = (props: ParentProps) => {
 	}
 
 	onCleanup(() => {
-		console.log("[rtc] cleanup");
+		rtcLog.debug("cleanup");
 		const rtc = state.rtc;
 		if (!rtc) return;
 		rtc.disconnect();
@@ -167,11 +171,11 @@ export const VoiceProvider = (props: ParentProps) => {
 				update("rtc", createVoiceClient());
 			}
 			update("threadId", threadId);
-			console.log("[rtc] connect to %s", threadId, state.rtc);
+			rtcLog.debug(`connect to ${threadId}`, state.rtc);
 			state.rtc?.connect(threadId);
 		},
 		disconnect() {
-			console.log("[rtc] disconnect");
+			rtcLog.debug("disconnect");
 			disconnect();
 		},
 		toggleMic: async () => {
@@ -182,30 +186,27 @@ export const VoiceProvider = (props: ParentProps) => {
 				})
 					.catch(handleGetMediaError);
 				if (stream) {
-					console.log("[voice] got microphone stream", stream);
+					voiceLog.debug("got microphone stream", stream);
 					streamMic = stream;
 					update("muted", false);
 					if (state.rtc) {
 						if (!micTn) {
 							micTn = state.rtc.createTransceiver("user", "audio");
 						}
-						console.log("[voice] got microphone stream", stream);
+						voiceLog.debug("got microphone stream", stream);
 						const track = streamMic.getAudioTracks()[0];
 						if (track) {
 							if (micTn.currentDirection !== "stopped") {
 								await micTn.sender.replaceTrack(track);
 								micTn.direction = "sendonly";
 							} else {
-								console.warn(
-									"[voice] microphone transceiver is stopped",
-									micTn,
-								);
+								voiceLog.warn("microphone transceiver is stopped", micTn);
 							}
 						}
 					}
 					vad.connect(streamMic);
 				} else {
-					console.warn("[voice] couldn't get microphone stream");
+					voiceLog.warn("couldn't get microphone stream");
 				}
 			} else {
 				if (state.rtc) {
@@ -214,11 +215,11 @@ export const VoiceProvider = (props: ParentProps) => {
 					}
 					const tr = micTn.sender.track;
 					if (tr) {
-						console.log("[voice] toggle microphone track enabled");
+						voiceLog.debug("toggle microphone track enabled");
 						tr.enabled = state.muted;
 						update("muted", !state.muted);
 					} else if (streamMic && state.muted) {
-						console.log("[voice] restore microphone track");
+						voiceLog.debug("restore microphone track");
 						const track = streamMic.getAudioTracks()[0];
 						if (!track) {
 							throw new Error("microphone doesn't have any audio tracks?");
@@ -228,11 +229,11 @@ export const VoiceProvider = (props: ParentProps) => {
 						track.enabled = true;
 						update("muted", false);
 					} else {
-						console.log("[voice] toggle microphone muted");
+						voiceLog.debug("toggle microphone muted");
 						update("muted", !state.muted);
 					}
 				} else {
-					console.log("[voice] toggle microphone muted, not connected to rtc");
+					voiceLog.debug("toggle microphone muted, not connected to rtc");
 					update("muted", !state.muted);
 				}
 			}
@@ -245,14 +246,14 @@ export const VoiceProvider = (props: ParentProps) => {
 				})
 					.catch(handleGetMediaError);
 				if (stream) {
-					console.log("[voice] got camera stream", stream);
+					voiceLog.debug("got camera stream", stream);
 					streamCam = stream;
 					update("cameraHidden", false);
 					if (state.rtc) {
 						if (!camTn) {
 							camTn = state.rtc.createTransceiver("user", "video");
 						}
-						console.log("[voice] got camera stream", stream);
+						voiceLog.debug("got camera stream", stream);
 						const track = streamCam.getVideoTracks()[0];
 						if (track) {
 							await camTn.sender.replaceTrack(track);
@@ -260,7 +261,7 @@ export const VoiceProvider = (props: ParentProps) => {
 						}
 					}
 				} else {
-					console.warn("[voice] couldn't get camera stream");
+					voiceLog.warn("couldn't get camera stream");
 				}
 			} else {
 				if (state.rtc) {
@@ -269,11 +270,11 @@ export const VoiceProvider = (props: ParentProps) => {
 					}
 					const tr = camTn.sender.track;
 					if (tr) {
-						console.log("[voice] toggle camera track enabled");
+						voiceLog.debug("toggle camera track enabled");
 						tr.enabled = state.cameraHidden;
 						update("cameraHidden", !state.cameraHidden);
 					} else if (streamCam && state.cameraHidden) {
-						console.log("[voice] restore camera track");
+						voiceLog.debug("restore camera track");
 						const track = streamCam.getVideoTracks()[0];
 						if (!track) {
 							throw new Error("camera doesn't have any video tracks?");
@@ -283,11 +284,11 @@ export const VoiceProvider = (props: ParentProps) => {
 						track.enabled = true;
 						update("cameraHidden", false);
 					} else {
-						console.log("[voice] toggle camera hidden");
+						voiceLog.debug("toggle camera hidden");
 						update("cameraHidden", !state.cameraHidden);
 					}
 				} else {
-					console.log("[voice] toggle camera hidden, not connected to rtc");
+					voiceLog.debug("toggle camera hidden, not connected to rtc");
 					update("cameraHidden", !state.cameraHidden);
 				}
 			}
@@ -384,7 +385,8 @@ function handleGetMediaError(e: Error) {
 // deep neural network: https://www.microsoft.com/en-us/research/wp-content/uploads/2017/04/Tashev-Mirsamadi_DNN-based-Causal-VAD.pdf
 // another implementation: https://github.com/snakers4/silero-vad
 function createVoiceActivityDetection() {
-	console.log("[vad] init");
+	const vadLog = logger.for("vad");
+	vadLog.debug("init");
 
 	const [hasVoiceActivity, setHasVoiceActivity] = createSignal(false);
 	const ctx = new AudioContext();
@@ -404,14 +406,14 @@ function createVoiceActivityDetection() {
 				source.connect(node);
 			}
 		} catch (e) {
-			console.error("[vad] failed to initialize audio worklet", e);
+			vadLog.error("failed to initialize audio worklet", e);
 		}
 	};
 
 	initWorklet();
 
 	onCleanup(() => {
-		console.log("[vad] cleanup");
+		vadLog.debug("cleanup");
 		node?.disconnect();
 		source?.disconnect();
 		ctx.close();
@@ -428,7 +430,7 @@ function createVoiceActivityDetection() {
 			if (ctx.state === "suspended") {
 				ctx.resume();
 			}
-			console.log("[vad] new stream connected");
+			vadLog.debug("new stream connected");
 		},
 	};
 }

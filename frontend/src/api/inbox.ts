@@ -14,6 +14,9 @@ import {
 } from "solid-js";
 import type { Api } from "../api.tsx";
 import type { Message } from "sdk";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/inbox");
 
 export interface NotificationPagination extends Pagination<Notification> {
 	channels: Channel[];
@@ -49,7 +52,7 @@ export class Inbox {
 			});
 
 			if (error) {
-				console.error(error);
+				log.error(error);
 				throw error;
 			}
 

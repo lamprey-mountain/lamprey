@@ -1,5 +1,8 @@
 import { createSignal } from "solid-js";
 import type { Config } from "../config.tsx";
+import { logger } from "../logger.ts";
+
+const log = logger.for("config");
 
 function loadSavedConfig(): Config | null {
 	const c = localStorage.getItem("config");
@@ -10,14 +13,14 @@ function loadSavedConfig(): Config | null {
 async function fetchConfig(): Promise<Config> {
 	const env = (globalThis as any).ENV;
 	if (env) {
-		console.log("[config] using server defined env", env);
+		log.info("using server defined env", env);
 		return env;
 	} else {
 		const c: Config = await fetch("/config.json").then(
 			(res) => res.json(),
 			() => null,
 		);
-		console.log("[config] fetched new config", c);
+		log.info("using server defined env", c);
 		return c;
 	}
 }
@@ -27,7 +30,7 @@ export function useAppConfig() {
 	const [config, setConfig] = createSignal<Config | null>(saved);
 	const [resolved, setResolved] = createSignal(false);
 
-	console.log("[config] temporarily reusing existing config", saved);
+	log.info("temporarily reusing existing config", saved);
 
 	(async () => {
 		if (localStorage.dontFetchConfig) return;
@@ -47,7 +50,7 @@ export function useAppConfig() {
 		c.cdn_url ??= localStorage.getItem("cdn_url") ??
 			"https://chat-cdn.celery.eu.org";
 
-		console.log("[config] resolved new config", c);
+		log.info("resolved new config", c);
 		localStorage.setItem("config", JSON.stringify(c));
 		setConfig(c);
 		setResolved(true);

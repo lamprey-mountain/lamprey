@@ -1,5 +1,8 @@
 import type { PushCreate, PushInfo } from "sdk";
 import type { Api } from "../api.tsx";
+import { logger } from "../logger.ts";
+
+const log = logger.for("api/push");
 
 export class Push {
 	public api: Api = null as unknown as Api;
@@ -12,7 +15,7 @@ export class Push {
 			},
 		);
 		if (error) {
-			console.error(error);
+			log.error(error);
 			throw new Error(error);
 		}
 		return data as PushInfo;
@@ -23,7 +26,7 @@ export class Push {
 			"/api/v1/push",
 		);
 		if (error) {
-			console.error(error);
+			log.error(error);
 			throw new Error(error);
 		}
 	}
@@ -33,7 +36,7 @@ export class Push {
 			"/api/v1/push",
 		);
 		if (error) {
-			console.error(error);
+			log.error(error);
 			throw new Error(error);
 		}
 		return data as PushInfo;

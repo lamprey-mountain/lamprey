@@ -13,6 +13,9 @@ export type ClientOptions = {
 	token?: string;
 	onReady: (event: MessageReady) => void;
 	onSync: (event: MessageSync, raw: MessageEnvelope) => void;
+	onError?: (error: Error) => void;
+	onSend?: (data: any) => void;
+	onMessage?: (raw: MessageEnvelope) => void;
 	format?: "json" | "msgpack";
 };
 
@@ -99,8 +102,10 @@ export function createClient(opts: ClientOptions): Client {
 				// Text message (JSON)
 				msg = JSON.parse(e.data);
 			}
+			opts.onMessage?.(msg);
 			if (msg.op === "Ping") {
 				const pong = { type: "Pong" };
+				opts.onSend?.(pong);
 				ws.send(
 					useMsgpack ? packData(pong) : JSON.stringify(pong),
 				);
@@ -108,7 +113,7 @@ export function createClient(opts: ClientOptions): Client {
 				if (resume) resume.seq = msg.seq;
 				opts.onSync(msg.data, msg);
 			} else if (msg.op === "Error") {
-				console.error(msg.error);
+				opts.onError?.(new Error(msg.error));
 			} else if (msg.op === "Ready") {
 				opts.onReady(msg);
 				resume = { conn: msg.conn, seq: msg.seq };
@@ -126,13 +131,14 @@ export function createClient(opts: ClientOptions): Client {
 		ws.addEventListener("open", (_e) => {
 			setState("connected");
 			const hello: any = { type: "Hello", token: opts.token, ...resume };
+			opts.onSend?.(hello);
 			ws.send(useMsgpack ? packData(hello) : JSON.stringify(hello));
 		});
 
 		ws.addEventListener("error", (e) => {
 			if (state.get() === "stopped") return;
 			setState("connecting");
-			console.error(e);
+			opts.onError?.(e as unknown as Error);
 			ws.close();
 		});
 
@@ -175,6 +181,9 @@ export function createClient(opts: ClientOptions): Client {
 			} else {
 				msg = JSON.stringify(data);
 			}
+			// maybe i should only send it when its sent to the websocket
+			// right now it might *say* its sent, but actually be in the queue
+			opts.onSend?.(data);
 			if (state.get() === "ready") {
 				ws.send(msg);
 			} else {
