@@ -1,3 +1,6 @@
+// TODO: make most of these configurable per server
+// TODO: move the rest of these to crate-common, as they are protocol-level constraints
+
 /// the maximum number of roles per room. clients should be able to fetch everything in one request.
 pub const MAX_ROLE_COUNT: u32 = 1024;
 
@@ -29,6 +32,9 @@ pub const MAX_CHANNEL_WEBHOOKS: u32 = 16;
 /// the maximum number of rooms a user can be in.
 pub const MAX_ROOM_JOINS: u32 = 128;
 
+/// the maximum number of rooms to keep loaded in memory.
+pub const MAX_LOADED_ROOMS: u64 = 4096;
+
 /// how many days to retain audit log entries
 pub const RETENTION_AUDIT_LOG: u32 = 90;
 
@@ -45,6 +51,7 @@ pub const IDLE_TIMEOUT_ROOM: u64 = 900;
 pub const IDLE_TIMEOUT_MEMBER_LIST: u64 = 900;
 
 /// the maximum number of messages to process in a single actor tick before yielding.
+// NOTE: should i reduce this? is there any penalty to yielding more often?
 pub const ROOM_ACTOR_MESSAGE_BUDGET: usize = 50;
 
 /// the maximum number of public connections a user can have
@@ -53,7 +60,7 @@ pub const ROOM_ACTOR_MESSAGE_BUDGET: usize = 50;
 pub const MAX_PUBLIC_CONNECTIONS: usize = 32;
 
 /// the maximum number of active branches a document can have
-// TODO: remove?
+// TODO: make unlimited, then remove?
 pub const MAX_DOCUMENT_BRANCHES: usize = 64;
 
 /// the maximum number of loaded branches/editing contexts a document can have

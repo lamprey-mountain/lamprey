@@ -9,7 +9,7 @@ use common::v1::types::{
 use tracing::{trace, warn};
 
 use crate::{
-    services::cache::room::{CachedChannel, RoomSnapshot},
+    services::rooms::{CachedChannel, RoomSnapshot},
     types::{PermissionBits, Permissions},
 };
 

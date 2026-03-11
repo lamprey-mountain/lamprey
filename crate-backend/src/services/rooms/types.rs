@@ -20,6 +20,7 @@ use crate::Result;
 pub enum RoomSnapshot {
     Loading,
     Ready(Arc<RoomData>),
+    WithoutMembers(Arc<RoomData>),
     NotFound,
     Unavailable(RoomUnavailable),
 }
@@ -130,7 +131,7 @@ pub struct CachedPermissionOverwrite {
 impl RoomSnapshot {
     pub fn get_data(&self) -> Option<&Arc<RoomData>> {
         match self {
-            Self::Ready(data) => Some(data),
+            Self::Ready(data) | Self::WithoutMembers(data) => Some(data),
             _ => None,
         }
     }

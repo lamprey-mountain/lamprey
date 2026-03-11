@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::services::cache::permissions::PermissionsCalculator;
-use crate::services::cache::room::{RoomData, RoomSnapshot};
+use crate::services::rooms::{RoomData, RoomSnapshot};
 use crate::{
     services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey},
     Result, ServerStateInner,
@@ -29,6 +29,9 @@ pub struct MemberList {
 
     /// group summaries (id and count)
     pub(super) groups: Vec<MemberListGroup>,
+
+    /// count of members in each group
+    pub(super) group_counts: BTreeMap<MemberGroupInfo, u32>,
 
     pub(super) events_tx: broadcast::Sender<MemberListEvent>,
 
@@ -61,6 +64,7 @@ impl MemberList {
             members: BTreeMap::new(),
             user_to_key: HashMap::new(),
             groups: Vec::new(),
+            group_counts: BTreeMap::new(),
             events_tx,
             last_active: Instant::now(),
         }
@@ -68,6 +72,32 @@ impl MemberList {
 
     pub fn is_idle(&self) -> bool {
         self.last_active.elapsed().as_secs() >= IDLE_TIMEOUT_MEMBER_LIST
+    }
+
+    fn add_to_group(&mut self, info: MemberGroupInfo) {
+        *self.group_counts.entry(info).or_insert(0) += 1;
+        self.rebuild_groups_from_counts();
+    }
+
+    fn remove_from_group(&mut self, info: MemberGroupInfo) {
+        if let std::collections::btree_map::Entry::Occupied(mut e) = self.group_counts.entry(info) {
+            *e.get_mut() -= 1;
+            if *e.get() == 0 {
+                e.remove();
+            }
+        }
+        self.rebuild_groups_from_counts();
+    }
+
+    fn rebuild_groups_from_counts(&mut self) {
+        self.groups = self
+            .group_counts
+            .iter()
+            .map(|(&info, &count)| MemberListGroup {
+                id: info.into(),
+                count: count as u64,
+            })
+            .collect();
     }
 
     pub async fn initialize(&mut self, snapshot: Arc<RoomSnapshot>) -> Result<()> {
@@ -113,6 +143,7 @@ impl MemberList {
 
             self.members.clear();
             self.user_to_key.clear();
+            self.group_counts.clear();
 
             for user_id in user_ids {
                 if let Some(_user) = users_map.get(&user_id) {
@@ -135,14 +166,15 @@ impl MemberList {
                                 data,
                             );
                             self.members.insert(key.clone(), user_id);
-                            self.user_to_key.insert(user_id, key);
+                            self.user_to_key.insert(user_id, key.clone());
+                            *self.group_counts.entry(key.group).or_insert(0) += 1;
                         }
                     }
                 }
             }
         }
 
-        self.recalculate_groups();
+        self.rebuild_groups_from_counts();
         Ok(())
     }
 
@@ -256,41 +288,6 @@ impl MemberList {
             name: Arc::from(name),
             user_id: *user_id,
         }
-    }
-
-    pub fn recalculate_groups(&mut self) {
-        let mut new_groups = Vec::new();
-        if self.members.is_empty() {
-            self.groups = new_groups;
-            return;
-        }
-
-        let mut current_group: Option<MemberGroupInfo> = None;
-        let mut count = 0;
-
-        for key in self.members.keys() {
-            if Some(key.group) != current_group {
-                if let Some(info) = current_group {
-                    new_groups.push(MemberListGroup {
-                        id: info.into(),
-                        count,
-                    });
-                }
-                current_group = Some(key.group);
-                count = 1;
-            } else {
-                count += 1;
-            }
-        }
-
-        if let Some(info) = current_group {
-            new_groups.push(MemberListGroup {
-                id: info.into(),
-                count,
-            });
-        }
-
-        self.groups = new_groups;
     }
 
     pub async fn handle_command(&mut self, cmd: MemberListCommand, snapshot: &Arc<RoomSnapshot>) {
@@ -486,6 +483,7 @@ impl MemberList {
                 if let Some(ok) = old_key {
                     let old_pos = self.members.range(..&ok).count() as u64;
                     self.members.remove(&ok);
+                    self.remove_from_group(ok.group);
                     ops.push(MemberListOp::Delete {
                         position: old_pos,
                         count: 1,
@@ -494,7 +492,7 @@ impl MemberList {
 
                 self.members.insert(new_key.clone(), user_id);
                 self.user_to_key.insert(user_id, new_key.clone());
-                self.recalculate_groups();
+                self.add_to_group(new_key.group);
 
                 let new_pos = self.members.range(..&new_key).count() as u64;
                 let mut thread_member = None;
@@ -526,7 +524,7 @@ impl MemberList {
         if let Some(key) = self.user_to_key.remove(&user_id) {
             let pos = self.members.range(..&key).count() as u64;
             self.members.remove(&key);
-            self.recalculate_groups();
+            self.remove_from_group(key.group);
             self.broadcast_ops(vec![MemberListOp::Delete {
                 position: pos,
                 count: 1,
@@ -568,12 +566,18 @@ impl MemberList {
             }
 
             let slice = &sorted_ids[start..end];
+
+            // Batch fetch all users in this slice
+            let users_vec = srv.users.get_many(slice).await.unwrap_or_default();
+            let mut users_map: HashMap<UserId, User> =
+                users_vec.into_iter().map(|u| (u.id, u)).collect();
+
             let mut room_members = Vec::new();
             let mut thread_members = Vec::new();
             let mut users = Vec::new();
 
             for user_id in slice {
-                if let Ok(mut u) = srv.cache.user_get(*user_id).await {
+                if let Some(mut u) = users_map.remove(user_id) {
                     u.presence = srv.presence.get(*user_id);
                     users.push(u);
                 }

@@ -4,15 +4,15 @@ use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 
 use common::v1::types::error::ErrorCode;
-use common::v1::types::{MessageSync, RoomId, UserId};
+use common::v1::types::{MessageSync, RoomId, User, UserId};
 use tokio::sync::{mpsc, watch};
 use tracing::{error, info, trace};
 
-use crate::consts::{IDLE_TIMEOUT_ROOM, ROOM_ACTOR_MESSAGE_BUDGET};
-use crate::services::cache::room::{
+use super::{
     CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomData,
     RoomHandle, RoomSnapshot,
 };
+use crate::consts::{IDLE_TIMEOUT_ROOM, ROOM_ACTOR_MESSAGE_BUDGET};
 use crate::services::member_lists::actor::MemberList;
 use crate::services::member_lists::util::MemberListKey;
 use crate::types::PermissionBits;
@@ -85,9 +85,9 @@ impl RoomActor {
 
         // Cleanup: unregister all members from the cache
         if let RoomSnapshot::Ready(data) = self.snapshot.as_ref() {
-            let cache = self.state.services().cache.clone();
+            let rooms = self.state.services().rooms.clone();
             for user_id in data.members.keys() {
-                cache.member_unregister(*user_id, self.room_id);
+                rooms.member_unregister(*user_id, self.room_id);
             }
         }
 
@@ -195,23 +195,29 @@ impl RoomActor {
 
         let roles_data = roles_data.items;
 
+        let user_ids: Vec<_> = room_members.iter().map(|m| m.user_id).collect();
+        let users = srv.users.get_many(&user_ids).await?;
+        let users_map: HashMap<UserId, Arc<User>> =
+            users.into_iter().map(|u| (u.id, Arc::new(u))).collect();
+
         let mut members = ImMap::new();
         let mut online_count = 0;
-        let cache = srv.cache.clone();
+        let rooms_srv = srv.rooms.clone();
         for member in room_members {
             let user_id = member.user_id;
-            let user = srv.users.get(user_id, None).await?;
-            if user.presence.status.is_online() {
-                online_count += 1;
+            if let Some(user) = users_map.get(&user_id) {
+                if user.presence.status.is_online() {
+                    online_count += 1;
+                }
+                members.insert(
+                    user_id,
+                    CachedRoomMember {
+                        member,
+                        user: user.clone(),
+                    },
+                );
+                rooms_srv.member_register(user_id, self.room_id);
             }
-            members.insert(
-                user_id,
-                CachedRoomMember {
-                    member,
-                    user: Arc::new(user),
-                },
-            );
-            cache.member_register(user_id, self.room_id);
         }
 
         let mut roles = ImMap::new();
@@ -247,7 +253,7 @@ impl RoomActor {
             }
             channels.insert(
                 channel.id,
-                crate::services::cache::room::CachedChannel {
+                super::CachedChannel {
                     inner: channel,
                     overwrites,
                 },
@@ -326,7 +332,7 @@ impl RoomActor {
                 } else {
                     snapshot_data.channels.insert(
                         channel.id,
-                        crate::services::cache::room::CachedChannel {
+                        super::CachedChannel {
                             inner: *channel.clone(),
                             overwrites,
                         },
@@ -369,7 +375,7 @@ impl RoomActor {
                 } else {
                     snapshot_data.channels.insert(
                         channel.id,
-                        crate::services::cache::room::CachedChannel {
+                        super::CachedChannel {
                             inner: *channel.clone(),
                             overwrites,
                         },
@@ -412,15 +418,14 @@ impl RoomActor {
                 }
                 snapshot_data.roles.remove(role_id);
 
-                // For bulk updates, it's faster to use std::collections::HashMap and convert back
-                let mut members: HashMap<UserId, CachedRoomMember> =
-                    snapshot_data.members.into_iter().collect();
-
-                for member in members.values_mut() {
-                    member.member.roles.retain(|r| r != role_id);
+                // Efficiently update the immutable map using structural sharing
+                for (user_id, member) in snapshot_data.members.clone().into_iter() {
+                    if member.member.roles.contains(role_id) {
+                        let mut updated_member = member.clone();
+                        updated_member.member.roles.retain(|r| r != role_id);
+                        snapshot_data.members.insert(user_id, updated_member);
+                    }
                 }
-
-                snapshot_data.members = members.into_iter().collect();
             }
             MessageSync::RoleReorder { roles, room_id } => {
                 if *room_id != self.room_id {
@@ -452,7 +457,7 @@ impl RoomActor {
                 );
                 self.state
                     .services()
-                    .cache
+                    .rooms
                     .member_register(member.user_id, self.room_id);
             }
             MessageSync::RoomMemberUpdate { member, user } => {
@@ -480,7 +485,7 @@ impl RoomActor {
                 );
                 self.state
                     .services()
-                    .cache
+                    .rooms
                     .member_register(member.user_id, self.room_id);
             }
             MessageSync::RoomMemberDelete { user_id, room_id } => {
@@ -497,7 +502,7 @@ impl RoomActor {
                 }
                 self.state
                     .services()
-                    .cache
+                    .rooms
                     .member_unregister(*user_id, self.room_id);
             }
             MessageSync::PresenceUpdate { user_id, presence } => {

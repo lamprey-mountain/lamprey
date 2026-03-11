@@ -5,7 +5,7 @@ use std::sync::Arc;
 use common::v1::types::MessageSync;
 use tokio::sync::{broadcast, mpsc};
 
-use crate::services::cache::room::RoomCommand;
+use crate::services::rooms::{RoomActor, RoomCommand, RoomHandle};
 use crate::{
     services::member_lists::{
         actor::{MemberListCommand, MemberListEvent},
@@ -67,12 +67,10 @@ impl ServiceMemberLists {
         let room_handle = self
             .s
             .services()
-            .cache
             .rooms
+            .actors
             .try_get_with(room_id, async {
-                Ok::<crate::services::cache::room::RoomHandle, crate::Error>(
-                    crate::services::cache::room_actor::RoomActor::spawn(room_id, self.s.clone()),
-                )
+                Ok::<RoomHandle, crate::Error>(RoomActor::spawn(room_id, self.s.clone()))
             })
             .await
             .map_err(|e| e.fake_clone())?;

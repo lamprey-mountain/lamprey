@@ -9,9 +9,10 @@ use std::{
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
+use tracing::error;
 use url::Url;
 
-use crate::Result;
+use crate::{Error, Result};
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -276,7 +277,8 @@ pub struct ConfigInternal {
     pub admin_token: Option<String>,
 }
 
-// TODO: use this
+// TODO: use this for loading secrets
+// do i use this type in config structs, or just use this to decode?
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Secret {
@@ -300,7 +302,8 @@ impl Secret {
                 Ok(s.trim_end().to_owned())
             }
             Secret::Env { env_var } => std::env::var(env_var).map_err(|_| {
-                crate::Error::BadRequest(format!("environment variable {env_var} not set"))
+                error!("environment variable {env_var} not set");
+                Error::Internal(format!("environment variable {env_var} not set"))
             }),
         }
     }

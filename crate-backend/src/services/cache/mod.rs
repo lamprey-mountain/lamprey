@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::{error::Result, types::PaginationQuery, Error, ServerStateInner};
 use common::v1::types::{
     emoji::EmojiCustom,
     ids::EmojiId,
@@ -12,23 +13,18 @@ use common::v1::types::{
 use futures::{future::BoxFuture, StreamExt};
 use moka::future::Cache;
 
-use crate::{
-    error::Result, services::cache::room_actor::RoomActor, types::PaginationQuery, Error,
-    ServerStateInner,
-};
-
 pub mod permissions;
-pub mod room;
-pub mod room_actor;
 pub mod user;
 
-use crate::services::cache::room::{RoomCommand, RoomHandle, RoomSnapshot, RoomUnavailableReason};
+pub use crate::services::rooms::{
+    CachedChannel, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomHandle,
+    RoomSnapshot, RoomUnavailableReason,
+};
+
 use common::v1::types::error::ApiError;
 use common::v1::types::error::ErrorCode;
 pub use permissions::PermissionsCalculator;
 pub use user::CachedUser;
-
-use dashmap::{DashMap, DashSet};
 
 /// service for caching all in-memory data used by the server
 #[derive(Clone)]
@@ -36,15 +32,9 @@ pub struct ServiceCache {
     state: Arc<ServerStateInner>,
 
     // TODO: make not pub?
-    pub(crate) rooms: Cache<RoomId, RoomHandle>,
-
-    // TODO: make not pub?
     pub(crate) users: Cache<UserId, User>,
 
     pub(crate) emojis: Cache<EmojiId, EmojiCustom>,
-
-    /// Keep an in-memory map of UserId -> Set of RoomIds for fast fan-out of presence/user updates
-    pub(crate) user_rooms: Arc<DashMap<UserId, DashSet<RoomId>>>,
 
     // preferences caches
     preferences_global: Cache<UserId, PreferencesGlobal>,
@@ -57,20 +47,11 @@ impl ServiceCache {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            rooms: Cache::builder()
-                .max_capacity(100)
-                .support_invalidation_closures()
-                .eviction_listener(|room_id, handle: RoomHandle, cause| {
-                    tracing::debug!(?room_id, ?cause, "Evicting room actor");
-                    let _ = handle.tx.try_send(RoomCommand::Close);
-                })
-                .build(),
             users: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
             emojis: Cache::builder().max_capacity(100_000).build(),
-            user_rooms: Arc::new(DashMap::new()),
             preferences_global: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
@@ -92,21 +73,18 @@ impl ServiceCache {
 
     /// register a user as being in a room in the cache
     pub fn member_register(&self, user_id: UserId, room_id: RoomId) {
-        self.user_rooms
-            .entry(user_id)
-            .or_insert_with(DashSet::new)
-            .insert(room_id);
+        self.state
+            .services()
+            .rooms
+            .member_register(user_id, room_id);
     }
 
     /// unregister a user from a room in the cache
     pub fn member_unregister(&self, user_id: UserId, room_id: RoomId) {
-        if let Some(rooms) = self.user_rooms.get(&user_id) {
-            rooms.remove(&room_id);
-            if rooms.is_empty() {
-                drop(rooms);
-                self.user_rooms.remove(&user_id);
-            }
-        }
+        self.state
+            .services()
+            .rooms
+            .member_unregister(user_id, room_id);
     }
 
     pub fn start_background_tasks(&self) {
@@ -131,28 +109,30 @@ impl ServiceCache {
     /// clean up orphaned user_rooms entries
     async fn janitor_cleanup(&self) {
         let mut to_remove = Vec::new();
+        let rooms_srv = self.state.services().rooms.clone();
+        let actors = rooms_srv.actors.clone();
 
-        for entry in self.user_rooms.iter() {
-            let (user_id, rooms) = entry.pair();
+        for entry in rooms_srv.user_rooms.iter() {
+            let (user_id, user_rooms) = entry.pair();
             let mut orphaned = Vec::new();
 
-            for room_id in rooms.iter() {
-                if !self.rooms.contains_key(&*room_id) {
+            for room_id in user_rooms.iter() {
+                if !actors.contains_key(&*room_id) {
                     orphaned.push(*room_id);
                 }
             }
 
             for room_id in orphaned {
-                rooms.remove(&room_id);
+                user_rooms.remove(&room_id);
             }
 
-            if rooms.is_empty() {
+            if user_rooms.is_empty() {
                 to_remove.push(*user_id);
             }
         }
 
         for user_id in to_remove {
-            self.user_rooms.remove(&user_id);
+            rooms_srv.user_rooms.remove(&user_id);
         }
     }
 
@@ -164,158 +144,81 @@ impl ServiceCache {
     }
 
     pub fn load_room(&self, room_id: RoomId) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
-        Box::pin(async move {
-            let handle = self
-                .rooms
-                .try_get_with(room_id, async {
-                    Ok::<RoomHandle, Error>(RoomActor::spawn(room_id, self.state.clone()))
-                })
-                .await
-                .map_err(|e| e.fake_clone())?;
-
-            let mut rx = handle.snapshot_rx.clone();
-            let snapshot = rx
-                .wait_for(|s| !s.is_loading())
-                .await
-                .map_err(|_| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
-
-            let snapshot = snapshot.clone();
-
-            if snapshot.is_not_found() {
-                return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
-            }
-
-            if let RoomSnapshot::Unavailable(_) = snapshot.as_ref() {
-                // If it's backlogged, we should probably evict it so it can retry later
-                // but for now we just return error.
-                return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
-            }
-
-            Ok(snapshot)
-        })
+        let rooms = self.state.services().rooms.clone();
+        Box::pin(async move { rooms.load_room(room_id).await })
     }
 
     /// mark a room as unavailable
-    pub async fn mark_unavailable(&self, room_id: RoomId, _reason: RoomUnavailableReason) {
-        if let Some(_handle) = self.rooms.get(&room_id).await {
-            // We can't easily update the watch channel from outside the actor
-            // unless we have the Sender.
-            // For now, we'll just unload it, which is effectively a "retry soon".
-            self.unload_room(room_id).await;
-        }
+    pub async fn mark_unavailable(&self, room_id: RoomId, reason: RoomUnavailableReason) {
+        self.state
+            .services()
+            .rooms
+            .mark_unavailable(room_id, reason)
+            .await;
     }
 
     /// unload a single room
     pub async fn unload_room(&self, room_id: RoomId) {
-        self.rooms.invalidate(&room_id).await;
+        self.state.services().rooms.unload_cache(room_id).await;
     }
 
     /// update a room's metadata in the cache
     pub async fn update_room(&self, room: Room) {
-        if let Some(handle) = self.rooms.get(&room.id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoomUpdate {
-                    room: room.clone(),
-                }))
-            {
-                self.mark_unavailable(room.id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        self.state.services().rooms.update_cache(room).await;
     }
 
     /// reload a member from the database and update the cache
     pub async fn reload_member(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
-        if let Some(handle) = self.rooms.get(&room_id).await {
-            let member = self.state.data().room_member_get(room_id, user_id).await?;
-            let user = self.state.services().users.get(user_id, None).await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoomMemberUpdate {
-                    member,
-                    user,
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
-        Ok(())
+        self.state
+            .services()
+            .rooms
+            .reload_member(room_id, user_id)
+            .await
     }
 
     /// remove a member from the cache
     pub async fn remove_member(&self, room_id: RoomId, user_id: UserId) {
-        if let Some(handle) = self.rooms.get(&room_id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoomMemberDelete {
-                    room_id,
-                    user_id,
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        self.state
+            .services()
+            .rooms
+            .remove_member(room_id, user_id)
+            .await
     }
 
     /// reload a role from the database and update the cache
     pub async fn reload_role(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
-        if let Some(handle) = self.rooms.get(&room_id).await {
-            let role = self.state.data().role_select(room_id, role_id).await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoleUpdate { role }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
-        Ok(())
+        self.state
+            .services()
+            .rooms
+            .reload_role(room_id, role_id)
+            .await
     }
 
     /// remove a role from the cache
     pub async fn remove_role(&self, room_id: RoomId, role_id: RoleId) {
-        if let Some(handle) = self.rooms.get(&room_id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoleDelete {
-                    room_id,
-                    role_id,
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        self.state
+            .services()
+            .rooms
+            .remove_role(room_id, role_id)
+            .await
     }
 
     /// reload a channel from the database and update the cache
     pub async fn reload_channel(&self, room_id: RoomId, channel_id: ChannelId) -> Result<()> {
-        if let Some(handle) = self.rooms.get(&room_id).await {
-            let channel = self.state.data().channel_get(channel_id).await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::ChannelUpdate {
-                    channel: Box::new(channel),
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
-        Ok(())
+        self.state
+            .services()
+            .rooms
+            .reload_channel(room_id, channel_id)
+            .await
     }
 
     /// remove a channel from the cache
-    pub async fn remove_channel(&self, room_id: RoomId, _channel_id: ChannelId) {
-        if let Some(_handle) = self.rooms.get(&room_id).await {
-            // We don't have a direct "Delete" event that only takes ID for channel,
-            // but we can send a dummy ChannelUpdate with is_removed = true if needed,
-            // or just use unload_room if it's simpler.
-            self.unload_room(room_id).await;
-        }
+    pub async fn remove_channel(&self, room_id: RoomId, channel_id: ChannelId) {
+        self.state
+            .services()
+            .rooms
+            .remove_channel(room_id, channel_id)
+            .await
     }
 
     /// reload a thread member from the database and update the cache
@@ -325,26 +228,11 @@ impl ServiceCache {
         thread_id: ChannelId,
         user_id: UserId,
     ) -> Result<()> {
-        if let Some(handle) = self.rooms.get(&room_id).await {
-            let member = self
-                .state
-                .data()
-                .thread_member_get(thread_id, user_id)
-                .await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::ThreadMemberUpsert {
-                    room_id: Some(room_id),
-                    thread_id,
-                    added: vec![member],
-                    removed: vec![],
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
-        Ok(())
+        self.state
+            .services()
+            .rooms
+            .reload_thread_member(room_id, thread_id, user_id)
+            .await
     }
 
     /// remove a thread member from the cache
@@ -354,25 +242,16 @@ impl ServiceCache {
         thread_id: ChannelId,
         user_id: UserId,
     ) {
-        if let Some(handle) = self.rooms.get(&room_id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::ThreadMemberUpsert {
-                    room_id: Some(room_id),
-                    thread_id,
-                    added: vec![],
-                    removed: vec![user_id],
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        self.state
+            .services()
+            .rooms
+            .remove_thread_member(room_id, thread_id, user_id)
+            .await
     }
 
     /// unload all rooms
     pub fn unload_all(&self) {
-        self.rooms.invalidate_all();
+        self.state.services().rooms.unload_all_cache();
     }
 
     /// get a user from the cache, loading from the database if not present
@@ -646,9 +525,11 @@ impl ServiceCache {
         }
 
         if let Some(room_id) = event.room_id() {
-            if let Some(handle) = self.rooms.get(&room_id).await {
+            let rooms = self.state.services().rooms.clone();
+            if let Some(handle) = rooms.actors.get(&room_id).await {
                 if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
-                    self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
+                    rooms
+                        .mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
                         .await;
                 }
                 return;
@@ -701,14 +582,19 @@ impl ServiceCache {
                 }
 
                 // Find all rooms this user is in and notify their actors
-                if let Some(rooms) = self.user_rooms.get(user_id) {
-                    for room_id in rooms.iter() {
-                        let room_id = *room_id;
-                        if let Some(handle) = self.rooms.get(&room_id).await {
-                            if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
-                                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                                    .await;
-                            }
+                let rooms_srv = self.state.services().rooms.clone();
+                let rooms_to_notify = if let Some(rooms_set) = rooms_srv.user_rooms.get(user_id) {
+                    rooms_set.iter().map(|r| *r).collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                };
+
+                for room_id in rooms_to_notify {
+                    if let Some(handle) = rooms_srv.actors.get(&room_id).await {
+                        if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
+                            rooms_srv
+                                .mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
+                                .await;
                         }
                     }
                 }
@@ -717,14 +603,19 @@ impl ServiceCache {
                 self.users.insert(user.id, user.clone()).await;
 
                 // Find all rooms this user is in and notify their actors
-                if let Some(rooms) = self.user_rooms.get(&user.id) {
-                    for room_id in rooms.iter() {
-                        let room_id = *room_id;
-                        if let Some(handle) = self.rooms.get(&room_id).await {
-                            if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
-                                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                                    .await;
-                            }
+                let rooms_srv = self.state.services().rooms.clone();
+                let rooms_to_notify = if let Some(rooms_set) = rooms_srv.user_rooms.get(&user.id) {
+                    rooms_set.iter().map(|r| *r).collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                };
+
+                for room_id in rooms_to_notify {
+                    if let Some(handle) = rooms_srv.actors.get(&room_id).await {
+                        if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
+                            rooms_srv
+                                .mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
+                                .await;
                         }
                     }
                 }

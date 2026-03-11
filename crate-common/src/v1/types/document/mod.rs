@@ -317,6 +317,7 @@ pub struct DocumentTag {
     /// may be None if the creator doesnt exist
     pub creator_id: Option<UserId>,
 
+    // use DocumentVersionId here
     pub branch_id: DocumentBranchId,
     pub revision_seq: u64,
 
