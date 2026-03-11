@@ -804,10 +804,10 @@ impl ServiceMessages {
 
         if let Some(perms) = &perms {
             let mut required_perms = vec![];
-            if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
+            if json.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
                 required_perms.push(Permission::MessageAttachments);
             }
-            if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
+            if json.embeds.as_ref().is_some_and(|a| !a.is_empty()) {
                 required_perms.push(Permission::MessageEmbeds);
             }
             perms.ensure_all(&required_perms)?;
