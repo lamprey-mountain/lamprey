@@ -8,7 +8,7 @@ use common::v1::types::{
     emoji::EmojiCustom,
     ids::EmojiId,
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
-    ChannelId, MessageSync, RoleId, Room, RoomId, RoomMember, User, UserId,
+    ChannelId, MessageSync, Room, RoomId, RoomMember, User, UserId,
 };
 use futures::{future::BoxFuture, StreamExt};
 use moka::future::Cache;
@@ -171,76 +171,12 @@ impl ServiceCache {
             .await
     }
 
-    /// remove a member from the cache
-    pub async fn remove_member(&self, room_id: RoomId, user_id: UserId) {
-        self.state
-            .services()
-            .rooms
-            .remove_member(room_id, user_id)
-            .await
-    }
-
-    /// reload a role from the database and update the cache
-    pub async fn reload_role(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
-        self.state
-            .services()
-            .rooms
-            .reload_role(room_id, role_id)
-            .await
-    }
-
-    /// remove a role from the cache
-    pub async fn remove_role(&self, room_id: RoomId, role_id: RoleId) {
-        self.state
-            .services()
-            .rooms
-            .remove_role(room_id, role_id)
-            .await
-    }
-
     /// reload a channel from the database and update the cache
     pub async fn reload_channel(&self, room_id: RoomId, channel_id: ChannelId) -> Result<()> {
         self.state
             .services()
             .rooms
             .reload_channel(room_id, channel_id)
-            .await
-    }
-
-    /// remove a channel from the cache
-    pub async fn remove_channel(&self, room_id: RoomId, channel_id: ChannelId) {
-        self.state
-            .services()
-            .rooms
-            .remove_channel(room_id, channel_id)
-            .await
-    }
-
-    /// reload a thread member from the database and update the cache
-    pub async fn reload_thread_member(
-        &self,
-        room_id: RoomId,
-        thread_id: ChannelId,
-        user_id: UserId,
-    ) -> Result<()> {
-        self.state
-            .services()
-            .rooms
-            .reload_thread_member(room_id, thread_id, user_id)
-            .await
-    }
-
-    /// remove a thread member from the cache
-    pub async fn remove_thread_member(
-        &self,
-        room_id: RoomId,
-        thread_id: ChannelId,
-        user_id: UserId,
-    ) {
-        self.state
-            .services()
-            .rooms
-            .remove_thread_member(room_id, thread_id, user_id)
             .await
     }
 

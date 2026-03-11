@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use common::v1::types::MessageSync;
 use tokio::sync::{broadcast, mpsc};
 
 use crate::services::rooms::{RoomActor, RoomCommand, RoomHandle};
@@ -51,11 +50,6 @@ impl ServiceMemberLists {
             }
             MemberListKey1::DmChannel(channel_id) => Ok(MemberListKey::Dm(channel_id)),
         }
-    }
-
-    /// Handle a sync event and notify affected member lists
-    pub async fn handle_event(&self, _msg: &MessageSync) {
-        // No longer needed as RoomActor handles its own events
     }
 
     /// Ensure a member list exists and return its handle

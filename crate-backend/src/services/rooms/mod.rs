@@ -173,6 +173,10 @@ impl ServiceRooms {
         }
     }
 
+    pub fn purge_cache(&self) {
+        self.unload_all_cache();
+    }
+
     /// update a room's metadata in the cache
     pub async fn update_cache(&self, room: Room) {
         if let Some(handle) = self.actors.get(&room.id).await {
@@ -394,7 +398,6 @@ impl ServiceRooms {
         let data = snapshot.get_data().unwrap();
         end.online_count = data.room.online_count;
         end.member_count = data.room.member_count;
-
 
         let changes = Changes::new()
             .change("name", &start.name, &end.name)

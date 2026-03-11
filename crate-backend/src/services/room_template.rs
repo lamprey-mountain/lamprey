@@ -353,7 +353,12 @@ impl ServiceRoomTemplates {
     async fn generate_room_snapshot(&self, room_id: RoomId) -> Result<RoomTemplateSnapshot> {
         use common::v1::types::channel::ChannelType;
 
-        let snapshot = self.state.services().cache.load_room(room_id, false).await?;
+        let snapshot = self
+            .state
+            .services()
+            .cache
+            .load_room(room_id, false)
+            .await?;
         let data = snapshot.get_data().unwrap();
 
         let mut template_channels: Vec<RoomTemplateChannel> = Vec::new();
