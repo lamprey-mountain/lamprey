@@ -203,17 +203,38 @@ impl Peer {
             }
 
             let input = if let Some((source, data)) = &input_data {
+                let local_addr = if source.is_ipv4() {
+                    self.socket_v4.local_addr()
+                } else {
+                    self.socket_v6.local_addr()
+                };
+
+                let destination = match local_addr {
+                    Ok(addr) => addr,
+                    Err(e) => {
+                        warn!(
+                            "Failed to get local address for peer {}: {}",
+                            self.user_id, e
+                        );
+                        continue;
+                    }
+                };
+
+                let contents = match data.as_slice().try_into() {
+                    Ok(c) => c,
+                    Err(_) => {
+                        warn!("Failed to convert packet data for peer {}", self.user_id);
+                        continue;
+                    }
+                };
+
                 str0m::Input::Receive(
                     Instant::now(),
                     str0m::net::Receive {
                         proto: str0m::net::Protocol::Udp,
                         source: *source,
-                        destination: if source.is_ipv4() {
-                            self.socket_v4.local_addr().unwrap()
-                        } else {
-                            self.socket_v6.local_addr().unwrap()
-                        },
-                        contents: data.as_ref().try_into().unwrap(),
+                        destination,
+                        contents,
                     },
                 )
             } else {
@@ -455,9 +476,13 @@ impl Peer {
                     self.rtc.add_remote_candidate(candidate);
                 }
             }
-            SignallingMessage::Want { .. } => todo!(),
+            SignallingMessage::Want { .. } => {
+                warn!("SignallingMessage::Want not implemented for peer, ignoring");
+            }
             SignallingMessage::Have { .. } => return Err(Error::HaveServerOnly.into()),
-            SignallingMessage::Reconnect => panic!("handled by sfu"),
+            SignallingMessage::Reconnect => {
+                warn!("SignallingMessage::Reconnect should be handled by SFU, ignoring");
+            }
             _ => {}
         }
         Ok(())

@@ -52,10 +52,11 @@ impl BackendConnection {
             .replace("https", "wss");
 
         let mut request = url_str.into_client_request()?;
-        request.headers_mut().insert(
-            "Authorization",
-            format!("Server {}", self.config.token).try_into().unwrap(),
-        );
+        let auth_header = format!("Server {}", self.config.token)
+            .try_into()
+            .map_err(|e| anyhow::anyhow!("Invalid auth token: {e}"))?;
+
+        request.headers_mut().insert("Authorization", auth_header);
 
         info!("Connecting to backend websocket...");
         let (ws_stream, _) = connect_async(request).await?;

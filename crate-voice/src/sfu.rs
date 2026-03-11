@@ -91,12 +91,22 @@ impl Sfu {
             let event_tx_clone = event_tx.clone();
 
             thread::spawn(move || {
-                let rt = Builder::new_current_thread().enable_all().build().unwrap();
+                let rt = Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("failed to build tokio runtime");
 
                 let local = LocalSet::new();
 
                 local.block_on(&rt, async move {
-                    let mut worker = Worker::new(i, config_clone, w_rx, event_tx_clone).await;
+                    let mut worker = match Worker::new(i, config_clone, w_rx, event_tx_clone).await
+                    {
+                        Ok(w) => w,
+                        Err(e) => {
+                            error!("Failed to create worker {}: {}", i, e);
+                            return;
+                        }
+                    };
                     if let Err(e) = worker.run().await {
                         error!("Worker {} died: {}", i, e);
                     }
@@ -206,40 +216,49 @@ impl Worker {
         config: Config,
         command_rx: UnboundedReceiver<WorkerCommand>,
         event_tx: UnboundedSender<SfuEvent>,
-    ) -> Self {
+    ) -> Result<Self> {
         let (peer_event_tx, peer_event_rx) = mpsc::unbounded_channel();
 
         // Bind shared UDP sockets with SO_REUSEPORT
         let socket_v4 = {
             use socket2::{Domain, Protocol, Socket, Type};
-            let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+            let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
             #[cfg(all(unix, not(target_os = "macos")))]
-            socket.set_reuse_port(true).unwrap();
-            socket.set_reuse_address(true).unwrap();
-            socket.set_nonblocking(true).unwrap();
+            socket.set_reuse_port(true)?;
+            socket.set_reuse_address(true)?;
+            socket.set_nonblocking(true)?;
             _ = socket.set_recv_buffer_size(2 * 1024 * 1024);
 
-            let addr = SocketAddr::new("0.0.0.0".parse().unwrap(), config.udp_port);
-            socket.bind(&addr.into()).unwrap();
-            Arc::new(tokio::net::UdpSocket::from_std(socket.into()).unwrap())
+            let addr = SocketAddr::new(
+                "0.0.0.0"
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("failed to parse ipv4 addr: {e}"))?,
+                config.udp_port,
+            );
+            socket.bind(&addr.into())?;
+            Arc::new(tokio::net::UdpSocket::from_std(socket.into())?)
         };
 
         let socket_v6 = {
             use socket2::{Domain, Protocol, Socket, Type};
-            let socket = Socket::new(Domain::IPV6, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+            let socket = Socket::new(Domain::IPV6, Type::DGRAM, Some(Protocol::UDP))?;
             #[cfg(all(unix, not(target_os = "macos")))]
-            socket.set_reuse_port(true).unwrap();
-            socket.set_reuse_address(true).unwrap();
-            socket.set_nonblocking(true).unwrap();
-            socket.set_only_v6(true).unwrap();
+            socket.set_reuse_port(true)?;
+            socket.set_reuse_address(true)?;
+            socket.set_nonblocking(true)?;
+            socket.set_only_v6(true)?;
             _ = socket.set_recv_buffer_size(2 * 1024 * 1024);
 
-            let addr = SocketAddr::new("::".parse().unwrap(), config.udp_port);
-            socket.bind(&addr.into()).unwrap();
-            Arc::new(tokio::net::UdpSocket::from_std(socket.into()).unwrap())
+            let addr = SocketAddr::new(
+                "::".parse()
+                    .map_err(|e| anyhow::anyhow!("failed to parse ipv6 addr: {e}"))?,
+                config.udp_port,
+            );
+            socket.bind(&addr.into())?;
+            Arc::new(tokio::net::UdpSocket::from_std(socket.into())?)
         };
 
-        Self {
+        Ok(Self {
             id,
             config,
             command_rx,
@@ -255,7 +274,7 @@ impl Worker {
             packet_txs: HashMap::new(),
             addr_to_user: HashMap::new(),
             ufrag_to_user: HashMap::new(),
-        }
+        })
     }
 
     async fn run(&mut self) -> Result<()> {
@@ -323,6 +342,10 @@ impl Worker {
     }
 
     fn extract_stun_ufrag(&self, data: &[u8]) -> Option<String> {
+        if data.len() < 24 {
+            return None;
+        }
+
         let mut pos = 20; // Skip header
         while pos + 4 <= data.len() {
             let attr_type = u16::from_be_bytes([data[pos], data[pos + 1]]);
