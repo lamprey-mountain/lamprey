@@ -73,6 +73,12 @@ pub enum Error {
     #[error("decompress error: {0}")]
     Decompress(#[from] flate2::DecompressError),
 
+    #[error("rmp encode error: {0}")]
+    RmpEncode(#[from] rmp_serde::encode::Error),
+
+    #[error("rmp decode error: {0}")]
+    RmpDecode(#[from] rmp_serde::decode::Error),
+
     #[error("unmodified")]
     // HACK: not really an error, but still kind of helpful to have here
     NotModified,

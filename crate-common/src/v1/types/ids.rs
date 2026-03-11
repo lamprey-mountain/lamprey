@@ -36,13 +36,88 @@ pub trait Marker: private::Sealed {
 }
 
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Id<M: Marker> {
     inner: Uuid,
-
-    #[cfg_attr(feature = "serde", serde(skip))]
     phantom: PhantomData<M>,
+}
+
+#[cfg(feature = "serde")]
+impl<M: Marker> Serialize for Id<M> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Force the UUID to always be serialized as a string.
+        // This isn't as efficient as sending the uuid as bytes, but msgpackr keeps trying to deserialize it as a Uint8Array
+        // TODO: find out how to make msgpackr work nicely with binary uuids
+        serializer.serialize_str(&self.inner.to_string())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, M: Marker> Deserialize<'de> for Id<M> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct UuidVisitor<M> {
+            phantom: PhantomData<M>,
+        }
+
+        impl<'de, M: Marker> serde::de::Visitor<'de> for UuidVisitor<M> {
+            type Value = Id<M>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a UUID string or bytes")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                let uuid = Uuid::parse_str(value).map_err(E::custom)?;
+                Ok(Id {
+                    inner: uuid,
+                    phantom: PhantomData,
+                })
+            }
+
+            fn visit_bytes<E: serde::de::Error>(self, value: &[u8]) -> Result<Self::Value, E> {
+                let uuid = Uuid::from_slice(value).map_err(E::custom)?;
+                Ok(Id {
+                    inner: uuid,
+                    phantom: PhantomData,
+                })
+            }
+
+            fn visit_string<E: serde::de::Error>(self, value: String) -> Result<Self::Value, E> {
+                let uuid = Uuid::parse_str(&value).map_err(E::custom)?;
+                Ok(Id {
+                    inner: uuid,
+                    phantom: PhantomData,
+                })
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                // Fallback for MessagePack interpreting bytes as sequence
+                let mut bytes = Vec::new();
+                while let Some(b) = seq.next_element::<u8>()? {
+                    bytes.push(b);
+                }
+                let uuid = Uuid::from_slice(&bytes).map_err(serde::de::Error::custom)?;
+                Ok(Id {
+                    inner: uuid,
+                    phantom: PhantomData,
+                })
+            }
+        }
+
+        // Use deserialize_any to seamlessly adapt to both JSON strings and
+        // older msgpack bytes clients might still be sending.
+        deserializer.deserialize_any(UuidVisitor {
+            phantom: PhantomData,
+        })
+    }
 }
 
 impl<M: Marker> fmt::Debug for Id<M> {

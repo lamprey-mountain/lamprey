@@ -29,6 +29,7 @@
 		"highlight.js": "^11.11.1",
 		"lib0": "^0.2.117",
 		"marked": "^15.0.12",
+		"msgpackr": "^1.11.9",
 		"prosemirror-history": "^1.4.1",
 		"prosemirror-keymap": "^1.2.3",
 		"prosemirror-model": "^1.25.3",

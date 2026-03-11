@@ -14,6 +14,7 @@ import { useLocation } from "@solidjs/router";
 import type { ChatCtx, Data, Events, MediaCtx } from "../context.ts";
 import type { ThreadsViewData } from "../context.ts";
 import type { Config } from "../config.tsx";
+import { flags } from "../flags.ts";
 
 function loadSavedPreferences(): Preferences | null {
 	const c = localStorage.getItem("preferences");
@@ -56,9 +57,11 @@ export function useChatClient(config: Config) {
 		sync: [import("sdk").MessageSync, import("sdk").MessageEnvelope];
 		ready: import("sdk").MessageReady;
 	}>();
+	const useMsgpack = flags.has("msgpack");
 	const client = createClient({
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
+		format: useMsgpack ? "msgpack" : "json",
 		onSync(msg, raw) {
 			console.log("recv", msg, raw);
 			events.emit("sync", [msg, raw as import("sdk").MessageEnvelope]);

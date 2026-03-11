@@ -1,6 +1,6 @@
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
-    sync::{SyncCompression, SyncParams, SyncResume},
+    sync::{SyncCompression, SyncFormat, SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
     ChannelId, ConnectionId, SessionToken, UserId,
 };
@@ -56,6 +56,7 @@ pub struct Connection {
     seq_client: u64,
     id: ConnectionId,
     compression: Option<Compression>,
+    pub format: SyncFormat,
 
     pub member_list: Box<ConnectionMemberListSyncer>,
     pub document: Box<DocumentSyncer>,
@@ -149,6 +150,7 @@ impl Connection {
         };
 
         let id = ConnectionId::new();
+        let format = params.format;
 
         let member_list = Box::new(ConnectionMemberListSyncer {
             inner: s.services().member_lists.create_syncer(id.into()),
@@ -166,6 +168,7 @@ impl Connection {
             member_list,
             document: Box::new(s.services().documents.create_syncer(id)),
             compression,
+            format,
             s,
         }
     }
@@ -218,6 +221,7 @@ impl Connection {
                 self.handle_message_client(msg, ws, timeout).await
             }
             Message::Binary(bytes) => {
+                // Handle compressed JSON
                 if let Some(Compression::Deflate {
                     decompressor,
                     buffer,
@@ -270,6 +274,10 @@ impl Connection {
                         self.handle_message_client(msg, ws, timeout).await?;
                     }
                     Ok(())
+                // Handle msgpack
+                } else if self.format == SyncFormat::Msgpack {
+                    let msg = rmp_serde::from_slice::<MessageClient>(&bytes)?;
+                    self.handle_message_client(msg, ws, timeout).await
                 } else {
                     return Err(Error::BadStatic(
                         "unexpected binary message for uncompressed session",
@@ -1158,10 +1166,12 @@ impl Connection {
 
         let queue = &self.queue;
         let compression = &mut self.compression;
+        let format = self.format;
 
         for (seq, msg) in queue.iter().rev() {
             if seq.is_none_or(|s| s > last_seen) {
-                ws.send(Self::compress_message(compression, msg)?).await?;
+                ws.send(Self::compress_message(compression, format, msg)?)
+                    .await?;
 
                 if let Some(seq) = *seq {
                     high_water_mark = high_water_mark.max(seq);
@@ -1183,48 +1193,98 @@ impl Connection {
 
     fn compress_message(
         compression: &mut Option<Compression>,
+        format: SyncFormat,
         msg: &MessageEnvelope,
     ) -> Result<WsMessage> {
-        let json = serde_json::to_string(msg)?;
-        if let Some(Compression::Deflate { compressor, .. }) = compression {
-            let mut output = Vec::with_capacity(json.len() + 64);
-            let input = json.as_bytes();
+        // Handle msgpack format
+        if format == SyncFormat::Msgpack {
+            let bytes = rmp_serde::to_vec_named(msg)?;
+            if let Some(Compression::Deflate { compressor, .. }) = compression {
+                let mut output = Vec::with_capacity(bytes.len() + 64);
+                let input = bytes.as_slice();
 
-            let mut input_offset = 0;
-            while input_offset < input.len() {
-                let mut out_buf = [0u8; 4096];
-                let before_in = compressor.total_in();
-                let before_out = compressor.total_out();
-                compressor.compress(&input[input_offset..], &mut out_buf, FlushCompress::None)?;
-                let consumed = (compressor.total_in() - before_in) as usize;
-                let produced = (compressor.total_out() - before_out) as usize;
-                output.extend_from_slice(&out_buf[..produced]);
-                input_offset += consumed;
-                if consumed == 0 && produced == 0 {
-                    break;
+                let mut input_offset = 0;
+                while input_offset < input.len() {
+                    let mut out_buf = [0u8; 4096];
+                    let before_in = compressor.total_in();
+                    let before_out = compressor.total_out();
+                    compressor.compress(
+                        &input[input_offset..],
+                        &mut out_buf,
+                        FlushCompress::None,
+                    )?;
+                    let consumed = (compressor.total_in() - before_in) as usize;
+                    let produced = (compressor.total_out() - before_out) as usize;
+                    output.extend_from_slice(&out_buf[..produced]);
+                    input_offset += consumed;
+                    if consumed == 0 && produced == 0 {
+                        break;
+                    }
                 }
-            }
 
-            // Sync Flush
-            loop {
-                let mut out_buf = [0u8; 4096];
-                let before_out = compressor.total_out();
-                let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
-                let produced = (compressor.total_out() - before_out) as usize;
-                output.extend_from_slice(&out_buf[..produced]);
-                if produced == 0 || status == Status::StreamEnd {
-                    break;
+                // Sync Flush
+                loop {
+                    let mut out_buf = [0u8; 4096];
+                    let before_out = compressor.total_out();
+                    let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
+                    let produced = (compressor.total_out() - before_out) as usize;
+                    output.extend_from_slice(&out_buf[..produced]);
+                    if produced == 0 || status == Status::StreamEnd {
+                        break;
+                    }
                 }
-            }
 
-            Ok(WsMessage::Binary(output.into()))
+                Ok(WsMessage::Binary(output.into()))
+            } else {
+                Ok(WsMessage::Binary(bytes.into()))
+            }
+        // Handle JSON format
         } else {
-            Ok(WsMessage::text(json))
+            let json = serde_json::to_string(msg)?;
+            if let Some(Compression::Deflate { compressor, .. }) = compression {
+                let mut output = Vec::with_capacity(json.len() + 64);
+                let input = json.as_bytes();
+
+                let mut input_offset = 0;
+                while input_offset < input.len() {
+                    let mut out_buf = [0u8; 4096];
+                    let before_in = compressor.total_in();
+                    let before_out = compressor.total_out();
+                    compressor.compress(
+                        &input[input_offset..],
+                        &mut out_buf,
+                        FlushCompress::None,
+                    )?;
+                    let consumed = (compressor.total_in() - before_in) as usize;
+                    let produced = (compressor.total_out() - before_out) as usize;
+                    output.extend_from_slice(&out_buf[..produced]);
+                    input_offset += consumed;
+                    if consumed == 0 && produced == 0 {
+                        break;
+                    }
+                }
+
+                // Sync Flush
+                loop {
+                    let mut out_buf = [0u8; 4096];
+                    let before_out = compressor.total_out();
+                    let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
+                    let produced = (compressor.total_out() - before_out) as usize;
+                    output.extend_from_slice(&out_buf[..produced]);
+                    if produced == 0 || status == Status::StreamEnd {
+                        break;
+                    }
+                }
+
+                Ok(WsMessage::Binary(output.into()))
+            } else {
+                Ok(WsMessage::text(json))
+            }
         }
     }
 
     fn serialize_and_compress(&mut self, msg: &MessageEnvelope) -> Result<WsMessage> {
-        Self::compress_message(&mut self.compression, msg)
+        Self::compress_message(&mut self.compression, self.format, msg)
     }
 }
 

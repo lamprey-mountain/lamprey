@@ -893,22 +893,28 @@ impl<'de> Deserialize<'de> for SyncVersion {
     }
 }
 
-// TODO(#249): websocket msgpack
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "snake_case")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SyncFormat {
     #[default]
     Json,
-    // Msgpack,
+    Msgpack,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "snake_case")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SyncCompression {
     /// Deflate compression
-    #[cfg_attr(feature = "serde", serde(rename = "deflate"))]
     Deflate,
 }
 

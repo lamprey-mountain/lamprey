@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use axum::routing::any;
 use common::v1::types::error::SyncError;
 use common::v1::types::presence::Presence;
-use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
+use common::v1::types::{MessageEnvelope, MessagePayload, SyncFormat, SyncParams};
 use futures_util::{SinkExt, StreamExt};
 use tracing::{debug, warn};
 use utoipa_axum::router::OpenApiRouter;
@@ -87,9 +87,9 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                         if let Err(err) = conn.handle_message(ws_msg, &mut ws, &mut timeout).await {
                             let _ = ws.send(err.into()).await;
                             let _ = ws
-                                .send(Message::text(serde_json::to_string(&MessageEnvelope {
+                                .send(serialize(&MessageEnvelope {
                                     payload: MessagePayload::Reconnect { can_resume: false },
-                                }).expect("can always serialize message")))
+                                }, conn.format))
                                 .await;
                             // TODO: don't close ws on *every* error - most are recoverable
                             let _ = ws.close().await;
@@ -106,12 +106,12 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                 }
             }
             _ = tokio::time::sleep_until(timeout.get_instant()) => {
-                if !handle_timeout(&mut timeout, &mut ws).await {
+                if !handle_timeout(&mut timeout, &mut ws, conn.format).await {
                     let _ = ws.send(Error::from(SyncError::Timeout).into()).await;
                     let _ = ws
-                        .send(Message::text(serde_json::to_string(&MessageEnvelope {
+                        .send(serialize(&MessageEnvelope {
                             payload: MessagePayload::Reconnect { can_resume: true },
-                        }).expect("can always serialize message")))
+                        }, conn.format))
                         .await;
                     let _ = ws.close().await;
                     break;
@@ -140,13 +140,13 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
     s.syncers.insert(conn.get_id(), conn);
 }
 
-async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket) -> bool {
+async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket, format: SyncFormat) -> bool {
     match timeout {
         Timeout::Ping(_) => {
             let ping = MessageEnvelope {
                 payload: MessagePayload::Ping {},
             };
-            let _ = ws.send(serialize(&ping)).await;
+            let _ = ws.send(serialize(&ping, format)).await;
             *timeout = Timeout::for_close();
             true
         }
@@ -157,10 +157,18 @@ async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket) -> bool {
     }
 }
 
-fn serialize(msg: &MessageEnvelope) -> WsMessage {
-    WsMessage::text(
-        serde_json::to_string(msg).expect("server messages should always be able to be serialized"),
-    )
+fn serialize(msg: &MessageEnvelope, format: SyncFormat) -> WsMessage {
+    match format {
+        SyncFormat::Msgpack => {
+            let bytes = rmp_serde::to_vec_named(msg)
+                .expect("server messages should always be able to be serialized");
+            WsMessage::Binary(bytes.into())
+        }
+        SyncFormat::Json => WsMessage::text(
+            serde_json::to_string(msg)
+                .expect("server messages should always be able to be serialized"),
+        ),
+    }
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

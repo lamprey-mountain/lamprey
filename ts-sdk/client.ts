@@ -3,6 +3,7 @@ import * as oapi from "openapi-fetch";
 import type { paths } from "./schema.d.ts";
 import { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
 import { createObservable, Observer } from "./observable.ts";
+import { pack, unpack } from "msgpackr";
 export * from "./observable.ts";
 
 export type ClientState = "stopped" | "connecting" | "connected" | "ready";
@@ -12,6 +13,7 @@ export type ClientOptions = {
 	token?: string;
 	onReady: (event: MessageReady) => void;
 	onSync: (event: MessageSync, raw: MessageEnvelope) => void;
+	format?: "json" | "msgpack";
 };
 
 export type Http = oapi.Client<paths>;
@@ -45,7 +47,17 @@ export function createClient(opts: ClientOptions): Client {
 	let ws: WebSocket;
 	let resume: null | Resume = null;
 	const state = createObservable<ClientState>("stopped");
-	const queue: string[] = [];
+	const queue: (string | ArrayBuffer)[] = [];
+	const format = opts.format ?? "json";
+	const useMsgpack = format === "msgpack";
+
+	function packData(data: any): ArrayBuffer {
+		const packed = pack(data);
+		return packed.buffer.slice(
+			packed.byteOffset,
+			packed.byteOffset + packed.byteLength,
+		) as ArrayBuffer;
+	}
 
 	const http = createFetch<paths>({
 		baseUrl: opts.apiUrl,
@@ -66,18 +78,32 @@ export function createClient(opts: ClientOptions): Client {
 
 	function flushQueue() {
 		while (queue.length > 0 && state.get() === "ready") {
-			ws.send(queue.shift()!);
+			const item = queue.shift()!;
+			ws.send(item);
 		}
 	}
 
 	function setupWebsocket() {
 		if (state.get() !== "connecting") return;
 
-		ws = new WebSocket(new URL("/api/v1/sync?version=1", opts.apiUrl));
+		ws = new WebSocket(
+			new URL(`/api/v1/sync?version=1&format=${format}`, opts.apiUrl),
+		);
+		ws.binaryType = "arraybuffer";
 		ws.addEventListener("message", (e) => {
-			const msg: MessageEnvelope = JSON.parse(e.data);
+			let msg: MessageEnvelope;
+			if (e.data instanceof ArrayBuffer) {
+				// Binary message (msgpack)
+				msg = unpack(new Uint8Array(e.data));
+			} else {
+				// Text message (JSON)
+				msg = JSON.parse(e.data);
+			}
 			if (msg.op === "Ping") {
-				ws.send(JSON.stringify({ type: "Pong" }));
+				const pong = { type: "Pong" };
+				ws.send(
+					useMsgpack ? packData(pong) : JSON.stringify(pong),
+				);
 			} else if (msg.op === "Sync") {
 				if (resume) resume.seq = msg.seq;
 				opts.onSync(msg.data, msg);
@@ -99,7 +125,8 @@ export function createClient(opts: ClientOptions): Client {
 
 		ws.addEventListener("open", (_e) => {
 			setState("connected");
-			ws.send(JSON.stringify({ type: "Hello", token: opts.token, ...resume }));
+			const hello: any = { type: "Hello", token: opts.token, ...resume };
+			ws.send(useMsgpack ? packData(hello) : JSON.stringify(hello));
 		});
 
 		ws.addEventListener("error", (e) => {
@@ -140,7 +167,14 @@ export function createClient(opts: ClientOptions): Client {
 		stop,
 		getWebsocket: () => ws,
 		send(data) {
-			const msg = typeof data === "string" ? data : JSON.stringify(data);
+			let msg: string | ArrayBuffer;
+			if (typeof data === "string") {
+				msg = data;
+			} else if (useMsgpack) {
+				msg = packData(data);
+			} else {
+				msg = JSON.stringify(data);
+			}
 			if (state.get() === "ready") {
 				ws.send(msg);
 			} else {
