@@ -61,6 +61,7 @@ export function Submenu(
 			content: JSX.Element;
 			onClick?: (e: MouseEvent) => void;
 			onOpen?: () => void;
+			color?: ItemColor;
 		}
 	>,
 ) {
@@ -123,6 +124,9 @@ export function Submenu(
 					props.onClick?.(e);
 					// HACK: close menu
 					document.getElementById("root")!.click();
+				}}
+				classList={{
+					["color-" + props.color]: !!props.color,
 				}}
 			>
 				{props.content}
