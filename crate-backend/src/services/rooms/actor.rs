@@ -164,15 +164,70 @@ impl RoomActor {
             }
             RoomCommand::MemberListSubscribe(key, events_tx) => {
                 if !self.member_lists.contains_key(&key) {
+                    if self.snapshot.is_without_members() {
+                        self.load_members().await?;
+                    }
                     let mut list = MemberList::new(self.state.clone(), key.clone(), events_tx);
                     let _ = list.initialize(Arc::clone(&self.snapshot)).await;
                     self.member_lists.insert(key, list);
+                }
+            }
+            RoomCommand::EnsureMembers => {
+                if self.snapshot.is_without_members() {
+                    self.load_members().await?;
                 }
             }
             RoomCommand::Close => return Ok(false),
         }
         let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
         Ok(true)
+    }
+
+    /// Load members for a room that is in WithoutMembers state.
+    /// Transitions the snapshot from WithoutMembers to Ready.
+    async fn load_members(&mut self) -> Result<()> {
+        let data = self.state.data();
+        let srv = self.state.services();
+
+        // Get the current snapshot data (without members)
+        let current_data = match self.snapshot.as_ref() {
+            RoomSnapshot::WithoutMembers(data) | RoomSnapshot::Ready(data) => data.as_ref().clone(),
+            _ => return Ok(()), // Can't load members if we're in Loading/NotFound/Unavailable state
+        };
+
+        // Load members from database
+        let room_members = data.room_member_list_all(self.room_id).await?;
+
+        let user_ids: Vec<_> = room_members.iter().map(|m| m.user_id).collect();
+        let users = srv.users.get_many(&user_ids).await?;
+        let users_map: HashMap<UserId, Arc<User>> =
+            users.into_iter().map(|u| (u.id, Arc::new(u))).collect();
+
+        let mut members = ImMap::new();
+        let rooms_srv = srv.rooms.clone();
+        for member in room_members {
+            let user_id = member.user_id;
+            if let Some(user) = users_map.get(&user_id) {
+                members.insert(
+                    user_id,
+                    CachedRoomMember {
+                        member,
+                        user: user.clone(),
+                    },
+                );
+                rooms_srv.member_register(user_id, self.room_id);
+            }
+        }
+
+        // Create new snapshot with members loaded
+        let new_data = Arc::new(RoomData {
+            members,
+            ..current_data
+        });
+
+        self.snapshot = Arc::new(RoomSnapshot::Ready(new_data));
+
+        Ok(())
     }
 
     async fn load_initial_state(&mut self) -> Result<()> {
@@ -201,14 +256,10 @@ impl RoomActor {
             users.into_iter().map(|u| (u.id, Arc::new(u))).collect();
 
         let mut members = ImMap::new();
-        let mut online_count = 0;
         let rooms_srv = srv.rooms.clone();
         for member in room_members {
             let user_id = member.user_id;
             if let Some(user) = users_map.get(&user_id) {
-                if user.presence.status.is_online() {
-                    online_count += 1;
-                }
                 members.insert(
                     user_id,
                     CachedRoomMember {
@@ -280,10 +331,6 @@ impl RoomActor {
             );
         }
 
-        let mut room = room;
-        room.member_count = members.len() as u64;
-        room.online_count = online_count;
-
         self.snapshot = Arc::new(RoomSnapshot::Ready(Arc::new(RoomData {
             room,
             members,
@@ -297,7 +344,7 @@ impl RoomActor {
 
     async fn handle_sync(&mut self, event: MessageSync) -> Result<()> {
         let mut snapshot_data = match self.snapshot.as_ref() {
-            RoomSnapshot::Ready(data) => data.as_ref().clone(),
+            RoomSnapshot::Ready(data) | RoomSnapshot::WithoutMembers(data) => data.as_ref().clone(),
             _ => return Ok(()), // Don't process sync if not ready
         };
 
@@ -418,12 +465,14 @@ impl RoomActor {
                 }
                 snapshot_data.roles.remove(role_id);
 
-                // Efficiently update the immutable map using structural sharing
-                for (user_id, member) in snapshot_data.members.clone().into_iter() {
-                    if member.member.roles.contains(role_id) {
-                        let mut updated_member = member.clone();
-                        updated_member.member.roles.retain(|r| r != role_id);
-                        snapshot_data.members.insert(user_id, updated_member);
+                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
+                    // Efficiently update the immutable map using structural sharing
+                    for (user_id, member) in snapshot_data.members.clone().into_iter() {
+                        if member.member.roles.contains(role_id) {
+                            let mut updated_member = member.clone();
+                            updated_member.member.roles.retain(|r| r != role_id);
+                            snapshot_data.members.insert(user_id, updated_member);
+                        }
                     }
                 }
             }
@@ -442,19 +491,31 @@ impl RoomActor {
                 if member.room_id != self.room_id {
                     return Ok(());
                 }
-                if !snapshot_data.members.contains_key(&member.user_id) {
+
+                // If we are in WithoutMembers state, we don't insert into members map
+                // but we should still update the counts.
+                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
+                    if !snapshot_data.members.contains_key(&member.user_id) {
+                        snapshot_data.room.member_count += 1;
+                        if user.presence.status.is_online() {
+                            snapshot_data.room.online_count += 1;
+                        }
+                    }
+                    snapshot_data.members.insert(
+                        member.user_id,
+                        CachedRoomMember {
+                            member: member.clone(),
+                            user: Arc::new(user.clone()),
+                        },
+                    );
+                } else {
+                    // Just update counts
                     snapshot_data.room.member_count += 1;
                     if user.presence.status.is_online() {
                         snapshot_data.room.online_count += 1;
                     }
                 }
-                snapshot_data.members.insert(
-                    member.user_id,
-                    CachedRoomMember {
-                        member: member.clone(),
-                        user: Arc::new(user.clone()),
-                    },
-                );
+
                 self.state
                     .services()
                     .rooms
@@ -464,25 +525,35 @@ impl RoomActor {
                 if member.room_id != self.room_id {
                     return Ok(());
                 }
-                if let Some(old_member) = snapshot_data.members.get(&member.user_id) {
-                    let old_online = old_member.user.presence.status.is_online();
-                    let new_online = user.presence.status.is_online();
-                    if old_online != new_online {
-                        if new_online {
-                            snapshot_data.room.online_count += 1;
-                        } else {
-                            snapshot_data.room.online_count =
-                                snapshot_data.room.online_count.saturating_sub(1);
+
+                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
+                    if let Some(old_member) = snapshot_data.members.get(&member.user_id) {
+                        let old_online = old_member.user.presence.status.is_online();
+                        let new_online = user.presence.status.is_online();
+                        if old_online != new_online {
+                            if new_online {
+                                snapshot_data.room.online_count += 1;
+                            } else {
+                                snapshot_data.room.online_count =
+                                    snapshot_data.room.online_count.saturating_sub(1);
+                            }
                         }
                     }
+                    snapshot_data.members.insert(
+                        member.user_id,
+                        CachedRoomMember {
+                            member: member.clone(),
+                            user: Arc::new(user.clone()),
+                        },
+                    );
+                } else {
+                    // In WithoutMembers we don't know the old presence state easily
+                    // unless we want to query DB or presence service.
+                    // For now, let's assume member count doesn't change,
+                    // but online count might.
+                    // This is a trade-off of lazy loading.
                 }
-                snapshot_data.members.insert(
-                    member.user_id,
-                    CachedRoomMember {
-                        member: member.clone(),
-                        user: Arc::new(user.clone()),
-                    },
-                );
+
                 self.state
                     .services()
                     .rooms
@@ -492,57 +563,68 @@ impl RoomActor {
                 if *room_id != self.room_id {
                     return Ok(());
                 }
-                if let Some(member) = snapshot_data.members.remove(user_id) {
+
+                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
+                    if let Some(member) = snapshot_data.members.remove(user_id) {
+                        snapshot_data.room.member_count =
+                            snapshot_data.room.member_count.saturating_sub(1);
+                        if member.user.presence.status.is_online() {
+                            snapshot_data.room.online_count =
+                                snapshot_data.room.online_count.saturating_sub(1);
+                        }
+                    }
+                } else {
                     snapshot_data.room.member_count =
                         snapshot_data.room.member_count.saturating_sub(1);
-                    if member.user.presence.status.is_online() {
-                        snapshot_data.room.online_count =
-                            snapshot_data.room.online_count.saturating_sub(1);
-                    }
                 }
+
                 self.state
                     .services()
                     .rooms
                     .member_unregister(*user_id, self.room_id);
             }
             MessageSync::PresenceUpdate { user_id, presence } => {
-                if let Some(mut member) = snapshot_data.members.get(user_id).cloned() {
-                    let old_online = member.user.presence.status.is_online();
-                    let new_online = presence.status.is_online();
-                    if old_online != new_online {
-                        if new_online {
-                            snapshot_data.room.online_count += 1;
-                        } else {
-                            snapshot_data.room.online_count =
-                                snapshot_data.room.online_count.saturating_sub(1);
+                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
+                    if let Some(mut member) = snapshot_data.members.get(user_id).cloned() {
+                        let old_online = member.user.presence.status.is_online();
+                        let new_online = presence.status.is_online();
+                        if old_online != new_online {
+                            if new_online {
+                                snapshot_data.room.online_count += 1;
+                            } else {
+                                snapshot_data.room.online_count =
+                                    snapshot_data.room.online_count.saturating_sub(1);
+                            }
                         }
+
+                        member.user = Arc::new({
+                            let mut u = member.user.as_ref().clone();
+                            u.presence = presence.clone();
+                            u
+                        });
+
+                        snapshot_data.members.insert(*user_id, member);
                     }
-
-                    member.user = Arc::new({
-                        let mut u = member.user.as_ref().clone();
-                        u.presence = presence.clone();
-                        u
-                    });
-
-                    snapshot_data.members.insert(*user_id, member);
                 }
             }
             MessageSync::UserUpdate { user } => {
-                if let Some(mut member) = snapshot_data.members.get(&user.id).cloned() {
-                    let old_online = member.user.presence.status.is_online();
-                    let new_online = user.presence.status.is_online();
-                    if old_online != new_online {
-                        if new_online {
-                            snapshot_data.room.online_count += 1;
-                        } else {
-                            snapshot_data.room.online_count =
-                                snapshot_data.room.online_count.saturating_sub(1);
+                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
+                    if let Some(mut member) = snapshot_data.members.get(&user.id).cloned() {
+                        let old_online = member.user.presence.status.is_online();
+                        let new_online = user.presence.status.is_online();
+                        if old_online != new_online {
+                            if new_online {
+                                snapshot_data.room.online_count += 1;
+                            } else {
+                                snapshot_data.room.online_count =
+                                    snapshot_data.room.online_count.saturating_sub(1);
+                            }
                         }
+
+                        member.user = Arc::new(user.clone());
+
+                        snapshot_data.members.insert(user.id, member);
                     }
-
-                    member.user = Arc::new(user.clone());
-
-                    snapshot_data.members.insert(user.id, member);
                 }
             }
             MessageSync::MessageCreate { message } | MessageSync::MessageUpdate { message } => {
@@ -569,7 +651,16 @@ impl RoomActor {
             _ => {}
         }
 
-        self.snapshot = Arc::new(RoomSnapshot::Ready(Arc::new(snapshot_data)));
+        let new_data = Arc::new(snapshot_data);
+        match self.snapshot.as_ref() {
+            RoomSnapshot::Ready(_) => {
+                self.snapshot = Arc::new(RoomSnapshot::Ready(new_data));
+            }
+            RoomSnapshot::WithoutMembers(_) => {
+                self.snapshot = Arc::new(RoomSnapshot::WithoutMembers(new_data));
+            }
+            _ => {}
+        }
 
         // Notify member lists of the event
         for list in self.member_lists.values_mut() {

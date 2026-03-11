@@ -59,7 +59,12 @@ impl ServiceRooms {
         }
     }
 
-    pub fn load_room(&self, room_id: RoomId) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
+    /// load a room snapshot, ensuring members are loaded if requested.
+    pub fn load_room(
+        &self,
+        room_id: RoomId,
+        ensure_members: bool,
+    ) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
         Box::pin(async move {
             let handle = self
                 .actors
@@ -69,9 +74,21 @@ impl ServiceRooms {
                 .await
                 .map_err(|e| e.fake_clone())?;
 
+            if ensure_members {
+                let _ = handle.tx.try_send(RoomCommand::EnsureMembers);
+            }
+
             let mut rx = handle.snapshot_rx.clone();
             let snapshot = rx
-                .wait_for(|s| !s.is_loading())
+                .wait_for(|s| {
+                    if s.is_loading() {
+                        return false;
+                    }
+                    if ensure_members && s.is_without_members() {
+                        return false;
+                    }
+                    true
+                })
                 .await
                 .map_err(|_| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
 
@@ -112,7 +129,7 @@ impl ServiceRooms {
 
     // TODO: make this not require writing room
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
-        let snapshot = self.load_room(room_id).await?;
+        let snapshot = self.load_room(room_id, false).await?;
         let mut room = snapshot.get_data().unwrap().room.clone();
 
         if let Some(user_id) = user_id {
@@ -137,19 +154,6 @@ impl ServiceRooms {
         Ok(())
     }
 
-    /// unregister a user from all rooms in the cache
-    pub fn member_unregister_all(&self, user_id: UserId) {
-        let rooms = if let Some(rooms) = self.user_rooms.get(&user_id) {
-            rooms.iter().map(|r| *r).collect::<Vec<_>>()
-        } else {
-            return;
-        };
-
-        for room_id in rooms {
-            self.member_unregister(user_id, room_id);
-        }
-    }
-
     /// register a user as being in a room in the cache
     pub fn member_register(&self, user_id: UserId, room_id: RoomId) {
         self.user_rooms
@@ -167,10 +171,6 @@ impl ServiceRooms {
                 self.user_rooms.remove(&user_id);
             }
         }
-    }
-
-    pub fn purge_cache(&self) {
-        self.unload_all_cache();
     }
 
     /// update a room's metadata in the cache
@@ -390,10 +390,11 @@ impl ServiceRooms {
             end.preferences = Some(preferences);
         }
 
-        let snapshot = self.state.services().rooms.load_room(room_id).await?;
+        let snapshot = self.load_room(room_id, false).await?;
         let data = snapshot.get_data().unwrap();
         end.online_count = data.room.online_count;
         end.member_count = data.room.member_count;
+
 
         let changes = Changes::new()
             .change("name", &start.name, &end.name)

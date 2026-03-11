@@ -18,10 +18,16 @@ use crate::Result;
 /// Used for zero-latency reads.
 #[derive(Debug, Clone)]
 pub enum RoomSnapshot {
+    /// The room is currently being loaded from the database.
     Loading,
+    /// The room is fully loaded, including the complete member list.
     Ready(Arc<RoomData>),
+    /// The room metadata, roles, and channels are loaded, but the member list is not.
+    /// This is used for large rooms or rooms that haven't been "activated" by a member list request.
     WithoutMembers(Arc<RoomData>),
+    /// The room was not found in the database.
     NotFound,
+    /// The room is currently unavailable (e.g. backlogged).
     Unavailable(RoomUnavailable),
 }
 
@@ -61,6 +67,9 @@ pub enum RoomCommand {
         crate::services::member_lists::util::MemberListKey,
         tokio::sync::broadcast::Sender<crate::services::member_lists::actor::MemberListEvent>,
     ),
+
+    /// Ensure that the room members are loaded.
+    EnsureMembers,
 
     /// Close the actor (usually due to idle timeout).
     Close,
@@ -146,6 +155,10 @@ impl RoomSnapshot {
 
     pub fn is_loading(&self) -> bool {
         matches!(self, Self::Loading)
+    }
+
+    pub fn is_without_members(&self) -> bool {
+        matches!(self, Self::WithoutMembers(_))
     }
 
     pub fn is_unavailable(&self) -> bool {

@@ -14,7 +14,6 @@ use futures::{future::BoxFuture, StreamExt};
 use moka::future::Cache;
 
 pub mod permissions;
-pub mod user;
 
 pub use crate::services::rooms::{
     CachedChannel, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomHandle,
@@ -24,7 +23,6 @@ pub use crate::services::rooms::{
 use common::v1::types::error::ApiError;
 use common::v1::types::error::ErrorCode;
 pub use permissions::PermissionsCalculator;
-pub use user::CachedUser;
 
 /// service for caching all in-memory data used by the server
 #[derive(Clone)]
@@ -136,16 +134,13 @@ impl ServiceCache {
         }
     }
 
-    /// load ALL users
-    // TEMP: this is probably horrible for performance
-    // this is a bad idea
-    pub async fn load_users(&self) -> Result<()> {
-        todo!("load all users into cache")
-    }
-
-    pub fn load_room(&self, room_id: RoomId) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
+    pub fn load_room(
+        &self,
+        room_id: RoomId,
+        ensure_members: bool,
+    ) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
         let rooms = self.state.services().rooms.clone();
-        Box::pin(async move { rooms.load_room(room_id).await })
+        Box::pin(async move { rooms.load_room(room_id, ensure_members).await })
     }
 
     /// mark a room as unavailable
@@ -391,8 +386,12 @@ impl ServiceCache {
     }
 
     /// get the permission calculator for this room, loading the room if it doesn't exist
-    pub async fn permissions(&self, room_id: RoomId) -> Result<PermissionsCalculator> {
-        let snapshot = self.load_room(room_id).await?;
+    pub async fn permissions(
+        &self,
+        room_id: RoomId,
+        ensure_members: bool,
+    ) -> Result<PermissionsCalculator> {
+        let snapshot = self.load_room(room_id, ensure_members).await?;
         let data = snapshot
             .get_data()
             .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
@@ -444,7 +443,7 @@ impl ServiceCache {
             .map(|room| {
                 let this = self.clone();
                 async move {
-                    let snapshot = this.load_room(room.id).await?;
+                    let snapshot = this.load_room(room.id, true).await?;
                     let member = this
                         .state
                         .data()

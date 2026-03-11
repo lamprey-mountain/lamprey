@@ -51,12 +51,23 @@ pub struct User {
     /// whether this user is an official system user
     pub system: bool,
 
+    // skip serializing if is_none
     pub puppet: Option<Puppet>,
+
+    // skip serializing if is_none
     pub webhook: Option<UserWebhook>,
+
+    // skip serializing if is_none; only return for admins
     pub suspended: Option<Suspended>,
+
     pub presence: Presence,
+
+    // ...remove? unsure how this will work.
     pub registered_at: Option<Time>,
+
+    // skip serializing if is_none; only return for admins
     pub deleted_at: Option<Time>,
+
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub emails: Option<Vec<EmailInfo>>,
     pub preferences: Option<PreferencesUser>,

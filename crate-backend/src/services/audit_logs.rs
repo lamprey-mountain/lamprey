@@ -35,7 +35,7 @@ impl ServiceAuditLogs {
         }
 
         let srv = self.state.services();
-        let cached_room = srv.cache.load_room(room_id).await.ok();
+        let cached_room = srv.cache.load_room(room_id, false).await.ok();
 
         let mut threads = Vec::new();
         let mut missing_threads = Vec::new();

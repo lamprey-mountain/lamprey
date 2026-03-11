@@ -992,7 +992,7 @@ impl ServiceMessages {
         let users_map: HashMap<UserId, User> = users.into_iter().map(|u| (u.id, u)).collect();
 
         if let Some(room_id) = room_id {
-            let room = srv.cache.load_room(room_id).await?;
+            let room = srv.cache.load_room(room_id, true).await?;
 
             for user_id in mentions_ids.users {
                 let Some(user) = users_map.get(&user_id) else {

@@ -1378,7 +1378,7 @@ impl ServiceChannels {
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<Vec<(ChannelId, bool)>> {
-        let perms_calc = self.state.services().cache.permissions(room_id).await?;
+        let perms_calc = self.state.services().cache.permissions(room_id, true).await?;
         let mut out = vec![];
 
         for ch in perms_calc.room.get_data().unwrap().channels.values() {

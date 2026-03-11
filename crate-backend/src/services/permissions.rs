@@ -96,7 +96,7 @@ impl ServicePermissions {
 
         self.cache_perm_room
             .try_get_with((user_id, room_id), async {
-                let calc = srv.cache.permissions(room_id).await?;
+                let calc = srv.cache.permissions(room_id, true).await?;
                 Result::Ok(calc.query(user_id, None))
             })
             .await
@@ -118,7 +118,7 @@ impl ServicePermissions {
         let chan = srv.channels.get(channel_id, Some(user_id)).await?;
 
         if let Some(room_id) = chan.room_id {
-            let calc = srv.cache.permissions(room_id).await?;
+            let calc = srv.cache.permissions(room_id, true).await?;
             Ok(calc.query(user_id, Some(&chan)))
         } else {
             if let Some(parent_id) = chan.parent_id {
