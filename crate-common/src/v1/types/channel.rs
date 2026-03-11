@@ -784,6 +784,7 @@ pub struct Locked {
     pub until: Option<Time>,
 
     /// if present, users with these roles bypass the lock
+    #[cfg_attr(feature = "serde", serde(default))]
     pub allow_roles: Vec<RoleId>,
 }
 
