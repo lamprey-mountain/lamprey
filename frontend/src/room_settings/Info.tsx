@@ -90,13 +90,16 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const save = () => {
 		const description = getDescriptionFromState();
+		const body: { name: string; public: boolean; description?: string } = {
+			name: editingName(),
+			public: editingPublic(),
+		};
+		if (description.trim() !== "") {
+			body.description = description;
+		}
 		ctx.client.http.PATCH("/api/v1/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
-			body: {
-				name: editingName(),
-				description,
-				public: editingPublic(),
-			},
+			body,
 		});
 	};
 

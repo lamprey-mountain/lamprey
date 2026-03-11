@@ -1,4 +1,4 @@
 {
-	"api_url": "https://chat.celery.eu.org",
-	"cdn_url": "https://chat-cdn.celery.eu.org"
+	"api_url": "http://localhost:4000",
+	"cdn_url": "http://localhost:4000/media"
 }
