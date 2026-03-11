@@ -5,9 +5,10 @@ use common::v1::types::{
     self,
     misc::UserIdReq,
     pagination::{PaginationQuery, PaginationResponse},
-    presence, Channel, ChannelId, ChannelType, Media, MediaCreate, MediaCreateSource,
-    MessageCreate, MessageId, MessageSync, RoomId, RoomMemberPut, Session, User, UserId,
+    presence, Channel, ChannelId, ChannelType, Media, MessageCreate, MessageId, MessageSync,
+    RoomId, RoomMemberPut, Session, User, UserId,
 };
+use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use common::v2::types::message::Message;
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -207,10 +208,11 @@ impl LampreyHandle {
         user_id: UserId,
     ) -> Result<Media> {
         let req = MediaCreate {
+            strip_exif: false,
             alt: None,
             source: MediaCreateSource::Upload {
                 filename,
-                size: bytes.len() as u64,
+                size: Some(bytes.len() as u64),
             },
         };
         let upload = self.http.for_puppet(user_id).media_create(&req).await?;

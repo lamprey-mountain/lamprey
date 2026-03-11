@@ -2,16 +2,17 @@ use anyhow::{Context, Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
 use common::v1::types::{
-    media::MediaCreated, misc::UserIdReq, ApplicationId, Channel, ChannelCreate, ChannelId,
-    ChannelPatch, ChannelReorder, Media, MediaCreate, MediaId, MessageCreate, MessageId,
-    MessageModerate, MessagePatch, MessageVerId, PinsReorder, PuppetCreate, Room, RoomBan,
-    RoomBanBulkCreate, RoomCreate, RoomId, RoomPatch, SessionToken, ThreadMember, ThreadMemberPut,
-    User, UserId, UserPatch, UserWithRelationship,
+    misc::UserIdReq, ApplicationId, Channel, ChannelCreate, ChannelId, ChannelPatch,
+    ChannelReorder, Media, MediaId, MessageCreate, MessageId, MessageModerate, MessagePatch,
+    MessageVerId, PinsReorder, PuppetCreate, Room, RoomBan, RoomBanBulkCreate, RoomCreate, RoomId,
+    RoomPatch, SessionToken, ThreadMember, ThreadMemberPut, User, UserId, UserPatch,
+    UserWithRelationship,
 };
 use common::v1::types::{
     MessageMigrate, RoomBanCreate, RoomMember, RoomMemberPatch, RoomMemberPut, SuspendRequest,
     TransferOwnership, UserCreate,
 };
+use common::v2::types::media::{MediaCreate, MediaCreated};
 use common::v2::types::message::Message;
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};

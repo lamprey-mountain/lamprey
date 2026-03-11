@@ -220,7 +220,7 @@ impl Peer {
                     }
                 };
 
-                let contents = match data.as_slice().try_into() {
+                let contents = match data.as_ref().try_into() {
                     Ok(c) => c,
                     Err(_) => {
                         warn!("Failed to convert packet data for peer {}", self.user_id);
