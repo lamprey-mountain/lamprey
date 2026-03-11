@@ -183,6 +183,7 @@ impl Permissions {
     /// Returns a 404 error (UnknownRoom/UnknownChannel) if ViewChannel is missing,
     /// otherwise a 403 error (MissingPermissions). The error payload includes *all*
     /// missing permissions.
+    #[inline]
     pub fn ensure_all(&self, perms: &[Permission]) -> Result<()> {
         self.ensure_all_impl(perms, false)
     }
@@ -190,6 +191,7 @@ impl Permissions {
     /// ensure that the user has all permissions (server variant)
     ///
     /// Like `ensure_all`, but uses `required_permissions_server` in the error response.
+    #[inline]
     pub fn ensure_all_server(&self, perms: &[Permission]) -> Result<()> {
         self.ensure_all_impl(perms, true)
     }
