@@ -4,13 +4,18 @@ use std::sync::Arc;
 
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Channel, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
+    Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
+    SERVER_USER_ID,
 };
-use tracing::{trace, warn};
+use lamprey_backend_core::types::permission::{
+    PermissionBits, Permissions, Permissions2, Permissions2Builder, Permissions2Context,
+    BROADCAST_LURKER_PERMS, QUARANTINE_PERMS, VIEW_PERMS,
+};
+use tracing::warn;
 
 use crate::{
     services::rooms::{CachedChannel, RoomSnapshot},
-    types::{PermissionBits, Permissions},
+    Error, Result,
 };
 
 /// a permission calculator for a room
@@ -24,67 +29,89 @@ pub struct PermissionsCalculator {
 impl PermissionsCalculator {
     /// query permissions for a room member, optionally in a specific channel
     pub fn query(&self, user_id: UserId, channel: Option<&Channel>) -> Permissions {
+        self.query_inner(user_id, channel).unwrap().into()
+    }
+
+    fn query_inner(&self, user_id: UserId, channel: Option<&Channel>) -> Result<Permissions2> {
+        let mut p = Permissions2::builder();
+
         let Some(data) = self.room.get_data() else {
-            return Permissions::empty();
+            return Err(Error::ServiceUnavailable);
         };
 
         let member = data.members.get(&user_id).map(|m| &m.member);
+        if !data.room.public && member.is_none() {
+            p.flags.set_cannot_view();
+            return Ok(p.build());
+        }
 
-        // calculate base perms
-        let mut perms = self.calculate_room_permissions(user_id, member);
+        // calculate base perms (includes mute/deafen)
+        self.calculate_room_permissions(&mut p, user_id, member)?;
 
         // admins have full permissions
-        if !perms.has(Permission::Admin) {
+        if !p.perms.has(Permission::Admin) {
             if let Some(channel) = channel {
+                p.context = Permissions2Context::Channel;
                 // only calculate channel permissions if the channel exists in cache
                 // (channels not in cache have no overwrites)
                 if let Some(cached_channel) = data.channels.get(&channel.id) {
-                    self.calculate_channel_permissions(&mut perms, cached_channel, member);
+                    self.calculate_channel_permissions(&mut p, cached_channel, member);
                 }
             }
         }
 
-        perms
+        // mask permissions for lurkers/non-members
+        if member.is_none() {
+            if channel.is_some_and(|c| c.ty == ChannelType::Broadcast) {
+                p.perms.mask(BROADCAST_LURKER_PERMS);
+            } else {
+                p.perms.mask(VIEW_PERMS);
+            }
+        }
+
+        if p.flags.is_quarantined() && !p.perms.has(Permission::Admin) {
+            p.perms.mask(QUARANTINE_PERMS);
+        }
+
+        if p.flags.is_timed_out() {
+            p.perms.mask(VIEW_PERMS);
+        }
+
+        Ok(p.build())
     }
 
     /// calculate base permissions for a member in a room
     fn calculate_room_permissions(
         &self,
+        p: &mut Permissions2Builder,
         user_id: UserId,
         member: Option<&RoomMember>,
-    ) -> Permissions {
+    ) -> Result<()> {
         // root user and owners have full permissions
-        if user_id == common::v1::types::SERVER_USER_ID || self.owner_id == Some(user_id) {
-            let mut p = Permissions::empty();
-            p.set_is_room_member(true);
-            p.add(Permission::ViewChannel);
-            p.add(Permission::Admin);
-            return p;
+        if user_id == SERVER_USER_ID || self.owner_id == Some(user_id) {
+            p.rank = u16::MAX;
+            p.perms = Permission::Admin.into();
+            return Ok(());
         }
 
         let Some(data) = self.room.get_data() else {
-            return Permissions::empty();
+            return Err(Error::ServiceUnavailable);
         };
 
         let Some(member) = member else {
             if self.public {
                 // use public/default perms
                 let everyone_role_id: RoleId = self.room_id.into_inner().into();
-                let mut perms = Permissions::empty();
-                perms.set_is_room_member(false);
 
                 if let Some(role) = data.roles.get(&everyone_role_id) {
-                    perms.add_bits(role.allow);
-                    perms.remove_bits(role.deny);
+                    p.perms.add_all(role.allow);
+                    p.perms.remove_all(role.deny);
                 }
-
-                perms.set_lurker(true);
-                return perms;
             } else {
                 // the member doesnt exist here and room not public; no perms
-                tracing::debug!(?user_id, room_id = ?self.room_id, "user not a member and room not public");
-                return Permissions::empty();
             }
+
+            return Ok(());
         };
 
         // calculate role permissions using bit operations
@@ -97,48 +124,53 @@ impl PermissionsCalculator {
             if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
                 allowed_bits.add_all(role.allow);
                 denied_bits.add_all(role.deny);
+                p.rank = p.rank.max(role.inner.position as u16);
             }
         }
 
-        let mut perms = Permissions::empty();
-        perms.set_is_room_member(true);
-        perms.add_bits(allowed_bits);
+        p.perms.add_all(allowed_bits);
 
-        trace!(?user_id, room_id = ?self.room_id, bits = ?allowed_bits, "calculated base perms");
-
-        if perms.has(Permission::Admin) {
-            return perms;
+        // admins cannot have any permissions revoked
+        if p.perms.has(Permission::Admin) {
+            return Ok(());
         }
 
-        perms.remove_bits(denied_bits);
-        trace!(?user_id, room_id = ?self.room_id, "perms after denied bits: {:?}", perms);
+        p.perms.remove_all(denied_bits);
+
+        // handle mute/deaf
+        if member.mute {
+            p.flags.set_room_muted();
+        }
+        if member.deaf {
+            p.flags.set_room_deafened();
+        }
 
         // handle timeout
         if let Some(timeout_until) = member.timeout_until {
             if timeout_until > Time::now_utc() {
-                perms.set_timed_out(true);
+                p.flags.set_timed_out();
             }
         }
 
         // quarantined by automod
         if member.quarantined {
-            perms.set_quarantined(true);
+            p.flags.set_quarantined();
         }
 
-        perms
+        Ok(())
     }
 
     /// recursively calculate channel permissions
     fn calculate_channel_permissions(
         &self,
-        perms: &mut Permissions,
+        p: &mut Permissions2Builder,
         cc: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
         if let Some(parent_id) = cc.inner.parent_id {
             if let Some(data) = self.room.get_data() {
                 if let Some(parent) = data.channels.get(&parent_id) {
-                    self.calculate_channel_permissions(perms, parent, member);
+                    self.calculate_channel_permissions(p, parent, member);
                 } else {
                     warn!(
                         channel_id = ?cc.inner.id,
@@ -149,13 +181,13 @@ impl PermissionsCalculator {
             }
         }
 
-        self.apply_channel_overwrites(perms, cc, member);
+        self.apply_channel_overwrites(p, cc, member);
     }
 
     /// apply the permission overwrites for a channel to a permissions set
     fn apply_channel_overwrites(
         &self,
-        perms: &mut Permissions,
+        p: &mut Permissions2Builder,
         cc: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
@@ -163,14 +195,24 @@ impl PermissionsCalculator {
         if let Some(locked) = &cc.inner.locked {
             let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
             if !is_expired {
-                perms.set_channel_locked(true);
-                if let Some(member) = member {
-                    for role_id in &locked.allow_roles {
-                        if member.roles.contains(&(*role_id).into()) {
-                            perms.set_locked_bypass(true);
-                            break;
-                        }
-                    }
+                p.flags.set_channel_locked();
+
+                // the member has a role that is explicitly allowed by the lock
+                let has_bypass = member.map_or(false, |m| {
+                    m.roles
+                        .iter()
+                        .any(|r| locked.allow_roles.contains(&(*r).into()))
+                });
+
+                // or the member has the Manage Channels permission
+                // or this is a thread and the member has the Manage Threads or Lock Threads permission
+                let has_perm = p.perms.has(Permission::ChannelManage)
+                    || (cc.inner.ty.is_thread()
+                        && (p.perms.has(Permission::ThreadLock)
+                            || p.perms.has(Permission::ThreadManage)));
+
+                if !has_bypass && !has_perm {
+                    p.flags.set_timed_out();
                 }
             }
         }
@@ -183,12 +225,12 @@ impl PermissionsCalculator {
 
         // 1. apply everyone allows
         if let Some(ow) = cc.overwrites.get(&everyone_id) {
-            perms.add_bits(ow.allow);
+            p.perms.add_all(ow.allow);
         }
 
         // 2. apply everyone denies
         if let Some(ow) = cc.overwrites.get(&everyone_id) {
-            perms.remove_bits(ow.deny);
+            p.perms.remove_all(ow.deny);
         }
 
         let Some(member) = member else { return };
@@ -197,7 +239,7 @@ impl PermissionsCalculator {
         for role_id in &member.roles {
             if let Some(ow) = cc.overwrites.get(&role_id.into_inner()) {
                 if ow.ty == PermissionOverwriteType::Role {
-                    perms.add_bits(ow.allow);
+                    p.perms.add_all(ow.allow);
                 }
             }
         }
@@ -206,7 +248,7 @@ impl PermissionsCalculator {
         for role_id in &member.roles {
             if let Some(ow) = cc.overwrites.get(&role_id.into_inner()) {
                 if ow.ty == PermissionOverwriteType::Role {
-                    perms.remove_bits(ow.deny);
+                    p.perms.remove_all(ow.deny);
                 }
             }
         }
@@ -214,14 +256,14 @@ impl PermissionsCalculator {
         // 5. apply user allows
         if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner()) {
             if ow.ty == PermissionOverwriteType::User {
-                perms.add_bits(ow.allow);
+                p.perms.add_all(ow.allow);
             }
         }
 
         // 6. apply user denies
         if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner()) {
             if ow.ty == PermissionOverwriteType::User {
-                perms.remove_bits(ow.deny);
+                p.perms.remove_all(ow.deny);
             }
         }
     }

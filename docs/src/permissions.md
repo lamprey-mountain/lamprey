@@ -30,11 +30,13 @@ how permissions are calculated and applied in lamprey.
 
 Specific states can override the final permissions.
 
-- **Timed Out**: remove all permissions except `ViewChannel` and `ViewAuditLog`.
-- **Quarantined**: remove all permissions except `ViewChannel`, `ViewAuditLog`,
-  and `MemberNickname`.
-- **Lurker** (non-members in a public room): remove all permissions except
-  `ViewChannel` and `ViewAuditLog`.
+View permissions are `ViewChannel`, `ViewAuditLog`, and `ViewAnalytics`.
+
+- **Timed Out**: remove all permissions except view permissions.
+- **Quarantined**: remove all permissions except view permissions and
+  `MemberNickname`.
+- **Lurker** (non-members in a public room): remove all permissions except view
+  permissions.
   - In broadcast channels, members will retain `VoiceConnect`, `VoiceRequest`,
     and `VoiceVad`
 

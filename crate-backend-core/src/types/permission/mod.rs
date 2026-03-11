@@ -9,9 +9,181 @@ use common::v1::types::{
 use crate::error::{Error, Result};
 
 pub mod bits;
-pub use bits::PermissionBits;
+pub mod flags;
 
+pub use bits::{PermissionBits, BROADCAST_LURKER_PERMS, QUARANTINE_PERMS, VIEW_PERMS};
+pub use flags::Permissions2Flags;
+
+/// representation of what permissions a user has
+#[derive(Debug, Clone, Default)]
+pub struct Permissions2 {
+    /// set of basic permissions
+    perms: PermissionBits,
+
+    /// special permissions/restrictions
+    flags: Permissions2Flags,
+
+    /// the kind of resource this permission is for
+    context: Permissions2Context,
+
+    /// the rank of the user in this context
+    rank: u16,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Permissions2Builder {
+    /// set of basic permissions
+    pub perms: PermissionBits,
+
+    /// special permissions/restrictions
+    pub flags: Permissions2Flags,
+
+    /// the kind of resource this permission is for
+    pub context: Permissions2Context,
+
+    /// the rank of the user in this context
+    pub rank: u16,
+}
+
+impl Permissions2Builder {
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[inline]
+    pub fn build(self) -> Permissions2 {
+        Permissions2 {
+            perms: self.perms,
+            flags: self.flags,
+            context: self.context,
+            rank: self.rank,
+        }
+    }
+}
+
+impl Permissions2 {
+    /// create a new permissions builder
+    #[inline]
+    pub fn builder() -> Permissions2Builder {
+        Permissions2Builder::new()
+    }
+
+    #[inline]
+    pub fn has(&self, perm: Permission) -> bool {
+        self.perms.has(perm)
+    }
+
+    /// ensure that the user is able to view this resource, returning an error if they don't
+    #[inline]
+    pub fn ensure_view(&self) -> Result<()> {
+        if self.flags.can_view() {
+            Ok(())
+        } else {
+            return Err(Error::ApiError(ApiError::from_code(match self.context {
+                Permissions2Context::Room => ErrorCode::UnknownRoom,
+                Permissions2Context::Channel => ErrorCode::UnknownChannel,
+            })));
+        }
+    }
+
+    /// ensure that the user has a permission, returning an error if they don't
+    #[inline]
+    pub fn ensure(&self, perm: Permission) -> Result<()> {
+        if self.perms.has(perm) {
+            Ok(())
+        } else {
+            if perm == Permission::ViewChannel {
+                return self.ensure_view();
+            }
+            Err(Error::ApiError(ApiError {
+                required_permissions: vec![perm],
+                ..ApiError::from_code(ErrorCode::MissingPermissions)
+            }))
+        }
+    }
+
+    #[inline]
+    pub fn perms(&self) -> PermissionBits {
+        self.perms
+    }
+
+    #[inline]
+    pub fn flags(&self) -> &Permissions2Flags {
+        &self.flags
+    }
+
+    #[inline]
+    pub fn context(&self) -> &Permissions2Context {
+        &self.context
+    }
+
+    #[inline]
+    pub fn rank(&self) -> u16 {
+        self.rank
+    }
+
+    #[inline]
+    pub fn set_context(&mut self, context: Permissions2Context) {
+        self.context = context;
+    }
+
+    #[inline]
+    pub fn set_rank(&mut self, rank: u16) {
+        self.rank = rank;
+    }
+
+    #[inline]
+    pub fn is_channel_locked(&self) -> bool {
+        self.flags.is_channel_locked()
+    }
+
+    #[inline]
+    pub fn can_bypass_locked_channels(&self) -> bool {
+        // Users with admin or channel/thread manage can bypass locks
+        self.perms.has(Permission::Admin)
+            || self.perms.has(Permission::ChannelManage)
+            || self.perms.has(Permission::ThreadManage)
+    }
+}
+
+/// the kind of resource this permission is for
+#[derive(Debug, Clone, Default)]
+#[repr(u16)]
+pub enum Permissions2Context {
+    /// this is for room-level permissions
+    #[default]
+    Room,
+
+    /// this is for channel-level permissions, including overwrites
+    Channel,
+}
+
+// === old code below ===
+
+impl From<Permissions2> for Permissions {
+    #[inline]
+    fn from(p2: Permissions2) -> Self {
+        let locked_bypass = p2.perms.has(Permission::Admin)
+            || p2.perms.has(Permission::ChannelManage)
+            || p2.perms.has(Permission::ThreadManage)
+            || p2.perms.has(Permission::ThreadLock);
+
+        Permissions {
+            p: p2.perms,
+            timed_out: p2.flags.is_timed_out(),
+            quarantined: p2.flags.is_quarantined(),
+            locked_bypass,
+            channel_locked: p2.flags.is_channel_locked(),
+            lurker: false,
+            is_room_member: true,
+        }
+    }
+}
+
+// TODO: remove
 /// permission calculator
+// this isnt really a permission calculator, more like a representation of what permissions a user has
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Permissions {
     /// the set of permissions this user has
@@ -247,6 +419,12 @@ impl Permissions {
             || self.has(Permission::ThreadManage)
             || self.has(Permission::ChannelManage)
             || self.has(Permission::ThreadLock)
+    }
+
+    /// alias for can_use_locked_threads()
+    #[inline]
+    pub fn can_bypass_locked_channels(&self) -> bool {
+        self.can_use_locked_threads()
     }
 
     /// ensure a channel is either unlocked or that the user has permission to interact with it

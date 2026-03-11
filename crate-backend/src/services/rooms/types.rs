@@ -4,15 +4,15 @@ use im::HashMap as ImMap;
 use std::sync::Arc;
 
 use common::v1::types::{
-    Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomMember,
-    ThreadMember, User, UserId,
+    Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomId,
+    RoomMember, ThreadMember, User, UserId,
 };
 use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
 
 use crate::routes::util::Auth;
 use crate::types::PermissionBits;
-use crate::Result;
+use crate::{Error, Result};
 
 /// A snapshot of a room's state at a point in time.
 /// Used for zero-latency reads.
@@ -84,7 +84,7 @@ pub enum RoomCommand {
 /// A handle to a room actor.
 #[derive(Clone)]
 pub struct RoomHandle {
-    pub room_id: crate::types::RoomId,
+    pub room_id: RoomId,
     pub tx: mpsc::Sender<RoomCommand>,
     pub snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
 }
@@ -113,6 +113,7 @@ pub struct CachedChannel {
     pub inner: Channel,
 
     /// channel permission overwrites as bitfields
+    // maybe dont make this an ImMap
     pub overwrites: ImMap<Uuid, CachedPermissionOverwrite>,
 }
 
@@ -197,7 +198,7 @@ impl RoomSnapshot {
         if let Some(data) = self.get_data() {
             if data.room.security.require_mfa {
                 if !auth.user.has_mfa.unwrap_or_default() {
-                    return Err(crate::Error::BadStatic("mfa required for this action"));
+                    return Err(Error::BadStatic("mfa required for this action"));
                 }
             }
         }

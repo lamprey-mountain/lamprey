@@ -4,12 +4,37 @@ use common::v1::types::Permission;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PermissionBits(u128);
 
+/// permissions that affect one's ability to view something
+pub const VIEW_PERMS: PermissionBits = PermissionBits(
+    (1u128 << 40) | // ViewChannel
+    (1u128 << 41) | // ViewAuditLog
+    (1u128 << 42), // ViewAnalytics
+);
+
+/// permissions for lurkers in broadcast channels
+pub const BROADCAST_LURKER_PERMS: PermissionBits = PermissionBits(
+    (1u128 << 40) | // ViewChannel
+    (1u128 << 41) | // ViewAuditLog
+    (1u128 << 42) | // ViewAnalytics
+    (1u128 << 43) | // VoiceConnect
+    (1u128 << 52) | // VoiceRequest
+    (1u128 << 51),  // VoiceVad
+);
+
+/// permissions for quarantined users (view + nickname)
+pub const QUARANTINE_PERMS: PermissionBits = PermissionBits(
+    (1u128 << 40) | // ViewChannel
+    (1u128 << 41) | // ViewAuditLog
+    (1u128 << 42) | // ViewAnalytics
+    (1u128 << 10),  // MemberNickname
+);
+
 impl PermissionBits {
     /// Maximum number of permissions that can be represented (currently limited by u128)
     const MAX_PERMISSIONS: usize = 128;
 
     /// Convert a Permission to its corresponding bit position
-    fn permission_to_bit(permission: Permission) -> u32 {
+    const fn permission_to_bit(permission: Permission) -> u32 {
         match permission {
             Permission::Admin => 0,
             Permission::IntegrationsManage => 1,
@@ -296,11 +321,13 @@ impl std::ops::BitAndAssign for PermissionBits {
 
 impl PermissionBits {
     /// Add all permissions from another PermissionBits
+    #[inline]
     pub fn add_all(&mut self, other: PermissionBits) {
         self.0 |= other.0;
     }
 
     /// Remove all permissions that are set in another PermissionBits
+    #[inline]
     pub fn remove_all(&mut self, other: PermissionBits) {
         self.0 &= !other.0;
     }
@@ -312,5 +339,11 @@ impl PermissionBits {
             bits.add(*perm);
         }
         bits
+    }
+
+    /// remove all permissions except those in the allowed set
+    #[inline]
+    pub fn mask(&mut self, mask: PermissionBits) {
+        self.0 &= mask.0;
     }
 }
