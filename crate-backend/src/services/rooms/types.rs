@@ -20,13 +20,18 @@ use crate::Result;
 pub enum RoomSnapshot {
     /// The room is currently being loaded from the database.
     Loading,
+
     /// The room is fully loaded, including the complete member list.
     Ready(Arc<RoomData>),
+
     /// The room metadata, roles, and channels are loaded, but the member list is not.
     /// This is used for large rooms or rooms that haven't been "activated" by a member list request.
     WithoutMembers(Arc<RoomData>),
+
     /// The room was not found in the database.
+    // remove this? i dont need an actor for a non-existent room. maybe i should cache "negative stuff" though.
     NotFound,
+
     /// The room is currently unavailable (e.g. backlogged).
     Unavailable(RoomUnavailable),
 }
@@ -39,6 +44,7 @@ pub struct RoomUnavailable {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RoomUnavailableReason {
     /// too many events were received and the room actor is backlogged
+    // maybe rename to "overloaded"?
     Backlogged,
 }
 
