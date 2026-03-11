@@ -71,7 +71,16 @@ export function useChatClient(config: Config) {
 	const [preferences, setPreferences] = createSignal<Preferences>(
 		loadSavedPreferences() ?? DEFAULT_PREFERENCES,
 	);
-	const store = new RootStore(client, events, preferences, setPreferences);
+	const [serverPreferences, setServerPreferences] = createSignal<
+		Preferences | null
+	>(null);
+	const store = new RootStore(
+		client,
+		events,
+		preferences,
+		setPreferences,
+		setServerPreferences,
+	);
 	const api = createApi(client, events, { preferences, setPreferences, store });
 
 	const cs = from(client.state);
@@ -109,7 +118,14 @@ export function useChatClient(config: Config) {
 		if (api.session()?.status !== "Authorized") return;
 
 		localStorage.setItem("preferences", JSON.stringify(config));
-		api.users.setPreferences(config);
+
+		// Only send to server if preferences differ from what server has
+		const serverPrefs = serverPreferences();
+		if (
+			!serverPrefs || JSON.stringify(config) !== JSON.stringify(serverPrefs)
+		) {
+			api.users.setPreferences(config);
+		}
 	});
 
 	const [recentChannels, setRecentChannels] = createSignal([] as string[]);

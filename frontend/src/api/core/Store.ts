@@ -37,6 +37,7 @@ export class RootStore {
 
 	preferences?: Accessor<Preferences>;
 	setPreferences?: (p: Preferences) => void;
+	setServerPreferences?: (p: Preferences) => void;
 
 	constructor(
 		client: Client,
@@ -46,10 +47,12 @@ export class RootStore {
 		}>,
 		preferences?: Accessor<Preferences>,
 		setPreferences?: (p: Preferences) => void,
+		setServerPreferences?: (p: Preferences) => void,
 	) {
 		this.client = client;
 		this.preferences = preferences;
 		this.setPreferences = setPreferences;
+		this.setServerPreferences = setServerPreferences;
 
 		const [session, setSession] = createSignal<Session | null>(null);
 		this.session = session;
@@ -96,6 +99,9 @@ export class RootStore {
 			}
 			if (msg.config && this.setPreferences) {
 				this.setPreferences(msg.config);
+			}
+			if (msg.config && this.setServerPreferences) {
+				this.setServerPreferences(msg.config);
 			}
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			this.rooms.upsert(msg.room);
@@ -167,6 +173,9 @@ export class RootStore {
 				msg.user_id === (this.session() as any)?.user_id && this.setPreferences
 			) {
 				this.setPreferences(msg.config);
+				if (this.setServerPreferences) {
+					this.setServerPreferences(msg.config);
+				}
 			}
 		} else if (msg.type === "MemberListSync") {
 			this.memberLists.handleSync(msg);
