@@ -521,6 +521,7 @@ const DocumentMain = (
 	},
 ) => {
 	const api = useApi();
+	const [ch, setCh] = useChannel()!;
 	const [diffLoading, setDiffLoading] = createSignal(false);
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
 	const [currentRevision, setCurrentRevision] = createSignal<number | null>(
@@ -531,6 +532,14 @@ const DocumentMain = (
 	);
 	const editor = createMemo(() => props.editor());
 	const [viewReady, setViewReady] = createSignal(false);
+
+	// Clear selection when history sidebar is closed
+	createEffect(() => {
+		if (!ch.history_view && (props.selectedSeq || props.hoverSeq)) {
+			props.onSelectChangeset(null);
+			props.onHoverChangeset(null);
+		}
+	});
 
 	// Determine mode: 'edit' | 'diff_preview' | 'diff_readonly'
 	// Hover preview takes priority when actively hovering; otherwise show selected
