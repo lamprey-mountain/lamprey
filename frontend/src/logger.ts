@@ -60,36 +60,24 @@ export const logger = {
 
 			// entries.push({ level, namespace, tag, message, data });
 			const cfg = namespaceConfig.get(namespace);
-			const resolvedColor = customColor ?? cfg?.color;
-			if (resolvedColor) {
-				if (tag) {
-					console[level](
-						"%c%s%c %s%c %s",
-						badgeStyle(resolvedColor),
-						namespace,
-						color(resolvedColor),
-						tag,
-						"color:initial",
-						message,
-						data,
-					);
-				} else {
-					console[level](
-						"%c%s%c %s",
-						badgeStyle(resolvedColor),
-						namespace,
-						"color:initial",
-						message,
-						data,
-					);
-				}
-			} else {
-				if (tag) {
-					console[level]("[%s] %s :: %s", namespace, tag, message, data);
-				} else {
-					console[level]("[%s] %s", namespace, message, data);
-				}
-			}
+			const resolvedColor = customColor ?? cfg?.color ?? "white";
+
+			const log: Array<unknown> = tag
+				? [
+					"%c%s%c %s%c %s",
+					badgeStyle(resolvedColor),
+					namespace,
+					color(resolvedColor),
+					tag,
+				]
+				: [
+					"%c%s%c %s",
+					badgeStyle(resolvedColor),
+					namespace,
+				];
+			log.push("color:initial", message);
+			if (data) log.push(data);
+			console[level](...log);
 		};
 
 		return {
@@ -109,8 +97,9 @@ export const logger = {
 logger.config("sw", { color: colors.gray });
 logger.config("config", { color: colors.gray });
 logger.config("voice", { color: colors.green });
-logger.config("rtc", { color: colors.cyan });
-logger.config("vad", { color: colors.teal });
+logger.config("rtc", { color: colors.cyan }); // webrtc
+logger.config("vad", { color: colors.teal }); // voice activity detection
+logger.config("cs", { color: colors.gray }); // client state
 logger.config("api/dms", { color: colors.orange });
 logger.config("api/threads", { color: colors.orange });
 logger.config("api/emoji", { color: colors.orange });

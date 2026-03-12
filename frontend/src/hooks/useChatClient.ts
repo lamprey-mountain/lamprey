@@ -15,6 +15,8 @@ import type { ChatCtx, Data, Events, MediaCtx } from "../context.ts";
 import type { ThreadsViewData } from "../context.ts";
 import type { Config } from "../config.tsx";
 import { flags } from "../flags.ts";
+import { RootStore } from "../api/core/Store.ts";
+import { colors, logger } from "../logger.ts";
 
 function loadSavedPreferences(): Preferences | null {
 	const c = localStorage.getItem("preferences");
@@ -49,9 +51,6 @@ const DEFAULT_PREFERENCES: Preferences = {
 	},
 };
 
-import { RootStore } from "../api/core/Store.ts";
-import { colors, logger } from "../logger.ts";
-
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
 		sync: [import("sdk").MessageSync, import("sdk").MessageEnvelope];
@@ -60,7 +59,7 @@ export function useChatClient(config: Config) {
 	const useMsgpack = flags.has("msgpack");
 	const recvLog = logger.for("sync").create("debug", colors.blue);
 	const sendLog = logger.for("sync").create("debug", colors.teal);
-	const errorLog = logger.for("sync").create("error", colors.red);
+	const syncLog = logger.for("cs");
 	const client = createClient({
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
@@ -73,7 +72,7 @@ export function useChatClient(config: Config) {
 			sendLog("send 🢁", `sent op ${data.type}`, data);
 		},
 		onError(error) {
-			errorLog("error", error.message, error);
+			syncLog.error("error", error.message, error);
 		},
 		onSync(msg, raw) {
 			events.emit("sync", [msg, raw as import("sdk").MessageEnvelope]);
@@ -100,7 +99,7 @@ export function useChatClient(config: Config) {
 
 	const cs = from(client.state);
 	createEffect(() => {
-		console.log("client state", cs());
+		syncLog.debug("client state", cs() ?? "unknown", null);
 	});
 
 	const [data, update] = createStore<Data>({
