@@ -1,0 +1,30 @@
+# FIXME: use faster linkers (like mold or ldd)
+
+[build]
+rustflags = [
+  # "-Z", "threads=8", # requires nightly
+  # "-C", "link-arg=-fuse-ld=lld",
+  "-C", "codegen-units=16",
+]
+
+# [target.x86_64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# [target.aarch64-apple-darwin]
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
+[profile.release]
+codegen-units = 16
+lto = "thin" # unsure if i should set it to this
+
+# Experimental "fast-dev" profile for iteration (use: cargo build --profile fast-dev)
+[profile.fast-dev]
+inherits = "dev"
+opt-level = 1
+debug = "line-tables-only"
+codegen-units = 32

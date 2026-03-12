@@ -36,6 +36,8 @@ bot.toml
 scanner-malware.toml
 scanner-nsfw.toml
 
+!/.cargo/config.toml
+
 # Added by cargo
 /target
 

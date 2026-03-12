@@ -19,15 +19,22 @@
           buildInputs = with pkgs; [
             openssl
             pkg-config
-            # Add additional build inputs here
           ] ++ lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
             pkgs.libiconv
           ];
 
           nativeBuildInputs = with pkgs; [
             perl
+            mold
+            clang
+            lld
           ];
+
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.clang}/bin/clang";
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
+
+          OPENSSL_NO_VENDOR = "1";
+          ZSTD_NO_VENDOR = "1";
         };
 
         cargoArtifacts =
