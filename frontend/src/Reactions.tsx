@@ -81,9 +81,11 @@ export const Reactions = (props: ReactionsProps) => {
 				},
 			});
 		} else {
+			const popout = ctx.popout();
 			if (
-				(ctx.popout() as any).id === "emoji" &&
-				(ctx.popout() as any).ref === addEl
+				popout &&
+				(popout as any).id === "emoji" &&
+				(popout as any).ref === addEl
 			) {
 				ctx.setPopout({});
 			}
