@@ -23,8 +23,30 @@ mod tests;
 
 // Re-export main types for convenience
 pub use ast::{
-    AngleBracketLink, Ast, AstNode, Autolink, BlockQuote, CodeBlock, Document, Emoji, Emphasis,
-    Escape, Header, InlineCode, Link, List, ListItem, Mention, Paragraph, Strikethrough, Strong,
+    AngleBracketLink,
+    Ast,
+    AstNode,
+    Autolink,
+    BlockQuote,
+    CodeBlock,
+    Document,
+    Emoji,
+    Emphasis,
+    Escape,
+    Header,
+    InlineCode,
+    Link,
+    LinkKind,
+    // Query types
+    LinkRef,
+    List,
+    ListItem,
+    Mention,
+    MentionId,
+    MentionIds,
+    Paragraph,
+    Strikethrough,
+    Strong,
 };
 pub use events::{Event, EventFilter, EventIterator, Tag};
 pub use parser::{Edit, ParseOptions, Parsed, Parser, SyntaxKind, TokenKind};

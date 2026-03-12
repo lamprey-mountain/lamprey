@@ -860,24 +860,282 @@ impl Ast {
             .filter_map(|node| Emphasis::cast(node))
     }
 
-    /// Find all links in the document.
-    pub fn links(&self) -> impl Iterator<Item = Link> + '_ {
-        self.syntax()
-            .descendants()
-            .filter_map(|node| Link::cast(node))
-    }
-
-    /// Find all mentions in the document.
-    pub fn mentions(&self) -> impl Iterator<Item = Mention> + '_ {
-        self.syntax()
-            .descendants()
-            .filter_map(|node| Mention::cast(node))
-    }
-
     /// Find all emojis in the document.
     pub fn emojis(&self) -> impl Iterator<Item = Emoji> + '_ {
         self.syntax()
             .descendants()
             .filter_map(|node| Emoji::cast(node))
+    }
+}
+
+// ============ AST Query Helpers ============
+
+/// A mention ID that can be extracted from markdown.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum MentionId {
+    User(uuid::Uuid),
+    Role(uuid::Uuid),
+    Channel(uuid::Uuid),
+    Emoji {
+        id: uuid::Uuid,
+        name: String,
+        animated: bool,
+    },
+    Everyone,
+}
+
+/// Collection of mention IDs extracted from markdown.
+#[derive(Debug, Default, Clone)]
+pub struct MentionIds {
+    pub users: Vec<uuid::Uuid>,
+    pub roles: Vec<uuid::Uuid>,
+    pub channels: Vec<uuid::Uuid>,
+    pub emojis: Vec<(uuid::Uuid, String, bool)>, // (id, name, animated)
+    pub everyone: bool,
+}
+
+impl FromIterator<MentionId> for MentionIds {
+    fn from_iter<I: IntoIterator<Item = MentionId>>(iter: I) -> Self {
+        let mut result = MentionIds::default();
+        for mention in iter {
+            match mention {
+                MentionId::User(id) => result.users.push(id),
+                MentionId::Role(id) => result.roles.push(id),
+                MentionId::Channel(id) => result.channels.push(id),
+                MentionId::Emoji { id, name, animated } => result.emojis.push((id, name, animated)),
+                MentionId::Everyone => result.everyone = true,
+            }
+        }
+        result
+    }
+}
+
+/// A link extracted from markdown.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinkRef<'a> {
+    /// The link destination (URL).
+    pub dest: std::borrow::Cow<'a, str>,
+    /// The link text (if any).
+    pub text: Option<std::borrow::Cow<'a, str>>,
+    /// The type of link.
+    pub kind: LinkKind,
+}
+
+/// The type of link.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LinkKind {
+    /// Raw URL (autolink): https://example.com
+    RawUrl,
+    /// Angle bracket link: <https://example.com>
+    AngleBracket,
+    /// Named link: [text](url)
+    Named,
+}
+
+/// Iterator over links in the AST.
+pub struct LinksIter<'a> {
+    nodes: std::iter::Peekable<
+        std::boxed::Box<dyn Iterator<Item = rowan::SyntaxNode<crate::parser::MyLang>> + 'a>,
+    >,
+    source: &'a str,
+}
+
+impl<'a> Iterator for LinksIter<'a> {
+    type Item = LinkRef<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use crate::parser::SyntaxKind;
+
+        while let Some(node) = self.nodes.next() {
+            match node.kind() {
+                SyntaxKind::Autolink => {
+                    let dest = node.text().to_string();
+                    return Some(LinkRef {
+                        dest: std::borrow::Cow::Owned(dest),
+                        text: None,
+                        kind: LinkKind::RawUrl,
+                    });
+                }
+                SyntaxKind::AngleBracketLink => {
+                    let text = node.text().to_string();
+                    // Strip < and >
+                    let dest = text.trim_matches(|c| c == '<' || c == '>');
+                    return Some(LinkRef {
+                        dest: std::borrow::Cow::Owned(dest.to_string()),
+                        text: None,
+                        kind: LinkKind::AngleBracket,
+                    });
+                }
+                SyntaxKind::Link => {
+                    let mut dest = None;
+                    let mut text = None;
+
+                    for child in node.children() {
+                        match child.kind() {
+                            SyntaxKind::LinkText => {
+                                let t = child.text().to_string();
+                                // Strip [ and ]
+                                let trimmed = t.trim_matches(|c| c == '[' || c == ']');
+                                text = Some(std::borrow::Cow::Owned(trimmed.to_string()));
+                            }
+                            SyntaxKind::LinkDestination => {
+                                let t = child.text().to_string();
+                                // Strip ( and )
+                                let trimmed = t.trim_matches(|c| c == '(' || c == ')');
+                                dest = Some(std::borrow::Cow::Owned(trimmed.to_string()));
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    if let Some(dest) = dest {
+                        return Some(LinkRef {
+                            dest,
+                            text,
+                            kind: LinkKind::Named,
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        None
+    }
+}
+
+/// Iterator over mention IDs in the AST.
+pub struct MentionsIter<'a> {
+    nodes: std::iter::Peekable<
+        std::boxed::Box<dyn Iterator<Item = rowan::SyntaxNode<crate::parser::MyLang>> + 'a>,
+    >,
+    source: &'a str,
+}
+
+impl<'a> Iterator for MentionsIter<'a> {
+    type Item = MentionId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use crate::parser::SyntaxKind;
+
+        while let Some(node) = self.nodes.next() {
+            match node.kind() {
+                SyntaxKind::Mention => {
+                    // Extract UUID from mention
+                    let mut uuid_str = String::new();
+                    for child in node.children_with_tokens() {
+                        if let rowan::NodeOrToken::Token(token) = child {
+                            if token.kind() != SyntaxKind::MentionMarker {
+                                uuid_str.push_str(token.text());
+                            }
+                        }
+                    }
+
+                    if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
+                        return Some(MentionId::User(uuid));
+                    }
+                }
+                SyntaxKind::Emoji => {
+                    let mut name = String::new();
+                    let mut uuid_str = String::new();
+                    let mut animated = false;
+
+                    for child in node.children_with_tokens() {
+                        match child {
+                            rowan::NodeOrToken::Node(child_node) => {
+                                if child_node.kind() == SyntaxKind::EmojiName {
+                                    name = child_node.text().to_string();
+                                }
+                            }
+                            rowan::NodeOrToken::Token(token) => {
+                                let text = token.text();
+                                // Check for animated marker "a"
+                                if token.kind() == SyntaxKind::EmojiMarker && text == "a" {
+                                    animated = true;
+                                }
+                                // Get UUID
+                                if text.len() == 36
+                                    && text.chars().filter(|c| *c == '-').count() == 4
+                                {
+                                    uuid_str = text.to_string();
+                                }
+                            }
+                        }
+                    }
+
+                    if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
+                        return Some(MentionId::Emoji {
+                            id: uuid,
+                            name,
+                            animated,
+                        });
+                    }
+                }
+                SyntaxKind::Paragraph => {
+                    // Check for @everyone in paragraph text
+                    let text = node.text().to_string();
+                    if text.contains("@everyone") {
+                        return Some(MentionId::Everyone);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        None
+    }
+}
+
+impl Ast {
+    /// Iterate over all links in the document.
+    ///
+    /// This includes:
+    /// - Raw URLs (autolinks): https://example.com
+    /// - Angle bracket links: <https://example.com>
+    /// - Named links: [text](url)
+    ///
+    /// # Example
+    /// ```
+    /// use lamprey_markdown::{Parser, Ast};
+    ///
+    /// let parser = Parser::default();
+    /// let ast = Ast::new(parser.parse("check [example](https://example.com) and https://other.com"));
+    ///
+    /// let links: Vec<_> = ast.links().collect();
+    /// assert_eq!(links.len(), 2);
+    /// ```
+    pub fn links(&self) -> impl Iterator<Item = LinkRef<'_>> + '_ {
+        let iter: Box<dyn Iterator<Item = _> + '_> = Box::new(self.syntax().descendants());
+        LinksIter {
+            nodes: iter.peekable(),
+            source: self.source(),
+        }
+    }
+
+    /// Iterate over all mention IDs in the document.
+    ///
+    /// This extracts:
+    /// - User mentions: <@uuid>
+    /// - Emoji mentions: <:name:uuid> or <a:name:uuid>
+    /// - @everyone mentions
+    ///
+    /// # Example
+    /// ```
+    /// use lamprey_markdown::{Parser, Ast};
+    /// use lamprey_markdown::ast::{MentionId, MentionIds};
+    ///
+    /// let parser = Parser::default();
+    /// let ast = Ast::new(parser.parse("hello <@uuid> and <:emoji:uuid>"));
+    ///
+    /// let mentions: MentionIds = ast.mentions().collect();
+    /// assert!(!mentions.users.is_empty());
+    /// assert!(!mentions.emojis.is_empty());
+    /// ```
+    pub fn mentions(&self) -> impl Iterator<Item = MentionId> + '_ {
+        let iter: Box<dyn Iterator<Item = _> + '_> = Box::new(self.syntax().descendants());
+        MentionsIter {
+            nodes: iter.peekable(),
+            source: self.source(),
+        }
     }
 }
