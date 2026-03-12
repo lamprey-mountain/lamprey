@@ -272,12 +272,16 @@ impl<'a> EventIterator<'a> {
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
                         child_idx += 1;
+                        // Push child state first, then Paragraph state
+                        // This ensures child is processed before we continue with Paragraph
+                        self.push_state_for_node_or_text(child);
                         self.stack.push(IterState::Paragraph {
                             node,
                             pos,
                             child_idx,
                         });
-                        self.push_state_for_node_or_text(child);
+                    } else {
+                        return Some(Event::End(Tag::Paragraph));
                     }
                 }
 
@@ -778,6 +782,17 @@ impl<'a> EventIterator<'a> {
                         node: emoji,
                         emitted: false,
                     });
+                }
+            }
+            SyntaxKind::Escape => {
+                // For escape sequences, emit the escaped character (not the backslash)
+                for child in node.children_with_tokens() {
+                    if let rowan::NodeOrToken::Token(token) = child {
+                        if token.kind() == SyntaxKind::EscapedChar {
+                            self.pending
+                                .push(Event::Text(token.text().to_string().into()));
+                        }
+                    }
                 }
             }
             _ => {}

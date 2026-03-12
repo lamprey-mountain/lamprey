@@ -9,9 +9,8 @@
 //! let ast = Ast::new(parsed);
 //!
 //! // Get plain text (strips formatting)
-//! let plain = PlainTextReader::new();
-//! let text = plain.read(&ast);
-//! // Note: formatting markers are stripped but text content remains
+//! let reader = PlainTextReader::new();
+//! let text = reader.read(&ast);
 //! assert!(text.contains("hello"));
 //! assert!(text.contains("world"));
 //! ```
@@ -23,44 +22,28 @@ pub use strip_emoji::StripEmojiReader;
 mod identity;
 mod plain;
 mod strip_emoji;
-// mod html; // NOTE: html isn't needed for now
 
 /// Trait for reading/rendering an AST in different ways.
 ///
-/// This trait allows readers to be composed and chained together.
+/// Each reader operates independently on the AST. For composition,
+/// use the event iterator API:
 ///
 /// # Example
-/// ```ignore
-/// // The trait methods allow chaining readers, but each reader operates
-/// // on the AST directly. For composition, create wrapper types.
-/// use lamprey_markdown::{Parser, Ast, PlainTextReader, StripEmojiReader};
-/// use lamprey_common::v1::types::EmojiId;
+/// ```
+/// use lamprey_markdown::{Parser, Ast};
+/// use lamprey_markdown::events::EventFilter;
 ///
 /// let parser = Parser::default();
-/// let parsed = parser.parse("**hello** :emoji:uuid:");
-/// let ast = Ast::new(parsed);
+/// let ast = Ast::new(parser.parse("**hello** world"));
 ///
-/// // Use readers independently
-/// let plain = PlainTextReader::new();
-/// let text = plain.read(&ast);
+/// // Use event iterators for composition
+/// let text: String = ast.events()
+///     .map(|e| e.text())
+///     .collect();
 /// ```
-pub trait MarkdownReader: Sized {
+pub trait MarkdownReader {
     /// Read the AST and produce output string.
     fn read(&self, ast: &Ast) -> String;
-
-    /// Wrap this reader with a PlainTextReader.
-    fn plain(self) -> PlainTextReader<Self> {
-        PlainTextReader(self)
-    }
-
-    /// Wrap this reader with a StripEmojiReader.
-    fn strip_emoji(self, allowed: Vec<EmojiId>) -> StripEmojiReader<Self> {
-        StripEmojiReader {
-            inner: self,
-            allowed,
-        }
-    }
 }
 
 use crate::ast::Ast;
-use lamprey_common::v1::types::EmojiId;

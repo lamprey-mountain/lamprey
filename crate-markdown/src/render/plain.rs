@@ -1,8 +1,8 @@
-use rowan::NodeOrToken;
+use crate::ast::Ast;
+use crate::events::Event;
+use crate::render::MarkdownReader;
 
-use crate::{ast::Ast, parser::SyntaxNode as ParserSyntaxNode, render::MarkdownReader};
-
-/// A reader that wraps another reader and strips markdown syntax tokens, returning plain text.
+/// A reader that converts markdown to plain text by stripping formatting.
 ///
 /// This reader removes all formatting markers (bold, italic, links, etc.) and
 /// returns only the text content. Escape sequences are processed so that
@@ -16,25 +16,31 @@ use crate::{ast::Ast, parser::SyntaxNode as ParserSyntaxNode, render::MarkdownRe
 /// let parsed = parser.parse("**hello** *world*");
 /// let ast = Ast::new(parsed);
 ///
-/// // Use PlainTextReader directly
 /// let reader = PlainTextReader::new();
 /// let result = reader.read(&ast);
-/// // Formatting markers are stripped, text content remains
 /// assert!(result.contains("hello"));
 /// assert!(result.contains("world"));
 /// ```
-pub struct PlainTextReader<R = ()>(pub R);
+pub struct PlainTextReader;
 
 impl PlainTextReader {
-    /// Create a new PlainTextReader with no inner reader (reads directly from AST).
+    /// Create a new PlainTextReader.
     pub fn new() -> Self {
-        PlainTextReader(())
+        PlainTextReader
     }
 
-    /// Read plain text from an AST, stripping all markdown formatting.
+    /// Read plain text from an AST using event iteration.
     pub fn read(&self, ast: &Ast) -> String {
-        let syntax = ast.syntax();
-        collect_plain_text(&syntax)
+        ast.events()
+            .filter_map(|event| {
+                match event {
+                    Event::Text(t) => Some(t),
+                    Event::Code(c) => Some(c),
+                    // Skip Start/End tags, they're formatting
+                    _ => None,
+                }
+            })
+            .collect()
     }
 }
 
@@ -44,76 +50,8 @@ impl Default for PlainTextReader {
     }
 }
 
-impl<R: MarkdownReader> MarkdownReader for PlainTextReader<R> {
+impl MarkdownReader for PlainTextReader {
     fn read(&self, ast: &Ast) -> String {
-        // First get the inner reader's output, then strip formatting
-        // For now, just strip directly from AST
-        let syntax = ast.syntax();
-        collect_plain_text(&syntax)
-    }
-}
-
-/// Collect plain text from a syntax tree, skipping delimiters and markers
-fn collect_plain_text(node: &ParserSyntaxNode) -> String {
-    let mut result = String::new();
-    collect_plain_text_impl(node, &mut result);
-    result
-}
-
-fn collect_plain_text_impl(node: &ParserSyntaxNode, result: &mut String) {
-    for child in node.children_with_tokens() {
-        match child {
-            NodeOrToken::Node(child_node) => {
-                // Skip delimiter-only nodes but recurse into content nodes
-                match child_node.kind() {
-                    // Skip delimiter nodes
-                    crate::parser::SyntaxKind::StrongDelimiter
-                    | crate::parser::SyntaxKind::EmphasisDelimiter
-                    | crate::parser::SyntaxKind::StrikethroughDelimiter
-                    | crate::parser::SyntaxKind::InlineCodeFence
-                    | crate::parser::SyntaxKind::LinkText
-                    | crate::parser::SyntaxKind::LinkDestination
-                    | crate::parser::SyntaxKind::LinkTitle
-                    | crate::parser::SyntaxKind::HeaderMarker
-                    | crate::parser::SyntaxKind::ListMarker
-                    | crate::parser::SyntaxKind::BlockQuoteMarker
-                    | crate::parser::SyntaxKind::CodeBlockFence
-                    | crate::parser::SyntaxKind::MentionMarker
-                    | crate::parser::SyntaxKind::EmojiMarker => {
-                        // Skip these markers entirely
-                    }
-                    // For Escape nodes, only output the escaped character (not the backslash)
-                    crate::parser::SyntaxKind::Escape => {
-                        // Recurse but only collect EscapedChar tokens
-                        for esc_child in child_node.children_with_tokens() {
-                            if let NodeOrToken::Token(t) = esc_child {
-                                if t.kind() == crate::parser::SyntaxKind::EscapedChar {
-                                    result.push_str(t.text());
-                                }
-                            }
-                        }
-                    }
-                    // Skip emoji entirely (it's a special element)
-                    crate::parser::SyntaxKind::Emoji => {
-                        // Skip emoji nodes
-                    }
-                    // Recurse into content nodes
-                    crate::parser::SyntaxKind::InlineCodeContent
-                    | crate::parser::SyntaxKind::CodeBlockContent => {
-                        collect_plain_text_impl(&child_node, result);
-                    }
-                    // For other nodes, recurse to get their text content
-                    _ => {
-                        collect_plain_text_impl(&child_node, result);
-                    }
-                }
-            }
-            NodeOrToken::Token(token) => {
-                // Include text tokens, but skip backslashes and escape-related tokens
-                if token.kind() != crate::parser::SyntaxKind::Escape {
-                    result.push_str(token.text());
-                }
-            }
-        }
+        self.read(ast)
     }
 }
