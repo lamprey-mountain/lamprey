@@ -66,19 +66,19 @@ impl MemberListSyncer {
                 callback: tx,
             },
         );
-        
+
         let result = list.room_tx.send(cmd).await;
-        
+
         if result.is_err() {
             // Actor is dead, evict it and get a fresh one
             let room_id = key
                 .room_id()
                 .ok_or_else(|| Error::Internal("no room id for member list key".to_string()))?;
-            
+
             srv.rooms.unload_cache(room_id).await;
-            
+
             let list = srv.member_lists.ensure(key.clone()).await?;
-            
+
             let (tx, rx) = oneshot::channel();
             let cmd = RoomCommand::MemberList(
                 key.clone(),
@@ -88,12 +88,12 @@ impl MemberListSyncer {
                     callback: tx,
                 },
             );
-            
+
             list.room_tx
                 .send(cmd)
                 .await
                 .map_err(|_| Error::Internal("failed to send member list command".to_string()))?;
-            
+
             let mut initial_sync = rx
                 .await
                 .map_err(|_| Error::Internal("failed to receive initial ranges".to_string()))?;
@@ -104,7 +104,7 @@ impl MemberListSyncer {
                 let stream = StreamNotifyClose::new(BroadcastStream::new(list.subscribe()));
                 self.streams.insert(key, stream);
             }
-            
+
             return Ok(());
         }
 

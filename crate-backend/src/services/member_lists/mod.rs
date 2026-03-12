@@ -70,7 +70,7 @@ impl ServiceMemberLists {
             .map_err(|e| e.fake_clone())?;
 
         let (events_tx, _) = broadcast::channel(100);
-        
+
         // Try to send the subscribe command; if it fails, the actor is dead
         // Evict the dead actor and retry once
         let result = room_handle
@@ -80,11 +80,11 @@ impl ServiceMemberLists {
                 events_tx.clone(),
             ))
             .await;
-        
+
         if result.is_err() {
             // Actor is dead, evict it
             self.s.services().rooms.unload_cache(room_id).await;
-            
+
             // Get a fresh actor
             let room_handle = self
                 .s
@@ -96,7 +96,7 @@ impl ServiceMemberLists {
                 })
                 .await
                 .map_err(|e| e.fake_clone())?;
-            
+
             room_handle
                 .tx
                 .send(RoomCommand::MemberListSubscribe(
@@ -107,7 +107,7 @@ impl ServiceMemberLists {
                 .map_err(|_| {
                     crate::Error::Internal("failed to subscribe to member list".to_string())
                 })?;
-            
+
             return Ok(Arc::new(MemberListHandle {
                 room_tx: room_handle.tx.clone(),
                 key,

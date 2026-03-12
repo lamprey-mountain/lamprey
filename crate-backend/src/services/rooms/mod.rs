@@ -178,23 +178,30 @@ impl ServiceRooms {
     }
 
     /// Try to send a command to a room actor. Returns Ok(true) if sent, Ok(false) if actor is dead.
-    async fn try_send_to_actor(
-        &self,
-        room_id: RoomId,
-        cmd: RoomCommand,
-    ) -> Result<bool> {
+    async fn try_send_to_actor(&self, room_id: RoomId, cmd: RoomCommand) -> Result<bool> {
+        use tokio::sync::mpsc::error::TrySendError;
+
         let handle = self.actors.get(&room_id).await;
         let Some(handle) = handle else {
             return Ok(false);
         };
 
-        if handle.tx.try_send(cmd).is_err() {
-            // Actor is dead, evict it so next request will respawn
-            self.unload_cache(room_id).await;
-            return Ok(false);
+        match handle.tx.try_send(cmd) {
+            Ok(_) => Ok(true),
+            Err(TrySendError::Closed(_)) => {
+                // Actor is dead, evict it so next request will respawn
+                self.unload_cache(room_id).await;
+                Ok(false)
+            }
+            Err(TrySendError::Full(_)) => {
+                // Actor is backlogged, mark it as unavailable but don't evict
+                // This allows it to recover once it processes some messages
+                tracing::warn!(?room_id, "Room actor channel full, marking as backlogged");
+                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
+                    .await;
+                Ok(true)
+            }
         }
-
-        Ok(true)
     }
 
     /// update a room's metadata in the cache
