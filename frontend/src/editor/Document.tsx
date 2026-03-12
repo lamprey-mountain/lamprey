@@ -528,18 +528,19 @@ const DocumentMain = (
 		null,
 	);
 	const editor = createMemo(() => props.editor());
-	let hoverDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// Determine mode: 'edit' | 'diff_preview' | 'diff_readonly'
+	// Hover preview takes priority when actively hovering; otherwise show selected
 	const mode = () => {
-		if (props.selectedSeq !== null) return "diff_readonly";
 		if (props.hoverSeq !== null) return "diff_preview";
+		if (props.selectedSeq !== null) return "diff_readonly";
 		return "edit";
 	};
 
 	// Get the changeset info for the current revision
 	const currentChangeset = () => {
-		const selection = props.selectedSeq ?? props.hoverSeq;
+		// Hover takes priority over selected when hovering
+		const selection = props.hoverSeq ?? props.selectedSeq;
 		if (selection === null) return null;
 		const hist = history();
 		if (!hist) return null;
@@ -597,13 +598,7 @@ const DocumentMain = (
 		setLastSubscribedChannel(chId);
 	});
 
-	// Handle readonly/preview mode: load historical revision with debounce for hover
-	const [pendingPreviewSeq, setPendingPreviewSeq] = createSignal<
-		ChangesetSelection | null
-	>(
-		null,
-	);
-
+	// Handle readonly/preview mode: load historical revision
 	createEffect(() => {
 		const ed = editor();
 		const m = mode();
@@ -619,31 +614,7 @@ const DocumentMain = (
 			setEditState(ed.view.state);
 		}
 
-		// Debounce hover previews (150ms) to avoid flickering
-		if (m === "diff_preview") {
-			if (hoverDebounceTimer) clearTimeout(hoverDebounceTimer);
-			setPendingPreviewSeq(selection);
-
-			hoverDebounceTimer = setTimeout(() => {
-				if (
-					pendingPreviewSeq()?.start_seq === selection.start_seq &&
-					pendingPreviewSeq()?.end_seq === selection.end_seq
-				) {
-					loadReadonlyRevision(ed, selection, true);
-				}
-				hoverDebounceTimer = null;
-			}, 150);
-
-			return () => {
-				if (hoverDebounceTimer) {
-					clearTimeout(hoverDebounceTimer);
-					hoverDebounceTimer = null;
-				}
-			};
-		}
-
-		setPendingPreviewSeq(null);
-		loadReadonlyRevision(ed, selection, false);
+		loadReadonlyRevision(ed, selection, m === "diff_preview");
 	});
 
 	// Clear preview when returning to edit mode
@@ -696,9 +667,7 @@ const DocumentMain = (
 			}
 
 			// Abort Guard: Check if user moved away while fetching
-			const activeSelection = isPreview
-				? pendingPreviewSeq()
-				: props.selectedSeq;
+			const activeSelection = isPreview ? props.hoverSeq : props.selectedSeq;
 			if (
 				activeSelection?.start_seq !== selection.start_seq ||
 				activeSelection?.end_seq !== selection.end_seq
@@ -720,7 +689,7 @@ const DocumentMain = (
 
 			// Abort Guard 2
 			const activeSelectionPostFetch = isPreview
-				? pendingPreviewSeq()
+				? props.hoverSeq
 				: props.selectedSeq;
 			if (
 				activeSelectionPostFetch?.start_seq !== selection.start_seq ||
@@ -748,9 +717,7 @@ const DocumentMain = (
 		} catch (e) {
 			console.error("Failed to load revision:", e);
 		} finally {
-			const activeSelection = isPreview
-				? pendingPreviewSeq()
-				: props.selectedSeq;
+			const activeSelection = isPreview ? props.hoverSeq : props.selectedSeq;
 			if (
 				activeSelection?.start_seq === selection.start_seq &&
 				activeSelection?.end_seq === selection.end_seq && !hasCache

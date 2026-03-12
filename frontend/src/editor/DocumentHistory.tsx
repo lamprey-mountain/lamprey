@@ -138,7 +138,10 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 					<div class="error">{error()}</div>
 				</Show>
 				<Show when={!loading() && !error() && history()}>
-					<div class="history-list">
+					<div
+						class="history-list"
+						onMouseLeave={() => props.onHoverChangeset(null)}
+					>
 						<For each={history()!.changesets}>
 							{(changeset) => {
 								const isSelected = props.selectedSeq !== null &&
@@ -163,7 +166,6 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 												start_seq: changeset.start_seq,
 												end_seq: changeset.end_seq,
 											})}
-										onMouseLeave={() => props.onHoverChangeset(null)}
 									>
 										<div class="history-item-header">
 											<Time date={new Date(changeset.start_time)} />
