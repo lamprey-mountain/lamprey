@@ -75,7 +75,7 @@
           VITE_GIT_SHA = self.rev or self.dirtyRev or "unknown";
           VITE_GIT_DIRTY = if (self ? rev) then "false" else "true";
 
-          pnpmDepsHash = "sha256-vJQ2MruYHWcHVihYBJ1X+UZjWjhys7LTun7PQMgOPWk=";
+          pnpmDepsHash = "sha256-1oQTy6syo64yfOTzuLFas+t6Sjx3LXdruumzg6ygppE=";
           pnpmDeps = pkgs.pnpm.fetchDeps {
             inherit (finalAttrs) src pname version;
             fetcherVersion = 2;
