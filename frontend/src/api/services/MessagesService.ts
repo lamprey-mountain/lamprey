@@ -620,6 +620,226 @@ export class MessagesService extends BaseService<Message> {
 		});
 	}
 
+	// TODO: the next few methods are directly ported from the old api impl. these should probably return promises rather than resources, and have useFoo variants for resources
+	listReplies(
+		channel_id: () => string,
+		message_id: () => string | undefined,
+		query?: () => { depth?: number; breadth?: number } & PaginationQuery,
+	): Resource<Pagination<Message>> {
+		const [resource] = createResource(
+			() => ({
+				channel_id: channel_id(),
+				message_id: message_id(),
+				query: query?.(),
+			}),
+			async ({ channel_id, message_id, query }) => {
+				const { data, error } = await (message_id
+					? this.client.http.GET(
+						"/api/v1/channel/{channel_id}/reply/{message_id}",
+						{
+							params: { path: { channel_id, message_id }, query },
+						},
+					)
+					: this.client.http.GET(
+						"/api/v1/channel/{channel_id}/reply",
+						{
+							params: { path: { channel_id }, query },
+						},
+					));
+				if (error) throw error;
+
+				batch(() => {
+					for (const item of data.items) {
+						this.upsert(item as Message);
+					}
+				});
+
+				return data as Pagination<Message>;
+			},
+		);
+		return resource;
+	}
+
+	listPinned(thread_id_signal: () => string): Resource<Pagination<Message>> {
+		const paginate = async (pagination?: Pagination<Message>) => {
+			if (pagination && !pagination.has_more) return pagination;
+
+			const { data, error } = await this.client.http.GET(
+				"/api/v1/channel/{channel_id}/pin",
+				{
+					params: {
+						path: { channel_id: thread_id_signal() },
+						query: {
+							dir: "f",
+							limit: 1024,
+							from: pagination?.items.at(-1)?.id,
+						},
+					},
+				},
+			);
+			if (error) throw error;
+
+			batch(() => {
+				for (const item of data.items) {
+					this.upsert(item as Message);
+				}
+			});
+
+			return {
+				...data,
+				items: [...pagination?.items ?? [], ...data.items as Message[]],
+			} as Pagination<Message>;
+		};
+
+		const thread_id = thread_id_signal();
+		const l = this._pinnedListings.get(thread_id);
+		if (l) {
+			return l.resource;
+		}
+
+		const l2 = {
+			resource: (() => {}) as unknown as Resource<Pagination<Message>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+		this._pinnedListings.set(thread_id, l2);
+
+		const [resource, { mutate, refetch }] = createResource(
+			thread_id_signal,
+			async (thread_id) => {
+				let l = this._pinnedListings.get(thread_id)!;
+				if (l?.prom) {
+					await l.prom;
+					return l.pagination!;
+				}
+
+				const prom = l.pagination ? paginate(l.pagination) : paginate();
+				l.prom = prom;
+				const res = await prom;
+				l!.pagination = res;
+				l!.prom = null;
+
+				for (const mut of this._pinnedListingMutators) {
+					if (mut.thread_id === thread_id) mut.mutate(res);
+				}
+
+				return res!;
+			},
+		);
+
+		l2.resource = resource;
+		l2.refetch = refetch;
+		l2.mutate = mutate;
+
+		const mut = { thread_id: thread_id_signal(), mutate };
+		this._pinnedListingMutators.add(mut);
+
+		createEffect(() => {
+			mut.thread_id = thread_id_signal();
+		});
+
+		return resource;
+	}
+
+	async reorderPins(
+		thread_id: string,
+		messages: { id: string; position: number }[],
+	) {
+		await this.client.http.PATCH("/api/v1/channel/{channel_id}/pin", {
+			params: { path: { channel_id: thread_id } },
+			body: { messages },
+		});
+	}
+
+	async pin(thread_id: string, message_id: string) {
+		await this.client.http.PUT(
+			"/api/v1/channel/{channel_id}/pin/{message_id}",
+			{
+				params: { path: { channel_id: thread_id, message_id } },
+			},
+		);
+	}
+
+	async unpin(thread_id: string, message_id: string) {
+		await this.client.http.DELETE(
+			"/api/v1/channel/{channel_id}/pin/{message_id}",
+			{
+				params: { path: { channel_id: thread_id, message_id } },
+			},
+		);
+	}
+
+	async search(body: any): Promise<import("sdk").MessageSearch> {
+		const { data, error } = await this.client.http.POST(
+			"/api/v1/search/message",
+			{
+				body,
+			},
+		);
+		if (error) throw error;
+
+		const { users, threads, room_members, thread_members, messages } = data;
+
+		for (const message of messages) {
+			this.upsert(message as import("sdk").Message);
+		}
+
+		if (users) {
+			for (const user of users) {
+				const userWithRelationship: import("sdk").UserWithRelationship = {
+					...user,
+					relationship: {
+						relation: null,
+						until: null,
+						note: null,
+						petname: null,
+					},
+				};
+				this.store.users.upsert(userWithRelationship);
+			}
+		}
+
+		if (threads) {
+			for (const thread of threads) {
+				this.store.channels.upsert(thread);
+			}
+		}
+
+		if (room_members) {
+			for (const member of room_members) {
+				this.store.roomMembers.upsert(member);
+			}
+		}
+
+		if (thread_members) {
+			for (const member of thread_members) {
+				this.store.threadMembers.upsert(member);
+			}
+		}
+
+		return {
+			...data,
+			approximate_total: data.total,
+			messages: messages as import("sdk").Message[],
+		};
+	}
+
+	public _pinnedListings = new Map<
+		string,
+		{
+			resource: Resource<Pagination<Message>>;
+			refetch: () => void;
+			mutate: (value: Pagination<Message>) => void;
+			prom: Promise<Pagination<Message>> | null;
+			pagination: Pagination<Message> | null;
+		}
+	>();
+	public _pinnedListingMutators = new Set<
+		{ thread_id: string; mutate: (value: Pagination<Message>) => void }
+	>();
+
 	// Helpers
 	private async fetchList(thread_id: string, query: PaginationQuery) {
 		const { data, error } = await this.client.http.GET(

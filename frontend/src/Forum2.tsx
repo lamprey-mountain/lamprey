@@ -24,7 +24,7 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
 import { useMenu, useUserPopout } from "./contexts/mod.tsx";
-import { useApi } from "./api";
+import { useApi, useMessages2 } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
 import { A, useNavigate } from "@solidjs/router";
@@ -535,12 +535,13 @@ function EditorChannelMention(props: { id: string }) {
 export const Forum2Thread = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
 	const submit = useMessageSubmit(props.channel.id);
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
 	const reply_id = () => ch.reply_id;
-	const reply = () => api.messages.cache.get(reply_id()!);
+	const reply = () => messagesService.cache.get(reply_id()!);
 	const storageKey = () => `editor_draft_${props.channel.id}`;
 
 	function handleUpload(file: File) {
@@ -564,7 +565,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		},
 		8000,
 	);
-	const comments = api.messages.listReplies(
+	const comments = messagesService.listReplies(
 		() => props.channel.id,
 		() => undefined,
 		() => ({ depth: 8, breadth: 9999, limit: 1024 }),
@@ -1003,6 +1004,7 @@ function CommentEditor(
 ) {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
 	const [draft, setDraft] = createSignal(
 		props.message.latest_version.type === "DefaultMarkdown"
@@ -1051,7 +1053,7 @@ function CommentEditor(
 			chUpdate("editingMessage", undefined);
 			return true;
 		}
-		api.messages.edit(
+		messagesService.edit(
 			props.message.channel_id,
 			props.message.id,
 			content,

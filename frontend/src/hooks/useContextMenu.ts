@@ -61,8 +61,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 				channel_id: thread_id,
 			};
 		} else if (menuEl.classList.contains("menu-message")) {
-			const message = store.messages.cache.get(message_id!) ??
-				api.messages.cache.get(message_id!);
+			const message = store.messages.cache.get(message_id!);
 			if (!message) return;
 			const channel_id = (message as any).channel_id;
 			const version_id = (message as any).latest_version?.version_id ??

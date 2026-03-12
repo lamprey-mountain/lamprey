@@ -39,7 +39,6 @@ import type {
 	VoiceState,
 } from "sdk";
 import type { Emitter } from "@solid-primitives/event-bus";
-import { Messages } from "./api/messages.ts";
 import { Rooms } from "./api/rooms.ts";
 import { Channels } from "./api/channels.ts";
 import { Threads } from "./api/threads.ts";
@@ -195,7 +194,6 @@ export function createApi(
 	const room_bans = new RoomBans();
 	const thread_members = new ThreadMembers();
 	const users = new Users();
-	const messages = new Messages();
 	const media = new MediaInfo();
 	const typing = new ReactiveMap<string, Set<string>>();
 	const typing_timeout = new Map<string, Map<string, NodeJS.Timeout>>();
@@ -613,38 +611,14 @@ export function createApi(
 			}
 
 			batch(() => {
-				const r = messages.cacheRanges.get(m.channel_id);
-				let is_new = false;
-				let is_unread = true;
-				if (r) {
-					if (m.nonce) {
-						// local echo
-						console.log("Message Create local echo");
-						const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
-						if (idx !== -1) {
-							r.live.items.splice(idx, 1, m);
-						} else {
-							const id_idx = r.live.items.findIndex((i) => i.id === m.id);
-							if (id_idx === -1) {
-								r.live.items.push(m);
-							}
-						}
-						is_new = true;
-						is_unread = false;
-					} else {
-						console.log("Message Create new message");
-						r.live.items.push(m);
-						is_new = true;
-					}
-					messages.cache.set(m.id, m);
-					messages._updateMutators(r, m.channel_id);
-				}
+				store.messages.handleMessageCreate(m);
 
+				const is_unread = true;
 				const t = api.channels.cache.get(m.channel_id);
 				if (t) {
 					api.channels.cache.set(m.channel_id, {
 						...t,
-						message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
+						message_count: (t.message_count ?? 0) + 1,
 						mention_count: !is_unread
 							? 0
 							: (t.mention_count ?? 0) + (is_mentioned ? 1 : 0),
@@ -678,31 +652,13 @@ export function createApi(
 			}
 		} else if (msg.type === "MessageUpdate") {
 			const m = msg.message as Message;
-			const r = messages.cacheRanges.get(m.channel_id);
-			if (r) {
-				const idx = r.live.items.findIndex((i) => i.id === m.id);
-				if (idx !== -1) {
-					console.log("Message Update edit");
-					r.live.items.splice(idx, 1, m);
-				}
-				batch(() => {
-					messages.cache.set(m.id, m);
-					messages._updateMutators(r, m.channel_id);
-				});
-			}
+			store.messages.handleMessageUpdate(m);
 		} else if (msg.type === "MessageDelete") {
 			batch(() => {
 				const { message_id, channel_id: thread_id } = msg;
-				const ranges = messages.cacheRanges.get(thread_id);
-				const r = ranges?.find(message_id);
-				if (ranges && r) {
-					const idx = r.items.findIndex((i) => i.id === message_id);
-					if (idx !== -1) {
-						r.items.splice(idx, 1);
-					}
-					messages.cache.delete(thread_id);
-					messages._updateMutators(ranges, thread_id);
-				}
+				store.messages.handleMessageDelete(thread_id, message_id);
+
+				const ranges = store.messages.cacheRanges.get(thread_id);
 				const t = api.channels.cache.get(msg.channel_id);
 				if (t) {
 					const last_version_id =
@@ -721,25 +677,11 @@ export function createApi(
 		} else if (msg.type === "MessageDeleteBulk") {
 			batch(() => {
 				const { channel_id: thread_id, message_ids } = msg;
-				const ranges = messages.cacheRanges.get(thread_id);
-				if (ranges) {
-					let changed = false;
-					for (const message_id of message_ids) {
-						messages.cache.delete(message_id);
-						const r = ranges.find(message_id);
-						if (r) {
-							const idx = r.items.findIndex((i) => i.id === message_id);
-							if (idx !== -1) {
-								r.items.splice(idx, 1);
-								changed = true;
-							}
-						}
-					}
-					if (changed) {
-						messages._updateMutators(ranges, thread_id);
-					}
+				for (const message_id of message_ids) {
+					store.messages.handleMessageDelete(thread_id, message_id);
 				}
 
+				const ranges = store.messages.cacheRanges.get(thread_id);
 				const t = api.channels.cache.get(thread_id);
 				if (t) {
 					const last_version_id =
@@ -1019,7 +961,7 @@ export function createApi(
 			}
 		} else if (msg.type === "ReactionCreate") {
 			const { message_id, channel_id, user_id, key } = msg;
-			const message = messages.cache.get(message_id);
+			const message = store.messages.cache.get(message_id);
 			if (message) {
 				const reactions = [...(message.reactions ?? [])];
 				const idx = reactions.findIndex((r) =>
@@ -1039,11 +981,11 @@ export function createApi(
 						self: user_id === getCurrentUserId(),
 					});
 				}
-				messages.cache.set(message_id, { ...message, reactions });
+				store.messages.cache.set(message_id, { ...message, reactions });
 			}
 		} else if (msg.type === "ReactionDelete") {
 			const { message_id, channel_id, user_id, key } = msg;
-			const message = messages.cache.get(message_id);
+			const message = store.messages.cache.get(message_id);
 			if (message) {
 				const reactions = [...(message.reactions ?? [])];
 				const idx = reactions.findIndex((r) =>
@@ -1061,11 +1003,11 @@ export function createApi(
 						reactions[idx] = reaction;
 					}
 				}
-				messages.cache.set(message_id, { ...message, reactions });
+				store.messages.cache.set(message_id, { ...message, reactions });
 			}
 		} else if (msg.type === "ReactionDeleteKey") {
 			const { message_id, key } = msg;
-			const message = messages.cache.get(message_id);
+			const message = store.messages.cache.get(message_id);
 			if (message) {
 				const reactions = [...(message.reactions ?? [])];
 				const idx = reactions.findIndex((r) =>
@@ -1074,13 +1016,13 @@ export function createApi(
 				if (idx !== -1) {
 					reactions.splice(idx, 1);
 				}
-				messages.cache.set(message_id, { ...message, reactions });
+				store.messages.cache.set(message_id, { ...message, reactions });
 			}
 		} else if (msg.type === "ReactionDeleteAll") {
 			const { message_id } = msg;
-			const message = messages.cache.get(message_id);
+			const message = store.messages.cache.get(message_id);
 			if (message) {
-				messages.cache.set(message_id, { ...message, reactions: [] });
+				store.messages.cache.set(message_id, { ...message, reactions: [] });
 			}
 		} else if (msg.type === "EmojiCreate") {
 			// TODO
@@ -1368,7 +1310,6 @@ export function createApi(
 		room_bans,
 		thread_members,
 		users,
-		messages,
 		media,
 		session,
 		preferencesLoaded,
@@ -1402,7 +1343,6 @@ export function createApi(
 		events,
 	};
 
-	messages.api = api;
 	rooms.api = api;
 	channels.api = api;
 	threads.api = api;
@@ -1451,7 +1391,6 @@ export type Api = {
 	room_bans: RoomBans;
 	thread_members: ThreadMembers;
 	users: Users;
-	messages: Messages;
 	media: MediaInfo;
 	emoji: Emoji;
 	reactions: Reactions;

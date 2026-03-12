@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Channel } from "sdk";
-import { useApi } from "./api.tsx";
+import { useApi, useMessages2 } from "./api.tsx";
 import { MessageView } from "./Message.tsx";
 import type { Message } from "sdk";
 
@@ -10,7 +10,8 @@ type PinnedMessagesProps = {
 
 export function PinnedMessages(props: PinnedMessagesProps) {
 	const api = useApi();
-	const pinnedMessages = api.messages.listPinned(() => props.channel.id);
+	const messagesService = useMessages2();
+	const pinnedMessages = messagesService.listPinned(() => props.channel.id);
 
 	const [dragging, setDragging] = createSignal<string | null>(null);
 	const [target, setTarget] = createSignal<
@@ -82,12 +83,12 @@ export function PinnedMessages(props: PinnedMessagesProps) {
 			position: i,
 		}));
 
-		api.messages.reorderPins(props.channel.id, body);
+		messagesService.reorderPins(props.channel.id, body);
 
 		// optimistic update
 		const current = pinnedMessages();
 		if (current) {
-			api.messages._pinnedListings.get(props.channel.id)?.mutate({
+			messagesService._pinnedListings.get(props.channel.id)?.mutate({
 				...current,
 				items: reordered,
 			});

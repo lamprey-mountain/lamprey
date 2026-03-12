@@ -36,7 +36,7 @@ export function useMessageSubmit(channel_id: string) {
 		})) as any;
 
 		const channel = api.channels.cache.get(dest);
-		const messagesService = store?.messages ?? api.messages;
+		const messagesService = store.messages;
 
 		messagesService.send(dest, {
 			content: text || null,

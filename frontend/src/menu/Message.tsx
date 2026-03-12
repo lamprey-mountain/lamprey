@@ -20,11 +20,9 @@ type MessageMenuProps = {
 export function MessageMenu(props: MessageMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const { markThreadRead } = useReadTracking();
-	const message = api.messages.fetch(
-		() => props.channel_id,
-		() => props.message_id,
-	);
+	const message = messagesService.use(() => props.message_id);
 	const [ch, chUpdate] = ctx.channel_contexts.get(props.channel_id)!;
 	const [, modalCtl] = useModals();
 
@@ -49,8 +47,6 @@ export function MessageMenu(props: MessageMenuProps) {
 		chUpdate("reply_id", props.message_id);
 	};
 
-	const messagesService = useMessages2();
-
 	function markUnread() {
 		const r = messagesService.cacheRanges.get(props.channel_id);
 		if (!r) return;
@@ -74,9 +70,9 @@ export function MessageMenu(props: MessageMenuProps) {
 
 	const togglePin = () => {
 		if (message()?.pinned) {
-			api.messages.unpin(props.channel_id, props.message_id);
+			messagesService.unpin(props.channel_id, props.message_id);
 		} else {
-			api.messages.pin(props.channel_id, props.message_id);
+			messagesService.pin(props.channel_id, props.message_id);
 		}
 	};
 

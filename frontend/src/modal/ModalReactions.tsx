@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import type { User } from "sdk";
 import { Modal } from "./mod";
-import { useApi } from "../api";
+import { useApi, useMessages2 } from "../api";
 import { Avatar } from "../User";
 
 interface ModalReactionsProps {
@@ -19,10 +19,8 @@ interface ModalReactionsProps {
 
 export const ModalReactions = (props: ModalReactionsProps) => {
 	const api = useApi();
-	const message = api.messages.fetch(
-		() => props.channel_id,
-		() => props.message_id,
-	);
+	const messagesService = useMessages2();
+	const message = messagesService.use(() => props.message_id);
 
 	const reactions = () => message()?.reactions ?? [];
 	const [selectedReaction, setSelectedReaction] = createSignal<string | null>(

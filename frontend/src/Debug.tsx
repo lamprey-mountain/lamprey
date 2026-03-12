@@ -1,6 +1,6 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
-import { useApi } from "./api.tsx";
+import { useApi, useMessages2 } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 import { flags } from "./flags.ts";
@@ -87,13 +87,14 @@ export const Debug = () => {
 const Search = () => {
 	const ctx = useCtx();
 	const api = useApi();
+	const messagesService = useMessages2();
 	const [searchQuery, setSearchQueryRaw] = createSignal<string>("");
 	const setSearchQuery = leadingAndTrailing(throttle, setSearchQueryRaw, 300);
 	const [searchResults] = createResource(
 		searchQuery as any,
 		(async (query: string) => {
 			if (!query) return;
-			const data = await api.messages.search({ query });
+			const data = await messagesService.search({ query });
 			return (data as any).items;
 		}) as any,
 	);

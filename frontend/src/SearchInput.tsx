@@ -1,6 +1,6 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi } from "./api";
+import { useApi, useMessages2 } from "./api";
 import { useCtx } from "./context";
 import type { RoomT, ThreadT } from "./types";
 import type { ChannelSearch } from "./context";
@@ -316,6 +316,7 @@ const AutocompleteDropdown = (props: {
 	onSelectFilter: (text: string) => void;
 }) => {
 	const api = useApi();
+	const messagesService = useMessages2();
 	const threadMembers = api.thread_members.list(
 		() => (props.channel?.id as any),
 	);
@@ -699,6 +700,7 @@ export const SearchInput = (
 	props: { channel?: ThreadT; room?: RoomT; autofocus?: boolean },
 ) => {
 	const api = useApi();
+	const messagesService = useMessages2();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
 	const [activeFilter, setActiveFilter] = createSignal<
 		{
@@ -903,7 +905,7 @@ export const SearchInput = (
 			limit: 100,
 		};
 
-		const res = await api.messages.search(body);
+		const res = await messagesService.search(body);
 		if (res) {
 			updateSearch({
 				...searchState,

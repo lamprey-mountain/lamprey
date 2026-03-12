@@ -40,7 +40,7 @@ export function Input(props: InputProps) {
 	const [ch, chUpdate] = useChannel()!;
 	const submit = useMessageSubmit(props.channel.id);
 	const reply_id = () => ch.reply_id;
-	const reply = () => api.messages.cache.get(reply_id()!);
+	const reply = () => messagesService.cache.get(reply_id()!);
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
 

@@ -17,8 +17,17 @@ import type { Config } from "../config.tsx";
 import { flags } from "../flags.ts";
 import { RootStore } from "../api/core/Store.ts";
 import { colors, logger } from "../logger.ts";
-import { DBSchema, openDB, type IDBPDatabase } from "idb";
-import { UserT, RoomT, ChannelT, MessageT, RoleT, MemberT, MediaT, SessionT } from "../types.ts";
+import { DBSchema, type IDBPDatabase, openDB } from "idb";
+import {
+	ChannelT,
+	MediaT,
+	MemberT,
+	MessageT,
+	RoleT,
+	RoomT,
+	SessionT,
+	UserT,
+} from "../types.ts";
 import type { RevisionContent } from "../api/services/DocumentsService.ts";
 import type { ThreadMember } from "sdk";
 
@@ -155,7 +164,9 @@ export function useChatClient(config: Config) {
 						database.createObjectStore("session", { keyPath: "id" });
 						database.createObjectStore("document", { keyPath: "id" });
 						database.createObjectStore("thread_member", { keyPath: "id" });
-						logger.for("idb").info("IndexedDB initialized with all object stores");
+						logger.for("idb").info(
+							"IndexedDB initialized with all object stores",
+						);
 					}
 				},
 			});

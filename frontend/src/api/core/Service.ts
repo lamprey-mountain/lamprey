@@ -19,7 +19,10 @@ export abstract class BaseService<T> {
 	protected getDb?: () => IDBPDatabase<unknown> | undefined;
 	protected abstract cacheName: string;
 
-	constructor(store: RootStore, getDb?: () => IDBPDatabase<unknown> | undefined) {
+	constructor(
+		store: RootStore,
+		getDb?: () => IDBPDatabase<unknown> | undefined,
+	) {
 		this.store = store;
 		this.client = store.client;
 		this.getDb = getDb;
@@ -47,7 +50,10 @@ export abstract class BaseService<T> {
 				res = await fn();
 			} catch (e: any) {
 				// Don't retry on client errors (4xx except 429)
-				if (e?.response?.status && e.response.status < 500 && e.response.status !== 429) {
+				if (
+					e?.response?.status && e.response.status < 500 &&
+					e.response.status !== 429
+				) {
 					throw e;
 				}
 				if (i === retries - 1) throw e;
