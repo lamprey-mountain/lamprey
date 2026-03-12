@@ -70,16 +70,50 @@ impl ServiceMemberLists {
             .map_err(|e| e.fake_clone())?;
 
         let (events_tx, _) = broadcast::channel(100);
-        room_handle
+        
+        // Try to send the subscribe command; if it fails, the actor is dead
+        // Evict the dead actor and retry once
+        let result = room_handle
             .tx
             .send(RoomCommand::MemberListSubscribe(
                 key.clone(),
                 events_tx.clone(),
             ))
-            .await
-            .map_err(|_| {
-                crate::Error::Internal("failed to subscribe to member list".to_string())
-            })?;
+            .await;
+        
+        if result.is_err() {
+            // Actor is dead, evict it
+            self.s.services().rooms.unload_cache(room_id).await;
+            
+            // Get a fresh actor
+            let room_handle = self
+                .s
+                .services()
+                .rooms
+                .actors
+                .try_get_with(room_id, async {
+                    Ok::<RoomHandle, crate::Error>(RoomActor::spawn(room_id, self.s.clone()))
+                })
+                .await
+                .map_err(|e| e.fake_clone())?;
+            
+            room_handle
+                .tx
+                .send(RoomCommand::MemberListSubscribe(
+                    key.clone(),
+                    events_tx.clone(),
+                ))
+                .await
+                .map_err(|_| {
+                    crate::Error::Internal("failed to subscribe to member list".to_string())
+                })?;
+            
+            return Ok(Arc::new(MemberListHandle {
+                room_tx: room_handle.tx.clone(),
+                key,
+                events_tx,
+            }));
+        }
 
         Ok(Arc::new(MemberListHandle {
             room_tx: room_handle.tx.clone(),

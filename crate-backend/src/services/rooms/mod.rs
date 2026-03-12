@@ -177,112 +177,78 @@ impl ServiceRooms {
         self.unload_all_cache();
     }
 
+    /// Try to send a command to a room actor. Returns Ok(true) if sent, Ok(false) if actor is dead.
+    async fn try_send_to_actor(
+        &self,
+        room_id: RoomId,
+        cmd: RoomCommand,
+    ) -> Result<bool> {
+        let handle = self.actors.get(&room_id).await;
+        let Some(handle) = handle else {
+            return Ok(false);
+        };
+
+        if handle.tx.try_send(cmd).is_err() {
+            // Actor is dead, evict it so next request will respawn
+            self.unload_cache(room_id).await;
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
     /// update a room's metadata in the cache
     pub async fn update_cache(&self, room: Room) {
-        if let Some(handle) = self.actors.get(&room.id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoomUpdate {
-                    room: room.clone(),
-                }))
-            {
-                self.mark_unavailable(room.id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let room_id = room.id;
+        let cmd = RoomCommand::Sync(MessageSync::RoomUpdate { room });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
     }
 
     /// reload a member from the database and update the cache
     pub async fn reload_member(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
-        if let Some(handle) = self.actors.get(&room_id).await {
-            let member = self.state.data().room_member_get(room_id, user_id).await?;
-            let user = self.state.services().users.get(user_id, None).await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoomMemberUpdate {
-                    member,
-                    user,
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let member = self.state.data().room_member_get(room_id, user_id).await?;
+        let user = self.state.services().users.get(user_id, None).await?;
+        let cmd = RoomCommand::Sync(MessageSync::RoomMemberUpdate { member, user });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
         Ok(())
     }
 
     /// remove a member from the cache
     pub async fn remove_member(&self, room_id: RoomId, user_id: UserId) {
-        if let Some(handle) = self.actors.get(&room_id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoomMemberDelete {
-                    room_id,
-                    user_id,
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let cmd = RoomCommand::Sync(MessageSync::RoomMemberDelete { room_id, user_id });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
     }
 
     /// reload a role from the database and update the cache
     pub async fn reload_role(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
-        if let Some(handle) = self.actors.get(&room_id).await {
-            let role = self.state.data().role_select(room_id, role_id).await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoleUpdate { role }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let role = self.state.data().role_select(room_id, role_id).await?;
+        let cmd = RoomCommand::Sync(MessageSync::RoleUpdate { role });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
         Ok(())
     }
 
     /// remove a role from the cache
     pub async fn remove_role(&self, room_id: RoomId, role_id: RoleId) {
-        if let Some(handle) = self.actors.get(&room_id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::RoleDelete {
-                    room_id,
-                    role_id,
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let cmd = RoomCommand::Sync(MessageSync::RoleDelete { room_id, role_id });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
     }
 
     /// reload a channel from the database and update the cache
     pub async fn reload_channel(&self, room_id: RoomId, channel_id: ChannelId) -> Result<()> {
-        if let Some(handle) = self.actors.get(&room_id).await {
-            let channel = self.state.data().channel_get(channel_id).await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::ChannelUpdate {
-                    channel: Box::new(channel),
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let channel = self.state.data().channel_get(channel_id).await?;
+        let cmd = RoomCommand::Sync(MessageSync::ChannelUpdate {
+            channel: Box::new(channel),
+        });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
         Ok(())
     }
 
     /// remove a channel from the cache
     pub async fn remove_channel(&self, room_id: RoomId, _channel_id: ChannelId) {
-        if let Some(_handle) = self.actors.get(&room_id).await {
-            // We don't have a direct "Delete" event that only takes ID for channel,
-            // but we can send a dummy ChannelUpdate with is_removed = true if needed,
-            // or just use unload_room if it's simpler.
-            self.unload_cache(room_id).await;
-        }
+        // We don't have a direct "Delete" event that only takes ID for channel,
+        // but we can send a dummy ChannelUpdate with is_removed = true if needed,
+        // or just use unload_room if it's simpler.
+        self.unload_cache(room_id).await;
     }
 
     /// reload a thread member from the database and update the cache
@@ -292,25 +258,18 @@ impl ServiceRooms {
         thread_id: ChannelId,
         user_id: UserId,
     ) -> Result<()> {
-        if let Some(handle) = self.actors.get(&room_id).await {
-            let member = self
-                .state
-                .data()
-                .thread_member_get(thread_id, user_id)
-                .await?;
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::ThreadMemberUpsert {
-                    room_id: Some(room_id),
-                    thread_id,
-                    added: vec![member],
-                    removed: vec![],
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let member = self
+            .state
+            .data()
+            .thread_member_get(thread_id, user_id)
+            .await?;
+        let cmd = RoomCommand::Sync(MessageSync::ThreadMemberUpsert {
+            room_id: Some(room_id),
+            thread_id,
+            added: vec![member],
+            removed: vec![],
+        });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
         Ok(())
     }
 
@@ -321,20 +280,13 @@ impl ServiceRooms {
         thread_id: ChannelId,
         user_id: UserId,
     ) {
-        if let Some(handle) = self.actors.get(&room_id).await {
-            if let Err(_) = handle
-                .tx
-                .try_send(RoomCommand::Sync(MessageSync::ThreadMemberUpsert {
-                    room_id: Some(room_id),
-                    thread_id,
-                    added: vec![],
-                    removed: vec![user_id],
-                }))
-            {
-                self.mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                    .await;
-            }
-        }
+        let cmd = RoomCommand::Sync(MessageSync::ThreadMemberUpsert {
+            room_id: Some(room_id),
+            thread_id,
+            added: vec![],
+            removed: vec![user_id],
+        });
+        let _ = self.try_send_to_actor(room_id, cmd).await;
     }
 
     pub async fn update(&self, room_id: RoomId, auth: Auth, patch: RoomPatch) -> Result<Room> {

@@ -11,6 +11,7 @@ use crate::{
         actor::{MemberListCommand, MemberListEvent},
         util::{MemberListKey, MemberListKey1},
     },
+    services::rooms::RoomCommand,
     Error, Result, ServerStateInner,
 };
 
@@ -54,13 +55,58 @@ impl MemberListSyncer {
 
         let list = srv.member_lists.ensure(key.clone()).await?;
 
+        // Try to send the command; if it fails, evict the dead actor and retry
         let (tx, rx) = oneshot::channel();
-        list.send_command(MemberListCommand::GetInitialRanges {
-            ranges,
-            conn_id: self.conn_id,
-            callback: tx,
-        })
-        .await?;
+        let conn_id = self.conn_id;
+        let cmd = RoomCommand::MemberList(
+            key.clone(),
+            MemberListCommand::GetInitialRanges {
+                ranges: ranges.clone(),
+                conn_id,
+                callback: tx,
+            },
+        );
+        
+        let result = list.room_tx.send(cmd).await;
+        
+        if result.is_err() {
+            // Actor is dead, evict it and get a fresh one
+            let room_id = key
+                .room_id()
+                .ok_or_else(|| Error::Internal("no room id for member list key".to_string()))?;
+            
+            srv.rooms.unload_cache(room_id).await;
+            
+            let list = srv.member_lists.ensure(key.clone()).await?;
+            
+            let (tx, rx) = oneshot::channel();
+            let cmd = RoomCommand::MemberList(
+                key.clone(),
+                MemberListCommand::GetInitialRanges {
+                    ranges,
+                    conn_id: self.conn_id,
+                    callback: tx,
+                },
+            );
+            
+            list.room_tx
+                .send(cmd)
+                .await
+                .map_err(|_| Error::Internal("failed to send member list command".to_string()))?;
+            
+            let mut initial_sync = rx
+                .await
+                .map_err(|_| Error::Internal("failed to receive initial ranges".to_string()))?;
+            self.patch_msg_key(&mut initial_sync, &key1);
+            self.outbox.push_back(initial_sync);
+
+            if !self.streams.contains_key(&key) {
+                let stream = StreamNotifyClose::new(BroadcastStream::new(list.subscribe()));
+                self.streams.insert(key, stream);
+            }
+            
+            return Ok(());
+        }
 
         let mut initial_sync = rx
             .await
