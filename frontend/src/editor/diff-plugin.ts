@@ -21,25 +21,36 @@ export function createDiffPlugin(
 				const meta = tr.getMeta(diffPluginKey);
 				if (meta?.marks) {
 					const marks: DiffMark[] = meta.marks;
+					const decorations: Decoration[] = [];
+					const maxPos = newState.doc.content.size - 1;
 
-					const decorations = marks.map((mark) => {
+					for (const mark of marks) {
 						if (mark.type === "insertion") {
-							// Clamp positions to valid range
-							const from = Math.min(mark.from, newState.doc.content.size);
-							const to = Math.min(mark.to, newState.doc.content.size);
-							return Decoration.inline(from, to, {
-								class: "diff-insertion",
-							});
+							let from = Math.max(0, Math.min(mark.from, maxPos));
+							const to = Math.max(0, Math.min(mark.to, maxPos));
+							if (from >= to) continue;
+
+							while (from < to) {
+								const node = newState.doc.nodeAt(from);
+								if (!node) break;
+
+								const nodeEnd = Math.min(from + node.nodeSize, to);
+								decorations.push(Decoration.inline(from, nodeEnd, {
+									class: "diff-insertion",
+								}));
+								from = nodeEnd;
+							}
 						} else {
-							const pos = Math.min(mark.pos, newState.doc.content.size);
-							return Decoration.widget(pos, () => {
+							const pos = Math.max(0, Math.min(mark.pos, maxPos));
+							decorations.push(Decoration.widget(pos, () => {
 								const dom = document.createElement("span");
 								dom.className = "diff-deletion";
 								dom.textContent = mark.text;
 								return dom;
-							});
+							}));
 						}
-					});
+					}
+
 					try {
 						return DecorationSet.create(newState.doc, decorations);
 					} catch (e) {

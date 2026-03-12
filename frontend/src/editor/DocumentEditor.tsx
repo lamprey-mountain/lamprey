@@ -455,23 +455,7 @@ export const createEditor = (
 			doc,
 			schema,
 			plugins: [
-				// No ySyncPlugin - this state is readonly and won't sync
-				// No yUndoPlugin - requires yjs state
-				// No cursorPlugin - hide cursors in readonly mode
 				createDiffPlugin(() => diffMarks()),
-				keymap({
-					"Ctrl-z": () => false, // Disable undo in readonly
-					"Ctrl-Shift-z": () => false, // Disable redo in readonly
-					"Ctrl-y": () => false,
-					// Disable most keymaps in readonly mode
-					"Ctrl-b": () => false,
-					"Ctrl-i": () => false,
-					"Ctrl-`": () => false,
-					"Ctrl-m": () => false,
-					"Enter": () => false,
-					"Backspace": () => false,
-					...opts.keymap,
-				}),
 			],
 		});
 	};
@@ -489,23 +473,7 @@ export const createEditor = (
 			doc,
 			schema,
 			plugins: [
-				// No ySyncPlugin - this state is readonly and won't sync
-				// No yUndoPlugin - requires yjs state
-				// No cursorPlugin - hide cursors in readonly mode
 				createDiffPlugin(() => diffMarks()),
-				keymap({
-					"Ctrl-z": () => false, // Disable undo in readonly
-					"Ctrl-Shift-z": () => false, // Disable redo in readonly
-					"Ctrl-y": () => false,
-					// Disable most keymaps in readonly mode
-					"Ctrl-b": () => false,
-					"Ctrl-i": () => false,
-					"Ctrl-`": () => false,
-					"Ctrl-m": () => false,
-					"Enter": () => false,
-					"Backspace": () => false,
-					...opts.keymap,
-				}),
 			],
 		});
 	};
@@ -523,7 +491,10 @@ export const createEditor = (
 		View: (props: EditorViewProps) => {
 			return (
 				<>
-					<editor.View {...props} />
+					<editor.View
+						{...props}
+						disabled={props.disabled ?? (opts.diffMode?.() ?? false)}
+					/>
 					<EditorWithToolbar getView={() => editor.view!} />
 				</>
 			);

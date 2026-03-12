@@ -34,10 +34,10 @@ import type { HistoryPagination } from "sdk";
 import * as Y from "yjs";
 import { base64UrlDecode } from "./editor-utils.ts";
 import { Time } from "../Time.tsx";
-import { diffWords } from "diff";
 import { schema } from "./schema.ts";
 import { md } from "../markdown_utils.tsx";
-import { DOMParser } from "prosemirror-model";
+import { DOMParser, type Node as PMNode } from "prosemirror-model";
+import { diffWords } from "diff";
 
 type DocumentProps = {
 	channel: Channel;
@@ -53,7 +53,6 @@ export const Document = (
 ) => {
 	const [branchId, setBranchId] = createSignal(props.channel.id);
 	const [editor, setEditor] = createSignal<any>(null);
-	// setup ydoc here, pass to DocumentMain?
 
 	return (
 		<div class="document">
@@ -161,8 +160,6 @@ const DocumentHeader = (
 		onCleanup(() => window.removeEventListener("click", close));
 	});
 
-	// top: title, topic(?), notifications, members, search
-	// bottom: branches (merge, diff), edit, format, insert, view, tools
 	return (
 		<header>
 			<div class="menu-group">
@@ -414,12 +411,7 @@ const DocumentHeader = (
 					>
 						<ul>
 							<li>
-								<button
-									onClick={() => {
-										// TODO: publishing documents
-										setActive(null);
-									}}
-								>
+								<button onClick={() => setActive(null)}>
 									<div class="info">
 										<div>{false ? "open in new tab" : "publish document"}</div>
 									</div>
@@ -427,12 +419,7 @@ const DocumentHeader = (
 							</li>
 							<li class="separator"></li>
 							<li>
-								<button
-									onClick={() => {
-										// TODO: download as html
-										setActive(null);
-									}}
-								>
+								<button onClick={() => setActive(null)}>
 									<div class="info">
 										<div>download as html</div>
 										<div class="dim">single file .mhtml file</div>
@@ -440,12 +427,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button
-									onClick={() => {
-										// TODO: download as markdown (how do i handle media?)
-										setActive(null);
-									}}
-								>
+								<button onClick={() => setActive(null)}>
 									<div class="info">
 										<div>download as markdown</div>
 									</div>
@@ -562,10 +544,7 @@ const DocumentMain = (
 	// Load history when channel changes
 	createEffect(
 		on(() => props.channel.id, async (channelId) => {
-			// Clear edit state
 			setEditState(null);
-
-			// Clear the documents revision cache for this channel
 			api.documents.clearChannelCache(channelId);
 
 			try {
@@ -591,10 +570,7 @@ const DocumentMain = (
 		props.setEditor(ed);
 	});
 
-	// Store the edit state to restore when exiting diff view
 	const [editState, setEditState] = createSignal<any>(null);
-
-	// Track last subscribed channel to avoid duplicate subscriptions
 	const [lastSubscribedChannel, setLastSubscribedChannel] = createSignal<
 		string | null
 	>(null);
@@ -605,15 +581,8 @@ const DocumentMain = (
 		const ed = editor();
 		const m = mode();
 
-		// Only subscribe in edit mode
-		if (!ed || m !== "edit") {
-			return;
-		}
-
-		// Skip if already subscribed to this channel
-		if (lastSubscribedChannel() === chId) {
-			return;
-		}
+		if (!ed || m !== "edit") return;
+		if (lastSubscribedChannel() === chId) return;
 
 		ed.subscribe(chId, chId);
 		setLastSubscribedChannel(chId);
@@ -639,16 +608,10 @@ const DocumentMain = (
 
 		// Debounce hover previews (150ms) to avoid flickering
 		if (m === "diff_preview") {
-			// Cancel any pending load
-			if (hoverDebounceTimer) {
-				clearTimeout(hoverDebounceTimer);
-			}
-
-			// Set pending seq for tracking
+			if (hoverDebounceTimer) clearTimeout(hoverDebounceTimer);
 			setPendingPreviewSeq(seq);
 
 			hoverDebounceTimer = setTimeout(() => {
-				// Only load if still hovering at this seq
 				if (pendingPreviewSeq() === seq) {
 					loadReadonlyRevision(ed, seq, true);
 				}
@@ -663,10 +626,7 @@ const DocumentMain = (
 			};
 		}
 
-		// Clear pending preview when switching to readonly
 		setPendingPreviewSeq(null);
-
-		// No debounce for readonly (click) mode
 		loadReadonlyRevision(ed, seq, false);
 	});
 
@@ -686,11 +646,9 @@ const DocumentMain = (
 			ed.setState(savedState);
 			setEditState(null);
 		}
-
-		// Don't re-subscribe here - the subscribe effect above handles it
 	});
 
-	// Helper to load a readonly historical revision (without syncing to server)
+	// Helper to load a readonly historical revision
 	const loadReadonlyRevision = async (
 		ed: Editor,
 		seq: number,
@@ -699,29 +657,28 @@ const DocumentMain = (
 		const targetRevision = isPreview ? previewRevision() : currentRevision();
 		const revisionId = `${props.channel.id}@${seq}`;
 
-		// Check if we have cached content - if so, load immediately without loading state
 		const cachedSerdoc = api.documents.revisionCache.get(revisionId);
 		const hasCache = cachedSerdoc !== undefined;
 
-		if (targetRevision === seq && hasCache) return; // Already loaded and cached
+		if (targetRevision === seq && hasCache) return;
 
-		// Only show loading state if we don't have cache
-		if (!hasCache) {
-			setDiffLoading(true);
-		}
+		if (!hasCache) setDiffLoading(true);
 
 		try {
-			// Fetch the revision at this seq using the documents service
 			let newSerdoc: any = cachedSerdoc;
 			if (!newSerdoc) {
 				newSerdoc = await api.documents.getRevisionContent(
 					props.channel.id,
-					`${props.channel.id}@${seq}`,
+					revisionId,
 				);
 				if (!newSerdoc) return;
 			}
 
-			// Fetch the previous revision for diff
+			// Abort Guard: Check if user moved away while fetching
+			const activeSeq = isPreview ? pendingPreviewSeq() : props.selectedSeq;
+			if (activeSeq !== seq) return;
+
+			// Fetch previous revision for diff
 			const prevSeq = Math.max(0, seq - 1);
 			let oldSerdoc: any = null;
 			if (prevSeq > 0) {
@@ -736,17 +693,23 @@ const DocumentMain = (
 				}
 			}
 
-			// Compute diff marks BEFORE setting state (state change resets plugin)
+			// Abort Guard 2
+			const activeSeqPostFetch = isPreview
+				? pendingPreviewSeq()
+				: props.selectedSeq;
+			if (activeSeqPostFetch !== seq) return;
+
+			// Compute diff marks BEFORE setting state
 			const marks = computeDiffMarks(oldSerdoc ?? {}, newSerdoc);
 
-			// Convert serdoc to HTML for the editor
+			// Safely call createReadonlyState depending on what is exported by Editor
 			const newHtml = serdocToHtml(newSerdoc);
+			const readonlyState =
+				typeof (ed as any).createReadonlyStateFromHtml === "function"
+					? (ed as any).createReadonlyStateFromHtml(newHtml)
+					: ed.createReadonlyState(newHtml);
 
-			// Use the editor's createReadonlyState method (no Yjs sync)
-			const readonlyState = ed.createReadonlyStateFromHtml(newHtml);
 			ed.setState(readonlyState);
-
-			// Set diff marks AFTER setting state (otherwise they get lost!)
 			ed.setDiffMarks(marks);
 
 			if (isPreview) {
@@ -757,7 +720,8 @@ const DocumentMain = (
 		} catch (e) {
 			console.error("Failed to load revision:", e);
 		} finally {
-			if (!hasCache) {
+			const activeSeq = isPreview ? pendingPreviewSeq() : props.selectedSeq;
+			if (activeSeq === seq && !hasCache) {
 				setDiffLoading(false);
 			}
 		}
@@ -767,7 +731,6 @@ const DocumentMain = (
 		props.setEditor(null);
 	});
 
-	// Restore version dropdown state
 	const [restoreMenuOpen, setRestoreMenuOpen] = createSignal(false);
 	const [restoreBtn, setRestoreBtn] = createSignal<HTMLElement>();
 	const [restoreMenu, setRestoreMenu] = createSignal<HTMLElement>();
@@ -777,23 +740,19 @@ const DocumentMain = (
 		middleware: [offset(4), flip(), shift()],
 	});
 
-	// Close restore menu on click outside
 	onMount(() => {
 		const close = () => setRestoreMenuOpen(false);
 		window.addEventListener("click", close);
 		onCleanup(() => window.removeEventListener("click", close));
 	});
 
-	// Handle restoring a historical version
 	const handleRestoreVersion = async (mode: "current" | "new") => {
 		const seq = props.selectedSeq;
 		if (seq === null) return;
-
 		setRestoreMenuOpen(false);
 
 		try {
 			if (mode === "new") {
-				// Fork a new branch from the selected revision
 				const newBranchName = `restored-${
 					new Date().toISOString().slice(0, 10)
 				}`;
@@ -815,7 +774,6 @@ const DocumentMain = (
 				);
 				console.log("Created restored branch:", newBranchName);
 			} else {
-				// TODO: Restore to current branch (needs API endpoint)
 				console.log("Restore to current branch @seq:", seq);
 			}
 		} catch (e) {
@@ -853,7 +811,10 @@ const DocumentMain = (
 							</button>
 							<button
 								class="diff-view-close"
-								onClick={() => props.onSelectChangeset(null)}
+								onClick={() => {
+									props.onSelectChangeset(null);
+									props.onHoverChangeset(null); // Fix: also clear hover state to avoid getting trapped in preview
+								}}
 							>
 								Back to current version
 							</button>
@@ -918,85 +879,96 @@ const DocumentMain = (
 	);
 };
 
-// Helper function to compute DiffMark[] from old and new serdocs
+// Extracted utility to securely map pure text to absolute PM structure positions
+function getDocTextAndMap(doc: PMNode): { text: string; posMap: number[] } {
+	let text = "";
+	const posMap: number[] = [];
+
+	doc.descendants((node, pos) => {
+		if (node.isText) {
+			const str = node.text!;
+			for (let i = 0; i < str.length; i++) {
+				posMap.push(pos + i);
+			}
+			text += str;
+		} else if (node.isBlock) {
+			// Represent block boundaries as newlines to give diffWords paragraph context
+			if (text.length > 0) {
+				posMap.push(pos);
+				text += "\n";
+			}
+		}
+		return true; // continue traversing
+	});
+
+	return { text, posMap };
+}
+
+function mapTextPosToPMPos(
+	posMap: number[],
+	textPos: number,
+	doc: PMNode,
+): number {
+	if (textPos < 0) return 1;
+	// Max valid position is the end of the root node content
+	const maxPos = Math.max(1, doc.content.size - 1);
+	if (textPos >= posMap.length) return maxPos;
+	return posMap[textPos] ?? maxPos;
+}
+
 function computeDiffMarks(oldSerdoc: any, newSerdoc: any): DiffMark[] {
 	const oldDoc = serdocToProseMirrorDoc(oldSerdoc);
 	const newDoc = serdocToProseMirrorDoc(newSerdoc);
 
-	// If we can't parse either document, return empty marks
-	if (!oldDoc || !newDoc) {
-		return [];
-	}
+	if (!oldDoc || !newDoc) return [];
 
-	// Extract text content from PM documents (this preserves exact text structure)
-	const oldText = oldDoc.textContent;
-	const newText = newDoc.textContent;
+	const oldData = getDocTextAndMap(oldDoc);
+	const newData = getDocTextAndMap(newDoc);
 
-	// Build position maps: string index -> ProseMirror position
-	const oldPosMap = buildPositionMap(oldDoc);
-	const newPosMap = buildPositionMap(newDoc);
-
-	// Run diff on text content
-	const changes = diffWords(oldText, newText);
+	const changes = diffWords(oldData.text, newData.text);
 
 	const marks: DiffMark[] = [];
-	let oldStringPos = 0;
-	let newStringPos = 0;
+	let oldTextPos = 0;
+	let newTextPos = 0;
 
 	for (const change of changes) {
 		const len = change.value.length;
 
 		if (change.added) {
-			// Map string positions to ProseMirror positions in the new document
-			const from = mapStringToPMPosition(newPosMap, newStringPos);
-			const to = mapStringToPMPosition(newPosMap, newStringPos + len);
-			marks.push({
-				type: "insertion",
-				from,
-				to,
-			});
-			newStringPos += len;
+			const from = mapTextPosToPMPos(newData.posMap, newTextPos, newDoc);
+			const to = mapTextPosToPMPos(newData.posMap, newTextPos + len, newDoc);
+			if (from < to) {
+				marks.push({ type: "insertion", from, to });
+			}
+			newTextPos += len;
 		} else if (change.removed) {
-			// Map string positions to ProseMirror positions in the old document
-			// Deletions are shown at the current position in the new document
-			const pos = mapStringToPMPosition(newPosMap, newStringPos);
-			marks.push({
-				type: "deletion",
-				pos,
-				text: change.value,
-			});
-			oldStringPos += len;
+			const pos = mapTextPosToPMPos(newData.posMap, newTextPos, newDoc);
+			// Replace actual newlines so deletion widgets don't aggressively line-break visually
+			const cleanText = change.value.replace(/\n/g, " ↵ ");
+			marks.push({ type: "deletion", pos, text: cleanText });
+			oldTextPos += len;
 		} else {
-			// Unchanged text
-			oldStringPos += len;
-			newStringPos += len;
+			oldTextPos += len;
+			newTextPos += len;
 		}
 	}
 
 	return marks;
 }
 
-// Convert serdoc to ProseMirror document
 function serdocToProseMirrorDoc(serdoc: any) {
 	try {
 		const doc = serdoc?.data ?? serdoc;
+		if (!doc) return null;
 
-		// Handle different serdoc formats
-		if (!doc) {
-			return null;
-		}
-
-		// Format 1: { root: { blocks: [...] } }
 		if (doc?.root?.blocks) {
 			const htmlParts: string[] = [];
 			for (const block of doc.root.blocks) {
 				if (block.Markdown?.content) {
 					htmlParts.push(block.Markdown.content);
-					htmlParts.push("\n\n");
 				}
 			}
 			if (htmlParts.length === 0) {
-				// Empty document - create empty paragraph
 				htmlParts.push("<p></p>");
 			}
 			const div = document.createElement("div");
@@ -1004,7 +976,6 @@ function serdocToProseMirrorDoc(serdoc: any) {
 			return DOMParser.fromSchema(schema).parse(div);
 		}
 
-		// Format 2: Already HTML
 		if (typeof doc === "string") {
 			const div = document.createElement("div");
 			div.innerHTML = doc;
@@ -1018,15 +989,11 @@ function serdocToProseMirrorDoc(serdoc: any) {
 	}
 }
 
-// Convert serdoc to HTML string
 function serdocToHtml(serdoc: any): string {
 	try {
 		const doc = serdoc?.data ?? serdoc;
-		if (!doc) {
-			return "";
-		}
+		if (!doc) return "<p></p>";
 
-		// Format 1: { root: { blocks: [...] } }
 		if (doc?.root?.blocks) {
 			const htmlParts: string[] = [];
 			for (const block of doc.root.blocks) {
@@ -1034,65 +1001,15 @@ function serdocToHtml(serdoc: any): string {
 					htmlParts.push(block.Markdown.content);
 				}
 			}
-			if (htmlParts.length === 0) {
-				return "";
-			}
+			if (htmlParts.length === 0) return "<p></p>";
 			return htmlParts.join("\n\n");
 		}
 
-		// Format 2: Already HTML
-		if (typeof doc === "string") {
-			return doc;
-		}
+		if (typeof doc === "string") return doc;
 
-		return "";
+		return "<p></p>";
 	} catch (e) {
 		console.error("Failed to convert serdoc to HTML:", e, serdoc);
-		return "";
+		return "<p></p>";
 	}
-}
-
-// Build a map from string index to ProseMirror position
-// Returns array where index = string position, value = PM position
-// This walks the PM document and maps each text character to its PM position
-function buildPositionMap(doc: any): number[] {
-	if (!doc) {
-		return [];
-	}
-
-	const result: number[] = [];
-
-	doc.descendants((node: any, pos: number) => {
-		if (node.isText) {
-			// Map each character in the text node to its PM position
-			for (let i = 0; i < node.text!.length; i++) {
-				result.push(pos + 1 + i);
-			}
-		}
-		return !node.isLeaf;
-	});
-
-	return result;
-}
-
-// Map a string position to ProseMirror position using the position map
-function mapStringToPMPosition(posMap: number[], stringPos: number): number {
-	if (stringPos >= posMap.length) {
-		return posMap.length > 0 ? posMap[posMap.length - 1] + 1 : 0;
-	}
-	return posMap[stringPos] ?? 0;
-}
-
-// Convert Y.XmlFragment to plain text
-function yXmlFragmentToText(xmlFragment: Y.XmlFragment): string {
-	const textParts: string[] = [];
-	xmlFragment.forEach((item) => {
-		if (item instanceof Y.XmlText) {
-			textParts.push(item.toString());
-		} else if (item instanceof Y.XmlElement) {
-			textParts.push("\n");
-			textParts.push(yXmlFragmentToText(item as unknown as Y.XmlFragment));
-		}
-	});
-	return textParts.join("");
 }
