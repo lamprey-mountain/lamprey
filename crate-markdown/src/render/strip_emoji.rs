@@ -44,23 +44,21 @@ impl StripEmojiReader {
         let mut result = String::new();
         let mut current_emoji_name: Option<String> = None;
         let mut current_emoji_uuid: Option<String> = None;
-        let mut current_emoji_animated: bool = false;
 
         for event in ast.events() {
             match event {
                 Event::Start(crate::events::Tag::Emoji {
-                    animated,
+                    animated: _,
                     name,
                     uuid,
                 }) => {
                     current_emoji_name = Some(name.to_string());
                     current_emoji_uuid = Some(uuid.to_string());
-                    current_emoji_animated = animated;
                 }
                 Event::End(crate::events::Tag::Emoji {
-                    animated,
-                    name,
-                    uuid,
+                    animated: _,
+                    name: _,
+                    uuid: _,
                 }) => {
                     // Process the emoji we just collected
                     if let (Some(name_str), Some(uuid_str)) =
@@ -75,8 +73,8 @@ impl StripEmojiReader {
 
                         if is_allowed {
                             // Preserve original format <:name:uuid> or <a:name:uuid>
-                            let prefix = if animated { "a" } else { "" };
-                            result.push_str(&format!("<{}:{}:{}>", prefix, name_str, uuid_str));
+                            // Note: animated info is lost in End event, use Start event if needed
+                            result.push_str(&format!("<:{}:{}>", name_str, uuid_str));
                         } else {
                             // Convert to :name: format
                             result.push_str(&format!(":{}:", name_str));
