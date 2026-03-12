@@ -9,7 +9,7 @@ members = [
   "crate-bot",
   "crate-bridge",
   "crate-common",
-  "crate-hakari",
+  "crate-hakari", "crate-markdown",
   # "crate-macros",
   "crate-media",
   "crate-sdk",

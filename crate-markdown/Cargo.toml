@@ -1,0 +1,18 @@
+[package]
+name = "lamprey-markdown"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[dependencies]
+lamprey-common = { version = "0.1.1", path = "../crate-common" }
+logos = "0.16.1"
+rowan = "0.16.1"
+uuid = "1.22.0"
+
+[features]
+wasm = []
