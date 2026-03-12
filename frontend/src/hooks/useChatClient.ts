@@ -56,7 +56,7 @@ interface ApiDB extends DBSchema {
 	};
 	room_member: {
 		value: MemberT;
-		key: string;
+		key: [string, string];
 	};
 	media: {
 		value: MediaT;
@@ -72,7 +72,7 @@ interface ApiDB extends DBSchema {
 	};
 	thread_member: {
 		value: ThreadMember;
-		key: string;
+		key: [string, string];
 	};
 }
 
@@ -159,11 +159,15 @@ export function useChatClient(config: Config) {
 						database.createObjectStore("channel", { keyPath: "id" });
 						database.createObjectStore("message", { keyPath: "id" });
 						database.createObjectStore("role", { keyPath: "id" });
-						database.createObjectStore("room_member", { keyPath: "id" });
+						database.createObjectStore("room_member", {
+							keyPath: ["room_id", "user_id"],
+						});
 						database.createObjectStore("media", { keyPath: "id" });
 						database.createObjectStore("session", { keyPath: "id" });
 						database.createObjectStore("document", { keyPath: "id" });
-						database.createObjectStore("thread_member", { keyPath: "id" });
+						database.createObjectStore("thread_member", {
+							keyPath: ["thread_id", "user_id"],
+						});
 						logger.for("idb").info(
 							"IndexedDB initialized with all object stores",
 						);

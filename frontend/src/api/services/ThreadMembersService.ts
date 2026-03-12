@@ -9,6 +9,19 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 		return `${item.thread_id}:${item.user_id}`;
 	}
 
+	override upsert(item: ThreadMember) {
+		this.cache.set(this.getKey(item), item);
+
+		if (this.db && this.cacheName) {
+			this.db.put(this.cacheName, item).catch((e) => {
+				console.warn(`Failed to write to ${this.cacheName}`, {
+					key: [item.thread_id, item.user_id],
+					error: e,
+				});
+			});
+		}
+	}
+
 	async fetch(id: string): Promise<ThreadMember> {
 		// id is "thread_id:user_id"
 		const [thread_id, user_id] = id.split(":");

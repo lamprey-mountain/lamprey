@@ -125,7 +125,18 @@ export abstract class BaseService<T> {
 			// Attempt to load from IndexedDB first
 			if (this.db && this.cacheName) {
 				try {
-					const cached = await this.db.get(this.cacheName, itemId);
+					// HACK: theres probably a better way of doing this than hardcoding
+					let dbKey: string | [string, string] = itemId;
+					if (
+						this.cacheName === "room_member" ||
+						this.cacheName === "thread_member"
+					) {
+						const parts = itemId.split(":");
+						if (parts.length === 2) {
+							dbKey = [parts[0], parts[1]] as [string, string];
+						}
+					}
+					const cached = await this.db.get(this.cacheName, dbKey);
 					if (cached) {
 						// Load stale data into cache immediately
 						this.upsert(cached);
@@ -168,7 +179,7 @@ export abstract class BaseService<T> {
 
 	upsert(item: T) {
 		this.cache.set(this.getKey(item), item);
-		// Save to IndexedDB
+
 		if (this.db && this.cacheName) {
 			this.db.put(this.cacheName, item).catch((e) => {
 				logger.for("idb").warn(`Failed to write to ${this.cacheName}`, {

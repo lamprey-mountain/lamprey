@@ -48,6 +48,15 @@ export class RoomMembersService extends BaseService<RoomMember> {
 
 	override upsert(item: RoomMember) {
 		this.cache.set(this.getKey(item), item);
+
+		if (this.db && this.cacheName) {
+			this.db.put(this.cacheName, item).catch((e) => {
+				console.warn(`Failed to write to ${this.cacheName}`, {
+					key: [item.room_id, item.user_id],
+					error: e,
+				});
+			});
+		}
 	}
 
 	useMember(
