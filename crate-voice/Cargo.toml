@@ -13,18 +13,18 @@ path = "src/main.rs"
 [dependencies]
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 str0m = "0.10.0"
-tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread", "sync", "time"] }
-anyhow = "1.0.98"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-thiserror = "2.0.12"
-tracing = "0.1.41"
+tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread", "sync", "time"] }
+anyhow = "1.0.102"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+thiserror = "2.0.18"
+tracing = "0.1.44"
 dashmap = "6.1.0"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-systemstat = "0.2.4"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+systemstat = "0.2.6"
 figment = { version = "0.10.19", features = ["env", "json", "toml"] }
 tokio-tungstenite = { version = "0.27.0", features = ["rustls-tls-webpki-roots"] }
-futures-util = "0.3.31"
+futures-util = "0.3.32"
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 num_cpus = "1.17.0"
 socket2 = { version = "0.6.3", features = ["all"] }

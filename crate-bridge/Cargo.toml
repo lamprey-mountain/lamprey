@@ -11,21 +11,21 @@ name = "bridge"
 path = "src/main.rs"
 
 [dependencies]
-async-trait = "0.1.85"
+async-trait = "0.1.89"
 dashmap = "6.1.0"
 dotenvy = "0.15.7"
-reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls-native-roots", "json"] }
-serde = "1.0.217"
-serenity = "0.12.4"
-sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite", "uuid"] }
-tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
+serde = "1.0.228"
+serenity = "0.12.5"
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "uuid"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
-uuid = "1.12.0"
+uuid = "1.22.0"
 sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk" }
 time = { version = "0.3", features = ["serde-human-readable", "macros"] }
-anyhow = "1.0.95"
+anyhow = "1.0.102"
 figment = { version = "0.10.19", features = ["env", "toml"] }
 opentelemetry-otlp = { version = "0.30.0", features = ["grpc-tonic", "logs", "metrics", "reqwest", "tokio", "tracing", "trace"], default-features = false }
 opentelemetry = "0.30.0"
