@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE metric_invite SET deleted_at = $1 WHERE ts < $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "af1e0b372055e4528fd98000e3d539aae3e91b688d30140a8761b817e8a4409f"
+}

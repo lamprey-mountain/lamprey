@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM user_relationship WHERE user_id = $1 AND other_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7730f6ead155232854af203771908f312f2e9e6a5e9ce4fe5d4cd840b54048a2"
+}

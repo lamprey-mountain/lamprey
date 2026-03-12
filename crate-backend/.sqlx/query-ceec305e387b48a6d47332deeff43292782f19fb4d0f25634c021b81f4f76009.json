@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO config_internal (key, vapid_private_key, vapid_public_key, oidc_jwk_key, admin_token)\n             VALUES ('main', $1, $2, $3, $4)\n             ON CONFLICT (key) DO UPDATE SET\n                vapid_private_key = EXCLUDED.vapid_private_key,\n                vapid_public_key = EXCLUDED.vapid_public_key,\n                oidc_jwk_key = EXCLUDED.oidc_jwk_key,\n                admin_token = EXCLUDED.admin_token",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ceec305e387b48a6d47332deeff43292782f19fb4d0f25634c021b81f4f76009"
+}

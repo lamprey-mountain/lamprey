@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT count(*)\n                FROM room_ban b\n                JOIN usr u ON b.user_id = u.id\n                WHERE b.room_id = $1 AND u.name ILIKE $2\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "52edf47a67460ad4d9c63cc1875d4f5c5ca917bb96a34c67352256cc254e9d17"
+}

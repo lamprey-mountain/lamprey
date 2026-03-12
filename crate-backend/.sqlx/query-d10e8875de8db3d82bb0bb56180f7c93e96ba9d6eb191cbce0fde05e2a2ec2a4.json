@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE message_version\n            SET\n                deleted_at = $2,\n                content = NULL,\n                embeds = '[]'::jsonb\n            WHERE version_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d10e8875de8db3d82bb0bb56180f7c93e96ba9d6eb191cbce0fde05e2a2ec2a4"
+}

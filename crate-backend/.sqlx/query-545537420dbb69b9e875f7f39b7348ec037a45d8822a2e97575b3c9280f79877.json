@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO permission_overwrite (target_id, actor_id, type, allow, deny)\n            VALUES ($1, $2, $3, $4, $5)\n            ON CONFLICT (target_id, actor_id) DO UPDATE SET type = $3, allow = $4, deny = $5\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "545537420dbb69b9e875f7f39b7348ec037a45d8822a2e97575b3c9280f79877"
+}

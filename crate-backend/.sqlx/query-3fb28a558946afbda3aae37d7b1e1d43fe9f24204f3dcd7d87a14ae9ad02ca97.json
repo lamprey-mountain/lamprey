@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT count(*)\n                FROM custom_emoji e\n                JOIN room_member rm ON e.room_id = rm.room_id\n                WHERE rm.user_id = $1 AND rm.membership = 'Join' AND e.name ILIKE $2\n                AND e.deleted_at IS NULL\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3fb28a558946afbda3aae37d7b1e1d43fe9f24204f3dcd7d87a14ae9ad02ca97"
+}

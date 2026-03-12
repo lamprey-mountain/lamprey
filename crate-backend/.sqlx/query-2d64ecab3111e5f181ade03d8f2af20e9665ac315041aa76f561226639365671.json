@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH last_messages AS (\n    SELECT DISTINCT ON (m.channel_id)\n        m.channel_id,\n        m.id AS message_id,\n        mv.version_id\n    FROM message m\n    JOIN message_version mv ON m.latest_version_id = mv.version_id\n    WHERE m.channel_id IN (\n        SELECT id FROM channel WHERE room_id = $2 AND deleted_at IS NULL AND archived_at IS NULL\n    ) AND m.deleted_at IS NULL\n    ORDER BY m.channel_id, m.id DESC\n),\nupdated_unreads AS (\n    INSERT INTO unread (user_id, channel_id, message_id, version_id, mention_count)\n    SELECT\n        $1,\n        lm.channel_id,\n        lm.message_id,\n        lm.version_id,\n        0\n    FROM last_messages lm\n    ON CONFLICT (user_id, channel_id) DO UPDATE SET\n        message_id = excluded.message_id,\n        version_id = excluded.version_id,\n        mention_count = 0\n    RETURNING channel_id, message_id, version_id\n)\nSELECT channel_id, message_id, version_id FROM updated_unreads\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "message_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "version_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2d64ecab3111e5f181ade03d8f2af20e9665ac315041aa76f561226639365671"
+}

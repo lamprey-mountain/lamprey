@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update media set data = $1 where id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d1ad09db927bc6557e7a628f3da6516632980650a1c8358ab12a534954995e1e"
+}

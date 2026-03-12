@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update room set quarantined = false, version_id = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "eebcd842df58601b451acfdaf639b8a4614643ce71f85233d257e9747385a473"
+}

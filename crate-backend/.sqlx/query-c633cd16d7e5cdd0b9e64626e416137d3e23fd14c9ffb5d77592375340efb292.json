@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT vapid_private_key, vapid_public_key, oidc_jwk_key, admin_token\n             FROM config_internal WHERE key = 'main'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "vapid_private_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "vapid_public_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "oidc_jwk_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "admin_token",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "c633cd16d7e5cdd0b9e64626e416137d3e23fd14c9ffb5d77592375340efb292"
+}

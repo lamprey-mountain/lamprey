@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n    channel_viewer as (\n        select channel.id, channel.room_id from channel\n        where channel.id = any($17)\n        union\n        select channel.id, channel.room_id from channel\n        where channel.parent_id = any($18)\n        union\n        select channel.id, channel.room_id from channel\n        join thread_member on channel.id = thread_member.channel_id\n        where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'\n    )\nselect count(*)\nfrom message as m\njoin message_version mv on m.latest_version_id = mv.version_id\njoin channel_viewer on m.channel_id = channel_viewer.id\nwhere m.deleted_at is null\n  and ($2::text is null or $2 = '' or mv.content @@ websearch_to_tsquery('english', $2))\n  and (cardinality($3::uuid[]) = 0 or channel_viewer.room_id = any($3))\n  and (cardinality($4::uuid[]) = 0 or m.channel_id = any($4))\n  and (cardinality($5::uuid[]) = 0 or m.author_id = any($5))\n  -- has_attachment: $6\n  and ($6::boolean is null or (exists (select 1 from message_attachment where version_id = mv.version_id)) = $6)\n  -- has_image: $7\n  and ($7::boolean is null or (exists (select 1 from message_attachment ma join media m2 on ma.media_id = m2.id, jsonb_array_elements(m2.data->'tracks') as track where ma.version_id = mv.version_id and track->>'mime' like 'image/%')) = $7)\n  -- has_audio: $8\n  and ($8::boolean is null or (exists (select 1 from message_attachment ma join media m2 on ma.media_id = m2.id, jsonb_array_elements(m2.data->'tracks') as track where ma.version_id = mv.version_id and track->>'mime' like 'audio/%')) = $8)\n  -- has_video: $9\n  and ($9::boolean is null or (exists (select 1 from message_attachment ma join media m2 on ma.media_id = m2.id, jsonb_array_elements(m2.data->'tracks') as track where ma.version_id = mv.version_id and track->>'mime' like 'video/%')) = $9)\n  -- has_link: $10\n  and ($10::boolean is null or ((mv.content ~ 'https?://[^\\s<>\"]+|www\\.[^\\s<>\"]+') = $10))\n  -- has_embed: $11\n  and ($11::boolean is null or ((jsonb_array_length(coalesce(mv.embeds, '[]'::jsonb)) > 0) = $11))\n  -- pinned: $12\n  and ($12::boolean is null or ((m.pinned is not null) = $12))\n  -- link_hostnames: $13\n  and (cardinality($13::text[]) = 0 or embed_hosts(mv.embeds) && $13 or content_hosts(mv.content) && $13)\n  -- mentions_users: $14\n  and (cardinality($14::uuid[]) = 0 or (mv.mentions->'users')::jsonb ?| array(select jsonb_array_elements_text(to_jsonb($14::uuid[]))))\n  -- mentions_roles: $15\n  and (cardinality($15::uuid[]) = 0 or (mv.mentions->'roles')::jsonb ?| array(select jsonb_array_elements_text(to_jsonb($15::uuid[]))))\n  -- mentions_everyone: $16\n  and ($16::boolean is null or (mv.mentions->>'everyone')::boolean = $16)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "UuidArray",
+        "UuidArray",
+        "UuidArray",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "TextArray",
+        "UuidArray",
+        "UuidArray",
+        "Bool",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4e02bdb1d57e6cc4d8c2523ee21d00acb6fab7e3643fb6fc5c03655c395fa613"
+}

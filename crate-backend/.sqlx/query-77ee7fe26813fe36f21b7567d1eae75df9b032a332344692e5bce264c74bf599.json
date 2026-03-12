@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                u.author_id as user_id, u.created_at, u.stat_added, u.stat_removed, u.seq, u.document_id\n            FROM document_update u\n            JOIN channel c ON c.id = u.document_id\n            WHERE c.parent_id = $1\n            ORDER BY u.created_at ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 2,
+        "name": "stat_added",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "stat_removed",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "seq",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "document_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "77ee7fe26813fe36f21b7567d1eae75df9b032a332344692e5bce264c74bf599"
+}

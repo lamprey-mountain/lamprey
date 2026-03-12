@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update message set pinned = jsonb_set(pinned, '{position}', ((pinned->>'position')::int + 1)::text::jsonb) where channel_id = $1 and pinned is not null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3418997f81692a937fa5ce942659248b70947853d39a31946514847dd8d7de2a"
+}

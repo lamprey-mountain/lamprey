@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update role set position = $3 where id = $1 and room_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cef9907c06418a2a445ae51ed4153ed6a9f351b9e6a406b397ddb97acb7e049e"
+}

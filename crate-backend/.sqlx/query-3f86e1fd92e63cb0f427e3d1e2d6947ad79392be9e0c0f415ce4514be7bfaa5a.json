@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO channel_slowmode_thread (channel_id, user_id, expires_at)\n             VALUES ($1, $2, $3)\n             ON CONFLICT (channel_id, user_id)\n             DO UPDATE SET expires_at = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3f86e1fd92e63cb0f427e3d1e2d6947ad79392be9e0c0f415ce4514be7bfaa5a"
+}

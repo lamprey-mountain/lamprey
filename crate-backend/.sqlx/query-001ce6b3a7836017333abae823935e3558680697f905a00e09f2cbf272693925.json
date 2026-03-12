@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update totp_recovery set used_at = now() where user_id = $1 and code = $2 and used_at is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "001ce6b3a7836017333abae823935e3558680697f905a00e09f2cbf272693925"
+}

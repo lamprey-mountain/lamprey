@@ -1,0 +1,75 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, room_id as \"room_id!\", channel_id as \"channel_id!\", message_id as \"message_id!\", type as \"ty!: DbNotificationType\", added_at, read_at\nFROM inbox\nWHERE user_id = $1\n  AND ($2 OR read_at IS NULL)\n  AND (array_length($3::uuid[], 1) IS NULL OR room_id = ANY($3))\n  AND (array_length($4::uuid[], 1) IS NULL OR channel_id = ANY($4))\n  AND id > $5 AND id < $6\nORDER BY (CASE WHEN $7 = 'f' THEN id END), id DESC\nLIMIT $8\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "channel_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "message_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "ty!: DbNotificationType",
+        "type_info": {
+          "Custom": {
+            "name": "notification_type",
+            "kind": {
+              "Enum": [
+                "Message",
+                "Reaction"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "added_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "read_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "UuidArray",
+        "UuidArray",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "9eab9078a74b0c54715866fcd66a8065f3a79c4169ced201ef3984320e0689ee"
+}

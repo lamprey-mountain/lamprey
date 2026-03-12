@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ts, sum(message_count)::int as message_count, sum(media_count)::int as media_count, sum(media_size)::int as media_size\n        FROM metric_channel\n        WHERE room_id = $1 AND ($2::timestamp IS NULL OR ts >= $2) AND ($3::timestamp IS NULL OR ts <= $3)\n        GROUP BY ts\n        ORDER BY ts ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ts",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 1,
+        "name": "message_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "media_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "media_size",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamp",
+        "Timestamp"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "45931bfacf5308687aa7d5176c0369965e2adf6cfbd637f3c2601f2f4809cf95"
+}

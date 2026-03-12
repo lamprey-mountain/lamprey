@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT media_id, target_id, link_type as \"link_type: _\"\n            FROM media_link\n            WHERE media_id = $1 AND deleted_at IS NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "media_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "target_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "link_type: _",
+        "type_info": {
+          "Custom": {
+            "name": "media_link_type",
+            "kind": {
+              "Enum": [
+                "Message",
+                "MessageVersion",
+                "UserAvatar",
+                "Embed",
+                "CustomEmoji",
+                "RoomIcon",
+                "UserBanner",
+                "ChannelIcon",
+                "RoomBanner"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1c946818eb427bfdd45dc6d6a873822a7d4b068db1c4f60518942da2f7580dfd"
+}

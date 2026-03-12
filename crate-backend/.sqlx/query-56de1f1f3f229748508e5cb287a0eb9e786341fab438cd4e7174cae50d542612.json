@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE message SET removed_at = $2 WHERE id = ANY($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "56de1f1f3f229748508e5cb287a0eb9e786341fab438cd4e7174cae50d542612"
+}

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT count(*) FROM room_member rm\n                JOIN room ON room.id = rm.room_id\n                WHERE rm.user_id = $1 AND rm.membership = 'Join'\n                  AND (room.type != 'Server' OR $2)\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "28cf9af7698de1a63afd366550a0ebf5f66964892bac71da5dcb23d633195bc6"
+}

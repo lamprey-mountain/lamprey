@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH pos AS (\n                SELECT coalesce(\n                    (SELECT position FROM reaction WHERE message_id = $1 AND key = $4),\n                    (SELECT coalesce(max(position) + 1, 0) FROM reaction WHERE message_id = $1)\n                ) AS pos\n            )\n            INSERT INTO reaction (message_id, user_id, channel_id, key, position)\n            SELECT $1, $2, $3, $4, pos FROM pos\n            ON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0550c360601c99f9086ef4f4764f24cf4403622528b6312234cd41e12d3c1809"
+}

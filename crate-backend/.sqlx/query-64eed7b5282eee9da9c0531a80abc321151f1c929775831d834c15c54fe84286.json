@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM webhook w JOIN channel c ON w.channel_id = c.id JOIN usr u ON w.id = u.id WHERE c.room_id = $1 AND u.deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "64eed7b5282eee9da9c0531a80abc321151f1c929775831d834c15c54fe84286"
+}

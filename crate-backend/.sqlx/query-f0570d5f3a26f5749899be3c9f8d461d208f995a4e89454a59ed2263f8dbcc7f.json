@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO room_ban (room_id, user_id, reason, created_at, expires_at)\n            VALUES ($1, $2, $3, now(), $4)\n            ON CONFLICT (room_id, user_id) DO UPDATE\n            SET expires_at = EXCLUDED.expires_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f0570d5f3a26f5749899be3c9f8d461d208f995a4e89454a59ed2263f8dbcc7f"
+}

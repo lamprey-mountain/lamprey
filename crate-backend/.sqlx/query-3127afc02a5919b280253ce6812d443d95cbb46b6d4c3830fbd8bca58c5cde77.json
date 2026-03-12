@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT b.user_id, b.reason, b.created_at, b.expires_at\n                FROM room_ban b\n                JOIN usr u ON b.user_id = u.id\n                WHERE b.room_id = $1 AND u.name ILIKE $2 AND b.user_id > $3 AND b.user_id < $4\n                ORDER BY (CASE WHEN $5 = 'f' THEN b.user_id END), b.user_id DESC\n                LIMIT $6\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 3,
+        "name": "expires_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "3127afc02a5919b280253ce6812d443d95cbb46b6d4c3830fbd8bca58c5cde77"
+}

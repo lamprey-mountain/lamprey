@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT id, room_id, user_id, session_id, reason, data, status as \"status: _\", started_at, ended_at, ip_addr::text, user_agent, application_id FROM audit_log\n                WHERE room_id = $1 AND id > $2 AND id < $3\n                AND (cardinality($6::uuid[]) = 0 OR user_id = ANY($6))\n                AND (cardinality($7::text[]) = 0 OR data->>'type' = ANY($7))\n                AND (cardinality($8::audit_log_entry_status[]) = 0 OR status = ANY($8))\n                ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "session_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "status: _",
+        "type_info": {
+          "Custom": {
+            "name": "audit_log_entry_status",
+            "kind": {
+              "Enum": [
+                "Success",
+                "Unauthorized",
+                "Failed"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "started_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "ended_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 9,
+        "name": "ip_addr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "user_agent",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "application_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8",
+        "UuidArray",
+        "TextArray",
+        {
+          "Custom": {
+            "name": "audit_log_entry_status[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "audit_log_entry_status",
+                  "kind": {
+                    "Enum": [
+                      "Success",
+                      "Unauthorized",
+                      "Failed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      null,
+      true,
+      true
+    ]
+  },
+  "hash": "363f29b4d435c787a3748c1479a61faa016590c35bedc692bc0dba7af5966b8d"
+}

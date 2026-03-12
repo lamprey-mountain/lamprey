@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT room_id\n            FROM room_member\n            WHERE user_id = $1 AND membership = 'Join'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "room_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4a1a8f254cec93b38f1f4b60af0e75d772a9cb69e0b83c43290f22718ebc6dcd"
+}
