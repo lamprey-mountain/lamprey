@@ -15,7 +15,7 @@ use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use tokio::sync::{broadcast, RwLock};
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 use uuid::Uuid;
 use yrs::types::{Delta, Event};
 use yrs::updates::encoder::Encode;
