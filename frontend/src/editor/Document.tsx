@@ -3,6 +3,7 @@ import {
 	createEffect,
 	createMemo,
 	createSignal,
+	For,
 	on,
 	onCleanup,
 	onMount,
@@ -38,6 +39,7 @@ import { schema } from "./schema.ts";
 import { md } from "../markdown_utils.tsx";
 import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import { diffWords } from "diff";
+import type { Tokens } from "marked";
 
 type ChangesetSelection = {
 	start_seq: number;
@@ -528,6 +530,7 @@ const DocumentMain = (
 		null,
 	);
 	const editor = createMemo(() => props.editor());
+	const [viewReady, setViewReady] = createSignal(false);
 
 	// Determine mode: 'edit' | 'diff_preview' | 'diff_readonly'
 	// Hover preview takes priority when actively hovering; otherwise show selected
@@ -784,85 +787,351 @@ const DocumentMain = (
 		}
 	};
 
+	// Extract headings from serdoc for table of contents
+	const [headings, setHeadings] = createSignal<
+		{ level: number; text: string }[]
+	>([]);
+
+	// Extract headings from markdown content
+	const extractHeadingsFromMarkdown = (markdown: string) => {
+		console.log(
+			"[TOC] extractHeadingsFromMarkdown called, markdown length:",
+			markdown.length,
+		);
+		const result: { level: number; text: string }[] = [];
+		const tokens = md.lexer(markdown);
+		console.log("[TOC] tokens:", tokens.length);
+
+		for (const token of tokens) {
+			console.log("[TOC] token type:", token.type);
+			if (token.type === "heading") {
+				const heading = token as Tokens.Heading;
+				const text = heading.tokens
+					?.map((t) => (t.type === "text" ? t.text : ""))
+					.join("")
+					.trim() ?? heading.text.trim();
+				console.log("[TOC] found heading:", heading.depth, text);
+				if (text) {
+					result.push({ level: heading.depth, text });
+				}
+			}
+		}
+		console.log("[TOC] result:", result);
+		return result;
+	};
+
+	// Extract headings from ProseMirror document by scanning text content
+	const extractHeadingsFromDoc = () => {
+		const ed = editor();
+		if (!ed || !ed.view) return [];
+
+		const state = ed.view.state;
+		const doc = state.doc;
+		const result: { level: number; text: string }[] = [];
+
+		doc.descendants((node) => {
+			if (node.isBlock) {
+				const textContent = node.textContent;
+				if (textContent) {
+					// Split by newline because blocks can have multiple lines
+					const lines = textContent.split("\n");
+					for (const line of lines) {
+						const text = line.trim();
+						// Check for ATX-style headings: # Heading, ## Subheading, etc.
+						const match = text.match(/^(#{1,6})\s+(.+)$/);
+						if (match) {
+							const level = match[1].length;
+							const headingText = match[2].trim();
+							if (headingText) {
+								result.push({ level, text: headingText });
+							}
+						}
+					}
+				}
+				return false; // Skip traversing into inline children, we only need block textContent
+			}
+			return true;
+		});
+
+		console.log("[TOC] extractHeadingsFromDoc result:", result);
+		return result;
+	};
+
+	// Update headings when selection changes (historical revision)
+	createEffect(() => {
+		console.log("[TOC] historical effect running");
+		const selection = props.selectedSeq ?? props.hoverSeq;
+		const seq = selection?.end_seq ?? null;
+		console.log("[TOC] selection:", selection, "seq:", seq);
+
+		if (!seq) {
+			console.log("[TOC] no seq, returning");
+			return;
+		}
+
+		const serdoc = api.documents.revisionCache.get(
+			`${props.channel.id}@${seq}`,
+		);
+		console.log("[TOC] serdoc from cache:", serdoc);
+		if (!serdoc) {
+			console.log("[TOC] no serdoc, returning");
+			return;
+		}
+
+		const doc = serdoc?.data ?? serdoc;
+		console.log("[TOC] doc:", doc);
+		if (!doc?.root?.blocks) {
+			console.log("[TOC] no root.blocks, returning");
+			return;
+		}
+
+		for (const block of doc.root.blocks) {
+			console.log("[TOC] block:", block);
+			if (block.Markdown?.content) {
+				console.log("[TOC] found markdown content");
+				setHeadings(extractHeadingsFromMarkdown(block.Markdown.content));
+				return;
+			}
+		}
+		console.log("[TOC] no markdown content found");
+		setHeadings([]);
+	});
+
+	// Update headings from live editor content when not viewing history
+	createEffect(() => {
+		console.log("[TOC] live effect running");
+		const selection = props.selectedSeq ?? props.hoverSeq;
+		console.log("[TOC] selection:", selection);
+		if (selection) {
+			console.log("[TOC] has selection, skipping live update");
+			return; // Don't update from live content when viewing history
+		}
+
+		// Wait for view to be ready
+		const ready = viewReady();
+		console.log("[TOC] viewReady:", ready);
+		if (!ready) {
+			console.log("[TOC] view not ready, returning");
+			return;
+		}
+
+		const ed = editor();
+		console.log("[TOC] editor:", ed);
+		if (!ed) {
+			console.log("[TOC] no editor, returning");
+			return;
+		}
+
+		const view = ed.view;
+		console.log("[TOC] view:", view);
+		if (!view) {
+			console.log("[TOC] no view, returning");
+			return;
+		}
+
+		console.log("[TOC] view.dom:", view.dom);
+
+		// Track editor state changes using dispatchTransaction
+		const updateHeadings = () => {
+			console.log("[TOC] updateHeadings called from dispatch");
+			setHeadings(extractHeadingsFromDoc());
+		};
+
+		const originalDispatch = view.dispatch.bind(view);
+		view.dispatch = function (tr) {
+			originalDispatch(tr);
+			if (tr.docChanged) {
+				console.log("[TOC] doc changed, updating headings");
+				updateHeadings();
+			}
+		};
+		console.log("[TOC] hooked into dispatch");
+
+		// Initial update
+		updateHeadings();
+
+		return () => {
+			console.log("[TOC] cleanup live effect");
+			// Restore original dispatch
+			view.dispatch = originalDispatch;
+		};
+	});
+
+	const scrollToHeading = (targetText: string) => {
+		const ed = editor();
+		if (!ed) return;
+		const view = ed.view;
+		if (!view) return;
+
+		const state = view.state;
+		const doc = state.doc;
+		let targetPos = -1;
+
+		doc.descendants((node, pos) => {
+			if (targetPos !== -1) return false;
+
+			if (node.isBlock) {
+				const text = node.textContent;
+				if (!text) return false;
+
+				const lines = text.split("\n");
+				let currentOffset = 0;
+
+				for (const line of lines) {
+					const match = line.trim().match(/^(#{1,6})\s+(.+)$/);
+					if (match && match[2].trim() === targetText) {
+						// Found the matching line! Map its string index to a ProseMirror position.
+						const stringIndex = text.indexOf(line, currentOffset);
+
+						let pmOffset = 0;
+						let strOffset = 0;
+
+						// Iterate over the block's inline children to map string offset -> PM offset properly
+						// (Required because custom Atoms like @mentions take 1 position but have N characters of text)
+						node.forEach((child) => {
+							if (strOffset >= stringIndex) return;
+
+							const childTextLen = child.textContent.length;
+							if (strOffset + childTextLen >= stringIndex) {
+								// The target text falls inside this inline child
+								pmOffset += stringIndex - strOffset;
+								strOffset = stringIndex;
+							} else {
+								pmOffset += child.nodeSize;
+								strOffset += childTextLen;
+							}
+						});
+
+						targetPos = pos + 1 + pmOffset;
+						return false; // Stop iterating descendants completely
+					}
+					currentOffset += line.length + 1; // +1 to account for the split newline char
+				}
+				return false; // Skip inline children
+			}
+			return true;
+		});
+
+		if (targetPos !== -1) {
+			try {
+				// Get viewport coordinates of the exact text position
+				const coords = view.coordsAtPos(targetPos);
+				window.scrollTo({
+					top: window.scrollY + coords.top - 80, // -80px offset so it clears floating headers
+					behavior: "smooth",
+				});
+			} catch (e) {
+				console.error("Failed to scroll to heading position:", e);
+			}
+		}
+	};
+
 	return (
-		<>
-			<Show when={mode() === "diff_readonly" && currentChangeset()}>
-				{(changeset) => (
-					<div class="diff-view-inline">
-						<div class="diff-view-header">
-							<span class="diff-view-title">
+		<div>
+			<div class="document-left-rail">
+				<Show when={mode() === "diff_readonly" && currentChangeset()}>
+					{(changeset) => (
+						<div class="diff-view-message">
+							<div class="diff-view-info">
 								Viewing revision from{" "}
 								<Time date={new Date(changeset().start_time)} />
-							</span>
-							<div class="diff-view-stats">
-								<span class="diff-stat-added">
-									+{changeset().stat_added}
-								</span>
-								<span class="diff-stat-removed">
-									−{changeset().stat_removed}
-								</span>
 							</div>
-							<button
-								ref={setRestoreBtn}
-								class="diff-view-close"
-								onClick={(e) => {
-									e.stopPropagation();
-									setRestoreMenuOpen(!restoreMenuOpen());
-								}}
-							>
-								Restore ▼
-							</button>
-							<button
-								class="diff-view-close"
-								onClick={() => {
-									props.onSelectChangeset(null);
-									props.onHoverChangeset(null); // Fix: also clear hover state to avoid getting trapped in preview
-								}}
-							>
-								Back to current version
-							</button>
+							<div class="diff-view-actions">
+								<button
+									ref={setRestoreBtn}
+									class="secondary"
+									onClick={(e) => {
+										e.stopPropagation();
+										setRestoreMenuOpen(!restoreMenuOpen());
+									}}
+								>
+									Restore ▼
+								</button>
+								<button
+									class="secondary"
+									onClick={() => {
+										props.onSelectChangeset(null);
+										props.onHoverChangeset(null);
+									}}
+								>
+									Cancel
+								</button>
+							</div>
 						</div>
-					</div>
-				)}
-			</Show>
-			<Show when={restoreMenuOpen()}>
-				<Portal>
-					<menu
-						class="restore-menu document-menu"
-						ref={setRestoreMenu}
-						style={{
-							position: restorePos.strategy,
-							top: `${restorePos.y ?? 0}px`,
-							left: `${restorePos.x ?? 0}px`,
-							"z-index": 100,
-						}}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<ul>
-							<li>
-								<button onClick={() => handleRestoreVersion("current")}>
-									<div class="info">
-										<div>Restore to current branch</div>
-										<div class="dim">overwrite current content</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button onClick={() => handleRestoreVersion("new")}>
-									<div class="info">
-										<div>Create new branch</div>
-										<div class="dim">fork from this revision</div>
-									</div>
-								</button>
-							</li>
-						</ul>
-					</menu>
-				</Portal>
-			</Show>
+					)}
+				</Show>
+				{(() => {
+					const h = headings();
+					console.log("[TOC] render, headings:", h);
+					return (
+						<Show when={h.length > 0}>
+							<div class="document-toc">
+								<h4>Table of Contents</h4>
+								<ul>
+									<For each={h}>
+										{(heading) => (
+											<li
+												style={{
+													"margin-left": `${(heading.level - 1) * 12}px`,
+												}}
+												onClick={() => scrollToHeading(heading.text)}
+											>
+												{heading.text}
+											</li>
+										)}
+									</For>
+								</ul>
+							</div>
+						</Show>
+					);
+				})()}
+				<Show when={restoreMenuOpen()}>
+					<Portal>
+						<menu
+							class="restore-menu document-menu"
+							ref={setRestoreMenu}
+							style={{
+								position: restorePos.strategy,
+								top: `${restorePos.y ?? 0}px`,
+								left: `${restorePos.x ?? 0}px`,
+								"z-index": 100,
+							}}
+							onClick={(e) => e.stopPropagation()}
+						>
+							<ul>
+								<li>
+									<button onClick={() => handleRestoreVersion("current")}>
+										<div class="info">
+											<div>Restore to current branch</div>
+											<div class="dim">overwrite current content</div>
+										</div>
+									</button>
+								</li>
+								<li>
+									<button onClick={() => handleRestoreVersion("new")}>
+										<div class="info">
+											<div>Create new branch</div>
+											<div class="dim">fork from this revision</div>
+										</div>
+									</button>
+								</li>
+							</ul>
+						</menu>
+					</Portal>
+				</Show>
+			</div>
 			<main>
 				{(() => {
 					const ed = editor();
 					if (!ed) return null;
+					onMount(() => {
+						console.log("[TOC] View mounted, setting viewReady");
+						setViewReady(true);
+						return () => {
+							console.log("[TOC] View unmounting, clearing viewReady");
+							setViewReady(false);
+						};
+					});
 					return (
 						<ed.View
 							onSubmit={() => false}
@@ -878,7 +1147,7 @@ const DocumentMain = (
 					);
 				})()}
 			</main>
-		</>
+		</div>
 	);
 };
 

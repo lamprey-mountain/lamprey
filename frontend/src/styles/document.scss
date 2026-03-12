@@ -6,6 +6,7 @@
 	display: flex;
 	flex-direction: column;
 	overflow-y: auto;
+	position: relative;
 
 	& > header {
 		padding: 4px;
@@ -70,7 +71,7 @@
 		border: solid $sep-300 1px;
 		min-height: 100%;
 		max-width: 850px;
-		margin: 0 auto;
+		margin: 8px auto;
 		padding: 16px;
 
 		.placeholder {
@@ -246,6 +247,78 @@
 
 		&:hover {
 			background: $bg-300;
+		}
+	}
+}
+
+.document-left-rail {
+	float: left;
+	overflow-y: auto;
+	min-width: 200px;
+	max-width: 300px;
+}
+
+.diff-view-message {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px 12px;
+	background: oklch(var(--color-warn) / 0.05);
+	border: solid $warn-500 1px;
+	margin: 8px;
+	border-radius: 4px;
+
+	.diff-view-info {
+		color: $fg-200;
+		font-size: 0.9rem;
+	}
+
+	.diff-view-actions {
+		display: flex;
+		gap: 8px;
+		margin-left: auto;
+
+		button {
+			padding: 4px 8px;
+			background: $bg-150;
+		}
+	}
+}
+
+.document-toc {
+	background: $bg-150;
+	border: solid $sep-300 1px;
+	border-radius: 4px;
+	padding: 8px 12px;
+	margin: 8px;
+	box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
+
+	h4 {
+		margin: 0 0 8px 0;
+		font-size: 0.85rem;
+		font-weight: bold;
+		color: $fg-500;
+	}
+
+	ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+
+		li {
+			@include truncate;
+			cursor: pointer;
+			color: $link-500;
+			font-size: 0.85rem;
+			padding: 2px 4px;
+			border-radius: 2px;
+
+			&:hover {
+				background: $bg-200;
+			}
 		}
 	}
 }
