@@ -202,7 +202,7 @@ impl AstNode for List {
 impl List {
     /// Iterate over list items.
     pub fn items(&self) -> impl Iterator<Item = ListItem> + '_ {
-        self.0.children().filter_map(|node| ListItem::cast(node))
+        self.0.children().filter_map(ListItem::cast)
     }
 
     /// Check if this is a numbered list.
@@ -823,48 +823,42 @@ impl Ast {
 
     /// Find all paragraphs in the document.
     pub fn paragraphs(&self) -> impl Iterator<Item = Paragraph> + '_ {
-        self.blocks().filter_map(|node| Paragraph::cast(node))
+        self.blocks().filter_map(Paragraph::cast)
     }
 
     /// Find all headers in the document.
     pub fn headers(&self) -> impl Iterator<Item = Header> + '_ {
-        self.blocks().filter_map(|node| Header::cast(node))
+        self.blocks().filter_map(Header::cast)
     }
 
     /// Find all lists in the document.
     pub fn lists(&self) -> impl Iterator<Item = List> + '_ {
-        self.blocks().filter_map(|node| List::cast(node))
+        self.blocks().filter_map(List::cast)
     }
 
     /// Find all blockquotes in the document.
     pub fn blockquotes(&self) -> impl Iterator<Item = BlockQuote> + '_ {
-        self.blocks().filter_map(|node| BlockQuote::cast(node))
+        self.blocks().filter_map(BlockQuote::cast)
     }
 
     /// Find all code blocks in the document.
     pub fn code_blocks(&self) -> impl Iterator<Item = CodeBlock> + '_ {
-        self.blocks().filter_map(|node| CodeBlock::cast(node))
+        self.blocks().filter_map(CodeBlock::cast)
     }
 
     /// Find all strong (bold) elements in the document.
     pub fn strong_elements(&self) -> impl Iterator<Item = Strong> + '_ {
-        self.syntax()
-            .descendants()
-            .filter_map(|node| Strong::cast(node))
+        self.syntax().descendants().filter_map(Strong::cast)
     }
 
     /// Find all emphasis (italic) elements in the document.
     pub fn emphasis_elements(&self) -> impl Iterator<Item = Emphasis> + '_ {
-        self.syntax()
-            .descendants()
-            .filter_map(|node| Emphasis::cast(node))
+        self.syntax().descendants().filter_map(Emphasis::cast)
     }
 
     /// Find all emojis in the document.
     pub fn emojis(&self) -> impl Iterator<Item = Emoji> + '_ {
-        self.syntax()
-            .descendants()
-            .filter_map(|node| Emoji::cast(node))
+        self.syntax().descendants().filter_map(Emoji::cast)
     }
 }
 

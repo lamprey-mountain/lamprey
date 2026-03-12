@@ -363,10 +363,7 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| match n {
-                            NodeOrToken::Node(n) => n.kind() != SyntaxKind::ListMarker,
-                            NodeOrToken::Token(_) => true,
-                        })
+                        .filter(|n| !matches!(n, NodeOrToken::Node(node) if node.kind() == SyntaxKind::ListMarker))
                         .collect();
 
                     if child_idx - 1 < children.len() {
@@ -437,10 +434,7 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| match n {
-                            NodeOrToken::Node(_) => true,
-                            NodeOrToken::Token(t) => t.kind() != SyntaxKind::StrongDelimiter,
-                        })
+                        .filter(|n| !matches!(n, NodeOrToken::Token(t) if t.kind() == SyntaxKind::StrongDelimiter))
                         .collect();
 
                     if child_idx - 1 < children.len() {
@@ -466,10 +460,7 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| match n {
-                            NodeOrToken::Node(_) => true,
-                            NodeOrToken::Token(t) => t.kind() != SyntaxKind::EmphasisDelimiter,
-                        })
+                        .filter(|n| !matches!(n, NodeOrToken::Token(t) if t.kind() == SyntaxKind::EmphasisDelimiter))
                         .collect();
 
                     if child_idx - 1 < children.len() {
@@ -496,10 +487,7 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| match n {
-                            NodeOrToken::Node(_) => true,
-                            NodeOrToken::Token(t) => t.kind() != SyntaxKind::StrikethroughDelimiter,
-                        })
+                        .filter(|n| !matches!(n, NodeOrToken::Token(t) if t.kind() == SyntaxKind::StrikethroughDelimiter))
                         .collect();
 
                     if child_idx - 1 < children.len() {
@@ -548,11 +536,9 @@ impl<'a> EventIterator<'a> {
                             None
                         })
                         .flatten()
-                        .filter(|n| match n {
-                            NodeOrToken::Node(_) => true,
-                            NodeOrToken::Token(t) => {
-                                t.kind() != SyntaxKind::Text || (t.text() != "[" && t.text() != "]")
-                            }
+                        .filter(|n| {
+                            matches!(n, NodeOrToken::Node(_))
+                                || matches!(n, NodeOrToken::Token(t) if t.kind() != SyntaxKind::Text || (t.text() != "[" && t.text() != "]"))
                         })
                         .collect();
 
