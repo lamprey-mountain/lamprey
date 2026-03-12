@@ -358,6 +358,15 @@ impl ServiceDocuments {
 
         let mut txn = ctx.doc.transact_mut();
         txn.apply_update(update)?;
+
+        if !txn
+            .root_refs()
+            .all(|(name, out)| name == DOCUMENT_ROOT_NAME && matches!(out, Out::YXmlFragment(_)))
+        {
+            warn!("got invalid root ref for document");
+            // FIXME: rollback and return error here
+        }
+
         drop(txn);
         drop(_sub);
 
