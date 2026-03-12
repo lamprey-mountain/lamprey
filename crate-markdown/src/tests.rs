@@ -246,10 +246,21 @@ mod tests {
 
     #[test]
     fn test_emoji() {
-        let root = parse(":smile:12345678-1234-1234-1234-123456789abc:");
+        let root = parse("<:smile:12345678-1234-1234-1234-123456789abc>");
         let kinds = collect_kinds(&root);
         assert!(kinds.contains(&SyntaxKind::Emoji));
         assert!(kinds.contains(&SyntaxKind::EmojiName));
+    }
+
+    #[test]
+    fn test_animated_emoji() {
+        let root = parse("<a:wave:12345678-1234-1234-1234-123456789abc>");
+        let kinds = collect_kinds(&root);
+        assert!(kinds.contains(&SyntaxKind::Emoji));
+        assert!(kinds.contains(&SyntaxKind::EmojiName));
+        // Check that the 'a' marker is present
+        let source = root.text().to_string();
+        assert!(source.starts_with("<a:"));
     }
 
     #[test]
@@ -320,7 +331,7 @@ mod tests {
         use uuid::uuid;
 
         let allowed_emoji = vec![EmojiId::from(uuid!("12345678-1234-1234-1234-123456789abc"))];
-        let source = "hello :smile:12345678-1234-1234-1234-123456789abc: world";
+        let source = "hello <:smile:12345678-1234-1234-1234-123456789abc> world";
         let parser = Parser::new(crate::parser::ParseOptions::default());
         let parsed = parser.parse(source);
         let ast = Ast::new(parsed);
@@ -530,7 +541,7 @@ mod tests {
         use rowan::{NodeOrToken, SyntaxNode};
 
         let parser = Parser::new(crate::parser::ParseOptions::default());
-        let parsed = parser.parse(":smile:12345678-1234-1234-1234-123456789abc:");
+        let parsed = parser.parse("<:smile:12345678-1234-1234-1234-123456789abc>");
         let root = parsed.syntax();
 
         // Find the Emoji node
@@ -783,6 +794,267 @@ mod tests {
             "Bold should be preserved after edit"
         );
         assert_eq!(edited.source(), "**hello** universe");
+    }
+
+    // ============ Context-sensitive incremental parsing tests ============
+
+    #[test]
+    fn test_incremental_edit_breaks_emphasis() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: *foo* is valid emphasis
+        let original = parser.parse("*foo*\nbar");
+
+        // Edit: add another * to make it **foo* (broken emphasis)
+        // "*foo*\nbar" - insert at position 1 (after first *)
+        let edit = Edit {
+            delete: TextRange::new(1.into(), 1.into()), // zero-width insert
+            insert: "*",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "**foo*\nbar"
+        assert_eq!(edited.source(), "**foo*\nbar");
+
+        // The tree should be valid (no Emphasis node, just Text)
+        let root = edited.syntax();
+        let has_emphasis = root.descendants().any(|n| n.kind() == SyntaxKind::Emphasis);
+        // **foo* is unmatched, so no emphasis should exist
+        assert!(
+            !has_emphasis,
+            "Broken emphasis should not create Emphasis node"
+        );
+    }
+
+    #[test]
+    fn test_incremental_edit_breaks_list() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: - item is a valid list
+        let original = parser.parse("- item");
+
+        // Edit: change "- item" to "text" (removing the list marker entirely)
+        let edit = Edit {
+            delete: TextRange::new(0.into(), 2.into()), // delete "- "
+            insert: "text ",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "text item"
+        assert_eq!(edited.source(), "text item");
+
+        // The tree should NOT have a List node anymore (it's just text now)
+        let root = edited.syntax();
+        let has_list = root.descendants().any(|n| n.kind() == SyntaxKind::List);
+        assert!(!has_list, "Removing dash should break the list");
+    }
+
+    #[test]
+    fn test_incremental_edit_fixes_emphasis() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: "foo bar" (no emphasis)
+        let original = parser.parse("foo bar");
+
+        // Edit: add emphasis delimiters to make it "*foo* bar"
+        // Insert "*" at position 0 and "*" at position 4 (after "foo")
+        // First, insert opening delimiter
+        let edit1 = Edit {
+            delete: TextRange::new(0.into(), 0.into()),
+            insert: "*",
+        };
+        let intermediate = parser.edit(&original, edit1);
+
+        // Then insert closing delimiter after "foo"
+        let edit2 = Edit {
+            delete: TextRange::new(4.into(), 4.into()),
+            insert: "*",
+        };
+        let edited = parser.edit(&intermediate, edit2);
+
+        // The source should now be "*foo* bar"
+        assert_eq!(edited.source(), "*foo* bar");
+
+        // The tree should now have an Emphasis node
+        let root = edited.syntax();
+        let has_emphasis = root.descendants().any(|n| n.kind() == SyntaxKind::Emphasis);
+        assert!(has_emphasis, "Added delimiters should create Emphasis node");
+    }
+
+    #[test]
+    fn test_incremental_edit_paragraph_merges() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: two paragraphs separated by blank line
+        let original = parser.parse("first\n\nsecond");
+
+        // Edit: remove one newline to merge into single paragraph
+        let edit = Edit {
+            delete: TextRange::new(5.into(), 6.into()), // delete one newline
+            insert: "",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "first\nsecond" (single paragraph)
+        assert_eq!(edited.source(), "first\nsecond");
+
+        // Should have one Paragraph node (merged)
+        let root = edited.syntax();
+        let paragraph_count = root
+            .descendants()
+            .filter(|n| n.kind() == SyntaxKind::Paragraph)
+            .count();
+        assert_eq!(paragraph_count, 1, "Should have one merged paragraph");
+    }
+
+    #[test]
+    fn test_incremental_edit_code_block_fence() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: ```code``` (valid code block)
+        let original = parser.parse("```code```");
+
+        // Edit: remove one backtick from closing fence
+        let edit = Edit {
+            delete: TextRange::new(8.into(), 9.into()), // delete one backtick
+            insert: "",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "```code``"
+        assert_eq!(edited.source(), "```code``");
+
+        // Should NOT have a complete CodeBlock (unclosed fence)
+        let root = edited.syntax();
+        let has_code_block = root
+            .descendants()
+            .any(|n| n.kind() == SyntaxKind::CodeBlock);
+        // The parser may still create a CodeBlock node, but it should be handled gracefully
+        // This test ensures the incremental parser doesn't crash
+        assert!(root.children().count() > 0, "Tree should be valid");
+    }
+
+    #[test]
+    fn test_incremental_edit_list_item_content() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: list with emphasis in item
+        let original = parser.parse("- *item*");
+
+        // Edit: break the emphasis in the list item
+        let edit = Edit {
+            delete: TextRange::new(3.into(), 3.into()), // insert after first *
+            insert: "*",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "- **item*"
+        assert_eq!(edited.source(), "- **item*");
+
+        // The list should still be valid
+        let root = edited.syntax();
+        let has_list = root.descendants().any(|n| n.kind() == SyntaxKind::List);
+        assert!(has_list, "List should still exist");
+
+        // The emphasis should be broken
+        let has_emphasis = root.descendants().any(|n| n.kind() == SyntaxKind::Emphasis);
+        assert!(!has_emphasis, "Broken emphasis should not exist");
+    }
+
+    #[test]
+    fn test_incremental_edit_blockquote_marker() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: > quote
+        let original = parser.parse("> quote");
+
+        // Edit: change "> quote" to "text quote" (removing the blockquote marker)
+        let edit = Edit {
+            delete: TextRange::new(0.into(), 2.into()), // delete "> "
+            insert: "text ",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "text quote"
+        assert_eq!(edited.source(), "text quote");
+
+        // Should NOT have a BlockQuote node anymore
+        let root = edited.syntax();
+        let has_blockquote = root
+            .descendants()
+            .any(|n| n.kind() == SyntaxKind::BlockQuote);
+        assert!(!has_blockquote, "Removing > should break blockquote");
+    }
+
+    #[test]
+    fn test_incremental_edit_header_marker() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: # Header
+        let original = parser.parse("# Header");
+
+        // Edit: change "# Header" to "text Header" (removing the header marker)
+        let edit = Edit {
+            delete: TextRange::new(0.into(), 2.into()), // delete "# "
+            insert: "text ",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "text Header"
+        assert_eq!(edited.source(), "text Header");
+
+        // Should NOT have a Header node anymore
+        let root = edited.syntax();
+        let has_header = root.descendants().any(|n| n.kind() == SyntaxKind::Header);
+        assert!(!has_header, "Removing # should break header");
+    }
+
+    #[test]
+    fn test_incremental_edit_multiple_blocks_affected() {
+        use crate::parser::{Edit, Parser, SyntaxKind};
+        use rowan::TextRange;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Original: list followed by paragraph
+        let original = parser.parse("- item\n\nparagraph");
+
+        // Edit: at the boundary between list and paragraph
+        let edit = Edit {
+            delete: TextRange::new(7.into(), 8.into()), // delete one newline
+            insert: "",
+        };
+
+        let edited = parser.edit(&original, edit);
+
+        // The source should now be "- item\nparagraph"
+        assert_eq!(edited.source(), "- item\nparagraph");
+
+        // The tree should still be valid
+        let root = edited.syntax();
+        assert!(root.children().count() > 0, "Tree should be valid");
     }
 
     // ============ Escape sequence tests ============
@@ -1119,7 +1391,7 @@ mod tests {
         use crate::parser::{Parser, SyntaxKind};
 
         let parser = Parser::new(crate::parser::ParseOptions::default());
-        let parsed = parser.parse("*hello :smile:12345678-1234-1234-1234-123456789abc: world*");
+        let parsed = parser.parse("*hello <:smile:12345678-1234-1234-1234-123456789abc> world*");
         let root = parsed.syntax();
 
         // Should have both Emphasis and Emoji

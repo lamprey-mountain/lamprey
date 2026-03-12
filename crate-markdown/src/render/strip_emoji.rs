@@ -7,7 +7,7 @@ use crate::{ast::Ast, parser::SyntaxNode as ParserSyntaxNode, render::MarkdownRe
 
 /// A reader that wraps another reader and filters out disallowed custom emoji.
 ///
-/// This reader filters out custom emoji (`:name:uuid:`) that are not in the
+/// This reader filters out custom emoji (`<:name:uuid>` or `<a:name:uuid>`) that are not in the
 /// allowed list. All other text content is preserved.
 ///
 /// # Example
@@ -18,7 +18,7 @@ use crate::{ast::Ast, parser::SyntaxNode as ParserSyntaxNode, render::MarkdownRe
 ///
 /// let allowed = vec![EmojiId::from(uuid!("12345678-1234-1234-1234-123456789abc"))];
 /// let parser = Parser::default();
-/// let parsed = parser.parse("hello :smile:12345678-1234-1234-1234-123456789abc: world");
+/// let parsed = parser.parse("hello <:smile:12345678-1234-1234-1234-123456789abc> world");
 /// let ast = Ast::new(parsed);
 /// let reader = StripEmojiReader::new(allowed);
 ///

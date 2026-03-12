@@ -1,5 +1,7 @@
 //! json serialized document format
 
+// TODO: actually flesh out the serialized document format
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -22,6 +24,7 @@ pub struct SerdocRoot {
     pub blocks: Vec<SerdocBlock>,
 }
 
+// TODO: serde(tag = type)
 /// serialized document block element
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
