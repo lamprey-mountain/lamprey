@@ -342,6 +342,8 @@ impl Connection {
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 let srv = self.s.services();
 
+                // FIXME: validate that *exactly* one of room_id or thread_id is provided
+
                 let target = if let Some(room_id) = room_id {
                     let perms = srv.perms.for_room(user_id, room_id).await?;
                     if room_id == SERVER_ROOM_ID {

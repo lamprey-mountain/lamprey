@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
 use crate::v1::types::error::SyncError;
 
 use crate::v1::types::{
@@ -70,7 +73,7 @@ pub enum MessageClient {
     /// subscribe to a range of room or thread members. you can subscribe to one list at a time.
     MemberListSubscribe {
         // TODO: rename thread_id -> channel_id
-        // one of room_id or thread_id must be provided
+        // EXACTLY one of room_id or thread_id must be provided
         room_id: Option<RoomId>,
         thread_id: Option<ChannelId>,
 
@@ -108,6 +111,54 @@ pub enum MessageClient {
         cursor_head: String,
         cursor_tail: Option<String>,
     },
+
+    // TODO: centralize into one single Subscribe message
+    #[cfg(any())]
+    /// subscribe to some resources
+    Subscribe(SyncSubscribe),
+}
+
+/// update what the client is subscribed to
+///
+/// leaving a field as None will skip updating. set it to an empty vec to clear.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct SyncSubscribe {
+    /// the member lists to subscribe to
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    pub member_lists: Option<Vec<SyncSubscribeMemberList>>,
+
+    /// the documents to subscribe to
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    pub documents: Option<Vec<SyncSubscribeDocument>>,
+    // TODO: subscribing to user profiles
+    // TODO: subscribing to invites
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SyncSubscribeMemberList {
+    pub room_id: Option<RoomId>,
+
+    // renamed from thread_id
+    pub channel_id: Option<ChannelId>,
+
+    /// the ranges to subscribe to
+    pub ranges: Vec<(u64, u64)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SyncSubscribeDocument {
+    pub channel_id: ChannelId,
+    pub branch_id: DocumentBranchId,
+    pub state_vector: Option<DocumentStateVector>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -124,13 +175,13 @@ pub struct SyncResume {
 pub struct MessageEnvelope {
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub payload: MessagePayload,
+    // should i move seq here?
 }
 
 // NOTE: consider making Ready and ReadySupplemental part of Sync
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "op"))]
 pub enum MessagePayload {
     /// heartbeat
     Ping,

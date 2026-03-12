@@ -1,3 +1,5 @@
+// TODO: use an actor system for documents?
+
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
