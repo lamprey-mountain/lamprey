@@ -126,8 +126,16 @@ export const Wiki = (props: { channel: Channel }) => {
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	const [documentId, setDocumentId] = createSignal<null | string>(null);
-	const [selectedSeq, setSelectedSeq] = createSignal<number | null>(null);
-	const [hoverSeq, setHoverSeq] = createSignal<number | null>(null);
+
+	type ChangesetSelection = {
+		start_seq: number;
+		end_seq: number;
+	};
+
+	const [selectedSeq, setSelectedSeq] = createSignal<ChangesetSelection | null>(
+		null,
+	);
+	const [hoverSeq, setHoverSeq] = createSignal<ChangesetSelection | null>(null);
 
 	const getOrCreateChannelContext = (channelId: string) => {
 		if (!ctx.channel_contexts.has(channelId)) {

@@ -39,16 +39,21 @@ import { md } from "../markdown_utils.tsx";
 import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import { diffWords } from "diff";
 
+type ChangesetSelection = {
+	start_seq: number;
+	end_seq: number;
+};
+
 type DocumentProps = {
 	channel: Channel;
 };
 
 export const Document = (
 	props: DocumentProps & {
-		selectedSeq: number | null;
-		onSelectChangeset: (seq: number | null) => void;
-		hoverSeq: number | null;
-		onHoverChangeset: (seq: number | null) => void;
+		selectedSeq: ChangesetSelection | null;
+		onSelectChangeset: (changeset: ChangesetSelection | null) => void;
+		hoverSeq: ChangesetSelection | null;
+		onHoverChangeset: (changeset: ChangesetSelection | null) => void;
 	},
 ) => {
 	const [branchId, setBranchId] = createSignal(props.channel.id);
@@ -506,10 +511,10 @@ type Editor = ReturnType<typeof createEditor>;
 const DocumentMain = (
 	props: DocumentProps & {
 		setEditor: (editor: Editor | null) => void;
-		selectedSeq: number | null;
-		onSelectChangeset: (seq: number | null) => void;
-		hoverSeq: number | null;
-		onHoverChangeset: (seq: number | null) => void;
+		selectedSeq: ChangesetSelection | null;
+		onSelectChangeset: (changeset: ChangesetSelection | null) => void;
+		hoverSeq: ChangesetSelection | null;
+		onHoverChangeset: (changeset: ChangesetSelection | null) => void;
 		editor: () => Editor | null;
 	},
 ) => {
@@ -534,11 +539,15 @@ const DocumentMain = (
 
 	// Get the changeset info for the current revision
 	const currentChangeset = () => {
-		const seq = props.selectedSeq ?? props.hoverSeq;
-		if (seq === null) return null;
+		const selection = props.selectedSeq ?? props.hoverSeq;
+		if (selection === null) return null;
 		const hist = history();
 		if (!hist) return null;
-		return hist.changesets.find((cs) => cs.start_seq === seq) ?? null;
+		return hist.changesets.find(
+			(cs) =>
+				cs.start_seq === selection.start_seq &&
+				cs.end_seq === selection.end_seq,
+		) ?? null;
 	};
 
 	// Load history when channel changes
@@ -589,7 +598,9 @@ const DocumentMain = (
 	});
 
 	// Handle readonly/preview mode: load historical revision with debounce for hover
-	const [pendingPreviewSeq, setPendingPreviewSeq] = createSignal<number | null>(
+	const [pendingPreviewSeq, setPendingPreviewSeq] = createSignal<
+		ChangesetSelection | null
+	>(
 		null,
 	);
 
@@ -598,8 +609,10 @@ const DocumentMain = (
 		const m = mode();
 		if (!ed || m === "edit") return;
 
-		const seq = m === "diff_readonly" ? props.selectedSeq : props.hoverSeq;
-		if (seq === null) return;
+		const selection = m === "diff_readonly"
+			? props.selectedSeq
+			: props.hoverSeq;
+		if (selection === null) return;
 
 		// Save edit state before switching to readonly (only if not already saved)
 		if (editState() === null) {
@@ -609,11 +622,14 @@ const DocumentMain = (
 		// Debounce hover previews (150ms) to avoid flickering
 		if (m === "diff_preview") {
 			if (hoverDebounceTimer) clearTimeout(hoverDebounceTimer);
-			setPendingPreviewSeq(seq);
+			setPendingPreviewSeq(selection);
 
 			hoverDebounceTimer = setTimeout(() => {
-				if (pendingPreviewSeq() === seq) {
-					loadReadonlyRevision(ed, seq, true);
+				if (
+					pendingPreviewSeq()?.start_seq === selection.start_seq &&
+					pendingPreviewSeq()?.end_seq === selection.end_seq
+				) {
+					loadReadonlyRevision(ed, selection, true);
 				}
 				hoverDebounceTimer = null;
 			}, 150);
@@ -627,7 +643,7 @@ const DocumentMain = (
 		}
 
 		setPendingPreviewSeq(null);
-		loadReadonlyRevision(ed, seq, false);
+		loadReadonlyRevision(ed, selection, false);
 	});
 
 	// Clear preview when returning to edit mode
@@ -651,16 +667,21 @@ const DocumentMain = (
 	// Helper to load a readonly historical revision
 	const loadReadonlyRevision = async (
 		ed: Editor,
-		seq: number,
+		selection: ChangesetSelection,
 		isPreview: boolean = false,
 	) => {
+		// Use end_seq for the "after" state (the revision showing the changeset's result)
+		const afterSeq = selection.end_seq;
+		// Use start_seq - 1 for the "before" state (document before this changeset)
+		const beforeSeq = Math.max(0, selection.start_seq - 1);
+
 		const targetRevision = isPreview ? previewRevision() : currentRevision();
-		const revisionId = `${props.channel.id}@${seq}`;
+		const revisionId = `${props.channel.id}@${afterSeq}`;
 
 		const cachedSerdoc = api.documents.revisionCache.get(revisionId);
 		const hasCache = cachedSerdoc !== undefined;
 
-		if (targetRevision === seq && hasCache) return;
+		if (targetRevision === afterSeq && hasCache) return;
 
 		if (!hasCache) setDiffLoading(true);
 
@@ -675,14 +696,18 @@ const DocumentMain = (
 			}
 
 			// Abort Guard: Check if user moved away while fetching
-			const activeSeq = isPreview ? pendingPreviewSeq() : props.selectedSeq;
-			if (activeSeq !== seq) return;
+			const activeSelection = isPreview
+				? pendingPreviewSeq()
+				: props.selectedSeq;
+			if (
+				activeSelection?.start_seq !== selection.start_seq ||
+				activeSelection?.end_seq !== selection.end_seq
+			) return;
 
 			// Fetch previous revision for diff
-			const prevSeq = Math.max(0, seq - 1);
 			let oldSerdoc: any = null;
-			if (prevSeq > 0) {
-				const prevRevisionId = `${props.channel.id}@${prevSeq}`;
+			if (beforeSeq > 0) {
+				const prevRevisionId = `${props.channel.id}@${beforeSeq}`;
 				oldSerdoc = api.documents.revisionCache.get(prevRevisionId) ?? null;
 				if (!oldSerdoc) {
 					oldSerdoc = await api.documents.getRevisionContent(
@@ -694,10 +719,13 @@ const DocumentMain = (
 			}
 
 			// Abort Guard 2
-			const activeSeqPostFetch = isPreview
+			const activeSelectionPostFetch = isPreview
 				? pendingPreviewSeq()
 				: props.selectedSeq;
-			if (activeSeqPostFetch !== seq) return;
+			if (
+				activeSelectionPostFetch?.start_seq !== selection.start_seq ||
+				activeSelectionPostFetch?.end_seq !== selection.end_seq
+			) return;
 
 			// Compute diff marks BEFORE setting state
 			const marks = computeDiffMarks(oldSerdoc ?? {}, newSerdoc);
@@ -713,15 +741,20 @@ const DocumentMain = (
 			ed.setDiffMarks(marks);
 
 			if (isPreview) {
-				setPreviewRevision(seq);
+				setPreviewRevision(afterSeq);
 			} else {
-				setCurrentRevision(seq);
+				setCurrentRevision(afterSeq);
 			}
 		} catch (e) {
 			console.error("Failed to load revision:", e);
 		} finally {
-			const activeSeq = isPreview ? pendingPreviewSeq() : props.selectedSeq;
-			if (activeSeq === seq && !hasCache) {
+			const activeSelection = isPreview
+				? pendingPreviewSeq()
+				: props.selectedSeq;
+			if (
+				activeSelection?.start_seq === selection.start_seq &&
+				activeSelection?.end_seq === selection.end_seq && !hasCache
+			) {
 				setDiffLoading(false);
 			}
 		}
@@ -747,9 +780,12 @@ const DocumentMain = (
 	});
 
 	const handleRestoreVersion = async (mode: "current" | "new") => {
-		const seq = props.selectedSeq;
-		if (seq === null) return;
+		const selection = props.selectedSeq;
+		if (selection === null) return;
 		setRestoreMenuOpen(false);
+
+		// Use end_seq as the revision to restore
+		const seq = selection.end_seq;
 
 		try {
 			if (mode === "new") {

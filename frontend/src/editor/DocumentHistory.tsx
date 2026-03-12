@@ -6,13 +6,18 @@ import { Time } from "../Time.tsx";
 import { useChannel } from "../contexts/channel.tsx";
 import { Avatar } from "../avatar/UserAvatar.tsx";
 
+type ChangesetSelection = {
+	start_seq: number;
+	end_seq: number;
+};
+
 type DocumentHistoryProps = {
 	channel: Channel;
 	branchId: string;
 	isOpen: boolean;
-	onSelectChangeset: (seq: number | null) => void;
-	onHoverChangeset: (seq: number | null) => void;
-	selectedSeq: number | null;
+	onSelectChangeset: (changeset: ChangesetSelection | null) => void;
+	onHoverChangeset: (changeset: ChangesetSelection | null) => void;
+	selectedSeq: ChangesetSelection | null;
 };
 
 const AvatarWithTooltip = (props: { user: any; name: string }) => {
@@ -136,7 +141,9 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 					<div class="history-list">
 						<For each={history()!.changesets}>
 							{(changeset) => {
-								const isSelected = props.selectedSeq === changeset.start_seq;
+								const isSelected = props.selectedSeq !== null &&
+									props.selectedSeq.start_seq === changeset.start_seq &&
+									props.selectedSeq.end_seq === changeset.end_seq;
 								return (
 									<div
 										class="history-item"
@@ -145,11 +152,17 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 											if (isSelected) {
 												props.onSelectChangeset(null);
 											} else {
-												props.onSelectChangeset(changeset.start_seq);
+												props.onSelectChangeset({
+													start_seq: changeset.start_seq,
+													end_seq: changeset.end_seq,
+												});
 											}
 										}}
 										onMouseEnter={() =>
-											props.onHoverChangeset(changeset.start_seq)}
+											props.onHoverChangeset({
+												start_seq: changeset.start_seq,
+												end_seq: changeset.end_seq,
+											})}
 										onMouseLeave={() => props.onHoverChangeset(null)}
 									>
 										<div class="history-item-header">

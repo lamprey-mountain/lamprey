@@ -211,11 +211,16 @@ export const RouteChannelSettings = (p: ParentProps<RouteSectionProps>) => {
 	);
 };
 
+type ChangesetSelection = {
+	start_seq: number;
+	end_seq: number;
+};
+
 const ChannelSidebar = (props: {
 	channel: Channel;
-	selectedSeq: number | null;
-	onSelectChangeset: (seq: number | null) => void;
-	onHoverChangeset: (seq: number | null) => void;
+	selectedSeq: ChangesetSelection | null;
+	onSelectChangeset: (changeset: ChangesetSelection | null) => void;
+	onHoverChangeset: (changeset: ChangesetSelection | null) => void;
 }) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
@@ -317,8 +322,10 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 	const documentCtx = createMemo(() => getOrCreateDocumentContext());
 	const channelCtx = createMemo(() => getOrCreateChannelContext());
 
-	const [selectedSeq, setSelectedSeq] = createSignal<number | null>(null);
-	const [hoverSeq, setHoverSeq] = createSignal<number | null>(null);
+	const [selectedSeq, setSelectedSeq] = createSignal<ChangesetSelection | null>(
+		null,
+	);
+	const [hoverSeq, setHoverSeq] = createSignal<ChangesetSelection | null>(null);
 
 	// store last viewed channel per room
 	createEffect(() => {
