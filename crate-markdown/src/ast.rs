@@ -1073,8 +1073,7 @@ impl<'a> Iterator for MentionsIter<'a> {
                 }
                 SyntaxKind::Paragraph => {
                     // Check for @everyone in paragraph text
-                    let text = node.text().to_string();
-                    if text.contains("@everyone") {
+                    if node.text().to_string().contains("@everyone") {
                         return Some(MentionId::Everyone);
                     }
                 }

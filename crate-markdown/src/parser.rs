@@ -1486,23 +1486,26 @@ fn find_affected_blocks(
 fn parse_block_region(builder: &mut GreenNodeBuilder, source: &str, _region_start: usize) {
     let mut lexer = TokenKind::lexer(source).spanned();
     let tokens: Vec<_> = lexer.by_ref().collect();
-    
+
     // Create a temporary ParseContext to build the region
     let mut ctx = ParseContext::new(source, &tokens, None);
-    
+
     // Build blocks into the context's builder
     ctx.builder.start_node(SyntaxKind::Root.into());
     ctx.builder.start_node(SyntaxKind::Document.into());
     ctx.parse_blocks();
     ctx.builder.finish_node(); // Document
     ctx.builder.finish_node(); // Root
-    
+
     // Get the temporary tree and copy its children into the outer builder
     let temp_tree = ctx.builder.finish();
     let temp_root = SyntaxNode::new_root(temp_tree);
-    
+
     // Copy Document's children (the actual blocks) into the outer builder
-    if let Some(doc) = temp_root.children().find(|n| n.kind() == SyntaxKind::Document.into()) {
+    if let Some(doc) = temp_root
+        .children()
+        .find(|n| n.kind() == SyntaxKind::Document.into())
+    {
         for child in doc.children_with_tokens() {
             match child {
                 NodeOrToken::Node(node) => {
@@ -1560,4 +1563,3 @@ enum ListType {
     Bullet,
     Numbered,
 }
-

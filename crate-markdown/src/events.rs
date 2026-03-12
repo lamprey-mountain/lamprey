@@ -674,13 +674,12 @@ impl<'a> EventIterator<'a> {
                     SyntaxKind::Text => {
                         // Check for newlines
                         if text.contains('\n') {
-                            let parts: Vec<String> =
-                                text.split('\n').map(|s| s.to_string()).collect();
-                            for (i, part) in parts.iter().enumerate() {
+                            let mut parts = text.split('\n').peekable();
+                            while let Some(part) = parts.next() {
                                 if !part.is_empty() {
-                                    self.pending.push(Event::Text(Cow::Owned(part.clone())));
+                                    self.pending.push(Event::Text(Cow::Owned(part.to_string())));
                                 }
-                                if i < parts.len() - 1 {
+                                if parts.peek().is_some() {
                                     self.pending.push(Event::SoftBreak);
                                 }
                             }
@@ -820,7 +819,7 @@ impl<'a> EventIterator<'a> {
                     if let rowan::NodeOrToken::Token(token) = child {
                         if token.kind() == SyntaxKind::EscapedChar {
                             self.pending
-                                .push(Event::Text(token.text().to_string().into()));
+                                .push(Event::Text(Cow::Owned(token.text().to_string())));
                         }
                     }
                 }
