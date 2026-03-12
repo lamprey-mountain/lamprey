@@ -1,12 +1,13 @@
 use im::HashMap as ImMap;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::time::{Duration, Instant};
+use std::time::Instant;
+use tokio::time::Duration;
 
 use common::v1::types::error::ErrorCode;
 use common::v1::types::{MessageSync, RoomId, User, UserId};
 use tokio::sync::{mpsc, watch};
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, Instrument};
 
 use super::{
     CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomData,
@@ -234,24 +235,53 @@ impl RoomActor {
         let data = self.state.data();
         let srv = self.state.services();
 
-        let (room, room_members, roles_data, channels_data, active_threads_vec) = tokio::try_join!(
-            data.room_get(self.room_id),
-            data.room_member_list_all(self.room_id),
-            data.role_list(
-                self.room_id,
-                crate::types::PaginationQuery {
-                    limit: Some(1024),
-                    ..Default::default()
-                },
-            ),
-            data.channel_list(self.room_id),
-            data.thread_all_active_room(self.room_id),
-        )?;
+        let root_span = tracing::info_span!("room_load", room_id = ?self.room_id);
 
-        let roles_data = roles_data.items;
+        let (room, room_members, roles_data, channels_data, active_threads_vec) = async {
+            tokio::try_join!(
+                data.room_get(self.room_id)
+                    .instrument(tracing::info_span!("room_load.query.room")),
+                data.room_member_list_all(self.room_id)
+                    .instrument(tracing::info_span!("room_load.query.members")),
+                async {
+                    data.role_list(
+                        self.room_id,
+                        crate::types::PaginationQuery {
+                            limit: Some(1024),
+                            ..Default::default()
+                        },
+                    )
+                    .instrument(tracing::info_span!("room_load.query.roles"))
+                    .await
+                    .map(|r| r.items)
+                },
+                data.channel_list(self.room_id)
+                    .instrument(tracing::info_span!("room_load.query.channels")),
+                data.thread_all_active_room(self.room_id)
+                    .instrument(tracing::info_span!("room_load.query.threads")),
+            )
+        }
+        .instrument(root_span.clone())
+        .await?;
+
+        root_span.record("room_members_count", room_members.len());
+        root_span.record("roles_count", roles_data.len());
+        root_span.record("channels_count", channels_data.len());
+        root_span.record("threads_count", active_threads_vec.len());
 
         let user_ids: Vec<_> = room_members.iter().map(|m| m.user_id).collect();
-        let users = srv.users.get_many(&user_ids).await?;
+        let thread_member_futs = active_threads_vec.iter().map(|t| {
+            data.thread_member_list_all(t.id).instrument(
+                tracing::info_span!("room_load.query.thread_members", thread_id = ?t.id),
+            )
+        });
+
+        let (users, all_thread_members) = tokio::try_join!(
+            srv.users.get_many(&user_ids),
+            async { futures::future::try_join_all(thread_member_futs).await }
+                .instrument(tracing::info_span!("room_load.query.thread_members_all")),
+        )?;
+
         let users_map: HashMap<UserId, Arc<User>> =
             users.into_iter().map(|u| (u.id, Arc::new(u))).collect();
 
@@ -312,11 +342,6 @@ impl RoomActor {
         }
 
         let mut threads = ImMap::new();
-        let thread_member_futs = active_threads_vec
-            .iter()
-            .map(|t| data.thread_member_list_all(t.id));
-        let all_thread_members = futures::future::try_join_all(thread_member_futs).await?;
-
         for (thread, thread_members_vec) in active_threads_vec.into_iter().zip(all_thread_members) {
             let mut members_map = ImMap::new();
             for member in thread_members_vec {
