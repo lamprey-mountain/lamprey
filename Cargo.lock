@@ -3592,6 +3592,7 @@ dependencies = [
  "lamprey-backend-core",
  "lamprey-common",
  "lamprey-hakari",
+ "nanoid",
  "once_cell",
  "rand 0.9.2",
  "regex",
