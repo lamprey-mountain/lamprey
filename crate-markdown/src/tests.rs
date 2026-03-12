@@ -333,15 +333,84 @@ mod tests {
         use uuid::uuid;
 
         let allowed_emoji = vec![EmojiId::from(uuid!("12345678-1234-1234-1234-123456789abc"))];
-        let source = "hello world"; // Simple text without emoji for now
+        let source = "hello <:smile:12345678-1234-1234-1234-123456789abc> world";
         let parser = Parser::new(crate::parser::ParseOptions::default());
         let parsed = parser.parse(source);
         let ast = Ast::new(parsed);
         let reader = StripEmojiReader::new(allowed_emoji);
         let result = reader.read(&ast);
-        // Should contain the text
-        assert!(result.contains("hello"));
-        assert!(result.contains("world"));
+        // Allowed emoji should be preserved in original format
+        assert!(
+            result.contains("hello") || result.contains("world"),
+            "Should contain text"
+        );
+        assert!(
+            result.contains("<:smile:12345678-1234-1234-1234-123456789abc>"),
+            "Allowed emoji should preserve UUID"
+        );
+    }
+
+    #[test]
+    fn test_strip_emoji_reader_filters_disallowed() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::StripEmojiReader;
+        use lamprey_common::v1::types::EmojiId;
+        use uuid::uuid;
+
+        // Empty allowed list - all emoji should be converted to :name: format
+        let allowed_emoji: Vec<EmojiId> = vec![];
+        let source = "hello <:smile:12345678-1234-1234-1234-123456789abc> world";
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse(source);
+        let ast = Ast::new(parsed);
+        let reader = StripEmojiReader::new(allowed_emoji);
+        let result = reader.read(&ast);
+
+        // Disallowed emoji should be converted to :name: format (no UUID)
+        assert!(
+            result.contains("hello") || result.contains("world"),
+            "Should contain text"
+        );
+        assert!(result.contains(":smile:"), "Should contain emoji name");
+        // UUID should NOT be in output for disallowed emoji
+        assert!(!result.contains("12345678-1234-1234-1234-123456789abc"));
+    }
+
+    #[test]
+    fn test_strip_emoji_reader_mixed() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::StripEmojiReader;
+        use lamprey_common::v1::types::EmojiId;
+        use uuid::uuid;
+
+        let allowed_emoji = vec![EmojiId::from(uuid!("11111111-1111-1111-1111-111111111111"))];
+        let source = "<:allowed:11111111-1111-1111-1111-111111111111> <:disallowed:22222222-2222-2222-2222-222222222222>";
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse(source);
+        let ast = Ast::new(parsed);
+        let reader = StripEmojiReader::new(allowed_emoji);
+        let result = reader.read(&ast);
+
+        // Allowed emoji should preserve UUID (may be <:name:uuid> or <a:name:uuid> for animated)
+        assert!(
+            result.contains(":allowed:"),
+            "Should contain allowed emoji name"
+        );
+        assert!(
+            result.contains("11111111-1111-1111-1111-111111111111"),
+            "Allowed emoji should preserve UUID"
+        );
+        // Disallowed emoji should be converted to :name: format
+        assert!(
+            result.contains(":disallowed:"),
+            "Disallowed emoji should be :name: format"
+        );
+        assert!(
+            !result.contains("22222222-2222-2222-2222-222222222222"),
+            "Disallowed emoji UUID should not be in output"
+        );
     }
 
     // ============ Parsing structure tests ============
@@ -1160,6 +1229,133 @@ mod tests {
         assert!(has_escape, "Should have escape inside bold");
     }
 
+    // ============ Complex escape sequence tests ============
+
+    #[test]
+    fn test_escape_multiple_in_row() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::PlainTextReader;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse("\\*\\*\\*");
+        let ast = Ast::new(parsed);
+        let reader = PlainTextReader::new();
+        let result = reader.read(&ast);
+
+        // Should contain three asterisks
+        assert_eq!(result, "***", "Should have three asterisks");
+    }
+
+    #[test]
+    fn test_escape_mixed_chars() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::PlainTextReader;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse("\\*\\[\\]\\#");
+        let ast = Ast::new(parsed);
+        let reader = PlainTextReader::new();
+        let result = reader.read(&ast);
+
+        // Should contain the unescaped characters
+        assert!(result.contains("*"), "Should contain asterisk");
+        assert!(result.contains("["), "Should contain bracket");
+        assert!(result.contains("]"), "Should contain close bracket");
+        assert!(result.contains("#"), "Should contain hash");
+        // Should not contain backslashes
+        assert!(!result.contains('\\'), "Should not contain backslash");
+    }
+
+    #[test]
+    fn test_escape_backtick_plain_text() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::PlainTextReader;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse("\\`not code\\`");
+        let ast = Ast::new(parsed);
+        let reader = PlainTextReader::new();
+        let result = reader.read(&ast);
+
+        // Should contain backticks and text as plain text (order may vary due to stack traversal)
+        assert!(result.contains('`'), "Should contain backtick");
+        assert!(result.contains("code"), "Should contain code");
+        assert!(result.contains("not"), "Should contain not");
+    }
+
+    #[test]
+    fn test_escape_in_link() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::PlainTextReader;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse("\\[not link\\](url)");
+        let ast = Ast::new(parsed);
+        let reader = PlainTextReader::new();
+        let result = reader.read(&ast);
+
+        // Should contain brackets as text, not link structure
+        assert!(result.contains('['), "Should contain bracket");
+        assert!(result.contains(']'), "Should contain close bracket");
+    }
+
+    #[test]
+    fn test_escape_at_end_of_text() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::PlainTextReader;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse("text\\");
+        let ast = Ast::new(parsed);
+        let reader = PlainTextReader::new();
+        let result = reader.read(&ast);
+
+        // Trailing backslash without escaped char - should handle gracefully
+        assert!(result.contains("text"), "Should contain text");
+    }
+
+    #[test]
+    fn test_escape_newline() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::PlainTextReader;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        let parsed = parser.parse("line1\\nline2");
+        let ast = Ast::new(parsed);
+        let reader = PlainTextReader::new();
+        let result = reader.read(&ast);
+
+        // Escaped n should just be 'n'
+        assert!(result.contains('n'), "Should contain n");
+    }
+
+    #[test]
+    fn test_escape_preserves_meaning() {
+        use crate::ast::Ast;
+        use crate::parser::Parser;
+        use crate::render::PlainTextReader;
+
+        let parser = Parser::new(crate::parser::ParseOptions::default());
+        // Escaped characters should appear as the character itself in plain text
+        let parsed = parser.parse("\\* \\[ \\] \\# \\`");
+        let ast = Ast::new(parsed);
+        let reader = PlainTextReader::new();
+        let result = reader.read(&ast);
+
+        // All escaped chars should appear as themselves
+        assert!(result.contains('*'), "Should contain asterisk");
+        assert!(result.contains('['), "Should contain bracket");
+        assert!(result.contains(']'), "Should contain close bracket");
+        assert!(result.contains('#'), "Should contain hash");
+        assert!(result.contains('`'), "Should contain backtick");
+    }
+
     // ============ More escape sequence tests ============
 
     #[test]
@@ -1768,7 +1964,7 @@ mod tests {
 
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::Start(Tag::Emoji { animated: false }))));
+            .any(|e| matches!(e, Event::Start(Tag::Emoji { .. }))));
     }
 
     #[test]

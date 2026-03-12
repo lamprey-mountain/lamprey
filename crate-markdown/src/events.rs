@@ -58,6 +58,8 @@ pub enum Tag<'a> {
     Mention,
     Emoji {
         animated: bool,
+        name: Cow<'a, str>,
+        uuid: Cow<'a, str>,
     },
 }
 
@@ -187,6 +189,7 @@ enum IterState<'a> {
     Emoji {
         node: Emoji,
         emitted: bool,
+        text_emitted: bool,
     },
     Text {
         text: Cow<'a, str>,
@@ -605,19 +608,45 @@ impl<'a> EventIterator<'a> {
                     return Some(Event::Text(uuid.into()));
                 }
 
-                Some(IterState::Emoji { node, emitted }) => {
+                Some(IterState::Emoji {
+                    node,
+                    emitted,
+                    text_emitted,
+                }) => {
                     self.stack.pop();
                     if !emitted {
                         let name = node.name();
+                        let uuid = node.uuid();
                         let animated = name.starts_with('a');
                         self.stack.push(IterState::Emoji {
                             node,
                             emitted: true,
+                            text_emitted: false,
                         });
-                        return Some(Event::Start(Tag::Emoji { animated }));
+                        return Some(Event::Start(Tag::Emoji {
+                            animated,
+                            name: Cow::Owned(name),
+                            uuid: Cow::Owned(uuid),
+                        }));
+                    }
+                    if !text_emitted {
+                        let name = node.name();
+                        let uuid = node.uuid();
+                        self.stack.push(IterState::Emoji {
+                            node,
+                            emitted: true,
+                            text_emitted: true,
+                        });
+                        return Some(Event::Text(format!(":{}:", name).into()));
                     }
                     let name = node.name();
-                    return Some(Event::Text(format!(":{}:", name).into()));
+                    let uuid = node.uuid();
+                    let animated = name.starts_with('a');
+                    return Some(Event::End(Tag::Emoji {
+                        animated,
+                        name: Cow::Owned(name),
+                        uuid: Cow::Owned(uuid),
+                    }));
                 }
 
                 Some(IterState::Text { text, emitted }) => {
@@ -781,6 +810,7 @@ impl<'a> EventIterator<'a> {
                     self.stack.push(IterState::Emoji {
                         node: emoji,
                         emitted: false,
+                        text_emitted: false,
                     });
                 }
             }
