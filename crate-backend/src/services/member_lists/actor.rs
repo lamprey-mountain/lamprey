@@ -326,7 +326,8 @@ impl MemberList {
     }
 
     pub async fn handle_sync(&mut self, event: MessageSync, snapshot: Arc<RoomSnapshot>) {
-        self.last_active = Instant::now();
+        // Don't update last_active here - only active commands should refresh the timeout.
+        // This prevents memory leaks where member lists stay alive forever due to room activity.
         let Some(data) = snapshot.get_data() else {
             return;
         };
