@@ -281,6 +281,17 @@
 		button {
 			padding: 4px 8px;
 			background: $bg-150;
+
+			&.linkstyled {
+				background: none;
+
+				// keep border even though its transparent so everything is aligned
+				border: solid transparent 1px;
+
+				&:hover {
+					text-decoration: underline;
+				}
+			}
 		}
 	}
 }

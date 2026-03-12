@@ -1038,6 +1038,15 @@ const DocumentMain = (
 							</div>
 							<div class="diff-view-actions">
 								<button
+									class="secondary linkstyled"
+									onClick={() => {
+										props.onSelectChangeset(null);
+										props.onHoverChangeset(null);
+									}}
+								>
+									Cancel
+								</button>
+								<button
 									ref={setRestoreBtn}
 									class="secondary"
 									onClick={(e) => {
@@ -1046,15 +1055,6 @@ const DocumentMain = (
 									}}
 								>
 									Restore ▼
-								</button>
-								<button
-									class="secondary"
-									onClick={() => {
-										props.onSelectChangeset(null);
-										props.onHoverChangeset(null);
-									}}
-								>
-									Cancel
 								</button>
 							</div>
 						</div>
