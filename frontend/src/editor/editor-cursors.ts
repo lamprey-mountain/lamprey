@@ -24,6 +24,7 @@ export const cursorPlugin = (
 	channelId: string,
 	branchId: string,
 	isSubscribed: () => boolean,
+	showCursors?: () => boolean,
 ) => {
 	return new Plugin({
 		key: cursorPluginKey,
@@ -51,6 +52,11 @@ export const cursorPlugin = (
 		},
 		props: {
 			decorations(state) {
+				// Hide cursors when showCursors returns false (e.g., during diff/history view)
+				if (showCursors?.() === false) {
+					return DecorationSet.empty;
+				}
+
 				const { cursors } = cursorPluginKey.getState(state);
 				const decos: Decoration[] = [];
 				const yState = ySyncPluginKey.getState(state);

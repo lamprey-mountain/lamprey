@@ -520,7 +520,7 @@ export class Messages {
 					attachments: body.attachments.map((a: any) => {
 						const media_id = a.media_id ?? a.id;
 						return {
-							type: "Media",
+							type: "Media" as const,
 							media_id,
 							spoiler: a.spoiler ?? false,
 						};

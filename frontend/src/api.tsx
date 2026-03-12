@@ -65,7 +65,7 @@ import {
 import { deepEqual } from "./utils/deepEqual.ts";
 import { Inbox } from "./api/inbox.ts";
 import { Push } from "./api/push.ts";
-import { Documents } from "./api/document.ts";
+import { DocumentsService } from "./api/services/DocumentsService.ts";
 import { RoomAnalytics } from "./api/room_analytics.ts";
 import { generateNotificationIcon } from "./drawing.ts";
 
@@ -208,7 +208,7 @@ export function createApi(
 	const push = new Push();
 	const inbox = new Inbox();
 	const tags = new Tags();
-	const documents = new Documents();
+	const documents = new DocumentsService(store);
 	const room_analytics = new RoomAnalytics();
 	const voiceStates = new ReactiveMap<string, VoiceState>();
 	const [voiceState, setVoiceState] = createSignal<VoiceState | null>(null);
@@ -225,6 +225,8 @@ export function createApi(
 	events.on("sync", async ([msg, raw]) => {
 		if (msg.type === "Ambient") {
 			batch(() => {
+				console.time("process ambient");
+
 				for (const room of msg.rooms) {
 					rooms.cache.set(room.id, room);
 				}
@@ -328,6 +330,8 @@ export function createApi(
 
 				setPreferences(msg.config);
 				setPreferencesLoaded(true);
+
+				console.timeEnd("process ambient");
 			});
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			const { room } = msg;
@@ -1452,7 +1456,7 @@ export type Api = {
 	emoji: Emoji;
 	reactions: Reactions;
 	tags: Tags;
-	documents: Documents;
+	documents: DocumentsService;
 	room_analytics: RoomAnalytics;
 	session: Accessor<Session | null>;
 	preferencesLoaded: Accessor<boolean>;

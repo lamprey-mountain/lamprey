@@ -96,7 +96,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const { room_id } = channel;
 				const currentUser = api.users.cache.get("@self");
 				const self_id = currentUser?.id;
-				if (!self_id) return;
+				if (!self_id || !room_id) return;
 
 				if (
 					(channel.type !== "ThreadPublic" &&

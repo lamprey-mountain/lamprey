@@ -15,7 +15,10 @@ import { md } from "../markdown_utils.tsx";
 import { useApi } from "../api.tsx";
 import { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
-import { createEditor as createBaseEditor } from "./mod.tsx";
+import {
+	createEditor as createBaseEditor,
+	type EditorViewProps,
+} from "./mod.tsx";
 import { schema } from "./schema.ts";
 import {
 	base64UrlDecode,
@@ -28,6 +31,11 @@ import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { useFormattingToolbar } from "../contexts/formatting-toolbar.tsx";
 import { setFormattingToolbarView } from "../contexts/FormattingToolbar.tsx";
 import { EditorView } from "prosemirror-view";
+import {
+	createDiffPlugin,
+	type DiffMark,
+	diffPluginKey,
+} from "./diff-plugin.ts";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -81,6 +89,8 @@ type EditorProps = {
 	initialSelection?: "start" | "end";
 	mentionRenderer?: (node: HTMLElement, userId: string) => void;
 	mentionChannelRenderer?: (node: HTMLElement, channelId: string) => void;
+	diffMarks?: DiffMark[];
+	diffMode?: () => boolean; // when true, editor is readonly and cursors are hidden
 };
 
 const EditorWithToolbar = (props: { getView: () => EditorView }) => {
@@ -171,7 +181,18 @@ const EditorWithToolbar = (props: { getView: () => EditorView }) => {
 
 export const createEditor = (
 	opts: EditorProps,
-) => {
+): {
+	schema: any;
+	setState: (state?: any) => void;
+	focus: () => void;
+	view: any;
+	View: (props: any) => any;
+	subscribe: (channelId: string, branchId: string) => void;
+	isSubscribed: () => boolean;
+	setDiffMarks: (marks: any) => void;
+	createReadonlyState: (content: string) => any;
+	createReadonlyStateFromHtml: (html: string) => any;
+} => {
 	const api = useApi();
 
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
@@ -179,6 +200,9 @@ export const createEditor = (
 		"no channel id!",
 	);
 	const [currentBranchId, setCurrentBranchId] = createSignal("no branch id!");
+	const [diffMarks, setDiffMarksSignal] = createSignal<DiffMark[]>(
+		opts.diffMarks ?? [],
+	);
 
 	const createYDoc = () => {
 		const ydoc = new Y.Doc();
@@ -244,8 +268,15 @@ export const createEditor = (
 			schema,
 			plugins: [
 				ySyncPlugin(type, { mapping }),
-				cursorPlugin(api, currentChannelId(), currentBranchId(), isSubscribed),
+				cursorPlugin(
+					api,
+					currentChannelId(),
+					currentBranchId(),
+					isSubscribed,
+					() => !(opts.diffMode?.() ?? false),
+				),
 				yUndoPlugin(),
+				createDiffPlugin(() => diffMarks()),
 				keymap({
 					"Ctrl-z": undo,
 					"Ctrl-Shift-z": redo,
@@ -377,8 +408,6 @@ export const createEditor = (
 	});
 
 	const subscribe = (channelId: string, branchId: string) => {
-		console.log("[document] subscribe to", { channelId, branchId });
-
 		// don't resubscribe if nothing changed
 		if (
 			currentChannelId() === channelId &&
@@ -403,14 +432,95 @@ export const createEditor = (
 		});
 	};
 
+	const setDiffMarks = (marks: DiffMark[]) => {
+		setDiffMarksSignal(marks);
+		if (editor.view) {
+			const tr = editor.view.state.tr;
+			tr.setMeta(diffPluginKey, { marks });
+			editor.view.dispatch(tr);
+		}
+	};
+
+	// Create a plain state without Yjs sync (for viewing historical revisions)
+	const createReadonlyState = (content: string) => {
+		let doc;
+		if (content) {
+			const div = document.createElement("div");
+			const html = md.parser(md.lexer(content));
+			div.innerHTML = html;
+			doc = DOMParser.fromSchema(schema).parse(div);
+		}
+
+		return EditorState.create({
+			doc,
+			schema,
+			plugins: [
+				// No ySyncPlugin - this state is readonly and won't sync
+				// No yUndoPlugin - requires yjs state
+				// No cursorPlugin - hide cursors in readonly mode
+				createDiffPlugin(() => diffMarks()),
+				keymap({
+					"Ctrl-z": () => false, // Disable undo in readonly
+					"Ctrl-Shift-z": () => false, // Disable redo in readonly
+					"Ctrl-y": () => false,
+					// Disable most keymaps in readonly mode
+					"Ctrl-b": () => false,
+					"Ctrl-i": () => false,
+					"Ctrl-`": () => false,
+					"Ctrl-m": () => false,
+					"Enter": () => false,
+					"Backspace": () => false,
+					...opts.keymap,
+				}),
+			],
+		});
+	};
+
+	// Create a plain state from HTML (for viewing historical revisions from serdoc)
+	const createReadonlyStateFromHtml = (html: string) => {
+		let doc;
+		if (html) {
+			const div = document.createElement("div");
+			div.innerHTML = html;
+			doc = DOMParser.fromSchema(schema).parse(div);
+		}
+
+		return EditorState.create({
+			doc,
+			schema,
+			plugins: [
+				// No ySyncPlugin - this state is readonly and won't sync
+				// No yUndoPlugin - requires yjs state
+				// No cursorPlugin - hide cursors in readonly mode
+				createDiffPlugin(() => diffMarks()),
+				keymap({
+					"Ctrl-z": () => false, // Disable undo in readonly
+					"Ctrl-Shift-z": () => false, // Disable redo in readonly
+					"Ctrl-y": () => false,
+					// Disable most keymaps in readonly mode
+					"Ctrl-b": () => false,
+					"Ctrl-i": () => false,
+					"Ctrl-`": () => false,
+					"Ctrl-m": () => false,
+					"Enter": () => false,
+					"Backspace": () => false,
+					...opts.keymap,
+				}),
+			],
+		});
+	};
+
 	return {
 		...editor,
 		subscribe,
 		isSubscribed,
+		setDiffMarks,
+		createReadonlyState,
+		createReadonlyStateFromHtml,
 		get view() {
 			return editor.view;
 		},
-		View: (props: Parameters<typeof editor.View>[0]) => {
+		View: (props: EditorViewProps) => {
 			return (
 				<>
 					<editor.View {...props} />

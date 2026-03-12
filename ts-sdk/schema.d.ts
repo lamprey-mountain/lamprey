@@ -6755,6 +6755,16 @@ export interface components {
 			 * @description number of graphemes removed
 			 */
 			stat_removed: number;
+			/**
+			 * Format: int32
+			 * @description the sequence number of the first update in this changeset
+			 */
+			start_seq: number;
+			/**
+			 * Format: int32
+			 * @description the sequence number of the last update in this changeset
+			 */
+			end_seq: number;
 		};
 		/** @description A channel */
 		Channel: {

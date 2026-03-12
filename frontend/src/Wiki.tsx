@@ -126,6 +126,8 @@ export const Wiki = (props: { channel: Channel }) => {
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	const [documentId, setDocumentId] = createSignal<null | string>(null);
+	const [selectedSeq, setSelectedSeq] = createSignal<number | null>(null);
+	const [hoverSeq, setHoverSeq] = createSignal<number | null>(null);
 
 	const getOrCreateChannelContext = (channelId: string) => {
 		if (!ctx.channel_contexts.has(channelId)) {
@@ -383,7 +385,13 @@ export const Wiki = (props: { channel: Channel }) => {
 					const docCtx = getOrCreateChannelContext(did());
 					return (
 						<ChannelContext.Provider value={docCtx}>
-							<Document channel={documentChannel} />
+							<Document
+								channel={documentChannel}
+								selectedSeq={selectedSeq()}
+								onSelectChangeset={setSelectedSeq}
+								hoverSeq={hoverSeq()}
+								onHoverChangeset={setHoverSeq}
+							/>
 						</ChannelContext.Provider>
 					);
 				}}

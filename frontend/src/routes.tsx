@@ -11,6 +11,7 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
+	createSignal,
 	Match,
 	Show,
 	Switch,
@@ -210,7 +211,12 @@ export const RouteChannelSettings = (p: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-const ChannelSidebar = (props: { channel: Channel }) => {
+const ChannelSidebar = (props: {
+	channel: Channel;
+	selectedSeq: number | null;
+	onSelectChangeset: (seq: number | null) => void;
+	onHoverChangeset: (seq: number | null) => void;
+}) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
 	const [doc] = useDocument()!;
@@ -236,6 +242,9 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 						channel={props.channel}
 						branchId={branchId}
 						isOpen={ch.history_view}
+						selectedSeq={props.selectedSeq}
+						onSelectChangeset={props.onSelectChangeset}
+						onHoverChangeset={props.onHoverChangeset}
 					/>
 				</Resizable>
 			</Match>
@@ -307,6 +316,9 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 
 	const documentCtx = createMemo(() => getOrCreateDocumentContext());
 	const channelCtx = createMemo(() => getOrCreateChannelContext());
+
+	const [selectedSeq, setSelectedSeq] = createSignal<number | null>(null);
+	const [hoverSeq, setHoverSeq] = createSignal<number | null>(null);
 
 	// store last viewed channel per room
 	createEffect(() => {
@@ -381,7 +393,13 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 								<Voice channel={channel()!} />
 							</Show>
 							<Show when={channel()!.type === "Document"}>
-								<Document channel={channel()!} />
+								<Document
+									channel={channel()!}
+									selectedSeq={selectedSeq()}
+									onSelectChangeset={setSelectedSeq}
+									hoverSeq={hoverSeq()}
+									onHoverChangeset={setHoverSeq}
+								/>
 							</Show>
 							<Show when={channel()!.type === "Wiki"}>
 								<Wiki channel={channel()!} />
@@ -401,7 +419,12 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 							<Show when={channel()!.type === "Category"}>
 								<Category channel={channel()!} />
 							</Show>
-							<ChannelSidebar channel={channel()!} />
+							<ChannelSidebar
+								channel={channel()!}
+								selectedSeq={selectedSeq()}
+								onSelectChangeset={setSelectedSeq}
+								onHoverChangeset={setHoverSeq}
+							/>
 						</Show>
 					</LayoutDefault>
 				</DocumentContext.Provider>

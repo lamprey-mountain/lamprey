@@ -1,10 +1,85 @@
+import { BaseService } from "../core/Service";
+import { fetchWithRetry } from "../util";
 import type { HistoryPagination, User, UserWithRelationship } from "sdk";
-import type { Api } from "../api.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
-import { fetchWithRetry } from "./util.ts";
+import type { Api } from "../../api.tsx";
 
-export class Documents {
+export type RevisionContent = {
+	data?: {
+		root: {
+			blocks: Array<{
+				Markdown?: {
+					content: string;
+				};
+			}>;
+		};
+	};
+	root?: {
+		blocks: Array<{
+			Markdown?: {
+				content: string;
+			};
+		}>;
+	};
+};
+
+export class DocumentsService extends BaseService<RevisionContent> {
 	api: Api = null as unknown as Api;
+
+	revisionCache = new Map<string, RevisionContent>();
+
+	getKey(item: RevisionContent): string {
+		return "";
+	}
+
+	async fetch(id: string): Promise<RevisionContent> {
+		const [channelId, revisionId] = id.split("@");
+		const result = await this.getRevisionContent(channelId, revisionId);
+		if (!result) {
+			throw new Error(`Revision ${id} not found`);
+		}
+		return result;
+	}
+
+	async getRevisionContent(
+		channel_id: string,
+		revision_id: string,
+	): Promise<RevisionContent | null> {
+		const cacheKey = `${channel_id}@${revision_id}`;
+
+		if (this.revisionCache.has(cacheKey)) {
+			return this.revisionCache.get(cacheKey)!;
+		}
+
+		try {
+			const data = await fetchWithRetry(() =>
+				this.api.client.http.GET(
+					"/api/v1/document/{channel_id}/revision/{revision_id}/content",
+					{
+						params: {
+							path: {
+								channel_id,
+								revision_id: revision_id as any,
+							},
+						},
+					},
+				)
+			);
+			this.revisionCache.set(cacheKey, data);
+			return data;
+		} catch {
+			return null;
+		}
+	}
+
+	clearChannelCache(channel_id: string): void {
+		const prefix = `${channel_id}@`;
+		for (const key of this.revisionCache.keys()) {
+			if (key.startsWith(prefix)) {
+				this.revisionCache.delete(key);
+			}
+		}
+	}
 
 	async history(
 		channel_id: string,
@@ -68,7 +143,7 @@ export class Documents {
 		channel_id: string,
 		branch_id: string,
 	): Promise<ArrayBuffer> {
-		const data = await fetchWithRetry(() =>
+		return await fetchWithRetry(() =>
 			this.api.client.http.GET(
 				"/api/v1/document/{channel_id}/branch/{branch_id}/crdt",
 				{
@@ -79,6 +154,5 @@ export class Documents {
 				},
 			)
 		);
-		return data;
 	}
 }

@@ -1,6 +1,7 @@
 import type { Channel } from "sdk";
 import {
 	createEffect,
+	createMemo,
 	createSignal,
 	on,
 	onCleanup,
@@ -11,6 +12,7 @@ import { Portal } from "solid-js/web";
 import { useFloating } from "solid-floating-ui";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { createEditor } from "./DocumentEditor.tsx";
+import type { DiffMark } from "./diff-plugin.ts";
 import icBranchDefault from "../assets/edit.png";
 import icBranchPrivate from "../assets/edit.png";
 import icBranchNew from "../assets/edit.png";
@@ -27,25 +29,56 @@ import { useDocument } from "../contexts/document.tsx";
 import { useModals } from "../contexts/modal.tsx";
 import { TextSelection } from "prosemirror-state";
 import { useChannel } from "../contexts/channel.tsx";
+import { useApi } from "../api.tsx";
+import type { HistoryPagination } from "sdk";
+import * as Y from "yjs";
+import { base64UrlDecode } from "./editor-utils.ts";
+import { Time } from "../Time.tsx";
+import { diffWords } from "diff";
+import { schema } from "./schema.ts";
+import { md } from "../markdown_utils.tsx";
+import { DOMParser } from "prosemirror-model";
 
 type DocumentProps = {
 	channel: Channel;
 };
 
-export const Document = (props: DocumentProps) => {
+export const Document = (
+	props: DocumentProps & {
+		selectedSeq: number | null;
+		onSelectChangeset: (seq: number | null) => void;
+		hoverSeq: number | null;
+		onHoverChangeset: (seq: number | null) => void;
+	},
+) => {
 	const [branchId, setBranchId] = createSignal(props.channel.id);
 	const [editor, setEditor] = createSignal<any>(null);
 	// setup ydoc here, pass to DocumentMain?
 
 	return (
 		<div class="document">
-			<DocumentHeader channel={props.channel} editor={editor()} />
-			<DocumentMain channel={props.channel} setEditor={setEditor} />
+			<DocumentHeader
+				channel={props.channel}
+				editor={editor}
+			/>
+			<DocumentMain
+				channel={props.channel}
+				setEditor={setEditor}
+				editor={() => editor()}
+				selectedSeq={props.selectedSeq}
+				onSelectChangeset={props.onSelectChangeset}
+				hoverSeq={props.hoverSeq}
+				onHoverChangeset={props.onHoverChangeset}
+			/>
 		</div>
 	);
 };
 
-const DocumentHeader = (props: DocumentProps & { editor: any }) => {
+const DocumentHeader = (
+	props: DocumentProps & {
+		editor: any;
+	},
+) => {
 	const [doc, update] = useDocument();
 	const [, modalCtl] = useModals();
 	const [ch, setCh] = useChannel()!;
@@ -486,38 +519,580 @@ const DocumentHeader = (props: DocumentProps & { editor: any }) => {
 	);
 };
 
-const DocumentMain = (
-	props: DocumentProps & { setEditor: (editor: any) => void },
-) => {
-	const editor = createEditor({});
+type Editor = ReturnType<typeof createEditor>;
 
+const DocumentMain = (
+	props: DocumentProps & {
+		setEditor: (editor: Editor | null) => void;
+		selectedSeq: number | null;
+		onSelectChangeset: (seq: number | null) => void;
+		hoverSeq: number | null;
+		onHoverChangeset: (seq: number | null) => void;
+		editor: () => Editor | null;
+	},
+) => {
+	const api = useApi();
+	const [diffLoading, setDiffLoading] = createSignal(false);
+	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
+	const [currentRevision, setCurrentRevision] = createSignal<number | null>(
+		null,
+	);
+	const [previewRevision, setPreviewRevision] = createSignal<number | null>(
+		null,
+	);
+	const editor = createMemo(() => props.editor());
+	let hoverDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Determine mode: 'edit' | 'diff_preview' | 'diff_readonly'
+	const mode = () => {
+		if (props.selectedSeq !== null) return "diff_readonly";
+		if (props.hoverSeq !== null) return "diff_preview";
+		return "edit";
+	};
+
+	// Get the changeset info for the current revision
+	const currentChangeset = () => {
+		const seq = props.selectedSeq ?? props.hoverSeq;
+		if (seq === null) return null;
+		const hist = history();
+		if (!hist) return null;
+		return hist.changesets.find((cs) => cs.start_seq === seq) ?? null;
+	};
+
+	// Load history when channel changes
 	createEffect(
-		on(() => props.channel.id, (newChannelId) => {
-			editor.subscribe(newChannelId, newChannelId);
+		on(() => props.channel.id, async (channelId) => {
+			// Clear edit state
+			setEditState(null);
+
+			// Clear the documents revision cache for this channel
+			api.documents.clearChannelCache(channelId);
+
+			try {
+				const data = await api.documents.history(channelId, channelId, {
+					limit: 50,
+					by_author: false,
+					by_changes: 100,
+					by_tag: true,
+					by_time: 60 * 5,
+				});
+				setHistory(data);
+			} catch (e) {
+				console.error("Failed to load history:", e);
+			}
 		}),
 	);
 
+	// Create editor once on mount
 	onMount(() => {
-		props.setEditor(editor);
+		const ed = createEditor({
+			diffMode: () => mode() !== "edit",
+		});
+		props.setEditor(ed);
 	});
+
+	// Store the edit state to restore when exiting diff view
+	const [editState, setEditState] = createSignal<any>(null);
+
+	// Track last subscribed channel to avoid duplicate subscriptions
+	const [lastSubscribedChannel, setLastSubscribedChannel] = createSignal<
+		string | null
+	>(null);
+
+	// Subscribe to channel only when channel actually changes
+	createEffect(() => {
+		const chId = props.channel.id;
+		const ed = editor();
+		const m = mode();
+
+		// Only subscribe in edit mode
+		if (!ed || m !== "edit") {
+			return;
+		}
+
+		// Skip if already subscribed to this channel
+		if (lastSubscribedChannel() === chId) {
+			return;
+		}
+
+		ed.subscribe(chId, chId);
+		setLastSubscribedChannel(chId);
+	});
+
+	// Handle readonly/preview mode: load historical revision with debounce for hover
+	const [pendingPreviewSeq, setPendingPreviewSeq] = createSignal<number | null>(
+		null,
+	);
+
+	createEffect(() => {
+		const ed = editor();
+		const m = mode();
+		if (!ed || m === "edit") return;
+
+		const seq = m === "diff_readonly" ? props.selectedSeq : props.hoverSeq;
+		if (seq === null) return;
+
+		// Save edit state before switching to readonly (only if not already saved)
+		if (editState() === null) {
+			setEditState(ed.view.state);
+		}
+
+		// Debounce hover previews (150ms) to avoid flickering
+		if (m === "diff_preview") {
+			// Cancel any pending load
+			if (hoverDebounceTimer) {
+				clearTimeout(hoverDebounceTimer);
+			}
+
+			// Set pending seq for tracking
+			setPendingPreviewSeq(seq);
+
+			hoverDebounceTimer = setTimeout(() => {
+				// Only load if still hovering at this seq
+				if (pendingPreviewSeq() === seq) {
+					loadReadonlyRevision(ed, seq, true);
+				}
+				hoverDebounceTimer = null;
+			}, 150);
+
+			return () => {
+				if (hoverDebounceTimer) {
+					clearTimeout(hoverDebounceTimer);
+					hoverDebounceTimer = null;
+				}
+			};
+		}
+
+		// Clear pending preview when switching to readonly
+		setPendingPreviewSeq(null);
+
+		// No debounce for readonly (click) mode
+		loadReadonlyRevision(ed, seq, false);
+	});
+
+	// Clear preview when returning to edit mode
+	createEffect(() => {
+		const ed = editor();
+		const m = mode();
+		if (!ed || m !== "edit") return;
+
+		ed.setDiffMarks([]);
+		setCurrentRevision(null);
+		setPreviewRevision(null);
+
+		// Restore edit state if we have one saved
+		const savedState = editState();
+		if (savedState) {
+			ed.setState(savedState);
+			setEditState(null);
+		}
+
+		// Don't re-subscribe here - the subscribe effect above handles it
+	});
+
+	// Helper to load a readonly historical revision (without syncing to server)
+	const loadReadonlyRevision = async (
+		ed: Editor,
+		seq: number,
+		isPreview: boolean = false,
+	) => {
+		const targetRevision = isPreview ? previewRevision() : currentRevision();
+		const revisionId = `${props.channel.id}@${seq}`;
+
+		// Check if we have cached content - if so, load immediately without loading state
+		const cachedSerdoc = api.documents.revisionCache.get(revisionId);
+		const hasCache = cachedSerdoc !== undefined;
+
+		if (targetRevision === seq && hasCache) return; // Already loaded and cached
+
+		// Only show loading state if we don't have cache
+		if (!hasCache) {
+			setDiffLoading(true);
+		}
+
+		try {
+			// Fetch the revision at this seq using the documents service
+			let newSerdoc: any = cachedSerdoc;
+			if (!newSerdoc) {
+				newSerdoc = await api.documents.getRevisionContent(
+					props.channel.id,
+					`${props.channel.id}@${seq}`,
+				);
+				if (!newSerdoc) return;
+			}
+
+			// Fetch the previous revision for diff
+			const prevSeq = Math.max(0, seq - 1);
+			let oldSerdoc: any = null;
+			if (prevSeq > 0) {
+				const prevRevisionId = `${props.channel.id}@${prevSeq}`;
+				oldSerdoc = api.documents.revisionCache.get(prevRevisionId) ?? null;
+				if (!oldSerdoc) {
+					oldSerdoc = await api.documents.getRevisionContent(
+						props.channel.id,
+						prevRevisionId,
+					);
+					if (!oldSerdoc) return;
+				}
+			}
+
+			// Compute diff marks BEFORE setting state (state change resets plugin)
+			const marks = computeDiffMarks(oldSerdoc ?? {}, newSerdoc);
+
+			// Convert serdoc to HTML for the editor
+			const newHtml = serdocToHtml(newSerdoc);
+
+			// Use the editor's createReadonlyState method (no Yjs sync)
+			const readonlyState = ed.createReadonlyStateFromHtml(newHtml);
+			ed.setState(readonlyState);
+
+			// Set diff marks AFTER setting state (otherwise they get lost!)
+			ed.setDiffMarks(marks);
+
+			if (isPreview) {
+				setPreviewRevision(seq);
+			} else {
+				setCurrentRevision(seq);
+			}
+		} catch (e) {
+			console.error("Failed to load revision:", e);
+		} finally {
+			if (!hasCache) {
+				setDiffLoading(false);
+			}
+		}
+	};
 
 	onCleanup(() => {
 		props.setEditor(null);
 	});
 
+	// Restore version dropdown state
+	const [restoreMenuOpen, setRestoreMenuOpen] = createSignal(false);
+	const [restoreBtn, setRestoreBtn] = createSignal<HTMLElement>();
+	const [restoreMenu, setRestoreMenu] = createSignal<HTMLElement>();
+	const restorePos = useFloating(restoreBtn, restoreMenu, {
+		whileElementsMounted: autoUpdate,
+		placement: "bottom-end",
+		middleware: [offset(4), flip(), shift()],
+	});
+
+	// Close restore menu on click outside
+	onMount(() => {
+		const close = () => setRestoreMenuOpen(false);
+		window.addEventListener("click", close);
+		onCleanup(() => window.removeEventListener("click", close));
+	});
+
+	// Handle restoring a historical version
+	const handleRestoreVersion = async (mode: "current" | "new") => {
+		const seq = props.selectedSeq;
+		if (seq === null) return;
+
+		setRestoreMenuOpen(false);
+
+		try {
+			if (mode === "new") {
+				// Fork a new branch from the selected revision
+				const newBranchName = `restored-${
+					new Date().toISOString().slice(0, 10)
+				}`;
+				await api.client.http.POST(
+					"/api/v1/document/{channel_id}/branch/{parent_id}/fork",
+					{
+						params: {
+							path: {
+								channel_id: props.channel.id,
+								parent_id: props.channel.id,
+							},
+						},
+						body: {
+							name: newBranchName,
+							description: `Restored from revision @${seq}`,
+							private: false,
+						},
+					},
+				);
+				console.log("Created restored branch:", newBranchName);
+			} else {
+				// TODO: Restore to current branch (needs API endpoint)
+				console.log("Restore to current branch @seq:", seq);
+			}
+		} catch (e) {
+			console.error("Failed to restore version:", e);
+		}
+	};
+
 	return (
-		<main
-			onClick={() => {
-				editor.view?.focus();
-			}}
-		>
-			<editor.View
-				onSubmit={() => false}
-				channelId={props.channel.id}
-				submitOnEnter={false}
-				placeholder="write something cool..."
-				disabled={!editor.isSubscribed()}
-			/>
-		</main>
+		<>
+			<Show when={mode() === "diff_readonly" && currentChangeset()}>
+				{(changeset) => (
+					<div class="diff-view-inline">
+						<div class="diff-view-header">
+							<span class="diff-view-title">
+								Viewing revision from{" "}
+								<Time date={new Date(changeset().start_time)} />
+							</span>
+							<div class="diff-view-stats">
+								<span class="diff-stat-added">
+									+{changeset().stat_added}
+								</span>
+								<span class="diff-stat-removed">
+									−{changeset().stat_removed}
+								</span>
+							</div>
+							<button
+								ref={setRestoreBtn}
+								class="diff-view-close"
+								onClick={(e) => {
+									e.stopPropagation();
+									setRestoreMenuOpen(!restoreMenuOpen());
+								}}
+							>
+								Restore ▼
+							</button>
+							<button
+								class="diff-view-close"
+								onClick={() => props.onSelectChangeset(null)}
+							>
+								Back to current version
+							</button>
+						</div>
+					</div>
+				)}
+			</Show>
+			<Show when={restoreMenuOpen()}>
+				<Portal>
+					<menu
+						class="restore-menu document-menu"
+						ref={setRestoreMenu}
+						style={{
+							position: restorePos.strategy,
+							top: `${restorePos.y ?? 0}px`,
+							left: `${restorePos.x ?? 0}px`,
+							"z-index": 100,
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<ul>
+							<li>
+								<button onClick={() => handleRestoreVersion("current")}>
+									<div class="info">
+										<div>Restore to current branch</div>
+										<div class="dim">overwrite current content</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button onClick={() => handleRestoreVersion("new")}>
+									<div class="info">
+										<div>Create new branch</div>
+										<div class="dim">fork from this revision</div>
+									</div>
+								</button>
+							</li>
+						</ul>
+					</menu>
+				</Portal>
+			</Show>
+			<main>
+				{(() => {
+					const ed = editor();
+					if (!ed) return null;
+					return (
+						<ed.View
+							onSubmit={() => false}
+							channelId={props.channel.id}
+							submitOnEnter={false}
+							placeholder={mode() === "edit"
+								? "write something cool..."
+								: mode() === "diff_readonly"
+								? "viewing historical revision (readonly)"
+								: ""}
+							disabled={mode() !== "edit" || diffLoading()}
+						/>
+					);
+				})()}
+			</main>
+		</>
 	);
 };
+
+// Helper function to compute DiffMark[] from old and new serdocs
+function computeDiffMarks(oldSerdoc: any, newSerdoc: any): DiffMark[] {
+	const oldDoc = serdocToProseMirrorDoc(oldSerdoc);
+	const newDoc = serdocToProseMirrorDoc(newSerdoc);
+
+	// If we can't parse either document, return empty marks
+	if (!oldDoc || !newDoc) {
+		return [];
+	}
+
+	// Extract text content from PM documents (this preserves exact text structure)
+	const oldText = oldDoc.textContent;
+	const newText = newDoc.textContent;
+
+	// Build position maps: string index -> ProseMirror position
+	const oldPosMap = buildPositionMap(oldDoc);
+	const newPosMap = buildPositionMap(newDoc);
+
+	// Run diff on text content
+	const changes = diffWords(oldText, newText);
+
+	const marks: DiffMark[] = [];
+	let oldStringPos = 0;
+	let newStringPos = 0;
+
+	for (const change of changes) {
+		const len = change.value.length;
+
+		if (change.added) {
+			// Map string positions to ProseMirror positions in the new document
+			const from = mapStringToPMPosition(newPosMap, newStringPos);
+			const to = mapStringToPMPosition(newPosMap, newStringPos + len);
+			marks.push({
+				type: "insertion",
+				from,
+				to,
+			});
+			newStringPos += len;
+		} else if (change.removed) {
+			// Map string positions to ProseMirror positions in the old document
+			// Deletions are shown at the current position in the new document
+			const pos = mapStringToPMPosition(newPosMap, newStringPos);
+			marks.push({
+				type: "deletion",
+				pos,
+				text: change.value,
+			});
+			oldStringPos += len;
+		} else {
+			// Unchanged text
+			oldStringPos += len;
+			newStringPos += len;
+		}
+	}
+
+	return marks;
+}
+
+// Convert serdoc to ProseMirror document
+function serdocToProseMirrorDoc(serdoc: any) {
+	try {
+		const doc = serdoc?.data ?? serdoc;
+
+		// Handle different serdoc formats
+		if (!doc) {
+			return null;
+		}
+
+		// Format 1: { root: { blocks: [...] } }
+		if (doc?.root?.blocks) {
+			const htmlParts: string[] = [];
+			for (const block of doc.root.blocks) {
+				if (block.Markdown?.content) {
+					htmlParts.push(block.Markdown.content);
+					htmlParts.push("\n\n");
+				}
+			}
+			if (htmlParts.length === 0) {
+				// Empty document - create empty paragraph
+				htmlParts.push("<p></p>");
+			}
+			const div = document.createElement("div");
+			div.innerHTML = htmlParts.join("");
+			return DOMParser.fromSchema(schema).parse(div);
+		}
+
+		// Format 2: Already HTML
+		if (typeof doc === "string") {
+			const div = document.createElement("div");
+			div.innerHTML = doc;
+			return DOMParser.fromSchema(schema).parse(div);
+		}
+
+		return null;
+	} catch (e) {
+		console.error("Failed to parse serdoc:", e, serdoc);
+		return null;
+	}
+}
+
+// Convert serdoc to HTML string
+function serdocToHtml(serdoc: any): string {
+	try {
+		const doc = serdoc?.data ?? serdoc;
+		if (!doc) {
+			return "";
+		}
+
+		// Format 1: { root: { blocks: [...] } }
+		if (doc?.root?.blocks) {
+			const htmlParts: string[] = [];
+			for (const block of doc.root.blocks) {
+				if (block.Markdown?.content) {
+					htmlParts.push(block.Markdown.content);
+				}
+			}
+			if (htmlParts.length === 0) {
+				return "";
+			}
+			return htmlParts.join("\n\n");
+		}
+
+		// Format 2: Already HTML
+		if (typeof doc === "string") {
+			return doc;
+		}
+
+		return "";
+	} catch (e) {
+		console.error("Failed to convert serdoc to HTML:", e, serdoc);
+		return "";
+	}
+}
+
+// Build a map from string index to ProseMirror position
+// Returns array where index = string position, value = PM position
+// This walks the PM document and maps each text character to its PM position
+function buildPositionMap(doc: any): number[] {
+	if (!doc) {
+		return [];
+	}
+
+	const result: number[] = [];
+
+	doc.descendants((node: any, pos: number) => {
+		if (node.isText) {
+			// Map each character in the text node to its PM position
+			for (let i = 0; i < node.text!.length; i++) {
+				result.push(pos + 1 + i);
+			}
+		}
+		return !node.isLeaf;
+	});
+
+	return result;
+}
+
+// Map a string position to ProseMirror position using the position map
+function mapStringToPMPosition(posMap: number[], stringPos: number): number {
+	if (stringPos >= posMap.length) {
+		return posMap.length > 0 ? posMap[posMap.length - 1] + 1 : 0;
+	}
+	return posMap[stringPos] ?? 0;
+}
+
+// Convert Y.XmlFragment to plain text
+function yXmlFragmentToText(xmlFragment: Y.XmlFragment): string {
+	const textParts: string[] = [];
+	xmlFragment.forEach((item) => {
+		if (item instanceof Y.XmlText) {
+			textParts.push(item.toString());
+		} else if (item instanceof Y.XmlElement) {
+			textParts.push("\n");
+			textParts.push(yXmlFragmentToText(item as unknown as Y.XmlFragment));
+		}
+	});
+	return textParts.join("");
+}

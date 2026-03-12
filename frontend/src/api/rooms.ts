@@ -1,4 +1,4 @@
-import type { Pagination, Room, RoomPatch } from "sdk";
+import type { Pagination, Room } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
@@ -158,7 +158,7 @@ export class Rooms {
 		return await service.create(body);
 	}
 
-	async update(room_id: string, body: RoomPatch): Promise<Room> {
+	async update(room_id: string, body: any): Promise<Room> {
 		const service = this.getService();
 		return await service.update(room_id, body);
 	}

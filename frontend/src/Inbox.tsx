@@ -123,16 +123,22 @@ const NotificationItem = (
 	},
 ) => {
 	const api = useApi();
-	const thread = () =>
-		props.allData?.threads.find((t) =>
-			t.id === ((props.notification as any).thread_id as any)
-		);
+	const thread = () => {
+		const threadId = (props.notification as any).thread_id as
+			| string
+			| undefined;
+		if (!threadId) return undefined;
+		// Try to find the thread channel from channels array
+		return props.allData?.channels.find((c) => c.id === threadId);
+	};
 	const message = () =>
-		props.allData?.messages.find((m) => m.id === props.notification.message_id);
+		props.allData?.messages.find((m: Message) =>
+			m.id === props.notification.message_id
+		);
 	const room = () => {
 		const t = thread();
 		if (!t?.room_id) return;
-		return props.allData?.rooms.find((r) => r.id === t.room_id);
+		return props.allData?.rooms.find((r: Room) => r.id === t.room_id);
 	};
 
 	const handleMarkRead = async () => {

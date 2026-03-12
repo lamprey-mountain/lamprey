@@ -552,7 +552,7 @@ export class MessagesService extends BaseService<Message> {
 				body: {
 					...body,
 					attachments: body.attachments.map((a: any) => ({
-						type: "Media",
+						type: "Media" as const,
 						media_id: a.media_id ?? a.id,
 						spoiler: a.spoiler ?? false,
 					})),

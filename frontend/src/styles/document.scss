@@ -135,15 +135,23 @@
 	}
 }
 
+.restore-menu {
+	/* Same styles as document-menu, positioned at bottom-end */
+}
+
 .document-history {
 	width: 100%;
+	background: $bg-150;
+	overflow-y: auto;
 
 	header {
-		background: $bg-150;
+		background: $bg-100;
 		padding: 8px 12px;
 		border-bottom: solid $sep-300 1px;
 		display: flex;
 		justify-content: space-between;
+		position: sticky;
+		top: 0;
 	}
 
 	.history-item {
@@ -194,5 +202,94 @@
 			border-radius: 4px;
 			color: $fg-100;
 		}
+	}
+}
+
+// Inline diff view banner (sticky header when viewing history)
+.diff-view-inline {
+	position: sticky;
+	top: 0;
+	z-index: 50;
+
+	.diff-view-header {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 8px 12px;
+		background: $bg-100;
+		border-bottom: solid $sep-300 1px;
+		border-radius: 4px 4px 0 0;
+		margin: 0 8px;
+	}
+
+	.diff-view-title {
+		font-weight: 600;
+		color: $fg-100;
+	}
+
+	.diff-view-stats {
+		display: flex;
+		gap: 12px;
+		font-size: 0.9rem;
+		font-weight: bold;
+	}
+
+	.diff-view-close {
+		margin-left: auto;
+		padding: 6px 12px;
+		background: $bg-200;
+		border: solid $sep-300 1px;
+		border-radius: 4px;
+		cursor: pointer;
+		color: $fg-200;
+		font-size: 0.85rem;
+
+		&:hover {
+			background: $bg-300;
+		}
+	}
+}
+
+.diff-stat-added {
+	color: $color-green;
+}
+
+.diff-stat-removed {
+	color: $color-red;
+}
+
+// Diff decorations in editor
+.editor .diff-insertion {
+	color: $color-green;
+	background: rgba(0, 255, 0, 0.15);
+	padding: 1px 2px;
+	margin: 0 -2px;
+	border-radius: 2px;
+	text-decoration: none;
+}
+
+.editor .diff-deletion {
+	color: $color-red;
+	background: rgba(255, 0, 0, 0.15);
+	text-decoration: line-through;
+	padding: 1px 2px;
+	margin: 0 -2px;
+	border-radius: 2px;
+}
+
+.editor .diff-deletion::before {
+	content: "";
+}
+
+// Readonly mode indicator
+.document[readonly] .editor {
+	opacity: 0.8;
+	background-color: $bg-100;
+}
+
+.history-item {
+	&.selected {
+		background: $bg-100;
+		border-color: $link-200;
 	}
 }

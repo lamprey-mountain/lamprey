@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, Show } from "solid-js";
+import { createEffect, createSignal, For, on, Show } from "solid-js";
 import type { Channel } from "sdk";
 import { useApi } from "../api.tsx";
 import type { HistoryPagination } from "sdk";
@@ -11,6 +11,9 @@ type DocumentHistoryProps = {
 	channel: Channel;
 	branchId: string;
 	isOpen: boolean;
+	onSelectChangeset: (seq: number | null) => void;
+	onHoverChangeset: (seq: number | null) => void;
+	selectedSeq: number | null;
 };
 
 export const DocumentHistory = (props: DocumentHistoryProps) => {
@@ -74,48 +77,72 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 				</Show>
 				<Show when={!loading() && !error() && history()}>
 					<div class="history-list">
-						{history()!.changesets.map((changeset) => (
-							<div class="history-item">
-								<div class="history-item-header">
-									<Time date={new Date(changeset.start_time)} />
-									<div style="flex:1"></div>
-									<div class="history-item-stat history-item-stat-added">
-										+{changeset.stat_added}
+						<For each={history()!.changesets}>
+							{(changeset) => {
+								const isSelected = props.selectedSeq === changeset.start_seq;
+								return (
+									<div
+										class="history-item"
+										classList={{ selected: isSelected }}
+										onClick={() => {
+											if (isSelected) {
+												props.onSelectChangeset(null);
+											} else {
+												props.onSelectChangeset(changeset.start_seq);
+											}
+										}}
+										onMouseEnter={() =>
+											props.onHoverChangeset(changeset.start_seq)}
+										onMouseLeave={() => props.onHoverChangeset(null)}
+									>
+										<div class="history-item-header">
+											<Time date={new Date(changeset.start_time)} />
+											<div style="flex:1"></div>
+											<div class="history-item-stat history-item-stat-added">
+												+{changeset.stat_added}
+											</div>
+											<div class="history-item-stat history-item-stat-removed">
+												-{changeset.stat_removed}
+											</div>
+										</div>
+										<div class="history-item-authors">
+											{(() => {
+												const visibleAuthors = changeset.authors.slice(0, 5);
+												const remainingCount = changeset.authors.length - 5;
+												return (
+													<>
+														<For each={visibleAuthors}>
+															{(authorId) => {
+																const user = history()!.users.find((u) =>
+																	u.id === authorId
+																);
+																const userTip = createTooltip({
+																	tip: () => user?.name ?? authorId,
+																});
+																return (
+																	<div ref={userTip.content}>
+																		<Avatar
+																			animate={false}
+																			user={user}
+																			pad={2}
+																		/>
+																	</div>
+																);
+															}}
+														</For>
+														{remainingCount > 0 && (
+															<div class="avatar avatar-remaining">
+																+{remainingCount}
+															</div>
+														)}
+													</>
+												);
+											})()}
+										</div>
 									</div>
-									<div class="history-item-stat history-item-stat-removed">
-										-{changeset.stat_removed}
-									</div>
-								</div>
-								<div class="history-item-authors">
-									{(() => {
-										const visibleAuthors = changeset.authors.slice(0, 5);
-										const remainingCount = changeset.authors.length - 5;
-										return (
-											<>
-												{visibleAuthors.map((authorId) => {
-													const user = history()!.users.find((u) =>
-														u.id === authorId
-													);
-													const tip = createTooltip({
-														tip: () => user?.name ?? authorId,
-													});
-													return (
-														<div ref={tip.content}>
-															<Avatar animate={false} user={user} pad={2} />
-														</div>
-													);
-												})}
-												{remainingCount > 0 && (
-													<div class="avatar avatar-remaining">
-														+{remainingCount}
-													</div>
-												)}
-											</>
-										);
-									})()}
-								</div>
-							</div>
-						))}
+								);
+							}}
+						</For>
 					</div>
 				</Show>
 				<Show when={!loading() && !error() && !history()}>

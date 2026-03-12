@@ -116,12 +116,15 @@ export class Tags {
 		tag_id: string,
 		force?: boolean,
 	): Promise<void> {
+		const queryParams: any = force ? { force: true } : {};
 		await this.api.client.http.DELETE(
 			"/api/v1/channel/{channel_id}/tag/{tag_id}",
 			{
 				params: {
 					path: { channel_id, tag_id },
-					...(force ? { query: { force: true } } : {}),
+					...(Object.keys(queryParams).length > 0
+						? { query: queryParams }
+						: {}),
 				},
 			},
 		);
