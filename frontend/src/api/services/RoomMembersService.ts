@@ -1,12 +1,10 @@
 import { RoomMember } from "sdk";
 import { BaseService } from "../core/Service";
-import { fetchWithRetry } from "../util";
 import { Accessor, createEffect, createResource, Resource } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 
 export class RoomMembersService extends BaseService<RoomMember> {
-	// We override cache to support efficient room lookup if needed,
-	// or we just rely on the key convention "room_id:user_id"
+	protected cacheName = "room_member";
 
 	// For now, let's use the key convention "room_id:user_id" for the main cache
 	// so `use()` works with a composite ID.
@@ -24,7 +22,7 @@ export class RoomMembersService extends BaseService<RoomMember> {
 		if (!room_id || !user_id) throw new Error("Invalid composite ID");
 
 		try {
-			const data = await fetchWithRetry(() =>
+			const data = await this.retryWithBackoff<RoomMember>(() =>
 				this.client.http.GET("/api/v1/room/{room_id}/member/{user_id}", {
 					params: { path: { room_id, user_id } },
 				})

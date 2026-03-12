@@ -2,6 +2,8 @@ import { Session } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class SessionsService extends BaseService<Session> {
+	protected cacheName = "session";
+
 	getKey(item: Session): string {
 		return item.id;
 	}

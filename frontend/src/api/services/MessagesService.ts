@@ -6,7 +6,6 @@ import {
 	PaginationQuery,
 } from "sdk";
 import { BaseService } from "../core/Service";
-import { fetchWithRetry } from "../util";
 import {
 	Accessor,
 	batch,
@@ -133,6 +132,8 @@ type MessageSendReq = Omit<MessageCreate, "nonce"> & {
 };
 
 export class MessagesService extends BaseService<Message> {
+	protected cacheName = "message";
+
 	getKey(item: Message): string {
 		return item.id;
 	}
@@ -145,7 +146,7 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	async fetchInThread(thread_id: string, message_id: string): Promise<Message> {
-		const data = await fetchWithRetry(() =>
+		const data = await this.retryWithBackoff(() =>
 			this.client.http.GET(
 				"/api/v1/channel/{channel_id}/message/{message_id}",
 				{
@@ -546,7 +547,7 @@ export class MessagesService extends BaseService<Message> {
 			}
 		});
 
-		const data = await fetchWithRetry(() =>
+		const data = await this.retryWithBackoff<Message>(() =>
 			this.client.http.POST("/api/v1/channel/{channel_id}/message", {
 				params: { path: { channel_id } },
 				body: {

@@ -1,6 +1,7 @@
 import type { types } from "sdk";
 
 export type RoomT = types.Room;
+export type ChannelT = types.Channel;
 export type ThreadT = types.Channel;
 export type MessageT = types.Message;
 export type UserT = types.User;

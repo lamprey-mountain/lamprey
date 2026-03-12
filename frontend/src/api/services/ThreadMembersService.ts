@@ -1,9 +1,10 @@
 import { ThreadMember } from "sdk";
 import { BaseService } from "../core/Service";
-import { fetchWithRetry } from "../util";
 import { Accessor, createResource, Resource } from "solid-js";
 
 export class ThreadMembersService extends BaseService<ThreadMember> {
+	protected cacheName = "thread_member";
+
 	getKey(item: ThreadMember): string {
 		return `${item.thread_id}:${item.user_id}`;
 	}
@@ -14,7 +15,7 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 		if (!thread_id || !user_id) throw new Error("Invalid composite ID");
 
 		try {
-			const data = await fetchWithRetry(() =>
+			const data = await this.retryWithBackoff<ThreadMember>(() =>
 				this.client.http.GET("/api/v1/thread/{thread_id}/member/{user_id}", {
 					params: { path: { thread_id, user_id } },
 				})

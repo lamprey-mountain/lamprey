@@ -1,5 +1,4 @@
 import { BaseService } from "../core/Service";
-import { fetchWithRetry } from "../util";
 import type { HistoryPagination, User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import type { Api } from "../../api.tsx";
@@ -25,6 +24,7 @@ export type RevisionContent = {
 
 export class DocumentsService extends BaseService<RevisionContent> {
 	api: Api = null as unknown as Api;
+	protected cacheName = "document";
 
 	revisionCache = new Map<string, RevisionContent>();
 
@@ -52,7 +52,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 		}
 
 		try {
-			const data = await fetchWithRetry(() =>
+			const data = await this.retryWithBackoff<RevisionContent>(() =>
 				this.api.client.http.GET(
 					"/api/v1/document/{channel_id}/revision/{revision_id}/content",
 					{
@@ -93,7 +93,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 			limit?: number;
 		},
 	): Promise<HistoryPagination> {
-		const data = await fetchWithRetry(() =>
+		const data = await this.retryWithBackoff<HistoryPagination>(() =>
 			this.api.client.http.GET(
 				"/api/v1/document/{channel_id}/branch/{branch_id}/history",
 				{
@@ -143,7 +143,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 		channel_id: string,
 		branch_id: string,
 	): Promise<ArrayBuffer> {
-		return await fetchWithRetry(() =>
+		return await this.retryWithBackoff<ArrayBuffer>(() =>
 			this.api.client.http.GET(
 				"/api/v1/document/{channel_id}/branch/{branch_id}/crdt",
 				{

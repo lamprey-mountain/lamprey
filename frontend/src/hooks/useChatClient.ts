@@ -1,6 +1,6 @@
 import { createEffect, createSignal, from, onCleanup } from "solid-js";
 import { createStore } from "solid-js/store";
-import { createClient, type Preferences } from "sdk";
+import { createClient, type Preferences, Room } from "sdk";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createResource } from "solid-js";
@@ -17,6 +17,55 @@ import type { Config } from "../config.tsx";
 import { flags } from "../flags.ts";
 import { RootStore } from "../api/core/Store.ts";
 import { colors, logger } from "../logger.ts";
+import { DBSchema, openDB, type IDBPDatabase } from "idb";
+import { UserT, RoomT, ChannelT, MessageT, RoleT, MemberT, MediaT, SessionT } from "../types.ts";
+import type { RevisionContent } from "../api/services/DocumentsService.ts";
+import type { ThreadMember } from "sdk";
+
+const DB_VERSION = 1;
+
+interface ApiDB extends DBSchema {
+	user: {
+		value: UserT;
+		key: string;
+	};
+	room: {
+		value: RoomT;
+		key: string;
+	};
+	channel: {
+		value: ChannelT;
+		key: string;
+	};
+	message: {
+		value: MessageT;
+		key: string;
+	};
+	role: {
+		value: RoleT;
+		key: string;
+	};
+	room_member: {
+		value: MemberT;
+		key: string;
+	};
+	media: {
+		value: MediaT;
+		key: string;
+	};
+	session: {
+		value: SessionT;
+		key: string;
+	};
+	document: {
+		value: RevisionContent;
+		key: string;
+	};
+	thread_member: {
+		value: ThreadMember;
+		key: string;
+	};
+}
 
 function loadSavedPreferences(): Preferences | null {
 	const c = localStorage.getItem("preferences");
@@ -34,9 +83,8 @@ const DEFAULT_PREFERENCES: Preferences = {
 	notifs: {
 		messages: "Nothing",
 		threads: "Nothing",
-		room_public: "Nothing",
-		room_private: "Nothing",
-		room_dm: "Nothing",
+		reactions: "Dms",
+		tts: "Nothing",
 	},
 	privacy: {
 		friends: {
@@ -88,12 +136,43 @@ export function useChatClient(config: Config) {
 	const [serverPreferences, setServerPreferences] = createSignal<
 		Preferences | null
 	>(null);
+
+	const [db, setDb] = createSignal<IDBPDatabase<ApiDB> | undefined>();
+
+	(async () => {
+		try {
+			const database = await openDB<ApiDB>("api", DB_VERSION, {
+				upgrade(database, oldVersion, newVersion) {
+					if (oldVersion < 1) {
+						// Initial schema - create all object stores
+						database.createObjectStore("user", { keyPath: "id" });
+						database.createObjectStore("room", { keyPath: "id" });
+						database.createObjectStore("channel", { keyPath: "id" });
+						database.createObjectStore("message", { keyPath: "id" });
+						database.createObjectStore("role", { keyPath: "id" });
+						database.createObjectStore("room_member", { keyPath: "id" });
+						database.createObjectStore("media", { keyPath: "id" });
+						database.createObjectStore("session", { keyPath: "id" });
+						database.createObjectStore("document", { keyPath: "id" });
+						database.createObjectStore("thread_member", { keyPath: "id" });
+						logger.for("idb").info("IndexedDB initialized with all object stores");
+					}
+				},
+			});
+			setDb(database);
+			logger.for("idb").debug("IndexedDB opened successfully");
+		} catch (e) {
+			logger.for("idb").error("Failed to initialize IndexedDB", e);
+		}
+	})();
+
 	const store = new RootStore(
 		client,
 		events,
 		preferences,
 		setPreferences,
 		setServerPreferences,
+		() => db() as IDBPDatabase<unknown> | undefined,
 	);
 	const api = createApi(client, events, { preferences, setPreferences, store });
 

@@ -1,9 +1,10 @@
 import { Role, RolePatch } from "sdk";
 import { BaseService } from "../core/Service";
-import { fetchWithRetry } from "../util";
 import { Accessor, createEffect, createResource, Resource } from "solid-js";
 
 export class RolesService extends BaseService<Role> {
+	protected cacheName = "role";
+
 	getKey(item: Role): string {
 		return item.id;
 	}
@@ -16,7 +17,7 @@ export class RolesService extends BaseService<Role> {
 	}
 
 	async fetchByRoom(room_id: string, role_id: string): Promise<Role> {
-		const data = await fetchWithRetry(() =>
+		const data = await this.retryWithBackoff<Role>(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/role/{role_id}", {
 				params: { path: { room_id, role_id } },
 			})

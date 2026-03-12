@@ -18,6 +18,7 @@ import { MessagesService } from "../services/MessagesService";
 import { NotificationService } from "../services/NotificationService";
 import { MemberListService } from "../services/MemberListService";
 import { Emitter } from "@solid-primitives/event-bus";
+import type { IDBPDatabase } from "idb";
 
 export class RootStore {
 	client: Client;
@@ -48,6 +49,7 @@ export class RootStore {
 		preferences?: Accessor<Preferences>,
 		setPreferences?: (p: Preferences) => void,
 		setServerPreferences?: (p: Preferences) => void,
+		getDb?: () => IDBPDatabase<unknown> | undefined,
 	) {
 		this.client = client;
 		this.preferences = preferences;
@@ -58,14 +60,14 @@ export class RootStore {
 		this.session = session;
 		this.setSession = setSession;
 
-		this.rooms = new RoomsService(this);
-		this.channels = new ChannelsService(this);
-		this.users = new UsersService(this);
-		this.roles = new RolesService(this);
-		this.sessions = new SessionsService(this);
-		this.roomMembers = new RoomMembersService(this);
-		this.threadMembers = new ThreadMembersService(this);
-		this.messages = new MessagesService(this);
+		this.rooms = new RoomsService(this, getDb);
+		this.channels = new ChannelsService(this, getDb);
+		this.users = new UsersService(this, getDb);
+		this.roles = new RolesService(this, getDb);
+		this.sessions = new SessionsService(this, getDb);
+		this.roomMembers = new RoomMembersService(this, getDb);
+		this.threadMembers = new ThreadMembersService(this, getDb);
+		this.messages = new MessagesService(this, getDb);
 		this.notifications = new NotificationService(this);
 		this.memberLists = new MemberListService(this);
 

@@ -1,14 +1,15 @@
 import { User, UserWithRelationship } from "sdk";
 import { BaseService } from "../core/Service";
-import { fetchWithRetry } from "../util";
 
 export class UsersService extends BaseService<UserWithRelationship> {
+	protected cacheName = "user";
+
 	getKey(item: User | UserWithRelationship): string {
 		return item.id;
 	}
 
 	async fetch(id: string): Promise<UserWithRelationship> {
-		return await fetchWithRetry(() =>
+		return await this.retryWithBackoff<UserWithRelationship>(() =>
 			this.client.http.GET("/api/v1/user/{user_id}", {
 				params: { path: { user_id: id } },
 			})
