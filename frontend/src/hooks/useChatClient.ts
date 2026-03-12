@@ -31,7 +31,6 @@ const DEFAULT_PREFERENCES: Preferences = {
 	},
 	notifs: {
 		messages: "Nothing",
-		mentions: "Notify",
 		threads: "Nothing",
 		room_public: "Nothing",
 		room_private: "Nothing",
@@ -61,7 +60,7 @@ export function useChatClient(config: Config) {
 	const useMsgpack = flags.has("msgpack");
 	const recvLog = logger.for("sync").create("debug", colors.blue);
 	const sendLog = logger.for("sync").create("debug", colors.teal);
-	const errorLog = logger.for("sync").error;
+	const errorLog = logger.for("sync").create("error", colors.red);
 	const client = createClient({
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,

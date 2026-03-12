@@ -562,11 +562,11 @@ const DocumentMain = (
 		}),
 	);
 
-	// Create editor once on mount
+	const ed = createEditor({
+		diffMode: () => mode() !== "edit",
+	});
+
 	onMount(() => {
-		const ed = createEditor({
-			diffMode: () => mode() !== "edit",
-		});
 		props.setEditor(ed);
 	});
 

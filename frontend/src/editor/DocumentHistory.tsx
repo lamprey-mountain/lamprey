@@ -5,7 +5,6 @@ import type { HistoryPagination } from "sdk";
 import { Time } from "../Time.tsx";
 import { useChannel } from "../contexts/channel.tsx";
 import { Avatar } from "../avatar/UserAvatar.tsx";
-import { createTooltip } from "../Tooltip.tsx";
 
 type DocumentHistoryProps = {
 	channel: Channel;
@@ -14,6 +13,64 @@ type DocumentHistoryProps = {
 	onSelectChangeset: (seq: number | null) => void;
 	onHoverChangeset: (seq: number | null) => void;
 	selectedSeq: number | null;
+};
+
+const AvatarWithTooltip = (props: { user: any; name: string }) => {
+	let wrap: HTMLDivElement;
+	let tipEl: HTMLDivElement;
+	const [visible, setVisible] = createSignal(false);
+	const [position, setPosition] = createSignal({ x: 0, y: 0 });
+
+	const updatePosition = () => {
+		if (!wrap) return;
+		const rect = wrap.getBoundingClientRect();
+		setPosition({ x: rect.left, y: rect.top - 40 });
+	};
+
+	const showTip = () => {
+		updatePosition();
+		setVisible(true);
+	};
+
+	const hideTip = () => setVisible(false);
+
+	createEffect(() => {
+		if (visible()) {
+			window.addEventListener("scroll", updatePosition, true);
+			window.addEventListener("resize", updatePosition);
+			return () => {
+				window.removeEventListener("scroll", updatePosition, true);
+				window.removeEventListener("resize", updatePosition);
+			};
+		}
+	});
+
+	return (
+		<>
+			<div
+				ref={wrap!}
+				onMouseEnter={showTip}
+				onMouseLeave={hideTip}
+				style="display: inline-block"
+			>
+				<Avatar animate={false} user={props.user} pad={2} />
+			</div>
+			<Show when={visible()}>
+				<div
+					ref={tipEl!}
+					class="tooltip"
+					style={{
+						position: "fixed",
+						left: `${position().x}px`,
+						top: `${position().y}px`,
+					}}
+				>
+					<div class="base"></div>
+					<div class="inner">{props.name}</div>
+				</div>
+			</Show>
+		</>
+	);
 };
 
 export const DocumentHistory = (props: DocumentHistoryProps) => {
@@ -116,22 +173,20 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 																const user = history()!.users.find((u) =>
 																	u.id === authorId
 																);
-																const userTip = createTooltip({
-																	tip: () => user?.name ?? authorId,
-																});
+																const userName = user?.name ?? authorId;
 																return (
-																	<div ref={userTip.content}>
-																		<Avatar
-																			animate={false}
-																			user={user}
-																			pad={2}
-																		/>
-																	</div>
+																	<AvatarWithTooltip
+																		user={user}
+																		name={userName}
+																	/>
 																);
 															}}
 														</For>
 														{remainingCount > 0 && (
-															<div class="avatar avatar-remaining">
+															<div
+																class="avatar avatar-remaining"
+																title={`${remainingCount} more author(s)`}
+															>
 																+{remainingCount}
 															</div>
 														)}
