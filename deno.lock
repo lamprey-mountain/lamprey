@@ -3,14 +3,11 @@
   "specifiers": {
     "jsr:@std/assert@1": "1.0.11",
     "jsr:@std/internal@^1.0.5": "1.0.5",
-    "npm:@types/turndown@^5.0.5": "5.0.5",
-    "npm:diff@^8.0.2": "8.0.2",
     "npm:event-emitter@~0.3.5": "0.3.5",
     "npm:fuzzysort@^3.1.0": "3.1.0",
     "npm:highlight.js@^11.11.1": "11.11.1",
     "npm:marked@^15.0.12": "15.0.12",
     "npm:openapi-fetch@~0.13.4": "0.13.8",
-    "npm:turndown@^7.2.1": "7.2.1",
     "npm:twemoji@^14.0.2": "14.0.2",
     "npm:typed-emitter@^2.1.0": "2.1.0",
     "npm:uuidv7@^1.0.2": "1.0.2"
@@ -27,21 +24,12 @@
     }
   },
   "npm": {
-    "@mixmark-io/domino@2.2.0": {
-      "integrity": "sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw=="
-    },
-    "@types/turndown@5.0.5": {
-      "integrity": "sha512-TL2IgGgc7B5j78rIccBtlYAnkuv8nUQqhQc+DSYV5j9Be9XOcm/SKOVRuA47xAVI3680Tk9B1d8flK2GWT2+4w=="
-    },
     "d@1.0.2": {
       "integrity": "sha512-MOqHvMWF9/9MX6nza0KgvFH4HpMU0EF5uUDXqX/BtxtU8NfB0QzRtJ8Oe/6SuS4kbhyzVJwjd97EA4PKrzJ8bw==",
       "dependencies": [
         "es5-ext",
         "type"
       ]
-    },
-    "diff@8.0.2": {
-      "integrity": "sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg=="
     },
     "es5-ext@0.10.64": {
       "integrity": "sha512-p2snDhiLaXe6dahss1LddxqEm+SkuDvV8dnIQG0MWjyHpcMNfXKPE+/Cc0y+PhxJX3A4xGNeFCj5oc0BUh6deg==",
@@ -147,12 +135,6 @@
     "tslib@2.8.1": {
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
-    "turndown@7.2.1": {
-      "integrity": "sha512-7YiPJw6rLClQL3oUKN3KgMaXeJJ2lAyZItclgKDurqnH61so4k4IH/qwmMva0zpuJc/FhRExBBnk7EbeFANlgQ==",
-      "dependencies": [
-        "@mixmark-io/domino"
-      ]
-    },
     "twemoji-parser@14.0.0": {
       "integrity": "sha512-9DUOTGLOWs0pFWnh1p6NF+C3CkQ96PWmEFwhOVmT3WbecRC+68AIqpsnJXygfkFcp4aXbOp8Dwbhh/HQgvoRxA=="
     },
@@ -195,46 +177,48 @@
       "frontend": {
         "packageJson": {
           "dependencies": [
-            "npm:@floating-ui/dom@^1.7.4",
+            "npm:@floating-ui/dom@^1.7.6",
             "npm:@playwright/test@^1.58.2",
-            "npm:@solid-primitives/autofocus@~0.1.3",
-            "npm:@solid-primitives/event-bus@^1.1.2",
+            "npm:@solid-primitives/autofocus@~0.1.4",
+            "npm:@solid-primitives/event-bus@^1.1.3",
             "npm:@solid-primitives/i18n@^2.2.1",
-            "npm:@solid-primitives/intersection-observer@^2.2.2",
+            "npm:@solid-primitives/intersection-observer@^2.2.4",
             "npm:@solid-primitives/map@0.6",
-            "npm:@solid-primitives/resize-observer@^2.1.3",
-            "npm:@solid-primitives/scheduled@^1.5.2",
+            "npm:@solid-primitives/resize-observer@^2.1.5",
+            "npm:@solid-primitives/scheduled@^1.5.3",
             "npm:@solid-primitives/set@0.6",
-            "npm:@solid-primitives/websocket@^1.3.1",
-            "npm:@solidjs/router@~0.15.3",
-            "npm:@tanstack/solid-virtual@^3.13.12",
-            "npm:@types/node@^22.18.1",
-            "npm:@types/sanitize-html@^2.16.0",
-            "npm:@types/turndown@^5.0.5",
-            "npm:diff@^8.0.2",
+            "npm:@solid-primitives/websocket@^1.3.2",
+            "npm:@solidjs/router@~0.15.4",
+            "npm:@tanstack/solid-virtual@^3.13.21",
+            "npm:@types/node@^22.19.15",
+            "npm:@types/sanitize-html@^2.16.1",
+            "npm:@types/turndown@^5.0.6",
+            "npm:diff@^8.0.3",
             "npm:emojibase-data@^7.0.1",
             "npm:event-emitter@~0.3.5",
             "npm:fuzzysort@^3.1.0",
             "npm:highlight.js@^11.11.1",
+            "npm:idb@^8.0.3",
             "npm:lib0@~0.2.117",
             "npm:marked@^15.0.12",
-            "npm:prosemirror-history@^1.4.1",
+            "npm:msgpackr@^1.11.9",
+            "npm:prosemirror-history@^1.5.0",
             "npm:prosemirror-keymap@^1.2.3",
-            "npm:prosemirror-model@^1.25.3",
-            "npm:prosemirror-state@^1.4.3",
-            "npm:prosemirror-view@^1.41.0",
-            "npm:sanitize-html@^2.17.0",
-            "npm:sass@^1.92.1",
+            "npm:prosemirror-model@^1.25.4",
+            "npm:prosemirror-state@^1.4.4",
+            "npm:prosemirror-view@^1.41.6",
+            "npm:sanitize-html@^2.17.1",
+            "npm:sass@^1.98.0",
             "npm:solid-floating-ui@~0.3.1",
-            "npm:solid-js@^1.9.9",
-            "npm:turndown@^7.2.1",
+            "npm:solid-js@^1.9.11",
+            "npm:turndown@^7.2.2",
             "npm:twemoji@^14.0.2",
             "npm:typed-emitter@^2.1.0",
-            "npm:typescript@^5.9.2",
-            "npm:uuidv7@^1.0.2",
+            "npm:typescript@^5.9.3",
+            "npm:uuidv7@^1.1.0",
             "npm:vite-plugin-node-polyfills@0.23",
-            "npm:vite-plugin-solid@^2.11.8",
-            "npm:vite@^6.3.5",
+            "npm:vite-plugin-solid@^2.11.10",
+            "npm:vite@^6.4.1",
             "npm:y-prosemirror@^1.3.7",
             "npm:yjs@^13.6.29"
           ]
@@ -248,6 +232,7 @@
       "ts-sdk": {
         "packageJson": {
           "dependencies": [
+            "npm:msgpackr@^1.11.9",
             "npm:openapi-fetch@~0.13.4",
             "npm:openapi-typescript@^7.6.1",
             "npm:typescript@^5.7.3",
