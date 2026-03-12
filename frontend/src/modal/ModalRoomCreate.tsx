@@ -11,7 +11,7 @@ interface ModalRoomCreateProps {
 
 export const ModalRoomCreate = (props: ModalRoomCreateProps) => {
 	const [roomName, setRoomName] = createSignal("");
-	const [isPublic, setIsPublic] = createSignal(true);
+	const [isPublic, setIsPublic] = createSignal(false);
 	const [, modalCtl] = useModals();
 
 	const handleSubmit = (e: SubmitEvent) => {
