@@ -478,6 +478,12 @@ impl MemberList {
 
             if included {
                 let new_key = self.calculate_key(&user_id, member, users_map, data);
+
+                // If the member key hasn't changed, no need to emit delete+insert no-op
+                if Some(&new_key) == old_key.as_ref() {
+                    return;
+                }
+
                 let mut ops = Vec::new();
 
                 if let Some(ok) = old_key {
