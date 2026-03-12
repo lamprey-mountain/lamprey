@@ -8,6 +8,7 @@
 //! - Incremental editing with tree reuse
 
 pub mod ast;
+pub mod events;
 pub mod parser;
 pub mod render;
 
@@ -25,5 +26,6 @@ pub use ast::{
     AngleBracketLink, Ast, AstNode, Autolink, BlockQuote, CodeBlock, Document, Emoji, Emphasis,
     Escape, Header, InlineCode, Link, List, ListItem, Mention, Paragraph, Strikethrough, Strong,
 };
+pub use events::{Event, EventFilter, EventIterator, Tag};
 pub use parser::{Edit, ParseOptions, Parsed, Parser, SyntaxKind, TokenKind};
 pub use render::{IdentityReader, MarkdownReader, PlainTextReader, StripEmojiReader};

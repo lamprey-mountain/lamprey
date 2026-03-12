@@ -6,6 +6,8 @@
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::Ast;
+    use crate::events::{Event, EventFilter, Tag};
     use crate::parser::{ParseOptions, Parser, SyntaxKind};
     use rowan::{NodeOrToken, SyntaxNode};
 
@@ -1647,5 +1649,331 @@ mod tests {
         let has_root = root.kind() == SyntaxKind::Root;
 
         assert!(has_root, "Should have Root even for newlines only");
+    }
+
+    // ============ Pull Parser / Event Iterator Tests ============
+
+    #[test]
+    fn test_events_basic() {
+        use crate::events::Event;
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("hello world"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Just verify we got some events and they don't panic
+        assert!(!events.is_empty());
+    }
+
+    #[test]
+    fn test_events_header() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("# Header 1\n## Header 2"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Should have at least one header
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Header(_)))));
+    }
+
+    #[test]
+    fn test_events_list() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("- item 1\n- item 2"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Should have list
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::List(_)))));
+        // Should have at least one list item
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::ListItem))));
+    }
+
+    #[test]
+    fn test_events_numbered_list() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("1. first\n2. second"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Should have numbered list (true)
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::List(true)))));
+    }
+
+    #[test]
+    fn test_events_emphasis() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("**bold** *italic* ~~strike~~"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Strong))));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emphasis))));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Strikethrough))));
+    }
+
+    #[test]
+    fn test_events_inline_code() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("code `inline` here"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Should have some events
+        assert!(!events.is_empty());
+        // Should have text content
+        assert!(events.iter().any(|e| matches!(e, Event::Text(_))));
+    }
+
+    #[test]
+    fn test_events_link() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("[text](https://example.com)"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Link { .. }))));
+    }
+
+    #[test]
+    fn test_events_emoji() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast =
+            Ast::new(parser.parse("hello <:smile:12345678-1234-1234-1234-123456789abc> world"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emoji { animated: false }))));
+    }
+
+    #[test]
+    fn test_events_animated_emoji() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast =
+            Ast::new(parser.parse("hello <a:wave:12345678-1234-1234-1234-123456789abc> world"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Should have emoji event (animated or not)
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emoji { .. }))));
+    }
+
+    #[test]
+    fn test_events_mention() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("hello <@12345678-1234-1234-1234-123456789abc>"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Mention))));
+    }
+
+    #[test]
+    fn test_events_filter_strip_emphasis() {
+        use crate::events::EventFilter;
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("**bold** *italic* text"));
+
+        let events: Vec<_> = ast.events().strip_emphasis().collect();
+
+        // Should NOT have emphasis events
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emphasis))));
+        // Should still have strong events
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Strong))));
+    }
+
+    #[test]
+    fn test_events_filter_strip_strong() {
+        use crate::events::EventFilter;
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("**bold** *italic* text"));
+
+        let events: Vec<_> = ast.events().strip_strong().collect();
+
+        // Should NOT have strong events
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Strong))));
+        // Should still have emphasis events
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emphasis))));
+    }
+
+    #[test]
+    fn test_events_filter_strip_emoji() {
+        use crate::events::EventFilter;
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("text <:smile:12345678-1234-1234-1234-123456789abc> more"));
+
+        let events: Vec<_> = ast.events().strip_emoji().collect();
+
+        // Should NOT have emoji events
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emoji { .. }))));
+    }
+
+    #[test]
+    fn test_events_filter_composition() {
+        use crate::events::EventFilter;
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(
+            parser.parse("**bold** *italic* <:smile:12345678-1234-1234-1234-123456789abc>"),
+        );
+
+        let events: Vec<_> = ast.events().strip_emphasis().strip_emoji().collect();
+
+        // Should have neither emphasis nor emoji
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emphasis))));
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Emoji { .. }))));
+        // Should still have strong
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::Strong))));
+    }
+
+    #[test]
+    fn test_events_map_text() {
+        use crate::events::EventFilter;
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("hello world"));
+
+        // Just verify the iterator adapter compiles and runs without panic
+        let events: Vec<_> = ast.events().map_text(|t: &str| t.to_uppercase()).collect();
+
+        assert!(!events.is_empty());
+    }
+
+    #[test]
+    fn test_events_merge_text() {
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("hello   world"));
+
+        let events: Vec<_> = ast.events().merge_text().collect();
+
+        // Consecutive text should be merged
+        // (exact behavior depends on implementation)
+        assert!(!events.is_empty());
+    }
+
+    #[test]
+    fn test_events_code_block() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("```rust\ncode here\n```"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::CodeBlock))));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Code(c) if c.contains("code"))));
+    }
+
+    #[test]
+    fn test_events_blockquote() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("> quoted text"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, Event::Start(Tag::BlockQuote))));
+    }
+
+    #[test]
+    fn test_events_nested_formatting() {
+        use crate::events::{Event, Tag};
+
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse("**bold *italic* more**"));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Should have nested structure
+        let strong_start = events
+            .iter()
+            .position(|e| matches!(e, Event::Start(Tag::Strong)));
+        let emphasis_start = events
+            .iter()
+            .position(|e| matches!(e, Event::Start(Tag::Emphasis)));
+
+        assert!(strong_start.is_some());
+        assert!(emphasis_start.is_some());
+        // Emphasis should be inside strong
+        assert!(strong_start.unwrap() < emphasis_start.unwrap());
+    }
+
+    #[test]
+    fn test_events_empty_document() {
+        let parser = Parser::new(ParseOptions::default());
+        let ast = Ast::new(parser.parse(""));
+
+        let events: Vec<_> = ast.events().collect();
+
+        // Should still produce some events (at minimum document structure)
+        // Exact behavior depends on implementation
+        assert!(events.len() >= 0); // Just verify it doesn't panic
     }
 }

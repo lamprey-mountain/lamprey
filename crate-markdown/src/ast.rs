@@ -81,6 +81,11 @@ impl Document {
             )
         })
     }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
+    }
 }
 
 /// A paragraph block.
@@ -116,6 +121,11 @@ impl Paragraph {
     /// Iterate over inline children.
     pub fn inlines(&self) -> impl Iterator<Item = SyntaxNode> + '_ {
         self.0.children()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -158,6 +168,11 @@ impl Header {
         let text = self.0.text().to_string();
         text.trim_start_matches('#').trim().to_string()
     }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
+    }
 }
 
 /// A list block containing list items.
@@ -193,6 +208,11 @@ impl List {
     /// Check if this is a numbered list.
     pub fn is_numbered(&self) -> bool {
         self.items().next().map_or(false, |item| item.is_numbered())
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -233,6 +253,11 @@ impl ListItem {
             .find(|n| n.kind() == SyntaxKind::ListMarker)
             .map_or(false, |marker| marker.text().to_string().contains('.'))
     }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
+    }
 }
 
 /// A blockquote.
@@ -264,6 +289,11 @@ impl BlockQuote {
     pub fn text(&self) -> String {
         let text = self.0.text().to_string();
         text.trim_start_matches('>').trim().to_string()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -299,6 +329,11 @@ impl CodeBlock {
             .find(|n| n.kind() == SyntaxKind::CodeBlockContent)
             .map(|n| n.text().to_string())
             .unwrap_or_default()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -336,6 +371,11 @@ impl Strong {
             .trim_end_matches("**")
             .to_string()
     }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
+    }
 }
 
 /// Emphasized (italic) text: *text*
@@ -369,6 +409,11 @@ impl Emphasis {
         text.trim_start_matches('*')
             .trim_end_matches('*')
             .to_string()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -404,6 +449,11 @@ impl Strikethrough {
             .trim_end_matches("~~")
             .to_string()
     }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
+    }
 }
 
 /// Inline code: `code`
@@ -438,6 +488,11 @@ impl InlineCode {
             .find(|n| n.kind() == SyntaxKind::InlineCodeContent)
             .map(|n| n.text().to_string())
             .unwrap_or_default()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -489,6 +544,11 @@ impl Link {
             })
             .unwrap_or_default()
     }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
+    }
 }
 
 /// An autolink: <url> or bare URL
@@ -519,6 +579,11 @@ impl Autolink {
     /// Get the URL.
     pub fn url(&self) -> String {
         self.0.text().to_string()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -551,6 +616,11 @@ impl AngleBracketLink {
     pub fn url(&self) -> String {
         let text = self.0.text().to_string();
         text.trim_matches(|c| c == '<' || c == '>').to_string()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -589,6 +659,11 @@ impl Mention {
             .find(|t| t.kind() != SyntaxKind::MentionMarker)
             .map(|t| t.text().to_string())
             .unwrap_or_default()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
@@ -638,6 +713,11 @@ impl Emoji {
             })
             .map(|t| t.text().to_string())
             .unwrap_or_default()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
     }
 }
 
