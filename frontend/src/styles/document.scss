@@ -256,6 +256,8 @@
 	overflow-y: auto;
 	min-width: 200px;
 	max-width: 300px;
+	position: sticky;
+	top: 0;
 }
 
 .diff-view-message {
