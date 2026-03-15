@@ -8,7 +8,7 @@ use figment::providers::{Env, Format, Toml};
 use lamprey::Lamprey;
 use opentelemetry_otlp::WithExportConfig;
 use std::{str::FromStr, sync::Arc};
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{mpsc, RwLock, Semaphore};
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
@@ -108,6 +108,7 @@ async fn main() -> Result<()> {
     }
 
     let presence_globals = globals.clone();
+    let presence_semaphore = Arc::new(Semaphore::new(5)); // Max 5 concurrent presence syncs
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(120)).await;
@@ -115,7 +116,9 @@ async fn main() -> Result<()> {
             for item in presence_globals.presences.iter() {
                 let presence = item.value().clone();
                 let globals = presence_globals.clone();
+                let permit = presence_semaphore.clone().acquire_owned().await.unwrap();
                 tokio::spawn(async move {
+                    let _permit = permit; // hold permit for duration of task
                     if let Err(e) = discord::process_presence_update(globals, presence).await {
                         error!("failed to re-sync presence: {e}");
                     }
@@ -164,9 +167,13 @@ async fn main() -> Result<()> {
         info!("starting lamprey backfill");
         let portals = globals.get_portals().await?;
 
+        let backfill_semaphore = Arc::new(Semaphore::new(5)); // Max 5 concurrent backfills
+
         for portal_config in portals {
             let globals = globals.clone();
+            let permit = backfill_semaphore.clone().acquire_owned().await.unwrap();
             tokio::spawn(async move {
+                let _permit = permit; // hold permit for duration of task
                 let res: Result<()> = async {
                     let ly = globals.lamprey_handle().await?;
                     let from = globals

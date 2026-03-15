@@ -23,10 +23,7 @@ impl Debug for Portal {
 }
 
 impl Portal {
-    pub fn summon(
-        globals: Arc<Globals>,
-        config: PortalConfig,
-    ) -> mpsc::Sender<PortalMessage> {
+    pub fn summon(globals: Arc<Globals>, config: PortalConfig) -> mpsc::Sender<PortalMessage> {
         let (send, recv) = mpsc::channel(1024);
         let portal = Self {
             globals,

@@ -81,8 +81,9 @@ impl EventHandler for Handler {
                                     debug!("skipping already bridged message: {}", message.id);
                                     continue;
                                 }
-                                let _ =
-                                    portal.send(PortalMessage::DiscordMessageCreate { message }).await;
+                                let _ = portal
+                                    .send(PortalMessage::DiscordMessageCreate { message })
+                                    .await;
                             }
                             p = MessagePagination::After(last_id);
                         }
@@ -107,17 +108,16 @@ impl EventHandler for Handler {
 
                         info!("no portal exists so we'll create one");
 
-                        if let Err(e) =
-                            globals
-                                .bridge_chan
-                                .send(BridgeMessage::DiscordChannelCreate {
-                                    guild_id: guild.id,
-                                    channel_id: ch.id,
-                                    channel_name: ch.name.clone(),
-                                    channel_type: ch.kind,
-                                    parent_id: ch.parent_id,
-                                })
-                                .await
+                        if let Err(e) = globals
+                            .bridge_chan
+                            .send(BridgeMessage::DiscordChannelCreate {
+                                guild_id: guild.id,
+                                channel_id: ch.id,
+                                channel_name: ch.name.clone(),
+                                channel_type: ch.kind,
+                                parent_id: ch.parent_id,
+                            })
+                            .await
                         {
                             error!("failed to send discord channel create message: {e}");
                         }

@@ -65,7 +65,9 @@ pub(super) async fn backfill_channel(
                 debug!("skipping already bridged message: {}", message.id);
                 continue;
             }
-            let _ = portal.send(PortalMessage::DiscordMessageCreate { message }).await;
+            let _ = portal
+                .send(PortalMessage::DiscordMessageCreate { message })
+                .await;
         }
         p = MessagePagination::After(last_id);
     }
