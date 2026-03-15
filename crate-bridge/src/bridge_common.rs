@@ -28,14 +28,14 @@ pub struct UserCacheEntry {
 pub struct Globals {
     pub pool: sqlx::SqlitePool,
     pub config: Config,
-    pub portals: Arc<DashMap<ChannelId, mpsc::UnboundedSender<PortalMessage>>>,
+    pub portals: Arc<DashMap<ChannelId, mpsc::Sender<PortalMessage>>>,
     pub last_lamprey_ids: Arc<DashMap<ChannelId, MessageId>>,
     pub last_discord_ids: Arc<DashMap<DcChannelId, DcMessageId>>,
     pub presences: Arc<DashMap<DcUserId, Presence>>,
     pub discord_user_cache: Arc<DashMap<DcUserId, UserCacheEntry>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<LampreyMessage>,
-    pub bridge_chan: mpsc::UnboundedSender<BridgeMessage>,
+    pub bridge_chan: mpsc::Sender<BridgeMessage>,
     pub lamprey_user_id: Arc<RwLock<Option<UserId>>>,
     pub recently_created_discord_channels: Arc<DashMap<DcChannelId, ()>>,
 }
@@ -79,7 +79,7 @@ impl GlobalsTrait for Arc<Globals> {
             .portals
             .entry(config.lamprey_thread_id)
             .or_insert_with(|| Portal::summon(self.clone(), config.to_owned()));
-        let _ = portal.send(msg);
+        let _ = portal.send(msg).await;
     }
 
     async fn portal_send_dc(&self, channel_id: DcChannelId, msg: PortalMessage) {
@@ -90,7 +90,7 @@ impl GlobalsTrait for Arc<Globals> {
             .portals
             .entry(config.lamprey_thread_id)
             .or_insert_with(|| Portal::summon(self.clone(), config.to_owned()));
-        let _ = portal.send(msg);
+        let _ = portal.send(msg).await;
     }
 }
 

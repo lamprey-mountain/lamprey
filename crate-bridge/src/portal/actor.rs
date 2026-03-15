@@ -12,7 +12,7 @@ use crate::portal::messages::PortalMessage;
 
 pub struct Portal {
     pub globals: Arc<Globals>,
-    recv: mpsc::UnboundedReceiver<PortalMessage>,
+    recv: mpsc::Receiver<PortalMessage>,
     pub config: PortalConfig,
 }
 
@@ -26,8 +26,8 @@ impl Portal {
     pub fn summon(
         globals: Arc<Globals>,
         config: PortalConfig,
-    ) -> mpsc::UnboundedSender<PortalMessage> {
-        let (send, recv) = mpsc::unbounded_channel();
+    ) -> mpsc::Sender<PortalMessage> {
+        let (send, recv) = mpsc::channel(1024);
         let portal = Self {
             globals,
             recv,

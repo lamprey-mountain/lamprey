@@ -14,11 +14,11 @@ use crate::{
 
 pub struct Bridge {
     globals: Arc<Globals>,
-    recv: mpsc::UnboundedReceiver<BridgeMessage>,
+    recv: mpsc::Receiver<BridgeMessage>,
 }
 
 impl Bridge {
-    pub fn spawn(globals: Arc<Globals>, recv: mpsc::UnboundedReceiver<BridgeMessage>) {
+    pub fn spawn(globals: Arc<Globals>, recv: mpsc::Receiver<BridgeMessage>) {
         let bridge = Self { globals, recv };
         tokio::spawn(bridge.activate());
     }

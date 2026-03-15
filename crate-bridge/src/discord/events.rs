@@ -82,7 +82,7 @@ impl EventHandler for Handler {
                                     continue;
                                 }
                                 let _ =
-                                    portal.send(PortalMessage::DiscordMessageCreate { message });
+                                    portal.send(PortalMessage::DiscordMessageCreate { message }).await;
                             }
                             p = MessagePagination::After(last_id);
                         }
@@ -117,6 +117,7 @@ impl EventHandler for Handler {
                                     channel_type: ch.kind,
                                     parent_id: ch.parent_id,
                                 })
+                                .await
                         {
                             error!("failed to send discord channel create message: {e}");
                         }
@@ -343,6 +344,7 @@ impl EventHandler for Handler {
                 channel_type: channel.kind,
                 parent_id: channel.parent_id,
             })
+            .await
         {
             error!("failed to send discord channel create message: {e}");
         }

@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
 
     let dc_chan = mpsc::channel(100);
     let ch_chan = mpsc::channel(100);
-    let bridge_chan = mpsc::unbounded_channel();
+    let bridge_chan = mpsc::channel(1024);
 
     let globals = Arc::new(Globals {
         pool,
@@ -149,6 +149,7 @@ async fn main() -> Result<()> {
                         thread,
                         discord_guild_id: realm.discord_guild_id,
                     })
+                    .await
                 {
                     error!("failed to send lamprey thread create message: {e}");
                 }

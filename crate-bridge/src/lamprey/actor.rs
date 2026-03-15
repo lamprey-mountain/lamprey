@@ -101,6 +101,7 @@ impl EventHandler for Handle {
                         thread: *thread,
                         discord_guild_id: realm_config.discord_guild_id,
                     })
+                    .await
                 {
                     error!("failed to send lamprey thread create message: {e}");
                 }
