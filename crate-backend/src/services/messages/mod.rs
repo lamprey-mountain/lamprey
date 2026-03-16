@@ -1117,7 +1117,7 @@ impl ServiceMessages {
             None
         };
 
-        let can_use_external_emoji = self
+        let (can_use_external_emoji, can_embed) = self
             .enforce_send_permissions(auth, &user, &chan, &json)
             .await?;
         let (attachment_ids, all_media_ids) = self.validate_and_claim_media(&json).await?;
@@ -1160,8 +1160,7 @@ impl ServiceMessages {
             .await?;
 
         if let Some(c) = content {
-            self.spawn_url_unfurling(message.clone(), user_id, c, is_webhook)
-                .await;
+            self.spawn_url_unfurling(message.clone(), user_id, c, can_embed || is_webhook);
         }
 
         // 5. Broadcast & Notify
@@ -1190,10 +1189,10 @@ impl ServiceMessages {
         user: &User,
         thread: &Channel,
         json: &MessageCreate,
-    ) -> Result<bool> {
+    ) -> Result<(bool, bool)> {
         // Webhooks bypass
         if user.webhook.is_some() {
-            return Ok(true);
+            return Ok((true, true));
         }
 
         let srv = self.state.services();
@@ -1222,7 +1221,7 @@ impl ServiceMessages {
                     )
                     .await?;
             }
-            return Ok(true);
+            return Ok((true, true));
         };
 
         let perms = srv.perms.for_channel(user.id, thread.id).await?;
@@ -1276,7 +1275,10 @@ impl ServiceMessages {
                 .await?;
         }
 
-        Ok(perms.has(Permission::EmojiUseExternal))
+        Ok((
+            perms.has(Permission::EmojiUseExternal),
+            perms.has(Permission::MessageEmbeds),
+        ))
     }
 
     async fn validate_and_claim_media(
@@ -1440,27 +1442,14 @@ impl ServiceMessages {
         Ok(())
     }
 
-    async fn spawn_url_unfurling(
+    fn spawn_url_unfurling(
         &self,
         message: Message,
         user_id: UserId,
         content: String,
-        is_webhook: bool,
+        can_embed: bool,
     ) {
-        let mut should_embed = is_webhook;
-        if !should_embed {
-            if let Ok(perms) = self
-                .state
-                .services()
-                .perms
-                .for_channel(user_id, message.channel_id)
-                .await
-            {
-                should_embed = perms.has(Permission::MessageEmbeds);
-            }
-        }
-
-        if should_embed {
+        if can_embed {
             tokio::spawn(self.handle_url_embed(message, user_id, content));
         }
     }
