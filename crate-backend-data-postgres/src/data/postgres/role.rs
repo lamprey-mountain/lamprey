@@ -1,14 +1,12 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{PaginationDirection, RoleReorder, UserId};
+use common::v1::types::{RoleReorder, UserId};
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 
-use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::types::{
-    DbPermission, DbRoleCreate, PaginationQuery, PaginationResponse, Role, RoleId, RolePatch,
-    RoleVerId, RoomId,
+    DbPermission, DbRoleCreate, Role, RoleId, RolePatch, RoleVerId, RoomId,
 };
 use crate::Error;
 
@@ -111,12 +109,7 @@ impl DataRole for Postgres {
         Ok(role.into())
     }
 
-    async fn role_list(
-        &self,
-        room_id: RoomId,
-        paginate: PaginationQuery<RoleId>,
-    ) -> Result<PaginationResponse<Role>> {
-        let p: Pagination<_> = paginate.try_into()?;
+    async fn role_list(&self, room_id: RoomId) -> Result<Vec<Role>> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
 
@@ -147,42 +140,19 @@ impl DataRole for Postgres {
                 FROM role_member
                 GROUP BY role_id
             ) rm ON rm.role_id = r.id
-        	WHERE r.room_id = $1 AND r.id > $2 AND r.id < $3
-        	ORDER BY (CASE WHEN $4 = 'f' THEN r.id END), r.id DESC LIMIT $5
+        	WHERE r.room_id = $1
+        	ORDER BY r.id DESC
             "#,
-            room_id.into_inner(),
-            p.after.into_inner(),
-            p.before.into_inner(),
-            p.dir.to_string(),
-            (p.limit + 1) as i32
+            room_id.into_inner()
         )
         .fetch_all(&mut *tx)
         .await?;
-        let total = query_scalar!(
-            "SELECT count(*) FROM role WHERE room_id = $1",
-            room_id.into_inner(),
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-        let cursor = items.last().map(|i: &Role| i.id.to_string());
+
+        let items: Vec<_> = items.into_iter().map(Into::into).collect();
 
         // tx intentionally dropped to rollback here
 
-        Ok(PaginationResponse {
-            items,
-            total: total.unwrap_or(0) as u64,
-            has_more,
-            cursor,
-        })
+        Ok(items)
     }
 
     async fn role_delete(&self, _room_id: RoomId, role_id: RoleId) -> Result<()> {

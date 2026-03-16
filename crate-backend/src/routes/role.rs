@@ -307,8 +307,22 @@ async fn role_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    let res = d.role_list(room_id, paginate).await?;
-    Ok(Json(res))
+    let all_roles = d.role_list(room_id).await?;
+    let p: crate::data::postgres::Pagination<_> = paginate.try_into()?;
+    let mut items: Vec<Role> = all_roles
+        .into_iter()
+        .skip(p.after as usize)
+        .take(p.limit as usize)
+        .collect();
+    if p.dir == common::v1::types::PaginationDirection::B {
+        items.reverse();
+    }
+    Ok(Json(PaginationResponse {
+        items,
+        total: all_roles.len() as u64,
+        has_more: all_roles.len() > p.limit as usize,
+        cursor: items.last().map(|i: &Role| i.id.to_string()),
+    }))
 }
 
 /// Role list members
