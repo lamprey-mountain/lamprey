@@ -17,54 +17,16 @@ use crate::discord::events::Handler;
 pub struct Discord {
     pub globals: Arc<Globals>,
     pub hooks: Arc<DashMap<String, Webhook>>,
-}
-
-/// Discord actor messages - fully using Kameo ask pattern
-#[derive(Debug)]
-pub enum DiscordMessage {
-    WebhookExecute {
-        url: String,
-        payload: serenity::all::ExecuteWebhook,
-    },
-    WebhookMessageEdit {
-        url: String,
-        message_id: DcMessageId,
-        payload: serenity::all::EditWebhookMessage,
-    },
-    WebhookMessageDelete {
-        url: String,
-        thread_id: Option<DcChannelId>,
-        message_id: DcMessageId,
-    },
-    MessageGet {
-        message_id: DcMessageId,
-        channel_id: DcChannelId,
-    },
-    ChannelCreate {
-        guild_id: DcGuildId,
-        name: String,
-        ty: common::v1::types::ChannelType,
-        parent_id: Option<DcChannelId>,
-    },
-    WebhookCreate {
-        channel_id: DcChannelId,
-        name: String,
-    },
-}
-
-/// Response types for DiscordMessage requests
-pub enum DiscordResponse {
-    Unit,
-    Message(serenity::all::Message),
-    ChannelId(DcChannelId),
-    Webhook(Webhook),
+    pub http: Arc<Http>,
 }
 
 impl Discord {
-    pub fn new(globals: Arc<Globals>) -> Discord {
-        Discord {
+    pub fn new(globals: Arc<Globals>) -> Self {
+        let http = Arc::new(Http::new(&globals.config.discord_token));
+        Self {
             globals,
             hooks: Arc::new(DashMap::new()),
+            http,
         }
     }
 
@@ -83,89 +45,93 @@ impl Discord {
         Ok(())
     }
 
-    /// Handle a DiscordMessage directly (used by serenity event handlers)
-    pub async fn handle_message(&self, msg: DiscordMessage) -> Result<DiscordResponse> {
-        match msg {
-            DiscordMessage::WebhookExecute { url, payload } => {
-                let http = Http::new(&self.globals.config.discord_token);
-                let hook = self.get_hook(url, &http).await?;
-
-                let msg = hook
-                    .execute(&http, true, payload)
-                    .await?
-                    .expect("wait should return message");
-
-                Ok(DiscordResponse::Message(msg))
-            }
-
-            DiscordMessage::WebhookMessageEdit {
-                url,
-                message_id,
-                payload,
-            } => {
-                let http = Http::new(&self.globals.config.discord_token);
-                let hook = self.get_hook(url, &http).await?;
-
-                let msg = hook.edit_message(&http, message_id, payload).await?;
-                Ok(DiscordResponse::Message(msg))
-            }
-            DiscordMessage::WebhookMessageDelete {
-                url,
-                thread_id,
-                message_id,
-            } => {
-                let http = Http::new(&self.globals.config.discord_token);
-                let hook = self.get_hook(url, &http).await?;
-
-                hook.delete_message(&http, thread_id, message_id).await?;
-                Ok(DiscordResponse::Unit)
-            }
-            DiscordMessage::MessageGet {
-                message_id,
-                channel_id,
-            } => {
-                let http = Http::new(&self.globals.config.discord_token);
-                let message = http.get_message(channel_id, message_id).await?;
-                Ok(DiscordResponse::Message(message))
-            }
-            DiscordMessage::ChannelCreate {
-                guild_id,
-                name,
-                ty,
-                parent_id,
-            } => {
-                let http = Http::new(&self.globals.config.discord_token);
-                let mut channel = CreateChannel::new(name).kind(match ty {
-                    common::v1::types::ChannelType::Category => ChannelType::Category,
-                    _ => ChannelType::Text,
-                });
-                if let Some(parent_id) = parent_id {
-                    channel = channel.category(parent_id);
-                }
-                let channel = guild_id.create_channel(&http, channel).await?;
-                self.globals
-                    .recently_created_discord_channels
-                    .insert(channel.id, ());
-                Ok(DiscordResponse::ChannelId(channel.id))
-            }
-            DiscordMessage::WebhookCreate { channel_id, name } => {
-                let http = Http::new(&self.globals.config.discord_token);
-                let hook = channel_id
-                    .create_webhook(&http, CreateWebhook::new(name))
-                    .await?;
-                Ok(DiscordResponse::Webhook(hook))
-            }
-        }
+    /// Execute a webhook and return the created message
+    pub async fn execute_webhook(
+        &self,
+        url: &str,
+        payload: serenity::all::ExecuteWebhook,
+    ) -> Result<serenity::all::Message> {
+        let hook = self.get_hook(url).await?;
+        let msg = hook
+            .execute(&self.http, true, payload)
+            .await?
+            .expect("wait should return message");
+        Ok(msg)
     }
 
-    async fn get_hook(&self, url: String, http: &Http) -> Result<Webhook> {
+    /// Edit a webhook message
+    pub async fn edit_webhook_message(
+        &self,
+        url: &str,
+        message_id: DcMessageId,
+        payload: serenity::all::EditWebhookMessage,
+    ) -> Result<serenity::all::Message> {
+        let hook = self.get_hook(url).await?;
+        let msg = hook.edit_message(&self.http, message_id, payload).await?;
+        Ok(msg)
+    }
+
+    /// Delete a webhook message
+    pub async fn delete_webhook_message(
+        &self,
+        url: &str,
+        thread_id: Option<DcChannelId>,
+        message_id: DcMessageId,
+    ) -> Result<()> {
+        let hook = self.get_hook(url).await?;
+        hook.delete_message(&self.http, thread_id, message_id)
+            .await?;
+        Ok(())
+    }
+
+    /// Get a Discord message by channel and message ID
+    pub async fn get_message(
+        &self,
+        channel_id: DcChannelId,
+        message_id: DcMessageId,
+    ) -> Result<serenity::all::Message> {
+        let msg = self.http.get_message(channel_id, message_id).await?;
+        Ok(msg)
+    }
+
+    /// Create a Discord channel
+    pub async fn create_channel(
+        &self,
+        guild_id: DcGuildId,
+        name: String,
+        ty: common::v1::types::ChannelType,
+        parent_id: Option<DcChannelId>,
+    ) -> Result<DcChannelId> {
+        let mut channel = CreateChannel::new(name).kind(match ty {
+            common::v1::types::ChannelType::Category => ChannelType::Category,
+            _ => ChannelType::Text,
+        });
+        if let Some(parent_id) = parent_id {
+            channel = channel.category(parent_id);
+        }
+        let channel = guild_id.create_channel(&self.http, channel).await?;
+        self.globals
+            .recently_created_discord_channels
+            .insert(channel.id, ());
+        Ok(channel.id)
+    }
+
+    /// Create a webhook in a channel
+    pub async fn create_webhook(&self, channel_id: DcChannelId, name: String) -> Result<Webhook> {
+        let hook = channel_id
+            .create_webhook(&self.http, CreateWebhook::new(name))
+            .await?;
+        Ok(hook)
+    }
+
+    async fn get_hook(&self, url: &str) -> Result<Webhook> {
         // First try to get existing hook
-        if let Some(hook) = self.hooks.get(&url) {
+        if let Some(hook) = self.hooks.get(url) {
             return Ok(hook.clone());
         }
         // Create new hook
-        let hook = Webhook::from_url(http, &url).await?;
-        self.hooks.insert(url.clone(), hook.clone());
+        let hook = Webhook::from_url(&self.http, url).await?;
+        self.hooks.insert(url.to_owned(), hook.clone());
         Ok(hook)
     }
 }

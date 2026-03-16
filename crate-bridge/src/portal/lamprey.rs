@@ -69,12 +69,8 @@ impl Portal {
         if let Some(reply_ids) = reply_ids {
             let (discord_id, _chat_id) = reply_ids;
             // Get the reply message using Discord actor
-            let discord_msg = crate::discord::discord_get_message(
-                self.globals.clone(),
-                self.channel_id(),
-                discord_id,
-            )
-            .await?;
+            let discord = self.globals.get_discord()?;
+            let discord_msg = discord.get_message(self.channel_id(), discord_id).await?;
             let reply_content = format_discord_reply_content(&discord_msg);
             let description = format!(
                 "**[replying to](https://canary.discord.com/channels/{}/{}/{})**\n{}",
@@ -134,13 +130,10 @@ impl Portal {
             if let Some(dc_tid) = self.config.discord_thread_id {
                 payload = payload.in_thread(dc_tid);
             }
-            let discord_msg = crate::discord::discord_edit_message(
-                self.globals.clone(),
-                self.config.discord_webhook.clone(),
-                edit.discord_id,
-                payload,
-            )
-            .await?;
+            let discord = self.globals.get_discord()?;
+            let discord_msg = discord
+                .edit_webhook_message(&self.config.discord_webhook, edit.discord_id, payload)
+                .await?;
             self.globals
                 .insert_message(MessageMetadata {
                     chat_id: message.id,
@@ -222,12 +215,10 @@ impl Portal {
                 payload = payload.avatar_url(url);
             };
             // Execute using Discord actor
-            let discord_msg = crate::discord::discord_execute_webhook(
-                self.globals.clone(),
-                self.config.discord_webhook.clone(),
-                payload,
-            )
-            .await?;
+            let discord = self.globals.get_discord()?;
+            let discord_msg = discord
+                .execute_webhook(&self.config.discord_webhook, payload)
+                .await?;
             self.globals
                 .insert_message(MessageMetadata {
                     chat_id: message.id,
@@ -263,13 +254,14 @@ impl Portal {
 
         self.globals.delete_message(message_id).await?;
         // Delete using Discord actor
-        crate::discord::discord_delete_message(
-            self.globals.clone(),
-            self.config.discord_webhook.clone(),
-            self.config.discord_thread_id,
-            existing.discord_id,
-        )
-        .await?;
+        let discord = self.globals.get_discord()?;
+        discord
+            .delete_webhook_message(
+                &self.config.discord_webhook,
+                self.config.discord_thread_id,
+                existing.discord_id,
+            )
+            .await?;
         Ok(())
     }
 }

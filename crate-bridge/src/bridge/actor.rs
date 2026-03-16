@@ -81,22 +81,15 @@ impl Bridge {
                     thread.name.clone()
                 };
 
-                let channel_id = discord::discord_create_channel(
-                    self.globals.clone(),
-                    discord_guild_id,
-                    name.clone(),
-                    thread.ty,
-                    discord_parent_id,
-                )
-                .await?;
+                let discord = self.globals.get_discord()?;
+                let channel_id = discord
+                    .create_channel(discord_guild_id, name.clone(), thread.ty, discord_parent_id)
+                    .await?;
 
                 let webhook_url = if thread.ty != common::v1::types::ChannelType::Category {
-                    let webhook = discord::discord_create_webhook(
-                        self.globals.clone(),
-                        channel_id,
-                        "bridge".to_string(),
-                    )
-                    .await?;
+                    let webhook = discord
+                        .create_webhook(channel_id, "bridge".to_string())
+                        .await?;
                     webhook
                         .url()
                         .map_err(|_| anyhow!("created webhook has no url"))?
@@ -189,13 +182,11 @@ impl Bridge {
                     )
                     .await?;
 
+                let discord = self.globals.get_discord()?;
                 let webhook_url = if channel_type != serenity::all::ChannelType::Category {
-                    let webhook = discord::discord_create_webhook(
-                        self.globals.clone(),
-                        channel_id,
-                        "bridge".to_string(),
-                    )
-                    .await?;
+                    let webhook = discord
+                        .create_webhook(channel_id, "bridge".to_string())
+                        .await?;
                     webhook
                         .url()
                         .map_err(|_| anyhow!("created webhook has no url"))?
