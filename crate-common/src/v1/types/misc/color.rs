@@ -86,9 +86,25 @@ pub enum ColorSemantic {
 pub struct ColorSrgb(pub String);
 
 impl Color {
+    // TODO: remove
     pub fn from_hex_string(s: String) -> Color {
-        // TODO: ensure hex
         Color::Srgb(s)
+    }
+
+    // TODO: ensure hex
+    //
+    // support css-style hex, with an optional leading hash:
+    //
+    // - #rgb
+    // - #rgba
+    // - #rrggbb
+    // - #rrggbbaa
+    // - rgb
+    // - rgba
+    // - rrggbb
+    // - rrggbbaa
+    pub fn try_from_hex_string(s: String) -> Result<Color, ()> {
+        Ok(Color::Srgb(s))
     }
 }
 

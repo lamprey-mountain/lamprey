@@ -12,7 +12,7 @@ members = [
   "crate-hakari", "crate-markdown",
   # "crate-macros",
   "crate-media",
-  "crate-sdk",
+  "crate-sdk", "crate-unfurl",
   # "crate-unfurl",
   "crate-voice",
   "scanner-malware",
