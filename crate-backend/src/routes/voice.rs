@@ -134,7 +134,6 @@ async fn voice_state_patch(
     }
 
     // handle mute/deaf/suppress
-    // TODO: audit logging for suppress
     if json.mute.is_some() || json.deaf.is_some() || json.suppress.is_some() {
         if json.mute.is_some() {
             perms.ensure(Permission::VoiceMute)?;
@@ -172,20 +171,23 @@ async fn voice_state_patch(
         old_state = state;
 
         if let Some(room_id) = chan.room_id {
-            if json.mute.is_some() || json.deaf.is_some() {
-                let changes = Changes::new()
-                    .change("mute", &json.mute.unwrap_or(old_state.mute), &mute)
-                    .change("deaf", &json.deaf.unwrap_or(old_state.deaf), &deaf)
-                    .build();
-                if !changes.is_empty() {
-                    let al = auth.audit_log(room_id);
-                    al.commit_success(AuditLogEntryType::MemberUpdate {
-                        room_id,
-                        user_id: target_user_id,
-                        changes,
-                    })
-                    .await?;
-                }
+            let changes = Changes::new()
+                .change("mute", &json.mute.unwrap_or(old_state.mute), &mute)
+                .change("deaf", &json.deaf.unwrap_or(old_state.deaf), &deaf)
+                .change(
+                    "suppress",
+                    &json.suppress.unwrap_or(old_state.suppress),
+                    &suppress,
+                )
+                .build();
+            if !changes.is_empty() {
+                let al = auth.audit_log(room_id);
+                al.commit_success(AuditLogEntryType::MemberUpdate {
+                    room_id,
+                    user_id: target_user_id,
+                    changes,
+                })
+                .await?;
             }
         }
     }
