@@ -301,18 +301,8 @@ async fn main() -> Result<()> {
                 types::RoomMemberPut::default(),
             )
             .await?;
-            let roles = data
-                .role_list(
-                    SERVER_ROOM_ID,
-                    PaginationQuery {
-                        from: None,
-                        to: None,
-                        dir: Some(types::PaginationDirection::F),
-                        limit: Some(2),
-                    },
-                )
-                .await?;
-            data.role_member_put(SERVER_ROOM_ID, *user_id, roles.items[1].id)
+            let roles = data.role_list(SERVER_ROOM_ID).await?;
+            data.role_member_put(SERVER_ROOM_ID, *user_id, roles[1].id)
                 .await?;
         }
     }

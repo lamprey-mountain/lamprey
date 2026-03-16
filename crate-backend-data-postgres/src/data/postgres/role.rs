@@ -5,9 +5,7 @@ use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 
 use crate::error::Result;
-use crate::types::{
-    DbPermission, DbRoleCreate, Role, RoleId, RolePatch, RoleVerId, RoomId,
-};
+use crate::types::{DbPermission, DbRoleCreate, Role, RoleId, RolePatch, RoleVerId, RoomId};
 use crate::Error;
 
 use crate::data::DataRole;

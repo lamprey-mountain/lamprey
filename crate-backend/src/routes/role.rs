@@ -290,39 +290,23 @@ async fn role_get(
     get,
     path = "/room/{room_id}/role",
     params(
-        PaginationQuery<RoleId>,
         ("room_id", description = "Room id"),
     ),
     tags = ["role", "badge.scope.full"],
     responses(
-        (status = OK, body = PaginationResponse<Role>, description = "success"),
+        (status = OK, body = Vec<Role>, description = "success"),
     )
 )]
 async fn role_list(
     Path(room_id): Path<RoomId>,
-    Query(paginate): Query<PaginationQuery<RoleId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
-    let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    let all_roles = d.role_list(room_id).await?;
-    let p: crate::data::postgres::Pagination<_> = paginate.try_into()?;
-    let mut items: Vec<Role> = all_roles
-        .into_iter()
-        .skip(p.after as usize)
-        .take(p.limit as usize)
-        .collect();
-    if p.dir == common::v1::types::PaginationDirection::B {
-        items.reverse();
-    }
-    Ok(Json(PaginationResponse {
-        items,
-        total: all_roles.len() as u64,
-        has_more: all_roles.len() > p.limit as usize,
-        cursor: items.last().map(|i: &Role| i.id.to_string()),
-    }))
+    let srv = s.services();
+    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let roles = srv.role.list(room_id).await?;
+    Ok(Json(roles))
 }
 
 /// Role list members

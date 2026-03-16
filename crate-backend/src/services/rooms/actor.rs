@@ -121,16 +121,9 @@ impl RoomActor {
                 data.room_member_list_all(self.room_id)
                     .instrument(tracing::info_span!("room_load.query.members")),
                 async {
-                    data.role_list(
-                        self.room_id,
-                        crate::types::PaginationQuery {
-                            limit: Some(1024),
-                            ..Default::default()
-                        },
-                    )
-                    .instrument(tracing::info_span!("room_load.query.roles"))
-                    .await
-                    .map(|r| r.items)
+                    data.role_list(self.room_id)
+                        .instrument(tracing::info_span!("room_load.query.roles"))
+                        .await
                 },
                 data.channel_list(self.room_id)
                     .instrument(tracing::info_span!("room_load.query.channels")),

@@ -133,11 +133,7 @@ pub trait DataRoom {
 #[async_trait]
 pub trait DataRole {
     async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role>;
-    async fn role_list(
-        &self,
-        room_id: RoomId,
-        paginate: PaginationQuery<RoleId>,
-    ) -> Result<PaginationResponse<Role>>;
+    async fn role_list(&self, room_id: RoomId) -> Result<Vec<Role>>;
     async fn role_delete(&self, room_id: RoomId, role_id: RoleId) -> Result<()>;
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
     async fn role_get_many(&self, room_id: RoomId, role_ids: &[RoleId]) -> Result<Vec<Role>>;

@@ -405,6 +405,7 @@ impl ServiceCache {
             .collect::<Vec<_>>()
             .await
             .into_iter()
+            .filter_map(|r| r.transpose())
             .collect::<Result<Vec<_>>>()?;
 
         let mut rooms = Vec::new();

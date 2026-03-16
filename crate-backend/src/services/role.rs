@@ -307,12 +307,16 @@ impl ServiceRoles {
         Ok(())
     }
 
-    pub async fn list(
-        &self,
-        room_id: RoomId,
-        pagination: PaginationQuery<RoleId>,
-    ) -> Result<PaginationResponse<Role>> {
-        self.state.data().role_list(room_id, pagination).await
+    pub async fn list(&self, room_id: RoomId) -> Result<Vec<Role>> {
+        let snapshot = self
+            .state
+            .services()
+            .rooms
+            .load_room(room_id, false)
+            .await?;
+        snapshot
+            .get_roles()
+            .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))
     }
 
     pub async fn member_list(

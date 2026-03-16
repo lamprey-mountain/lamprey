@@ -182,6 +182,11 @@ impl RoomSnapshot {
         self.get_data()?.roles.get(role_id)
     }
 
+    pub fn get_roles(&self) -> Option<Vec<Role>> {
+        let data = self.get_data()?;
+        Some(data.roles.values().map(|r| r.inner.clone()).collect())
+    }
+
     pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
         if let Some(data) = self.get_data() {
             if data.room.security.require_sudo {
