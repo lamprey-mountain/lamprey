@@ -87,10 +87,7 @@ impl ServiceSearch {
                     .await?;
                 msgs.extend(replies);
                 srv2.messages
-                    .populate_reactions(channel_id, auth_user_id, &mut msgs)
-                    .await?;
-                srv2.messages
-                    .populate_mentions(channel_id, auth_user_id, &mut msgs)
+                    .populate_all(channel_id, auth_user_id, &mut msgs)
                     .await?;
                 Result::Ok(msgs)
             });

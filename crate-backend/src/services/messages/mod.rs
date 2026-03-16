@@ -19,7 +19,7 @@ use common::v1::types::{
     MessageSync, NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
     Permission, RepliesQuery, RoomId, User,
 };
-use common::v1::types::{ThreadMemberPut, UserId};
+use common::v1::types::{MediaId, ThreadMemberPut, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 use common::v2::types::message::{
     Message, MessageAttachmentCreateType, MessageDefaultMarkdown, MessagePatch, MessageType,
@@ -181,6 +181,91 @@ impl ServiceMessages {
         }
     }
 
+    async fn check_timestamp_override(
+        &self,
+        user_id: UserId,
+        thread_id: ChannelId,
+        timestamp: Time,
+    ) -> Result<Time> {
+        let user = self.state.data().user_get(user_id).await?;
+        let srv = self.state.services();
+
+        let owner_id = if let Some(puppet) = user.puppet {
+            puppet.owner_id.into_inner().into()
+        } else if user.bot {
+            let app = self
+                .state
+                .data()
+                .application_get(user_id.into_inner().into())
+                .await
+                .map_err(|_| {
+                    Error::BadStatic("MemberBridge permission required to override timestamp")
+                })?;
+            app.owner_id.into_inner().into()
+        } else {
+            return Err(Error::BadStatic(
+                "MemberBridge permission required to override timestamp",
+            ));
+        };
+
+        let owner_perms = srv.perms.for_channel(owner_id, thread_id).await?;
+        owner_perms.ensure_all(&[Permission::ViewChannel, Permission::MemberBridge])?;
+        Ok(timestamp)
+    }
+
+    fn extract_and_validate_media(
+        json: &MessageCreate,
+    ) -> Result<(Vec<MediaId>, HashSet<MediaId>)> {
+        let mut all_media_ids = HashSet::new();
+
+        let attachment_ids: Vec<_> = json
+            .attachments
+            .iter()
+            .filter_map(|r| match &r.ty {
+                MessageAttachmentCreateType::Media { media, .. } => match media {
+                    MediaReference::Media { media_id } => Some(*media_id),
+                    MediaReference::Url { .. } => None,
+                    MediaReference::Attachment { .. } => None,
+                },
+            })
+            .collect();
+
+        for id in &attachment_ids {
+            if !all_media_ids.insert(*id) {
+                return Err(Error::BadStatic("duplicate media id in request"));
+            }
+        }
+
+        for embed in &json.embeds {
+            if let Some(m) = &embed.media {
+                let Some(media_id) = m.media_id() else {
+                    return Err(Error::Unimplemented);
+                };
+                if !all_media_ids.insert(media_id) {
+                    return Err(Error::BadStatic("duplicate media id in request"));
+                }
+            }
+            if let Some(m) = &embed.thumbnail {
+                let Some(media_id) = m.media_id() else {
+                    return Err(Error::Unimplemented);
+                };
+                if !all_media_ids.insert(media_id) {
+                    return Err(Error::BadStatic("duplicate media id in request"));
+                }
+            }
+            if let Some(m) = &embed.author_avatar {
+                let Some(media_id) = m.media_id() else {
+                    return Err(Error::Unimplemented);
+                };
+                if !all_media_ids.insert(media_id) {
+                    return Err(Error::BadStatic("duplicate media id in request"));
+                }
+            }
+        }
+
+        Ok((attachment_ids, all_media_ids))
+    }
+
     async fn create_inner(
         &self,
         thread_id: ChannelId,
@@ -200,35 +285,11 @@ impl ServiceMessages {
 
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
 
-        // check if timestamp override is allowed
         let created_at = if let Some(ts) = header_timestamp {
-            if let Some(puppet) = user.puppet {
-                let owner_perms = srv
-                    .perms
-                    .for_channel(puppet.owner_id.into_inner().into(), thread_id)
-                    .await?;
-                let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
-                owner_perms.ensure_all(&required_perms)?;
-            } else if user.bot {
-                // For bot users, check if the bot owner has MemberBridge permission
-                if let Ok(app) = s.data().application_get(user_id.into_inner().into()).await {
-                    let owner_perms = srv
-                        .perms
-                        .for_channel(app.owner_id.into_inner().into(), thread_id)
-                        .await?;
-                    let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
-                    owner_perms.ensure_all(&required_perms)?;
-                } else {
-                    return Err(Error::BadStatic(
-                        "MemberBridge permission required to override timestamp",
-                    ));
-                }
-            } else {
-                return Err(Error::BadStatic(
-                    "MemberBridge permission required to override timestamp",
-                ));
-            }
-            Some(ts)
+            Some(
+                self.check_timestamp_override(user_id, thread_id, ts)
+                    .await?,
+            )
         } else {
             None
         };
@@ -325,56 +386,7 @@ impl ServiceMessages {
             ));
         }
 
-        let attachment_ids: Vec<_> = json
-            .attachments
-            .iter()
-            .filter_map(|r| match &r.ty {
-                MessageAttachmentCreateType::Media { media, .. } => match media {
-                    MediaReference::Media { media_id } => Some(*media_id),
-                    // TODO: impl url and attachment media references
-                    MediaReference::Url { .. } => None,
-                    MediaReference::Attachment { .. } => None,
-                },
-            })
-            .collect();
-        let mut all_media_ids = std::collections::HashSet::new();
-        for id in &attachment_ids {
-            if !all_media_ids.insert(*id) {
-                return Err(Error::BadStatic("duplicate media id in request"));
-            }
-        }
-
-        if !json.embeds.is_empty() {
-            for embed in &json.embeds {
-                if let Some(m) = &embed.media {
-                    let Some(media_id) = m.media_id() else {
-                        return Err(Error::Unimplemented);
-                    };
-
-                    if !all_media_ids.insert(media_id) {
-                        return Err(Error::BadStatic("duplicate media id in request"));
-                    }
-                }
-                if let Some(m) = &embed.thumbnail {
-                    let Some(media_id) = m.media_id() else {
-                        return Err(Error::Unimplemented);
-                    };
-
-                    if !all_media_ids.insert(media_id) {
-                        return Err(Error::BadStatic("duplicate media id in request"));
-                    }
-                }
-                if let Some(m) = &embed.author_avatar {
-                    let Some(media_id) = m.media_id() else {
-                        return Err(Error::Unimplemented);
-                    };
-
-                    if !all_media_ids.insert(media_id) {
-                        return Err(Error::BadStatic("duplicate media id in request"));
-                    }
-                }
-            }
-        }
+        let (attachment_ids, all_media_ids) = Self::extract_and_validate_media(&json)?;
 
         for id in &all_media_ids {
             data.media_select(*id).await?;
@@ -399,7 +411,7 @@ impl ServiceMessages {
         let content = json.content.clone();
 
         let mut removed_at = None;
-        let message_id = dbg!(MessageId::new());
+        let message_id = MessageId::new();
 
         // enforce automod just before message is sent
         if let Some(room_id) = thread.room_id {
@@ -462,7 +474,7 @@ impl ServiceMessages {
                 .await?;
         }
         let mut message = self.get(thread_id, message_id, user_id).await?;
-        message.latest_version.mentions = dbg!(mentions.clone());
+        message.latest_version.mentions = mentions.clone();
 
         if let Some(content) = &content {
             let mut should_embed = is_webhook;
@@ -786,32 +798,10 @@ impl ServiceMessages {
         let is_webhook = user.webhook.is_some();
 
         let created_at = if let Some(ts) = header_timestamp {
-            if let Some(puppet) = user.puppet {
-                let owner_perms = srv
-                    .perms
-                    .for_channel(puppet.owner_id.into_inner().into(), thread_id)
-                    .await?;
-                let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
-                owner_perms.ensure_all(&required_perms)?;
-            } else if user.bot {
-                if let Ok(app) = s.data().application_get(user_id.into_inner().into()).await {
-                    let owner_perms = srv
-                        .perms
-                        .for_channel(app.owner_id.into_inner().into(), thread_id)
-                        .await?;
-                    let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
-                    owner_perms.ensure_all(&required_perms)?;
-                } else {
-                    return Err(Error::BadStatic(
-                        "MemberBridge permission required to override timestamp",
-                    ));
-                }
-            } else {
-                return Err(Error::BadStatic(
-                    "MemberBridge permission required to override timestamp",
-                ));
-            }
-            Some(ts)
+            Some(
+                self.check_timestamp_override(user_id, thread_id, ts)
+                    .await?,
+            )
         } else {
             None
         };
@@ -943,7 +933,7 @@ impl ServiceMessages {
 
         let (content, payload, mentions) = match message.latest_version.message_type.clone() {
             MessageType::DefaultMarkdown(msg) => {
-                let mut content = json.content.clone().unwrap_or(msg.content);
+                let mut content = json.content.as_ref().cloned().unwrap_or(msg.content);
                 let mut mentions = message.latest_version.mentions.clone();
 
                 if json.content.is_some() {
@@ -1064,13 +1054,15 @@ impl ServiceMessages {
                 let Some(user) = users_map.get(&user_id) else {
                     continue;
                 };
-                let resolved_name = room
-                    .get_data()
-                    .unwrap()
-                    .members
-                    .get(&user_id)
-                    .and_then(|m| m.member.override_name.clone())
-                    .unwrap_or_else(|| user.name.clone());
+
+                let resolved_name = match room.get_data() {
+                    Some(d) => d
+                        .members
+                        .get(&user_id)
+                        .and_then(|m| m.member.override_name.clone())
+                        .unwrap_or_else(|| user.name.clone()),
+                    None => user.name.clone(),
+                };
 
                 mentions.users.push(MentionsUser {
                     id: user_id,
@@ -1139,54 +1131,14 @@ impl ServiceMessages {
         Ok(mentions::strip_emoji(content, &allowed_emoji))
     }
 
-    pub async fn populate_reactions(
+    async fn fetch_mentions_data(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
-        messages: &mut [Message],
-    ) -> Result<()> {
-        let data = self.state.data();
-        let message_ids: Vec<MessageId> = messages.iter().map(|m| m.id).collect();
-        let reactions = data
-            .reaction_fetch_all(channel_id, user_id, &message_ids)
-            .await?;
-        let reactions: HashMap<MessageId, Vec<(ReactionKeyParam, u64, bool)>> =
-            reactions.into_iter().collect();
-        for m in messages {
-            let Some(rs) = reactions.get(&m.id) else {
-                continue;
-            };
-
-            let mut a = vec![];
-            for r in rs {
-                a.push(ReactionCount {
-                    key: match &r.0 {
-                        ReactionKeyParam::Text(t) => ReactionKey::Text {
-                            content: t.to_owned(),
-                        },
-                        ReactionKeyParam::Custom(c) => {
-                            let emoji = data.emoji_get(*c).await?;
-                            ReactionKey::Custom(emoji)
-                        }
-                    },
-                    count: r.1,
-                    self_reacted: r.2,
-                });
-            }
-            m.reactions = ReactionCounts(a);
-        }
-
-        Ok(())
-    }
-
-    pub async fn populate_mentions(
-        &self,
-        channel_id: ChannelId,
-        user_id: UserId,
-        messages: &mut [Message],
-    ) -> Result<()> {
+        messages: &[Message],
+    ) -> Result<Vec<Mentions>> {
         if messages.is_empty() {
-            return Ok(());
+            return Ok(vec![]);
         }
 
         let data = self.state.data();
@@ -1206,49 +1158,82 @@ impl ServiceMessages {
             .message_fetch_mention_ids(channel_id, &version_ids)
             .await?;
 
-        for (message, mentions_ids) in messages.iter_mut().zip(mentions_ids) {
+        let mut mentions_list = Vec::with_capacity(messages.len());
+        for mentions_ids in mentions_ids {
             let full_mentions = self
                 .fetch_full_mentions_from_ids(mentions_ids, room_id)
                 .await?;
-            message.latest_version.mentions = full_mentions;
+            mentions_list.push(full_mentions);
         }
 
-        Ok(())
+        Ok(mentions_list)
     }
 
-    pub async fn populate_threads(&self, user_id: UserId, messages: &mut [Message]) -> Result<()> {
-        if messages.is_empty() {
-            return Ok(());
-        }
+    async fn fetch_threads_data(
+        &self,
+        user_id: UserId,
+        messages: &[Message],
+    ) -> Result<HashMap<ChannelId, Channel>> {
+        let mut threads_map = HashMap::new();
 
-        let mut thread_futs = FuturesUnordered::new();
+        let srv = self.state.services();
+        let mut thread_futs: FuturesUnordered<_> = messages
+            .iter()
+            .map(|m| {
+                let srv2 = Arc::clone(&srv);
+                let cid: ChannelId = (*m.id).into();
+                async move {
+                    let thread = srv2.channels.get(cid, Some(user_id)).await;
+                    (cid, thread)
+                }
+            })
+            .collect();
 
-        // PERF: fetch all threads in parallel with get_many
-        for message in messages.iter() {
-            let srv = self.state.services();
-            let thread_channel_id: ChannelId = (*message.id).into();
-            thread_futs.push(async move {
-                // we dont care about the result, if it errors it means no thread
-                let thread = srv.channels.get(thread_channel_id, Some(user_id)).await;
-                (thread_channel_id, thread)
-            });
-        }
-
-        let mut threads_map: HashMap<ChannelId, Channel> = HashMap::new();
         while let Some((id, thread_result)) = thread_futs.next().await {
             if let Ok(thread) = thread_result {
                 threads_map.insert(id, thread);
             }
         }
 
-        for message in messages {
-            let thread_channel_id: ChannelId = (*message.id).into();
-            if let Some(thread) = threads_map.remove(&thread_channel_id) {
-                message.thread = Some(Box::new(thread));
+        Ok(threads_map)
+    }
+
+    async fn fetch_reactions_data(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        messages: &[Message],
+    ) -> Result<HashMap<MessageId, ReactionCounts>> {
+        let data = self.state.data();
+        let message_ids: Vec<MessageId> = messages.iter().map(|m| m.id).collect();
+        let reactions = data
+            .reaction_fetch_all(channel_id, user_id, &message_ids)
+            .await?;
+        let reactions_raw: HashMap<MessageId, Vec<(ReactionKeyParam, u64, bool)>> =
+            reactions.into_iter().collect();
+
+        let mut reactions_map = HashMap::new();
+        for (message_id, rs) in reactions_raw {
+            let mut counts = Vec::new();
+            for r in &rs {
+                counts.push(ReactionCount {
+                    key: match &r.0 {
+                        ReactionKeyParam::Text(t) => ReactionKey::Text {
+                            content: t.to_owned(),
+                        },
+                        ReactionKeyParam::Custom(c) => {
+                            let emoji = data.emoji_get(*c).await?;
+                            ReactionKey::Custom(emoji)
+                        }
+                    },
+                    count: r.1,
+                    self_reacted: r.2,
+                });
             }
+            reactions_map.insert(message_id, ReactionCounts(counts));
         }
 
-        Ok(())
+        Ok(reactions_map)
     }
 
     pub async fn populate_all(
@@ -1257,18 +1242,29 @@ impl ServiceMessages {
         user_id: UserId,
         messages: &mut [Message],
     ) -> Result<()> {
-        self.populate_mentions(channel_id, user_id, messages)
-            .await?;
-        self.populate_threads(user_id, messages).await?;
-        self.populate_reactions(channel_id, user_id, messages)
-            .await?;
+        if messages.is_empty() {
+            return Ok(());
+        }
 
-        // PERF: populate data in parallel
-        // tokio::try_join!(
-        //     self.populate_mentions(channel_id, user_id, messages),
-        //     self.populate_threads(user_id, messages),
-        //     self.populate_reactions(channel_id, user_id, messages),
-        // )?;
+        let mentions_fut = self.fetch_mentions_data(channel_id, user_id, messages);
+        let threads_fut = self.fetch_threads_data(user_id, messages);
+        let reactions_fut = self.fetch_reactions_data(channel_id, user_id, messages);
+
+        let (mentions_data, threads_data, reactions_data) =
+            tokio::try_join!(mentions_fut, threads_fut, reactions_fut)?;
+
+        for (i, message) in messages.iter_mut().enumerate() {
+            if let Some(m) = mentions_data.get(i) {
+                message.latest_version.mentions = m.clone();
+            }
+            let thread_channel_id: ChannelId = (*message.id).into();
+            if let Some(t) = threads_data.get(&thread_channel_id) {
+                message.thread = Some(Box::new(t.clone()));
+            }
+            if let Some(r) = reactions_data.get(&message.id) {
+                message.reactions = r.clone();
+            }
+        }
 
         Ok(())
     }
@@ -1312,24 +1308,34 @@ impl ServiceMessages {
         Ok(ancestors)
     }
 
+    async fn process_message_list(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        mut res: PaginationResponse<Message>,
+    ) -> Result<PaginationResponse<Message>> {
+        self.populate_all(channel_id, user_id, &mut res.items)
+            .await?;
+
+        for message in &mut res.items {
+            self.state.presign_message(message).await?;
+        }
+
+        Ok(res)
+    }
+
     pub async fn list(
         &self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
-        let s = &self.state;
-        let data = s.data();
-        let mut res = data.message_list(channel_id, user_id, pagination).await?;
-
-        self.populate_all(channel_id, user_id, &mut res.items)
+        let res = self
+            .state
+            .data()
+            .message_list(channel_id, user_id, pagination)
             .await?;
-
-        for message in &mut res.items {
-            s.presign_message(message).await?;
-        }
-
-        Ok(res)
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_deleted(
@@ -1338,20 +1344,12 @@ impl ServiceMessages {
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
-        let s = &self.state;
-        let data = s.data();
-        let mut res = data
+        let res = self
+            .state
+            .data()
             .message_list_deleted(channel_id, user_id, pagination)
             .await?;
-
-        self.populate_all(channel_id, user_id, &mut res.items)
-            .await?;
-
-        for message in &mut res.items {
-            s.presign_message(message).await?;
-        }
-
-        Ok(res)
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_removed(
@@ -1360,20 +1358,12 @@ impl ServiceMessages {
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
-        let s = &self.state;
-        let data = s.data();
-        let mut res = data
+        let res = self
+            .state
+            .data()
             .message_list_removed(channel_id, user_id, pagination)
             .await?;
-
-        self.populate_all(channel_id, user_id, &mut res.items)
-            .await?;
-
-        for message in &mut res.items {
-            s.presign_message(message).await?;
-        }
-
-        Ok(res)
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_all(
@@ -1382,20 +1372,12 @@ impl ServiceMessages {
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
-        let s = &self.state;
-        let data = s.data();
-        let mut res = data
+        let res = self
+            .state
+            .data()
             .message_list_all(channel_id, user_id, pagination)
             .await?;
-
-        self.populate_all(channel_id, user_id, &mut res.items)
-            .await?;
-
-        for message in &mut res.items {
-            s.presign_message(message).await?;
-        }
-
-        Ok(res)
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_context(
@@ -1547,19 +1529,12 @@ impl ServiceMessages {
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
-        let s = &self.state;
-        let data = s.data();
-        let mut res = data
+        let res = self
+            .state
+            .data()
             .message_pin_list(channel_id, user_id, pagination)
             .await?;
-
-        self.populate_all(channel_id, user_id, &mut res.items)
-            .await?;
-
-        for message in &mut res.items {
-            s.presign_message(message).await?;
-        }
-        Ok(res)
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_activity(
@@ -1568,20 +1543,31 @@ impl ServiceMessages {
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
-        let s = &self.state;
-        let data = s.data();
-        let mut res = data
+        let res = self
+            .state
+            .data()
             .message_list_activity(channel_id, user_id, pagination)
             .await?;
-
-        self.populate_all(channel_id, user_id, &mut res.items)
-            .await?;
-
-        for message in &mut res.items {
-            s.presign_message(message).await?;
-        }
-        Ok(res)
+        self.process_message_list(channel_id, user_id, res).await
     }
+}
+
+async fn fetch_media(
+    s: &Arc<ServerStateInner>,
+    media_ref: Option<MediaReference>,
+    user_id: UserId,
+) -> Result<Option<common::v2::types::media::Media>> {
+    let Some(media_ref) = media_ref else {
+        return Ok(None);
+    };
+    let Some(media_id) = media_ref.media_id() else {
+        return Err(Error::Unimplemented);
+    };
+    let media = s.data().media_select(media_id).await?;
+    if media.user_id != Some(user_id) {
+        return Err(Error::MissingPermissions);
+    }
+    Ok(Some(media))
 }
 
 // this should probably be moved somewhere else
@@ -1590,42 +1576,9 @@ async fn embed_from_create(
     value: EmbedCreate,
     user_id: UserId,
 ) -> Result<Embed> {
-    let media = if let Some(media_ref) = value.media {
-        let Some(media_id) = media_ref.media_id() else {
-            return Err(Error::Unimplemented);
-        };
-        let media = s.data().media_select(media_id).await?;
-        if media.user_id != Some(user_id) {
-            return Err(Error::MissingPermissions);
-        }
-        Some(media)
-    } else {
-        None
-    };
-    let thumbnail = if let Some(media_ref) = value.thumbnail {
-        let Some(media_id) = media_ref.media_id() else {
-            return Err(Error::Unimplemented);
-        };
-        let media = s.data().media_select(media_id).await?;
-        if media.user_id != Some(user_id) {
-            return Err(Error::MissingPermissions);
-        }
-        Some(media)
-    } else {
-        None
-    };
-    let author_avatar = if let Some(media_ref) = value.author_avatar {
-        let Some(media_id) = media_ref.media_id() else {
-            return Err(Error::Unimplemented);
-        };
-        let media = s.data().media_select(media_id).await?;
-        if media.user_id != Some(user_id) {
-            return Err(Error::MissingPermissions);
-        }
-        Some(media)
-    } else {
-        None
-    };
+    let media = fetch_media(&s, value.media, user_id).await?;
+    let thumbnail = fetch_media(&s, value.thumbnail, user_id).await?;
+    let author_avatar = fetch_media(&s, value.author_avatar, user_id).await?;
 
     Ok(Embed {
         id: EmbedId::new(),
