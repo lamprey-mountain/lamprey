@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use common::v1::types::util::Time;
 use kameo::message::Context;
 use kameo::prelude::*;
 use sdk::Client;
@@ -133,12 +134,24 @@ impl LampreyHandle {
         user_id: UserId,
         req: MessageCreate,
     ) -> Result<LMessage> {
+        self.message_create_with_timestamp(thread_id, user_id, req, Time::now_utc())
+            .await
+    }
+
+    pub async fn message_create_with_timestamp(
+        &self,
+        thread_id: ChannelId,
+        user_id: UserId,
+        req: MessageCreate,
+        timestamp: Time,
+    ) -> Result<LMessage> {
         let response = self
             .lamprey_ref
-            .ask(LampreyMessage::MessageCreate {
+            .ask(LampreyMessage::MessageCreateWithTimestamp {
                 thread_id,
                 user_id,
                 req,
+                timestamp,
             })
             .await?;
         match response {

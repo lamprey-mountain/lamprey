@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
+use common::v1::types::util::Time;
 use common::v1::types::{
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiSearchQuery},
     misc::UserIdReq,
@@ -453,3 +454,31 @@ route!(post   "/api/v1/invite/server"                             => invite_serv
 route!(get    "/api/v1/invite/server"                             => invite_server_list(_q: PaginationQuery<InviteCode>) -> PaginationResponse<Invite>);
 route!(post   "/api/v1/invite/user/{user_id}"                     => invite_user_create(user_id: UserId) -> Invite, InviteCreate);
 route!(get    "/api/v1/invite/user/{user_id}"                     => invite_user_list(user_id: UserId, _q: PaginationQuery<InviteCode>) -> PaginationResponse<Invite>);
+
+impl Http {
+    /// Create a message with a custom timestamp (for bridge sync)
+    pub async fn message_create_with_timestamp(
+        &self,
+        channel_id: ChannelId,
+        body: &MessageCreate,
+        timestamp: Time,
+    ) -> Result<Message> {
+        let url = self
+            .base_url
+            .join(&format!("/api/v1/channel/{}/message", channel_id))?;
+        let req = self
+            .client
+            .post(url)
+            .header("content-type", "application/json")
+            .header("X-Timestamp", timestamp.unix_timestamp().to_string())
+            .json(body);
+
+        let res = req.send().await?;
+        let res = res.error_for_status()?;
+        let text = res.text().await?;
+        serde_json::from_str(&text).with_context(|| {
+            error!(response_body = %text, "failed to decode response body");
+            format!("failed to decode response body for message_create_with_timestamp")
+        })
+    }
+}

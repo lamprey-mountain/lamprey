@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
+use common::v1::types::util::Time;
 use common::v1::types::{
     self, presence, Channel, ChannelId, ChannelType, Media, MessageCreate, MessageId, RoomId, User,
     UserId,
@@ -29,6 +30,12 @@ pub enum LampreyMessage {
         thread_id: ChannelId,
         user_id: UserId,
         req: MessageCreate,
+    },
+    MessageCreateWithTimestamp {
+        thread_id: ChannelId,
+        user_id: UserId,
+        req: MessageCreate,
+        timestamp: Time,
     },
     MessageUpdate {
         thread_id: ChannelId,

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use common::v1::types::util::Time;
 use common::v1::types::{self, util::Diff, EmbedCreate};
 use common::v2::types::media::MediaReference;
 use futures::future::try_join_all;
@@ -321,7 +322,13 @@ impl Portal {
             Some(_) | None => {}
         };
         let thread_id = self.thread_id();
-        let res = ly.message_create(thread_id, user_id, req).await?;
+        let timestamp: Time =
+            time::OffsetDateTime::from_unix_timestamp(message.timestamp.unix_timestamp())
+                .unwrap_or_else(|_| time::OffsetDateTime::now_utc())
+                .into();
+        let res = ly
+            .message_create_with_timestamp(thread_id, user_id, req, timestamp)
+            .await?;
         debug!("sent message");
         self.globals
             .insert_message(MessageMetadata {

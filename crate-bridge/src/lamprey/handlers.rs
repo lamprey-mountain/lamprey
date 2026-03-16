@@ -1,10 +1,8 @@
 //! Lamprey actor message handlers
 
 use anyhow::Result;
-use common::v1::types::{
-    self, misc::UserIdReq, pagination::PaginationQuery, Channel, ChannelId, ChannelType, Media,
-    MessageCreate, MessageId, RoomId, RoomMemberPut, User, UserId,
-};
+use common::v1::types::util::Time;
+use common::v1::types::{self, misc::UserIdReq, pagination::PaginationQuery, RoomMemberPut};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use sdk::Client;
 use std::sync::Arc;
@@ -59,10 +57,24 @@ pub(super) async fn handle_lamprey_message(
             thread_id,
             user_id,
             req,
+        } => {
+            let timestamp = Time::now_utc();
+            client
+                .http
+                .for_puppet(user_id)
+                .message_create_with_timestamp(thread_id, &req, timestamp)
+                .await
+                .map(LampreyResponse::Message)
+        }
+        LampreyMessage::MessageCreateWithTimestamp {
+            thread_id,
+            user_id,
+            req,
+            timestamp,
         } => client
             .http
             .for_puppet(user_id)
-            .message_create(thread_id, &req)
+            .message_create_with_timestamp(thread_id, &req, timestamp)
             .await
             .map(LampreyResponse::Message),
         LampreyMessage::MessageUpdate {
