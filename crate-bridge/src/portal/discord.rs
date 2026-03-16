@@ -12,6 +12,29 @@ use tracing::{debug, info};
 use crate::db::{AttachmentMetadata, Data, MessageMetadata, Puppet};
 use crate::portal::Portal;
 
+/// Format Discord message content, handling empty messages with attachments/embeds
+fn format_discord_message_content(
+    content: &str,
+    has_attachments: bool,
+    has_embeds: bool,
+    message_kind: &DcMessageType,
+) -> Option<String> {
+    match message_kind {
+        DcMessageType::Regular | DcMessageType::InlineReply => {
+            if content.is_empty() {
+                if has_attachments || has_embeds {
+                    None // Content implied from attachments/embeds
+                } else {
+                    Some("(sticker, poll, or other unsupported message type)".to_string())
+                }
+            } else {
+                Some(content.to_owned())
+            }
+        }
+        other => Some(format!("(discord message: {:?})", other)),
+    }
+}
+
 impl Portal {
     pub(super) async fn sync_discord_member_nick(
         &mut self,
@@ -235,20 +258,12 @@ impl Portal {
             };
             req.embeds.push(create);
         }
-        req.content = match message.kind {
-            DcMessageType::Regular | DcMessageType::InlineReply => {
-                if message.content.is_empty() {
-                    if message.attachments.is_empty() && message.embeds.is_empty() {
-                        Some("(sticker, poll, or other unsupported message type)".to_string())
-                    } else {
-                        None
-                    }
-                } else {
-                    Some(message.content)
-                }
-            }
-            other => Some(format!("(discord message: {:?})", other)),
-        };
+        req.content = format_discord_message_content(
+            &message.content,
+            !message.attachments.is_empty(),
+            !message.embeds.is_empty(),
+            &message.kind,
+        );
         match message.message_reference.map(|r| r.kind) {
             Some(MessageReferenceKind::Default) => {
                 if let Some(reply) = message.referenced_message {

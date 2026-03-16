@@ -9,6 +9,28 @@ use tracing::debug;
 use crate::db::{AttachmentMetadata, Data, MessageMetadata};
 use crate::portal::Portal;
 
+/// Format reply content from a Discord message for display in a reply embed
+fn format_discord_reply_content(discord_msg: &serenity::all::Message) -> String {
+    if !discord_msg.content.is_empty() {
+        discord_msg.content.to_owned()
+    } else if !discord_msg.attachments.is_empty() {
+        let names: Vec<_> = discord_msg
+            .attachments
+            .iter()
+            .map(|a| a.filename.to_owned())
+            .collect();
+        format!(
+            "{} attachment(s): {}",
+            discord_msg.attachments.len(),
+            names.join(", ")
+        )
+    } else if !discord_msg.embeds.is_empty() {
+        format!("{} embed(s)", discord_msg.embeds.len())
+    } else {
+        "(no content?)".to_owned()
+    }
+}
+
 impl Portal {
     pub(super) async fn handle_lamprey_message_create(&mut self, message: Message) -> Result<()> {
         let ly = self.globals.lamprey_handle().await?;
@@ -52,24 +74,7 @@ impl Portal {
                 discord_id,
             )
             .await?;
-            let reply_content = if !discord_msg.content.is_empty() {
-                discord_msg.content.to_owned()
-            } else if !discord_msg.attachments.is_empty() {
-                let names: Vec<_> = discord_msg
-                    .attachments
-                    .iter()
-                    .map(|a| a.filename.to_owned())
-                    .collect();
-                format!(
-                    "{} attachment(s): {}",
-                    discord_msg.attachments.len(),
-                    names.join(", ")
-                )
-            } else if !discord_msg.embeds.is_empty() {
-                format!("{} embed(s)", discord_msg.embeds.len())
-            } else {
-                "(no content?)".to_owned()
-            };
+            let reply_content = format_discord_reply_content(&discord_msg);
             let description = format!(
                 "**[replying to](https://canary.discord.com/channels/{}/{}/{})**\n{}",
                 self.config.discord_guild_id,

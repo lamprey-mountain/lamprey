@@ -114,11 +114,19 @@ async fn main() -> Result<()> {
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(120)).await;
             info!("Re-syncing all user presences");
-            for item in presence_globals.presences.iter() {
-                let presence = item.value().clone();
+
+            // Collect presences first to avoid holding DashMap lock while awaiting semaphore
+            let presences: Vec<_> = presence_globals
+                .presences
+                .iter()
+                .map(|item| item.value().clone())
+                .collect();
+
+            for presence in presences {
                 let globals = presence_globals.clone();
-                let permit = presence_semaphore.clone().acquire_owned().await.unwrap();
+                let semaphore = presence_semaphore.clone();
                 tokio::spawn(async move {
+                    let permit = semaphore.acquire_owned().await.unwrap();
                     let _permit = permit; // hold permit for duration of task
                     if let Err(e) = discord::process_presence_update(globals, presence).await {
                         error!("failed to re-sync presence: {e}");
