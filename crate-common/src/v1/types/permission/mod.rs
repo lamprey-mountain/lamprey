@@ -101,7 +101,7 @@ pub enum Permission {
     /// edit name, description, really anything else
     RoomEdit,
 
-    /// (server, unimplemented) can access metrics (prometheus)
+    /// (server) can access metrics (prometheus)
     ServerMetrics,
 
     /// (server) can perform server maintenance tasks
