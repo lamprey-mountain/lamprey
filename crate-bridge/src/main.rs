@@ -1,14 +1,15 @@
 use ::common::v1::types::{PaginationDirection, PaginationQuery};
 use anyhow::Result;
 use bridge_common::Globals;
-use dashmap::DashMap;
 use db::Data;
 use discord::Discord;
 use figment::providers::{Env, Format, Toml};
-use lamprey::Lamprey;
+use futures::future;
+use kameo::actor::Spawn;
+use lamprey::{Lamprey, LampreyMessage, LampreyResponse};
 use opentelemetry_otlp::WithExportConfig;
 use std::{str::FromStr, sync::Arc};
-use tokio::sync::{mpsc, RwLock, Semaphore};
+use tokio::sync::Semaphore;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
@@ -68,24 +69,25 @@ async fn main() -> Result<()> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let dc_chan = mpsc::channel(100);
-    let ch_chan = mpsc::channel(100);
-    let bridge_chan = mpsc::channel(1024);
+    // Create globals with empty actor refs
+    let globals = Arc::new(Globals::new(pool, config));
 
-    let globals = Arc::new(Globals {
-        pool,
-        config,
-        portals: Arc::new(DashMap::new()),
-        last_lamprey_ids: Arc::new(DashMap::new()),
-        last_discord_ids: Arc::new(DashMap::new()),
-        presences: Arc::new(DashMap::new()),
-        discord_user_cache: Arc::new(DashMap::new()),
-        dc_chan: dc_chan.0,
-        ch_chan: ch_chan.0,
-        bridge_chan: bridge_chan.0,
-        lamprey_user_id: Arc::new(RwLock::new(None)),
-        recently_created_discord_channels: Arc::new(DashMap::new()),
-    });
+    // Spawn the bridge actor using kameo
+    let bridge_ref = Bridge::spawn((globals.clone(),));
+
+    // Set the bridge_chan in globals
+    globals.set_bridge_chan(bridge_ref.clone()).await;
+
+    // Spawn lamprey actor using kameo
+    let lamprey_ref = Lamprey::spawn(globals.clone());
+
+    // Set the lamprey_chan in globals
+    globals.set_lamprey_chan(lamprey_ref.clone()).await;
+
+    // Create discord actor (not spawned via kameo - serenity runs its own event loop)
+    // We need to create it, store a reference in globals, then consume it for connect()
+    let discord = Discord::new(globals.clone());
+    globals.set_discord(discord).await;
 
     for config in globals.get_portals().await? {
         if let Some(last_id) = globals
@@ -127,11 +129,18 @@ async fn main() -> Result<()> {
         }
     });
 
-    let dc = Discord::new(globals.clone(), dc_chan.1);
-    let ch = Lamprey::new(globals.clone(), ch_chan.1);
-    Bridge::spawn(globals.clone(), bridge_chan.1);
+    // Spawn a task to run the lamprey syncer
+    let lamprey_syncer_task = tokio::spawn(async move {
+        // The lamprey actor is already running via kameo
+        // We need to keep the process alive for the syncer
+        // The syncer runs inside the actor, so we just need to wait
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        }
+    });
 
     let startup_autobridge_globals = globals.clone();
+    let lamprey_ref_startup = lamprey_ref.clone();
     let startup_autobridge_task = tokio::spawn(async move {
         let globals = startup_autobridge_globals;
         for realm in globals.get_realms().await? {
@@ -140,22 +149,29 @@ async fn main() -> Result<()> {
             }
 
             info!("creating new portal for {:?}", realm);
-            let ly = globals.lamprey_handle().await?;
-            let threads = ly.room_threads(realm.lamprey_room_id).await?;
+
+            // Use kameo's ask pattern to get room threads
+            let threads_response = lamprey_ref_startup
+                .ask(LampreyMessage::RoomThreads {
+                    room_id: realm.lamprey_room_id,
+                })
+                .await?;
+
+            let threads = match threads_response {
+                LampreyResponse::RoomThreads(t) => t,
+                _ => return Err(anyhow::anyhow!("unexpected response type")),
+            };
+
             for thread in threads {
                 if globals.get_portal_by_thread_id(thread.id).await?.is_some() {
                     continue;
                 }
-                if let Err(e) = globals
-                    .bridge_chan
-                    .send(BridgeMessage::LampreyThreadCreate {
+                globals
+                    .bridge_send(BridgeMessage::LampreyThreadCreate {
                         thread,
                         discord_guild_id: realm.discord_guild_id,
                     })
-                    .await
-                {
-                    error!("failed to send lamprey thread create message: {e}");
-                }
+                    .await?;
             }
         }
         Ok::<(), anyhow::Error>(())
@@ -171,26 +187,38 @@ async fn main() -> Result<()> {
 
         for portal_config in portals {
             let globals = globals.clone();
+            let lamprey_ref = lamprey_ref.clone();
             let permit = backfill_semaphore.clone().acquire_owned().await.unwrap();
             tokio::spawn(async move {
                 let _permit = permit; // hold permit for duration of task
                 let res: Result<()> = async {
-                    let ly = globals.lamprey_handle().await?;
                     let from = globals
                         .last_lamprey_ids
                         .get(&portal_config.lamprey_thread_id)
                         .map(|m| *m.value());
-                    let mut query = PaginationQuery {
-                        from,
-                        to: None,
-                        dir: Some(PaginationDirection::F),
-                        limit: Some(100),
-                    };
+                    let from_start = from;
+                    let mut current_from = from_start;
 
                     loop {
-                        let page = ly
-                            .message_list(portal_config.lamprey_thread_id, &query)
+                        let query = PaginationQuery {
+                            from: current_from,
+                            to: None,
+                            dir: Some(PaginationDirection::F),
+                            limit: Some(100),
+                        };
+
+                        let page_response = lamprey_ref
+                            .ask(LampreyMessage::MessageList {
+                                thread_id: portal_config.lamprey_thread_id,
+                                query: Arc::new(query),
+                            })
                             .await?;
+
+                        let page = match page_response {
+                            LampreyResponse::MessageList(p) => p,
+                            _ => return Err(anyhow::anyhow!("unexpected response type")),
+                        };
+
                         info!(
                             "backfilling {} messages for thread {}",
                             page.items.len(),
@@ -211,7 +239,7 @@ async fn main() -> Result<()> {
                         }
 
                         if let Some(cursor) = page.cursor {
-                            query.from = Some(cursor.parse()?);
+                            current_from = Some(cursor.parse()?);
                         } else {
                             break;
                         }
@@ -235,12 +263,23 @@ async fn main() -> Result<()> {
         Ok::<(), anyhow::Error>(())
     });
 
-    let _ = tokio::join!(
-        dc.connect(),
-        ch.connect(),
+    // Run the actors
+    // discord.connect() is a long-running future that runs serenity's event loop
+    // The other tasks are background tasks
+    let Some(discord) = globals.take_discord().await else {
+        return Err(anyhow::anyhow!("Discord actor not initialized"));
+    };
+    let (dc_res, _lamprey_res, startup_res, backfill_res, _syncer_res) = tokio::join!(
+        discord.connect(),
+        future::pending::<Result<()>>(),
         startup_autobridge_task,
-        lamprey_backfill_task
+        lamprey_backfill_task,
+        lamprey_syncer_task
     );
+
+    dc_res?;
+    startup_res??;
+    backfill_res??;
 
     Ok(())
 }

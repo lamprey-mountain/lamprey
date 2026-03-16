@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
+use kameo::actor::Spawn;
 use serenity::all::{
     ChannelType, CommandDataOptionValue, CommandInteraction, CommandOptionType, CreateCommand,
     CreateCommandOption, CreateInteractionResponseMessage, CreateWebhook, EditInteractionResponse,
@@ -40,7 +41,7 @@ pub(super) async fn backfill_channel(
     let portal = globals
         .portals
         .entry(config.lamprey_thread_id)
-        .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
+        .or_insert_with(|| Portal::spawn((globals.clone(), config.to_owned())));
 
     let mut p = MessagePagination::After(MessageId::new(1));
     loop {
@@ -66,7 +67,7 @@ pub(super) async fn backfill_channel(
                 continue;
             }
             let _ = portal
-                .send(PortalMessage::DiscordMessageCreate { message })
+                .tell(PortalMessage::DiscordMessageCreate { message })
                 .await;
         }
         p = MessagePagination::After(last_id);
@@ -193,7 +194,7 @@ pub(super) async fn backfill_guild(
         globals
             .portals
             .entry(portal_config.lamprey_thread_id)
-            .or_insert_with(|| Portal::summon(globals.clone(), portal_config));
+            .or_insert_with(|| Portal::spawn((globals.clone(), portal_config)));
 
         let globals = globals.clone();
         let ctx = ctx.clone();

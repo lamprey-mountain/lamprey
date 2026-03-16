@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use kameo::actor::Spawn;
 use serenity::all::{
     ChannelType, Guild, GuildChannel, GuildMemberUpdateEvent, Interaction, Message,
     MessagePagination, MessageUpdateEvent, Presence, Ready,
@@ -58,7 +59,7 @@ impl EventHandler for Handler {
                         let portal = globals
                             .portals
                             .entry(config.lamprey_thread_id)
-                            .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
+                            .or_insert_with(|| Portal::spawn((globals.clone(), config.to_owned())));
 
                         let last_id = globals.last_discord_ids.get(&ch.id).map(|v| *v.value());
                         let Some(last_id) = last_id else {
@@ -82,7 +83,7 @@ impl EventHandler for Handler {
                                     continue;
                                 }
                                 let _ = portal
-                                    .send(PortalMessage::DiscordMessageCreate { message })
+                                    .tell(PortalMessage::DiscordMessageCreate { message })
                                     .await;
                             }
                             p = MessagePagination::After(last_id);
@@ -109,8 +110,7 @@ impl EventHandler for Handler {
                         info!("no portal exists so we'll create one");
 
                         if let Err(e) = globals
-                            .bridge_chan
-                            .send(BridgeMessage::DiscordChannelCreate {
+                            .bridge_send(BridgeMessage::DiscordChannelCreate {
                                 guild_id: guild.id,
                                 channel_id: ch.id,
                                 channel_name: ch.name.clone(),
@@ -336,8 +336,7 @@ impl EventHandler for Handler {
         }
 
         if let Err(e) = globals
-            .bridge_chan
-            .send(BridgeMessage::DiscordChannelCreate {
+            .bridge_send(BridgeMessage::DiscordChannelCreate {
                 guild_id,
                 channel_id: channel.id,
                 channel_name: channel.name.clone(),
@@ -409,7 +408,7 @@ impl EventHandler for Handler {
                     timeout_until: None,
                 };
 
-                ly.room_member_patch(realm.lamprey_room_id, puppet.id.into(), &patch)
+                ly.room_member_patch(realm.lamprey_room_id, puppet.id.into(), patch)
                     .await?;
                 info!("updated lamprey member nick for {}", new.user.id);
                 Ok(())

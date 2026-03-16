@@ -1,153 +1,36 @@
+//! Lamprey actor - handles communication with the Lamprey chat service
+
 use std::sync::Arc;
 
-use anyhow::{Error, Result};
-use common::v1::types::{
-    self,
-    misc::UserIdReq,
-    pagination::{PaginationQuery, PaginationResponse},
-    presence, Channel, ChannelId, ChannelType, Media, MessageCreate, MessageId, MessageSync,
-    RoomId, RoomMemberPut, Session, User, UserId,
-};
-use common::v2::types::media::{MediaCreate, MediaCreateSource};
-use common::v2::types::message::Message;
-use sdk::{Client, EventHandler, Http};
-use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info};
+use anyhow::Result;
+use kameo::message::Context;
+use kameo::prelude::*;
+use sdk::Client;
+use tracing::info;
 
-use crate::bridge::BridgeMessage;
-use crate::bridge_common::{Globals, GlobalsTrait};
+use crate::bridge_common::Globals;
 use crate::db::Data;
-use crate::portal::PortalMessage;
+use crate::portal::{Portal, PortalMessage};
+
+pub use crate::lamprey::messages::{LampreyMessage, LampreyResponse};
 
 pub struct Lamprey {
-    recv: mpsc::Receiver<LampreyMessage>,
     client: Client,
     globals: Arc<Globals>,
 }
 
-pub enum LampreyMessage {
-    Handle {
-        response: oneshot::Sender<LampreyHandle>,
-    },
-}
+impl kameo::Actor for Lamprey {
+    type Args = Arc<Globals>;
+    type Error = anyhow::Error;
 
-struct Handle {
-    globals: Arc<Globals>,
-}
-
-impl EventHandler for Handle {
-    type Error = Error;
-
-    async fn ready(&mut self, user: Option<User>, _session: Session) -> Result<()> {
-        if let Some(user) = user {
-            *self.globals.lamprey_user_id.write().await = Some(user.id);
-            info!("lamprey ready, user id: {}", user.id);
-        }
-        Ok(())
-    }
-
-    async fn error(
-        &mut self,
-        err: String,
-        code: Option<common::v1::types::error::SyncError>,
-    ) -> Result<()> {
-        if let Some(code) = code {
-            error!("lamprey sync error [{code:?}]: {err}");
-        } else {
-            error!("lamprey sync error: {err}");
-        }
-        Ok(())
-    }
-
-    async fn sync(&mut self, msg: MessageSync) -> Result<()> {
-        match msg {
-            MessageSync::ChannelCreate { channel: thread } => {
-                if let Some(lamprey_user_id) = *self.globals.lamprey_user_id.read().await {
-                    if lamprey_user_id == thread.creator_id {
-                        info!("ignoring channel create from bridge itself");
-                        return Ok(());
-                    }
-                }
-
-                info!("chat upsert thread");
-                let Ok(realms) = self.globals.get_realms().await else {
-                    return Ok(());
-                };
-
-                let Some(realm_config) = realms
-                    .iter()
-                    .find(|c| Some(c.lamprey_room_id) == thread.room_id)
-                else {
-                    return Ok(());
-                };
-
-                if !realm_config.continuous {
-                    return Ok(());
-                }
-
-                if self
-                    .globals
-                    .get_portal_by_thread_id(thread.id)
-                    .await?
-                    .is_some()
-                {
-                    return Ok(());
-                }
-
-                if let Err(e) = self
-                    .globals
-                    .bridge_chan
-                    .send(BridgeMessage::LampreyThreadCreate {
-                        thread: *thread,
-                        discord_guild_id: realm_config.discord_guild_id,
-                    })
-                    .await
-                {
-                    error!("failed to send lamprey thread create message: {e}");
-                }
-            }
-            MessageSync::MessageCreate { message } => {
-                info!("lamprey message create");
-                self.globals
-                    .portal_send(
-                        message.channel_id,
-                        PortalMessage::LampreyMessageCreate { message },
-                    )
-                    .await;
-            }
-            MessageSync::MessageUpdate { message } => {
-                info!("lamprey message update");
-                self.globals
-                    .portal_send(
-                        message.channel_id,
-                        PortalMessage::LampreyMessageUpdate { message },
-                    )
-                    .await;
-            }
-            MessageSync::MessageDelete {
-                channel_id: thread_id,
-                message_id,
-            } => {
-                info!("lamprey message delete");
-                self.globals
-                    .portal_send(
-                        thread_id,
-                        PortalMessage::LampreyMessageDelete { message_id },
-                    )
-                    .await;
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-}
-
-impl Lamprey {
-    pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<LampreyMessage>) -> Self {
+    async fn on_start(
+        globals: Self::Args,
+        _actor_ref: kameo::prelude::ActorRef<Self>,
+    ) -> Result<Self, Self::Error> {
         let token = globals.config.lamprey_token.clone();
         let base_url = globals.config.lamprey_base_url.clone();
         let ws_url = globals.config.lamprey_ws_url.clone();
-        let handle = Handle {
+        let handle = LampreyEventHandler {
             globals: globals.clone(),
         };
         let mut client = Client::new(token.clone().into()).with_handler(Box::new(handle));
@@ -161,44 +44,30 @@ impl Lamprey {
         } else {
             client.syncer
         };
-        Self {
-            client,
-            recv,
-            globals,
-        }
-    }
-
-    pub async fn connect(mut self) -> Result<()> {
-        tokio::spawn(async move {
-            while let Some(msg) = self.recv.recv().await {
-                info!("got msg");
-                match handle(self.globals.clone(), msg, &self.client.http).await {
-                    Ok(_) => {}
-                    Err(err) => error!("{err}"),
-                };
-            }
-        });
-
-        let _ = self.client.syncer.connect().await;
-        Ok(())
+        Ok(Self { client, globals })
     }
 }
 
-async fn handle(globals: Arc<Globals>, msg: LampreyMessage, http: &Http) -> Result<()> {
-    match msg {
-        LampreyMessage::Handle { response } => {
-            let _ = response.send(LampreyHandle {
-                globals,
-                http: http.clone(),
-            });
-        }
+impl Message<LampreyMessage> for Lamprey {
+    type Reply = Result<LampreyResponse>;
+
+    async fn handle(
+        &mut self,
+        msg: LampreyMessage,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        crate::lamprey::handlers::handle_lamprey_message(
+            &mut self.client,
+            self.globals.clone(),
+            msg,
+        )
+        .await
     }
-    Ok(())
 }
 
 pub struct LampreyHandle {
-    http: Http,
-    globals: Arc<Globals>,
+    pub lamprey_ref: ActorRef<Lamprey>,
+    pub globals: Arc<Globals>,
 }
 
 impl LampreyHandle {
@@ -208,39 +77,54 @@ impl LampreyHandle {
         bytes: Vec<u8>,
         user_id: UserId,
     ) -> Result<Media> {
-        let req = MediaCreate {
-            strip_exif: false,
-            alt: None,
-            source: MediaCreateSource::Upload {
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MediaUpload {
                 filename,
-                size: Some(bytes.len() as u64),
-            },
-        };
-        let upload = self.http.for_puppet(user_id).media_create(&req).await?;
-        let media = self
-            .http
-            .for_puppet(user_id)
-            .media_upload(&upload, bytes)
+                bytes,
+                user_id,
+            })
             .await?;
-        media.ok_or(anyhow::anyhow!("failed to upload"))
+        match response {
+            LampreyResponse::Media(media) => Ok(media),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn message_get(
         &self,
         thread_id: ChannelId,
         message_id: MessageId,
-    ) -> Result<Message> {
-        let res = self.http.message_get(thread_id, message_id).await?;
-        Ok(res)
+    ) -> Result<LMessage> {
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MessageGet {
+                thread_id,
+                message_id,
+            })
+            .await?;
+        match response {
+            LampreyResponse::Message(msg) => Ok(msg),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn message_list(
         &self,
         thread_id: ChannelId,
-        query: &PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
-        let res = self.http.message_list(thread_id, query).await?;
-        Ok(res)
+        query: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<LMessage>> {
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MessageList {
+                thread_id,
+                query: Arc::new(query),
+            })
+            .await?;
+        match response {
+            LampreyResponse::MessageList(page) => Ok(page),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn message_create(
@@ -248,13 +132,19 @@ impl LampreyHandle {
         thread_id: ChannelId,
         user_id: UserId,
         req: MessageCreate,
-    ) -> Result<Message> {
-        let res = self
-            .http
-            .for_puppet(user_id)
-            .message_create(thread_id, &req)
+    ) -> Result<LMessage> {
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MessageCreate {
+                thread_id,
+                user_id,
+                req,
+            })
             .await?;
-        Ok(res)
+        match response {
+            LampreyResponse::Message(msg) => Ok(msg),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn message_update(
@@ -263,13 +153,20 @@ impl LampreyHandle {
         message_id: MessageId,
         user_id: UserId,
         req: types::MessagePatch,
-    ) -> Result<Message> {
-        let res = self
-            .http
-            .for_puppet(user_id)
-            .message_edit(thread_id, message_id, &req)
+    ) -> Result<LMessage> {
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MessageUpdate {
+                thread_id,
+                message_id,
+                user_id,
+                req,
+            })
             .await?;
-        Ok(res)
+        match response {
+            LampreyResponse::Message(msg) => Ok(msg),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn message_delete(
@@ -278,11 +175,18 @@ impl LampreyHandle {
         message_id: MessageId,
         user_id: UserId,
     ) -> Result<()> {
-        self.http
-            .for_puppet(user_id)
-            .message_delete(thread_id, message_id)
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MessageDelete {
+                thread_id,
+                message_id,
+                user_id,
+            })
             .await?;
-        Ok(())
+        match response {
+            LampreyResponse::Empty => Ok(()),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn message_react(
@@ -292,11 +196,19 @@ impl LampreyHandle {
         user_id: UserId,
         reaction: String,
     ) -> Result<()> {
-        self.http
-            .for_puppet(user_id)
-            .message_react(thread_id, message_id, reaction)
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MessageReact {
+                thread_id,
+                message_id,
+                user_id,
+                reaction,
+            })
             .await?;
-        Ok(())
+        match response {
+            LampreyResponse::Empty => Ok(()),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn message_unreact(
@@ -306,19 +218,30 @@ impl LampreyHandle {
         user_id: UserId,
         reaction: String,
     ) -> Result<()> {
-        self.http
-            .for_puppet(user_id)
-            .message_unreact(thread_id, message_id, reaction)
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::MessageUnreact {
+                thread_id,
+                message_id,
+                user_id,
+                reaction,
+            })
             .await?;
-        Ok(())
+        match response {
+            LampreyResponse::Empty => Ok(()),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn typing_start(&self, thread_id: ChannelId, user_id: UserId) -> Result<()> {
-        self.http
-            .for_puppet(user_id)
-            .channel_typing(thread_id)
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::TypingStart { thread_id, user_id })
             .await?;
-        Ok(())
+        match response {
+            LampreyResponse::Empty => Ok(()),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn puppet_ensure(
@@ -328,89 +251,87 @@ impl LampreyHandle {
         room_id: RoomId,
         bot: bool,
     ) -> Result<User> {
-        let app_id = self.globals.config.lamprey_application_id;
-        let user = self
-            .http
-            .puppet_ensure(
-                app_id,
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::PuppetEnsure {
+                name,
                 key,
-                &types::PuppetCreate {
-                    name,
-                    description: None,
-                    bot,
-                    system: false,
-                },
-            )
-            .await?;
-        debug!("ensured user");
-        self.http
-            .room_member_add(
                 room_id,
-                UserIdReq::UserId(user.id),
-                &RoomMemberPut::default(),
-            )
+                bot,
+            })
             .await?;
-        debug!("ensured room member");
-        Ok(user)
+        match response {
+            LampreyResponse::User(user) => Ok(user),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn user_fetch(&self, user_id: UserId) -> Result<User> {
-        let res = self.http.user_get(UserIdReq::UserId(user_id)).await?;
-        Ok(res.inner)
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::UserFetch { user_id })
+            .await?;
+        match response {
+            LampreyResponse::User(user) => Ok(user),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
-    pub async fn user_update(&self, user_id: UserId, patch: &types::UserPatch) -> Result<User> {
-        let res = self
-            .http
-            .for_puppet(user_id)
-            .user_update(UserIdReq::UserId(user_id), patch)
+    pub async fn user_update(&self, user_id: UserId, patch: types::UserPatch) -> Result<User> {
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::UserUpdate { user_id, patch })
             .await?;
-        Ok(res)
+        match response {
+            LampreyResponse::User(user) => Ok(user),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn user_set_presence(
         &self,
         user_id: UserId,
-        patch: &presence::Presence,
+        patch: presence::Presence,
     ) -> Result<()> {
-        self.http
-            .for_puppet(user_id)
-            .user_set_presence(UserIdReq::UserId(user_id), patch)
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::UserSetPresence { user_id, patch })
             .await?;
-        Ok(())
+        match response {
+            LampreyResponse::Empty => Ok(()),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn room_member_patch(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        patch: &types::RoomMemberPatch,
+        patch: types::RoomMemberPatch,
     ) -> Result<types::RoomMember> {
-        let res = self
-            .http
-            .room_member_patch(room_id, UserIdReq::UserId(user_id), patch)
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::RoomMemberPatch {
+                room_id,
+                user_id,
+                patch,
+            })
             .await?;
-        Ok(res)
+        match response {
+            LampreyResponse::RoomMember(member) => Ok(member),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
     }
 
     pub async fn room_threads(&self, room_id: RoomId) -> Result<Vec<Channel>> {
-        let mut all_threads = Vec::new();
-        let mut query = PaginationQuery::default();
-        loop {
-            info!("get room threads");
-            let res = self.http.channel_list(room_id, &query).await?;
-            debug!("threads: {res:?}");
-            all_threads.extend(res.items);
-            if let Some(cursor) = res.cursor {
-                query.from = Some(cursor.parse()?);
-            } else {
-                break;
-            }
-            if !res.has_more {
-                break;
-            }
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::RoomThreads { room_id })
+            .await?;
+        match response {
+            LampreyResponse::RoomThreads(threads) => Ok(threads),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
         }
-        Ok(all_threads)
     }
 
     pub async fn create_thread(
@@ -421,19 +342,133 @@ impl LampreyHandle {
         ty: ChannelType,
         parent_id: Option<ChannelId>,
     ) -> Result<Channel> {
-        let res = self
-            .http
-            .channel_create_room(
+        let response = self
+            .lamprey_ref
+            .ask(LampreyMessage::CreateThread {
                 room_id,
-                &types::ChannelCreate {
-                    name,
-                    description: topic,
-                    ty,
-                    parent_id,
-                    ..Default::default()
-                },
-            )
+                name,
+                topic,
+                ty,
+                parent_id,
+            })
             .await?;
-        Ok(res)
+        match response {
+            LampreyResponse::Channel(channel) => Ok(channel),
+            _ => Err(anyhow::anyhow!("unexpected response type")),
+        }
+    }
+}
+
+// Re-export types used in LampreyHandle
+use common::v1::types::{
+    self,
+    pagination::{PaginationQuery, PaginationResponse},
+    presence, Channel, ChannelId, ChannelType, Media, MessageCreate, MessageId, MessageSync,
+    RoomId, Session, User, UserId,
+};
+use common::v2::types::message::Message as LMessage;
+
+pub struct LampreyEventHandler {
+    pub globals: Arc<Globals>,
+}
+
+#[async_trait::async_trait]
+impl sdk::EventHandler for LampreyEventHandler {
+    type Error = anyhow::Error;
+
+    fn ready(
+        &mut self,
+        user: Option<User>,
+        _session: Session,
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
+        async move {
+            if let Some(user) = user {
+                *self.globals.lamprey_user_id.write().await = Some(user.id);
+                info!("lamprey ready, user id: {}", user.id);
+            }
+            Ok(())
+        }
+    }
+
+    fn error(
+        &mut self,
+        err: String,
+        code: Option<common::v1::types::error::SyncError>,
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
+        async move {
+            if let Some(code) = code {
+                tracing::error!("lamprey sync error [{code:?}]: {err}");
+            } else {
+                tracing::error!("lamprey sync error: {err}");
+            }
+            Ok(())
+        }
+    }
+
+    fn sync(
+        &mut self,
+        msg: MessageSync,
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
+        async move { self.handle_sync(msg).await }
+    }
+}
+
+impl LampreyEventHandler {
+    async fn handle_sync(&self, msg: MessageSync) -> Result<()> {
+        match msg {
+            MessageSync::MessageCreate { message } => {
+                let Ok(Some(config)) = self
+                    .globals
+                    .get_portal_by_thread_id(message.channel_id)
+                    .await
+                else {
+                    return Ok(());
+                };
+                let portal_ref = self
+                    .globals
+                    .portals
+                    .entry(config.lamprey_thread_id)
+                    .or_insert_with(|| Portal::spawn((self.globals.clone(), config.to_owned())));
+                let _ = portal_ref
+                    .tell(PortalMessage::LampreyMessageCreate { message })
+                    .await;
+            }
+            MessageSync::MessageUpdate { message } => {
+                let Ok(Some(config)) = self
+                    .globals
+                    .get_portal_by_thread_id(message.channel_id)
+                    .await
+                else {
+                    return Ok(());
+                };
+                let portal_ref = self
+                    .globals
+                    .portals
+                    .entry(config.lamprey_thread_id)
+                    .or_insert_with(|| Portal::spawn((self.globals.clone(), config.to_owned())));
+                let _ = portal_ref
+                    .tell(PortalMessage::LampreyMessageUpdate { message })
+                    .await;
+            }
+            MessageSync::MessageDelete {
+                channel_id,
+                message_id,
+            } => {
+                let Ok(Some(config)) = self.globals.get_portal_by_thread_id(channel_id).await
+                else {
+                    return Ok(());
+                };
+                let portal_ref = self
+                    .globals
+                    .portals
+                    .entry(config.lamprey_thread_id)
+                    .or_insert_with(|| Portal::spawn((self.globals.clone(), config.to_owned())));
+                let _ = portal_ref
+                    .tell(PortalMessage::LampreyMessageDelete { message_id })
+                    .await;
+            }
+            _ => {} // Other sync messages are ignored
+        }
+        Ok(())
     }
 }

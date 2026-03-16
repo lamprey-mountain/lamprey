@@ -7,7 +7,6 @@ use serenity::all::{
 use tracing::debug;
 
 use crate::db::{AttachmentMetadata, Data, MessageMetadata};
-use crate::discord::DiscordMessage;
 use crate::portal::Portal;
 
 impl Portal {
@@ -46,31 +45,28 @@ impl Portal {
         });
         if let Some(reply_ids) = reply_ids {
             let (discord_id, _chat_id) = reply_ids;
-            let (send, recv) = oneshot::channel();
-            self.globals
-                .dc_chan
-                .send(DiscordMessage::MessageGet {
-                    channel_id: self.channel_id(),
-                    message_id: discord_id,
-                    response: send,
-                })
-                .await?;
-            let reply = recv.await?;
-            let reply_content = if !reply.content.is_empty() {
-                reply.content.to_owned()
-            } else if !reply.attachments.is_empty() {
-                let names: Vec<_> = reply
+            // Get the reply message using Discord actor
+            let discord_msg = crate::discord::discord_get_message(
+                self.globals.clone(),
+                self.channel_id(),
+                discord_id,
+            )
+            .await?;
+            let reply_content = if !discord_msg.content.is_empty() {
+                discord_msg.content.to_owned()
+            } else if !discord_msg.attachments.is_empty() {
+                let names: Vec<_> = discord_msg
                     .attachments
                     .iter()
                     .map(|a| a.filename.to_owned())
                     .collect();
                 format!(
                     "{} attachment(s): {}",
-                    reply.attachments.len(),
+                    discord_msg.attachments.len(),
                     names.join(", ")
                 )
-            } else if !reply.embeds.is_empty() {
-                format!("{} embed(s)", reply.embeds.len())
+            } else if !discord_msg.embeds.is_empty() {
+                format!("{} embed(s)", discord_msg.embeds.len())
             } else {
                 "(no content?)".to_owned()
             };
@@ -81,14 +77,13 @@ impl Portal {
                 discord_id,
                 reply_content,
             );
-            content = format!("{} {}", reply.author.mention(), content);
+            content = format!("{} {}", discord_msg.author.mention(), content);
             embeds.push(CreateEmbed::new().description(description));
 
-            if let Some(att) = reply.attachments.first() {
+            if let Some(att) = discord_msg.attachments.first() {
                 embeds.push(CreateEmbed::new().image(&att.url));
             }
         }
-        let (send, recv) = tokio::sync::oneshot::channel();
         if let Some(edit) = existing {
             let mut files = EditAttachments::new();
             for attachment in &msg_inner.attachments {
@@ -111,7 +106,7 @@ impl Portal {
                     files = files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                 }
             }
-            // let files = files.into_iter().map(|i| EditAttachments::new().add()).collect();
+            // Edit using Discord actor
             let mut payload = EditWebhookMessage::new()
                 .content(content)
                 .allowed_mentions(
@@ -125,15 +120,32 @@ impl Portal {
             if let Some(dc_tid) = self.config.discord_thread_id {
                 payload = payload.in_thread(dc_tid);
             }
+            let discord_msg = crate::discord::discord_edit_message(
+                self.globals.clone(),
+                self.config.discord_webhook.clone(),
+                edit.discord_id,
+                payload,
+            )
+            .await?;
             self.globals
-                .dc_chan
-                .send(DiscordMessage::WebhookMessageEdit {
-                    url: self.config.discord_webhook.clone(),
-                    payload,
-                    response: send,
-                    message_id: edit.discord_id,
+                .insert_message(MessageMetadata {
+                    chat_id: message.id,
+                    chat_thread_id: message.channel_id,
+                    discord_id: discord_msg.id,
+                    discord_channel_id: discord_msg.channel_id,
                 })
                 .await?;
+
+            for (att, attachment) in discord_msg.attachments.iter().zip(msg_inner.attachments) {
+                let common::v2::types::message::MessageAttachmentType::Media { media } =
+                    attachment.ty;
+                self.globals
+                    .insert_attachment(AttachmentMetadata {
+                        chat_id: media.id,
+                        discord_id: att.id,
+                    })
+                    .await?;
+            }
         } else {
             let mut files = vec![];
             for attachment in &msg_inner.attachments {
@@ -179,33 +191,32 @@ impl Portal {
                 );
                 payload = payload.avatar_url(url);
             };
-            self.globals
-                .dc_chan
-                .send(DiscordMessage::WebhookExecute {
-                    url: self.config.discord_webhook.clone(),
-                    payload,
-                    response: send,
-                })
-                .await?;
-        }
-        let res = recv.await?;
-        self.globals
-            .insert_message(MessageMetadata {
-                chat_id: message.id,
-                chat_thread_id: message.channel_id,
-                discord_id: res.id,
-                discord_channel_id: res.channel_id,
-            })
+            // Execute using Discord actor
+            let discord_msg = crate::discord::discord_execute_webhook(
+                self.globals.clone(),
+                self.config.discord_webhook.clone(),
+                payload,
+            )
             .await?;
-
-        for (att, attachment) in res.attachments.iter().zip(msg_inner.attachments) {
-            let common::v2::types::message::MessageAttachmentType::Media { media } = attachment.ty;
             self.globals
-                .insert_attachment(AttachmentMetadata {
-                    chat_id: media.id,
-                    discord_id: att.id,
+                .insert_message(MessageMetadata {
+                    chat_id: message.id,
+                    chat_thread_id: message.channel_id,
+                    discord_id: discord_msg.id,
+                    discord_channel_id: discord_msg.channel_id,
                 })
                 .await?;
+
+            for (att, attachment) in discord_msg.attachments.iter().zip(msg_inner.attachments) {
+                let common::v2::types::message::MessageAttachmentType::Media { media } =
+                    attachment.ty;
+                self.globals
+                    .insert_attachment(AttachmentMetadata {
+                        chat_id: media.id,
+                        discord_id: att.id,
+                    })
+                    .await?;
+            }
         }
 
         Ok(())
@@ -221,19 +232,14 @@ impl Portal {
         };
 
         self.globals.delete_message(message_id).await?;
-        let (send, recv) = oneshot::channel();
-        self.globals
-            .dc_chan
-            .send(DiscordMessage::WebhookMessageDelete {
-                url: self.config.discord_webhook.clone(),
-                message_id: existing.discord_id,
-                thread_id: self.config.discord_thread_id,
-                response: send,
-            })
-            .await?;
-        recv.await?;
+        // Delete using Discord actor
+        crate::discord::discord_delete_message(
+            self.globals.clone(),
+            self.config.discord_webhook.clone(),
+            self.config.discord_thread_id,
+            existing.discord_id,
+        )
+        .await?;
         Ok(())
     }
 }
-
-use tokio::sync::oneshot;

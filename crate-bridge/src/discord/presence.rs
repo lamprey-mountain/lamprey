@@ -40,7 +40,7 @@ pub async fn process_presence_update(globals: Arc<Globals>, presence: Presence) 
     let ly_presence = common::v1::types::presence::Presence { status, activities };
 
     let ly = globals.lamprey_handle().await?;
-    ly.user_set_presence(puppet.id.into(), &ly_presence).await?;
+    ly.user_set_presence(puppet.id.into(), ly_presence).await?;
     info!("updated lamprey presence for {}", presence.user.id);
     Ok(())
 }

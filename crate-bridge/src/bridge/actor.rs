@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use tokio::sync::mpsc;
-use tracing::{error, info};
+use kameo::actor::Spawn;
+use kameo::message::{Context, Message};
+use tracing::info;
 
 use crate::{
     bridge::messages::BridgeMessage,
@@ -14,25 +15,35 @@ use crate::{
 
 pub struct Bridge {
     globals: Arc<Globals>,
-    recv: mpsc::Receiver<BridgeMessage>,
+}
+
+impl kameo::Actor for Bridge {
+    type Args = (Arc<Globals>,);
+    type Error = anyhow::Error;
+
+    async fn on_start(
+        args: Self::Args,
+        _actor_ref: kameo::prelude::ActorRef<Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self { globals: args.0 })
+    }
+}
+
+impl Message<BridgeMessage> for Bridge {
+    type Reply = Result<()>;
+
+    async fn handle(
+        &mut self,
+        msg: BridgeMessage,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.handle_inner(msg).await
+    }
 }
 
 impl Bridge {
-    pub fn spawn(globals: Arc<Globals>, recv: mpsc::Receiver<BridgeMessage>) {
-        let bridge = Self { globals, recv };
-        tokio::spawn(bridge.activate());
-    }
-
-    async fn activate(mut self) {
-        while let Some(msg) = self.recv.recv().await {
-            if let Err(err) = self.handle(msg).await {
-                error!("{err}")
-            }
-        }
-    }
-
     #[tracing::instrument(skip(self))]
-    async fn handle(&mut self, msg: BridgeMessage) -> Result<()> {
+    async fn handle_inner(&mut self, msg: BridgeMessage) -> Result<()> {
         match msg {
             BridgeMessage::LampreyThreadCreate {
                 thread,
@@ -69,6 +80,7 @@ impl Bridge {
                 } else {
                     thread.name.clone()
                 };
+
                 let channel_id = discord::discord_create_channel(
                     self.globals.clone(),
                     discord_guild_id,
@@ -106,7 +118,7 @@ impl Bridge {
                 self.globals
                     .portals
                     .entry(portal.lamprey_thread_id)
-                    .or_insert_with(|| Portal::summon(self.globals.clone(), portal));
+                    .or_insert_with(|| Portal::spawn((self.globals.clone(), portal.clone())));
             }
             BridgeMessage::DiscordChannelCreate {
                 guild_id,
@@ -205,7 +217,9 @@ impl Bridge {
                 self.globals
                     .portals
                     .entry(portal_config.lamprey_thread_id)
-                    .or_insert_with(|| Portal::summon(self.globals.clone(), portal_config));
+                    .or_insert_with(|| {
+                        Portal::spawn((self.globals.clone(), portal_config.clone()))
+                    });
             }
         }
 

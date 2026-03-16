@@ -1,50 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use serenity::all::EditWebhookMessage;
-use serenity::all::{ChannelId, ExecuteWebhook, GuildId, Message, MessageId, Webhook};
-use tokio::sync::oneshot;
+use serenity::all::{ChannelId, GuildId, MessageId, Webhook};
 
 use crate::bridge_common::Globals;
-
-/// discord actor message
-#[derive(Debug)]
-pub enum DiscordMessage {
-    WebhookExecute {
-        url: String,
-        payload: ExecuteWebhook,
-        response: oneshot::Sender<Message>,
-    },
-    WebhookMessageEdit {
-        url: String,
-        message_id: MessageId,
-        payload: EditWebhookMessage,
-        response: oneshot::Sender<Message>,
-    },
-    WebhookMessageDelete {
-        url: String,
-        message_id: MessageId,
-        thread_id: Option<ChannelId>,
-        response: oneshot::Sender<()>,
-    },
-    MessageGet {
-        message_id: MessageId,
-        channel_id: ChannelId,
-        response: oneshot::Sender<Message>,
-    },
-    ChannelCreate {
-        guild_id: GuildId,
-        name: String,
-        ty: common::v1::types::ChannelType,
-        parent_id: Option<ChannelId>,
-        response: oneshot::Sender<ChannelId>,
-    },
-    WebhookCreate {
-        channel_id: ChannelId,
-        name: String,
-        response: oneshot::Sender<Webhook>,
-    },
-}
+use crate::discord::{DiscordMessage, DiscordResponse};
 
 pub async fn discord_create_channel(
     globals: Arc<Globals>,
@@ -53,18 +13,25 @@ pub async fn discord_create_channel(
     ty: common::v1::types::ChannelType,
     parent_id: Option<serenity::all::ChannelId>,
 ) -> Result<serenity::all::ChannelId> {
-    let (send, recv) = oneshot::channel();
-    globals
-        .dc_chan
-        .send(DiscordMessage::ChannelCreate {
+    let mut discord_guard = globals.discord.write().await;
+    let discord = discord_guard
+        .as_mut()
+        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let response = discord
+        .handle_message(DiscordMessage::ChannelCreate {
             guild_id,
             name,
             ty,
             parent_id,
-            response: send,
         })
         .await?;
-    Ok(recv.await?)
+
+    match response {
+        DiscordResponse::ChannelId(id) => Ok(id),
+        _ => Err(anyhow::anyhow!(
+            "unexpected response type from Discord actor"
+        )),
+    }
 }
 
 pub async fn discord_create_webhook(
@@ -72,14 +39,115 @@ pub async fn discord_create_webhook(
     channel_id: serenity::all::ChannelId,
     name: String,
 ) -> Result<Webhook> {
-    let (send, recv) = oneshot::channel();
-    globals
-        .dc_chan
-        .send(DiscordMessage::WebhookCreate {
+    let mut discord_guard = globals.discord.write().await;
+    let discord = discord_guard
+        .as_mut()
+        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let response = discord
+        .handle_message(DiscordMessage::WebhookCreate { channel_id, name })
+        .await?;
+
+    match response {
+        DiscordResponse::Webhook(hook) => Ok(hook),
+        _ => Err(anyhow::anyhow!(
+            "unexpected response type from Discord actor"
+        )),
+    }
+}
+
+pub async fn discord_get_message(
+    globals: Arc<Globals>,
+    channel_id: ChannelId,
+    message_id: MessageId,
+) -> Result<serenity::all::Message> {
+    let mut discord_guard = globals.discord.write().await;
+    let discord = discord_guard
+        .as_mut()
+        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let response = discord
+        .handle_message(DiscordMessage::MessageGet {
+            message_id,
             channel_id,
-            name,
-            response: send,
         })
         .await?;
-    Ok(recv.await?)
+
+    match response {
+        DiscordResponse::Message(msg) => Ok(msg),
+        _ => Err(anyhow::anyhow!(
+            "unexpected response type from Discord actor"
+        )),
+    }
+}
+
+pub async fn discord_execute_webhook(
+    globals: Arc<Globals>,
+    url: String,
+    payload: serenity::all::ExecuteWebhook,
+) -> Result<serenity::all::Message> {
+    let mut discord_guard = globals.discord.write().await;
+    let discord = discord_guard
+        .as_mut()
+        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let response = discord
+        .handle_message(DiscordMessage::WebhookExecute { url, payload })
+        .await?;
+
+    match response {
+        DiscordResponse::Message(msg) => Ok(msg),
+        _ => Err(anyhow::anyhow!(
+            "unexpected response type from Discord actor"
+        )),
+    }
+}
+
+pub async fn discord_edit_message(
+    globals: Arc<Globals>,
+    url: String,
+    message_id: MessageId,
+    payload: serenity::all::EditWebhookMessage,
+) -> Result<serenity::all::Message> {
+    let mut discord_guard = globals.discord.write().await;
+    let discord = discord_guard
+        .as_mut()
+        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let response = discord
+        .handle_message(DiscordMessage::WebhookMessageEdit {
+            url,
+            message_id,
+            payload,
+        })
+        .await?;
+
+    match response {
+        DiscordResponse::Message(msg) => Ok(msg),
+        _ => Err(anyhow::anyhow!(
+            "unexpected response type from Discord actor"
+        )),
+    }
+}
+
+pub async fn discord_delete_message(
+    globals: Arc<Globals>,
+    url: String,
+    thread_id: Option<ChannelId>,
+    message_id: MessageId,
+) -> Result<()> {
+    let mut discord_guard = globals.discord.write().await;
+    let discord = discord_guard
+        .as_mut()
+        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let response = discord
+        .handle_message(DiscordMessage::WebhookMessageDelete {
+            url,
+            thread_id,
+            message_id,
+        })
+        .await?;
+
+    match response {
+        DiscordResponse::Unit => Ok(()),
+        _ => Err(anyhow::anyhow!(
+            "unexpected response type from Discord actor"
+        )),
+    }
 }

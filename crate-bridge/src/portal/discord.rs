@@ -14,7 +14,7 @@ use crate::portal::Portal;
 
 impl Portal {
     pub(super) async fn sync_discord_member_nick(
-        &self,
+        &mut self,
         user_id: serenity::model::id::UserId,
         nick: Option<String>,
     ) -> Result<()> {
@@ -37,7 +37,7 @@ impl Portal {
             timeout_until: None,
         };
 
-        ly.room_member_patch(self.room_id(), puppet.id.into(), &patch)
+        ly.room_member_patch(self.room_id(), puppet.id.into(), patch)
             .await?;
         debug!("synced nickname for user {}", user_id);
 
@@ -123,7 +123,7 @@ impl Portal {
         }
 
         if user_patch.changes(&puppet) {
-            puppet = ly.user_update(user_id, &user_patch).await?;
+            puppet = ly.user_update(user_id, user_patch).await?;
         }
 
         self.globals

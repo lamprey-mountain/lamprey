@@ -4,16 +4,29 @@ use std::sync::Arc;
 use crate::bridge_common::{Globals, PortalConfig};
 
 use anyhow::Result;
+use kameo::message::{Context, Message};
 use serenity::all::ChannelId as DcChannelId;
-use tokio::sync::mpsc;
-use tracing::error;
 
 use crate::portal::messages::PortalMessage;
 
 pub struct Portal {
     pub globals: Arc<Globals>,
-    recv: mpsc::Receiver<PortalMessage>,
     pub config: PortalConfig,
+}
+
+impl kameo::Actor for Portal {
+    type Args = (Arc<Globals>, PortalConfig);
+    type Error = anyhow::Error;
+
+    async fn on_start(
+        args: Self::Args,
+        _actor_ref: kameo::prelude::ActorRef<Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            globals: args.0,
+            config: args.1,
+        })
+    }
 }
 
 impl Debug for Portal {
@@ -23,17 +36,6 @@ impl Debug for Portal {
 }
 
 impl Portal {
-    pub fn summon(globals: Arc<Globals>, config: PortalConfig) -> mpsc::Sender<PortalMessage> {
-        let (send, recv) = mpsc::channel(1024);
-        let portal = Self {
-            globals,
-            recv,
-            config,
-        };
-        tokio::spawn(portal.activate());
-        send
-    }
-
     pub fn channel_id(&self) -> DcChannelId {
         self.config.discord_channel_id
     }
@@ -45,16 +47,21 @@ impl Portal {
     pub fn room_id(&self) -> common::v1::types::RoomId {
         self.config.lamprey_room_id
     }
+}
 
-    async fn activate(mut self) {
-        while let Some(msg) = self.recv.recv().await {
-            if let Err(err) = self.handle(msg).await {
-                error!(portal = ?self.config, "error handling portal message: {err:?}");
-            }
-        }
-        error!(portal = ?self.config, "portal channel closed, shutting down");
+impl Message<PortalMessage> for Portal {
+    type Reply = Result<()>;
+
+    async fn handle(
+        &mut self,
+        msg: PortalMessage,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.handle_inner(msg).await
     }
+}
 
+impl Portal {
     #[tracing::instrument(
         skip(self),
         fields(
@@ -62,7 +69,7 @@ impl Portal {
             discord_channel_id = %self.config.discord_channel_id,
         )
     )]
-    async fn handle(&mut self, msg: PortalMessage) -> Result<()> {
+    async fn handle_inner(&mut self, msg: PortalMessage) -> Result<()> {
         match msg {
             PortalMessage::LampreyMessageCreate { message } => {
                 self.handle_lamprey_message_create(message).await?;
