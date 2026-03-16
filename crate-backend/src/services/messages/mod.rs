@@ -277,14 +277,35 @@ impl ServiceMessages {
         json: MessagePatch,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
-        let s = &self.state;
         json.validate()?;
-        let data = s.data();
-        let srv = s.services();
+        let data = self.state.data();
+        let srv = self.state.services();
         let user = srv.users.get(user_id, None).await?;
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         let is_webhook = user.webhook.is_some();
 
+        // 1. Pre-flight checks
+        let (can_use_external_emoji, can_embed) = self
+            .enforce_edit_permissions(is_webhook, user_id, thread_id)
+            .await?;
+
+        let mut message = self
+            .get_message_for_edit(thread_id, message_id, user_id, is_webhook)
+            .await?;
+
+        if !message.latest_version.message_type.is_editable() {
+            return Err(Error::BadStatic("cant edit that message"));
+        }
+        if !json.changes(&message) {
+            return Ok((StatusCode::NOT_MODIFIED, message));
+        }
+
+        // 2. Validate and prepare payload
+        let (attachment_ids, content, payload, mentions) = self
+            .prepare_edit_payload(&json, &message, &thread, can_use_external_emoji)
+            .await?;
+
+        // 3. Database update
         let created_at = if let Some(ts) = header_timestamp {
             Some(
                 self.check_timestamp_override(user_id, thread_id, ts)
@@ -294,49 +315,96 @@ impl ServiceMessages {
             None
         };
 
-        let perms = if is_webhook {
-            None
-        } else {
-            Some(srv.perms.for_channel(user_id, thread_id).await?)
-        };
+        let version_id = self
+            .update_message_in_db(
+                thread_id,
+                message_id,
+                attachment_ids,
+                user_id,
+                payload,
+                created_at,
+                mentions,
+            )
+            .await?;
 
-        if let Some(perms) = &perms {
-            perms.ensure(Permission::ViewChannel)?;
+        // 4. Post-processing
+        self.finalize_edit(
+            &mut message,
+            thread_id,
+            version_id,
+            content.as_ref(),
+            user_id,
+            can_embed,
+        )
+        .await?;
+
+        self.state.presign_message(&mut message).await?;
+        self.state
+            .broadcast_channel(
+                thread_id,
+                user_id,
+                MessageSync::MessageUpdate {
+                    message: message.clone(),
+                },
+            )
+            .await?;
+        self.state.services().channels.invalidate(thread_id).await;
+
+        Ok((StatusCode::OK, message))
+    }
+
+    async fn enforce_edit_permissions(
+        &self,
+        is_webhook: bool,
+        user_id: UserId,
+        thread_id: ChannelId,
+    ) -> Result<(bool, bool)> {
+        if is_webhook {
+            return Ok((true, true));
         }
 
-        let can_use_external_emoji = if !is_webhook {
-            if let Some(perms) = &perms {
-                perms.has(Permission::EmojiUseExternal)
-            } else {
-                true // system
-            }
-        } else {
-            true
-        };
+        let perms = self
+            .state
+            .services()
+            .perms
+            .for_channel(user_id, thread_id)
+            .await?;
+        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure_unlocked()?;
 
-        let mut message = match self.get(thread_id, message_id, user_id).await {
-            Ok(m) => m,
+        Ok((
+            perms.has(Permission::EmojiUseExternal),
+            perms.has(Permission::MessageEmbeds),
+        ))
+    }
+
+    async fn get_message_for_edit(
+        &self,
+        thread_id: ChannelId,
+        message_id: MessageId,
+        user_id: UserId,
+        is_webhook: bool,
+    ) -> Result<Message> {
+        match self.get(thread_id, message_id, user_id).await {
+            Ok(m) => Ok(m),
             Err(e) => {
                 if is_webhook {
                     return Err(Error::ApiError(ApiError::from_code(
                         ErrorCode::UnknownMessage,
                     )));
                 }
-                return Err(e);
+                Err(e)
             }
-        };
+        }
+    }
 
-        if !message.latest_version.message_type.is_editable() {
-            return Err(Error::BadStatic("cant edit that message"));
-        }
-        if message.author_id != user_id {
-            if is_webhook {
-                return Err(Error::ApiError(ApiError::from_code(
-                    ErrorCode::UnknownMessage,
-                )));
-            }
-            return Err(ApiError::from_code(ErrorCode::MissingPermissions).into());
-        }
+    async fn prepare_edit_payload(
+        &self,
+        json: &MessagePatch,
+        message: &Message,
+        thread: &Channel,
+        can_use_external_emoji: bool,
+    ) -> Result<(Vec<MediaId>, Option<String>, MessageType, Mentions)> {
         if json.content.is_none()
             && json.attachments.as_ref().is_some_and(|a| a.is_empty())
             && json.embeds.as_ref().is_some_and(|a| a.is_empty())
@@ -346,75 +414,54 @@ impl ServiceMessages {
             ));
         }
 
+        let perms = self
+            .state
+            .services()
+            .perms
+            .for_channel(message.author_id, thread.id)
+            .await
+            .ok();
         if let Some(perms) = &perms {
-            let mut required_perms = vec![];
+            let mut required = vec![];
             if json.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
-                required_perms.push(Permission::MessageAttachments);
+                required.push(Permission::MessageAttachments);
             }
             if json.embeds.as_ref().is_some_and(|a| !a.is_empty()) {
-                required_perms.push(Permission::MessageEmbeds);
+                required.push(Permission::MessageEmbeds);
             }
-            perms.ensure_all(&required_perms)?;
+            perms.ensure_all(&required)?;
         }
 
-        if !json.changes(&message) {
-            return Ok((StatusCode::NOT_MODIFIED, message));
-        }
-        let attachment_ids: Vec<_> = json
-            .attachments
-            .clone()
-            .map(|ats| {
-                ats.into_iter()
-                    .filter_map(|r| match r.ty {
-                        MessageAttachmentCreateType::Media { media, .. } => match media {
-                            MediaReference::Media { media_id } => Some(media_id),
-                            _ => None,
-                        },
-                    })
-                    .collect()
-            })
-            .unwrap_or_else(|| match &message.latest_version.message_type {
-                MessageType::DefaultMarkdown(msg) => msg
-                    .attachments
-                    .iter()
-                    .filter_map(|a| match &a.ty {
-                        common::v2::types::message::MessageAttachmentType::Media { media } => {
-                            Some(media.id)
-                        }
-                    })
-                    .collect(),
-                _ => vec![],
-            });
-        for id in &attachment_ids {
-            data.media_select(*id).await?;
-            let existing = data.media_link_select(*id).await?;
-            let has_link = existing.iter().any(|i| {
-                i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner()
-            });
-            if !has_link {
-                return Err(Error::BadStatic("cant reuse media"));
-            }
-        }
-        let mut embeds = vec![];
-        if let Some(embed_creates) = json.embeds.clone() {
-            let mut embed_futs = Vec::new();
-            for embed_create in embed_creates {
-                let v1_embed_create: common::v1::types::EmbedCreate = embed_create.into();
-                embed_futs.push(self.embed_from_create(v1_embed_create, user_id));
-            }
-            embeds = futures_util::future::try_join_all(embed_futs).await?;
-        }
+        let attachment_ids = self.extract_attachment_ids(json, message)?;
+        self.validate_media_links(&attachment_ids, message.id)
+            .await?;
 
+        let embeds = self
+            .build_embeds(json.embeds.clone().unwrap_or_default(), message.author_id)
+            .await?;
+
+        // Enforce automod
         if let Some(room_id) = thread.room_id {
-            let automod = srv.automod.load(room_id).await?;
-            let scan = automod.scan_message_update(&message, &json);
+            let automod = self.state.services().automod.load(room_id).await?;
+            let scan = automod.scan_message_update(message, json);
             if scan.is_triggered() {
-                let removed = srv
+                let removed = self
+                    .state
+                    .services()
                     .automod
-                    .enforce_message_create(room_id, thread_id, message_id, user_id, &scan)
+                    .enforce_message_create(
+                        room_id,
+                        thread.id,
+                        message.id,
+                        message.author_id,
+                        &scan,
+                    )
                     .await?;
                 if removed {
-                    data.message_remove_bulk(thread_id, &[message_id]).await?;
+                    self.state
+                        .data()
+                        .message_remove_bulk(thread.id, &[message.id])
+                        .await?;
                 }
             }
         }
@@ -447,20 +494,86 @@ impl ServiceMessages {
                     }
                 }
 
-                Result::Ok((
+                (
                     content.clone(),
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content,
                         attachments: vec![],
-                        embeds: embeds.clone(),
+                        embeds: embeds.into_iter().map(|e| e.into()).collect(),
                         metadata: None,
                         reply_id: json.reply_id.unwrap_or(msg.reply_id),
                     }),
                     mentions,
-                ))
+                )
             }
             _ => return Err(Error::Unimplemented),
-        }?;
+        };
+
+        Ok((attachment_ids, content, payload, mentions))
+    }
+
+    fn extract_attachment_ids(
+        &self,
+        json: &MessagePatch,
+        message: &Message,
+    ) -> Result<Vec<MediaId>> {
+        Ok(json
+            .attachments
+            .clone()
+            .map(|ats| {
+                ats.into_iter()
+                    .filter_map(|r| match r.ty {
+                        MessageAttachmentCreateType::Media { media, .. } => match media {
+                            MediaReference::Media { media_id } => Some(media_id),
+                            _ => None,
+                        },
+                    })
+                    .collect()
+            })
+            .unwrap_or_else(|| match &message.latest_version.message_type {
+                MessageType::DefaultMarkdown(msg) => msg
+                    .attachments
+                    .iter()
+                    .filter_map(|a| match &a.ty {
+                        common::v2::types::message::MessageAttachmentType::Media { media } => {
+                            Some(media.id)
+                        }
+                    })
+                    .collect(),
+                _ => vec![],
+            }))
+    }
+
+    async fn validate_media_links(
+        &self,
+        attachment_ids: &[MediaId],
+        message_id: MessageId,
+    ) -> Result<()> {
+        let data = self.state.data();
+        for id in attachment_ids {
+            data.media_select(*id).await?;
+            let existing = data.media_link_select(*id).await?;
+            let has_link = existing.iter().any(|i| {
+                i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner()
+            });
+            if !has_link {
+                return Err(Error::BadStatic("cant reuse media"));
+            }
+        }
+        Ok(())
+    }
+
+    async fn update_message_in_db(
+        &self,
+        thread_id: ChannelId,
+        message_id: MessageId,
+        attachment_ids: Vec<MediaId>,
+        author_id: UserId,
+        payload: MessageType,
+        created_at: Option<Time>,
+        mentions: Mentions,
+    ) -> Result<MessageVerId> {
+        let data = self.state.data();
 
         let version_id = data
             .message_update(
@@ -468,8 +581,13 @@ impl ServiceMessages {
                 message_id,
                 DbMessageUpdate {
                     attachment_ids: attachment_ids.clone(),
-                    author_id: user_id,
-                    embeds: embeds.into_iter().map(|e| e.into()).collect(),
+                    author_id,
+                    embeds: match payload {
+                        MessageType::DefaultMarkdown(ref md) => {
+                            md.embeds.iter().cloned().map(|e| e.into()).collect()
+                        }
+                        _ => vec![],
+                    },
                     message_type: payload,
                     created_at: created_at.map(|t| t.into()),
                     mentions,
@@ -484,37 +602,34 @@ impl ServiceMessages {
                 .await?;
         }
 
+        Ok(version_id)
+    }
+
+    async fn finalize_edit(
+        &self,
+        message: &mut Message,
+        thread_id: ChannelId,
+        version_id: MessageVerId,
+        content: Option<&String>,
+        user_id: UserId,
+        can_embed: bool,
+    ) -> Result<()> {
+        let data = self.state.data();
         let ver = data
             .message_version_get(thread_id, version_id, user_id)
             .await?;
-
         message.latest_version = ver;
 
-        if let Some(content) = &content {
-            let can_embed = if let Some(perms) = &perms {
-                perms.has(Permission::MessageEmbeds)
-            } else {
-                is_webhook
-            };
+        self.populate_all(thread_id, user_id, std::slice::from_mut(message))
+            .await?;
+
+        if let Some(content) = content {
             if can_embed {
                 tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
             }
         }
 
-        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
-            .await?;
-
-        s.presign_message(&mut message).await?;
-        s.broadcast_channel(
-            thread_id,
-            user_id,
-            MessageSync::MessageUpdate {
-                message: message.clone(),
-            },
-        )
-        .await?;
-        s.services().channels.invalidate(thread_id).await; // last version id
-        Ok((StatusCode::OK, message))
+        Ok(())
     }
 
     pub async fn fetch_full_mentions_from_ids(
@@ -1176,7 +1291,6 @@ impl ServiceMessages {
             .await?;
         self.state.services().channels.invalidate(thread_id).await;
 
-        // THIS is the biggest win: moving the 150-line tokio::spawn block out!
         self.dispatch_notifications(message.clone(), chan.clone(), mentions, user_id)
             .await;
 
