@@ -1,6 +1,7 @@
 use anyhow::Result;
 use common::v1::types::{self, util::Diff, EmbedCreate};
 use common::v2::types::media::MediaReference;
+use futures::future::try_join_all;
 use reqwest::Url;
 use serenity::all::{
     Message as DcMessage, MessageId as DcMessageId, MessageReferenceKind,
@@ -184,29 +185,39 @@ impl Portal {
             embeds: vec![],
             mentions: Default::default(),
         };
-        for a in &message.attachments {
-            let bytes = a.download().await?;
-            debug!("downloaded attachment");
-            let media = ly
-                .media_upload(a.filename.to_owned(), bytes.into(), user_id)
-                .await?;
-            debug!("reuploaded attachment");
-            self.globals
-                .insert_attachment(AttachmentMetadata {
-                    chat_id: media.id,
-                    discord_id: a.id,
+
+        // Process attachments concurrently for better performance
+        let attachment_futures = message.attachments.iter().map(|a| {
+            let ly = &ly;
+            let globals = &self.globals;
+            let user_id = user_id;
+            async move {
+                let bytes = a.download().await?;
+                debug!("downloaded attachment");
+                let media = ly
+                    .media_upload(a.filename.to_owned(), bytes.into(), user_id)
+                    .await?;
+                debug!("reuploaded attachment");
+                globals
+                    .insert_attachment(AttachmentMetadata {
+                        chat_id: media.id,
+                        discord_id: a.id,
+                    })
+                    .await?;
+                debug!("saved attachment metadata to db");
+                Ok::<_, anyhow::Error>(types::MessageAttachmentCreate {
+                    ty: types::MessageAttachmentCreateType::Media {
+                        media: MediaReference::Media { media_id: media.id },
+                        alt: None,
+                        filename: None,
+                    },
+                    spoiler: false,
                 })
-                .await?;
-            debug!("saved attachment metadata to db");
-            req.attachments.push(types::MessageAttachmentCreate {
-                ty: types::MessageAttachmentCreateType::Media {
-                    media: MediaReference::Media { media_id: media.id },
-                    alt: None,
-                    filename: None,
-                },
-                spoiler: false,
-            });
-        }
+            }
+        });
+
+        req.attachments = try_join_all(attachment_futures).await?;
+
         for emb in message.embeds.iter().cloned() {
             let author_avatar = if let Some(url) = emb
                 .author

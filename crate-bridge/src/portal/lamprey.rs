@@ -1,5 +1,6 @@
 use anyhow::Result;
 use common::v2::types::message::Message;
+use futures::future::try_join_all;
 use serenity::all::{
     CreateAllowedMentions, CreateAttachment, CreateEmbed, EditAttachments, EditWebhookMessage,
     ExecuteWebhook, Mentionable,
@@ -160,30 +161,38 @@ impl Portal {
                     .await?;
             }
         } else {
-            let mut files = vec![];
-            for attachment in &msg_inner.attachments {
-                let common::v2::types::message::MessageAttachmentType::Media { media } =
-                    &attachment.ty;
-                let url = format!(
-                    "{}/media/{}",
-                    self.globals
-                        .config
-                        .lamprey_cdn_url
-                        .as_deref()
-                        .unwrap_or("https://chat-cdn.celery.eu.org"),
-                    media.id
-                );
-                let bytes = self
-                    .globals
-                    .reqwest_client
-                    .get(&url)
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .bytes()
-                    .await?;
-                files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
-            }
+            // Download attachments concurrently for better performance
+            let download_futures = msg_inner.attachments.iter().map(|attachment| {
+                let globals = &self.globals;
+                async move {
+                    let common::v2::types::message::MessageAttachmentType::Media { media } =
+                        &attachment.ty;
+                    let url = format!(
+                        "{}/media/{}",
+                        globals
+                            .config
+                            .lamprey_cdn_url
+                            .as_deref()
+                            .unwrap_or("https://chat-cdn.celery.eu.org"),
+                        media.id
+                    );
+                    let bytes = globals
+                        .reqwest_client
+                        .get(&url)
+                        .send()
+                        .await?
+                        .error_for_status()?
+                        .bytes()
+                        .await?;
+                    Ok::<_, anyhow::Error>(CreateAttachment::bytes(
+                        bytes,
+                        media.filename.to_owned(),
+                    ))
+                }
+            });
+
+            let files = try_join_all(download_futures).await?;
+
             let user = ly.user_fetch(message.author_id).await?;
             let mut payload = ExecuteWebhook::new()
                 .username(user.name)
