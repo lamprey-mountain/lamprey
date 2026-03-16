@@ -15,6 +15,7 @@ use common::{
     },
     v2::types::media::MediaReference,
 };
+use http::HeaderValue;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
@@ -77,6 +78,64 @@ fn convert_embed(embed: DiscordEmbed) -> EmbedCreate {
     }
 }
 
+struct ParsedAttachment {
+    filename: String,
+    data: Bytes,
+}
+
+struct Parsed {
+    message: MessageCreate,
+    attachments: Vec<ParsedAttachment>,
+}
+
+async fn parse_webhook_body(req: Request<Body>, s: &Arc<ServerState>) -> Result<Parsed> {
+    let ct = req
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let mut message_create = MessageCreate::default();
+    let mut attachments = Vec::new();
+
+    if ct.contains("application/json") {
+        let bytes = req.collect().await?.to_bytes();
+        let payload: DiscordWebhookExecuteBody = serde_json::from_slice(&bytes)?;
+        payload.validate()?;
+        message_create.content = payload.content;
+        if let Some(embeds) = payload.embeds {
+            message_create.embeds = embeds.into_iter().map(convert_embed).collect();
+        }
+    } else if ct.contains("multipart/form-data") {
+        let mut multipart = multipart::Multipart::from_request(req, s).await?;
+        while let Some(field) = multipart.next_field().await? {
+            let name = field.name().unwrap_or("").to_string();
+            if name == "payload_json" {
+                let data = field.bytes().await?;
+                let payload: DiscordWebhookExecuteBody = serde_json::from_slice(&data)?;
+                payload.validate()?;
+                message_create.content = payload.content;
+                if let Some(embeds) = payload.embeds {
+                    message_create.embeds = embeds.into_iter().map(convert_embed).collect();
+                }
+            } else if name.starts_with("files[") {
+                let filename = field.file_name().unwrap_or("file").to_string();
+                let data = field.bytes().await?;
+                attachments.push(ParsedAttachment { filename, data });
+            }
+        }
+    } else {
+        return Err(Error::BadStatic(
+            "content-type must be multipart/form-data or application/json",
+        ));
+    }
+
+    Ok(Parsed {
+        message: message_create,
+        attachments,
+    })
+}
+
 /// Webhook execute discord (WIP)
 #[utoipa::path(
     post,
@@ -98,29 +157,11 @@ pub async fn webhook_execute_discord(
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
     let webhook_user_id: types::UserId = (*webhook.id).into();
-    let mut multipart = multipart::Multipart::from_request(req, &s).await?;
 
-    let mut message_create = MessageCreate::default();
-    let mut file_fields = Vec::new();
-
-    while let Some(field) = multipart.next_field().await? {
-        let name = field.name().unwrap_or("").to_string();
-        if name == "payload_json" {
-            let data = field.bytes().await?;
-            let discord_payload: DiscordWebhookExecuteBody = serde_json::from_slice(&data)?;
-            discord_payload.validate()?;
-
-            message_create.content = discord_payload.content;
-            if let Some(embeds) = discord_payload.embeds {
-                message_create.embeds = embeds.into_iter().map(convert_embed).collect();
-            }
-        } else if name.starts_with("files[") {
-            // TODO: more robust parsing
-            let filename = field.file_name().map(|s| s.to_string());
-            let data = field.bytes().await?;
-            file_fields.push((filename, data));
-        }
-    }
+    let Parsed {
+        message: mut message_create,
+        attachments: file_fields,
+    } = parse_webhook_body(req, &s).await?;
 
     let mut attachments = Vec::new();
     if !file_fields.is_empty() {
