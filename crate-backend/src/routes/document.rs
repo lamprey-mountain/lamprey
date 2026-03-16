@@ -62,7 +62,7 @@ async fn wiki_history(
     let data = s.data();
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let summary = srv.documents.query_wiki_history(channel_id, query).await?;
 
@@ -113,7 +113,7 @@ async fn document_branch_list(
     let data = s.data();
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let branches = data
         .document_branch_paginate(channel_id, auth.user.id, query, pagination)
@@ -145,7 +145,7 @@ async fn document_branch_get(
     let data = s.data();
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let branch = data.document_branch_get(channel_id, branch_id).await?;
 
@@ -293,7 +293,7 @@ async fn document_branch_fork(
     let user_id = auth.user.id;
 
     let perms = srv.perms.for_channel(user_id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::DocumentEdit)?;
 
     let parent_branch = data.document_branch_get(channel_id, parent_id).await?;
@@ -497,7 +497,7 @@ async fn document_tag_list(
     let srv = s.services();
 
     let perms = srv.perms.for_channel(user_id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let tags = data
         .document_tag_list_by_document(channel_id, user_id)
@@ -528,7 +528,7 @@ async fn document_tag_get(
     let srv = s.services();
 
     let perms = srv.perms.for_channel(user_id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let data = s.data();
     let tag = data.document_tag_get(tag_id).await?;
@@ -684,7 +684,7 @@ async fn document_history(
     let data = s.data();
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let branch = data.document_branch_get(channel_id, branch_id).await?;
     if branch.private && branch.creator_id != auth.user.id {
@@ -745,7 +745,7 @@ async fn document_crdt_diff(
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let branch = data.document_branch_get(channel_id, branch_id).await?;
     if branch.private && branch.creator_id != auth.user.id {
@@ -831,7 +831,7 @@ async fn document_content_get(
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let (branch_id, seq) = match revision_id {
         DocumentRevisionId::Branch { branch_id } => (branch_id, None),

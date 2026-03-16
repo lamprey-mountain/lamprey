@@ -45,7 +45,7 @@ async fn reaction_list(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let list = data
         .reaction_list(channel_id, message_id, reaction_key, q)
         .await?;
@@ -90,7 +90,7 @@ async fn reaction_add(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::ReactionAdd)?;
 
     if auth.user.id != user_id {
@@ -168,11 +168,11 @@ async fn reaction_remove(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     if auth.user.id == user_id {
         perms.ensure(Permission::ReactionAdd)?;
     } else {
-        perms.ensure(Permission::ReactionPurge)?;
+        perms.ensure(Permission::ReactionManage)?;
     }
 
     let chan = s
@@ -248,8 +248,8 @@ async fn reaction_remove_key(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::ReactionPurge)?;
+    perms.ensure(Permission::ChannelView)?;
+    perms.ensure(Permission::ReactionManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     chan.ensure_unarchived()?;
@@ -316,8 +316,8 @@ async fn reaction_remove_all(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::ReactionPurge)?;
+    perms.ensure(Permission::ChannelView)?;
+    perms.ensure(Permission::ReactionManage)?;
 
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;

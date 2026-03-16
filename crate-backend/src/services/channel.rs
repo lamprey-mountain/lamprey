@@ -309,7 +309,7 @@ impl ServiceChannels {
                 "Channel must have a parent or be in a room",
             ));
         };
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
 
         let parent_id_opt = json.parent_id;
         let parent = if let Some(parent_id) = parent_id_opt {
@@ -682,7 +682,7 @@ impl ServiceChannels {
             .perms
             .for_channel(auth.user.id, parent_channel_id)
             .await?;
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
         perms.ensure(Permission::ThreadCreatePublic)?;
 
         let parent_channel = srv
@@ -834,7 +834,7 @@ impl ServiceChannels {
             .perms
             .for_channel(auth.user.id, thread_id)
             .await?;
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
         let data = self.state.data();
         let srv = self.state.services();
         let chan_old = srv.channels.get(thread_id, None).await?;
@@ -955,7 +955,7 @@ impl ServiceChannels {
 
         if patch.locked.as_ref().is_some_and(|a| a != &chan_old.locked) {
             if chan_old.is_thread() {
-                perms.ensure(Permission::ThreadLock)?;
+                perms.ensure(Permission::ThreadManage)?;
             } else {
                 perms.ensure(Permission::ChannelManage)?;
             }
@@ -973,7 +973,12 @@ impl ServiceChannels {
             if !chan_old.is_taggable() {
                 return Err(Error::BadStatic("channel is not taggable"));
             }
-            perms.ensure(Permission::TagApply)?;
+
+            // FIXME: permissions for tagging
+            // - allow creator to edit tags
+            // - require ThreadEdit OR ThreadManage
+            perms.ensure(Permission::ThreadEdit)?;
+
             // check if all tags are valid for this forum
             let forum_id = chan_old
                 .parent_id
@@ -1381,7 +1386,7 @@ impl ServiceChannels {
 
         for ch in perms_calc.room.get_data().unwrap().channels.values() {
             if let Ok(p) = perms_calc.query(user_id, Some(&ch.inner)) {
-                if p.has(Permission::ViewChannel) {
+                if p.has(Permission::ChannelView) {
                     out.push((ch.inner.id, p.has(Permission::ThreadManage)));
                 }
             }

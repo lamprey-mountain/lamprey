@@ -75,7 +75,7 @@ async fn tag_update(
     patch.validate()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::TagManage)?;
+    perms.ensure(Permission::ChannelEdit)?;
 
     let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
     if channel_id != tag_channel_id {
@@ -138,7 +138,7 @@ async fn tag_delete(
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::TagManage)?;
+    perms.ensure(Permission::ChannelEdit)?;
 
     let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
     if channel_id != tag_channel_id {
@@ -205,7 +205,7 @@ async fn tag_search(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !channel.ty.has_tags() {
@@ -246,7 +246,7 @@ async fn tag_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !channel.ty.has_tags() {

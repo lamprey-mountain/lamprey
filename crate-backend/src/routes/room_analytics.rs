@@ -46,7 +46,7 @@ async fn room_analytics_members_count(
     let data = s.data();
 
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::ViewAnalytics)?;
+    perms.ensure(Permission::AnalyticsView)?;
 
     let datapoints = data.room_analytics_members_count(room_id, q).await?;
     Ok(Json(datapoints))
@@ -71,7 +71,7 @@ async fn room_analytics_members_join(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::ViewAnalytics)?;
+    perms.ensure(Permission::AnalyticsView)?;
     let res = s.data().room_analytics_members_join(room_id, q).await?;
     Ok(Json(res))
 }
@@ -95,7 +95,7 @@ async fn room_analytics_members_leave(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::ViewAnalytics)?;
+    perms.ensure(Permission::AnalyticsView)?;
     let res = s.data().room_analytics_members_leave(room_id, q).await?;
     Ok(Json(res))
 }
@@ -120,7 +120,7 @@ async fn room_analytics_channels(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::ViewAnalytics)?;
+    perms.ensure(Permission::AnalyticsView)?;
     let res = s.data().room_analytics_channels(room_id, q, q2).await?;
     Ok(Json(res))
 }
@@ -146,7 +146,7 @@ async fn room_analytics_overview(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::ViewAnalytics)?;
+    perms.ensure(Permission::AnalyticsView)?;
     let res = s.data().room_analytics_overview(room_id, q).await?;
     Ok(Json(res))
 }

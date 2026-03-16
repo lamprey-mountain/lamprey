@@ -116,7 +116,7 @@ async fn inbox_post(
         .perms
         .for_channel(auth.user.id, json.channel_id)
         .await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     // Get room_id for the channel
     let room_id = s

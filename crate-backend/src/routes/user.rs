@@ -58,7 +58,7 @@ async fn user_update(
     if auth.user.id != target_user_id {
         perms.ensure(Permission::UserManage)?;
     } else {
-        perms.ensure(Permission::UserProfile)?;
+        perms.ensure(Permission::UserProfileSelf)?;
     }
     let data = s.data();
     let start = srv.users.get(target_user_id, Some(auth.user.id)).await?;
@@ -150,7 +150,7 @@ async fn user_delete(
     if auth.user.id != target_user_id {
         perms.ensure(Permission::UserManage)?;
     } else {
-        perms.ensure(Permission::UserDeleteSelf)?;
+        perms.ensure(Permission::UserManageSelf)?;
     }
 
     let user_to_delete = srv.users.get(target_user_id, Some(auth.user.id)).await?;

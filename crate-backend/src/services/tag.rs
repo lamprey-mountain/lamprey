@@ -61,7 +61,7 @@ impl ServiceTags {
         let srv = self.state.services();
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-        perms.ensure(Permission::TagManage)?;
+        perms.ensure(Permission::ChannelEdit)?;
 
         let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
         if !channel.ty.has_tags() {
@@ -108,7 +108,7 @@ impl ServiceTags {
         let srv = self.state.services();
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-        perms.ensure(Permission::TagManage)?;
+        perms.ensure(Permission::ChannelEdit)?;
 
         let tag_channel_id = data.tag_get_forum_id(tag_id).await?;
         if channel_id != tag_channel_id {
@@ -154,7 +154,7 @@ impl ServiceTags {
         let srv = self.state.services();
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-        perms.ensure(Permission::TagManage)?;
+        perms.ensure(Permission::ChannelEdit)?;
 
         let tag_channel_id = data.tag_get_forum_id(tag_id).await?;
         if channel_id != tag_channel_id {
@@ -207,7 +207,7 @@ impl ServiceTags {
             .perms
             .for_channel(auth.user.id, channel_id)
             .await?;
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
 
         let channel = self
             .state
@@ -238,7 +238,7 @@ impl ServiceTags {
             .perms
             .for_channel(auth.user.id, channel_id)
             .await?;
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
 
         let channel = self
             .state

@@ -259,7 +259,7 @@ async fn channel_get(
         .perms
         .for_channel(auth.user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let channel = s
         .services()
         .channels
@@ -351,7 +351,7 @@ async fn channel_list_removed(
             .perms
             .for_channel(auth.user.id, item.id)
             .await?
-            .has(Permission::ViewChannel)
+            .has(Permission::ChannelView)
         {
             items.push(item);
         }
@@ -409,12 +409,12 @@ async fn channel_reorder(
         channels_old.insert(channel_data.id, channel_data.clone());
 
         let perms_chan = srv.perms.for_channel(auth.user.id, channel.id).await?;
-        perms_chan.ensure(Permission::ViewChannel)?;
+        perms_chan.ensure(Permission::ChannelView)?;
         perms_chan.ensure(Permission::ChannelManage)?;
 
         if let Some(Some(parent_id)) = channel.parent_id {
             let perms_parent = srv.perms.for_channel(auth.user.id, parent_id).await?;
-            perms_chan.ensure(Permission::ViewChannel)?;
+            perms_chan.ensure(Permission::ChannelView)?;
             perms_parent.ensure(Permission::ChannelManage)?;
 
             let parent_data = srv.channels.get(parent_id, None).await?;
@@ -529,7 +529,7 @@ async fn channel_ack(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let version_id = json.version_id;
     let message_id = if let Some(message_id) = json.message_id {
         message_id
@@ -742,7 +742,7 @@ async fn channel_typing(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::MessageCreate)?;
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;

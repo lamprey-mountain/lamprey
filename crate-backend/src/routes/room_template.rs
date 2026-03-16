@@ -47,7 +47,7 @@ async fn room_template_create(
         .perms
         .for_room(auth.user.id, json.room_id)
         .await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let template = s
         .services()
@@ -194,7 +194,7 @@ async fn room_template_sync(
         .perms
         .for_room(auth.user.id, source_room_id)
         .await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let updated = s.services().room_templates.sync(code).await?;
     Ok(Json(updated))

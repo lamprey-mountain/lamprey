@@ -69,7 +69,7 @@ async fn calendar_event_list(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -102,7 +102,7 @@ async fn calendar_event_create(
     json.validate()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::CalendarEventCreate)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -165,7 +165,7 @@ async fn calendar_event_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -205,7 +205,7 @@ async fn calendar_event_update(
     json.validate()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -284,7 +284,7 @@ async fn calendar_event_delete(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -357,7 +357,7 @@ async fn calendar_overwrite_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -394,7 +394,7 @@ async fn calendar_overwrite_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -434,7 +434,7 @@ async fn calendar_overwrite_update(
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::CalendarEventManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -530,7 +530,7 @@ async fn calendar_overwrite_delete(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::CalendarEventManage)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
@@ -604,7 +604,7 @@ async fn calendar_event_rsvp_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -673,7 +673,7 @@ async fn calendar_event_rsvp_get(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -718,7 +718,7 @@ async fn calendar_event_rsvp_put(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::CalendarEventRsvp)?;
 
     if auth.user.id != user_id {
@@ -810,7 +810,7 @@ async fn calendar_event_rsvp_delete(
     let srv = s.services();
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     if auth.user.id != user_id {
         perms.ensure(Permission::CalendarEventManage)?;
     } else {
@@ -882,7 +882,7 @@ async fn calendar_overwrite_rsvp_list(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -958,7 +958,7 @@ async fn calendar_overwrite_rsvp_put(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::CalendarEventRsvp)?;
 
     if auth.user.id != user_id {
@@ -1060,7 +1060,7 @@ async fn calendar_overwrite_rsvp_delete(
     let srv = s.services();
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     if auth.user.id != user_id {
         perms.ensure(Permission::CalendarEventManage)?;
     } else {

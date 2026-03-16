@@ -289,7 +289,7 @@ async fn room_member_add(
     }
 
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::MemberBridge)?;
+    perms.ensure(Permission::IntegrationsBridge)?;
     let auth_user = srv.users.get(auth.user.id, None).await?;
     let target_user = srv.users.get(target_user_id, None).await?;
     let Some(puppet) = target_user.puppet else {
@@ -885,7 +885,7 @@ async fn room_member_prune(
 
     let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
     perms.ensure(Permission::MemberKick)?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     Ok(Error::Unimplemented)
 }

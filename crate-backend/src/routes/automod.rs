@@ -44,7 +44,7 @@ async fn automod_rule_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let rules = s.data().automod_rule_list(room_id).await?;
     Ok(Json(rules))
@@ -75,7 +75,7 @@ async fn automod_rule_create(
 
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let rule = s.data().automod_rule_create(room_id, json.clone()).await?;
     srv.automod.invalidate(room_id);
@@ -126,7 +126,7 @@ async fn automod_rule_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let rule = s.data().automod_rule_get(rule_id).await?;
     if rule.room_id != room_id {
@@ -164,7 +164,7 @@ async fn automod_rule_update(
 
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let old = s.data().automod_rule_get(rule_id).await?;
     if old.room_id != room_id {
@@ -228,7 +228,7 @@ async fn automod_rule_delete(
 
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let rule = s.data().automod_rule_get(rule_id).await?;
     if rule.room_id != room_id {
@@ -287,7 +287,7 @@ async fn automod_rule_test(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::RoomEdit)?;
 
     let result = srv
         .automod

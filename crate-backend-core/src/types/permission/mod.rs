@@ -92,11 +92,11 @@ impl Permissions {
 
     /// ensure that the user is able to view this resource, returning an error if they don't
     ///
-    /// If the user cannot view (missing ViewChannel permission or explicit cannot_view flag),
+    /// If the user cannot view (missing ChannelView permission or explicit cannot_view flag),
     /// returns a 404 error (UnknownRoom/UnknownChannel) to avoid leaking resource existence.
     #[inline]
     pub fn ensure_view(&self) -> Result<()> {
-        if self.has(Permission::ViewChannel) {
+        if self.has(Permission::ChannelView) {
             Ok(())
         } else {
             Err(Error::ApiError(ApiError::from_code(match self.context {
@@ -109,7 +109,7 @@ impl Permissions {
     /// ensure that the user has a permission, returning an error if they don't
     #[inline]
     pub fn ensure(&self, perm: Permission) -> Result<()> {
-        if perm == Permission::ViewChannel {
+        if perm == Permission::ChannelView {
             self.ensure_view()
         } else if self.has(perm) {
             Ok(())
@@ -124,7 +124,7 @@ impl Permissions {
     /// ensure that the user has a permission (server variant with different error message)
     #[inline]
     pub fn ensure_server(&self, perm: Permission) -> Result<()> {
-        if perm == Permission::ViewChannel {
+        if perm == Permission::ChannelView {
             self.ensure_view()
         } else if self.has(perm) {
             Ok(())
@@ -215,7 +215,7 @@ impl Permissions {
         }
 
         // return 404 instead of 403 if a visibility check fails to prevent leaks
-        if missing_bits.has(Permission::ViewChannel) {
+        if missing_bits.has(Permission::ChannelView) {
             let code = match self.context {
                 PermissionsContext::Room => ErrorCode::UnknownRoom,
                 PermissionsContext::Channel => ErrorCode::UnknownChannel,
@@ -240,7 +240,7 @@ impl Permissions {
         self.has(Permission::ChannelManage)
             || self.has(Permission::ThreadManage)
             || self.has(Permission::MemberTimeout)
-            || self.has(Permission::BypassSlowmode)
+            || self.has(Permission::ChannelSlowmodeBypass)
     }
 
     /// ensure a channel is either unlocked or that the user has permission to interact with it

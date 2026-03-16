@@ -49,7 +49,7 @@ async fn voice_state_get(
     };
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let state = srv.voice.state_get(target_user_id);
     if let Some(state) = state {
         Ok(Json(state))
@@ -86,7 +86,7 @@ async fn voice_state_patch(
     };
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let Some(mut old_state) = srv.voice.state_get(target_user_id) else {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     };
@@ -104,7 +104,7 @@ async fn voice_state_patch(
             .perms
             .for_channel(target_user_id, new_channel_id)
             .await?;
-        target_perms.ensure(Permission::ViewChannel)?;
+        target_perms.ensure(Permission::ChannelView)?;
 
         let old_channel_id = old_state.channel_id;
 
@@ -269,8 +269,8 @@ async fn voice_state_disconnect(
     };
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::VoiceDisconnect)?;
+    perms.ensure(Permission::ChannelView)?;
+    perms.ensure(Permission::VoiceMove)?;
     let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
     let Some(_state) = srv.voice.state_get(target_user_id) else {
         return Ok(StatusCode::NO_CONTENT);
@@ -320,8 +320,8 @@ async fn voice_state_disconnect_all(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::VoiceDisconnect)?;
+    perms.ensure(Permission::ChannelView)?;
+    perms.ensure(Permission::VoiceMove)?;
     let thread = srv.channels.get(channel_id, None).await?;
     thread.ensure_has_voice()?;
     srv.voice.disconnect_everyone(channel_id).await?;
@@ -362,16 +362,16 @@ async fn voice_state_move(
     };
     let srv = s.services();
     let perms_source = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms_source.ensure(Permission::ViewChannel)?;
+    perms_source.ensure(Permission::ChannelView)?;
     perms_source.ensure(Permission::VoiceMove)?;
     let perms_target = srv.perms.for_channel(auth.user.id, json.target_id).await?;
-    perms_target.ensure(Permission::ViewChannel)?;
+    perms_target.ensure(Permission::ChannelView)?;
     perms_target.ensure(Permission::VoiceMove)?;
     let _perms_user = srv
         .perms
         .for_channel(target_user_id, json.target_id)
         .await?;
-    perms_target.ensure(Permission::ViewChannel)?;
+    perms_target.ensure(Permission::ChannelView)?;
 
     let Some(old) = srv.voice.state_get(target_user_id) else {
         return Err(ApiError::from_code(ErrorCode::NotConnectedToAnyThread).into());
@@ -431,7 +431,7 @@ async fn voice_state_move_bulk(
 
     let srv = s.services();
     let perms_source = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms_source.ensure(Permission::ViewChannel)?;
+    perms_source.ensure(Permission::ChannelView)?;
     perms_source.ensure(Permission::VoiceMove)?;
     let chan = srv.channels.get(channel_id, None).await?;
     chan.ensure_has_voice()?;
@@ -458,7 +458,7 @@ async fn voice_state_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let chan = srv.channels.get(channel_id, None).await?;
     chan.ensure_has_voice()?;
     let states: Vec<_> = srv
@@ -500,7 +500,7 @@ async fn voice_call_create(
         .perms
         .for_channel(auth.user.id, json.channel_id)
         .await?;
-    perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
+    perms.ensure_all(&[Permission::ChannelView, Permission::CallUpdate])?;
     let channel = s.services().channels.get(json.channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
         return Err(ApiError::from_code(ErrorCode::InvalidData).into());
@@ -532,13 +532,13 @@ async fn voice_call_delete(
         .perms
         .for_channel(auth.user.id, channel_id)
         .await?;
-    perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
+    perms.ensure_all(&[Permission::ChannelView, Permission::CallUpdate])?;
     let channel = s.services().channels.get(channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
         return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
     if params.force {
-        perms.ensure(Permission::VoiceDisconnect)?;
+        perms.ensure(Permission::VoiceMove)?;
     }
     s.services()
         .voice
@@ -569,7 +569,7 @@ async fn voice_call_get(
         .perms
         .for_channel(auth.user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let call = s.services().voice.call_get(channel_id)?;
     Ok(Json(call))
 }
@@ -601,7 +601,7 @@ async fn voice_call_update(
         .perms
         .for_channel(auth.user.id, channel_id)
         .await?;
-    perms.ensure_all(&[Permission::ViewChannel, Permission::CallUpdate])?;
+    perms.ensure_all(&[Permission::ChannelView, Permission::CallUpdate])?;
     s.services().voice.call_update(channel_id, json)?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -628,7 +628,7 @@ async fn voice_ring_check(
         .perms
         .for_channel(auth.user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let channel = s
         .services()
         .channels

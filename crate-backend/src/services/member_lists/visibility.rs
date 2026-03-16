@@ -35,7 +35,7 @@ impl MemberListVisibility {
                 if ow.id != *room_id {
                     continue;
                 }
-                if ow.allow.contains(&Permission::ViewChannel) {
+                if ow.allow.contains(&Permission::ChannelView) {
                     sequence.push(VisibilityPermission {
                         id: ow.id,
                         ty: ow.ty,
@@ -48,7 +48,7 @@ impl MemberListVisibility {
                 if ow.id != *room_id {
                     continue;
                 }
-                if ow.deny.contains(&Permission::ViewChannel) {
+                if ow.deny.contains(&Permission::ChannelView) {
                     sequence.push(VisibilityPermission {
                         id: ow.id,
                         ty: ow.ty,
@@ -61,7 +61,7 @@ impl MemberListVisibility {
                 if ow.ty != PermissionOverwriteType::Role || ow.id == *room_id {
                     continue;
                 }
-                if ow.allow.contains(&Permission::ViewChannel) {
+                if ow.allow.contains(&Permission::ChannelView) {
                     sequence.push(VisibilityPermission {
                         id: ow.id,
                         ty: ow.ty,
@@ -74,7 +74,7 @@ impl MemberListVisibility {
                 if ow.ty != PermissionOverwriteType::Role || ow.id == *room_id {
                     continue;
                 }
-                if ow.deny.contains(&Permission::ViewChannel) {
+                if ow.deny.contains(&Permission::ChannelView) {
                     sequence.push(VisibilityPermission {
                         id: ow.id,
                         ty: ow.ty,
@@ -87,7 +87,7 @@ impl MemberListVisibility {
                 if ow.ty != PermissionOverwriteType::User {
                     continue;
                 }
-                if ow.allow.contains(&Permission::ViewChannel) {
+                if ow.allow.contains(&Permission::ChannelView) {
                     sequence.push(VisibilityPermission {
                         id: ow.id,
                         ty: ow.ty,
@@ -100,7 +100,7 @@ impl MemberListVisibility {
                 if ow.ty != PermissionOverwriteType::User {
                     continue;
                 }
-                if ow.deny.contains(&Permission::ViewChannel) {
+                if ow.deny.contains(&Permission::ChannelView) {
                     sequence.push(VisibilityPermission {
                         id: ow.id,
                         ty: ow.ty,

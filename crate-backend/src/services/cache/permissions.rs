@@ -205,11 +205,9 @@ impl PermissionsCalculator {
                 });
 
                 // or the member has the Manage Channels permission
-                // or this is a thread and the member has the Manage Threads or Lock Threads permission
+                // or this is a thread and the member has the Manage Threads permission
                 let has_perm = p.perms.has(Permission::ChannelManage)
-                    || (cc.inner.ty.is_thread()
-                        && (p.perms.has(Permission::ThreadLock)
-                            || p.perms.has(Permission::ThreadManage)));
+                    || (cc.inner.ty.is_thread() && p.perms.has(Permission::ThreadManage));
 
                 if !has_bypass && !has_perm {
                     p.flags.set_timed_out();

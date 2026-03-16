@@ -352,7 +352,7 @@ impl Connection {
                     Some(MemberListTarget::Room(room_id))
                 } else if let Some(thread_id) = thread_id {
                     let perms = srv.perms.for_channel(user_id, thread_id).await?;
-                    perms.ensure(Permission::ViewChannel)?;
+                    perms.ensure(Permission::ChannelView)?;
                     Some(MemberListTarget::Channel(thread_id))
                 } else {
                     None
@@ -412,7 +412,7 @@ impl Connection {
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
         let srv = self.s.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
 
         if !self.document.is_subscribed(&(channel_id, branch_id)) {
             return Err(Error::BadStatic("not subscribed to this document"));
@@ -524,7 +524,7 @@ impl Connection {
             let typing_states = srv.channels.typing_list();
             for (channel_id, typing_user_id, until) in typing_states {
                 if let Ok(perms) = srv.perms.for_channel(user_id, channel_id).await {
-                    if perms.has(Permission::ViewChannel) {
+                    if perms.has(Permission::ChannelView) {
                         self.push_sync(
                             MessageSync::ChannelTyping {
                                 channel_id,
@@ -543,7 +543,7 @@ impl Connection {
                 if let Ok(perms) = srv.perms.for_channel(user_id, voice_state.channel_id).await {
                     let is_ours =
                         self.state.session().and_then(|s| s.user_id()) == Some(voice_state.user_id);
-                    if perms.has(Permission::ViewChannel) || is_ours {
+                    if perms.has(Permission::ChannelView) || is_ours {
                         let mut voice_state = voice_state.clone();
                         if !is_ours {
                             voice_state.session_id = None;
@@ -586,8 +586,7 @@ impl Connection {
         match &payload {
             SignallingMessage::VoiceState { state: Some(state) } => {
                 let perms = srv.perms.for_channel(user_id, state.channel_id).await?;
-                perms.ensure(Permission::ViewChannel)?;
-                perms.ensure(Permission::VoiceConnect)?;
+                perms.ensure(Permission::ChannelView)?;
                 let thread = srv.channels.get(state.channel_id, Some(user_id)).await?;
                 thread.ensure_unarchived()?;
                 thread.ensure_unremoved()?;
@@ -690,7 +689,7 @@ impl Connection {
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
         let srv = self.s.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
 
         let branch = self
             .s
@@ -735,7 +734,7 @@ impl Connection {
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
         let srv = self.s.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
-        perms.ensure(Permission::ViewChannel)?;
+        perms.ensure(Permission::ChannelView)?;
         perms.ensure(Permission::DocumentEdit)?;
 
         if !self.document.is_subscribed(&(channel_id, branch_id)) {
@@ -958,7 +957,7 @@ impl Connection {
             MessageSync::ConnectionCreate { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::ConnectionDelete { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::AuditLogEntryCreate { entry } => {
-                AuthCheck::RoomPerm(entry.room_id, Permission::ViewAuditLog)
+                AuthCheck::RoomPerm(entry.room_id, Permission::AuditLogView)
             }
             MessageSync::BanCreate { room_id, .. } => {
                 AuthCheck::RoomPerm(*room_id, Permission::MemberBan)
@@ -967,16 +966,16 @@ impl Connection {
                 AuthCheck::RoomPerm(*room_id, Permission::MemberBan)
             }
             MessageSync::AutomodRuleCreate { rule } => {
-                AuthCheck::RoomPerm(rule.room_id, Permission::RoomManage)
+                AuthCheck::RoomPerm(rule.room_id, Permission::RoomEdit)
             }
             MessageSync::AutomodRuleUpdate { rule } => {
-                AuthCheck::RoomPerm(rule.room_id, Permission::RoomManage)
+                AuthCheck::RoomPerm(rule.room_id, Permission::RoomEdit)
             }
             MessageSync::AutomodRuleDelete { room_id, .. } => {
-                AuthCheck::RoomPerm(*room_id, Permission::RoomManage)
+                AuthCheck::RoomPerm(*room_id, Permission::RoomEdit)
             }
             MessageSync::AutomodRuleExecute { execution } => {
-                AuthCheck::RoomPerm(execution.rule.room_id, Permission::RoomManage)
+                AuthCheck::RoomPerm(execution.rule.room_id, Permission::RoomEdit)
             }
             MessageSync::MemberListSync { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxNotificationCreate { user_id, .. } => AuthCheck::User(*user_id),
@@ -1125,7 +1124,7 @@ impl Connection {
                             .perms
                             .for_channel(user_id, s.channel_id)
                             .await?;
-                        if !perms.has(Permission::ViewChannel) {
+                        if !perms.has(Permission::ChannelView) {
                             state = None;
                         }
                     }

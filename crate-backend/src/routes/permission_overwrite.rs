@@ -49,7 +49,7 @@ async fn permission_overwrite(
 
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::RoleManage)?;
     let channel = srv.channels.get(channel_id, None).await?;
     if channel.is_thread() {
@@ -185,7 +185,7 @@ async fn permission_delete(
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::RoleManage)?;
 
     let channel = srv.channels.get(channel_id, None).await?;

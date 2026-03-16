@@ -111,7 +111,7 @@ impl ServicePermissions {
                 if is_recipient || is_owner {
                     use lamprey_backend_core::types::permission::PermissionBits;
                     p.perms = PermissionBits::from_slice(EVERYONE_TRUSTED);
-                    p.perms.add(Permission::ViewChannel);
+                    p.perms.add(Permission::ChannelView);
                 } else {
                     p.flags.set_cannot_view();
                 }

@@ -99,7 +99,7 @@ async fn message_context(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     let res = srv
         .messages
@@ -130,7 +130,7 @@ async fn message_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let res = srv.messages.list(channel_id, auth.user.id, q).await?;
     Ok(Json(res))
 }
@@ -156,7 +156,7 @@ async fn message_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let message = srv
         .messages
         .get(channel_id, message_id, auth.user.id)
@@ -238,7 +238,7 @@ async fn message_delete(
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let message = data
         .message_get(channel_id, message_id, auth.user.id)
         .await?;
@@ -320,7 +320,7 @@ async fn message_version_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let res = srv
         .messages
         .list_versions(channel_id, message_id, auth.user.id, q)
@@ -350,7 +350,7 @@ async fn message_version_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let message = srv
         .messages
         .get_version(channel_id, version_id, auth.user.id)
@@ -397,7 +397,7 @@ async fn message_version_delete(
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     perms.ensure_unlocked()?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
@@ -525,7 +525,7 @@ async fn message_moderate(
     let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
 
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
 
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
@@ -712,7 +712,7 @@ async fn message_reply_query(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let res = srv
         .messages
         .list_replies(channel_id, Some(message_id), auth.user.id, q, pagination)
@@ -746,7 +746,7 @@ async fn message_reply_roots(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let res = srv
         .messages
         .list_replies(channel_id, None, auth.user.id, q, pagination)
@@ -1055,7 +1055,7 @@ async fn message_pin_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ViewChannel)?;
+    perms.ensure(Permission::ChannelView)?;
     let res = srv.messages.list_pins(channel_id, auth.user.id, q).await?;
     Ok(Json(res))
 }

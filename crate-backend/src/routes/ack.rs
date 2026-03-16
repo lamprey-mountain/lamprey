@@ -39,7 +39,7 @@ async fn ack_bulk(
 
     for ack in json.acks {
         let perms = srv.perms.for_channel(auth.user.id, ack.channel_id).await?;
-        if !perms.has(Permission::ViewChannel) {
+        if !perms.has(Permission::ChannelView) {
             continue;
         }
 

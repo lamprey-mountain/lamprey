@@ -717,7 +717,7 @@ impl ServiceAutomod {
             };
 
             // 1. check RoomManage exemption
-            if perms.has(Permission::RoomManage) && !rule.include_everyone {
+            if perms.has(Permission::RoomEdit) && !rule.include_everyone {
                 continue;
             }
 
@@ -744,7 +744,7 @@ impl ServiceAutomod {
             for action in &rule.actions {
                 // some actions (eg. Timeout) should not apply to members with RoomManage even if include_everyone is true
                 if matches!(action, AutomodAction::Timeout { .. })
-                    && perms.has(Permission::RoomManage)
+                    && perms.has(Permission::RoomEdit)
                 {
                     continue;
                 }

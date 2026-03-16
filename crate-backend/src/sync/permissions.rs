@@ -64,7 +64,7 @@ impl AuthCheck {
                     .perms
                     .for_channel(user_id, *thread_id)
                     .await?;
-                perms.has(Permission::ViewChannel)
+                perms.has(Permission::ChannelView)
             }
             (Some(user_id), AuthCheck::ChannelPerm(thread_id, perm)) => {
                 let perms = server_state
@@ -72,7 +72,7 @@ impl AuthCheck {
                     .perms
                     .for_channel(user_id, *thread_id)
                     .await?;
-                perms.has(Permission::ViewChannel) && perms.has(*perm)
+                perms.has(Permission::ChannelView) && perms.has(*perm)
             }
             (Some(user_id), AuthCheck::EitherChannel(thread_id_0, thread_id_1)) => {
                 let perms0 = server_state
@@ -85,7 +85,7 @@ impl AuthCheck {
                     .perms
                     .for_channel(user_id, *thread_id_1)
                     .await?;
-                perms0.has(Permission::ViewChannel) || perms1.has(Permission::ViewChannel)
+                perms0.has(Permission::ChannelView) || perms1.has(Permission::ChannelView)
             }
             (Some(auth_user_id), AuthCheck::User(target_user_id)) => {
                 auth_user_id == *target_user_id

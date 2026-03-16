@@ -224,10 +224,10 @@ impl MemberList {
                     has_admin = true;
                     break;
                 }
-                if role.allow.has(Permission::ViewChannel) {
+                if role.allow.has(Permission::ChannelView) {
                     has_view_allow = true;
                 }
-                if role.deny.has(Permission::ViewChannel) {
+                if role.deny.has(Permission::ChannelView) {
                     has_view_deny = true;
                 }
             }
