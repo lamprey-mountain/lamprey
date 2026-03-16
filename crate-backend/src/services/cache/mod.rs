@@ -8,7 +8,7 @@ use common::v1::types::{
     emoji::EmojiCustom,
     ids::EmojiId,
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
-    ChannelId, MessageSync, Room, RoomId, RoomMember, User, UserId,
+    ChannelId, MessageSync, Permission, Room, RoomId, RoomMember, User, UserId, SERVER_ROOM_ID,
 };
 use futures::{future::BoxFuture, StreamExt};
 use moka::future::Cache;
@@ -375,9 +375,11 @@ impl ServiceCache {
             }
         }
 
+        let srv = self.state.services();
         let results = futures::stream::iter(room_items.into_iter())
             .map(|room| {
                 let this = self.clone();
+                let srv = srv.clone();
                 async move {
                     let snapshot = this.load_room(room.id, true).await?;
                     let member = this
@@ -386,9 +388,17 @@ impl ServiceCache {
                         .room_member_get(room.id, user_id)
                         .await
                         .ok();
-                    Ok::<(Room, Arc<RoomSnapshot>, Option<RoomMember>), Error>((
+
+                    if room.id == SERVER_ROOM_ID {
+                        let perms = srv.perms.for_room(user_id, room.id).await?;
+                        if !perms.has(Permission::ServerOversee) {
+                            return Ok(None);
+                        }
+                    }
+
+                    Ok::<Option<(Room, Arc<RoomSnapshot>, Option<RoomMember>)>, Error>(Some((
                         room, snapshot, member,
-                    ))
+                    )))
                 }
             })
             .buffer_unordered(16)
