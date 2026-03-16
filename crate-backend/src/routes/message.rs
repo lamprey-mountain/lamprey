@@ -18,6 +18,7 @@ use validator::Validate;
 
 use crate::{
     error::Error,
+    routes::util::HeaderTimestamp,
     types::{
         ChannelId, DbMessageCreate, MessageCreate, MessageId, MessageSync, MessageVerId,
         PaginationQuery, PaginationResponse, Permission,
@@ -55,6 +56,7 @@ async fn message_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
+    HeaderTimestamp(header_timestamp): HeaderTimestamp,
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -64,7 +66,10 @@ async fn message_create(
     let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
     chan.ensure_has_text()?;
 
-    let message = srv.messages.create(channel_id, &auth, nonce, json).await?;
+    let message = srv
+        .messages
+        .create(channel_id, &auth, nonce, json, header_timestamp)
+        .await?;
 
     Ok((StatusCode::CREATED, Json(message)))
 }

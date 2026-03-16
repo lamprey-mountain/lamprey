@@ -577,7 +577,7 @@ impl ServiceChannels {
         if let Some(starter_message) = json.starter_message {
             if json.ty.is_thread() {
                 srv.messages
-                    .create(channel_id, auth, None, starter_message)
+                    .create(channel_id, auth, None, starter_message, None)
                     .await?;
             } else {
                 return Err(Error::BadStatic(

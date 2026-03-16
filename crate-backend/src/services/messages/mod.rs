@@ -130,18 +130,33 @@ impl ServiceMessages {
         auth: &Auth,
         nonce: Option<String>,
         json: MessageCreate,
+        header_timestamp: Option<Time>,
     ) -> Result<Message> {
         if let Some(n) = &nonce {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create_inner(thread_id, auth.user.id, Some(auth), nonce, json),
+                    self.create_inner(
+                        thread_id,
+                        auth.user.id,
+                        Some(auth),
+                        nonce,
+                        json,
+                        header_timestamp,
+                    ),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(thread_id, auth.user.id, Some(auth), nonce, json)
-                .await
+            self.create_inner(
+                thread_id,
+                auth.user.id,
+                Some(auth),
+                nonce,
+                json,
+                header_timestamp,
+            )
+            .await
         }
     }
 
@@ -156,12 +171,12 @@ impl ServiceMessages {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create_inner(thread_id, user_id, None, nonce, json),
+                    self.create_inner(thread_id, user_id, None, nonce, json, None),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(thread_id, user_id, None, nonce, json)
+            self.create_inner(thread_id, user_id, None, nonce, json, None)
                 .await
         }
     }
@@ -173,6 +188,7 @@ impl ServiceMessages {
         auth: Option<&Auth>,
         nonce: Option<String>,
         mut json: MessageCreate,
+        header_timestamp: Option<Time>,
     ) -> Result<Message> {
         json.validate()?;
         let s = &self.state;
@@ -183,6 +199,39 @@ impl ServiceMessages {
         let is_webhook = user.webhook.is_some();
 
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
+
+        // check if timestamp override is allowed
+        let created_at = if let Some(ts) = header_timestamp {
+            if let Some(puppet) = user.puppet {
+                let owner_perms = srv
+                    .perms
+                    .for_channel(puppet.owner_id.into_inner().into(), thread_id)
+                    .await?;
+                let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
+                owner_perms.ensure_all(&required_perms)?;
+            } else if user.bot {
+                // For bot users, check if the bot owner has MemberBridge permission
+                if let Ok(app) = s.data().application_get(user_id.into_inner().into()).await {
+                    let owner_perms = srv
+                        .perms
+                        .for_channel(app.owner_id.into_inner().into(), thread_id)
+                        .await?;
+                    let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
+                    owner_perms.ensure_all(&required_perms)?;
+                } else {
+                    return Err(Error::BadStatic(
+                        "MemberBridge permission required to override timestamp",
+                    ));
+                }
+            } else {
+                return Err(Error::BadStatic(
+                    "MemberBridge permission required to override timestamp",
+                ));
+            }
+            Some(ts)
+        } else {
+            None
+        };
 
         let can_use_external_emoji = if !is_webhook {
             if let Some(auth) = auth {
@@ -239,20 +288,6 @@ impl ServiceMessages {
                         )
                         .await?;
                 }
-                // TODO: re-add timestamp massaging
-                // if json.created_at.is_some() {
-                //     if let Some(puppet) = user.puppet {
-                //         let owner_perms = srv
-                //             .perms
-                //             .for_channel(puppet.owner_id.into_inner().into(), thread_id)
-                //             .await?;
-                //         let required_perms =
-                //             vec![Permission::ViewChannel, Permission::MemberBridge];
-                //         owner_perms.ensure_all(&required_perms)?;
-                //     } else {
-                //         return Err(Error::BadStatic("not a puppet"));
-                //     }
-                // }
 
                 perms.has(Permission::EmojiUseExternal)
             } else {
@@ -410,8 +445,7 @@ impl ServiceMessages {
                 author_id: user_id,
                 embeds: embeds.into_iter().map(|e| e.into()).collect(),
                 message_type: payload,
-                created_at: None,
-                // created_at: json.created_at.map(|t| t.into()),
+                created_at: created_at.map(|t| t.into()),
                 removed_at: removed_at.map(|t| t.into()),
                 mentions: mentions.clone(),
             })

@@ -18,6 +18,7 @@ use common::v1::types::{
 };
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 use http::{HeaderMap, HeaderName, HeaderValue};
+use time::OffsetDateTime;
 use tracing::{debug, error};
 use uuid::Uuid;
 
@@ -146,6 +147,9 @@ pub struct HeaderIdempotencyKey(pub Option<String>);
 
 /// extract the X-Puppet-Id header
 pub struct HeaderPuppetId(pub Option<UserId>);
+
+/// extract the X-Timestamp header
+pub struct HeaderTimestamp(pub Option<Time>);
 
 /// extract caching http headers
 pub struct HeaderCache {
@@ -416,6 +420,24 @@ impl FromRequestParts<Arc<ServerState>> for HeaderPuppetId {
             .and_then(|h| h.to_str().ok())
             .and_then(|h| h.parse().ok());
         Ok(Self(puppet_id))
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for HeaderTimestamp {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        let timestamp = parts
+            .headers
+            .get("X-Timestamp")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.parse::<i64>().ok())
+            .and_then(|secs| OffsetDateTime::from_unix_timestamp(secs).ok())
+            .map(Time::from);
+        Ok(Self(timestamp))
     }
 }
 
