@@ -17,7 +17,7 @@ import {
 } from "./room_settings/mod.tsx";
 import * as Admin from "./admin_settings/mod.tsx";
 import { Permission, SERVER_ROOM_ID } from "sdk";
-import { A } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
 import { useModals } from "./contexts/modal.tsx";
@@ -226,6 +226,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 		groupTabsByCategory(currentTabs(), perms, user_id, props.room)
 	);
 
+	const nav = useNavigate();
+
 	const handleAction = (action: string) => {
 		switch (action) {
 			case "delete":
@@ -236,7 +238,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 							ctx.client.http.DELETE("/api/v1/room/{room_id}", {
 								params: { path: { room_id: props.room.id } },
 							}).then(() => {
-								window.location.href = "/";
+								nav("/");
 							}).catch((error) => {
 								console.error("Failed to delete room:", error);
 								modalCtl.alert("Failed to delete room: " + error.message);
