@@ -90,6 +90,11 @@ export default {
 			name: "Manage integrations",
 			description: "Can add and remove bots in this room",
 		},
+		IntegrationsBridge: {
+			name: "Bridge integrations",
+			description:
+				"Can add puppet users and massage timestamps; only usable for bridge bots",
+		},
 		EmojiManage: {
 			name: "Manage emoji",
 			description: "Can add, remove, and rename emoji",
@@ -113,11 +118,6 @@ export default {
 		MemberBan: {
 			name: "Ban members",
 			description: "Can ban other members permanently or for a period of time",
-		},
-		MemberBridge: {
-			name: "Bridge members",
-			description:
-				"Can add puppet users and massage timestamps; only usable for bridge bots",
 		},
 		MemberKick: {
 			name: "Kick members",
@@ -162,8 +162,8 @@ export default {
 			description:
 				"Can add and remove new reactions to messages. Everyone can always react with an existing emoji.",
 		},
-		ReactionPurge: {
-			name: "Purge reactions",
+		ReactionManage: {
+			name: "Manage reactions",
 			description: "Can remove all reactions from a message",
 		},
 		RoleApply: {
@@ -175,8 +175,8 @@ export default {
 			description:
 				"Can create, edit, delete, and reorder roles. Can set and remove permission overwrites for threads.",
 		},
-		RoomManage: {
-			name: "Manage room",
+		RoomEdit: {
+			name: "Edit room",
 			description:
 				"Can change this room's name, description, and icon. Can make this room public or private.",
 		},
@@ -201,26 +201,18 @@ export default {
 			name: "Edit channels",
 			description: "can change channel names and topics",
 		},
-		ThreadLock: {
-			name: "Lock threads",
-			description: "Can lock threads",
-		},
 		ChannelManage: {
 			name: "Manage channels",
 			description:
 				"can create, remove, and archive channels. can also list all channels.",
 		},
-		ViewChannel: {
+		ChannelView: {
 			name: "View channel",
 			description: "Can view channels.",
 		},
-		ViewAuditLog: {
+		AuditLogView: {
 			name: "View audit log",
 			description: "Can view the audit log",
-		},
-		VoiceConnect: {
-			name: "Connect",
-			description: "Can connect to voice threads",
 		},
 		CalendarEventCreate: {
 			name: "Create calendar events",
@@ -238,10 +230,6 @@ export default {
 		VoiceDeafen: {
 			name: "Deafen members",
 			description: "Can deafen other members",
-		},
-		VoiceDisconnect: {
-			name: "Disconnect members",
-			description: "Can disconnect other members from voice threads",
 		},
 		VoiceMove: {
 			name: "Move members",
@@ -275,21 +263,13 @@ export default {
 			name: "Broadcast voice",
 			description: "(todo) Can broadcast voice to all channels in a category",
 		},
-		BypassSlowmode: {
+		ChannelSlowmodeBypass: {
 			name: "Bypass slowmode",
 			description: "Unaffected by slowmode",
-		},
-		ServerMetrics: {
-			name: "View metrics",
-			description: "Can access the metrics endpoint",
 		},
 		ServerOversee: {
 			name: "Oversee",
 			description: "Can view the server room and all members on the server",
-		},
-		ServerReports: {
-			name: "View reports",
-			description: "(unimplemented) Can view server reports",
 		},
 		DocumentCreate: {
 			name: "Create documents",
@@ -347,20 +327,20 @@ export default {
 			name: "Join rooms",
 			description: "Can manually join and leave rooms and gdms",
 		},
-		RoomManageServer: {
-			name: "Manage server rooms",
+		RoomManage: {
+			name: "Manage rooms",
 			description:
 				"Can delete and quarantine rooms, and view all rooms, room templates, dms, and gdms.",
 		},
-		UserDeleteSelf: {
-			name: "Delete own account",
+		UserManageSelf: {
+			name: "Manage own account",
 			description: "Can disable or delete their own account",
 		},
 		UserManage: {
 			name: "Manage users",
 			description: "Can create, edit, and delete users. Can view all users.",
 		},
-		UserProfile: {
+		UserProfileSelf: {
 			name: "Edit profile",
 			description: "Can edit their own profile",
 		},
@@ -368,18 +348,10 @@ export default {
 			name: "View analytics",
 			description: "Can view room analytics",
 		},
-		TagApply: {
-			name: "Apply tags",
-			description: "(unimplemented) Apply tags to threads",
-		},
-		TagManage: {
-			name: "Manage tags",
-			description: "(unimplemented) Create and delete tags",
-		},
 	},
 	// overwrite how permissions are rendered in channels
 	permission_overwrites: {
-		ViewChannel: {
+		ChannelView: {
 			name: "View channel",
 			description: "Can view this channel.",
 		},
@@ -403,7 +375,7 @@ export default {
 			name: "Manage invites",
 			description: "Can revoke invites and view metadata",
 		},
-		MemberBridge: {
+		IntegrationsBridge: {
 			name: "Bridge members",
 			description:
 				"Can add puppet users and massage timestamps; only usable for bridge bots",
@@ -447,8 +419,8 @@ export default {
 			description:
 				"Can add and remove new reactions to messages. Everyone can always react with an existing emoji.",
 		},
-		ReactionPurge: {
-			name: "Purge reactions",
+		ReactionManage: {
+			name: "Manage reactions",
 			description: "Can remove all reactions from a message",
 		},
 		ThreadCreatePublic: {
@@ -468,21 +440,9 @@ export default {
 			name: "Edit threads",
 			description: "Can edit threads created by others",
 		},
-		ThreadLock: {
-			name: "Lock threads",
-			description: "Can lock threads",
-		},
-		VoiceConnect: {
-			name: "Connect",
-			description: "Can connect to voice threads",
-		},
 		VoiceDeafen: {
 			name: "Deafen members",
 			description: "Can deafen other members",
-		},
-		VoiceDisconnect: {
-			name: "Disconnect members",
-			description: "Can disconnect other members from voice threads",
 		},
 		VoiceMove: {
 			name: "Move members",
@@ -516,7 +476,7 @@ export default {
 			name: "Broadcast voice",
 			description: "(todo) Can broadcast voice to all channels in a category",
 		},
-		BypassSlowmode: {
+		ChannelSlowmodeBypass: {
 			name: "Bypass slowmode",
 			description: "Unaffected by slowmode",
 		},

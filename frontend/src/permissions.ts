@@ -35,6 +35,21 @@ export const permissions: Array<Perm> = [
 		moderator: true,
 	},
 	{
+		id: "IntegrationsBridge",
+		group: "members",
+		overwrite_group: "members",
+		types: [
+			"Room",
+			"Text",
+			"Forum",
+			"Forum2",
+			"Voice",
+			"Broadcast",
+			"Category",
+		],
+		moderator: true,
+	},
+	{
 		id: "EmojiManage",
 		group: "room",
 		types: ["Room", "Server"],
@@ -101,21 +116,6 @@ export const permissions: Array<Perm> = [
 		id: "MemberBan",
 		group: "members",
 		types: ["Room", "Server"],
-		moderator: true,
-	},
-	{
-		id: "MemberBridge",
-		group: "members",
-		overwrite_group: "members",
-		types: [
-			"Room",
-			"Text",
-			"Forum",
-			"Forum2",
-			"Voice",
-			"Broadcast",
-			"Category",
-		],
 		moderator: true,
 	},
 	{
@@ -251,7 +251,7 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
-		id: "ReactionPurge",
+		id: "ReactionManage",
 		group: "messages",
 		overwrite_group: "messages",
 		types: [
@@ -290,7 +290,7 @@ export const permissions: Array<Perm> = [
 		moderator: true,
 	},
 	{
-		id: "RoomManage",
+		id: "RoomEdit",
 		group: "room",
 		types: ["Room", "Server"],
 		moderator: true,
@@ -342,20 +342,13 @@ export const permissions: Array<Perm> = [
 		moderator: true,
 	},
 	{
-		id: "ThreadLock",
-		group: "channels",
-		overwrite_group: "threads",
-		types: ["Room", "Text", "Forum", "Forum2", "Category"],
-		moderator: true,
-	},
-	{
 		id: "ChannelManage",
 		group: "channels",
 		types: ["Room", "Server"],
 		moderator: true,
 	},
 	{
-		id: "ViewChannel",
+		id: "ChannelView",
 		group: "channels",
 		overwrite_group: "general",
 		types: [
@@ -373,17 +366,10 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
-		id: "ViewAuditLog",
+		id: "AuditLogView",
 		group: "room",
 		types: ["Room", "Server"],
 		moderator: true,
-	},
-	{
-		id: "VoiceConnect",
-		group: "voice",
-		overwrite_group: "voice",
-		types: ["Room", "Voice", "Broadcast", "Category"],
-		moderator: false,
 	},
 	{
 		id: "CalendarEventCreate",
@@ -402,20 +388,6 @@ export const permissions: Array<Perm> = [
 		group: "calendar",
 		types: ["Calendar", "Category"],
 		moderator: false,
-	},
-	{
-		id: "VoiceDeafen",
-		group: "voice",
-		overwrite_group: "voice",
-		types: ["Room", "Voice", "Broadcast", "Category"],
-		moderator: true,
-	},
-	{
-		id: "VoiceDisconnect",
-		group: "voice",
-		overwrite_group: "voice",
-		types: ["Room", "Voice", "Broadcast", "Category"],
-		moderator: true,
 	},
 	{
 		id: "VoiceMove",
@@ -474,7 +446,7 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
-		id: "BypassSlowmode",
+		id: "ChannelSlowmodeBypass",
 		group: "messages",
 		overwrite_group: "messages",
 		types: [
@@ -486,24 +458,6 @@ export const permissions: Array<Perm> = [
 			"Broadcast",
 			"Category",
 		],
-		moderator: false,
-	},
-	{
-		id: "ServerMetrics",
-		group: "server",
-		types: ["Server"],
-		moderator: false,
-	},
-	{
-		id: "ServerOversee",
-		group: "server",
-		types: ["Server"],
-		moderator: false,
-	},
-	{
-		id: "ServerReports",
-		group: "server",
-		types: ["Server"],
 		moderator: false,
 	},
 	{
@@ -588,13 +542,13 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
-		id: "RoomManageServer",
+		id: "RoomManage",
 		group: "server",
 		types: ["Server"],
 		moderator: false,
 	},
 	{
-		id: "UserDeleteSelf",
+		id: "UserManageSelf",
 		group: "server",
 		types: ["Server"],
 		moderator: false,
@@ -606,7 +560,7 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
-		id: "UserProfile",
+		id: "UserProfileSelf",
 		group: "members",
 		types: ["Server"],
 		moderator: false,
@@ -615,18 +569,6 @@ export const permissions: Array<Perm> = [
 		id: "ViewAnalytics",
 		group: "room",
 		types: ["Room", "Server"],
-		moderator: false,
-	},
-	{
-		id: "TagApply",
-		group: "channels",
-		types: ["Room", "Forum", "Forum2"],
-		moderator: false,
-	},
-	{
-		id: "TagManage",
-		group: "channels",
-		types: ["Room", "Forum", "Forum2"],
 		moderator: false,
 	},
 ];
