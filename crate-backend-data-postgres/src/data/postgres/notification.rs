@@ -19,18 +19,12 @@ impl From<DbNotification> for Notification {
     fn from(val: DbNotification) -> Self {
         let ty = match val.ty {
             DbNotificationType::Message => NotificationType::Message {
-                room_id: val
-                    .room_id
-                    .map(|id| id.into())
-                    .unwrap_or_else(|| RoomId::new()),
+                room_id: val.room_id.map(|id| id.into()),
                 channel_id: val.channel_id.into(),
                 message_id: val.message_id.into(),
             },
             DbNotificationType::Reaction => NotificationType::Reaction {
-                room_id: val
-                    .room_id
-                    .map(|id| id.into())
-                    .unwrap_or_else(|| RoomId::new()),
+                room_id: val.room_id.map(|id| id.into()),
                 channel_id: val.channel_id.into(),
                 message_id: val.message_id.into(),
             },
@@ -56,7 +50,7 @@ impl DataNotification for Postgres {
                 channel_id,
                 message_id,
             } => (
-                Some(room_id.into_inner()),
+                room_id.map(|r| *r),
                 channel_id.into_inner(),
                 message_id.into_inner(),
                 DbNotificationType::Message,
@@ -66,7 +60,7 @@ impl DataNotification for Postgres {
                 channel_id,
                 message_id,
             } => (
-                Some(room_id.into_inner()),
+                room_id.map(|r| *r),
                 channel_id.into_inner(),
                 message_id.into_inner(),
                 DbNotificationType::Reaction,

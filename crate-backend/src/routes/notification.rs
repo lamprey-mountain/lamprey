@@ -9,7 +9,7 @@ use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationCreate, NotificationFlush, NotificationMarkRead,
     NotificationPagination, NotificationType,
 };
-use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission, RoomId};
+use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -125,8 +125,7 @@ async fn inbox_post(
         .get(json.channel_id, Some(auth.user.id))
         .await
         .ok()
-        .and_then(|ch| ch.room_id)
-        .unwrap_or_else(RoomId::new);
+        .and_then(|ch| ch.room_id);
 
     let notif = Notification {
         id: NotificationId::new(),

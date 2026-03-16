@@ -36,14 +36,13 @@ pub struct Notification {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum NotificationType {
     /// someone sent a message you should look at
     Message {
         /// the room this message was sent in
-        room_id: RoomId,
+        room_id: Option<RoomId>,
 
         /// the channel this message was sent in
         channel_id: ChannelId,
@@ -54,13 +53,13 @@ pub enum NotificationType {
 
     /// someone reacted to a message you sent
     Reaction {
-        /// the room this message was sent in
-        room_id: RoomId,
+        /// the room this reaction was sent in
+        room_id: Option<RoomId>,
 
-        /// the channel this message was sent in
+        /// the channel this reaction was sent in
         channel_id: ChannelId,
 
-        /// the id of the message that was sent
+        /// the id of the message that was reacted to
         message_id: MessageId,
         // TODO: user id, reaction key
         // NOTE: i should probably aggregate all notifications into one bundle
@@ -250,8 +249,8 @@ impl Notification {
 
     pub fn room_id(&self) -> Option<RoomId> {
         match &self.ty {
-            NotificationType::Message { room_id, .. } => Some(*room_id),
-            NotificationType::Reaction { room_id, .. } => Some(*room_id),
+            NotificationType::Message { room_id, .. } => *room_id,
+            NotificationType::Reaction { room_id, .. } => *room_id,
         }
     }
 

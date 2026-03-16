@@ -1,9 +1,12 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use common::v1::types::notifications::Notification;
-use common::v1::types::{ChannelId, MessageId, NotificationId, SessionId, UserId};
+use common::v1::types::notifications::{Notification, NotificationType};
+use common::v1::types::util::Time;
+use common::v1::types::{ChannelId, Message, MessageId, NotificationId, SessionId, UserId};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+use lamprey_backend_data_postgres::Channel;
 use p256::pkcs8::EncodePrivateKey;
 use p256::SecretKey;
 use reqwest::StatusCode;
@@ -12,7 +15,9 @@ use time::OffsetDateTime;
 use tracing::{error, info};
 
 use crate::error::Error;
-use crate::services::notifications::preferences::NotificationActionCalculator;
+use crate::services::notifications::preferences::{
+    NotificationAction, NotificationActionCalculator,
+};
 use crate::{Result, ServerStateInner};
 
 pub mod preferences;
@@ -244,5 +249,109 @@ impl ServiceNotifications {
         notif: &Notification,
     ) -> NotificationActionCalculator {
         NotificationActionCalculator::new(self.state.clone(), user_id, notif.clone())
+    }
+
+    /// create notifications for a new message
+    pub async fn dispatch_message_creation(
+        &self,
+        message: &Message,
+        chan: &Channel,
+        author_id: UserId,
+    ) {
+        let mentions = &message.latest_version.mentions;
+        let mut notified_users = HashSet::new();
+        let is_thread = chan.is_thread();
+
+        // 1. Resolve all users that need to be notified
+        let mut users_to_notify = Vec::new();
+
+        // Add directly mentioned users
+        users_to_notify.extend(mentions.users.iter().map(|u| u.id));
+
+        // Add role mention users
+        if chan.room_id.is_some() {
+            for role in &mentions.roles {
+                // TODO: use room cache/service for member list
+                if let Ok(members) = self
+                    .state
+                    .data()
+                    .role_member_list(role.id, Default::default())
+                    .await
+                {
+                    users_to_notify.extend(members.items.into_iter().map(|m| m.user_id));
+                }
+            }
+        }
+
+        // Add @everyone users
+        if mentions.everyone {
+            if is_thread {
+                if let Ok(members) = self.state.data().thread_member_list_all(chan.id).await {
+                    users_to_notify.extend(members.into_iter().map(|m| m.user_id));
+                }
+            } else if let Some(room_id) = chan.room_id {
+                if let Ok(members) = self.state.data().room_member_list_all(room_id).await {
+                    users_to_notify.extend(members.into_iter().map(|m| m.user_id));
+                }
+            }
+        }
+
+        // 2. Process Notifications
+        for user_id in users_to_notify {
+            if user_id == author_id || !notified_users.insert(user_id) {
+                continue; // Skip author and duplicates
+            }
+
+            // Optional: Handle thread auto-join logic here
+
+            // Increment mentions
+            // PERF: bulk increment mentions count
+            let _ = self
+                .state
+                .data()
+                .unread_increment_mentions(
+                    user_id,
+                    chan.id,
+                    message.id,
+                    message.latest_version.version_id,
+                    1,
+                )
+                .await;
+
+            // Generate Inbox Notification
+            let room_id_opt = self
+                .state
+                .services()
+                .channels
+                .get(chan.id, Some(user_id))
+                .await
+                .ok()
+                .and_then(|c| c.room_id);
+            let notification = Notification {
+                id: NotificationId::new(),
+                ty: NotificationType::Message {
+                    room_id: room_id_opt,
+                    channel_id: chan.id,
+                    message_id: message.id,
+                },
+                added_at: Time::now_utc(),
+                read_at: None,
+                note: None,
+            };
+
+            let action = self
+                .calculator(user_id, &notification)
+                .action()
+                .await
+                .unwrap_or(NotificationAction::Push);
+
+            if action.should_add_to_inbox() {
+                let _ = self
+                    .state
+                    .data()
+                    .notification_add(user_id, notification)
+                    .await;
+            }
+        }
     }
 }
