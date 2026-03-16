@@ -3,6 +3,7 @@ mod commands;
 mod events;
 mod messages;
 mod presence;
+mod sync;
 
 pub use actor::{Discord, DiscordMessage, DiscordResponse};
 pub use messages::{

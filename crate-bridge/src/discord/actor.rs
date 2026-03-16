@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use dashmap::{mapref::one::RefMut, DashMap};
+use dashmap::DashMap;
 use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId, MessageId as DcMessageId};
 use serenity::all::{ChannelType, CreateChannel, CreateWebhook, GatewayIntents, Http, Webhook};
 
@@ -12,11 +12,11 @@ use crate::discord::events::Handler;
 ///
 /// Note: This actor is NOT spawned via kameo because serenity runs its own event loop.
 /// The serenity client consumes `self` in `connect()`, so we can't use kameo's spawn.
-/// Instead, we store the Discord instance in an Arc<RwLock> and process messages directly.
-/// The Message trait implementation provides type-safe request/response handling.
+/// Instead, we store the Discord instance in an Arc<OnceCell> and clone for connect().
+#[derive(Clone)]
 pub struct Discord {
     pub globals: Arc<Globals>,
-    pub hooks: DashMap<String, Webhook>,
+    pub hooks: Arc<DashMap<String, Webhook>>,
 }
 
 /// Discord actor messages - fully using Kameo ask pattern
@@ -64,7 +64,7 @@ impl Discord {
     pub fn new(globals: Arc<Globals>) -> Discord {
         Discord {
             globals,
-            hooks: DashMap::new(),
+            hooks: Arc::new(DashMap::new()),
         }
     }
 
@@ -84,7 +84,7 @@ impl Discord {
     }
 
     /// Handle a DiscordMessage directly (used by serenity event handlers)
-    pub async fn handle_message(&mut self, msg: DiscordMessage) -> Result<DiscordResponse> {
+    pub async fn handle_message(&self, msg: DiscordMessage) -> Result<DiscordResponse> {
         match msg {
             DiscordMessage::WebhookExecute { url, payload } => {
                 let http = Http::new(&self.globals.config.discord_token);
@@ -158,11 +158,14 @@ impl Discord {
         }
     }
 
-    async fn get_hook(&mut self, url: String, http: &Http) -> Result<RefMut<'_, String, Webhook>> {
-        let hook = match self.hooks.entry(url.clone()) {
-            dashmap::Entry::Occupied(hook) => hook.into_ref(),
-            dashmap::Entry::Vacant(vacant) => vacant.insert(Webhook::from_url(http, &url).await?),
-        };
+    async fn get_hook(&self, url: String, http: &Http) -> Result<Webhook> {
+        // First try to get existing hook
+        if let Some(hook) = self.hooks.get(&url) {
+            return Ok(hook.clone());
+        }
+        // Create new hook
+        let hook = Webhook::from_url(http, &url).await?;
+        self.hooks.insert(url.clone(), hook.clone());
         Ok(hook)
     }
 }

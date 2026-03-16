@@ -383,7 +383,7 @@ impl sdk::EventHandler for LampreyEventHandler {
     ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
         async move {
             if let Some(user) = user {
-                *self.globals.lamprey_user_id.write().await = Some(user.id);
+                self.globals.set_lamprey_user_id(user.id)?;
                 info!("lamprey ready, user id: {}", user.id);
             }
             Ok(())

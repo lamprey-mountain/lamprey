@@ -11,7 +11,7 @@ use serenity::all::{
     ChannelId as DcChannelId, GuildId as DcGuildId, MessageId as DcMessageId, Presence,
     User as DcUser, UserId as DcUserId,
 };
-use tokio::sync::RwLock;
+use tokio::sync::OnceCell;
 
 use crate::bridge::Bridge;
 use crate::bridge::BridgeMessage;
@@ -37,10 +37,10 @@ pub struct Globals {
     pub last_discord_ids: Arc<DashMap<DcChannelId, DcMessageId>>,
     pub presences: Arc<DashMap<DcUserId, Presence>>,
     pub discord_user_cache: Arc<DashMap<DcUserId, UserCacheEntry>>,
-    pub discord: Arc<RwLock<Option<Discord>>>,
-    pub ch_chan: Arc<RwLock<Option<ActorRef<Lamprey>>>>,
-    pub bridge_chan: Arc<RwLock<Option<ActorRef<Bridge>>>>,
-    pub lamprey_user_id: Arc<RwLock<Option<UserId>>>,
+    pub discord: Arc<OnceCell<Discord>>,
+    pub lamprey_chan: OnceCell<ActorRef<Lamprey>>,
+    pub bridge_chan: OnceCell<ActorRef<Bridge>>,
+    pub lamprey_user_id: Arc<OnceCell<UserId>>,
     pub recently_created_discord_channels: Arc<DashMap<DcChannelId, ()>>,
 }
 
@@ -54,50 +54,71 @@ impl Globals {
             last_discord_ids: Arc::new(DashMap::new()),
             presences: Arc::new(DashMap::new()),
             discord_user_cache: Arc::new(DashMap::new()),
-            discord: Arc::new(RwLock::new(None)),
-            ch_chan: Arc::new(RwLock::new(None)),
-            bridge_chan: Arc::new(RwLock::new(None)),
-            lamprey_user_id: Arc::new(RwLock::new(None)),
+            discord: Arc::new(OnceCell::new()),
+            lamprey_chan: OnceCell::new(),
+            bridge_chan: OnceCell::new(),
+            lamprey_user_id: Arc::new(OnceCell::new()),
             recently_created_discord_channels: Arc::new(DashMap::new()),
         }
     }
 
-    pub async fn set_discord(&self, discord: Discord) {
-        *self.discord.write().await = Some(discord);
+    pub fn set_discord(&self, discord: Discord) -> Result<()> {
+        self.discord
+            .set(discord)
+            .map_err(|_| anyhow::anyhow!("Discord already initialized"))?;
+        Ok(())
     }
 
-    pub async fn take_discord(&self) -> Option<Discord> {
-        self.discord.write().await.take()
+    pub fn get_discord(&self) -> Result<&Discord> {
+        self.discord
+            .get()
+            .ok_or_else(|| anyhow::anyhow!("Discord not initialized"))
     }
 
-    pub async fn with_discord<F, R>(&self, f: F) -> Option<R>
-    where
-        F: FnOnce(&mut Discord) -> R,
-    {
-        let mut guard = self.discord.write().await;
-        guard.as_mut().map(f)
+    pub fn set_bridge_chan(&self, bridge_chan: ActorRef<Bridge>) -> Result<()> {
+        self.bridge_chan
+            .set(bridge_chan)
+            .map_err(|_| anyhow::anyhow!("Bridge already initialized"))?;
+        Ok(())
     }
 
-    pub async fn set_bridge_chan(&self, bridge_chan: ActorRef<Bridge>) {
-        *self.bridge_chan.write().await = Some(bridge_chan);
+    pub fn get_bridge_chan(&self) -> Result<ActorRef<Bridge>> {
+        self.bridge_chan
+            .get()
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Bridge not initialized"))
     }
 
-    pub async fn get_bridge_chan(&self) -> Option<ActorRef<Bridge>> {
-        self.bridge_chan.read().await.clone()
+    pub fn set_lamprey_chan(&self, lamprey_chan: ActorRef<Lamprey>) -> Result<()> {
+        self.lamprey_chan
+            .set(lamprey_chan)
+            .map_err(|_| anyhow::anyhow!("Lamprey already initialized"))?;
+        Ok(())
     }
 
-    pub async fn set_lamprey_chan(&self, lamprey_chan: ActorRef<Lamprey>) {
-        *self.ch_chan.write().await = Some(lamprey_chan);
+    pub fn get_lamprey_chan(&self) -> Result<ActorRef<Lamprey>> {
+        self.lamprey_chan
+            .get()
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Lamprey not initialized"))
     }
 
-    pub async fn get_lamprey_chan(&self) -> Option<ActorRef<Lamprey>> {
-        self.ch_chan.read().await.clone()
+    pub fn set_lamprey_user_id(&self, user_id: UserId) -> Result<()> {
+        self.lamprey_user_id
+            .set(user_id)
+            .map_err(|_| anyhow::anyhow!("User ID already initialized"))?;
+        Ok(())
+    }
+
+    pub fn get_lamprey_user_id(&self) -> Result<UserId> {
+        self.lamprey_user_id
+            .get()
+            .copied()
+            .ok_or_else(|| anyhow::anyhow!("User ID not initialized"))
     }
 
     pub async fn lamprey_handle(&self) -> Result<LampreyHandle> {
-        let Some(lamprey_ref) = self.get_lamprey_chan().await else {
-            return Err(anyhow::anyhow!("lamprey actor not initialized"));
-        };
+        let lamprey_ref = self.get_lamprey_chan()?;
         Ok(LampreyHandle {
             lamprey_ref,
             globals: Arc::new(self.clone()),
@@ -160,9 +181,9 @@ impl GlobalsTrait for Arc<Globals> {
 }
 
 impl Globals {
-    pub async fn bridge_send(&self, msg: BridgeMessage) -> Result<()> {
-        if let Some(bridge_chan) = self.get_bridge_chan().await {
-            let _ = bridge_chan.tell(msg).await;
+    pub fn bridge_send(&self, msg: BridgeMessage) -> Result<()> {
+        if let Ok(bridge_chan) = self.get_bridge_chan() {
+            let _ = bridge_chan.tell(msg);
         }
         Ok(())
     }

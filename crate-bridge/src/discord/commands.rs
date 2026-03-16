@@ -1,18 +1,20 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use kameo::actor::Spawn;
+use serenity::all::Context;
 use serenity::all::{
-    ChannelType, CommandDataOptionValue, CommandInteraction, CommandOptionType, CreateCommand,
+    CommandDataOptionValue, CommandInteraction, CommandOptionType, CreateCommand,
     CreateCommandOption, CreateInteractionResponseMessage, CreateWebhook, EditInteractionResponse,
-    GuildId, InteractionContext, InteractionResponseFlags, MessagePagination, Permissions, Webhook,
+    GuildId, InteractionContext, InteractionResponseFlags, Permissions, Webhook,
 };
-use serenity::model::prelude::{ChannelId, MessageId};
-use tracing::{debug, error, info, warn};
+use serenity::model::prelude::ChannelId;
+use tracing::{error, warn};
 
 use crate::bridge_common::{Globals, RealmConfig, WEBHOOK_NAME};
 use crate::db::Data;
-use crate::portal::{Portal, PortalMessage};
+use crate::discord::sync::backfill_discord_guild;
+use crate::portal::Portal;
 
 pub(super) async fn send_ephemeral_reply(
     ctx: &serenity::all::Context,
@@ -28,188 +30,13 @@ pub(super) async fn send_ephemeral_reply(
     }
 }
 
-pub(super) async fn backfill_channel(
-    ctx: &serenity::all::Context,
-    globals: Arc<Globals>,
-    channel_id: ChannelId,
-) -> Result<()> {
-    let Some(config) = globals.get_portal_by_discord_channel(channel_id).await? else {
-        warn!("backfill_channel: no portal for {}", channel_id);
-        return Ok(());
-    };
-
-    let portal = globals
-        .portals
-        .entry(config.lamprey_thread_id)
-        .or_insert_with(|| Portal::spawn((globals.clone(), config.to_owned())));
-
-    let mut p = MessagePagination::After(MessageId::new(1));
-    loop {
-        let msgs = ctx
-            .http
-            .get_messages(channel_id, Some(p), Some(100))
-            .await?;
-
-        if msgs.is_empty() {
-            break;
-        }
-
-        info!(
-            "discord backfill {} messages for channel {}",
-            msgs.len(),
-            channel_id
-        );
-
-        let last_id = msgs.first().unwrap().id;
-        for message in msgs.into_iter().rev() {
-            if globals.get_message_dc(message.id).await?.is_some() {
-                debug!("skipping already bridged message: {}", message.id);
-                continue;
-            }
-            let _ = portal
-                .tell(PortalMessage::DiscordMessageCreate { message })
-                .await;
-        }
-        p = MessagePagination::After(last_id);
-    }
-    info!("finished backfill for channel {}", channel_id);
-    Ok(())
-}
-
 pub(super) async fn backfill_guild(
     ctx: &serenity::all::Context,
     globals: Arc<Globals>,
     guild_id: GuildId,
-    realm_config: RealmConfig,
+    _realm_config: RealmConfig,
 ) -> Result<()> {
-    let guild = ctx
-        .cache
-        .guild(guild_id)
-        .ok_or(anyhow!("failed to get guild {guild_id} from cache"))?
-        .to_owned();
-
-    let mut all_channels: Vec<_> = guild.channels.values().chain(&guild.threads).collect();
-    all_channels.sort_by_key(|c| c.parent_id.is_some());
-
-    for channel in all_channels {
-        if !matches!(
-            channel.kind,
-            ChannelType::Text
-                | ChannelType::News
-                | ChannelType::PublicThread
-                | ChannelType::PrivateThread
-                | ChannelType::NewsThread
-                | ChannelType::Category
-        ) {
-            continue;
-        }
-
-        if globals
-            .get_portal_by_discord_channel(channel.id)
-            .await
-            .is_ok_and(|p| p.is_some())
-        {
-            let ctx = ctx.clone();
-            let globals = globals.clone();
-            let channel_id = channel.id;
-            tokio::spawn(async move {
-                if let Err(e) = backfill_channel(&ctx, globals, channel_id).await {
-                    error!(
-                        "failed to backfill existing portal for channel {}: {}",
-                        channel_id, e
-                    );
-                }
-            });
-            continue;
-        }
-
-        // create portal
-        let ly = globals.lamprey_handle().await?;
-
-        let thread_type = if channel.kind == ChannelType::Category {
-            common::v1::types::ChannelType::Category
-        } else {
-            common::v1::types::ChannelType::Text
-        };
-
-        let lamprey_parent_id = if let Some(discord_parent_id) = channel.parent_id {
-            if let Ok(Some(parent_portal)) = globals
-                .get_portal_by_discord_channel(discord_parent_id)
-                .await
-            {
-                Some(parent_portal.lamprey_thread_id)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        let thread = ly
-            .create_thread(
-                realm_config.lamprey_room_id,
-                channel.name.clone(),
-                None,
-                thread_type,
-                lamprey_parent_id,
-            )
-            .await?;
-
-        let (is_thread, parent_id) = if matches!(
-            channel.kind,
-            ChannelType::PublicThread | ChannelType::PrivateThread | ChannelType::NewsThread
-        ) {
-            (true, channel.parent_id)
-        } else {
-            (false, Some(channel.id))
-        };
-
-        let webhook_url = if channel.kind != ChannelType::Category {
-            let Some(webhook_channel_id) = parent_id else {
-                info!("channel {} has no parent, skipping", channel.id);
-                continue;
-            };
-            let webhook = crate::discord::discord_create_webhook(
-                globals.clone(),
-                webhook_channel_id,
-                WEBHOOK_NAME.to_string(),
-            )
-            .await?;
-            webhook.url().unwrap().to_string()
-        } else {
-            "".to_string()
-        };
-
-        let portal_config = crate::bridge_common::PortalConfig {
-            lamprey_thread_id: thread.id,
-            lamprey_room_id: realm_config.lamprey_room_id,
-            discord_guild_id: guild_id,
-            discord_channel_id: parent_id.unwrap_or(channel.id),
-            discord_thread_id: if is_thread { Some(channel.id) } else { None },
-            discord_webhook: webhook_url,
-        };
-
-        globals.insert_portal(portal_config.clone()).await?;
-
-        globals
-            .portals
-            .entry(portal_config.lamprey_thread_id)
-            .or_insert_with(|| Portal::spawn((globals.clone(), portal_config)));
-
-        let globals = globals.clone();
-        let ctx = ctx.clone();
-        let channel_id = channel.id;
-        tokio::spawn(async move {
-            if let Err(e) = backfill_channel(&ctx, globals, channel_id).await {
-                error!(
-                    "failed to backfill new portal for channel {}: {}",
-                    channel_id, e
-                );
-            }
-        });
-    }
-
-    Ok(())
+    backfill_discord_guild(ctx, globals, guild_id).await
 }
 
 pub(super) fn get_commands() -> Vec<CreateCommand> {
@@ -397,7 +224,7 @@ async fn handle_link_channel(
         let ctx = ctx.clone();
         let globals = globals.clone();
         tokio::spawn(async move {
-            if let Err(e) = backfill_channel(&ctx, globals, channel_id).await {
+            if let Err(e) = backfill_channel_task(&ctx, globals, channel_id).await {
                 error!("failed to backfill channel {}: {}", channel_id, e);
             }
         });
@@ -405,6 +232,27 @@ async fn handle_link_channel(
     } else {
         Ok("linked".to_string())
     }
+}
+
+/// Task to backfill a single channel (spawned as async task)
+async fn backfill_channel_task(
+    ctx: &Context,
+    globals: Arc<Globals>,
+    channel_id: ChannelId,
+) -> Result<()> {
+    let Some(config) = globals.get_portal_by_discord_channel(channel_id).await? else {
+        warn!("backfill_channel_task: no portal for {}", channel_id);
+        return Ok(());
+    };
+
+    let portal_ref = globals
+        .portals
+        .entry(config.lamprey_thread_id)
+        .or_insert_with(|| Portal::spawn((globals.clone(), config.to_owned())));
+    let portal = portal_ref.clone();
+    drop(portal_ref); // Release the borrow before calling backfill
+
+    crate::discord::sync::backfill_discord_channel(ctx, globals, channel_id, portal).await
 }
 
 async fn handle_link_guild(

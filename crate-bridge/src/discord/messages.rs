@@ -13,10 +13,7 @@ pub async fn discord_create_channel(
     ty: common::v1::types::ChannelType,
     parent_id: Option<serenity::all::ChannelId>,
 ) -> Result<serenity::all::ChannelId> {
-    let mut discord_guard = globals.discord.write().await;
-    let discord = discord_guard
-        .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let discord = globals.get_discord()?;
     let response = discord
         .handle_message(DiscordMessage::ChannelCreate {
             guild_id,
@@ -39,10 +36,7 @@ pub async fn discord_create_webhook(
     channel_id: serenity::all::ChannelId,
     name: String,
 ) -> Result<Webhook> {
-    let mut discord_guard = globals.discord.write().await;
-    let discord = discord_guard
-        .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let discord = globals.get_discord()?;
     let response = discord
         .handle_message(DiscordMessage::WebhookCreate { channel_id, name })
         .await?;
@@ -60,10 +54,7 @@ pub async fn discord_get_message(
     channel_id: ChannelId,
     message_id: MessageId,
 ) -> Result<serenity::all::Message> {
-    let mut discord_guard = globals.discord.write().await;
-    let discord = discord_guard
-        .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let discord = globals.get_discord()?;
     let response = discord
         .handle_message(DiscordMessage::MessageGet {
             message_id,
@@ -84,10 +75,7 @@ pub async fn discord_execute_webhook(
     url: String,
     payload: serenity::all::ExecuteWebhook,
 ) -> Result<serenity::all::Message> {
-    let mut discord_guard = globals.discord.write().await;
-    let discord = discord_guard
-        .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let discord = globals.get_discord()?;
     let response = discord
         .handle_message(DiscordMessage::WebhookExecute { url, payload })
         .await?;
@@ -106,10 +94,7 @@ pub async fn discord_edit_message(
     message_id: MessageId,
     payload: serenity::all::EditWebhookMessage,
 ) -> Result<serenity::all::Message> {
-    let mut discord_guard = globals.discord.write().await;
-    let discord = discord_guard
-        .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let discord = globals.get_discord()?;
     let response = discord
         .handle_message(DiscordMessage::WebhookMessageEdit {
             url,
@@ -132,10 +117,7 @@ pub async fn discord_delete_message(
     thread_id: Option<ChannelId>,
     message_id: MessageId,
 ) -> Result<()> {
-    let mut discord_guard = globals.discord.write().await;
-    let discord = discord_guard
-        .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("Discord actor not initialized"))?;
+    let discord = globals.get_discord()?;
     let response = discord
         .handle_message(DiscordMessage::WebhookMessageDelete {
             url,

@@ -76,18 +76,18 @@ async fn main() -> Result<()> {
     let bridge_ref = Bridge::spawn((globals.clone(),));
 
     // Set the bridge_chan in globals
-    globals.set_bridge_chan(bridge_ref.clone()).await;
+    globals.set_bridge_chan(bridge_ref.clone())?;
 
     // Spawn lamprey actor using kameo
     let lamprey_ref = Lamprey::spawn(globals.clone());
 
     // Set the lamprey_chan in globals
-    globals.set_lamprey_chan(lamprey_ref.clone()).await;
+    globals.set_lamprey_chan(lamprey_ref.clone())?;
 
     // Create discord actor (not spawned via kameo - serenity runs its own event loop)
-    // We need to create it, store a reference in globals, then consume it for connect()
+    // We need to create it, store a reference in globals, then clone it for connect()
     let discord = Discord::new(globals.clone());
-    globals.set_discord(discord).await;
+    globals.set_discord(discord.clone())?;
 
     for config in globals.get_portals().await? {
         if let Some(last_id) = globals
@@ -166,12 +166,10 @@ async fn main() -> Result<()> {
                 if globals.get_portal_by_thread_id(thread.id).await?.is_some() {
                     continue;
                 }
-                globals
-                    .bridge_send(BridgeMessage::LampreyThreadCreate {
-                        thread,
-                        discord_guild_id: realm.discord_guild_id,
-                    })
-                    .await?;
+                globals.bridge_send(BridgeMessage::LampreyThreadCreate {
+                    thread,
+                    discord_guild_id: realm.discord_guild_id,
+                })?;
             }
         }
         Ok::<(), anyhow::Error>(())
@@ -266,9 +264,6 @@ async fn main() -> Result<()> {
     // Run the actors
     // discord.connect() is a long-running future that runs serenity's event loop
     // The other tasks are background tasks
-    let Some(discord) = globals.take_discord().await else {
-        return Err(anyhow::anyhow!("Discord actor not initialized"));
-    };
     let (dc_res, _lamprey_res, startup_res, backfill_res, _syncer_res) = tokio::join!(
         discord.connect(),
         future::pending::<Result<()>>(),

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use kameo::actor::Spawn;
 use serenity::all::{
     ChannelType, Guild, GuildChannel, GuildMemberUpdateEvent, Interaction, Message,
-    MessagePagination, MessageUpdateEvent, Presence, Ready,
+    MessageUpdateEvent, Presence, Ready,
 };
 use serenity::model::prelude::{ChannelId, GuildId, MessageId, Reaction, TypingStartEvent};
 use serenity::prelude::*;
@@ -16,6 +16,7 @@ use crate::bridge_common::{Globals, GlobalsTrait};
 use crate::db::Data;
 use crate::discord::commands::{get_commands, handle_interaction};
 use crate::discord::presence::process_presence_update;
+use crate::discord::sync::backfill_discord_channel_incremental;
 use crate::portal::{Portal, PortalMessage};
 
 pub(super) struct GlobalsKey;
@@ -45,48 +46,22 @@ impl EventHandler for Handler {
             let chans = guild.channels.values().chain(&guild.threads);
             for ch in chans {
                 async {
-                    if globals
-                        .get_portal_by_discord_channel(ch.id)
-                        .await
-                        .unwrap()
-                        .is_some()
-                    {
-                        let config = globals
-                            .get_portal_by_discord_channel(ch.id)
-                            .await
-                            .unwrap()
-                            .unwrap();
-                        let portal = globals
+                    if let Ok(Some(config)) = globals.get_portal_by_discord_channel(ch.id).await {
+                        let portal_ref = globals
                             .portals
                             .entry(config.lamprey_thread_id)
                             .or_insert_with(|| Portal::spawn((globals.clone(), config.to_owned())));
+                        let portal = portal_ref.clone();
 
-                        let last_id = globals.last_discord_ids.get(&ch.id).map(|v| *v.value());
-                        let Some(last_id) = last_id else {
-                            return;
-                        };
-                        let mut p = MessagePagination::After(last_id);
-                        loop {
-                            let msgs = ctx
-                                .http
-                                .get_messages(ch.id, Some(p), Some(100))
-                                .await
-                                .unwrap();
-                            if msgs.is_empty() {
-                                break;
-                            }
-                            info!("discord backfill {} messages", msgs.len());
-                            let last_id = msgs.first().unwrap().id;
-                            for message in msgs.into_iter().rev() {
-                                if globals.get_message_dc(message.id).await.unwrap().is_some() {
-                                    debug!("skipping already bridged message: {}", message.id);
-                                    continue;
-                                }
-                                let _ = portal
-                                    .tell(PortalMessage::DiscordMessageCreate { message })
-                                    .await;
-                            }
-                            p = MessagePagination::After(last_id);
+                        if let Err(e) = backfill_discord_channel_incremental(
+                            &ctx,
+                            globals.clone(),
+                            ch.id,
+                            portal,
+                        )
+                        .await
+                        {
+                            error!("failed to backfill channel {}: {}", ch.id, e);
                         }
                     } else {
                         if ch.kind != ChannelType::Text && ch.kind != ChannelType::News {
@@ -109,16 +84,13 @@ impl EventHandler for Handler {
 
                         info!("no portal exists so we'll create one");
 
-                        if let Err(e) = globals
-                            .bridge_send(BridgeMessage::DiscordChannelCreate {
-                                guild_id: guild.id,
-                                channel_id: ch.id,
-                                channel_name: ch.name.clone(),
-                                channel_type: ch.kind,
-                                parent_id: ch.parent_id,
-                            })
-                            .await
-                        {
+                        if let Err(e) = globals.bridge_send(BridgeMessage::DiscordChannelCreate {
+                            guild_id: guild.id,
+                            channel_id: ch.id,
+                            channel_name: ch.name.clone(),
+                            channel_type: ch.kind,
+                            parent_id: ch.parent_id,
+                        }) {
                             error!("failed to send discord channel create message: {e}");
                         }
                     }
@@ -335,16 +307,13 @@ impl EventHandler for Handler {
             return;
         }
 
-        if let Err(e) = globals
-            .bridge_send(BridgeMessage::DiscordChannelCreate {
-                guild_id,
-                channel_id: channel.id,
-                channel_name: channel.name.clone(),
-                channel_type: channel.kind,
-                parent_id: channel.parent_id,
-            })
-            .await
-        {
+        if let Err(e) = globals.bridge_send(BridgeMessage::DiscordChannelCreate {
+            guild_id,
+            channel_id: channel.id,
+            channel_name: channel.name.clone(),
+            channel_type: channel.kind,
+            parent_id: channel.parent_id,
+        }) {
             error!("failed to send discord channel create message: {e}");
         }
     }
