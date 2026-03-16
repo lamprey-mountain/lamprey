@@ -775,6 +775,7 @@ impl ServiceMessages {
         message_id: MessageId,
         user_id: UserId,
         json: MessagePatch,
+        header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
         let s = &self.state;
         json.validate()?;
@@ -783,6 +784,37 @@ impl ServiceMessages {
         let user = srv.users.get(user_id, None).await?;
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         let is_webhook = user.webhook.is_some();
+
+        let created_at = if let Some(ts) = header_timestamp {
+            if let Some(puppet) = user.puppet {
+                let owner_perms = srv
+                    .perms
+                    .for_channel(puppet.owner_id.into_inner().into(), thread_id)
+                    .await?;
+                let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
+                owner_perms.ensure_all(&required_perms)?;
+            } else if user.bot {
+                if let Ok(app) = s.data().application_get(user_id.into_inner().into()).await {
+                    let owner_perms = srv
+                        .perms
+                        .for_channel(app.owner_id.into_inner().into(), thread_id)
+                        .await?;
+                    let required_perms = vec![Permission::ViewChannel, Permission::MemberBridge];
+                    owner_perms.ensure_all(&required_perms)?;
+                } else {
+                    return Err(Error::BadStatic(
+                        "MemberBridge permission required to override timestamp",
+                    ));
+                }
+            } else {
+                return Err(Error::BadStatic(
+                    "MemberBridge permission required to override timestamp",
+                ));
+            }
+            Some(ts)
+        } else {
+            None
+        };
 
         let perms = if is_webhook {
             None
@@ -961,7 +993,7 @@ impl ServiceMessages {
                     author_id: user_id,
                     embeds: embeds.into_iter().map(|e| e.into()).collect(),
                     message_type: payload,
-                    created_at: None,
+                    created_at: created_at.map(|t| t.into()),
                     mentions,
                 },
             )

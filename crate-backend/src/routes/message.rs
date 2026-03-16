@@ -183,6 +183,7 @@ async fn message_edit(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderTimestamp(header_timestamp): HeaderTimestamp,
     Json(json): Json<MessagePatch>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
@@ -197,7 +198,7 @@ async fn message_edit(
 
     let (_status, message) = srv
         .messages
-        .edit(channel_id, message_id, auth.user.id, json)
+        .edit(channel_id, message_id, auth.user.id, json, header_timestamp)
         .await?;
     Ok((StatusCode::OK, Json(message)))
 }

@@ -489,7 +489,7 @@ async fn webhook_message_edit(
     let (status, message) = s
         .services()
         .messages
-        .edit(channel_id, message_id, webhook_user_id, json)
+        .edit(channel_id, message_id, webhook_user_id, json, None)
         .await?;
 
     Ok((status, Json(message)))
