@@ -123,7 +123,7 @@ impl ServiceDocuments {
 
                 // capture actors to avoid holding dashmap locks across await points
                 let actors: Vec<_> = documents
-                    .edit_contexts
+                    .edit_contexts2
                     .iter()
                     .map(|entry| (*entry.key(), entry.value().clone()))
                     .collect();
@@ -317,12 +317,8 @@ impl ServiceDocuments {
                     Event::Text(e) => {
                         for change in e.delta(txn) {
                             match change {
-                                Delta::Inserted(t, _) => {
-                                    stats.0 += get_update_len(t, txn);
-                                }
-                                Delta::Deleted(len) => {
-                                    stats.1 += (*len) as usize;
-                                }
+                                Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
+                                Delta::Deleted(len) => stats.1 += (*len) as usize,
                                 Delta::Retain(_, _) => {}
                             }
                         }
@@ -330,12 +326,8 @@ impl ServiceDocuments {
                     Event::XmlText(e) => {
                         for change in e.delta(txn) {
                             match change {
-                                Delta::Inserted(t, _) => {
-                                    stats.0 += get_update_len(t, txn);
-                                }
-                                Delta::Deleted(len) => {
-                                    stats.1 += (*len) as usize;
-                                }
+                                Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
+                                Delta::Deleted(len) => stats.1 += (*len) as usize,
                                 Delta::Retain(_, _) => {}
                             }
                         }
@@ -348,9 +340,7 @@ impl ServiceDocuments {
                                         stats.0 += get_update_len(v, txn);
                                     }
                                 }
-                                yrs::types::Change::Removed(len) => {
-                                    stats.1 += (*len) as usize;
-                                }
+                                yrs::types::Change::Removed(len) => stats.1 += (*len) as usize,
                                 yrs::types::Change::Retain(_) => {}
                             }
                         }

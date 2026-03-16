@@ -28,7 +28,6 @@ use crate::{
 };
 
 /// a yjs/yrs crdt with presence
-// rename to EditContext?
 #[derive(Actor)]
 pub struct DocumentActor {
     context_id: EditContextId,
@@ -57,6 +56,31 @@ pub struct ApplyUpdate {
 
 /// check if this document should be unloaded
 pub struct CheckUnload;
+
+/// get the current snapshot
+pub struct GetSnapshot;
+
+/// get the diff from a state vector
+pub struct GetDiff {
+    pub state_vector: StateVector,
+}
+
+/// broadcast presence update
+pub struct BroadcastPresence {
+    pub user_id: UserId,
+    pub origin_conn_id: Option<ConnectionId>,
+    pub cursor_head: String,
+    pub cursor_tail: Option<String>,
+}
+
+/// remove presence
+pub struct RemovePresence {
+    pub user_id: UserId,
+    pub conn_id: ConnectionId,
+}
+
+/// get all presence
+pub struct GetPresence;
 
 impl DocumentActor {
     fn should_snapshot(&self) -> bool {
@@ -231,5 +255,106 @@ impl Message<CheckUnload> for DocumentActor {
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(60)
+    }
+}
+
+impl Message<GetSnapshot> for DocumentActor {
+    type Reply = Result<Vec<u8>>;
+
+    async fn handle(
+        &mut self,
+        _msg: GetSnapshot,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        Ok(self
+            .doc
+            .transact()
+            .encode_state_as_update_v1(&StateVector::default()))
+    }
+}
+
+impl Message<GetDiff> for DocumentActor {
+    type Reply = Result<Vec<u8>>;
+
+    async fn handle(&mut self, msg: GetDiff, _ctx: &mut Context<Self, Self::Reply>) -> Self::Reply {
+        Ok(self.doc.transact().encode_diff_v1(&msg.state_vector))
+    }
+}
+
+impl Message<BroadcastPresence> for DocumentActor {
+    type Reply = Result<()>;
+
+    async fn handle(
+        &mut self,
+        msg: BroadcastPresence,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.last_active = Instant::now();
+        if let Some(conn_id) = msg.origin_conn_id {
+            self.presence.insert(
+                msg.user_id,
+                PresenceData {
+                    conn_id,
+                    cursor_head: msg.cursor_head.clone(),
+                    cursor_tail: msg.cursor_tail.clone(),
+                },
+            );
+        }
+        let _ = self.update_tx.send(DocumentEvent::Presence {
+            user_id: msg.user_id,
+            origin_conn_id: msg.origin_conn_id,
+            cursor_head: msg.cursor_head,
+            cursor_tail: msg.cursor_tail,
+        });
+        Ok(())
+    }
+}
+
+impl Message<RemovePresence> for DocumentActor {
+    type Reply = Result<()>;
+
+    async fn handle(
+        &mut self,
+        msg: RemovePresence,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        if let Some(presence) = self.presence.get(&msg.user_id) {
+            if presence.conn_id == msg.conn_id {
+                self.presence.remove(&msg.user_id);
+                if self.presence.is_empty() {
+                    self.last_active = Instant::now();
+                }
+                let _ = self.update_tx.send(DocumentEvent::Presence {
+                    user_id: msg.user_id,
+                    origin_conn_id: Some(msg.conn_id),
+                    cursor_head: "".to_string(),
+                    cursor_tail: None,
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Message<GetPresence> for DocumentActor {
+    type Reply = Result<Vec<(UserId, String, Option<String>, ConnectionId)>>;
+
+    async fn handle(
+        &mut self,
+        _msg: GetPresence,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        Ok(self
+            .presence
+            .iter()
+            .map(|(uid, data)| {
+                (
+                    *uid,
+                    data.cursor_head.clone(),
+                    data.cursor_tail.clone(),
+                    data.conn_id,
+                )
+            })
+            .collect())
     }
 }

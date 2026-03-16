@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use common::v1::types::{ChannelId, MemberListOp, MessageSync, RoomId, UserId};
-use tokio::sync::oneshot;
 use tokio_stream::{wrappers::BroadcastStream, StreamExt, StreamMap, StreamNotifyClose};
 use uuid::Uuid;
 
@@ -11,6 +10,7 @@ use crate::{
         actor::{MemberListCommand, MemberListEvent},
         util::{MemberListKey, MemberListKey1},
     },
+    services::rooms::MemberListCommandMsg,
     Error, Result, ServerStateInner,
 };
 
@@ -55,15 +55,18 @@ impl MemberListSyncer {
         let list = srv.member_lists.ensure(key.clone()).await?;
 
         // Try to send the command; if it fails, evict the dead actor and retry
-        let (tx, rx) = oneshot::channel();
         let conn_id = self.conn_id;
-        let cmd = MemberListCommand::GetInitialRanges {
-            ranges: ranges.clone(),
-            conn_id,
-            callback: tx,
-        };
-
-        let result = list.send_command(cmd).await;
+        let result = list
+            .actor_ref
+            .ask(MemberListCommandMsg {
+                key: key.clone(),
+                cmd: MemberListCommand::GetInitialRanges {
+                    ranges: ranges.clone(),
+                    conn_id,
+                },
+            })
+            .send()
+            .await;
 
         if result.is_err() {
             // Actor is dead, evict it and get a fresh one
@@ -75,20 +78,36 @@ impl MemberListSyncer {
 
             let list = srv.member_lists.ensure(key.clone()).await?;
 
-            let (tx, rx) = oneshot::channel();
-            let cmd = MemberListCommand::GetInitialRanges {
-                ranges,
-                conn_id: self.conn_id,
-                callback: tx,
+            let reply_result = list
+                .actor_ref
+                .ask(MemberListCommandMsg {
+                    key: key.clone(),
+                    cmd: MemberListCommand::GetInitialRanges {
+                        ranges,
+                        conn_id: self.conn_id,
+                    },
+                })
+                .send()
+                .await;
+
+            let reply = match reply_result {
+                Ok(r) => r,
+                Err(e) => {
+                    return Err(Error::Internal(format!(
+                        "failed to send member list command: {e}"
+                    )))
+                }
             };
 
-            list.send_command(cmd)
-                .await
-                .map_err(|_| Error::Internal("failed to send member list command".to_string()))?;
+            let mut initial_sync = match reply {
+                Some(sync) => sync,
+                None => {
+                    return Err(Error::Internal(
+                        "member list command returned None".to_string(),
+                    ))
+                }
+            };
 
-            let mut initial_sync = rx
-                .await
-                .map_err(|_| Error::Internal("failed to receive initial ranges".to_string()))?;
             self.patch_msg_key(&mut initial_sync, &key1);
             self.outbox.push_back(initial_sync);
 
@@ -100,9 +119,26 @@ impl MemberListSyncer {
             return Ok(());
         }
 
-        let mut initial_sync = rx
-            .await
-            .map_err(|_| Error::Internal("failed to receive initial ranges".to_string()))?;
+        let reply_result = result;
+
+        let reply = match reply_result {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(Error::Internal(format!(
+                    "failed to receive initial ranges: {e}"
+                )))
+            }
+        };
+
+        let mut initial_sync = match reply {
+            Some(sync) => sync,
+            None => {
+                return Err(Error::Internal(
+                    "member list command returned None".to_string(),
+                ))
+            }
+        };
+
         self.patch_msg_key(&mut initial_sync, &key1);
         self.outbox.push_back(initial_sync);
 

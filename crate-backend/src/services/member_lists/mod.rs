@@ -75,10 +75,11 @@ impl ServiceMemberLists {
         // Evict the dead actor and retry once
         let result = room_handle
             .actor_ref
-            .tell(MemberListSubscribeMsg {
+            .ask(MemberListSubscribeMsg {
                 key: key.clone(),
                 events_tx: events_tx.clone(),
             })
+            .send()
             .await;
 
         if result.is_err() {
@@ -99,10 +100,11 @@ impl ServiceMemberLists {
 
             room_handle
                 .actor_ref
-                .tell(MemberListSubscribeMsg {
+                .ask(MemberListSubscribeMsg {
                     key: key.clone(),
                     events_tx: events_tx.clone(),
                 })
+                .send()
                 .await
                 .map_err(|_| {
                     crate::Error::Internal("failed to subscribe to member list".to_string())

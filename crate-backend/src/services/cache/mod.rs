@@ -16,8 +16,8 @@ use moka::future::Cache;
 pub mod permissions;
 
 pub use crate::services::rooms::{
-    CachedChannel, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomHandle,
-    RoomSnapshot, RoomUnavailableReason, SyncMessage,
+    CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread,
+    RoomHandle, RoomSnapshot, RoomUnavailableReason, SyncMessage,
 };
 
 use common::v1::types::error::ApiError;

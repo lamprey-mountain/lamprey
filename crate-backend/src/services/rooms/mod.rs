@@ -3,7 +3,7 @@ pub mod types;
 
 pub use types::{
     CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread,
-    EnsureMembers, GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg, RoomCommand,
+    CleanupIdleLists, EnsureMembers, GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg,
     RoomData, RoomHandle, RoomSnapshot, RoomUnavailable, RoomUnavailableReason, SyncMessage,
 };
 
@@ -12,6 +12,7 @@ pub use actor::RoomActor;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::consts::IDLE_TIMEOUT_ROOM;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
@@ -50,6 +51,7 @@ impl ServiceRooms {
                 .build(),
             actors: Cache::builder()
                 .max_capacity(MAX_LOADED_ROOMS)
+                .time_to_idle(Duration::from_secs(IDLE_TIMEOUT_ROOM))
                 .support_invalidation_closures()
                 .eviction_listener(|room_id, handle: RoomHandle, cause| {
                     tracing::debug!(?room_id, ?cause, "Evicting room actor");
@@ -77,7 +79,12 @@ impl ServiceRooms {
                 .map_err(|e| e.fake_clone())?;
 
             if ensure_members {
-                let _ = handle.actor_ref.tell(EnsureMembers).await;
+                handle
+                    .actor_ref
+                    .ask(EnsureMembers)
+                    .send()
+                    .await
+                    .map_err(|e| Error::Internal(format!("Actor mailbox closed: {e}")))?;
             }
 
             let mut rx = handle.snapshot_rx.clone();

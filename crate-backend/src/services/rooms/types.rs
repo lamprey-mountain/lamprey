@@ -56,31 +56,6 @@ pub struct RoomData {
     pub threads: ImMap<ChannelId, CachedThread>,
 }
 
-/// Commands that can be sent to a room actor.
-/// These will be converted to Kameo messages.
-pub enum RoomCommand {
-    /// Update the room state from a sync event.
-    Sync(MessageSync),
-
-    /// Member list command.
-    MemberList(
-        crate::services::member_lists::util::MemberListKey,
-        crate::services::member_lists::actor::MemberListCommand,
-    ),
-
-    /// Subscribe to member list events.
-    MemberListSubscribe(
-        crate::services::member_lists::util::MemberListKey,
-        tokio::sync::broadcast::Sender<crate::services::member_lists::actor::MemberListEvent>,
-    ),
-
-    /// Ensure that the room members are loaded.
-    EnsureMembers,
-
-    /// Close the actor (usually due to idle timeout).
-    Close,
-}
-
 /// Kameo messages for RoomActor
 pub struct GetSnapshot;
 
@@ -100,6 +75,9 @@ pub struct MemberListSubscribeMsg {
     pub events_tx:
         tokio::sync::broadcast::Sender<crate::services::member_lists::actor::MemberListEvent>,
 }
+
+/// Internal message to clean up idle member lists
+pub struct CleanupIdleLists;
 
 /// A handle to a room actor.
 /// Contains both the ActorRef for sending commands and a watch receiver for snapshots.

@@ -3,15 +3,16 @@ use kameo::prelude::{Actor, ActorRef, Context, Message, Spawn, WeakActorRef};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
+use tokio::time::Duration;
 use tracing::Instrument;
 
 use common::v1::types::{MessageSync, RoomId, User, UserId};
 use tokio::sync::watch;
 
 use super::{
-    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, EnsureMembers,
-    GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg, RoomData, RoomHandle, RoomSnapshot,
-    SyncMessage,
+    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, CleanupIdleLists,
+    EnsureMembers, GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg, RoomData, RoomHandle,
+    RoomSnapshot, SyncMessage,
 };
 use crate::services::member_lists::actor::MemberList;
 use crate::services::member_lists::util::MemberListKey;
@@ -38,7 +39,7 @@ impl Actor for RoomActor {
 
     async fn on_start(
         (room_id, state, snapshot_tx): Self::Args,
-        _actor_ref: ActorRef<Self>,
+        actor_ref: ActorRef<Self>,
     ) -> std::result::Result<Self, Self::Error> {
         let snapshot = Arc::new(RoomSnapshot::Loading);
 
@@ -50,6 +51,17 @@ impl Actor for RoomActor {
             member_lists: HashMap::new(),
             last_active: Instant::now(),
         };
+
+        // Spawn background task to clean up idle member lists
+        let cleanup_ref = actor_ref.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(60)).await;
+                if cleanup_ref.tell(CleanupIdleLists).await.is_err() {
+                    break;
+                }
+            }
+        });
 
         // Load initial state
         if let Err(e) = actor.load_initial_state().await {
@@ -607,7 +619,7 @@ impl Message<SyncMessage> for RoomActor {
 }
 
 impl Message<MemberListCommandMsg> for RoomActor {
-    type Reply = Result<()>;
+    type Reply = Result<Option<MessageSync>>;
 
     async fn handle(
         &mut self,
@@ -616,9 +628,10 @@ impl Message<MemberListCommandMsg> for RoomActor {
     ) -> Self::Reply {
         self.last_active = Instant::now();
         if let Some(list) = self.member_lists.get_mut(&msg.key) {
-            list.handle_command(msg.cmd, &self.snapshot).await;
+            Ok(list.handle_command(msg.cmd, &self.snapshot).await)
+        } else {
+            Ok(None)
         }
-        Ok(())
     }
 }
 
@@ -640,5 +653,24 @@ impl Message<MemberListSubscribeMsg> for RoomActor {
             self.member_lists.insert(msg.key, list);
         }
         Ok(())
+    }
+}
+
+impl Message<CleanupIdleLists> for RoomActor {
+    type Reply = ();
+
+    async fn handle(
+        &mut self,
+        _msg: CleanupIdleLists,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.member_lists.retain(|key, list| {
+            if list.is_idle() {
+                tracing::trace!(room_id = ?self.room_id, ?key, "Removing idle member list");
+                false
+            } else {
+                true
+            }
+        });
     }
 }

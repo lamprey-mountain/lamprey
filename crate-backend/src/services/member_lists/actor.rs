@@ -5,7 +5,7 @@ use tokio::time::Instant;
 use common::v1::types::{
     MemberListGroup, MemberListOp, MessageSync, Permission, RoleId, RoomMember, User, UserId,
 };
-use tokio::sync::{broadcast, oneshot};
+use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
@@ -42,7 +42,6 @@ pub enum MemberListCommand {
     GetInitialRanges {
         ranges: Vec<(u64, u64)>,
         conn_id: Uuid,
-        callback: oneshot::Sender<MessageSync>,
     },
 }
 
@@ -290,20 +289,20 @@ impl MemberList {
         }
     }
 
-    pub async fn handle_command(&mut self, cmd: MemberListCommand, snapshot: &Arc<RoomSnapshot>) {
+    pub async fn handle_command(
+        &mut self,
+        cmd: MemberListCommand,
+        snapshot: &Arc<RoomSnapshot>,
+    ) -> Option<MessageSync> {
         self.last_active = Instant::now();
         let Some(data) = snapshot.get_data() else {
-            return;
+            return None;
         };
 
         match cmd {
-            MemberListCommand::GetInitialRanges {
-                ranges,
-                conn_id: _,
-                callback,
-            } => {
+            MemberListCommand::GetInitialRanges { ranges, conn_id: _ } => {
                 let ops = self.get_initial_ranges(&ranges, data).await;
-                let _ = callback.send(MessageSync::MemberListSync {
+                return Some(MessageSync::MemberListSync {
                     user_id: UserId::new(), // dummy
 
                     room_id: match &self.key {
