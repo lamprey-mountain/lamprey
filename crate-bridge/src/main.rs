@@ -4,7 +4,6 @@ use bridge_common::Globals;
 use db::Data;
 use discord::Discord;
 use figment::providers::{Env, Format, Toml};
-use futures::future;
 use kameo::actor::Spawn;
 use lamprey::{Lamprey, LampreyMessage, LampreyResponse};
 use opentelemetry_otlp::WithExportConfig;
@@ -261,20 +260,27 @@ async fn main() -> Result<()> {
         Ok::<(), anyhow::Error>(())
     });
 
-    // Run the actors
-    // discord.connect() is a long-running future that runs serenity's event loop
-    // The other tasks are background tasks
-    let (dc_res, _lamprey_res, startup_res, backfill_res, _syncer_res) = tokio::join!(
-        discord.connect(),
-        future::pending::<Result<()>>(),
-        startup_autobridge_task,
-        lamprey_backfill_task,
-        lamprey_syncer_task
-    );
-
-    dc_res?;
-    startup_res??;
-    backfill_res??;
+    // Run the actors using select! for proper error handling
+    // discord.connect() is the main long-running future (serenity event loop)
+    // Background tasks run concurrently and are cancelled if discord.connect() fails
+    tokio::select! {
+        dc_res = discord.connect() => {
+            error!("Discord connection ended: {:?}", dc_res);
+            dc_res?
+        }
+        res = startup_autobridge_task => {
+            error!("Startup autobridge task failed: {:?}", res);
+            res??;
+        }
+        res = lamprey_backfill_task => {
+            error!("Lamprey backfill task failed: {:?}", res);
+            res??;
+        }
+        res = lamprey_syncer_task => {
+            error!("Lamprey syncer task failed: {:?}", res);
+            res?;
+        }
+    }
 
     Ok(())
 }
