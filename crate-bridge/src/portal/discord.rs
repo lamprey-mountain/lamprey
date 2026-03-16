@@ -108,7 +108,15 @@ impl Portal {
                 } else {
                     "avatar.png"
                 };
-                let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
+                let bytes = self
+                    .globals
+                    .reqwest_client
+                    .get(url)
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .bytes()
+                    .await?;
                 let media = ly
                     .media_upload(name.to_owned(), bytes.to_vec(), user_id)
                     .await?;
@@ -130,7 +138,11 @@ impl Portal {
                 } else {
                     "banner.png"
                 };
-                let bytes = reqwest::get(&url)
+                let bytes = self
+                    .globals
+                    .reqwest_client
+                    .get(url)
+                    .send()
                     .await?
                     .error_for_status()?
                     .bytes()
@@ -207,7 +219,14 @@ impl Portal {
                     .filter(|s| !s.is_empty())
                     .map(|s| s.to_owned())
                     .unwrap_or_else(|| "file.bin".to_owned());
-                let bytes = reqwest::get(url).await?.bytes().await?;
+                let bytes = self
+                    .globals
+                    .reqwest_client
+                    .get(url)
+                    .send()
+                    .await?
+                    .bytes()
+                    .await?;
                 let media = ly
                     .media_upload(filename.to_owned(), bytes.into(), user_id)
                     .await?;
@@ -227,7 +246,14 @@ impl Portal {
                         .filter(|s| !s.is_empty())
                         .map(|s| s.to_owned())
                         .unwrap_or_else(|| "file.bin".to_owned());
-                    let bytes = reqwest::get(url).await?.bytes().await?;
+                    let bytes = self
+                        .globals
+                        .reqwest_client
+                        .get(url)
+                        .send()
+                        .await?
+                        .bytes()
+                        .await?;
                     let media = ly
                         .media_upload(filename.to_owned(), bytes.into(), user_id)
                         .await?;
@@ -244,7 +270,14 @@ impl Portal {
                         .filter(|s| !s.is_empty())
                         .map(|s| s.to_owned())
                         .unwrap_or_else(|| "file.bin".to_owned());
-                    let bytes = reqwest::get(url).await?.bytes().await?;
+                    let bytes = self
+                        .globals
+                        .reqwest_client
+                        .get(url)
+                        .send()
+                        .await?
+                        .bytes()
+                        .await?;
                     let media = ly
                         .media_upload(filename.to_owned(), bytes.into(), user_id)
                         .await?;

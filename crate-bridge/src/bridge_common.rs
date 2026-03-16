@@ -42,6 +42,7 @@ pub struct Globals {
     pub bridge_chan: OnceCell<ActorRef<Bridge>>,
     pub lamprey_user_id: Arc<OnceCell<UserId>>,
     pub recently_created_discord_channels: Arc<DashMap<DcChannelId, ()>>,
+    pub reqwest_client: reqwest::Client,
 }
 
 impl Globals {
@@ -59,6 +60,7 @@ impl Globals {
             bridge_chan: OnceCell::new(),
             lamprey_user_id: Arc::new(OnceCell::new()),
             recently_created_discord_channels: Arc::new(DashMap::new()),
+            reqwest_client: reqwest::Client::new(),
         }
     }
 

@@ -107,7 +107,15 @@ impl Portal {
                             .unwrap_or("https://chat-cdn.celery.eu.org"),
                         media.id
                     );
-                    let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
+                    let bytes = self
+                        .globals
+                        .reqwest_client
+                        .get(&url)
+                        .send()
+                        .await?
+                        .error_for_status()?
+                        .bytes()
+                        .await?;
                     files = files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                 }
             }
@@ -165,7 +173,15 @@ impl Portal {
                         .unwrap_or("https://chat-cdn.celery.eu.org"),
                     media.id
                 );
-                let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
+                let bytes = self
+                    .globals
+                    .reqwest_client
+                    .get(&url)
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .bytes()
+                    .await?;
                 files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
             }
             let user = ly.user_fetch(message.author_id).await?;
