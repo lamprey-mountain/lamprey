@@ -60,7 +60,7 @@ pub async fn frontend_handler(
 
     let env = Environment::new();
 
-    let tpl = Asset::get("index-jinja.html").unwrap();
+    let tpl = Asset::get("index.html").unwrap();
     let template = std::str::from_utf8(tpl.data.as_ref()).unwrap();
 
     let rendered = env
@@ -72,6 +72,11 @@ pub async fn frontend_handler(
             },
         )
         .unwrap();
+
+    let rendered = rendered.replace(
+        "<!-- VITE_JINJA_PLACEHOLDER:script -->",
+        &format!(r#"<script nonce="{nonce}">globalThis.ENV = {env_json};</script>"#),
+    );
 
     Ok(Response::builder()
         .header(header::CONTENT_TYPE, "text/html")
