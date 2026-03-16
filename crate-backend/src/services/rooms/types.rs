@@ -1,14 +1,15 @@
 //! cached/in memory rooms
 
 use im::HashMap as ImMap;
+use kameo::prelude::ActorRef;
 use std::sync::Arc;
+use tokio::sync::watch;
+use uuid::Uuid;
 
 use common::v1::types::{
     Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomId,
     RoomMember, ThreadMember, User, UserId,
 };
-use tokio::sync::{mpsc, watch};
-use uuid::Uuid;
 
 use crate::routes::util::Auth;
 use crate::types::PermissionBits;
@@ -29,7 +30,6 @@ pub enum RoomSnapshot {
     WithoutMembers(Arc<RoomData>),
 
     /// The room was not found in the database.
-    // remove this? i dont need an actor for a non-existent room. maybe i should cache "negative stuff" though.
     NotFound,
 
     /// The room is currently unavailable (e.g. backlogged).
@@ -44,7 +44,6 @@ pub struct RoomUnavailable {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RoomUnavailableReason {
     /// too many events were received and the room actor is backlogged
-    // maybe rename to "overloaded"?
     Backlogged,
 }
 
@@ -58,6 +57,7 @@ pub struct RoomData {
 }
 
 /// Commands that can be sent to a room actor.
+/// These will be converted to Kameo messages.
 pub enum RoomCommand {
     /// Update the room state from a sync event.
     Sync(MessageSync),
@@ -81,11 +81,32 @@ pub enum RoomCommand {
     Close,
 }
 
+/// Kameo messages for RoomActor
+pub struct GetSnapshot;
+
+pub struct EnsureMembers;
+
+pub struct SyncMessage {
+    pub sync: MessageSync,
+}
+
+pub struct MemberListCommandMsg {
+    pub key: crate::services::member_lists::util::MemberListKey,
+    pub cmd: crate::services::member_lists::actor::MemberListCommand,
+}
+
+pub struct MemberListSubscribeMsg {
+    pub key: crate::services::member_lists::util::MemberListKey,
+    pub events_tx:
+        tokio::sync::broadcast::Sender<crate::services::member_lists::actor::MemberListEvent>,
+}
+
 /// A handle to a room actor.
+/// Contains both the ActorRef for sending commands and a watch receiver for snapshots.
 #[derive(Clone)]
 pub struct RoomHandle {
     pub room_id: RoomId,
-    pub tx: mpsc::Sender<RoomCommand>,
+    pub actor_ref: ActorRef<super::actor::RoomActor>,
     pub snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
 }
 
@@ -113,7 +134,6 @@ pub struct CachedChannel {
     pub inner: Channel,
 
     /// channel permission overwrites as bitfields
-    // maybe dont make this an ImMap
     pub overwrites: ImMap<Uuid, CachedPermissionOverwrite>,
 }
 

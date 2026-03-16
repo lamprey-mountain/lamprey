@@ -17,8 +17,8 @@ pub mod defaults;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Permission {
-    /// Allows **everything**
-    /// probably a major footgun. i'd like to remove it, but theres legit purposes for it right now...
+    /// Allows **everything**. Bypasses all locks, overwrites, etc. People with
+    /// this permission effectively become a second owner.
     Admin,
 
     /// can add, configure, and kick bots
@@ -34,15 +34,16 @@ pub enum Permission {
     InviteCreate,
 
     /// view metadata for all invites and delete all invites
-    /// implies InviteCreate
     InviteManage,
 
     /// ban and unban members
     MemberBan,
 
-    /// allow adding users with type Puppet and use timestamp massaging
-    /// intended for bridge bots
-    // TODO: rename to `Bridge`
+    /// for bridge bots, enables bridging features
+    ///
+    /// - can add users with type Puppet
+    /// - can use timestamp massaging
+    // TODO: rename -> IntegrationsBridge
     MemberBridge,
 
     /// kick members
@@ -58,7 +59,6 @@ pub enum Permission {
     MemberTimeout,
 
     /// send attachments
-    /// requires MessageCreate
     MessageAttachments,
 
     /// send messages
@@ -76,11 +76,9 @@ pub enum Permission {
     MessageRemove,
 
     /// send embeds (link previews)
-    /// requires MessageCreate
     MessageEmbeds,
 
-    /// (unimplemented) mention @everyone, @here, and all roles
-    /// requires MessageCreate
+    /// mention @everyone, @here, and all roles
     MessageMassMention,
 
     /// (unimplemented) move messages between channels
@@ -93,44 +91,45 @@ pub enum Permission {
     // TODO: can still react with existing reactions
     ReactionAdd,
 
-    /// remove all reactions
-    // TODO: rename to ReactionManage
+    /// remove reactions
+    // TODO: rename -> ReactionManage
     ReactionPurge,
 
-    /// add and remove roles from members
+    /// add and remove roles from members.
     RoleApply,
 
-    /// create, edit, and delete roles. also managing permissions in general.
+    /// create, edit, and delete roles. add and remove overwrites for channels.
     RoleManage,
 
     /// edit name, description, really anything else
-    // TODO: maybe rename this to prevent conflict with RoomManageServer
+    // TODO: rename -> RoomEdit
     RoomManage,
 
     /// (server, unimplemented) can access metrics (prometheus)
-    // TODO: enforce this permission
     ServerMetrics,
 
     /// (server) can perform server maintenance tasks
     ServerMaintenance,
 
     /// (server) can view the server room and all members on the server
+    ///
+    /// this should be added to all "server moderator/admin/operator" roles
     ServerOversee,
 
     /// (server, unimplemented) access reports
     // TODO: remove
     ServerReports,
 
-    /// (unimplemented) apply tags to threads
-    /// applying tags to rooms would probably be a RoomEdit thing
-    // TODO: merge with ThreadEdit?
+    /// apply tags to threads
+    // TODO: merge with ThreadEdit and remove
     TagApply,
 
-    /// (unimplemented) create and delete tags
-    // TODO: merge with ChannelManage or ChannelEdit?
+    /// create and delete tags
+    // TODO: merge with ChannelManage/ChannelEdit and remove
     TagManage,
 
     /// unaffected by slowmode
+    // TODO: rename -> ChannelSlowmodeBypass
     BypassSlowmode,
 
     /// can change channel names and topics
@@ -158,18 +157,19 @@ pub enum Permission {
     ThreadEdit,
 
     /// lock and unlock threads
-    // TODO: merge with ThreadManage?
-    // TODO: make this allow locking/unlocking entire channels?
-    // TODO: MemberTimeout is also somewhat relevant for this permission?
+    // TODO: merge -> ThreadManage, ChannelManage and remove
     ThreadLock,
 
     /// Can view channels
+    // rename -> ChannelView
     ViewChannel,
 
     /// view audit log
+    // rename -> AuditLogView
     ViewAuditLog,
 
     /// view room analytics
+    // rename -> AnalyticsView
     ViewAnalytics,
 
     /// connect and listen to voice threads
@@ -180,34 +180,32 @@ pub enum Permission {
     VoiceDeafen,
 
     /// disconnect members from voice threads
-    // TODO: maybe merge with VoiceMove?
+    // TODO: merge -> VoiceMove
     VoiceDisconnect,
 
-    /// move members between voice threads
+    /// move members between voice channels
+    // disconnect and move members between voice channels
     VoiceMove,
 
     /// stop someone from talking
     VoiceMute,
 
     /// talk louder
-    /// requires VoiceSpeak
     VoicePriority,
 
     /// talk in voice threads
-    /// requires VoiceConnect
     VoiceSpeak,
 
     /// stream video and screenshare in voice threads
-    /// requires VoiceConnect
     VoiceVideo,
 
-    /// use voice activity detection (TODO)
+    /// use voice activity detection
     VoiceVad,
 
     /// can request to speak in broadcast channels
     VoiceRequest,
 
-    /// can broadcast voice to all channels in a category (TODO)
+    /// can broadcast voice to all channels in a category
     VoiceBroadcast,
 
     /// can create calendar events and delete their own calendar events
@@ -232,24 +230,24 @@ pub enum Permission {
     RoomCreate,
 
     /// can delete and quarantine rooms, and view all rooms, room templates, dms, and gdms.
-    // TODO: maybe rename this to prevent conflict with RoomManage
+    // TODO: rename -> RoomManage
     RoomManageServer,
 
     /// can create, edit, and delete users. can view all users.
-    // TODO: maybe deduplicate this with ServerOversee?
     UserManage,
 
     /// can disable or delete their own account
+    // TODO: rename to UserManageSelf
     UserDeleteSelf,
 
     /// can edit their own profile
+    // TODO: rename to UserProfileSelf
     UserProfile,
 
     /// can create new applications
     ApplicationCreate,
 
     /// can edit and delete all applications. can list all applications on the server.
-    // TODO: implement
     ApplicationManage,
 
     /// can create new dms and gdms
@@ -267,7 +265,7 @@ pub enum Permission {
     CallUpdate,
 
     /// can forcibly make other users join and leave rooms and gdms. can join any room and gdm.
-    // TODO: implement
+    // TODO: rename -> RoomJoinForce
     RoomForceJoin,
 }
 
@@ -344,6 +342,22 @@ impl Permission {
     ///
     /// these can only be set in the server room
     pub fn is_server(&self) -> bool {
+        // server metrics
+        // server maintenence
+        // server oversee
+        // room create
+        // room manage
+        // user manage
+        // user delete self
+        // user manage
+        // user manage self
+        // user profile self
+        // application create
+        // application manage
+        // dm create
+        // friend create
+        // room join
+        // room join force
         todo!()
     }
 

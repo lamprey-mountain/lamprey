@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::broadcast;
 
-use crate::services::rooms::{RoomActor, RoomCommand, RoomHandle};
+use crate::services::rooms::{MemberListCommandMsg, MemberListSubscribeMsg, RoomActor, RoomHandle};
 use crate::{
     services::member_lists::{
         actor::{MemberListCommand, MemberListEvent},
@@ -64,7 +64,7 @@ impl ServiceMemberLists {
             .rooms
             .actors
             .try_get_with(room_id, async {
-                Ok::<RoomHandle, crate::Error>(RoomActor::spawn(room_id, self.s.clone()))
+                Ok::<RoomHandle, crate::Error>(RoomActor::spawn_room(room_id, self.s.clone()))
             })
             .await
             .map_err(|e| e.fake_clone())?;
@@ -74,11 +74,11 @@ impl ServiceMemberLists {
         // Try to send the subscribe command; if it fails, the actor is dead
         // Evict the dead actor and retry once
         let result = room_handle
-            .tx
-            .send(RoomCommand::MemberListSubscribe(
-                key.clone(),
-                events_tx.clone(),
-            ))
+            .actor_ref
+            .tell(MemberListSubscribeMsg {
+                key: key.clone(),
+                events_tx: events_tx.clone(),
+            })
             .await;
 
         if result.is_err() {
@@ -92,31 +92,31 @@ impl ServiceMemberLists {
                 .rooms
                 .actors
                 .try_get_with(room_id, async {
-                    Ok::<RoomHandle, crate::Error>(RoomActor::spawn(room_id, self.s.clone()))
+                    Ok::<RoomHandle, crate::Error>(RoomActor::spawn_room(room_id, self.s.clone()))
                 })
                 .await
                 .map_err(|e| e.fake_clone())?;
 
             room_handle
-                .tx
-                .send(RoomCommand::MemberListSubscribe(
-                    key.clone(),
-                    events_tx.clone(),
-                ))
+                .actor_ref
+                .tell(MemberListSubscribeMsg {
+                    key: key.clone(),
+                    events_tx: events_tx.clone(),
+                })
                 .await
                 .map_err(|_| {
                     crate::Error::Internal("failed to subscribe to member list".to_string())
                 })?;
 
             return Ok(Arc::new(MemberListHandle {
-                room_tx: room_handle.tx.clone(),
+                actor_ref: room_handle.actor_ref.clone(),
                 key,
                 events_tx,
             }));
         }
 
         Ok(Arc::new(MemberListHandle {
-            room_tx: room_handle.tx.clone(),
+            actor_ref: room_handle.actor_ref.clone(),
             key,
             events_tx,
         }))
@@ -134,15 +134,18 @@ impl ServiceMemberLists {
 }
 
 pub struct MemberListHandle {
-    pub(super) room_tx: mpsc::Sender<RoomCommand>,
+    pub(super) actor_ref: kameo::prelude::ActorRef<RoomActor>,
     pub(super) key: MemberListKey,
     pub(super) events_tx: broadcast::Sender<MemberListEvent>,
 }
 
 impl MemberListHandle {
     pub async fn send_command(&self, cmd: MemberListCommand) -> Result<()> {
-        self.room_tx
-            .send(RoomCommand::MemberList(self.key.clone(), cmd))
+        self.actor_ref
+            .tell(MemberListCommandMsg {
+                key: self.key.clone(),
+                cmd,
+            })
             .await
             .map_err(|_| crate::Error::Internal("failed to send member list command".to_string()))
     }

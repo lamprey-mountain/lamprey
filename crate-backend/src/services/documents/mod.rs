@@ -14,6 +14,9 @@ use common::v1::types::{
 use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use kameo::actor::ActorRef;
+use kameo::prelude::Message;
+use kameo::Actor;
 use tokio::sync::{broadcast, RwLock};
 use tracing::{debug, error, info, trace, warn};
 use uuid::Uuid;
@@ -22,19 +25,24 @@ use yrs::updates::encoder::Encode;
 use yrs::{updates::decoder::Decode, Doc, GetString, ReadTxn, StateVector, Transact, Update};
 use yrs::{DeepObservable, Out};
 
+use crate::services::documents::actor::{ApplyUpdate, CheckUnload, DocumentActor};
+use crate::services::documents::util::{
+    get_update_len, HistoryPaginationSummary, DOCUMENT_ROOT_NAME,
+};
 use crate::types::DocumentUpdateSummary;
 use crate::{Error, Result, ServerStateInner};
 
 // mod validate;
+mod actor;
 mod serdoc;
-
-const DOCUMENT_ROOT_NAME: &'static str = "doc";
+mod util;
 
 pub type EditContextId = (ChannelId, DocumentBranchId);
 
 pub struct ServiceDocuments {
     state: Arc<ServerStateInner>,
     edit_contexts: DashMap<EditContextId, Arc<RwLock<EditContext>>>,
+    edit_contexts2: DashMap<EditContextId, ActorRef<DocumentActor>>,
 }
 
 #[derive(Clone, Debug)]
@@ -49,6 +57,13 @@ pub enum DocumentEvent {
         cursor_head: String,
         cursor_tail: Option<String>,
     },
+}
+
+struct Presence {
+    user_id: UserId,
+    origin_conn_id: Option<ConnectionId>,
+    cursor_head: String,
+    cursor_tail: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -87,30 +102,13 @@ struct PendingChange {
     stat_removed: u32,
 }
 
-pub struct HistoryPaginationSummary {
-    pub changesets: Vec<Changeset>,
-    pub tags: Vec<DocumentTag>,
-}
-
-impl HistoryPaginationSummary {
-    /// get a list of all referenced users
-    pub fn user_ids(&self) -> Vec<UserId> {
-        let mut ids = std::collections::HashSet::new();
-        for cs in &self.changesets {
-            for author in &cs.authors {
-                ids.insert(*author);
-            }
-        }
-        ids.into_iter().collect()
-    }
-}
-
 // TODO: better error handling (add yrs errors to to crate::Error)
 impl ServiceDocuments {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
             edit_contexts: DashMap::new(),
+            edit_contexts2: DashMap::new(),
         }
     }
 
@@ -123,11 +121,17 @@ impl ServiceDocuments {
                 let services = state.services();
                 let documents = &services.documents;
 
+                // capture actors to avoid holding dashmap locks across await points
+                let actors: Vec<_> = documents
+                    .edit_contexts
+                    .iter()
+                    .map(|entry| (*entry.key(), entry.value().clone()))
+                    .collect();
+
                 let mut to_unload = Vec::new();
-                for entry in documents.edit_contexts.iter() {
-                    let (id, ctx) = entry.pair();
-                    if ctx.read().await.should_unload() {
-                        to_unload.push(*id);
+                for (id, actor_ref) in actors {
+                    if let Ok(true) = actor_ref.ask(CheckUnload).send().await {
+                        to_unload.push(id);
                     }
                 }
 
@@ -1058,34 +1062,5 @@ impl EditContext {
     /// whether we should unload this document
     pub fn should_unload(&self) -> bool {
         self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(60)
-    }
-}
-
-fn get_update_len(v: &Out, txn: &yrs::TransactionMut) -> usize {
-    match v {
-        Out::Any(yrs::Any::String(s)) => {
-            let len = s.chars().count();
-            trace!(len = len, "get_update_len matched Any::String");
-            len
-        }
-        Out::YText(t) => {
-            let len = t.get_string(txn).chars().count();
-            trace!(len = len, "get_update_len matched YText");
-            len
-        }
-        Out::YXmlText(t) => {
-            let len = t.get_string(txn).chars().count();
-            trace!(len = len, "get_update_len matched YXmlText");
-            len
-        }
-        Out::YXmlElement(e) => {
-            let len = e.get_string(txn).chars().count();
-            trace!(len = len, "get_update_len matched YXmlElement");
-            len
-        }
-        _ => {
-            trace!("get_update_len matched other");
-            0
-        }
     }
 }

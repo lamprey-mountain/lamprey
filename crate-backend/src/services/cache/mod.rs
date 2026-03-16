@@ -17,7 +17,7 @@ pub mod permissions;
 
 pub use crate::services::rooms::{
     CachedChannel, CachedRole, CachedRoomMember, CachedThread, RoomCommand, RoomHandle,
-    RoomSnapshot, RoomUnavailableReason,
+    RoomSnapshot, RoomUnavailableReason, SyncMessage,
 };
 
 use common::v1::types::error::ApiError;
@@ -462,11 +462,12 @@ impl ServiceCache {
         if let Some(room_id) = event.room_id() {
             let rooms = self.state.services().rooms.clone();
             if let Some(handle) = rooms.actors.get(&room_id).await {
-                if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
-                    rooms
-                        .mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                        .await;
-                }
+                let _ = handle
+                    .actor_ref
+                    .tell(SyncMessage {
+                        sync: event.clone(),
+                    })
+                    .await;
                 return;
             }
         }
@@ -526,11 +527,12 @@ impl ServiceCache {
 
                 for room_id in rooms_to_notify {
                     if let Some(handle) = rooms_srv.actors.get(&room_id).await {
-                        if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
-                            rooms_srv
-                                .mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                                .await;
-                        }
+                        let _ = handle
+                            .actor_ref
+                            .tell(SyncMessage {
+                                sync: event.clone(),
+                            })
+                            .await;
                     }
                 }
             }
@@ -547,11 +549,12 @@ impl ServiceCache {
 
                 for room_id in rooms_to_notify {
                     if let Some(handle) = rooms_srv.actors.get(&room_id).await {
-                        if let Err(_) = handle.tx.try_send(RoomCommand::Sync(event.clone())) {
-                            rooms_srv
-                                .mark_unavailable(room_id, RoomUnavailableReason::Backlogged)
-                                .await;
-                        }
+                        let _ = handle
+                            .actor_ref
+                            .tell(SyncMessage {
+                                sync: event.clone(),
+                            })
+                            .await;
                     }
                 }
             }

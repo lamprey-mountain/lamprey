@@ -11,7 +11,6 @@ use crate::{
         actor::{MemberListCommand, MemberListEvent},
         util::{MemberListKey, MemberListKey1},
     },
-    services::rooms::RoomCommand,
     Error, Result, ServerStateInner,
 };
 
@@ -58,16 +57,13 @@ impl MemberListSyncer {
         // Try to send the command; if it fails, evict the dead actor and retry
         let (tx, rx) = oneshot::channel();
         let conn_id = self.conn_id;
-        let cmd = RoomCommand::MemberList(
-            key.clone(),
-            MemberListCommand::GetInitialRanges {
-                ranges: ranges.clone(),
-                conn_id,
-                callback: tx,
-            },
-        );
+        let cmd = MemberListCommand::GetInitialRanges {
+            ranges: ranges.clone(),
+            conn_id,
+            callback: tx,
+        };
 
-        let result = list.room_tx.send(cmd).await;
+        let result = list.send_command(cmd).await;
 
         if result.is_err() {
             // Actor is dead, evict it and get a fresh one
@@ -80,17 +76,13 @@ impl MemberListSyncer {
             let list = srv.member_lists.ensure(key.clone()).await?;
 
             let (tx, rx) = oneshot::channel();
-            let cmd = RoomCommand::MemberList(
-                key.clone(),
-                MemberListCommand::GetInitialRanges {
-                    ranges,
-                    conn_id: self.conn_id,
-                    callback: tx,
-                },
-            );
+            let cmd = MemberListCommand::GetInitialRanges {
+                ranges,
+                conn_id: self.conn_id,
+                callback: tx,
+            };
 
-            list.room_tx
-                .send(cmd)
+            list.send_command(cmd)
                 .await
                 .map_err(|_| Error::Internal("failed to send member list command".to_string()))?;
 

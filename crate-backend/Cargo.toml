@@ -91,6 +91,7 @@ async-nats = "0.46.0"
 blake3 = { version = "1.8.3", features = ["mmap"] }
 arc-swap = "1.8.2"
 im = "15.1.0"
+kameo = "0.19.2"
 # lamprey-backend-rest = { version = "0.1.1", path = "../crate-backend-rest" }
 # lamprey-backend-sync = { version = "0.1.1", path = "../crate-backend-sync" }
 

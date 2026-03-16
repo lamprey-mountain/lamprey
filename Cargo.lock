@@ -3481,6 +3481,7 @@ dependencies = [
  "ipnet",
  "jsonwebkey",
  "jsonwebtoken",
+ "kameo",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",
