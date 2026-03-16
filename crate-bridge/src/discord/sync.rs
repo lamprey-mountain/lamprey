@@ -186,9 +186,7 @@ pub async fn ensure_portal_for_channel(
     }
 
     // Portal doesn't exist - check if we should create one
-    let Ok(realms) = globals.get_realms().await else {
-        return Ok(None);
-    };
+    let realms = globals.get_realms().await?;
 
     let Some(realm_config) = realms.iter().find(|c| c.discord_guild_id == guild_id) else {
         return Ok(None);
