@@ -2,11 +2,12 @@ use std::sync::Arc;
 
 use axum::{
     body::Body,
-    extract::State,
+    extract::{Path, State},
     http::{header, Uri},
     response::{IntoResponse, Response},
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
+use common::v1::types::{InviteCode, InviteTarget};
 use lamprey_backend::ServerState;
 use minijinja::{context, Environment};
 use rand::RngCore;
@@ -19,7 +20,6 @@ use crate::Result;
 #[folder = "$RUST_EMBED_FRONTEND_PATH"]
 struct Asset;
 
-/// minimal data the webui needs needed to start up
 #[derive(Serialize)]
 struct WebuiConfig {
     api_url: String,
@@ -28,7 +28,6 @@ struct WebuiConfig {
     cdn_url: String,
 }
 
-// TODO(#994): error variants instead of unwrap
 pub async fn frontend_handler(
     uri: Uri,
     State(s): State<Arc<ServerState>>,
@@ -74,6 +73,80 @@ pub async fn frontend_handler(
         .unwrap();
 
     let rendered = rendered.replace(
+        "<!-- VITE_JINJA_PLACEHOLDER:script -->",
+        &format!(r#"<script nonce="{nonce}">globalThis.ENV = {env_json};</script>"#),
+    );
+
+    Ok(Response::builder()
+        .header(header::CONTENT_TYPE, "text/html")
+        .body(Body::from(rendered))
+        .unwrap())
+}
+
+pub async fn invite_meta_handler(
+    Path(code): Path<String>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let invite = d.invite_select(InviteCode(code.clone())).await?;
+
+    let title = match &invite.invite.target {
+        InviteTarget::Room { room, .. } => {
+            format!("you have been invited to {}", room.name)
+        }
+        InviteTarget::Gdm { channel } => {
+            format!("you have been invited to {}", channel.name)
+        }
+        InviteTarget::Server => "you have been invited to a server".to_string(),
+        InviteTarget::User { user } => {
+            format!("{} sent a friend request", user.name)
+        }
+    };
+
+    let nonce = make_nonce();
+
+    let webui_config = WebuiConfig {
+        api_url: s.config.api_url.to_string(),
+        sync_url: s.config.api_url.join("/api/v1/sync")?.to_string(),
+        html_url: s.config.html_url.to_string(),
+        cdn_url: s.config.cdn_url.to_string(),
+    };
+
+    let env_json = serde_json::to_string(&webui_config)?;
+
+    let env = Environment::new();
+
+    let tpl = Asset::get("index.html").unwrap();
+    let template = std::str::from_utf8(tpl.data.as_ref()).unwrap();
+
+    let mut rendered = env
+        .render_str(
+            template,
+            context! {
+                nonce => nonce,
+                env   => env_json,
+            },
+        )
+        .unwrap();
+
+    let og_tags = format!(
+        r##"<meta property="og:title" content="{}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="lamprey mountain">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{}">
+<meta name="theme-color" content="#b18cf3">"##,
+        title, title
+    );
+
+    if let Some(viewport_pos) = rendered.find("<meta name=\"viewport\"") {
+        if let Some(newline_pos) = rendered[viewport_pos..].find('\n') {
+            let insert_pos = viewport_pos + newline_pos + 1;
+            rendered.insert_str(insert_pos, &format!("{}\n", og_tags));
+        }
+    }
+
+    rendered = rendered.replace(
         "<!-- VITE_JINJA_PLACEHOLDER:script -->",
         &format!(r#"<script nonce="{nonce}">globalThis.ENV = {env_json};</script>"#),
     );

@@ -368,6 +368,10 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
     let router = router.route("/", get(|| async { "it works!" }));
     #[cfg(feature = "embed-frontend")]
     let router = router
+        .route(
+            "/invite/{code}",
+            get(frontend::invite_meta_handler).with_state(state.clone()),
+        )
         .fallback_service(axum::routing::get(frontend::frontend_handler).with_state(state.clone()));
     let router = router
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16))

@@ -6,7 +6,7 @@ import { useNavigate } from "@solidjs/router";
 import { getThumbFromId } from "./media/util.tsx";
 
 const Title = (props: { title?: string }) => {
-	createEffect(() => document.title = props.title ?? "");
+	createEffect(() => (document.title = props.title ?? ""));
 	return undefined;
 };
 
@@ -24,11 +24,25 @@ export const RouteInviteInner = (props: { code: string }) => {
 				return ((i as any).target.room as any)?.name;
 			case "Thread":
 				return ((i as any).target.thread as any)?.name;
+			case "Gdm":
+				return ((i as any).target.channel as any)?.name;
 			case "Server":
-				return "the server";
+				return "a server";
+			case "User":
+				return ((i as any).target.user as any)?.name;
 			default:
 				return "unknown";
 		}
+	};
+
+	const titleText = () => {
+		const i = invite();
+		if (!i) return "invite";
+		const targetType = i.target.type as any;
+		if (targetType === "User") {
+			return `${name()} sent a friend request`;
+		}
+		return `you have been invited to ${name()}`;
 	};
 
 	const joinName = () => {
@@ -75,7 +89,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 
 	return (
 		<>
-			<Title title={invite.loading ? "invite" : `invited to ${name()}`} />
+			<Title title={invite.loading ? "invite" : titleText()} />
 			<Show when={invite()} fallback="loading...">
 				<div class="invite" style="padding:8px">
 					<div>
