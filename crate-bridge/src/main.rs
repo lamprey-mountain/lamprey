@@ -148,7 +148,7 @@ async fn main() -> Result<()> {
 
     let startup_autobridge_globals = globals.clone();
     let lamprey_ref_startup = lamprey_ref.clone();
-    let startup_autobridge_task = tokio::spawn(async move {
+    let _startup_autobridge_task = tokio::spawn(async move {
         let globals = startup_autobridge_globals;
         for realm in globals.get_realms().await? {
             if !realm.continuous {
@@ -183,7 +183,7 @@ async fn main() -> Result<()> {
     });
 
     let lamprey_backfill_globals = globals.clone();
-    let lamprey_backfill_task = tokio::spawn(async move {
+    let _lamprey_backfill_task = tokio::spawn(async move {
         let globals = lamprey_backfill_globals;
         info!("starting lamprey backfill");
         let portals = globals.get_portals().await?;
@@ -275,14 +275,6 @@ async fn main() -> Result<()> {
         dc_res = discord.connect() => {
             error!("Discord connection ended: {:?}", dc_res);
             dc_res?
-        }
-        res = startup_autobridge_task => {
-            error!("Startup autobridge task failed: {:?}", res);
-            res??;
-        }
-        res = lamprey_backfill_task => {
-            error!("Lamprey backfill task failed: {:?}", res);
-            res??;
         }
         res = lamprey_syncer_task => {
             error!("Lamprey syncer task failed: {:?}", res);
