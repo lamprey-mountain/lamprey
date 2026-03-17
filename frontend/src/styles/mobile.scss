@@ -1,0 +1,62 @@
+@use "./util.scss" as *;
+
+@media (max-width: 768px) {
+	#root.precedence-hack {
+		width: 100vw;
+		overflow-x: auto;
+		overflow-y: hidden;
+		scroll-snap-type: x mandatory;
+		overscroll-behavior-x: none;
+
+		/* 3 panels, each resolving exactly to 100vw widths:
+		   Panel 1: room-nav (72px) + channel-nav (remaining vw) = 100vw
+		   Panel 2: main (100vw)
+		   Panel 3: sidebar (100vw) */
+		grid-template-columns: 72px calc(100vw - 72px) 100vw 100vw;
+		grid-template-areas:
+			"room-nav channel-nav header  sidebar"
+			"room-nav channel-nav main    sidebar"
+			"tray     tray        main    sidebar"
+			"tray     tray        footer  sidebar";
+
+		scrollbar-width: none;
+		&::-webkit-scrollbar {
+			display: none;
+		}
+
+		/* Turn every main panel component into a snap point */
+		& > * {
+			scroll-snap-align: start;
+			scroll-snap-stop: always;
+		}
+
+		/* Exclude secondary components from serving as a snap point to prevent scrolling layout breaks */
+		& > .resizable-sidebar[data-side="left"],
+		& > footer,
+		& > .voice-tray {
+			scroll-snap-align: none;
+		}
+
+		// make sidebars full width
+		.resizable-sidebar {
+			width: 100%;
+		}
+
+		// make room nav a little bigger
+		#room-nav {
+			width: 72px;
+
+			.room-item,
+			.home-item {
+				min-height: 52px;
+				width: 52px;
+				margin-top: 6px;
+			}
+		}
+	}
+
+	/* Disable the resize handle on mobile */
+	.resizable-sidebar .resize-handle {
+		display: none;
+	}
+}

@@ -61,7 +61,7 @@ export const Resizable = (props: ResizableProps) => {
 			class="resizable-sidebar"
 			classList={props.classList}
 			data-side={side()}
-			style={{ width: `${width()}px` }}
+			style={{ "--width": `${width()}px` }}
 		>
 			<div class="resize-handle" onMouseDown={handleMouseDown} />
 			{props.children}

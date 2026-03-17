@@ -184,6 +184,7 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 	return (
 		<div
 			id="root"
+			class="precedence-hack"
 			classList={{
 				"underline-links":
 					ctx.preferences().frontend["underline_links"] === "yes",

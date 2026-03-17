@@ -19,6 +19,7 @@
 @use "./document.scss";
 @use "./analytics.scss";
 @use "./member-list.scss";
+@use "./mobile.scss";
 
 :root {
 	font: 16px/1.3 var(--font-default);
@@ -1906,6 +1907,7 @@ body.resizing {
 .resizable-sidebar {
 	position: relative;
 	display: flex;
+	width: var(--width);
 
 	&[data-side="right"] {
 		grid-area: sidebar;
