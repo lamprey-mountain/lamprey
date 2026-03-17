@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -55,7 +55,7 @@ pub struct DocumentActor {
     pub(super) changes_since_last_snapshot: u64,
 
     /// changes that have not been persisted yet
-    pub(super) pending_changes: Vec<PendingChange>,
+    pub(super) pending_changes: VecDeque<PendingChange>,
 
     /// the sequence number of the last persisted update or snapshot
     pub(super) last_seq: u32,
@@ -143,12 +143,8 @@ impl DocumentActor {
     }
 
     async fn flush(&mut self) -> Result<()> {
-        if self.pending_changes.is_empty() {
-            return Ok(());
-        }
-        let data = self.state.data();
-        let changes: Vec<_> = self.pending_changes.drain(..).collect();
-        for change in changes {
+        while let Some(change) = self.pending_changes.pop_front() {
+            let data = self.state.data();
             let new_seq = data
                 .document_update(
                     self.context_id,
@@ -259,9 +255,12 @@ impl Message<ApplyUpdate> for DocumentActor {
 
         self.last_active = Instant::now();
         self.changes_since_last_snapshot += 1;
-        self.pending_changes.push(PendingChange {
+
+        // Clone for broadcast, move original into pending_changes
+        let broadcast_bytes = msg.update_bytes.clone();
+        self.pending_changes.push_back(PendingChange {
             author_id: msg.author_id,
-            change: msg.update_bytes.clone(),
+            change: msg.update_bytes,
             stat_added: stat_inserted,
             stat_removed: stat_deleted,
         });
@@ -276,7 +275,7 @@ impl Message<ApplyUpdate> for DocumentActor {
 
         let _ = self.update_tx.send(DocumentEvent::Update {
             origin_conn_id: msg.origin_conn_id,
-            update: msg.update_bytes,
+            update: broadcast_bytes,
         });
 
         Ok(())
@@ -466,9 +465,12 @@ impl Message<SerdocPut> for DocumentActor {
 
         self.last_active = Instant::now();
         self.changes_since_last_snapshot += 1;
-        self.pending_changes.push(PendingChange {
+
+        // Clone for broadcast, move original into pending_changes
+        let broadcast_bytes = update_bytes.clone();
+        self.pending_changes.push_back(PendingChange {
             author_id: msg.author_id,
-            change: update_bytes.clone(),
+            change: update_bytes,
             stat_added,
             stat_removed,
         });
@@ -483,7 +485,7 @@ impl Message<SerdocPut> for DocumentActor {
 
         let _ = self.update_tx.send(DocumentEvent::Update {
             origin_conn_id: None,
-            update: update_bytes,
+            update: broadcast_bytes,
         });
 
         Ok(())
@@ -513,8 +515,7 @@ impl Message<PersistAndUnload> for DocumentActor {
         let data = self.state.data();
 
         // flush changes
-        let changes: Vec<_> = self.pending_changes.drain(..).collect();
-        for change in changes {
+        while let Some(change) = self.pending_changes.pop_front() {
             let new_seq = data
                 .document_update(
                     self.context_id,

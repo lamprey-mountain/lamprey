@@ -1,5 +1,3 @@
-// TODO: use an actor system for documents?
-
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -134,7 +132,7 @@ impl ServiceDocuments {
                     state: self.state.clone(),
                     doc,
                     changes_since_last_snapshot: dehydrated.changes.len() as u64,
-                    pending_changes: vec![],
+                    pending_changes: VecDeque::new(),
                     last_seq: dehydrated.snapshot_seq,
                     update_tx,
                     presence: HashMap::new(),
@@ -166,7 +164,7 @@ impl ServiceDocuments {
                         state: self.state.clone(),
                         doc,
                         changes_since_last_snapshot: 0,
-                        pending_changes: vec![],
+                        pending_changes: VecDeque::new(),
                         last_seq: 0,
                         update_tx,
                         presence: HashMap::new(),
