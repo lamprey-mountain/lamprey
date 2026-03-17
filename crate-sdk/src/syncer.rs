@@ -68,6 +68,7 @@ impl Syncer {
                             if let Some(Ok(msg)) = msg {
                                 let WsMessage::Text(text) = msg else { continue };
                                 let msg: MessageEnvelope = serde_json::from_str(&text)?;
+                                tracing::debug!("got lamprey message {msg:?}");
                                 match &msg.payload {
                                     MessagePayload::Ping => {
                                         client

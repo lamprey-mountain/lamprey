@@ -3,17 +3,19 @@
 use anyhow::Result;
 use common::v1::types::util::Time;
 use common::v1::types::{self, misc::UserIdReq, pagination::PaginationQuery, RoomMemberPut};
-use common::v2::types::media::{MediaCreate, MediaCreateSource, MediaDoneParams};
-use sdk::Client;
+use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use sdk::Http;
 use std::sync::Arc;
+use tokio::sync::broadcast;
 use tracing::{debug, info};
 
 use crate::bridge_common::Globals;
 use crate::lamprey::messages::{LampreyMessage, LampreyResponse};
 
 pub(super) async fn handle_lamprey_message(
-    client: &mut Client,
+    http: &Http,
     globals: Arc<Globals>,
+    media_processed_tx: broadcast::Sender<common::v2::types::media::Media>,
     msg: LampreyMessage,
 ) -> Result<LampreyResponse> {
     match msg {
@@ -30,36 +32,50 @@ pub(super) async fn handle_lamprey_message(
                     size: Some(bytes.len() as u64),
                 },
             };
-            let upload = client.http.for_puppet(user_id).media_create(&req).await?;
-            client
-                .http
-                .for_puppet(user_id)
+            let upload = http.for_puppet(user_id).media_create(&req).await?;
+
+            let mut rx = media_processed_tx.subscribe();
+
+            http.for_puppet(user_id)
                 .media_upload(&upload, bytes)
                 .await?;
-            let media = client
-                .http
-                .for_puppet(user_id)
-                .media_done(
-                    upload.media_id,
-                    &MediaDoneParams {
-                        process_async: false,
-                    },
-                )
-                .await?;
-            media
-                .ok_or_else(|| anyhow::anyhow!("failed to upload"))
-                .map(LampreyResponse::Media)
+
+            // HACK: media_done seems to be broken currently, so i have to do some channel gymnastics to get this to work :(
+            // let media = http
+            //     .for_puppet(user_id)
+            //     .media_done(
+            //         upload.media_id,
+            //         &MediaDoneParams {
+            //             process_async: true,
+            //         },
+            //     )
+            //     .await?;
+
+            loop {
+                match rx.recv().await {
+                    Ok(media) => {
+                        if media.id == upload.media_id {
+                            break Ok(LampreyResponse::Media(media));
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(n)) => {
+                        tracing::warn!("lagged behind on media_processed events: {n}");
+                        continue;
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {
+                        break Err(anyhow::anyhow!("media_processed channel closed"));
+                    }
+                }
+            }
         }
         LampreyMessage::MessageGet {
             thread_id,
             message_id,
-        } => client
-            .http
+        } => http
             .message_get(thread_id, message_id)
             .await
             .map(LampreyResponse::Message),
-        LampreyMessage::MessageList { thread_id, query } => client
-            .http
+        LampreyMessage::MessageList { thread_id, query } => http
             .message_list(thread_id, &query)
             .await
             .map(LampreyResponse::MessageList),
@@ -69,9 +85,8 @@ pub(super) async fn handle_lamprey_message(
             req,
         } => {
             let timestamp = Time::now_utc();
-            client
-                .http
-                .for_puppet(user_id)
+
+            http.for_puppet(user_id)
                 .message_create_with_timestamp(thread_id, &req, timestamp)
                 .await
                 .map(LampreyResponse::Message)
@@ -81,8 +96,7 @@ pub(super) async fn handle_lamprey_message(
             user_id,
             req,
             timestamp,
-        } => client
-            .http
+        } => http
             .for_puppet(user_id)
             .message_create_with_timestamp(thread_id, &req, timestamp)
             .await
@@ -92,8 +106,7 @@ pub(super) async fn handle_lamprey_message(
             message_id,
             user_id,
             req,
-        } => client
-            .http
+        } => http
             .for_puppet(user_id)
             .message_edit(thread_id, message_id, &req)
             .await
@@ -102,8 +115,7 @@ pub(super) async fn handle_lamprey_message(
             thread_id,
             message_id,
             user_id,
-        } => client
-            .http
+        } => http
             .for_puppet(user_id)
             .message_delete(thread_id, message_id)
             .await
@@ -113,8 +125,7 @@ pub(super) async fn handle_lamprey_message(
             message_id,
             user_id,
             reaction,
-        } => client
-            .http
+        } => http
             .for_puppet(user_id)
             .message_react(thread_id, message_id, reaction)
             .await
@@ -124,14 +135,12 @@ pub(super) async fn handle_lamprey_message(
             message_id,
             user_id,
             reaction,
-        } => client
-            .http
+        } => http
             .for_puppet(user_id)
             .message_unreact(thread_id, message_id, reaction)
             .await
             .map(|_| LampreyResponse::Empty),
-        LampreyMessage::TypingStart { thread_id, user_id } => client
-            .http
+        LampreyMessage::TypingStart { thread_id, user_id } => http
             .for_puppet(user_id)
             .channel_typing(thread_id)
             .await
@@ -143,8 +152,7 @@ pub(super) async fn handle_lamprey_message(
             bot,
         } => {
             let app_id = globals.config.lamprey_application_id;
-            let user = client
-                .http
+            let user = http
                 .puppet_ensure(
                     app_id,
                     key,
@@ -157,30 +165,26 @@ pub(super) async fn handle_lamprey_message(
                 )
                 .await?;
             debug!("ensured user");
-            client
-                .http
-                .room_member_add(
-                    room_id,
-                    UserIdReq::UserId(user.id),
-                    &RoomMemberPut::default(),
-                )
-                .await?;
+
+            http.room_member_add(
+                room_id,
+                UserIdReq::UserId(user.id),
+                &RoomMemberPut::default(),
+            )
+            .await?;
             debug!("ensured room member");
             Ok(LampreyResponse::User(user))
         }
-        LampreyMessage::UserFetch { user_id } => client
-            .http
+        LampreyMessage::UserFetch { user_id } => http
             .user_get(UserIdReq::UserId(user_id))
             .await
             .map(|res| LampreyResponse::User(res.inner)),
-        LampreyMessage::UserUpdate { user_id, patch } => client
-            .http
+        LampreyMessage::UserUpdate { user_id, patch } => http
             .for_puppet(user_id)
             .user_update(UserIdReq::UserId(user_id), &patch)
             .await
             .map(LampreyResponse::User),
-        LampreyMessage::UserSetPresence { user_id, patch } => client
-            .http
+        LampreyMessage::UserSetPresence { user_id, patch } => http
             .for_puppet(user_id)
             .user_set_presence(UserIdReq::UserId(user_id), &patch)
             .await
@@ -189,8 +193,7 @@ pub(super) async fn handle_lamprey_message(
             room_id,
             user_id,
             patch,
-        } => client
-            .http
+        } => http
             .room_member_patch(room_id, UserIdReq::UserId(user_id), &patch)
             .await
             .map(LampreyResponse::RoomMember),
@@ -199,7 +202,7 @@ pub(super) async fn handle_lamprey_message(
             let mut query = PaginationQuery::default();
             loop {
                 info!("get room threads");
-                let res = client.http.channel_list(room_id, &query).await?;
+                let res = http.channel_list(room_id, &query).await?;
                 debug!("threads: {res:?}");
                 all_threads.extend(res.items);
                 if let Some(cursor) = res.cursor {
@@ -220,8 +223,7 @@ pub(super) async fn handle_lamprey_message(
             ty,
             parent_id,
         } => {
-            let res = client
-                .http
+            let res = http
                 .channel_create_room(
                     room_id,
                     &types::ChannelCreate {

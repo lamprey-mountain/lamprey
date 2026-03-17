@@ -72,6 +72,7 @@ pub struct Channel {
     pub online_count: u64,
 
     /// number of tags in this Forum, Forum2, or Ticket channel
+    #[cfg_attr(feature = "serde", serde(default))]
     pub tag_count: u64,
 
     /// tags that are applied to this thread
@@ -112,6 +113,7 @@ pub struct Channel {
     pub permission_overwrites: Vec<PermissionOverwrite>,
 
     /// not safe for work
+    #[cfg_attr(feature = "serde", serde(default))]
     pub nsfw: bool,
 
     pub last_version_id: Option<MessageVerId>,
@@ -145,6 +147,7 @@ pub struct Channel {
     pub calendar: Option<Calendar>,
 
     /// for dm and gdm channels, this is who the dm is with
+    #[cfg_attr(feature = "serde", serde(default))]
     pub recipients: Vec<User>,
 
     /// for gdm channels, a custom icon

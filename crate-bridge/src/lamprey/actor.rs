@@ -13,8 +13,9 @@ use common::v2::types::message::Message as LMessage;
 use common::{v1::types::util::Time, v2::types::media::Media};
 use kameo::message::Context;
 use kameo::prelude::*;
-use sdk::Client;
-use tracing::info;
+use sdk::{Client, Http};
+use tokio::sync::broadcast;
+use tracing::{debug, info};
 
 use crate::bridge_common::Globals;
 use crate::db::Data;
@@ -23,8 +24,9 @@ use crate::portal::{Portal, PortalMessage};
 pub use crate::lamprey::messages::{LampreyMessage, LampreyResponse};
 
 pub struct Lamprey {
-    client: Client,
+    http: Http,
     globals: Arc<Globals>,
+    media_processed_tx: broadcast::Sender<Media>,
 }
 
 impl kameo::Actor for Lamprey {
@@ -38,8 +40,10 @@ impl kameo::Actor for Lamprey {
         let token = globals.config.lamprey_token.clone();
         let base_url = globals.config.lamprey_base_url.clone();
         let ws_url = globals.config.lamprey_ws_url.clone();
+        let (media_processed_tx, _) = broadcast::channel::<Media>(1024);
         let handle = LampreyEventHandler {
             globals: globals.clone(),
+            media_processed_tx: media_processed_tx.clone(),
         };
         let mut client = Client::new(token.clone().into()).with_handler(Box::new(handle));
         client.http = if let Some(base_url) = base_url {
@@ -47,12 +51,23 @@ impl kameo::Actor for Lamprey {
         } else {
             client.http
         };
-        client.syncer = if let Some(ws_url) = ws_url {
+        let mut syncer = if let Some(ws_url) = ws_url {
             client.syncer.with_base_url(ws_url.parse().unwrap())
         } else {
             client.syncer
         };
-        Ok(Self { client, globals })
+
+        tokio::spawn(async move {
+            if let Err(e) = syncer.connect().await {
+                tracing::error!("lamprey syncer error: {e}");
+            }
+        });
+
+        Ok(Self {
+            http: client.http,
+            globals,
+            media_processed_tx,
+        })
     }
 }
 
@@ -65,8 +80,9 @@ impl Message<LampreyMessage> for Lamprey {
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         crate::lamprey::handlers::handle_lamprey_message(
-            &mut self.client,
+            &self.http,
             self.globals.clone(),
+            self.media_processed_tx.clone(),
             msg,
         )
         .await
@@ -381,6 +397,7 @@ impl LampreyHandle {
 
 pub struct LampreyEventHandler {
     pub globals: Arc<Globals>,
+    pub media_processed_tx: broadcast::Sender<Media>,
 }
 
 #[async_trait::async_trait]
@@ -426,6 +443,7 @@ impl sdk::EventHandler for LampreyEventHandler {
 
 impl LampreyEventHandler {
     async fn handle_sync(&self, msg: MessageSync) -> Result<()> {
+        debug!("got lamprey sync {msg:?}");
         match msg {
             MessageSync::MessageCreate { message } => {
                 let Ok(Some(config)) = self
@@ -477,6 +495,9 @@ impl LampreyEventHandler {
                 let _ = portal_ref
                     .tell(PortalMessage::LampreyMessageDelete { message_id })
                     .await;
+            }
+            MessageSync::MediaProcessed { media, .. } => {
+                let _ = self.media_processed_tx.send(media);
             }
             _ => {} // Other sync messages are ignored
         }
