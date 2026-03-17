@@ -3563,6 +3563,7 @@ dependencies = [
  "lamprey-backend-data-postgres",
  "lamprey-common",
  "lamprey-hakari",
+ "lamprey-macros",
  "lettre",
  "linkify",
  "mediatype",
@@ -3782,6 +3783,8 @@ name = "lamprey-common"
 version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
+ "bytes",
+ "http",
  "lamprey-hakari",
  "lamprey-macros",
  "mediatype",
@@ -3903,6 +3906,9 @@ dependencies = [
 name = "lamprey-macros"
 version = "0.1.1"
 dependencies = [
+ "bytes",
+ "darling 0.23.0",
+ "http",
  "lamprey-hakari",
  "macrotest",
  "proc-macro2",

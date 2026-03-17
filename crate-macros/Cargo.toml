@@ -17,6 +17,9 @@ quote = "1.0"
 proc-macro2 = "1.0"
 uuid = { version = "1.22.0", features = ["v7", "macro-diagnostics"] }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+darling = "0.23.0"
+bytes = "1.11.1"
+http = "1.4.0"
 
 [dev-dependencies]
 macrotest = "1"

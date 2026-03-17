@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{parse2, spanned::Spanned, Attribute, Fields, Ident, Item, ItemMod, ItemStruct, LitStr};
 
 use crate::parse::{EndpointArgs, EndpointField, FieldKind};
@@ -42,8 +42,21 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
     let request_clean = build_clean_struct(request_struct.clone())?;
     let response_clean = build_clean_struct(response_struct.clone())?;
-    let extract_fn = build_extract_fn(&req_fields)?;
-    let meta_fn = build_meta_fn(&args)?;
+    let extract_fn = build_extract_fn(&req_fields, &args.path)?;
+    let encode_fn = build_encode_fn(response_struct)?;
+    let meta_fn = build_meta_fn(&args, &mod_attrs)?;
+
+    // Preserve all original items except Request/Response structs
+    let preserved_items: Vec<_> = items
+        .iter()
+        .filter(|item| {
+            if let Item::Struct(s) = item {
+                s.ident != "Request" && s.ident != "Response"
+            } else {
+                true
+            }
+        })
+        .collect();
 
     let expanded = quote! {
         #(#mod_attrs)*
@@ -57,7 +70,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             #response_clean
 
             #extract_fn
+            #encode_fn
             #meta_fn
+
+            #(#preserved_items)*
         }
     };
 
@@ -68,7 +84,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 // __extract
 // ---------------------------------------------------------------------------
 
-fn build_extract_fn(fields: &[EndpointField]) -> syn::Result<TokenStream> {
+fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<TokenStream> {
     let path_fields: Vec<_> = fields
         .iter()
         .filter(|f| matches!(f.kind, FieldKind::Path(_)))
@@ -84,32 +100,35 @@ fn build_extract_fn(fields: &[EndpointField]) -> syn::Result<TokenStream> {
     let json_field: Option<&EndpointField> =
         fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
 
-    // --- path extraction ---
-    // axum Path extractor uses a tuple for multiple params, single value for one
+    // Parse path template at compile time to build match pattern
+    let path_template = path.value();
+    let (match_arm_pattern, extract_bindings) = build_path_match_pattern(&path_template)?;
+
+    // Build path extraction with match statement
     let path_extraction = if path_fields.is_empty() {
         quote! {}
     } else {
-        let path_idents: Vec<_> = path_fields.iter().map(|f| &f.ident).collect();
-        let path_tys: Vec<_> = path_fields.iter().map(|f| &f.ty).collect();
-        if path_fields.len() == 1 {
-            quote! {
-                let ::axum::extract::Path(#(#path_idents)*) =
-                    ::axum::extract::Path::<#(#path_tys)*>::from_request_parts(&mut parts, state)
-                        .await
-                        .map_err(|e| e.into_response())?;
-            }
-        } else {
-            quote! {
-                let ::axum::extract::Path((#(#path_idents,)*)) =
-                    ::axum::extract::Path::<(#(#path_tys,)*)>::from_request_parts(&mut parts, state)
-                        .await
-                        .map_err(|e| e.into_response())?;
-            }
+        let conversions: Vec<TokenStream> = path_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                let ty = &f.ty;
+                let raw_name = format_ident!("{}_raw", f.ident);
+                quote! {
+                    let #ident: #ty = crate::v1::routes::PathParam::from_str(#raw_name)?;
+                }
+            })
+            .collect();
+        quote! {
+            let (#extract_bindings) = match path.split('/').collect::<Vec<_>>().as_slice() {
+                #match_arm_pattern => (#extract_bindings),
+                _ => return Err(invalid_path_error()),
+            };
+            #(#conversions)*
         }
     };
 
     // --- query extraction ---
-    // Build an intermediate struct for serde query deserialization
     let query_extraction = if query_fields.is_empty() {
         quote! {}
     } else {
@@ -127,10 +146,13 @@ fn build_extract_fn(fields: &[EndpointField]) -> syn::Result<TokenStream> {
             struct __QueryParams {
                 #(#q_renames #q_idents: #q_tys,)*
             }
-            let ::axum::extract::Query(__qp) =
-                ::axum::extract::Query::<__QueryParams>::from_request_parts(&mut parts, state)
-                    .await
-                    .map_err(|e| e.into_response())?;
+            let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
+                .map_err(|e| {
+                    ::http::Response::builder()
+                        .status(::http::StatusCode::BAD_REQUEST)
+                        .body(::bytes::Bytes::from(format!("invalid query: {}", e)))
+                        .unwrap()
+                })?;
             #(let #q_idents = __qp.#q_idents;)*
         }
     };
@@ -155,9 +177,9 @@ fn build_extract_fn(fields: &[EndpointField]) -> syn::Result<TokenStream> {
                         .and_then(|v| v.to_str().ok())
                         .and_then(|v| v.parse().ok())
                         .ok_or_else(|| {
-                            ::axum::response::Response::builder()
-                                .status(::axum::http::StatusCode::BAD_REQUEST)
-                                .body(::axum::body::Body::from(
+                            ::http::Response::builder()
+                                .status(::http::StatusCode::BAD_REQUEST)
+                                .body(::bytes::Bytes::from(
                                     format!("missing or invalid header: {}", #header_name)
                                 ))
                                 .unwrap()
@@ -169,33 +191,35 @@ fn build_extract_fn(fields: &[EndpointField]) -> syn::Result<TokenStream> {
     };
 
     // --- json extraction ---
-    // replace the json_extraction block:
     let json_extraction = if let Some(f) = json_field {
         let ident = &f.ident;
         let ty = &f.ty;
         quote! {
-            let req = ::axum::http::Request::from_parts(parts, body);
-            let ::axum::extract::Json(#ident) =
-                ::axum::extract::Json::<#ty>::from_request(req, &state)
-                    .await
-                    .map_err(|e| e.into_response())?;
+            let #ident: #ty = ::serde_json::from_slice(&body)
+                .map_err(|e| {
+                    ::http::Response::builder()
+                        .status(::http::StatusCode::BAD_REQUEST)
+                        .body(::bytes::Bytes::from(format!("invalid json: {}", e)))
+                        .unwrap()
+                })?;
         }
     } else {
-        quote! { let _ = body; }
+        quote! {}
     };
 
     // --- assemble Request struct ---
     let all_idents: Vec<_> = fields.iter().map(|f| &f.ident).collect();
 
     Ok(quote! {
-        pub async fn __extract(
-            req: ::axum::extract::Request,
-        ) -> Result<Request, ::axum::response::Response> {
-            use ::axum::extract::{FromRequest, FromRequestParts};
-            use ::axum::response::IntoResponse;
+        pub fn __extract(
+            req: ::http::Request<::bytes::Bytes>,
+        ) -> Result<Request, ::http::Response<::bytes::Bytes>> {
+            let (parts, body) = req.into_parts();
 
-            let (mut parts, body) = req.into_parts();
-            let state = ();
+            let path = parts.uri.path();
+
+            // Extract query string
+            let query_str = parts.uri.query().unwrap_or("");
 
             #path_extraction
             #query_extraction
@@ -209,33 +233,139 @@ fn build_extract_fn(fields: &[EndpointField]) -> syn::Result<TokenStream> {
     })
 }
 
+fn invalid_path_error() -> ::http::Response<::bytes::Bytes> {
+    ::http::Response::builder()
+        .status(::http::StatusCode::NOT_FOUND)
+        .body(::bytes::Bytes::from("invalid path"))
+        .unwrap()
+}
+
 // ---------------------------------------------------------------------------
-// __meta
+// __encode
 // ---------------------------------------------------------------------------
 
-fn build_meta_fn(args: &EndpointArgs) -> syn::Result<TokenStream> {
-    let method = &args.method;
+fn build_encode_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+    let has_json = extract_fields(response_struct)?
+        .iter()
+        .any(|f| matches!(f.kind, FieldKind::Json));
+
+    if has_json {
+        let json_field = extract_fields(response_struct)?
+            .into_iter()
+            .find(|f| matches!(f.kind, FieldKind::Json))
+            .unwrap();
+        let ident = &json_field.ident;
+
+        Ok(quote! {
+            pub fn __encode(resp: Response) -> ::http::Response<::bytes::Bytes> {
+                let json = ::serde_json::to_string(&resp.#ident)
+                    .unwrap_or_else(|e| format!("{{\"error\": \"serialization failed\"}}"));
+                ::http::Response::builder()
+                    .status(::http::StatusCode::OK)
+                    .header(::http::header::CONTENT_TYPE, "application/json")
+                    .body(::bytes::Bytes::from(json))
+                    .unwrap()
+            }
+        })
+    } else {
+        Ok(quote! {
+            pub fn __encode(resp: Response) -> ::http::Response<::bytes::Bytes> {
+                ::http::Response::builder()
+                    .status(::http::StatusCode::OK)
+                    .body(::bytes::Bytes::new())
+                    .unwrap()
+            }
+        })
+    }
+}
+
+/// build the `route_module::meta()` function
+fn build_meta_fn(args: &EndpointArgs, mod_attrs: &[&Attribute]) -> syn::Result<TokenStream> {
+    let method_str = &args.method.value();
+    // Convert to PascalCase (e.g., "GET" -> "Get", "POST" -> "Post")
+    let method_pascal = match method_str.as_str() {
+        "GET" => "Get",
+        "POST" => "Post",
+        "PUT" => "Put",
+        "PATCH" => "Patch",
+        "DELETE" => "Delete",
+        "HEAD" => "Head",
+        _ => method_str.as_str(),
+    };
+    let method_ident = Ident::new(method_pascal, Span::call_site());
     let path = &args.path;
 
-    let mut tags: Vec<LitStr> = args.tags.clone();
+    // Store original user-provided tags
+    let user_tags: Vec<LitStr> = args.tags.clone();
+
+    // Build full tags list including badge tags
+    let mut tags_full: Vec<LitStr> = user_tags.clone();
     for s in &args.scopes {
-        tags.push(LitStr::new(&format!("badge.scope.{}", s.value()), s.span()));
+        tags_full.push(LitStr::new(&format!("badge.scope.{}", s), s.span()));
     }
     for p in &args.permissions {
-        tags.push(LitStr::new(&format!("badge.perm.{}", p.value()), p.span()));
+        tags_full.push(LitStr::new(&format!("badge.perm.{}", p), p.span()));
     }
     for p in &args.permissions_optional {
-        tags.push(LitStr::new(
-            &format!("badge.perm-opt.{}", p.value()),
-            p.span(),
-        ));
+        tags_full.push(LitStr::new(&format!("badge.perm-opt.{}", p), p.span()));
     }
 
+    let scopes: Vec<_> = args.scopes.iter().collect();
+    let permissions: Vec<_> = args.permissions.iter().collect();
+    let permissions_optional: Vec<_> = args.permissions_optional.iter().collect();
+    let permissions_server: Vec<_> = args.permissions_server.iter().collect();
+    let permissions_server_optional: Vec<_> = args.permissions_server_optional.iter().collect();
+
+    // Parse doc comments into summary and description
+    let (summary, description) = parse_doc_attrs(mod_attrs);
+
     Ok(quote! {
-        pub fn __meta() -> (&'static str, &'static str, &'static [&'static str]) {
-            (&[#(#tags,)*], #method, #path)
+        pub fn metadata() -> crate::v1::routes::Endpoint {
+            crate::v1::routes::Endpoint {
+                summary: #summary,
+                description: #description,
+                method: crate::v1::routes::EndpointMethod::#method_ident,
+                path: #path,
+                tags: &[#(#user_tags,)*],
+                tags_full: &[#(#tags_full,)*],
+                scopes: &[#(crate::v1::types::oauth::Scope::#scopes,)*],
+                permissions: &[#(crate::v1::types::Permission::#permissions,)*],
+                permissions_optional: &[#(crate::v1::types::Permission::#permissions_optional,)*],
+                permissions_server: &[#(crate::v1::types::Permission::#permissions_server,)*],
+                permissions_server_optional: &[#(crate::v1::types::Permission::#permissions_server_optional,)*],
+            }
         }
     })
+}
+
+fn parse_doc_attrs(attrs: &[&Attribute]) -> (LitStr, TokenStream) {
+    let mut doc_lines: Vec<String> = Vec::new();
+
+    for attr in attrs {
+        if let Ok(meta) = attr.parse_args::<syn::Expr>() {
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(lit),
+                ..
+            }) = meta
+            {
+                let value = lit.value();
+                // Strip leading space from doc comment lines (rustc adds it)
+                let trimmed = value.strip_prefix(' ').unwrap_or(&value);
+                doc_lines.push(trimmed.to_string());
+            }
+        }
+    }
+
+    // First line is summary, rest is description
+    let summary = doc_lines.first().cloned().unwrap_or_default();
+    let description = if doc_lines.len() > 1 {
+        let desc = doc_lines[1..].join("\n");
+        quote! { Some(#desc) }
+    } else {
+        quote! { None }
+    };
+
+    (LitStr::new(&summary, Span::call_site()), description)
 }
 
 // ---------------------------------------------------------------------------
@@ -330,4 +460,30 @@ fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
         });
     }
     Ok(quote! { #original })
+}
+
+/// Build a match pattern for path extraction.
+/// For "/user/{id}/posts/{post_id}" returns:
+/// - pattern: `["", "user", id_raw, "posts", post_id_raw]`
+/// - bindings: `id_raw, post_id_raw`
+fn build_path_match_pattern(template: &str) -> syn::Result<(TokenStream, TokenStream)> {
+    let mut pattern_items: Vec<TokenStream> = Vec::new();
+    let mut bindings: Vec<TokenStream> = Vec::new();
+
+    for segment in template.split('/') {
+        if let Some(param_name) = segment.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
+            // This is a path parameter
+            let raw_name = format_ident!("{}_raw", param_name);
+            pattern_items.push(quote! { #raw_name });
+            bindings.push(quote! { #raw_name });
+        } else {
+            // This is a literal segment
+            pattern_items.push(quote! { #segment });
+        }
+    }
+
+    let pattern = quote! { [#(#pattern_items),*] };
+    let bindings = quote! { #(#bindings),* };
+
+    Ok((pattern, bindings))
 }

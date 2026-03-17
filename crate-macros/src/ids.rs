@@ -1,9 +1,8 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, LitStr};
+use syn::LitStr;
 
-pub fn expand_typed_id(input: TokenStream, phantom_ty: &str) -> TokenStream {
-    let lit = parse_macro_input!(input as LitStr);
+pub fn expand_typed_id(lit: LitStr, phantom_ty: &str) -> TokenStream {
     let s = lit.value();
 
     let uuid = match uuid::Uuid::parse_str(&s) {

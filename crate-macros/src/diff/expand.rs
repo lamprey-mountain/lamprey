@@ -1,5 +1,6 @@
 //! Code generation for the Diff derive macro.
 
+use darling::FromField;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DataStruct, Generics, Ident};
@@ -78,10 +79,10 @@ fn generate_field_checks(data_struct: &DataStruct) -> TokenStream {
 
     for (index, field) in fields.iter().enumerate() {
         // Parse field attributes
-        let field_attr = match DiffFieldAttr::from_attrs(&field.attrs) {
+        let field_attr = match DiffFieldAttr::from_field(&field) {
             Ok(attr) => attr,
             Err(e) => {
-                return e.to_compile_error();
+                return e.write_errors().into();
             }
         };
 

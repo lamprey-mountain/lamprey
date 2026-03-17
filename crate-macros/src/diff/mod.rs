@@ -3,6 +3,7 @@
 mod attr;
 mod expand;
 
+use darling::FromDeriveInput;
 use syn::{parse_macro_input, DeriveInput};
 
 /// Main entry point for the `#[derive(Diff)]` macro.
@@ -12,10 +13,9 @@ pub fn expand_diff_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     let struct_ident = &input.ident;
     let generics = &input.generics;
 
-    // Parse struct-level attributes
-    let struct_attrs = match attr::DiffStructAttr::from_attrs(&input.attrs) {
+    let struct_attrs = match attr::DiffStructAttr::from_derive_input(&input) {
         Ok(attrs) => attrs,
-        Err(e) => return e.to_compile_error().into(),
+        Err(e) => return e.write_errors().into(),
     };
 
     match &input.data {

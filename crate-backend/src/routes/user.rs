@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::routes::user_get2;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::harvest::{Harvest, HarvestCreate};
@@ -18,6 +19,7 @@ use common::v1::types::{
     SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID,
 };
 use http::StatusCode;
+use lamprey_macros::handler;
 use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -238,6 +240,33 @@ async fn user_undelete(
     .await?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[handler(user_get2)]
+async fn user_get2(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: user_get2::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Identify])?;
+    let target_user_id = match req.user_id {
+        UserIdReq::UserSelf => auth.user.id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+    let srv = s.services();
+    let data = s.data();
+    let mut user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
+    if !auth.scopes.iter().any(|s| s.implies(&Scope::Email)) {
+        user.emails = None;
+    }
+    let relationship = data
+        .user_relationship_get(auth.user.id, target_user_id)
+        .await?
+        .unwrap_or_default();
+    Ok(Json(UserWithRelationship {
+        inner: user,
+        relationship,
+    }))
 }
 
 /// User get
@@ -681,6 +710,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
         .routes(routes!(user_get))
+        .route(user_get2::metadata().path, axum::routing::get(user_get2)) // TODO: make this fully automatic (ie. dont require manually writing ::get(...))
         .routes(routes!(user_delete))
         .routes(routes!(user_undelete))
         .routes(routes!(user_audit_logs))

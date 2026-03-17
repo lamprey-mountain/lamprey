@@ -1,7 +1,5 @@
 use proc_macro::TokenStream;
 
-use crate::ids::expand_typed_id;
-
 mod diff;
 mod endpoint;
 mod handler;
@@ -29,10 +27,18 @@ pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn user_id(input: TokenStream) -> TokenStream {
-    expand_typed_id(input, "UserId")
+    let lit = syn::parse_macro_input!(input as syn::LitStr);
+    ids::expand_typed_id(lit, "UserId").into()
 }
 
 #[proc_macro]
 pub fn room_id(input: TokenStream) -> TokenStream {
-    expand_typed_id(input, "RoomId")
+    let lit = syn::parse_macro_input!(input as syn::LitStr);
+    ids::expand_typed_id(lit, "RoomId").into()
+}
+
+#[proc_macro]
+pub fn channel_id(input: TokenStream) -> TokenStream {
+    let lit = syn::parse_macro_input!(input as syn::LitStr);
+    ids::expand_typed_id(lit, "ChannelId").into()
 }

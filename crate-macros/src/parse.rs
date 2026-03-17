@@ -9,9 +9,11 @@ pub struct EndpointArgs {
     pub method: LitStr,
     pub path: LitStr,
     pub tags: Vec<LitStr>,
-    pub scopes: Vec<LitStr>,
-    pub permissions: Vec<LitStr>,
-    pub permissions_optional: Vec<LitStr>,
+    pub scopes: Vec<Ident>,
+    pub permissions: Vec<Ident>,
+    pub permissions_optional: Vec<Ident>,
+    pub permissions_server: Vec<Ident>,
+    pub permissions_server_optional: Vec<Ident>,
     pub responses: Vec<ResponseSpec>,
 }
 
@@ -45,6 +47,8 @@ impl Parse for EndpointArgs {
         let mut scopes = vec![];
         let mut permissions = vec![];
         let mut permissions_optional = vec![];
+        let mut permissions_server = vec![];
+        let mut permissions_server_optional = vec![];
         let mut responses = vec![];
 
         while !input.is_empty() {
@@ -82,9 +86,13 @@ impl Parse for EndpointArgs {
                 "method" => method = Some(input.parse::<LitStr>()?),
                 "path" => path = Some(input.parse::<LitStr>()?),
                 "tags" => tags = parse_str_array(input)?,
-                "scopes" => scopes = parse_str_array(input)?,
-                "permissions" => permissions = parse_str_array(input)?,
-                "permissions_optional" => permissions_optional = parse_str_array(input)?,
+                "scopes" => scopes = parse_ident_array(input)?,
+                "permissions" => permissions = parse_ident_array(input)?,
+                "permissions_optional" => permissions_optional = parse_ident_array(input)?,
+                "permissions_server" => permissions_server = parse_ident_array(input)?,
+                "permissions_server_optional" => {
+                    permissions_server_optional = parse_ident_array(input)?
+                }
                 other => {
                     return Err(syn::Error::new(
                         key.span(),
@@ -105,6 +113,8 @@ impl Parse for EndpointArgs {
             scopes,
             permissions,
             permissions_optional,
+            permissions_server,
+            permissions_server_optional,
             responses,
         })
     }
@@ -115,6 +125,14 @@ fn parse_str_array(input: ParseStream) -> syn::Result<Vec<LitStr>> {
     syn::bracketed!(content in input);
     let items: Punctuated<LitStr, Token![,]> =
         content.parse_terminated(|i| i.parse::<LitStr>(), Token![,])?;
+    Ok(items.into_iter().collect())
+}
+
+fn parse_ident_array(input: ParseStream) -> syn::Result<Vec<Ident>> {
+    let content;
+    syn::bracketed!(content in input);
+    let items: Punctuated<Ident, Token![,]> =
+        content.parse_terminated(|i| i.parse::<Ident>(), Token![,])?;
     Ok(items.into_iter().collect())
 }
 
