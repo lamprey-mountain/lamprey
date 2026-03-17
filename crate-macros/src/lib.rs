@@ -2,10 +2,16 @@ use proc_macro::TokenStream;
 
 use crate::ids::expand_typed_id;
 
+mod diff;
 mod endpoint;
 mod handler;
 mod ids;
 mod parse;
+
+#[proc_macro_derive(Diff, attributes(diff))]
+pub fn derive_diff(input: TokenStream) -> TokenStream {
+    diff::expand_diff_derive(input)
+}
 
 #[proc_macro_attribute]
 pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
