@@ -42,6 +42,7 @@ import { diffWords } from "diff";
 import type { Tokens } from "marked";
 import {
 	downloadFile,
+	exportAsHtml,
 	exportAsMarkdown,
 	generateFilename,
 } from "./export-utils.ts";
@@ -144,8 +145,11 @@ const DocumentHeader = (
 	};
 
 	const handleExportHtml = () => {
-		// TODO: implement HTML export
-		console.log("HTML export not yet implemented");
+		const editor = props.editor();
+		const view = editor?.view;
+		if (!view) return;
+		const filename = generateFilename(props.channel.name, "html");
+		exportAsHtml(view, filename, props.channel.name);
 		setActive(null);
 	};
 

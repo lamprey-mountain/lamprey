@@ -1,4 +1,6 @@
 import type { EditorView } from "prosemirror-view";
+import { md } from "../markdown_utils.tsx";
+import htmlTemplate from "./html-template.html?raw";
 
 /**
  * Triggers a browser download for the given content.
@@ -34,6 +36,45 @@ export function exportAsMarkdown(
 	const markdown = doc.textContent;
 
 	downloadFile(markdown, filename, "text/markdown");
+}
+
+/**
+ * Escapes HTML special characters.
+ */
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+}
+
+/**
+ * Generates a complete HTML document with embedded styles.
+ */
+function generateHtmlDocument(title: string, content: string): string {
+	return htmlTemplate
+		.replace("TITLE", escapeHtml(title))
+		.replace("CONTENT", content);
+}
+
+/**
+ * Exports the current editor content as a single-file HTML document.
+ * Converts the markdown text to HTML using the marked parser.
+ */
+export function exportAsHtml(
+	view: EditorView,
+	filename: string,
+	title: string,
+) {
+	const state = view.state;
+	const doc = state.doc;
+	const markdown = doc.textContent;
+	const tokens = md.lexer(markdown);
+	const htmlContent = md.parser(tokens);
+	const fullHtml = generateHtmlDocument(title, htmlContent);
+	downloadFile(fullHtml, filename, "text/html");
 }
 
 /**
