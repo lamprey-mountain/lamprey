@@ -120,9 +120,10 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
             })
             .collect();
         quote! {
-            let (#extract_bindings) = match path.split('/').collect::<Vec<_>>().as_slice() {
+            let segments = path.split('/').collect::<Vec<_>>();
+            let (#extract_bindings) = match segments.as_slice() {
                 #match_arm_pattern => (#extract_bindings),
-                _ => return Err(invalid_path_error()),
+                _ => return Err(crate::v1::routes::invalid_path_error()),
             };
             #(#conversions)*
         }
@@ -231,13 +232,6 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
             })
         }
     })
-}
-
-fn invalid_path_error() -> ::http::Response<::bytes::Bytes> {
-    ::http::Response::builder()
-        .status(::http::StatusCode::NOT_FOUND)
-        .body(::bytes::Bytes::from("invalid path"))
-        .unwrap()
 }
 
 // ---------------------------------------------------------------------------

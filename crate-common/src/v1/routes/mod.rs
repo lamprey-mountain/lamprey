@@ -19,6 +19,14 @@ impl From<PathParamError> for http::Response<bytes::Bytes> {
     }
 }
 
+/// Create an error response for invalid path matches
+pub fn invalid_path_error() -> http::Response<bytes::Bytes> {
+    http::Response::builder()
+        .status(http::StatusCode::NOT_FOUND)
+        .body(bytes::Bytes::from("invalid path"))
+        .unwrap()
+}
+
 /// Trait for types that can be parsed from a path parameter string
 pub trait PathParam: Sized {
     fn from_str(s: &str) -> Result<Self, PathParamError>;
