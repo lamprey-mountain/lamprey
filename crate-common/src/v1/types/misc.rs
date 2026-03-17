@@ -1,6 +1,6 @@
 //! miscellaneous types
 
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 #[cfg(feature = "serde")]
 use serde::Deserialize;
@@ -14,11 +14,11 @@ pub use color::{Color, ColorSemantic, ColorThemed};
 pub use time::Time;
 
 use super::{ApplicationId, SessionId, UserId};
+use crate::v1::routes::PathParam;
 
 #[derive(Debug)]
-#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum UserIdReq {
     #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     UserSelf,
@@ -129,6 +129,46 @@ impl Display for UserIdReq {
         match self {
             UserIdReq::UserSelf => write!(f, "@self"),
             UserIdReq::UserId(user_id) => write!(f, "{user_id}"),
+        }
+    }
+}
+
+impl PathParam for UserIdReq {
+    fn from_str(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+        if s == "@self" {
+            Ok(UserIdReq::UserSelf)
+        } else {
+            UserId::from_str(s)
+                .map(UserIdReq::UserId)
+                .map_err(|_| crate::v1::routes::PathParamError(format!("invalid user id: {}", s)))
+        }
+    }
+}
+
+impl PathParam for ApplicationIdReq {
+    fn from_str(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+        if s == "@self" {
+            Ok(ApplicationIdReq::AppSelf)
+        } else {
+            ApplicationId::from_str(s)
+                .map(ApplicationIdReq::ApplicationId)
+                .map_err(|_| {
+                    crate::v1::routes::PathParamError(format!("invalid application id: {}", s))
+                })
+        }
+    }
+}
+
+impl PathParam for SessionIdReq {
+    fn from_str(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+        if s == "@self" {
+            Ok(SessionIdReq::SessionSelf)
+        } else {
+            SessionId::from_str(s)
+                .map(SessionIdReq::SessionId)
+                .map_err(|_| {
+                    crate::v1::routes::PathParamError(format!("invalid session id: {}", s))
+                })
         }
     }
 }
