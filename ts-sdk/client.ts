@@ -17,6 +17,7 @@ export type ClientOptions = {
 	onSend?: (data: any) => void;
 	onMessage?: (raw: MessageEnvelope) => void;
 	format?: "json" | "msgpack";
+	compress?: "deflate";
 };
 
 export type Http = oapi.Client<paths>;
@@ -54,6 +55,55 @@ export function createClient(opts: ClientOptions): Client {
 	const format = opts.format ?? "json";
 	const useMsgpack = format === "msgpack";
 
+	const dec = new DecompressionStream("deflate");
+	const decReader = dec.readable.getReader();
+	const decWriter = dec.writable.getWriter();
+
+	async function processDecompressedStream() {
+		try {
+			const { value, done } = await decReader.read();
+			if (done) return;
+
+			if (opts.format === "msgpack") {
+				const msg: MessageEnvelope = unpack(value);
+				handleMessage(msg);
+			} else {
+				const text = new TextDecoder().decode(value);
+				const msg: MessageEnvelope = JSON.parse(text);
+				handleMessage(msg);
+			}
+		} catch (e) {
+			console.error("Decompression failed", e);
+		}
+	}
+
+	const handleMessage = (msg: MessageEnvelope) => {
+		opts.onMessage?.(msg);
+		if (msg.op === "Ping") {
+			const pong = { type: "Pong" };
+			opts.onSend?.(pong);
+			ws.send(
+				useMsgpack ? packData(pong) : JSON.stringify(pong),
+			);
+		} else if (msg.op === "Sync") {
+			if (resume) resume.seq = msg.seq;
+			opts.onSync(msg.data, msg);
+		} else if (msg.op === "Error") {
+			opts.onError?.(new Error(msg.error));
+		} else if (msg.op === "Ready") {
+			opts.onReady(msg);
+			resume = { conn: msg.conn, seq: msg.seq };
+			setState("ready");
+			flushQueue();
+		} else if (msg.op === "Resumed") {
+			setState("ready");
+			flushQueue();
+		} else if (msg.op === "Reconnect") {
+			if (!msg.can_resume) resume = null;
+			ws.close();
+		}
+	};
+
 	function packData(data: any): ArrayBuffer {
 		const packed = pack(data);
 		return packed.buffer.slice(
@@ -88,44 +138,25 @@ export function createClient(opts: ClientOptions): Client {
 
 	function setupWebsocket() {
 		if (state.get() !== "connecting") return;
-
-		ws = new WebSocket(
-			new URL(`/api/v1/sync?version=1&format=${format}`, opts.apiUrl),
-		);
+		const url = new URL(`/api/v1/sync?version=1&format=${format}`, opts.apiUrl);
+		if (opts.compress) url.searchParams.set("compression", opts.compress);
+		ws = new WebSocket(url);
 		ws.binaryType = "arraybuffer";
+
 		ws.addEventListener("message", (e) => {
+			if (opts.compress) {
+				decWriter.write(new Uint8Array(e.data));
+				processDecompressedStream();
+				return;
+			}
+
 			let msg: MessageEnvelope;
 			if (e.data instanceof ArrayBuffer) {
-				// Binary message (msgpack)
 				msg = unpack(new Uint8Array(e.data));
 			} else {
-				// Text message (JSON)
 				msg = JSON.parse(e.data);
 			}
-			opts.onMessage?.(msg);
-			if (msg.op === "Ping") {
-				const pong = { type: "Pong" };
-				opts.onSend?.(pong);
-				ws.send(
-					useMsgpack ? packData(pong) : JSON.stringify(pong),
-				);
-			} else if (msg.op === "Sync") {
-				if (resume) resume.seq = msg.seq;
-				opts.onSync(msg.data, msg);
-			} else if (msg.op === "Error") {
-				opts.onError?.(new Error(msg.error));
-			} else if (msg.op === "Ready") {
-				opts.onReady(msg);
-				resume = { conn: msg.conn, seq: msg.seq };
-				setState("ready");
-				flushQueue();
-			} else if (msg.op === "Resumed") {
-				setState("ready");
-				flushQueue();
-			} else if (msg.op === "Reconnect") {
-				if (!msg.can_resume) resume = null;
-				ws.close();
-			}
+			handleMessage(msg);
 		});
 
 		ws.addEventListener("open", (_e) => {
@@ -176,7 +207,7 @@ export function createClient(opts: ClientOptions): Client {
 			let msg: string | ArrayBuffer;
 			if (typeof data === "string") {
 				msg = data;
-			} else if (useMsgpack) {
+			} else if (useMsgpack && !opts.compress) {
 				msg = packData(data);
 			} else {
 				msg = JSON.stringify(data);

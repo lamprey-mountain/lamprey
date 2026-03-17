@@ -114,6 +114,7 @@ export function useChatClient(config: Config) {
 		ready: import("sdk").MessageReady;
 	}>();
 	const useMsgpack = flags.has("msgpack");
+	const useDeflate = flags.has("sync_deflate");
 	const recvLog = logger.for("sync").create("debug", colors.blue);
 	const sendLog = logger.for("sync").create("debug", colors.teal);
 	const syncLog = logger.for("cs");
@@ -121,6 +122,7 @@ export function useChatClient(config: Config) {
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
 		format: useMsgpack ? "msgpack" : "json",
+		compress: useDeflate ? "deflate" : undefined,
 		onMessage(raw) {
 			const op = raw.op === "Sync" ? `Sync (${raw.data.type})` : raw.op;
 			recvLog("recv 🢃", `got op ${op}`, raw);
