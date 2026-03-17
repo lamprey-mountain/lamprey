@@ -84,13 +84,16 @@ impl EventHandler for Handler {
 
                         info!("no portal exists so we'll create one");
 
-                        if let Err(e) = globals.bridge_send(BridgeMessage::DiscordChannelCreate {
-                            guild_id: guild.id,
-                            channel_id: ch.id,
-                            channel_name: ch.name.clone(),
-                            channel_type: ch.kind,
-                            parent_id: ch.parent_id,
-                        }) {
+                        if let Err(e) = globals
+                            .bridge_send(BridgeMessage::DiscordChannelCreate {
+                                guild_id: guild.id,
+                                channel_id: ch.id,
+                                channel_name: ch.name.clone(),
+                                channel_type: ch.kind,
+                                parent_id: ch.parent_id,
+                            })
+                            .await
+                        {
                             error!("failed to send discord channel create message: {e}");
                         }
                     }
@@ -307,13 +310,16 @@ impl EventHandler for Handler {
             return;
         }
 
-        if let Err(e) = globals.bridge_send(BridgeMessage::DiscordChannelCreate {
-            guild_id,
-            channel_id: channel.id,
-            channel_name: channel.name.clone(),
-            channel_type: channel.kind,
-            parent_id: channel.parent_id,
-        }) {
+        if let Err(e) = globals
+            .bridge_send(BridgeMessage::DiscordChannelCreate {
+                guild_id,
+                channel_id: channel.id,
+                channel_name: channel.name.clone(),
+                channel_type: channel.kind,
+                parent_id: channel.parent_id,
+            })
+            .await
+        {
             error!("failed to send discord channel create message: {e}");
         }
     }

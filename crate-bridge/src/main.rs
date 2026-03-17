@@ -175,10 +175,12 @@ async fn main() -> Result<()> {
                 if globals.get_portal_by_thread_id(thread.id).await?.is_some() {
                     continue;
                 }
-                globals.bridge_send(BridgeMessage::LampreyThreadCreate {
-                    thread,
-                    discord_guild_id: realm.discord_guild_id,
-                })?;
+                globals
+                    .bridge_send(BridgeMessage::LampreyThreadCreate {
+                        thread,
+                        discord_guild_id: realm.discord_guild_id,
+                    })
+                    .await?;
             }
         }
         Ok::<(), anyhow::Error>(())

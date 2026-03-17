@@ -183,9 +183,11 @@ impl GlobalsTrait for Arc<Globals> {
 }
 
 impl Globals {
-    pub fn bridge_send(&self, msg: BridgeMessage) -> Result<()> {
+    pub async fn bridge_send(&self, msg: BridgeMessage) -> Result<()> {
         if let Ok(bridge_chan) = self.get_bridge_chan() {
-            let _ = bridge_chan.tell(msg);
+            if let Err(e) = bridge_chan.tell(msg).await {
+                tracing::error!("Failed to send message to Bridge actor: {}", e);
+            }
         }
         Ok(())
     }
