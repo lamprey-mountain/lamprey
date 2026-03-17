@@ -8,7 +8,7 @@ use kameo::actor::Spawn;
 use lamprey::{Lamprey, LampreyMessage, LampreyResponse};
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::Semaphore;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
@@ -73,17 +73,70 @@ async fn main() -> Result<()> {
     // Create globals with empty actor refs
     let globals = Arc::new(Globals::new(pool, config));
 
-    // Spawn the bridge actor using kameo
-    let bridge_ref = Bridge::spawn((globals.clone(),));
+    // supervisor for bridge actor
+    let supervisor_globals = globals.clone();
+    tokio::spawn(async move {
+        loop {
+            tracing::info!("Starting Bridge Actor...");
+            let bridge_ref = Bridge::spawn((supervisor_globals.clone(),));
+            supervisor_globals.set_bridge_chan(bridge_ref.clone()).await;
+            loop {
+                tokio::time::sleep(Duration::from_secs(30)).await;
 
-    // Set the bridge_chan in globals
-    globals.set_bridge_chan(bridge_ref.clone())?;
+                // HACK: check globals reference to see if actor is alive
+                // this should be a no-op message instead
+                let current = supervisor_globals.bridge_chan.read().await;
+                if let Some(ref current_ref) = *current {
+                    if !current_ref.eq(&bridge_ref) {
+                        // actor was replaced
+                        drop(current);
+                        break;
+                    }
+                } else {
+                    // actor was cleared
+                    drop(current);
+                    break;
+                }
+                drop(current);
+            }
 
-    // Spawn lamprey actor using kameo
-    let lamprey_ref = Lamprey::spawn(globals.clone());
+            error!("Bridge Actor crashed or stopped! Restarting in 5 seconds...");
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+    });
 
-    // Set the lamprey_chan in globals
-    globals.set_lamprey_chan(lamprey_ref.clone())?;
+    // supervisor for lamprey actor
+    let supervisor_globals = globals.clone();
+    tokio::spawn(async move {
+        loop {
+            tracing::info!("Starting Lamprey Actor...");
+            let lamprey_ref = Lamprey::spawn(supervisor_globals.clone());
+            supervisor_globals
+                .set_lamprey_chan(lamprey_ref.clone())
+                .await;
+
+            loop {
+                tokio::time::sleep(Duration::from_secs(30)).await;
+
+                let current = supervisor_globals.lamprey_chan.read().await;
+                if let Some(ref current_ref) = *current {
+                    if !current_ref.eq(&lamprey_ref) {
+                        // actor was replaced
+                        drop(current);
+                        break;
+                    }
+                } else {
+                    // actor was cleared
+                    drop(current);
+                    break;
+                }
+                drop(current);
+            }
+
+            error!("Lamprey Actor crashed or stopped! Restarting in 5 seconds...");
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+    });
 
     // Create discord actor (not spawned via kameo - serenity runs its own event loop)
     // We need to create it, store a reference in globals, then clone it for connect()
@@ -114,7 +167,7 @@ async fn main() -> Result<()> {
     let presence_semaphore = Arc::new(Semaphore::new(5)); // Max 5 concurrent presence syncs
     tokio::spawn(async move {
         loop {
-            tokio::time::sleep(std::time::Duration::from_secs(120)).await;
+            tokio::time::sleep(Duration::from_secs(120)).await;
             info!("Re-syncing all user presences");
 
             // Collect presences first to avoid holding DashMap lock while awaiting semaphore
@@ -144,14 +197,17 @@ async fn main() -> Result<()> {
         // We need to keep the process alive for the syncer
         // The syncer runs inside the actor, so we just need to wait
         loop {
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            tokio::time::sleep(Duration::from_secs(60)).await;
         }
     });
 
     let startup_autobridge_globals = globals.clone();
-    let lamprey_ref_startup = lamprey_ref.clone();
     let _startup_autobridge_task = tokio::spawn(async move {
         let globals = startup_autobridge_globals;
+
+        // Wait for lamprey actor to be initialized
+        let lamprey_ref = globals.wait_for_lamprey().await?;
+
         for realm in globals.get_realms().await? {
             if !realm.continuous {
                 continue;
@@ -160,7 +216,7 @@ async fn main() -> Result<()> {
             info!("creating new portal for {:?}", realm);
 
             // Use kameo's ask pattern to get room threads
-            let threads_response = lamprey_ref_startup
+            let threads_response = lamprey_ref
                 .ask(LampreyMessage::RoomThreads {
                     room_id: realm.lamprey_room_id,
                 })
@@ -196,11 +252,13 @@ async fn main() -> Result<()> {
 
         for portal_config in portals {
             let globals = globals.clone();
-            let lamprey_ref = lamprey_ref.clone();
             let permit = backfill_semaphore.clone().acquire_owned().await.unwrap();
             tokio::spawn(async move {
                 let _permit = permit; // hold permit for duration of task
                 let res: Result<()> = async {
+                    // Wait for lamprey actor to be initialized
+                    let lamprey_ref = globals.wait_for_lamprey().await?;
+
                     let from = globals
                         .last_lamprey_ids
                         .get(&portal_config.lamprey_thread_id)

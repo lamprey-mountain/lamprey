@@ -1,5 +1,5 @@
 /// portal actor message
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PortalMessage {
     LampreyMessageCreate {
         message: common::v2::types::message::Message,

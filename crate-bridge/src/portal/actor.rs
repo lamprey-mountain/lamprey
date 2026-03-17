@@ -5,6 +5,7 @@ use crate::bridge_common::{Globals, PortalConfig};
 
 use anyhow::Result;
 use kameo::message::{Context, Message};
+use kameo::prelude::{ActorStopReason, WeakActorRef};
 use serenity::all::ChannelId as DcChannelId;
 use tracing::error;
 
@@ -31,16 +32,17 @@ impl kameo::Actor for Portal {
 
     async fn on_panic(
         &mut self,
+        _actor_ref: WeakActorRef<Self>,
         err: kameo::error::PanicError,
-    ) -> Result<Option<kameo::actor::ActorStopReason>, Self::Error> {
+    ) -> Result<std::ops::ControlFlow<ActorStopReason>, Self::Error> {
         tracing::error!("Portal Actor panicked! Error: {:?}", err);
-        Ok(Some(kameo::actor::ActorStopReason::Panicked(err)))
+        Ok(std::ops::ControlFlow::Break(ActorStopReason::Panicked(err)))
     }
 
     async fn on_stop(
-        self,
-        _actor_ref: kameo::prelude::ActorRef<Self>,
-        reason: kameo::actor::ActorStopReason,
+        &mut self,
+        _actor_ref: WeakActorRef<Self>,
+        reason: ActorStopReason,
     ) -> Result<(), Self::Error> {
         tracing::warn!("Portal Actor stopped. Reason: {:?}", reason);
         Ok(())

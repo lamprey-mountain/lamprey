@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use kameo::actor::Spawn;
 use kameo::message::{Context, Message};
+use kameo::prelude::{ActorStopReason, WeakActorRef};
 use tracing::{error, info};
 
 use crate::{
@@ -30,16 +31,17 @@ impl kameo::Actor for Bridge {
 
     async fn on_panic(
         &mut self,
+        _actor_ref: WeakActorRef<Self>,
         err: kameo::error::PanicError,
-    ) -> Result<Option<kameo::actor::ActorStopReason>, Self::Error> {
+    ) -> Result<std::ops::ControlFlow<ActorStopReason>, Self::Error> {
         tracing::error!("Bridge Actor panicked! Error: {:?}", err);
-        Ok(Some(kameo::actor::ActorStopReason::Panicked(err)))
+        Ok(std::ops::ControlFlow::Break(ActorStopReason::Panicked(err)))
     }
 
     async fn on_stop(
-        self,
-        _actor_ref: kameo::prelude::ActorRef<Self>,
-        reason: kameo::actor::ActorStopReason,
+        &mut self,
+        _actor_ref: WeakActorRef<Self>,
+        reason: ActorStopReason,
     ) -> Result<(), Self::Error> {
         tracing::warn!("Bridge Actor stopped. Reason: {:?}", reason);
         Ok(())

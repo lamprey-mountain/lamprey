@@ -72,16 +72,17 @@ impl kameo::Actor for Lamprey {
 
     async fn on_panic(
         &mut self,
+        _actor_ref: WeakActorRef<Self>,
         err: kameo::error::PanicError,
-    ) -> Result<Option<kameo::actor::ActorStopReason>, Self::Error> {
+    ) -> Result<std::ops::ControlFlow<ActorStopReason>, Self::Error> {
         tracing::error!("Lamprey Actor panicked! Error: {:?}", err);
-        Ok(Some(kameo::actor::ActorStopReason::Panicked(err)))
+        Ok(std::ops::ControlFlow::Break(ActorStopReason::Panicked(err)))
     }
 
     async fn on_stop(
-        self,
-        _actor_ref: kameo::prelude::ActorRef<Self>,
-        reason: kameo::actor::ActorStopReason,
+        &mut self,
+        _actor_ref: WeakActorRef<Self>,
+        reason: ActorStopReason,
     ) -> Result<(), Self::Error> {
         tracing::warn!("Lamprey Actor stopped. Reason: {:?}", reason);
         Ok(())
