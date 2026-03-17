@@ -221,6 +221,21 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
+		id: "MessageMassMention",
+		group: "messages",
+		overwrite_group: "messages",
+		types: [
+			"Room",
+			"Text",
+			"Forum",
+			"Forum2",
+			"Voice",
+			"Broadcast",
+			"Category",
+		],
+		moderator: false,
+	},
+	{
 		id: "MessagePin",
 		group: "messages",
 		overwrite_group: "messages",
@@ -372,6 +387,30 @@ export const permissions: Array<Perm> = [
 		moderator: true,
 	},
 	{
+		id: "AnalyticsView",
+		group: "room",
+		types: ["Room", "Server"],
+		moderator: false,
+	},
+	{
+		id: "ServerMetrics",
+		group: "server",
+		types: ["Server"],
+		moderator: false,
+	},
+	{
+		id: "ServerMaintenance",
+		group: "server",
+		types: ["Server"],
+		moderator: false,
+	},
+	{
+		id: "ServerOversee",
+		group: "server",
+		types: ["Server"],
+		moderator: false,
+	},
+	{
 		id: "CalendarEventCreate",
 		group: "calendar",
 		types: ["Calendar", "Category"],
@@ -391,6 +430,13 @@ export const permissions: Array<Perm> = [
 	},
 	{
 		id: "VoiceMove",
+		group: "voice",
+		overwrite_group: "voice",
+		types: ["Room", "Voice", "Broadcast", "Category"],
+		moderator: true,
+	},
+	{
+		id: "VoiceDeafen",
 		group: "voice",
 		overwrite_group: "voice",
 		types: ["Room", "Voice", "Broadcast", "Category"],
@@ -530,7 +576,7 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
-		id: "RoomForceJoin",
+		id: "RoomJoinForce",
 		group: "server",
 		types: ["Server"],
 		moderator: false,
@@ -563,12 +609,6 @@ export const permissions: Array<Perm> = [
 		id: "UserProfileSelf",
 		group: "members",
 		types: ["Server"],
-		moderator: false,
-	},
-	{
-		id: "ViewAnalytics",
-		group: "room",
-		types: ["Room", "Server"],
 		moderator: false,
 	},
 ];
