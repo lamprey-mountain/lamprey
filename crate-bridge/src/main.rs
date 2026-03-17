@@ -7,6 +7,7 @@ use figment::providers::{Env, Format, Toml};
 use kameo::actor::Spawn;
 use lamprey::{Lamprey, LampreyMessage, LampreyResponse};
 use opentelemetry_otlp::WithExportConfig;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::{str::FromStr, sync::Arc};
 use tokio::sync::Semaphore;
 use tracing::{error, info};
@@ -62,9 +63,9 @@ async fn main() -> Result<()> {
         tracing::subscriber::set_global_default(subscriber)?;
     }
 
-    let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect(&config.database_url)
-        .await?;
+    let options = SqliteConnectOptions::from_str(&config.database_url)?.create_if_missing(true);
+
+    let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 

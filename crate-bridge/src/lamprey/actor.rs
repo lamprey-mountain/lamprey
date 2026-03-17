@@ -3,7 +3,14 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use common::v1::types::util::Time;
+use common::v1::types::{
+    self,
+    pagination::{PaginationQuery, PaginationResponse},
+    presence, Channel, ChannelId, ChannelType, MessageCreate, MessageId, MessageSync, RoomId,
+    Session, User, UserId,
+};
+use common::v2::types::message::Message as LMessage;
+use common::{v1::types::util::Time, v2::types::media::Media};
 use kameo::message::Context;
 use kameo::prelude::*;
 use sdk::Client;
@@ -371,15 +378,6 @@ impl LampreyHandle {
         }
     }
 }
-
-// Re-export types used in LampreyHandle
-use common::v1::types::{
-    self,
-    pagination::{PaginationQuery, PaginationResponse},
-    presence, Channel, ChannelId, ChannelType, Media, MessageCreate, MessageId, MessageSync,
-    RoomId, Session, User, UserId,
-};
-use common::v2::types::message::Message as LMessage;
 
 pub struct LampreyEventHandler {
     pub globals: Arc<Globals>,

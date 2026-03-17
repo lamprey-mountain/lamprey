@@ -15,7 +15,7 @@ use common::v1::types::{
     SessionToken, ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
 };
 use common::v1::types::{
-    MessageMigrate, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
+    MessageCreate, MessageMigrate, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
 };
 use common::v2::types::media::{Media, MediaCreate, MediaCreated, MediaDoneParams};
 use common::v2::types::message::Message;
