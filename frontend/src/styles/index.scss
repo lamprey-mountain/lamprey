@@ -166,21 +166,21 @@ input[type="submit"] {
 		flex-direction: column;
 		overflow-y: auto;
 
-		& > .header {
+		& .list-inner > .header {
 			flex: 1;
 			display: flex;
 			justify-content: end;
 			flex-direction: column;
 		}
 
-		& > .header > header {
+		& .list-inner > .header > header {
 			padding: 0 8px;
 			margin-top: 32px;
 			margin-bottom: 16px;
 			box-shadow: 0 2px 8px $bg-200;
 		}
 
-		& > li {
+		& .list-inner > li {
 			display: grid;
 			grid-template-columns: 128px 1fr max-content;
 
@@ -1734,7 +1734,7 @@ pre.numbered {
 	color: $error-500;
 }
 
-.chat > .list > li.divider {
+.chat > .list .list-inner > li.divider {
 	display: flex;
 	color: $fg-600;
 	font-size: 0.9rem;
@@ -2130,7 +2130,7 @@ table {
 	}
 }
 
-.message + .message > .withavatar.separate {
+.list-inner.separate .message.withavatar.separate {
 	margin-top: 8px;
 	padding: 4px 0;
 }

@@ -1,175 +1,317 @@
 import type { JSX } from "solid-js/jsx-runtime";
-import { createComputed, For, on } from "solid-js";
+import { createMemo, For, on, onCleanup } from "solid-js";
 import { type Accessor, createEffect, createSignal } from "solid-js";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { createResizeObserver } from "@solid-primitives/resize-observer";
-// import { throttle } from "@solid-primitives/scheduled";
+import { createStore } from "solid-js/store";
 
-// export type TimelineStatus = "loading" | "update" | "ready";
+// TODO: split magic numbers into consts, find out how to calculate them
 
-// export type SliceInfo = {
-// 	start: number;
-// 	end: number;
-// };
+const OVERSCAN = 5;
+// const ESTIMATED_H = 24;
+const ESTIMATED_H = 80;
 
-// TODO: dynamically calculate how many events are needed
-// const SLICE_COUNT = 100;
-// const PAGINATE_COUNT = SLICE_COUNT * 3;
-// const PAGINATE_COUNT = SLICE_COUNT;
-// const AUTOSCROLL_MARGIN = 5;
-// const SCROLL_MARGIN = 100;
-// const PAGINATE_MARGIN = SCROLL_MARGIN + 50;
-
-// export function shouldSplit(msg: Event, prev?: Event) {
-//   if (!prev) return true;
-//   if (msg.sender !== prev.sender) return true;
-//   if (msg.originTs - prev.originTs > 1000 * 60 * 5) return true;
-//   return false;
-// }
-
-// /** A list that retains its scroll position when items are added/removed */
-// export function StableList() {}
-
-export function createList<T>(options: {
+export function createList2<T extends { id: string; class?: string }>(options: {
 	items: Accessor<Array<T>>;
 	autoscroll?: Accessor<boolean>;
-	// topPos?: Accessor<number>,
-	// bottomPos?: Accessor<number>,
-	topQuery: string;
-	bottomQuery: string;
 	onPaginate?: (dir: "forwards" | "backwards") => void;
-	// onScroll?: (pos: number) => void;
-	onContextMenu?: (e: MouseEvent) => void;
 	onRestore?: () => boolean;
+	isLoading?: Accessor<boolean>;
 	containerRef?: Accessor<HTMLElement | undefined>;
 }) {
-	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
-
-	createEffect(() => {
-		if (options.containerRef) {
-			setWrapperEl(options.containerRef());
-		}
-	});
-	const [topEl, setTopEl] = createSignal<HTMLElement>();
-	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
-	const [isAtBottom, setIsAtBottom] = createSignal(true); // FIXME: should only be true if at slice end
 	const [scrollPos, setScrollPos] = createSignal(0);
-	let anchorRef: Element;
-	let anchorRect: DOMRect;
+	const [isAtBottom, setIsAtBottom] = createSignal(true);
+	const [visibleRange, setVisibleRange] = createSignal({ start: 0, end: 0 });
 
-	createIntersectionObserver(
-		() => [topEl(), bottomEl()].filter((i) => i) as Element[],
-		handleIntersections,
-	);
+	let wrapperEl: HTMLElement | undefined;
+	let containerEl: HTMLDivElement | undefined;
 
-	function handleIntersections(entries: IntersectionObserverEntry[]) {
-		// PERF: run intersection callback takes too long
-		for (const el of entries) {
-			console.log("intersectionobserver", el.isIntersecting, el.target);
-			if (el.target === topEl()) {
-				if (el.isIntersecting) {
-					anchorRef = el.target;
-					options.onPaginate?.("backwards");
-				}
-			} else if (el.target === bottomEl()) {
-				if (el.isIntersecting) {
-					anchorRef = el.target;
-					options.onPaginate?.("forwards");
+	// --- height + offset tracking ---
+	const [heights, setHeights] = createStore<Record<string, number>>({});
+
+	const offsets = createMemo(() => {
+		const h = heights;
+		const items = options.items();
+		const result = [0];
+		for (let i = 1; i < items.length; i++) {
+			const prevH = h[items[i - 1].id] ?? ESTIMATED_H;
+			result[i] = result[i - 1] + prevH;
+		}
+		return result;
+	});
+
+	const totalHeight = createMemo(() => {
+		const items = options.items();
+		const lastIdx = items.length - 1;
+		if (lastIdx < 0) return 0;
+		return offsets()[lastIdx] + (heights[items[lastIdx].id] ?? ESTIMATED_H);
+	});
+
+	// --- ResizeObserver for height correction ---
+	let isProgrammaticScroll = false;
+	const ro = new ResizeObserver((entries) => {
+		if (!wrapperEl) return;
+		let heightDiff = 0;
+		const firstVisibleIdx = visibleRange().start;
+		let changed = false;
+
+		for (const entry of entries) {
+			const target = entry.target as HTMLElement;
+			const id = target.dataset.id!;
+			const newH = Math.round(
+				entry.borderBoxSize?.[0]?.blockSize ??
+					target.getBoundingClientRect().height,
+			);
+			const oldH = heights[id] ?? ESTIMATED_H;
+
+			if (newH > 0 && oldH !== newH) {
+				setHeights(id, newH);
+				changed = true;
+
+				const idx = options.items().findIndex((x) => x.id === id);
+				// If item's height changes and it's ABOVE the fold, we must push the scroll down
+				// to prevent the viewport from visually jumping!
+				if (idx !== -1 && idx < firstVisibleIdx) {
+					heightDiff += newH - oldH;
 				}
 			}
 		}
-	}
 
-	createResizeObserver(wrapperEl, () => {
-		// NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
-		if (isAtBottom() && options.autoscroll?.() || false) {
-			console.log("autoscroll on resize");
-			wrapperEl()!.scrollTo({ top: 999999, behavior: "instant" });
+		if (heightDiff !== 0) {
+			wrapperEl.scrollTop += heightDiff;
 		}
+		if (changed) updateRender();
 	});
 
-	function setRefs() {
-		const newTopEl = wrapperEl()!.querySelector(
-			options.topQuery,
-		)! as HTMLElement;
-		const newBottomEl = wrapperEl()!.querySelector(
-			options.bottomQuery,
-		)! as HTMLElement;
-		console.log("newTopEl", newTopEl);
-		console.log("newBottomEl", newBottomEl);
-		setTopEl(newTopEl);
-		setBottomEl(newBottomEl);
+	// --- visible range ---
+	function getVisibleRange(): { start: number; end: number } {
+		if (!wrapperEl) return { start: 0, end: 0 };
+		const items = options.items();
+		const scrollTop = wrapperEl.scrollTop;
+		const viewportH = wrapperEl.clientHeight;
+		const top = scrollTop - OVERSCAN * ESTIMATED_H;
+		const bottom = scrollTop + viewportH + OVERSCAN * ESTIMATED_H;
+
+		// binary search start
+		let lo = 0, hi = items.length - 1;
+		while (lo < hi) {
+			const mid = (lo + hi) >> 1;
+			if (
+				(offsets()[mid] ?? 0) + (heights[items[mid].id] ?? ESTIMATED_H) < top
+			) {
+				lo = mid + 1;
+			} else hi = mid;
+		}
+		const start = lo;
+
+		lo = start;
+		hi = items.length - 1;
+		while (lo < hi) {
+			const mid = (lo + hi + 1) >> 1;
+			if ((offsets()[mid] ?? 0) > bottom) hi = mid - 1;
+			else lo = mid;
+		}
+		return { start, end: lo };
+	}
+
+	// --- render loop ---
+	function updateRender() {
+		if (!wrapperEl || !containerEl) return;
+		const { start, end } = getVisibleRange();
+		setVisibleRange({ start, end });
+	}
+
+	// --- scroll handler ---
+	let ticking = false;
+	function onScroll() {
+		if (isProgrammaticScroll) {
+			isProgrammaticScroll = false;
+			return;
+		}
+
+		if (!wrapperEl) return;
+		const pos = wrapperEl.scrollTop;
+		const bottom = wrapperEl.scrollHeight - wrapperEl.clientHeight;
+		setScrollPos(pos);
+		setIsAtBottom(pos >= bottom - 32);
+
+		if (!ticking) {
+			ticking = true;
+			requestAnimationFrame(() => {
+				updateRender();
+				if (!options.isLoading?.()) {
+					if (pos < 200) options.onPaginate?.("backwards");
+					if (bottom - pos < 200) options.onPaginate?.("forwards");
+				}
+				ticking = false;
+			});
+		}
+	}
+
+	// --- items change (the critical part) ---
+	let prevItems: Array<T> = [];
+
+	function onItemsChange(newItems: Array<T>) {
+		if (!wrapperEl) {
+			prevItems = newItems;
+			return;
+		}
+
+		const prevLen = prevItems.length;
+		const newLen = newItems.length;
+
+		// Skip fixed IDs generated by renderTimeline to reliably find a "real" pivot
+		const ignoreIds = new Set([
+			"spacer-top",
+			"thread-header",
+			"spacer-bottom",
+			"spacer-bottom-mini",
+		]);
+
+		let pivotPrevIdx = -1;
+		let pivotNewIdx = -1;
+		let isSameList = false;
+
+		for (let i = 0; i < prevLen; i++) {
+			if (
+				!ignoreIds.has(prevItems[i].id) &&
+				!prevItems[i].id.startsWith("divider-")
+			) {
+				pivotPrevIdx = i;
+				pivotNewIdx = newItems.findIndex((x) => x.id === prevItems[i].id);
+				if (pivotNewIdx !== -1) {
+					isSameList = true;
+					break;
+				}
+			}
+		}
+
+		if (isSameList) {
+			let oldPivotOffset = 0;
+			for (let i = 0; i < pivotPrevIdx; i++) {
+				oldPivotOffset += heights[prevItems[i].id] ?? ESTIMATED_H;
+			}
+
+			let newPivotOffset = 0;
+			for (let i = 0; i < pivotNewIdx; i++) {
+				newPivotOffset += heights[newItems[i].id] ?? ESTIMATED_H;
+			}
+
+			// This represents how much the pivot item moved mathematically.
+			const shiftDiff = newPivotOffset - oldPivotOffset;
+
+			if (shiftDiff !== 0) {
+				// Prepended! Offset shifted, sync scroll
+				wrapperEl.scrollTop += shiftDiff;
+			} else if (newLen > prevLen) {
+				// Appended! Lock auto-scroll to bottom if needed
+				const wasAtBottom = isAtBottom();
+				if (wasAtBottom && options.autoscroll?.()) {
+					queueMicrotask(() =>
+						wrapperEl?.scrollTo({ top: wrapperEl.scrollHeight })
+					);
+				}
+			}
+		} else {
+			// Complete channel clear/reload
+			setHeights({});
+			if (options.onRestore) {
+				setTimeout(() => options.onRestore!(), 0);
+			}
+		}
+
+		prevItems = newItems;
+		updateRender();
 	}
 
 	return {
 		scrollPos,
 		isAtBottom,
 		scrollBy(pos: number, smooth = false) {
-			wrapperEl()?.scrollBy({
+			wrapperEl?.scrollBy({
 				top: pos,
 				behavior: smooth ? "smooth" : "instant",
 			});
 		},
 		scrollTo(pos: number, smooth = false) {
-			wrapperEl()?.scrollTo({
+			wrapperEl?.scrollTo({
 				top: pos,
 				behavior: smooth ? "smooth" : "instant",
 			});
 		},
-		List(props: { children: (item: T, idx: Accessor<number>) => JSX.Element }) {
-			function reanchor() {
-				console.log("do reanchor");
-				const wrap = wrapperEl();
-				const shouldAutoscroll = isAtBottom() &&
-					(options.autoscroll?.() || false);
-				if (!wrap || options.onRestore?.()) return setRefs();
-				if (shouldAutoscroll) {
-					console.log("autoscrolled");
-					wrap.scrollTo({ top: 999999, behavior: "instant" });
-				} else if (anchorRef && wrap.contains(anchorRef)) {
-					// FIXME: don't force reflow; this casuses jank
-					const currentRect = anchorRef.getBoundingClientRect();
-					const diff = (currentRect.y - anchorRect.y) +
-						(currentRect.height - anchorRect.height);
-					console.log("reanchored", anchorRect, currentRect, diff);
-					wrapperEl()?.scrollBy(0, diff);
-				}
-				setRefs();
-				setTimeout(setRefs);
-			}
+		getOffset(id: string) {
+			const idx = options.items().findIndex((x) => x.id === id);
+			return idx !== -1 ? (offsets()[idx] ?? 0) : null;
+		},
+		getViewportHeight() {
+			return wrapperEl?.clientHeight ?? 0;
+		},
+		List(
+			listProps: { children: (item: T, idx: Accessor<number>) => JSX.Element },
+		) {
+			createEffect(on(options.items, onItemsChange));
+			onCleanup(() => ro.disconnect());
 
-			createComputed(on(options.items, () => {
-				console.log("begin reanchor");
-				anchorRect = anchorRef?.getBoundingClientRect();
-				queueMicrotask(reanchor);
-			}));
-
-			function handleScroll() {
-				const pos = wrapperEl()!.scrollTop;
-				const bottom = wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight;
-				setScrollPos(pos);
-				setIsAtBottom(pos >= bottom);
-				// TODO: maybe use css + trigger elements?
-				if (pos >= bottom - 200) {
-					options.onPaginate?.("forwards");
-				} else if (pos < 200) {
-					options.onPaginate?.("backwards");
-				}
-				// options.onScroll?.(pos);
-			}
-
-			// TODO: onScrollEnd might be useful
-			// TODO: set passive: true on scroll event?
 			return (
 				<ul
 					class="list"
-					ref={setWrapperEl}
-					onScroll={handleScroll}
-					onContextMenu={options.onContextMenu}
+					ref={(el) => {
+						wrapperEl = el;
+					}}
+					onScroll={onScroll}
+					style="position: relative; overflow-y: scroll;"
 				>
-					<For each={options.items()}>
-						{(item, idx) => props.children(item, idx)}
-					</For>
+					{/* Explicitly setting the height so `scrollHeight` registers correctly */}
+					<div
+						style={`width: 100%; position: relative; height: ${totalHeight()}px;`}
+					>
+						<div
+							ref={(el) => {
+								containerEl = el;
+							}}
+							style="position: absolute; left: 0; right: 0; top: 0;"
+						>
+							<For
+								each={options.items().slice(
+									visibleRange().start,
+									visibleRange().end + 1,
+								)}
+							>
+								{(item) => {
+									let wrapEl!: HTMLDivElement;
+
+									createEffect(() => {
+										if (!wrapEl) return;
+										const globalIdx = options.items().findIndex((x) =>
+											x.id === item.id
+										);
+										wrapEl.style.translate = `0 ${offsets()[globalIdx] ?? 0}px`;
+										wrapEl.dataset.idx = String(globalIdx);
+									});
+
+									return (
+										<div
+											class="list-inner"
+											classList={{ [item?.class ?? ""]: !!item?.class }}
+											ref={(el) => {
+												wrapEl = el;
+												el.dataset.id = item.id;
+												el.style.position = "absolute";
+												el.style.left = "0";
+												el.style.right = "0";
+												ro.observe(el);
+												onCleanup(() => ro.unobserve(el));
+											}}
+										>
+											{listProps.children(
+												item,
+												() =>
+													options.items().findIndex((x) => x.id === item.id),
+											)}
+										</div>
+									);
+								}}
+							</For>
+						</div>
+					</div>
 				</ul>
 			);
 		},

@@ -275,11 +275,12 @@ export function Input(props: InputProps) {
 
 	const jumpToLatest = () => {
 		// messages are approx. 20 px high, show 3 pages of messages
-		const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+		const SLICE_LEN = Math.max(Math.ceil(globalThis.innerHeight / 20) * 3, 50);
 
 		chUpdate("anchor", {
 			type: "backwards",
 			limit: SLICE_LEN,
+			nonce: Math.random(),
 		});
 	};
 

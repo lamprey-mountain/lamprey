@@ -113,6 +113,6 @@ logger.config("api/invite", { color: colors.orange });
 logger.config("api/audit_log", { color: colors.orange });
 logger.config("api/rooms", { color: colors.orange });
 logger.config("idb", { color: colors.yellow });
-// logger.config("context_menu", { color: colors.red });
+logger.config("timeline", { color: colors.red });
 // logger.config("user_popout", { color: colors.red });
 // logger.config("permissions", { color: colors.green });

@@ -21,6 +21,7 @@ export type TimelineItemT =
 			type: "message";
 			message: MessageT;
 			separate: boolean;
+			class: string;
 		}
 	);
 
@@ -158,7 +159,9 @@ type RenderTimelineParams = {
 };
 
 export function renderTimeline(
-	{ items, read_marker_id, has_before, has_after }: RenderTimelineParams,
+	{ items, read_marker_id, has_before, has_after, cache }:
+		& RenderTimelineParams
+		& { cache?: Map<string, TimelineItemT> },
 ): Array<TimelineItemT> {
 	const newItems: Array<TimelineItemT> = [];
 	if (has_before) {
@@ -187,12 +190,21 @@ export function renderTimeline(
 				unread: markerUnread,
 			});
 		}
-		newItems.push({
-			type: "message",
-			id: msg.id,
-			message: msg as any,
-			separate: prev ? shouldSplit(msg, prev) : true,
-		});
+
+		const separate = prev ? shouldSplit(msg, prev) : true;
+		const cacheKey = `${msg.id}:${separate}`;
+		let item = cache?.get(cacheKey);
+		if (!item) {
+			item = {
+				type: "message",
+				id: msg.id,
+				message: msg as any,
+				separate,
+				class: separate ? "separate" : "",
+			};
+			cache?.set(cacheKey, item);
+		}
+		newItems.push(item);
 	}
 	if (has_after) {
 		newItems.push({

@@ -1,5 +1,6 @@
 import {
 	createEffect,
+	createMemo,
 	createRenderEffect,
 	For,
 	Match,
@@ -9,7 +10,7 @@ import {
 } from "solid-js";
 import { useCtx } from "./context.ts";
 import type { ChannelSearch } from "./context.ts";
-import { createList } from "./list.tsx";
+import { createList2 } from "./list.tsx";
 import type { Channel, Room } from "sdk";
 import {
 	renderTimeline,
@@ -19,7 +20,6 @@ import {
 import { Input } from "./Input.tsx";
 import { useApi, useMessages2 } from "./api.tsx";
 import { createSignal } from "solid-js";
-import { createStore, reconcile } from "solid-js/store";
 import type { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import type { MessageListAnchor } from "./api/services/MessagesService.ts";
@@ -43,7 +43,6 @@ type ChatProps = {
 };
 
 export const ChatMain = (props: ChatProps) => {
-	const ctx = useCtx();
 	const api = useApi();
 	const messagesService = useMessages2();
 	const { t } = useCtx();
@@ -61,17 +60,6 @@ export const ChatMain = (props: ChatProps) => {
 	};
 
 	const messages = messagesService.useList(() => props.channel.id, anchor);
-	const [tl, setTl] = createStore<Array<TimelineItemT>>([]);
-
-	createEffect(() =>
-		console.log(
-			"msgs",
-			messages.loading,
-			messages.latest,
-			messages.error,
-			messages(),
-		)
-	);
 
 	const markReadImmediately = () => {
 		const version_id = props.channel.last_version_id;
@@ -92,22 +80,45 @@ export const ChatMain = (props: ChatProps) => {
 	const autoscroll = () =>
 		!messages()?.has_forward && anchor().type !== "context";
 
+	const timelineCache = new Map<string, TimelineItemT>();
+
+	const tl = createMemo(() => {
+		const m = messages();
+		const rid = read_marker_id();
+		if (!m?.items) return [];
+
+		return renderTimeline({
+			items: m.items,
+			has_after: m.has_forward,
+			has_before: m.has_backwards,
+			read_marker_id: rid ?? null,
+			cache: timelineCache,
+		});
+	});
+
+	const log = logger.for("timeline");
+
+	createEffect(() => {
+		log.debug("anchor", channelState.anchor);
+	});
+
 	let last_thread_id: string | undefined;
 	let chatRef: HTMLDivElement | undefined;
-	const list = createList({
-		items: () => [...tl],
+	const list = createList2({
+		items: tl,
 		autoscroll,
-		topQuery: ".message > .content",
-		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
-			// FIXME: this tends to fire an excessive number of times
-			// it's not a problem when *actually* paginating, but is for eg. marking channels read or scrolling to replies
-			console.log("paginate", dir, messages.loading);
+			log.debug(`paginate dir=${dir} loading=${messages.loading}`);
+
 			if (messages.loading) return;
-			const channel_id = props.channel.id;
+
+			const MIN_MESSAGES = 50;
 
 			// messages are approx. 20 px high, show 3 pages of messages
-			const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+			const SLICE_LEN = Math.max(
+				MIN_MESSAGES,
+				Math.ceil(globalThis.innerHeight / 20) * 3,
+			);
 
 			// scroll a page at a time
 			const PAGINATE_LEN = SLICE_LEN / 3;
@@ -139,55 +150,58 @@ export const ChatMain = (props: ChatProps) => {
 		onRestore() {
 			const a = anchor();
 			if (a.type === "context") {
-				// TODO: is this safe and performant?
-				const target = chatRef?.querySelector(
-					`article[data-message-id="${a.message_id}"]`,
-				);
-				console.log("scroll restore: to anchor", a.message_id, target);
-				if (target) {
-					last_thread_id = props.channel.id;
-					target.scrollIntoView({
-						behavior: "instant",
-						block: "center",
-					});
-					const hl = channelState.highlight;
-					if (hl) scrollAndHighlight(hl);
+				const offset = list.getOffset(a.message_id);
+				if (offset !== null) {
+					list.scrollTo(offset - list.getViewportHeight() / 2);
 					return true;
-				} else {
-					console.warn("couldn't find target to scroll to");
-					return false;
 				}
-			} else if (last_thread_id !== props.channel.id) {
-				const pos = channelState.scroll_pos;
-				console.log("scroll restore: load pos", pos);
-				if (pos === undefined || pos === -1) {
-					list.scrollTo(999999);
-				} else {
-					list.scrollTo(pos);
-				}
-				last_thread_id = props.channel.id;
-				return true;
-			} else {
-				console.log("nothing special");
 				return false;
 			}
+			const pos = channelState.scroll_pos;
+			list.scrollTo(pos === undefined || pos === -1 ? 99999999 : pos);
+			return true;
 		},
 	});
 
-	// effect to update timeline
-	createRenderEffect(
-		on(() => [messages(), read_marker_id()] as const, ([m, rid]) => {
-			if (m?.items) {
-				const rendered = renderTimeline({
-					items: m.items,
-					has_after: m.has_forward,
-					has_before: m.has_backwards,
-					read_marker_id: rid ?? null,
-				});
-				setTl(reconcile(rendered, { key: "id", merge: true }));
-			}
-		}),
-	);
+	// TODO: re-add jumping to context
+	// const list = createList2({
+	// 	onRestore() {
+	// 		const a = anchor();
+	// 		if (a.type === "context") {
+	// 			// TODO: is this safe and performant?
+	// 			const target = chatRef?.querySelector(
+	// 				`article[data-message-id="${a.message_id}"]`,
+	// 			);
+	// 			console.log("scroll restore: to anchor", a.message_id, target);
+	// 			if (target) {
+	// 				last_thread_id = props.channel.id;
+	// 				target.scrollIntoView({
+	// 					behavior: "instant",
+	// 					block: "center",
+	// 				});
+	// 				const hl = channelState.highlight;
+	// 				if (hl) scrollAndHighlight(hl);
+	// 				return true;
+	// 			} else {
+	// 				console.warn("couldn't find target to scroll to");
+	// 				return false;
+	// 			}
+	// 		} else if (last_thread_id !== props.channel.id) {
+	// 			const pos = channelState.scroll_pos;
+	// 			console.log("scroll restore: load pos", pos);
+	// 			if (pos === undefined || pos === -1) {
+	// 				list.scrollTo(999999);
+	// 			} else {
+	// 				list.scrollTo(pos);
+	// 			}
+	// 			last_thread_id = props.channel.id;
+	// 			return true;
+	// 		} else {
+	// 			console.log("nothing special");
+	// 			return false;
+	// 		}
+	// 	},
+	// });
 
 	// effect to initialize new channels
 	createEffect(on(() => props.channel.id, (_channel_id) => {
@@ -218,6 +232,18 @@ export const ChatMain = (props: ChatProps) => {
 		highlight(target);
 		setChannelState("highlight", undefined);
 	}
+
+	// // TODO: replace with this
+	// function scrollAndHighlight(hl?: string) {
+	// 	if (!hl) return;
+	// 	const offset = list.getOffset(hl);
+	// 	if (offset === null) return;
+	// 	list.scrollTo(offset - list.getViewportHeight() / 2);
+	// 	// highlight the rendered el if it exists
+	// 	const el = document.querySelector(`article.message[data-message-id="${hl}"]`);
+	// 	if (el) highlight(el.closest('li') ?? el);
+	// 	setChannelState("highlight", undefined);
+	// }
 
 	createEffect(
 		on(() => channelState.highlight, scrollAndHighlight),
@@ -256,6 +282,9 @@ export const ChatMain = (props: ChatProps) => {
 				if (e.key === "Escape") {
 					const channel_id = props.channel.id;
 					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+
+					// clear stored scroll to guarantee jump on restore
+					setChannelState("scroll_pos", -1);
 
 					setChannelState("anchor", {
 						type: "backwards",
@@ -314,7 +343,7 @@ export const ChatMain = (props: ChatProps) => {
 				</div>
 			</Show>
 			<Show
-				when={messages.loading}
+				when={messages.loading && tl().length === 0}
 				fallback={
 					<list.List>
 						{(item) => (
@@ -345,11 +374,13 @@ export const ChatMain = (props: ChatProps) => {
 	);
 };
 
+// TODO: move this to ChatHeader.tsx
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { ChannelIcon } from "./User.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { MessageSkeleton } from "./MessageSkeleton.tsx";
+import { logger } from "./logger.ts";
 
 export const ChatHeader = (
 	props: ChatProps & { showMembersButton?: boolean },
