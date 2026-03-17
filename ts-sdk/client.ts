@@ -3,7 +3,7 @@ import * as oapi from "openapi-fetch";
 import type { paths } from "./schema.d.ts";
 import { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
 import { createObservable, Observer } from "./observable.ts";
-import { pack, unpack } from "msgpackr";
+import { pack, unpack, unpackMultiple } from "msgpackr";
 export * from "./observable.ts";
 
 export type ClientState = "stopped" | "connecting" | "connected" | "ready";
@@ -51,7 +51,7 @@ export function createClient(opts: ClientOptions): Client {
 	let ws: WebSocket;
 	let resume: null | Resume = null;
 	const state = createObservable<ClientState>("stopped");
-	const queue: (string | ArrayBuffer)[] = [];
+	const queue: Array<any> = [];
 	const format = opts.format ?? "json";
 	const useMsgpack = format === "msgpack";
 
@@ -59,18 +59,24 @@ export function createClient(opts: ClientOptions): Client {
 	const decReader = dec.readable.getReader();
 	const decWriter = dec.writable.getWriter();
 
+	let buffer = new Uint8Array(0);
+
 	async function processDecompressedStream() {
 		try {
 			const { value, done } = await decReader.read();
 			if (done) return;
 
-			if (opts.format === "msgpack") {
-				const msg: MessageEnvelope = unpack(value);
-				handleMessage(msg);
-			} else {
-				const text = new TextDecoder().decode(value);
-				const msg: MessageEnvelope = JSON.parse(text);
-				handleMessage(msg);
+			const newBuffer = new Uint8Array(buffer.length + value.length);
+			newBuffer.set(buffer);
+			newBuffer.set(value, buffer.length);
+			buffer = newBuffer;
+
+			try {
+				const msg = unpackMultiple(buffer);
+				for (const m of msg) handleMessage(m);
+				buffer = new Uint8Array(0);
+			} catch (e) {
+				console.log("Waiting for more data...");
 			}
 		} catch (e) {
 			console.error("Decompression failed", e);
@@ -81,10 +87,7 @@ export function createClient(opts: ClientOptions): Client {
 		opts.onMessage?.(msg);
 		if (msg.op === "Ping") {
 			const pong = { type: "Pong" };
-			opts.onSend?.(pong);
-			ws.send(
-				useMsgpack ? packData(pong) : JSON.stringify(pong),
-			);
+			send(pong);
 		} else if (msg.op === "Sync") {
 			if (resume) resume.seq = msg.seq;
 			opts.onSync(msg.data, msg);
@@ -132,7 +135,31 @@ export function createClient(opts: ClientOptions): Client {
 	function flushQueue() {
 		while (queue.length > 0 && state.get() === "ready") {
 			const item = queue.shift()!;
-			ws.send(item);
+			send2(item);
+		}
+	}
+
+	function send2(data: any) {
+		let msg: string | ArrayBuffer;
+		if (typeof data === "string") {
+			msg = data;
+		} else if (useMsgpack && !opts.compress) {
+			msg = packData(data);
+		} else {
+			msg = JSON.stringify(data);
+		}
+
+		ws.send(msg);
+		opts.onSend?.(data);
+	}
+
+	function send(data: any, force = false) {
+		// maybe i should only send it when its sent to the websocket
+		// right now it might *say* its sent, but actually be in the queue
+		if (state.get() === "ready" || force) {
+			send2(data);
+		} else {
+			queue.push(data);
 		}
 	}
 
@@ -161,9 +188,7 @@ export function createClient(opts: ClientOptions): Client {
 
 		ws.addEventListener("open", (_e) => {
 			setState("connected");
-			const hello: any = { type: "Hello", token: opts.token, ...resume };
-			opts.onSend?.(hello);
-			ws.send(useMsgpack ? packData(hello) : JSON.stringify(hello));
+			send({ type: "Hello", token: opts.token, ...resume }, true);
 		});
 
 		ws.addEventListener("error", (e) => {
@@ -203,24 +228,7 @@ export function createClient(opts: ClientOptions): Client {
 		start,
 		stop,
 		getWebsocket: () => ws,
-		send(data) {
-			let msg: string | ArrayBuffer;
-			if (typeof data === "string") {
-				msg = data;
-			} else if (useMsgpack && !opts.compress) {
-				msg = packData(data);
-			} else {
-				msg = JSON.stringify(data);
-			}
-			// maybe i should only send it when its sent to the websocket
-			// right now it might *say* its sent, but actually be in the queue
-			opts.onSend?.(data);
-			if (state.get() === "ready") {
-				ws.send(msg);
-			} else {
-				queue.push(msg);
-			}
-		},
+		send,
 	};
 }
 

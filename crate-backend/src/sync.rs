@@ -1192,99 +1192,31 @@ impl Connection {
         format: SyncFormat,
         msg: &MessageEnvelope,
     ) -> Result<WsMessage> {
-        // Handle msgpack format
-        if format == SyncFormat::Msgpack {
-            let bytes = rmp_serde::to_vec_named(msg)?;
-            if let Some(Compression::Deflate { compressor, .. }) = compression {
-                let mut output = Vec::with_capacity(bytes.len() + 64);
-                let input = bytes.as_slice();
-
-                let mut input_offset = 0;
-                while input_offset < input.len() {
-                    let mut out_buf = [0u8; 4096];
-                    let before_in = compressor.total_in();
-                    let before_out = compressor.total_out();
-                    compressor.compress(
-                        &input[input_offset..],
-                        &mut out_buf,
-                        FlushCompress::None,
-                    )?;
-                    let consumed = (compressor.total_in() - before_in) as usize;
-                    let produced = (compressor.total_out() - before_out) as usize;
-                    output.extend_from_slice(&out_buf[..produced]);
-                    input_offset += consumed;
-                    if consumed == 0 && produced == 0 {
-                        break;
-                    }
-                }
-
-                // sync flush
-                loop {
-                    let mut out_buf = [0u8; 4096];
-                    let before_out = compressor.total_out();
-                    let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
-                    let produced = (compressor.total_out() - before_out) as usize;
-                    output.extend_from_slice(&out_buf[..produced]);
-                    if produced == 0 || status == Status::StreamEnd || status == Status::BufError {
-                        break;
-                    }
-
-                    // sync flushes always end with these bytes
-                    if output.ends_with(&[0x00, 0x00, 0xff, 0xff]) {
-                        break;
-                    }
-                }
-
-                Ok(WsMessage::Binary(output.into()))
-            } else {
-                Ok(WsMessage::Binary(bytes.into()))
-            }
-        // Handle JSON format
+        let bytes = if format == SyncFormat::Msgpack {
+            rmp_serde::to_vec_named(msg)?
         } else {
-            let json = serde_json::to_string(msg)?;
-            if let Some(Compression::Deflate { compressor, .. }) = compression {
-                let mut output = Vec::with_capacity(json.len() + 64);
-                let input = json.as_bytes();
+            serde_json::to_vec(msg)?
+        };
 
-                let mut input_offset = 0;
-                while input_offset < input.len() {
-                    let mut out_buf = [0u8; 4096];
-                    let before_in = compressor.total_in();
-                    let before_out = compressor.total_out();
-                    compressor.compress(
-                        &input[input_offset..],
-                        &mut out_buf,
-                        FlushCompress::None,
-                    )?;
-                    let consumed = (compressor.total_in() - before_in) as usize;
-                    let produced = (compressor.total_out() - before_out) as usize;
-                    output.extend_from_slice(&out_buf[..produced]);
-                    input_offset += consumed;
-                    if consumed == 0 && produced == 0 {
-                        break;
-                    }
-                }
+        if let Some(Compression::Deflate { compressor, .. }) = compression {
+            let mut output = Vec::with_capacity(bytes.len() + 16);
+            let mut out_buf = [0u8; 4096];
 
-                // sync flush
-                loop {
-                    let mut out_buf = [0u8; 4096];
-                    let before_out = compressor.total_out();
-                    let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
-                    let produced = (compressor.total_out() - before_out) as usize;
-                    output.extend_from_slice(&out_buf[..produced]);
-                    if produced == 0 || status == Status::StreamEnd || status == Status::BufError {
-                        break;
-                    }
+            let before_in = compressor.total_in();
+            let before_out = compressor.total_out();
 
-                    // sync flushes always end with these bytes
-                    if output.ends_with(&[0x00, 0x00, 0xff, 0xff]) {
-                        break;
-                    }
-                }
+            compressor.compress(&bytes, &mut out_buf, FlushCompress::Sync)?;
 
-                Ok(WsMessage::Binary(output.into()))
+            let produced = (compressor.total_out() - before_out) as usize;
+            output.extend_from_slice(&out_buf[..produced]);
+
+            Ok(WsMessage::Binary(output.into()))
+        } else {
+            if format == SyncFormat::Msgpack {
+                Ok(WsMessage::Binary(bytes.into()))
             } else {
-                Ok(WsMessage::text(json))
+                let s = String::from_utf8(bytes).map_err(|e| Error::BadRequest(e.to_string()))?;
+                Ok(WsMessage::Text(s.into()))
             }
         }
     }
