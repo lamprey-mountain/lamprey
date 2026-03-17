@@ -33,7 +33,6 @@ type InputProps = {
 };
 
 export function Input(props: InputProps) {
-	const ctx = useCtx();
 	const api = useApi();
 	const messagesService = useMessages2();
 	const store = useApi2();
@@ -148,16 +147,6 @@ export function Input(props: InputProps) {
 		}
 	};
 
-	function EditorUserMention(props: { id: string }) {
-		const user = api.users.fetch(() => props.id);
-		return <span class="mention-user">@{user()?.name ?? props.id}</span>;
-	}
-
-	function EditorChannelMention(props: { id: string }) {
-		const channel = createMemo(() => api.channels.cache.get(props.id));
-		return <span class="mention-channel">#{channel()?.name ?? props.id}</span>;
-	}
-
 	const editor = createEditor({
 		keymap: {
 			ArrowUp: (state) => {
@@ -187,12 +176,6 @@ export function Input(props: InputProps) {
 
 				return false;
 			},
-		},
-		mentionRenderer: (node, userId) => {
-			render(() => <EditorUserMention id={userId} />, node);
-		},
-		mentionChannelRenderer: (node, channelId) => {
-			render(() => <EditorChannelMention id={channelId} />, node);
 		},
 	});
 

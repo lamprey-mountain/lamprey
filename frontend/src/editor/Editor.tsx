@@ -1,9 +1,7 @@
 import { type Command, EditorState, TextSelection } from "prosemirror-state";
 import { DOMParser } from "prosemirror-model";
-import { EditorView } from "prosemirror-view";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createEditor as createBaseEditor } from "./mod.tsx";
 import { schema } from "./schema.ts";
 import { md } from "../markdown_utils.tsx";
@@ -11,9 +9,9 @@ import {
 	createListContinueCommand,
 	createWrapCommand,
 } from "./editor-utils.ts";
-import { useFormattingToolbar } from "../contexts/formatting-toolbar.tsx";
-import { setFormattingToolbarView } from "../contexts/FormattingToolbar.tsx";
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
+import { useApi } from "../api.tsx";
+import { createEditorNodeViews } from "./node-views.tsx";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -32,6 +30,7 @@ type EditorProps = {
 };
 
 export const createEditor = (opts: EditorProps) => {
+	const api = useApi();
 	const toolbarPlugin = createToolbarPlugin();
 
 	const createState = () => {
@@ -94,28 +93,7 @@ export const createEditor = (opts: EditorProps) => {
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: () => ({
-			mention: (node: any) => {
-				const dom = document.createElement("span");
-				dom.classList.add("mention");
-				if (opts.mentionRenderer) {
-					opts.mentionRenderer(dom, node.attrs.user);
-				} else {
-					dom.textContent = `@${node.attrs.user}`;
-				}
-				return { dom };
-			},
-			mentionChannel: (node: any) => {
-				const dom = document.createElement("span");
-				dom.classList.add("mention");
-				if (opts.mentionChannelRenderer) {
-					opts.mentionChannelRenderer(dom, node.attrs.channel);
-				} else {
-					dom.textContent = `#${node.attrs.channel}`;
-				}
-				return { dom };
-			},
-		}),
+		nodeViews: createEditorNodeViews(api),
 	});
 
 	return {

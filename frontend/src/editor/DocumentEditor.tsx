@@ -9,8 +9,6 @@ import {
 	yUndoPlugin,
 } from "y-prosemirror";
 import { keymap } from "prosemirror-keymap";
-import { render } from "solid-js/web";
-import { getEmojiUrl } from "../media/util.tsx";
 import { md } from "../markdown_utils.tsx";
 import { useApi } from "../api.tsx";
 import { MessageSync } from "sdk";
@@ -26,62 +24,18 @@ import {
 	createListContinueCommand,
 	createWrapCommand,
 } from "./editor-utils.ts";
-import { type Api } from "../api.tsx";
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { useFormattingToolbar } from "../contexts/formatting-toolbar.tsx";
-import { setFormattingToolbarView } from "../contexts/FormattingToolbar.tsx";
-import { EditorView } from "prosemirror-view";
+import { createSignal } from "solid-js";
 import {
 	createDiffPlugin,
 	type DiffMark,
 	diffPluginKey,
 } from "./diff-plugin.ts";
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
+import { createEditorNodeViews } from "./node-views.tsx";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
 	isApplyingFormat = value;
-};
-
-const UserMention = (
-	props: { api: Api; userId: string; channelId: string },
-) => {
-	const channel = props.api.channels.fetch(() => props.channelId);
-	const user = props.api.users.fetch(() => props.userId);
-	const roomMember = props.api.room_members.fetch(
-		() => channel()?.room_id!,
-		() => props.userId,
-	);
-
-	const name = () => {
-		return roomMember()?.override_name ?? user()?.name ?? props.userId;
-	};
-
-	return <span class="mention-user">@{name()}</span>;
-};
-
-const ChannelMention = (props: { api: Api; channelId: string }) => {
-	const channel = props.api.channels.fetch(() => props.channelId);
-	return (
-		<span class="mention-channel">#{channel()?.name ?? props.channelId}</span>
-	);
-};
-
-const RoleMention = (props: { api: Api; roleId: string }) => {
-	const role = () => props.api.roles.cache.get(props.roleId);
-	return <span class="mention-role">@{role()?.name ?? "..."}</span>;
-};
-
-const Emoji = (props: { id: string; name: string }) => {
-	const url = getEmojiUrl(props.id);
-	return (
-		<img
-			class="emoji"
-			src={url}
-			alt={`:${props.name}:`}
-			title={`:${props.name}:`}
-		/>
-	);
 };
 
 type EditorProps = {
@@ -234,96 +188,7 @@ export const createEditor = (
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: (view) => ({
-			// TODO: use actual types
-			mention: (node: any) => {
-				const dom = document.createElement("span");
-				dom.classList.add("mention");
-				let dispose: () => void;
-				if (opts.mentionRenderer) {
-					opts.mentionRenderer(dom, node.attrs.user);
-				} else {
-					dispose = render(
-						() => (
-							<UserMention
-								api={api}
-								userId={node.attrs.user}
-								channelId={currentChannelId()}
-							/>
-						),
-						dom,
-					);
-				}
-				return {
-					dom,
-					destroy: () => {
-						dispose?.();
-					},
-				};
-			},
-			mentionChannel: (node: any) => {
-				const dom = document.createElement("span");
-				dom.classList.add("mention");
-				let dispose: () => void;
-				if (opts.mentionChannelRenderer) {
-					opts.mentionChannelRenderer(dom, node.attrs.channel);
-				} else {
-					dispose = render(
-						() => (
-							<ChannelMention
-								api={api}
-								channelId={node.attrs.channel}
-							/>
-						),
-						dom,
-					);
-				}
-				return {
-					dom,
-					destroy: () => {
-						dispose?.();
-					},
-				};
-			},
-			mentionRole: (node: any) => {
-				const dom = document.createElement("span");
-				dom.classList.add("mention");
-				const dispose = render(
-					() => (
-						<RoleMention
-							api={api}
-							roleId={node.attrs.role}
-						/>
-					),
-					dom,
-				);
-				return {
-					dom,
-					destroy: () => {
-						dispose?.();
-					},
-				};
-			},
-			emoji: (node: any) => {
-				const dom = document.createElement("span");
-				dom.classList.add("mention");
-				const dispose = render(
-					() => (
-						<Emoji
-							id={node.attrs.id}
-							name={node.attrs.name}
-						/>
-					),
-					dom,
-				);
-				return {
-					dom,
-					destroy: () => {
-						dispose?.();
-					},
-				};
-			},
-		}),
+		nodeViews: createEditorNodeViews(api, { currentChannelId }),
 	});
 
 	const subscribe = (channelId: string, branchId: string) => {
