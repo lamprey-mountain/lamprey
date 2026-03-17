@@ -459,6 +459,7 @@ impl Connection {
                             None,
                         );
                         std::mem::swap(self, &mut conn);
+                        tracing::debug!("rehydrating syncer: {}", self.get_id());
                         return Ok(());
                     }
                 }
@@ -1185,6 +1186,10 @@ impl Connection {
 
     pub fn state(&self) -> &ConnectionState {
         &self.state
+    }
+
+    pub fn serialize(&mut self, msg: &MessageEnvelope) -> Result<WsMessage> {
+        Self::compress_message(&mut self.compression, self.format, msg)
     }
 
     fn compress_message(

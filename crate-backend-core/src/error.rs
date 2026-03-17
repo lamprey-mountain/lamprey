@@ -1,10 +1,10 @@
 use std::num::{ParseFloatError, ParseIntError};
 
 use axum::extract::multipart::{MultipartError, MultipartRejection};
-use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
+use axum::{http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{ApiError, ErrorCode, SyncError};
-use common::v1::types::{MessageEnvelope, MessagePayload, MessageSync};
+use common::v1::types::MessageSync;
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
 use tracing::{debug, error};
@@ -278,31 +278,6 @@ impl IntoResponse for Error {
                 error!("Response error: status {}, message {:?}", status, self);
             }
             (status, Json(json!({ "error": self.to_string() }))).into_response()
-        }
-    }
-}
-
-impl From<Error> for Message {
-    fn from(val: Error) -> Self {
-        if let Error::SyncError(sync_err) = &val {
-            Message::Close(Some(axum::extract::ws::CloseFrame {
-                code: sync_err.code(),
-                reason: val.to_string().into(),
-            }))
-        } else {
-            let code = match &val {
-                Error::SyncError(sync_err) => Some(sync_err.clone()),
-                _ => None,
-            };
-            Message::text(
-                serde_json::to_string(&MessageEnvelope {
-                    payload: MessagePayload::Error {
-                        error: val.to_string(),
-                        code,
-                    },
-                })
-                .expect("error should always be able to be serialized"),
-            )
         }
     }
 }

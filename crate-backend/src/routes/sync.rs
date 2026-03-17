@@ -5,14 +5,11 @@ use axum::extract::WebSocketUpgrade;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::routing::any;
-use common::v1::types::error::SyncError;
 use common::v1::types::presence::Presence;
-use common::v1::types::{MessageEnvelope, MessagePayload, SyncFormat, SyncParams};
+use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
 use futures_util::{SinkExt, StreamExt};
-use tracing::{debug, warn};
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::error::Error;
 use crate::sync::{Connection, Timeout};
 use crate::ServerState;
 
@@ -55,7 +52,20 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                         }
                     }
                     Err(err) => {
-                        let _ = ws.send(err.into()).await;
+                        tracing::error!("member list poll error: {err}");
+                        if let Ok(msg) = conn.serialize(&MessageEnvelope {
+                            payload: MessagePayload::Error { error: err.to_string(), code: None },
+                        }) {
+                            if let Err(send_err) = ws.send(msg).await {
+                                tracing::error!("failed to send error message: {send_err}");
+                            }
+                        }
+                        if let Err(err) = conn.drain(&mut ws).await {
+                            tracing::error!("failed to drain messages on error: {err}");
+                        }
+                        if let Err(err) = ws.close().await {
+                            tracing::error!("failed to close websocket: {err}");
+                        }
                         break;
                     }
                 }
@@ -68,7 +78,20 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                         }
                     }
                     Err(err) => {
-                        let _ = ws.send(err.into()).await;
+                        tracing::error!("document poll error: {err}");
+                        if let Ok(msg) = conn.serialize(&MessageEnvelope {
+                            payload: MessagePayload::Error { error: err.to_string(), code: None },
+                        }) {
+                            if let Err(send_err) = ws.send(msg).await {
+                                tracing::error!("failed to send error message: {send_err}");
+                            }
+                        }
+                        if let Err(err) = conn.drain(&mut ws).await {
+                            tracing::error!("failed to drain messages on error: {err}");
+                        }
+                        if let Err(err) = ws.close().await {
+                            tracing::error!("failed to close websocket: {err}");
+                        }
                         break;
                     }
                 }
@@ -85,14 +108,28 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                     Some(Ok(Message::Close(None))) => break,
                     Some(Ok(ws_msg)) => {
                         if let Err(err) = conn.handle_message(ws_msg, &mut ws, &mut timeout).await {
-                            let _ = ws.send(err.into()).await;
-                            let _ = ws
-                                .send(serialize(&MessageEnvelope {
-                                    payload: MessagePayload::Reconnect { can_resume: false },
-                                }, conn.format))
-                                .await;
+                            tracing::error!("error handling websocket message: {err}");
+                            if let Ok(msg) = conn.serialize(&MessageEnvelope {
+                                payload: MessagePayload::Error { error: err.to_string(), code: None },
+                            }) {
+                                if let Err(send_err) = ws.send(msg).await {
+                                    tracing::error!("failed to send error message: {send_err}");
+                                }
+                            }
+                            if let Ok(msg) = conn.serialize(&MessageEnvelope {
+                                payload: MessagePayload::Reconnect { can_resume: false },
+                            }) {
+                                if let Err(send_err) = ws.send(msg).await {
+                                    tracing::error!("failed to send reconnect message: {send_err}");
+                                }
+                            }
                             // TODO: don't close ws on *every* error - most are recoverable
-                            let _ = ws.close().await;
+                            if let Err(err) = conn.drain(&mut ws).await {
+                                tracing::error!("failed to drain messages on error: {err}");
+                            }
+                            if let Err(err) = ws.close().await {
+                                tracing::error!("failed to close websocket: {err}");
+                            }
                             break;
                         }
                     },
@@ -100,25 +137,34 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                 }
             }
             Some(msg) = sushi.next() => {
-                if let Err(_err) = conn.queue_message(Box::new(msg.message), msg.nonce).await {
+                if let Err(err) = conn.queue_message(Box::new(msg.message), msg.nonce).await {
                     // most of the errors that are returned are auth check failures, which we don't need to log
-                    // error!("{err}");
+                    tracing::debug!("failed to queue sushi message (likely auth check failure): {err}");
                 }
             }
             _ = tokio::time::sleep_until(timeout.get_instant()) => {
-                if !handle_timeout(&mut timeout, &mut ws, conn.format).await {
-                    let _ = ws.send(Error::from(SyncError::Timeout).into()).await;
-                    let _ = ws
-                        .send(serialize(&MessageEnvelope {
-                            payload: MessagePayload::Reconnect { can_resume: true },
-                        }, conn.format))
-                        .await;
-                    let _ = ws.close().await;
+                if !handle_timeout(&mut timeout, &mut ws, &mut conn).await {
+                    tracing::warn!("connection timeout, sending reconnect");
+                    if let Ok(msg) = conn.serialize(&MessageEnvelope {
+                        payload: MessagePayload::Reconnect { can_resume: true },
+                    }) {
+                        if let Err(send_err) = ws.send(msg).await {
+                            tracing::error!("failed to send reconnect message: {send_err}");
+                        }
+                    }
+                    if let Err(err) = conn.drain(&mut ws).await {
+                        tracing::error!("failed to drain messages on timeout: {err}");
+                    }
+                    if let Err(err) = ws.close().await {
+                        tracing::error!("failed to close websocket on timeout: {err}");
+                    }
                     break;
                 }
             }
         }
-        let _ = conn.drain(&mut ws).await;
+        if let Err(err) = conn.drain(&mut ws).await {
+            tracing::error!("failed to drain messages: {err}");
+        }
     }
 
     // mark user as offline on normal close
@@ -130,44 +176,46 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                 .set(user_id, Presence::offline())
                 .await
             {
-                warn!("failed to set user {user_id} as offline: {err}");
+                tracing::warn!("failed to set user {user_id} as offline: {err}");
             }
         }
     }
 
     conn.disconnect().await;
-    debug!("inserting syncer: {}", conn.get_id());
+    tracing::debug!("dehydrating syncer: {}", conn.get_id());
     s.syncers.insert(conn.get_id(), conn);
 }
 
-async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket, format: SyncFormat) -> bool {
+async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket, conn: &mut Connection) -> bool {
     match timeout {
         Timeout::Ping(_) => {
             let ping = MessageEnvelope {
                 payload: MessagePayload::Ping {},
             };
-            let _ = ws.send(serialize(&ping, format)).await;
+            match conn.serialize(&ping) {
+                Ok(msg) => {
+                    if let Err(err) = ws.send(msg).await {
+                        tracing::error!("failed to send ping: {err}");
+                        return false;
+                    }
+                }
+                Err(err) => {
+                    tracing::error!("failed to serialize ping: {err}");
+                    return false;
+                }
+            }
+            if let Err(err) = conn.drain(ws).await {
+                tracing::error!("failed to drain messages after ping: {err}");
+            }
             *timeout = Timeout::for_close();
             true
         }
         Timeout::Close(_) => {
-            let _ = ws.close().await;
+            if let Err(err) = ws.close().await {
+                tracing::error!("failed to close websocket on timeout close: {err}");
+            }
             false
         }
-    }
-}
-
-fn serialize(msg: &MessageEnvelope, format: SyncFormat) -> WsMessage {
-    match format {
-        SyncFormat::Msgpack => {
-            let bytes = rmp_serde::to_vec_named(msg)
-                .expect("server messages should always be able to be serialized");
-            WsMessage::Binary(bytes.into())
-        }
-        SyncFormat::Json => WsMessage::text(
-            serde_json::to_string(msg)
-                .expect("server messages should always be able to be serialized"),
-        ),
     }
 }
 
