@@ -41,7 +41,6 @@ impl ServiceAdmin {
     }
 
     pub async fn verify_admin_token(&self, token: &str) -> bool {
-        tracing::debug!("verifying admin token: {}", token);
         if let Some(admin_token) = &self.state.config.admin_token {
             tracing::debug!("checking against static override: {}", admin_token);
             if admin_token.len() == token.len()
