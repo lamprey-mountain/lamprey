@@ -124,11 +124,26 @@ pub async fn backfill_discord_guild(
             continue;
         }
 
-        if globals
-            .get_portal_by_discord_channel(channel.id)
-            .await?
-            .is_some()
-        {
+        if let Some(existing_portal) = globals.get_portal_by_discord_channel(channel.id).await? {
+            // Portal exists but belongs to a different room - skip it
+            // This shouldn't happen during normal operation since handle_link_guild
+            // checks for this, but we handle it here as a safety measure
+            let realms = globals.get_realms().await?;
+            let target_room_id = realms
+                .iter()
+                .find(|r| r.discord_guild_id == guild_id)
+                .map(|r| r.lamprey_room_id);
+
+            if let Some(target_room_id) = target_room_id {
+                if existing_portal.lamprey_room_id != target_room_id {
+                    debug!(
+                        "skipping channel {} during backfill: already bridged to different room",
+                        channel.id
+                    );
+                    continue;
+                }
+            }
+
             let ctx = ctx.clone();
             let globals = globals.clone();
             let channel_id = channel.id;

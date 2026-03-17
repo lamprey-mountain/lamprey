@@ -295,6 +295,25 @@ async fn handle_link_guild(
         }
     };
 
+    let guild = ctx.cache.guild(guild_id).expect("guild").to_owned();
+    let all_channels: Vec<_> = guild.channels.values().chain(&guild.threads).collect();
+
+    for channel in all_channels {
+        if let Some(existing_portal) = globals
+            .get_portal_by_discord_channel(channel.id)
+            .await
+            .ok()
+            .flatten()
+        {
+            if existing_portal.lamprey_room_id != lamprey_room_id {
+                return Err(format!(
+                    "error: channel {} is already bridged to a different room",
+                    channel.id
+                ));
+            }
+        }
+    }
+
     let realm_config = RealmConfig {
         lamprey_room_id,
         discord_guild_id: guild_id,
