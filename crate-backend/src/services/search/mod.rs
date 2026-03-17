@@ -15,7 +15,9 @@ use crate::Error;
 use crate::{error::Result, services::search::index::TantivyHandle, ServerStateInner};
 
 mod directory;
+mod import;
 mod index;
+mod index2;
 mod schema;
 mod tokenizer;
 
@@ -28,6 +30,7 @@ pub struct ServiceSearch {
 
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
+        // let index_manager = index2::IndexManager::new(Arc::clone(&state));
         let tantivy = index::spawn_indexer(Arc::clone(&state));
         Self { state, tantivy }
     }

@@ -11,6 +11,7 @@ use common::v1::types::{
     },
     ChannelId, MessageId, MessageSync, PaginationDirection, PaginationQuery, SERVER_USER_ID,
 };
+use kameo::Actor;
 use tantivy::{
     collector::{Count, TopDocs},
     query::{BooleanQuery, Query, QueryParser},
@@ -40,7 +41,6 @@ pub struct TantivySearcher {
     pub reader: IndexReader,
 }
 
-#[allow(unused)] // TEMP
 pub struct TantivyHandle {
     pub(super) command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
     pub(super) thread: std::thread::JoinHandle<()>,
