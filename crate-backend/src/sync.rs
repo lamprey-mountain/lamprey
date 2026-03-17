@@ -212,11 +212,6 @@ impl Connection {
     ) -> Result<()> {
         match ws_msg {
             Message::Text(utf8_bytes) => {
-                if self.compression.is_some() {
-                    return Err(Error::BadStatic(
-                        "expected binary message for compressed session",
-                    ));
-                }
                 let msg = serde_json::from_str::<MessageClient>(&utf8_bytes)?;
                 self.handle_message_client(msg, ws, timeout).await
             }
@@ -1223,14 +1218,19 @@ impl Connection {
                     }
                 }
 
-                // Sync Flush
+                // sync flush
                 loop {
                     let mut out_buf = [0u8; 4096];
                     let before_out = compressor.total_out();
                     let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
                     let produced = (compressor.total_out() - before_out) as usize;
                     output.extend_from_slice(&out_buf[..produced]);
-                    if produced == 0 || status == Status::StreamEnd {
+                    if produced == 0 || status == Status::StreamEnd || status == Status::BufError {
+                        break;
+                    }
+
+                    // sync flushes always end with these bytes
+                    if output.ends_with(&[0x00, 0x00, 0xff, 0xff]) {
                         break;
                     }
                 }
@@ -1265,14 +1265,19 @@ impl Connection {
                     }
                 }
 
-                // Sync Flush
+                // sync flush
                 loop {
                     let mut out_buf = [0u8; 4096];
                     let before_out = compressor.total_out();
                     let status = compressor.compress(&[], &mut out_buf, FlushCompress::Sync)?;
                     let produced = (compressor.total_out() - before_out) as usize;
                     output.extend_from_slice(&out_buf[..produced]);
-                    if produced == 0 || status == Status::StreamEnd {
+                    if produced == 0 || status == Status::StreamEnd || status == Status::BufError {
+                        break;
+                    }
+
+                    // sync flushes always end with these bytes
+                    if output.ends_with(&[0x00, 0x00, 0xff, 0xff]) {
                         break;
                     }
                 }

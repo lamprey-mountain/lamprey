@@ -957,6 +957,11 @@ pub enum SyncFormat {
     Msgpack,
 }
 
+/// how data should be compressed
+///
+/// the client may send non-compressed json, but not non-compressed
+/// msgpack payloads (as theres no way to differentiate between compressed and
+/// non-compressed)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
