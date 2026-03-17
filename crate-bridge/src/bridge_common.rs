@@ -163,22 +163,60 @@ impl GlobalsTrait for Arc<Globals> {
         let Ok(Some(config)) = self.get_portal_by_thread_id(thread_id).await else {
             return;
         };
+
+        // extract the clone out of the map entry to avoid locking issues
         let portal_ref = self
             .portals
             .entry(config.lamprey_thread_id)
-            .or_insert_with(|| Portal::spawn((self.clone(), config.to_owned())));
-        let _ = portal_ref.tell(msg).await;
+            .or_insert_with(|| Portal::spawn((self.clone(), config.to_owned())))
+            .value()
+            .clone();
+
+        if let Err(e) = portal_ref.tell(msg.clone()).await {
+            tracing::warn!(
+                "Portal actor {} dead ({:?}). Respawning...",
+                config.lamprey_thread_id,
+                e
+            );
+
+            // respawn actor
+            let new_portal = Portal::spawn((self.clone(), config.to_owned()));
+            self.portals
+                .insert(config.lamprey_thread_id, new_portal.clone());
+
+            // retry message
+            let _ = new_portal.tell(msg).await;
+        }
     }
 
     async fn portal_send_dc(&self, channel_id: DcChannelId, msg: PortalMessage) {
         let Ok(Some(config)) = self.get_portal_by_discord_channel(channel_id).await else {
             return;
         };
+
+        // extract the clone out of the map entry to avoid locking issues
         let portal_ref = self
             .portals
             .entry(config.lamprey_thread_id)
-            .or_insert_with(|| Portal::spawn((self.clone(), config.to_owned())));
-        let _ = portal_ref.tell(msg).await;
+            .or_insert_with(|| Portal::spawn((self.clone(), config.to_owned())))
+            .value()
+            .clone();
+
+        if let Err(e) = portal_ref.tell(msg.clone()).await {
+            tracing::warn!(
+                "Portal actor {} dead ({:?}). Respawning...",
+                config.lamprey_thread_id,
+                e
+            );
+
+            // respawn actor
+            let new_portal = Portal::spawn((self.clone(), config.to_owned()));
+            self.portals
+                .insert(config.lamprey_thread_id, new_portal.clone());
+
+            // retry message
+            let _ = new_portal.tell(msg).await;
+        }
     }
 }
 
