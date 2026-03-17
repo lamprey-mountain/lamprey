@@ -40,6 +40,11 @@ import { md } from "../markdown_utils.tsx";
 import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import { diffWords } from "diff";
 import type { Tokens } from "marked";
+import {
+	downloadFile,
+	exportAsMarkdown,
+	generateFilename,
+} from "./export-utils.ts";
 
 type ChangesetSelection = {
 	start_seq: number;
@@ -127,6 +132,21 @@ const DocumentHeader = (
 		if (props.editor) {
 			modalCtl.open({ type: "link", editor: props.editor });
 		}
+	};
+
+	const handleExportMarkdown = () => {
+		const editor = props.editor();
+		const view = editor?.view;
+		if (!view) return;
+		const filename = generateFilename(props.channel.name, "md");
+		exportAsMarkdown(view, filename);
+		setActive(null);
+	};
+
+	const handleExportHtml = () => {
+		// TODO: implement HTML export
+		console.log("HTML export not yet implemented");
+		setActive(null);
 	};
 
 	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
@@ -426,15 +446,15 @@ const DocumentHeader = (
 							</li>
 							<li class="separator"></li>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button onClick={handleExportHtml}>
 									<div class="info">
 										<div>download as html</div>
-										<div class="dim">single file .mhtml file</div>
+										<div class="dim">single file .html file</div>
 									</div>
 								</button>
 							</li>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button onClick={handleExportMarkdown}>
 									<div class="info">
 										<div>download as markdown</div>
 									</div>
