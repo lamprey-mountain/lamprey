@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT discord_role_id\n            FROM discord_role_mapping WHERE lamprey_role_id = ? AND discord_guild_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "discord_role_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3e7f3b9d5b1788a5008d55ff35a88e2d02db40669c08ed45b4b15982aca9053e"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR REPLACE INTO discord_role_mapping (lamprey_role_id, discord_role_id, discord_guild_id)\n            VALUES (?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "3e87b31bddf1e324df42542043c1f3d95e3d66c69b1fb4600505c2e57f6a2733"
+}

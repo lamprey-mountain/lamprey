@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT ext_id\n            FROM puppet WHERE id = ? AND ext_platform = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "ext_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "985af42b763afb48036445dac6089dc0c51b0c0cfa1a731f1042bc7834bf365a"
+}
