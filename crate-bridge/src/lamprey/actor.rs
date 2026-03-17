@@ -69,6 +69,23 @@ impl kameo::Actor for Lamprey {
             media_processed_tx,
         })
     }
+
+    async fn on_panic(
+        &mut self,
+        err: kameo::error::PanicError,
+    ) -> Result<Option<kameo::actor::ActorStopReason>, Self::Error> {
+        tracing::error!("Lamprey Actor panicked! Error: {:?}", err);
+        Ok(Some(kameo::actor::ActorStopReason::Panicked(err)))
+    }
+
+    async fn on_stop(
+        self,
+        _actor_ref: kameo::prelude::ActorRef<Self>,
+        reason: kameo::actor::ActorStopReason,
+    ) -> Result<(), Self::Error> {
+        tracing::warn!("Lamprey Actor stopped. Reason: {:?}", reason);
+        Ok(())
+    }
 }
 
 impl Message<LampreyMessage> for Lamprey {

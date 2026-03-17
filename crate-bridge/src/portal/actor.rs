@@ -28,6 +28,23 @@ impl kameo::Actor for Portal {
             config: args.1,
         })
     }
+
+    async fn on_panic(
+        &mut self,
+        err: kameo::error::PanicError,
+    ) -> Result<Option<kameo::actor::ActorStopReason>, Self::Error> {
+        tracing::error!("Portal Actor panicked! Error: {:?}", err);
+        Ok(Some(kameo::actor::ActorStopReason::Panicked(err)))
+    }
+
+    async fn on_stop(
+        self,
+        _actor_ref: kameo::prelude::ActorRef<Self>,
+        reason: kameo::actor::ActorStopReason,
+    ) -> Result<(), Self::Error> {
+        tracing::warn!("Portal Actor stopped. Reason: {:?}", reason);
+        Ok(())
+    }
 }
 
 impl Debug for Portal {
