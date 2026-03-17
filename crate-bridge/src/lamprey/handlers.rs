@@ -3,7 +3,7 @@
 use anyhow::Result;
 use common::v1::types::util::Time;
 use common::v1::types::{self, misc::UserIdReq, pagination::PaginationQuery, RoomMemberPut};
-use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use common::v2::types::media::{MediaCreate, MediaCreateSource, MediaDoneParams};
 use sdk::Client;
 use std::sync::Arc;
 use tracing::{debug, info};
@@ -31,10 +31,20 @@ pub(super) async fn handle_lamprey_message(
                 },
             };
             let upload = client.http.for_puppet(user_id).media_create(&req).await?;
-            let media = client
+            client
                 .http
                 .for_puppet(user_id)
                 .media_upload(&upload, bytes)
+                .await?;
+            let media = client
+                .http
+                .for_puppet(user_id)
+                .media_done(
+                    upload.media_id,
+                    &MediaDoneParams {
+                        process_async: false,
+                    },
+                )
                 .await?;
             media
                 .ok_or_else(|| anyhow::anyhow!("failed to upload"))

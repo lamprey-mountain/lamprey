@@ -8,16 +8,16 @@ use common::v1::types::{
     reaction::{ReactionKeyParam, ReactionListItem},
     role::RoleDeleteQuery,
     ApplicationId, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelReorder, EmojiId,
-    Invite, InviteCode, InviteCreate, InvitePatch, Media, MediaId, MessageCreate, MessageId,
-    MessageModerate, MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate,
-    Role, RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
+    Invite, InviteCode, InviteCreate, InvitePatch, MediaId, MessageId, MessageModerate,
+    MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
+    RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
     RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomPatch,
     SessionToken, ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
 };
 use common::v1::types::{
     MessageMigrate, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
 };
-use common::v2::types::media::{MediaCreate, MediaCreated};
+use common::v2::types::media::{Media, MediaCreate, MediaCreated, MediaDoneParams};
 use common::v2::types::message::Message;
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
@@ -333,6 +333,7 @@ macro_rules! route {
 // Media Routes
 route!(get    "/api/v1/media/{media_id}"                          => media_info_get(media_id: MediaId) -> Media);
 route!(post   "/api/v1/media"                                     => media_create() -> MediaCreated, MediaCreate);
+route!(put    "/api/v1/media/{media_id}/done"                     => media_done(media_id: MediaId) -> Option<Media>, MediaDoneParams);
 
 // Channel Routes
 route!(post   "/api/v1/room/{room_id}/channel"                    => channel_create_room(room_id: RoomId) -> Channel, ChannelCreate);
