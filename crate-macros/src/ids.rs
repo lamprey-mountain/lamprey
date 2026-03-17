@@ -15,15 +15,14 @@ pub fn expand_typed_id(input: TokenStream, phantom_ty: &str) -> TokenStream {
         }
     };
 
-    let bytes = uuid.as_bytes();
-    let b = bytes.iter().copied().collect::<Vec<u8>>();
+    let b = uuid.as_bytes();
     let phantom_ty =
         syn::parse_str::<syn::Type>(phantom_ty).expect("phantom_ty must be a valid Rust type");
 
     quote! {
         Id {
-            inner: uuid::Uuid::from_bytes([#(#b),*]),
-            phantom: std::marker::PhantomData::<#phantom_ty>,
+            inner: ::uuid::Uuid::from_bytes([#(#b),*]),
+            phantom: ::std::marker::PhantomData::<#phantom_ty>,
         }
     }
     .into()

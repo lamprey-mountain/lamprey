@@ -1,5 +1,6 @@
-use lamprey_macros::endpoint;
-use common::v1::types::{UserWithRelationship, UserIdReq};
+use std::sync::Arc;
+use lamprey_macros::{endpoint, handler};
+use axum::extract::State;
 
 /// User get
 ///
@@ -10,11 +11,9 @@ use common::v1::types::{UserWithRelationship, UserIdReq};
     tags = ["user"],
     scopes = ["identify"],
     response(status = OK, body = UserWithRelationship, description = "success"),
-    errors(UnknownUser),
 )]
 pub mod user_get {
     pub struct Request {
-        /// the user id
         #[path]
         pub user_id: UserIdReq,
     }
@@ -22,4 +21,13 @@ pub mod user_get {
         #[json]
         pub user: UserWithRelationship,
     }
+}
+
+#[handler(user_get)]
+async fn user_get(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: user_get::Request,
+) -> Result<impl IntoResponse> {
+    todo!()
 }
