@@ -4,14 +4,48 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DataStruct, Generics, Ident};
 
-use super::attr::DiffFieldAttr;
+use super::attr::{DiffFieldAttr, DiffStructAttr};
 
 /// Generate the `Diff` trait implementation for a struct.
 pub fn expand_diff_derive(
     struct_ident: &Ident,
     generics: &Generics,
     data_struct: &DataStruct,
+    attrs: &DiffStructAttr,
 ) -> TokenStream {
+    // Determine target type
+    let target_ty = if let Some(target) = &attrs.target {
+        // Parse the target type string
+        match target.parse::<syn::Type>() {
+            Ok(ty) => ty,
+            Err(e) => return e.to_compile_error(),
+        }
+    } else {
+        // Default: try to infer from struct name by removing "Patch" suffix
+        let struct_name = struct_ident.to_string();
+        if let Some(base_name) = struct_name.strip_suffix("Patch") {
+            match syn::parse_str::<syn::Type>(base_name) {
+                Ok(ty) => ty,
+                Err(_) => {
+                    return syn::Error::new(
+                        struct_ident.span(),
+                        format!(
+                            "Could not infer target type from '{}'. Please specify #[diff(target = \"TypeName\")]",
+                            struct_name
+                        ),
+                    )
+                    .to_compile_error();
+                }
+            }
+        } else {
+            return syn::Error::new(
+                struct_ident.span(),
+                "Could not infer target type. Please specify #[diff(target = \"TypeName\")]",
+            )
+            .to_compile_error();
+        }
+    };
+
     // Extract field comparison logic
     let field_checks = generate_field_checks(data_struct);
 
@@ -22,10 +56,10 @@ pub fn expand_diff_derive(
     let diff_where_clause = generate_diff_where_clause(generics, data_struct);
 
     quote! {
-        impl #impl_generics crate::v1::types::util::Diff<#struct_ident #ty_generics> for #struct_ident #ty_generics
+        impl #impl_generics crate::v1::types::util::Diff<#target_ty> for #struct_ident #ty_generics
         #diff_where_clause
         {
-            fn changes(&self, other: &Self) -> bool {
+            fn changes(&self, other: &#target_ty) -> bool {
                 #field_checks
             }
         }

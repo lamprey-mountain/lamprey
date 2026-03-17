@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Diff, EmojiId, MediaId, RoomId, UserId};
+use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -85,7 +85,7 @@ fn validate_emoji_name(name: &str) -> Result<(), validator::ValidationError> {
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, lamprey_macros::Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -95,12 +95,6 @@ pub struct EmojiCustomPatch {
         validate(length(min = 2, max = 32), custom(function = "validate_emoji_name"))
     )]
     pub name: Option<String>,
-}
-
-impl Diff<EmojiCustom> for EmojiCustomPatch {
-    fn changes(&self, other: &EmojiCustom) -> bool {
-        self.name.changes(&other.name)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

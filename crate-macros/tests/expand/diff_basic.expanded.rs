@@ -1,12 +1,18 @@
 use lamprey_macros::Diff;
-/// Basic patch struct with Option fields
+/// Mock target type for testing
+pub struct User {
+    pub name: String,
+    pub description: Option<String>,
+    pub avatar: u64,
+}
+/// Basic patch struct - infers target from name (UserPatch -> User)
 pub struct UserPatch {
     pub name: Option<String>,
     pub description: Option<String>,
     pub avatar: Option<u64>,
 }
-impl crate::v1::types::util::Diff<UserPatch> for UserPatch {
-    fn changes(&self, other: &Self) -> bool {
+impl crate::v1::types::util::Diff<User> for UserPatch {
+    fn changes(&self, other: &User) -> bool {
         if let Some(ref val) = self.name {
             if val.changes(&other.name) {
                 return true;

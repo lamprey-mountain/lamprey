@@ -9,8 +9,6 @@ pub mod truncate;
 pub use super::audit_logs::AuditLogChange;
 pub use super::misc::Time;
 
-// TODO(#993): derive macro
-// NOTE: maybe it should be the other way around?
 // NOTE: maybe i should use associated types instead of generics
 pub trait Diff<T> {
     /// whether this patch would change the other resource

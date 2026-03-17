@@ -1,6 +1,11 @@
 use lamprey_macros::Diff;
 
-/// Generic patch struct
+/// Mock target type for testing
+pub struct GenericTarget<T> {
+    pub value: T,
+}
+
+/// Generic patch struct - infers target from name
 #[derive(Diff)]
 pub struct GenericPatch<T> {
     pub value: Option<T>,

@@ -1,13 +1,17 @@
 use lamprey_macros::Diff;
-/// Generic patch struct
+/// Mock target type for testing
+pub struct GenericTarget<T> {
+    pub value: T,
+}
+/// Generic patch struct - infers target from name
 pub struct GenericPatch<T> {
     pub value: Option<T>,
 }
-impl<T> crate::v1::types::util::Diff<GenericPatch<T>> for GenericPatch<T>
+impl<T> crate::v1::types::util::Diff<Generic> for GenericPatch<T>
 where
     T: crate::v1::types::util::Diff<T>,
 {
-    fn changes(&self, other: &Self) -> bool {
+    fn changes(&self, other: &Generic) -> bool {
         if let Some(ref val) = self.value {
             if val.changes(&other.value) {
                 return true;
@@ -22,19 +26,4 @@ where
     T: Clone,
 {
     pub value: Option<T>,
-}
-impl<T> crate::v1::types::util::Diff<GenericPatchWithBounds<T>>
-for GenericPatchWithBounds<T>
-where
-    T: Clone,
-    T: crate::v1::types::util::Diff<T>,
-{
-    fn changes(&self, other: &Self) -> bool {
-        if let Some(ref val) = self.value {
-            if val.changes(&other.value) {
-                return true;
-            }
-        }
-        false
-    }
 }

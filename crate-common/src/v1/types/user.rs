@@ -196,7 +196,7 @@ pub struct PuppetCreate {
     pub system: bool,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, lamprey_macros::Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -221,15 +221,6 @@ pub struct UserPatch {
 
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub banner: Option<Option<MediaId>>,
-}
-
-impl Diff<User> for UserPatch {
-    fn changes(&self, other: &User) -> bool {
-        self.name.changes(&other.name)
-            || self.description.changes(&other.description)
-            || self.avatar.changes(&other.avatar)
-            || self.banner.changes(&other.banner)
-    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

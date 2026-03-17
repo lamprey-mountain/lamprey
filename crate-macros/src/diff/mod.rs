@@ -12,9 +12,15 @@ pub fn expand_diff_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     let struct_ident = &input.ident;
     let generics = &input.generics;
 
+    // Parse struct-level attributes
+    let struct_attrs = match attr::DiffStructAttr::from_attrs(&input.attrs) {
+        Ok(attrs) => attrs,
+        Err(e) => return e.to_compile_error().into(),
+    };
+
     match &input.data {
         syn::Data::Struct(data_struct) => {
-            expand::expand_diff_derive(struct_ident, generics, data_struct)
+            expand::expand_diff_derive(struct_ident, generics, data_struct, &struct_attrs)
         }
         syn::Data::Enum(enum_data) => {
             return syn::Error::new(

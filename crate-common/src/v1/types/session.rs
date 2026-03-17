@@ -9,10 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    util::{Diff, Time},
-    ApplicationId,
-};
+use crate::v1::types::{util::Time, ApplicationId};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
@@ -105,7 +102,7 @@ pub struct SessionCreate {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, lamprey_macros::Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -145,12 +142,6 @@ impl From<String> for SessionToken {
 impl fmt::Display for SessionToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
-    }
-}
-
-impl Diff<Session> for SessionPatch {
-    fn changes(&self, other: &Session) -> bool {
-        self.name.changes(&other.name)
     }
 }
 
