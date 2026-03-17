@@ -1,4 +1,4 @@
-use common::v1::types::{Media, MediaTrackInfo};
+use common::v1::types::{MediaTrackInfo, MediaV0};
 use headers::HeaderMapExt;
 use http::HeaderMap;
 use std::{
@@ -46,14 +46,14 @@ pub struct BuiltHeaders {
 }
 
 pub enum ContentInfo<'a> {
-    Media(&'a Media),
+    Media(&'a MediaV0),
     Thumb {
-        media: &'a Media,
+        media: &'a MediaV0,
         content_length: Option<u64>,
         animated: bool,
     },
     Gifv {
-        media: &'a Media,
+        media: &'a MediaV0,
         content_length: Option<u64>,
     },
 }
@@ -102,7 +102,7 @@ impl<'a> ContentInfo<'a> {
         }
     }
 
-    fn media(&self) -> &'a Media {
+    fn media(&self) -> &'a MediaV0 {
         match self {
             ContentInfo::Media(media) => media,
             ContentInfo::Thumb { media, .. } => media,
@@ -211,7 +211,7 @@ pub fn build_headers<'a>(
     }
 }
 
-pub fn probably_can_thumbnail(media: &Media) -> bool {
+pub fn probably_can_thumbnail(media: &MediaV0) -> bool {
     match &media.source.info {
         MediaTrackInfo::Image(_) | MediaTrackInfo::Thumbnail(_) | MediaTrackInfo::Video(_) => true,
         MediaTrackInfo::Mixed(m)

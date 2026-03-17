@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::v1::types::media::{Media as V1Media, MediaWithAdmin as V1MediaWithAdmin};
+use crate::v1::types::media::{MediaV0 as V1Media, MediaV0WithAdmin as V1MediaWithAdmin};
 use crate::v2::types::media::{Media, MediaMetadata, MediaStatus};
 
 impl Into<V1Media> for Media {

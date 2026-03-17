@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{Media as MediaV1, MediaTrack as MediaTrackV1};
+use common::v1::types::{MediaTrack as MediaTrackV1, MediaV0 as MediaV1};
 use common::v2::types::media::{Media as MediaV2, MediaPatch as MediaPatchV2, MediaStatus};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};

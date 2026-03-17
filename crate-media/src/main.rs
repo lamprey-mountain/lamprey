@@ -1,6 +1,6 @@
 use axum::{response::Html, routing::get, Json};
 use common::{
-    v1::types::{EmojiId, Media, MediaId, MessageSync},
+    v1::types::{EmojiId, MediaId, MediaV0, MessageSync},
     v2::types::media::MediaStatus,
 };
 use error::Result;
@@ -40,7 +40,7 @@ struct AppState {
 
     // NOTE: be careful about allowing emoji/media editing! i'd need to invalidate these caches
     cache_emoji: Cache<EmojiId, MediaId>,
-    cache_media: Cache<MediaId, Media>,
+    cache_media: Cache<MediaId, MediaV0>,
     pending_thumbnails: Cache<(MediaId, u32, u32, bool), Vec<u8>>,
     pending_gifv: Cache<MediaId, Arc<async_tempfile::TempFile>>,
 
@@ -57,7 +57,7 @@ impl AppState {
         Ok(m)
     }
 
-    async fn ensure_media_ready(&self, media_id: MediaId, wait: bool) -> Result<Media> {
+    async fn ensure_media_ready(&self, media_id: MediaId, wait: bool) -> Result<MediaV0> {
         if let Some(m) = self.cache_media.get(&media_id).await {
             return Ok(m);
         }
@@ -82,7 +82,7 @@ impl AppState {
                 loop {
                     match sub.recv().await {
                         Ok(MessageSync::MediaProcessed { media: m, .. }) if m.id == media_id => {
-                            let media_v1: Media = data::DbMediaData::V2(m).into();
+                            let media_v1: MediaV0 = data::DbMediaData::V2(m).into();
                             self.cache_media.insert(media_id, media_v1.clone()).await;
                             return Ok(media_v1);
                         }

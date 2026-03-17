@@ -1,4 +1,4 @@
-use common::v1::types::{EmojiId, Media, MediaId, MediaTrack};
+use common::v1::types::{EmojiId, MediaId, MediaTrack, MediaV0};
 use common::v2::types::media::{Media as MediaV2, MediaStatus};
 use serde::Deserialize;
 use sqlx::{query_scalar, types::JsonValue, Executor, Postgres};
@@ -8,7 +8,7 @@ use crate::error::Result;
 #[derive(Debug, Deserialize)]
 #[serde(tag = "v")]
 pub enum DbMediaData {
-    V1(Media),
+    V1(MediaV0),
     V2(MediaV2),
     #[serde(untagged)]
     Raw(DbMediaRaw),
@@ -22,7 +22,7 @@ pub struct DbMediaRaw {
     tracks: Vec<MediaTrack>,
 }
 
-impl From<DbMediaData> for Media {
+impl From<DbMediaData> for MediaV0 {
     fn from(value: DbMediaData) -> Self {
         match value {
             DbMediaData::V1(media) => media,
@@ -32,7 +32,7 @@ impl From<DbMediaData> for Media {
     }
 }
 
-impl From<DbMediaRaw> for Media {
+impl From<DbMediaRaw> for MediaV0 {
     fn from(value: DbMediaRaw) -> Self {
         let tracks = value.tracks;
         let source = tracks
@@ -48,7 +48,7 @@ impl From<DbMediaRaw> for Media {
             .expect("media should always have at least one track")
             .clone();
 
-        Media {
+        MediaV0 {
             id: value.id,
             filename: value.filename,
             alt: value.alt,
@@ -72,7 +72,7 @@ where
 pub async fn lookup_media_with_status<'e, E>(
     exec: E,
     media_id: MediaId,
-) -> Result<(Media, Option<MediaStatus>)>
+) -> Result<(MediaV0, Option<MediaStatus>)>
 where
     E: Executor<'e, Database = Postgres>,
 {

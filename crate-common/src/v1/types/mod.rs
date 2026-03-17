@@ -50,7 +50,7 @@ pub mod webhook;
 pub mod interactions;
 
 pub use media::{
-    Audio, Image, Media, MediaTrack, MediaTrackInfo, Mime, Mixed, Text, TimedText, TrackSource,
+    Audio, Image, MediaTrack, MediaTrackInfo, MediaV0, Mime, Mixed, Text, TimedText, TrackSource,
     Video,
 };
 

@@ -15,12 +15,11 @@ mod track;
 pub use mime::Mime;
 pub use track::*;
 
-// TODO: rename to MediaV0
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct Media {
+pub struct MediaV0 {
     pub id: MediaId,
 
     /// The original filename
@@ -40,16 +39,14 @@ pub struct Media {
     pub source: MediaTrack,
 }
 
-// TODO: rename to MediaV0WithAdmin
 /// media with extra metadata for admins
-// maybe make this a part of media? and make each field optional
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MediaWithAdmin {
+pub struct MediaV0WithAdmin {
     #[cfg_attr(feature = "serde", serde(flatten))]
-    pub inner: Media,
+    pub inner: MediaV0,
 
     /// the user who uploaded this media
     pub user_id: UserId,
@@ -58,8 +55,8 @@ pub struct MediaWithAdmin {
     pub deleted_at: Option<Time>,
 }
 
-impl Into<Media> for MediaWithAdmin {
-    fn into(self) -> Media {
+impl Into<MediaV0> for MediaV0WithAdmin {
+    fn into(self) -> MediaV0 {
         self.inner
     }
 }
