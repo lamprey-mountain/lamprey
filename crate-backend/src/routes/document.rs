@@ -24,7 +24,6 @@ use common::v1::types::{
     ids::{DocumentBranchId, DocumentTagId},
     MessageSync,
 };
-use tracing::info;
 use uuid::Uuid;
 
 use utoipa_axum::{router::OpenApiRouter, routes};

@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use common::v1::types::document::serialized::{Serdoc, SerdocBlock};
+use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
@@ -14,21 +14,17 @@ use common::v1::types::{
 use dashmap::DashMap;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use kameo::actor::ActorRef;
-use kameo::prelude::Message;
-use kameo::Actor;
-use tokio::sync::{broadcast, RwLock};
-use tracing::{debug, error, info, trace, warn};
-use uuid::Uuid;
-use yrs::types::{Delta, Event};
-use yrs::updates::encoder::Encode;
-use yrs::{updates::decoder::Decode, Doc, GetString, ReadTxn, StateVector, Transact, Update};
-use yrs::{DeepObservable, Out};
+use kameo::actor::{ActorRef, Spawn};
+use tokio::sync::broadcast;
+use tracing::{debug, error};
+use yrs::ReadTxn;
+use yrs::{updates::decoder::Decode, Doc, StateVector, Transact, Update};
 
-use crate::services::documents::actor::{ApplyUpdate, CheckUnload, DocumentActor};
-use crate::services::documents::util::{
-    get_update_len, HistoryPaginationSummary, DOCUMENT_ROOT_NAME,
+use crate::services::documents::actor::{
+    ApplyUpdate, BroadcastPresence, CheckUnload, DocumentActor, GetDiff, GetSnapshot,
+    GetStateVector, PersistAndUnload, PresenceDelete, PresenceGet, SerdocGet, SerdocPut, Subscribe,
 };
+use crate::services::documents::util::{HistoryPaginationSummary, DOCUMENT_ROOT_NAME};
 use crate::types::DocumentUpdateSummary;
 use crate::{Error, Result, ServerStateInner};
 
@@ -41,8 +37,7 @@ pub type EditContextId = (ChannelId, DocumentBranchId);
 
 pub struct ServiceDocuments {
     state: Arc<ServerStateInner>,
-    edit_contexts: DashMap<EditContextId, Arc<RwLock<EditContext>>>,
-    edit_contexts2: DashMap<EditContextId, ActorRef<DocumentActor>>,
+    edit_contexts: DashMap<EditContextId, ActorRef<DocumentActor>>,
 }
 
 #[derive(Clone, Debug)]
@@ -59,48 +54,7 @@ pub enum DocumentEvent {
     },
 }
 
-struct Presence {
-    user_id: UserId,
-    origin_conn_id: Option<ConnectionId>,
-    cursor_head: String,
-    cursor_tail: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-struct PresenceData {
-    conn_id: ConnectionId,
-    cursor_head: String,
-    cursor_tail: Option<String>,
-}
-
-pub struct EditContext {
-    /// the live crdt document
-    doc: Doc,
-
-    /// the number of changes since the last snapshot
-    changes_since_last_snapshot: u64,
-
-    /// changes that have not been persisted yet
-    pending_changes: Vec<PendingChange>,
-
-    /// the sequence number of the last persisted update or snapshot
-    last_seq: u32,
-
-    update_tx: broadcast::Sender<DocumentEvent>,
-
-    presence: HashMap<UserId, PresenceData>,
-
-    last_snapshot: Instant,
-    last_flush: Instant,
-    last_active: Instant,
-}
-
-struct PendingChange {
-    author_id: UserId,
-    change: Vec<u8>,
-    stat_added: u32,
-    stat_removed: u32,
-}
+pub use actor::PendingChange;
 
 // TODO: better error handling (add yrs errors to to crate::Error)
 impl ServiceDocuments {
@@ -108,7 +62,6 @@ impl ServiceDocuments {
         Self {
             state,
             edit_contexts: DashMap::new(),
-            edit_contexts2: DashMap::new(),
         }
     }
 
@@ -123,7 +76,7 @@ impl ServiceDocuments {
 
                 // capture actors to avoid holding dashmap locks across await points
                 let actors: Vec<_> = documents
-                    .edit_contexts2
+                    .edit_contexts
                     .iter()
                     .map(|entry| (*entry.key(), entry.value().clone()))
                     .collect();
@@ -149,16 +102,16 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         maybe_author: Option<UserId>,
-    ) -> Result<Arc<RwLock<EditContext>>> {
-        if let Some(ctx) = self.edit_contexts.get(&context_id) {
-            return Ok(Arc::clone(&ctx));
+    ) -> Result<ActorRef<DocumentActor>> {
+        if let Some(actor_ref) = self.edit_contexts.get(&context_id) {
+            return Ok(actor_ref.clone());
         }
 
         debug!(context_id = ?context_id, maybe_author = ?maybe_author, "load document");
         let data = self.state.data();
         let loaded = data.document_load(context_id).await;
 
-        let ctx = match loaded {
+        let actor_ref = match loaded {
             Ok(dehydrated) => {
                 // load an existing document
                 let doc = Doc::new();
@@ -176,7 +129,9 @@ impl ServiceDocuments {
 
                 let (update_tx, _) = broadcast::channel(100);
 
-                Arc::new(RwLock::new(EditContext {
+                let actor = DocumentActor {
+                    context_id,
+                    state: self.state.clone(),
                     doc,
                     changes_since_last_snapshot: dehydrated.changes.len() as u64,
                     pending_changes: vec![],
@@ -186,7 +141,8 @@ impl ServiceDocuments {
                     last_snapshot: Instant::now(),
                     last_flush: Instant::now(),
                     last_active: Instant::now(),
-                }))
+                };
+                DocumentActor::spawn(actor)
             }
             Err(Error::ApiError(ApiError {
                 code: ErrorCode::UnknownDocumentBranch,
@@ -205,7 +161,9 @@ impl ServiceDocuments {
 
                     let (update_tx, _) = broadcast::channel(100);
 
-                    Arc::new(RwLock::new(EditContext {
+                    let actor = DocumentActor {
+                        context_id,
+                        state: self.state.clone(),
                         doc,
                         changes_since_last_snapshot: 0,
                         pending_changes: vec![],
@@ -215,7 +173,8 @@ impl ServiceDocuments {
                         last_snapshot: Instant::now(),
                         last_flush: Instant::now(),
                         last_active: Instant::now(),
-                    }))
+                    };
+                    DocumentActor::spawn(actor)
                 } else {
                     return Err(Error::ApiError(ApiError::from_code(
                         ErrorCode::UnknownDocumentBranch,
@@ -226,10 +185,10 @@ impl ServiceDocuments {
         };
 
         match self.edit_contexts.entry(context_id) {
-            dashmap::Entry::Occupied(o) => Ok(Arc::clone(o.get())),
+            dashmap::Entry::Occupied(o) => Ok(o.get().clone()),
             dashmap::Entry::Vacant(v) => {
-                v.insert(Arc::clone(&ctx));
-                Ok(ctx)
+                v.insert(actor_ref.clone());
+                Ok(actor_ref)
             }
         }
     }
@@ -237,37 +196,12 @@ impl ServiceDocuments {
     /// unload a document from memory
     // TODO: automatically unload unused documents
     pub async fn unload(&self, context_id: EditContextId) -> Result<()> {
-        if let Some((_, ctx)) = self.edit_contexts.remove(&context_id) {
-            let mut ctx = ctx.write().await;
-            let data = self.state.data();
-
-            // flush changes
-            let changes: Vec<_> = ctx.pending_changes.drain(..).collect();
-            for change in changes {
-                let new_seq = data
-                    .document_update(
-                        context_id,
-                        change.author_id,
-                        change.change,
-                        change.stat_added,
-                        change.stat_removed,
-                    )
-                    .await?;
-                ctx.last_seq = new_seq;
-            }
-
-            // snapshot if needed
-            if ctx.changes_since_last_snapshot > 0 {
-                let snapshot = ctx
-                    .doc
-                    .transact()
-                    .encode_state_as_update_v1(&StateVector::default());
-                let snapshot_id = Uuid::now_v7();
-                let seq = ctx.last_seq;
-
-                data.document_compact(context_id, snapshot_id, seq, snapshot)
-                    .await?;
-            }
+        if let Some((_, actor_ref)) = self.edit_contexts.remove(&context_id) {
+            actor_ref
+                .ask(PersistAndUnload)
+                .send()
+                .await
+                .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?;
         }
 
         Ok(())
@@ -277,9 +211,9 @@ impl ServiceDocuments {
     pub async fn unload_all(&self) {
         let mut futures = FuturesUnordered::new();
 
-        for ctx in &self.edit_contexts {
-            let context_id = ctx.key();
-            futures.push(self.unload(*context_id));
+        for entry in &self.edit_contexts {
+            let context_id = *entry.key();
+            futures.push(self.unload(context_id));
         }
 
         while let Some(r) = futures.next().await {
@@ -298,133 +232,25 @@ impl ServiceDocuments {
         origin_conn_id: Option<ConnectionId>,
         update_bytes: &[u8],
     ) -> Result<()> {
-        let update = Update::decode_v1(update_bytes)?;
-
-        // TODO: return Err if update is for any root thats not DOCUMENT_ROOT_NAME
-
-        let ctx = self.load(context_id, Some(author_id)).await?;
-        let mut ctx = ctx.write().await;
-
-        // use a std mutex since i'm not using any async stuff here?
-        let stats = Arc::new(std::sync::Mutex::new((0, 0)));
-        let stats_inner = stats.clone();
-
-        let xml = ctx.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
-        let _sub = xml.observe_deep(move |txn, events| {
-            let mut stats = stats_inner.lock().unwrap();
-            for e in events.iter() {
-                match e {
-                    Event::Text(e) => {
-                        for change in e.delta(txn) {
-                            match change {
-                                Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
-                                Delta::Deleted(len) => stats.1 += (*len) as usize,
-                                Delta::Retain(_, _) => {}
-                            }
-                        }
-                    }
-                    Event::XmlText(e) => {
-                        for change in e.delta(txn) {
-                            match change {
-                                Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
-                                Delta::Deleted(len) => stats.1 += (*len) as usize,
-                                Delta::Retain(_, _) => {}
-                            }
-                        }
-                    }
-                    Event::XmlFragment(e) => {
-                        for change in e.delta(txn) {
-                            match change {
-                                yrs::types::Change::Added(values) => {
-                                    for v in values {
-                                        stats.0 += get_update_len(v, txn);
-                                    }
-                                }
-                                yrs::types::Change::Removed(len) => stats.1 += (*len) as usize,
-                                yrs::types::Change::Retain(_) => {}
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        });
-
-        let mut txn = ctx.doc.transact_mut();
-        txn.apply_update(update)?;
-
-        if !txn
-            .root_refs()
-            .all(|(name, out)| name == DOCUMENT_ROOT_NAME && matches!(out, Out::YXmlFragment(_)))
-        {
-            warn!("got invalid root ref for document");
-            // FIXME: rollback and return error here
-        }
-
-        drop(txn);
-        drop(_sub);
-
-        let (stat_inserted, stat_deleted) = {
-            let s = stats.lock().unwrap();
-            (s.0 as u32, s.1 as u32)
-        };
-
-        debug!(stat_inserted, stat_deleted, "edit stats");
-
-        ctx.last_active = Instant::now();
-        ctx.changes_since_last_snapshot += 1;
-        ctx.pending_changes.push(PendingChange {
-            author_id,
-            change: update_bytes.to_vec(),
-            stat_added: stat_inserted,
-            stat_removed: stat_deleted,
-        });
-
-        let data = self.state.data();
-
-        if ctx.should_flush() {
-            let changes: Vec<_> = ctx.pending_changes.drain(..).collect();
-            for change in changes {
-                let new_seq = data
-                    .document_update(
-                        context_id,
-                        change.author_id,
-                        change.change,
-                        change.stat_added,
-                        change.stat_removed,
-                    )
-                    .await?;
-                ctx.last_seq = new_seq;
-            }
-            ctx.last_flush = Instant::now();
-        }
-
-        if ctx.should_snapshot() {
-            let snapshot = ctx
-                .doc
-                .transact()
-                .encode_state_as_update_v1(&StateVector::default());
-            let snapshot_id = Uuid::now_v7();
-            let seq = ctx.last_seq;
-
-            data.document_compact(context_id, snapshot_id, seq, snapshot)
-                .await?;
-            ctx.changes_since_last_snapshot = 0;
-            ctx.last_snapshot = Instant::now();
-        }
-
-        let _ = ctx.update_tx.send(DocumentEvent::Update {
-            origin_conn_id,
-            update: update_bytes.to_vec(),
-        });
-
-        Ok(())
+        let actor_ref = self.load(context_id, Some(author_id)).await?;
+        actor_ref
+            .ask(ApplyUpdate {
+                author_id,
+                origin_conn_id,
+                update_bytes: update_bytes.to_vec(),
+            })
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))
     }
 
     pub async fn get_content(&self, context_id: EditContextId) -> Result<Serdoc> {
-        let ctx = self.load(context_id, None).await?;
-        let ctx = ctx.read().await;
-        Ok(serdoc::doc_to_serdoc(&ctx.doc))
+        let actor_ref = self.load(context_id, None).await?;
+        Ok(actor_ref
+            .ask(SerdocGet)
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
     }
 
     pub async fn get_content_at_seq(&self, context_id: EditContextId, seq: u64) -> Result<Serdoc> {
@@ -456,98 +282,15 @@ impl ServiceDocuments {
         author_id: UserId,
         content: Serdoc,
     ) -> Result<()> {
-        let ctx = self.load(context_id, Some(author_id)).await?;
-        let mut ctx = ctx.write().await;
-
-        // calculate stats
-        let old_serdoc = serdoc::doc_to_serdoc(&ctx.doc);
-        let stat_removed = old_serdoc
-            .root
-            .blocks
-            .iter()
-            .map(|b| match b {
-                SerdocBlock::Markdown { content } => content.chars().count(),
+        let actor_ref = self.load(context_id, Some(author_id)).await?;
+        actor_ref
+            .ask(SerdocPut {
+                author_id,
+                serdoc: content,
             })
-            .sum::<usize>() as u32;
-
-        let stat_added = content
-            .root
-            .blocks
-            .iter()
-            .map(|b| match b {
-                SerdocBlock::Markdown { content } => content.chars().count(),
-            })
-            .sum::<usize>() as u32;
-
-        let update_out = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let update_out_inner = update_out.clone();
-
-        let _sub_update = ctx.doc.observe_update_v1(move |_, event| {
-            let mut u = update_out_inner.lock().unwrap();
-            *u = event.update.to_vec();
-        });
-
-        serdoc::serdoc_apply_to_doc(&ctx.doc, &content);
-
-        drop(_sub_update);
-
-        let update_bytes = {
-            let u = update_out.lock().unwrap();
-            u.clone()
-        };
-
-        if update_bytes.is_empty() {
-            return Ok(());
-        }
-
-        ctx.last_active = Instant::now();
-        ctx.changes_since_last_snapshot += 1;
-        ctx.pending_changes.push(PendingChange {
-            author_id,
-            change: update_bytes.clone(),
-            stat_added,
-            stat_removed,
-        });
-
-        let data = self.state.data();
-
-        if ctx.should_flush() {
-            let changes: Vec<_> = ctx.pending_changes.drain(..).collect();
-            for change in changes {
-                let new_seq = data
-                    .document_update(
-                        context_id,
-                        change.author_id,
-                        change.change,
-                        change.stat_added,
-                        change.stat_removed,
-                    )
-                    .await?;
-                ctx.last_seq = new_seq;
-            }
-            ctx.last_flush = Instant::now();
-        }
-
-        if ctx.should_snapshot() {
-            let snapshot = ctx
-                .doc
-                .transact()
-                .encode_state_as_update_v1(&StateVector::default());
-            let snapshot_id = Uuid::now_v7();
-            let seq = ctx.last_seq;
-
-            data.document_compact(context_id, snapshot_id, seq, snapshot)
-                .await?;
-            ctx.changes_since_last_snapshot = 0;
-            ctx.last_snapshot = Instant::now();
-        }
-
-        let _ = ctx.update_tx.send(DocumentEvent::Update {
-            origin_conn_id: None,
-            update: update_bytes,
-        });
-
-        Ok(())
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))
     }
 
     pub async fn broadcast_presence(
@@ -558,26 +301,19 @@ impl ServiceDocuments {
         cursor_head: String,
         cursor_tail: Option<String>,
     ) -> Result<()> {
-        if let Some(ctx) = self.edit_contexts.get(&context_id) {
-            let mut ctx = ctx.write().await;
-            if let Some(conn_id) = origin_conn_id {
-                ctx.presence.insert(
+        if let Some(actor_ref) = self.edit_contexts.get(&context_id) {
+            actor_ref
+                .ask(BroadcastPresence {
                     user_id,
-                    PresenceData {
-                        conn_id,
-                        cursor_head: cursor_head.clone(),
-                        cursor_tail: cursor_tail.clone(),
-                    },
-                );
-                ctx.last_active = Instant::now();
-            }
-            let _ = ctx.update_tx.send(DocumentEvent::Presence {
-                user_id,
-                origin_conn_id,
-                cursor_head,
-                cursor_tail,
-            });
+                    origin_conn_id,
+                    cursor_head,
+                    cursor_tail,
+                })
+                .send()
+                .await
+                .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?;
         }
+
         Ok(())
     }
 
@@ -587,22 +323,12 @@ impl ServiceDocuments {
         user_id: UserId,
         conn_id: ConnectionId,
     ) -> Result<()> {
-        if let Some(ctx) = self.edit_contexts.get(&context_id) {
-            let mut ctx = ctx.write().await;
-            if let Some(presence) = ctx.presence.get(&user_id) {
-                if presence.conn_id == conn_id {
-                    ctx.presence.remove(&user_id);
-                    if ctx.presence.is_empty() {
-                        ctx.last_active = Instant::now();
-                    }
-                    let _ = ctx.update_tx.send(DocumentEvent::Presence {
-                        user_id,
-                        origin_conn_id: Some(conn_id),
-                        cursor_head: "".to_string(),
-                        cursor_tail: None,
-                    });
-                }
-            }
+        if let Some(actor_ref) = self.edit_contexts.get(&context_id) {
+            actor_ref
+                .ask(PresenceDelete { user_id, conn_id })
+                .send()
+                .await
+                .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?;
         }
         Ok(())
     }
@@ -611,20 +337,12 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
     ) -> Result<Vec<(UserId, String, Option<String>, ConnectionId)>> {
-        let ctx = self.load(context_id, None).await?;
-        let ctx = ctx.read().await;
-        Ok(ctx
-            .presence
-            .iter()
-            .map(|(uid, data)| {
-                (
-                    *uid,
-                    data.cursor_head.clone(),
-                    data.cursor_tail.clone(),
-                    data.conn_id,
-                )
-            })
-            .collect())
+        let actor_ref = self.load(context_id, None).await?;
+        Ok(actor_ref
+            .ask(PresenceGet)
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
     }
 
     pub async fn diff(
@@ -638,27 +356,30 @@ impl ServiceDocuments {
         } else {
             StateVector::decode_v1(state_vector)?
         };
-        let ctx = self.load(context_id, maybe_author).await?;
-        let ctx = ctx.read().await;
-        let serialized = ctx.doc.transact().encode_diff_v1(&s);
-        Ok(serialized)
+        let actor_ref = self.load(context_id, maybe_author).await?;
+        Ok(actor_ref
+            .ask(GetDiff { state_vector: s })
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
     }
 
     pub async fn get_snapshot(&self, context_id: EditContextId) -> Result<Vec<u8>> {
-        let ctx = self.load(context_id, None).await?;
-        let ctx = ctx.read().await;
-        let snapshot = ctx
-            .doc
-            .transact()
-            .encode_state_as_update_v1(&StateVector::default());
-        Ok(snapshot)
+        let actor_ref = self.load(context_id, None).await?;
+        Ok(actor_ref
+            .ask(GetSnapshot)
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
     }
 
     pub async fn get_state_vector(&self, context_id: EditContextId) -> Result<Vec<u8>> {
-        let ctx = self.load(context_id, None).await?;
-        let ctx = ctx.read().await;
-        let sv = ctx.doc.transact().state_vector().encode_v1();
-        Ok(sv)
+        let actor_ref = self.load(context_id, None).await?;
+        Ok(actor_ref
+            .ask(GetStateVector)
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
     }
 
     pub async fn subscribe(
@@ -666,9 +387,12 @@ impl ServiceDocuments {
         context_id: EditContextId,
         maybe_author: Option<UserId>,
     ) -> Result<broadcast::Receiver<DocumentEvent>> {
-        let ctx = self.load(context_id, maybe_author).await?;
-        let ctx = ctx.read().await;
-        Ok(ctx.update_tx.subscribe())
+        let actor_ref = self.load(context_id, maybe_author).await?;
+        Ok(actor_ref
+            .ask(Subscribe)
+            .send()
+            .await
+            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
     }
 
     /// create a new DocumentSyncer for a session
@@ -927,13 +651,7 @@ impl DocumentSyncer {
                         let update = if let Some(sv) = state_vector {
                             srv.documents.diff(context_id, self.user_id, &sv).await?
                         } else {
-                            let ctx = srv.documents.load(context_id, self.user_id).await?;
-                            let ctx = ctx.read().await;
-                            let update = ctx
-                                .doc
-                                .transact()
-                                .encode_state_as_update_v1(&StateVector::default());
-                            update
+                            srv.documents.get_snapshot(context_id).await?
                         };
 
                         let presences = srv.documents.get_presence(context_id).await?;
@@ -1016,41 +734,5 @@ impl DocumentSyncer {
                 continue;
             }
         }
-    }
-}
-
-// TODO: fine tune these numbers
-impl EditContext {
-    /// whether we should create a new snapshot
-    pub fn should_snapshot(&self) -> bool {
-        if self.changes_since_last_snapshot > 256 {
-            return true;
-        } else if self.changes_since_last_snapshot == 0 {
-            return false;
-        }
-
-        if self.last_snapshot.elapsed() > Duration::from_secs(30) {
-            return true;
-        }
-
-        if self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(15) {
-            return true;
-        }
-
-        false
-    }
-
-    /// whether we should flush pending_changes to db
-    pub fn should_flush(&self) -> bool {
-        if self.pending_changes.is_empty() {
-            return false;
-        }
-
-        self.last_flush.elapsed() > Duration::from_secs(10)
-    }
-
-    /// whether we should unload this document
-    pub fn should_unload(&self) -> bool {
-        self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(60)
     }
 }
