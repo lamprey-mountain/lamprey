@@ -15,6 +15,7 @@ import icX4 from "../assets/x-4.png";
 import { permissions } from "../permissions.ts";
 import { cyrb53, LCG } from "../rng.ts";
 import { useCtx } from "../context.ts";
+import { Markdown } from "../Markdown.tsx";
 
 const icon = (type: "x" | "slash" | "check", seed: string) => {
 	const rand = LCG(cyrb53(seed));
@@ -168,17 +169,10 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 													<div class="permission-info">
 														<div class="permission-name">{name}</div>
 														{props.showDescriptions && (
-															<div
+															<Markdown
 																class="permission-description"
-																onClick={() => setIsExpanded(!isExpanded())}
-															>
-																{isExpanded()
-																	? (description as any)
-																	: (description as any).substring(0, 100) +
-																		((description as any).length > 100
-																			? "..."
-																			: "")}
-															</div>
+																content={description}
+															/>
 														)}
 													</div>
 													<div class="permission-controls">

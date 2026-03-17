@@ -24,6 +24,7 @@ import { useModals } from "../contexts/modal";
 import { A } from "@solidjs/router";
 import { Avatar } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
+import { Markdown } from "../Markdown.tsx";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));
@@ -514,6 +515,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				<br />
 				<For
 					each={[
+						/* TODO: move these to i18n */
 						{
 							key: "is_mentionable",
 							name: "Mentionable",
@@ -551,12 +553,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 								<div class="name">
 									{i.name}
 								</div>
-								<div
-									class="description"
-									innerHTML={md.parseInline(
-										i.description ?? "",
-									) as string}
-								/>
+								<Markdown class="description" content={i.description ?? ""} />
 							</div>
 						</CheckboxOption>
 					)}
