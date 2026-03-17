@@ -170,13 +170,17 @@ macro_rules! route {
             ) -> Result<$res> {
                 let url = self.base_url.join(&format!($url))?;
                 let res = self.client
-                    .$method(url)
+                    .$method(url.clone())
                     .header("content-type", "application/json")
                     .json(body)
                     .send()
                     .await?;
-                let res = res.error_for_status()?;
-                let text = res.text().await?;
+                let status = res.status();
+                let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                if !status.is_success() {
+                    error!(name = stringify!($name), status = %status, response_body = %text, url = %url, "request failed");
+                    return Err(anyhow::anyhow!("request failed with status {}: {}", status, text));
+                }
                 serde_json::from_str(&text).with_context(|| {
                     error!(response_body = %text, "failed to decode response body");
                     format!("failed to decode response body for {}", stringify!($name))
@@ -193,13 +197,17 @@ macro_rules! route {
             ) -> Result<$res> {
                 let url = self.base_url.join(&format!($url))?;
                 let res = self.client
-                    .$method(url)
+                    .$method(url.clone())
                     .header("content-type", "application/json")
                     .json(&json!({}))
                     .send()
                     .await?;
-                let res = res.error_for_status()?;
-                let text = res.text().await?;
+                let status = res.status();
+                let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                if !status.is_success() {
+                    error!(name = stringify!($name), status = %status, response_body = %text, url = %url, "request failed");
+                    return Err(anyhow::anyhow!("request failed with status {}: {}", status, text));
+                }
                 serde_json::from_str(&text).with_context(|| {
                     error!(response_body = %text, "failed to decode response body");
                     format!("failed to decode response body for {}", stringify!($name))
@@ -265,12 +273,16 @@ macro_rules! route {
             ) -> Result<$res> {
                 let url = self.base_url.join(&format!($url))?;
                 let res = self.client
-                    .$method(url)
+                    .$method(url.clone())
                     .query(&$query_param)
                     .send()
                     .await?;
-                let res = res.error_for_status()?;
-                let text = res.text().await?;
+                let status = res.status();
+                let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                if !status.is_success() {
+                    error!(name = stringify!($name), status = %status, response_body = %text, url = %url, "request failed");
+                    return Err(anyhow::anyhow!("request failed with status {}: {}", status, text));
+                }
                 serde_json::from_str(&text).with_context(|| {
                     error!(response_body = %text, "failed to decode response body");
                     format!("failed to decode response body for {}", stringify!($name))
@@ -290,13 +302,17 @@ macro_rules! route {
             ) -> Result<$res> {
                 let url = self.base_url.join(&format!($url))?;
                 let res = self.client
-                    .$method(url)
+                    .$method(url.clone())
                     .query(&$query_param1)
                     .query(&$query_param2)
                     .send()
                     .await?;
-                let res = res.error_for_status()?;
-                let text = res.text().await?;
+                let status = res.status();
+                let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                if !status.is_success() {
+                    error!(name = stringify!($name), status = %status, response_body = %text, url = %url, "request failed");
+                    return Err(anyhow::anyhow!("request failed with status {}: {}", status, text));
+                }
                 serde_json::from_str(&text).with_context(|| {
                     error!(response_body = %text, "failed to decode response body");
                     format!("failed to decode response body for {}", stringify!($name))
