@@ -53,59 +53,42 @@ export function createClient(opts: ClientOptions): Client {
 	const state = createObservable<ClientState>("stopped");
 	const queue: Array<any> = [];
 	const format = opts.format ?? "json";
-	const useMsgpack = format === "msgpack";
 
-	const dec = new DecompressionStream("deflate");
-	const decReader = dec.readable.getReader();
-	const decWriter = dec.writable.getWriter();
-
-	let buffer = new Uint8Array(0);
-
-	async function processDecompressedStream() {
-		try {
-			const { value, done } = await decReader.read();
-			if (done) return;
-
-			const newBuffer = new Uint8Array(buffer.length + value.length);
-			newBuffer.set(buffer);
-			newBuffer.set(value, buffer.length);
-			buffer = newBuffer;
-
-			try {
-				const msg = unpackMultiple(buffer);
-				for (const m of msg) handleMessage(m);
-				buffer = new Uint8Array(0);
-			} catch (e) {
-				console.log("Waiting for more data...");
+	function handleMessage(msg: MessageEnvelope) {
+		opts.onMessage?.(msg);
+		switch (msg.op) {
+			case "Ping": {
+				send({ type: "Pong" });
+				break;
 			}
-		} catch (e) {
-			console.error("Decompression failed", e);
+			case "Sync": {
+				if (resume) resume.seq = msg.seq;
+				opts.onSync(msg.data, msg);
+				break;
+			}
+			case "Ready": {
+				opts.onReady(msg);
+				resume = { conn: msg.conn, seq: msg.seq };
+				state.set("ready");
+				flushQueue();
+				break;
+			}
+			case "Resumed": {
+				state.set("ready");
+				flushQueue();
+				break;
+			}
+			case "Error": {
+				opts.onError?.(new Error(msg.error));
+				break;
+			}
+			case "Reconnect": {
+				if (!msg.can_resume) resume = null;
+				ws?.close();
+				break;
+			}
 		}
 	}
-
-	const handleMessage = (msg: MessageEnvelope) => {
-		opts.onMessage?.(msg);
-		if (msg.op === "Ping") {
-			const pong = { type: "Pong" };
-			send(pong);
-		} else if (msg.op === "Sync") {
-			if (resume) resume.seq = msg.seq;
-			opts.onSync(msg.data, msg);
-		} else if (msg.op === "Error") {
-			opts.onError?.(new Error(msg.error));
-		} else if (msg.op === "Ready") {
-			opts.onReady(msg);
-			resume = { conn: msg.conn, seq: msg.seq };
-			setState("ready");
-			flushQueue();
-		} else if (msg.op === "Resumed") {
-			setState("ready");
-			flushQueue();
-		} else if (msg.op === "Reconnect") {
-			if (!msg.can_resume) resume = null;
-			ws.close();
-		}
-	};
 
 	function packData(data: any): ArrayBuffer {
 		const packed = pack(data);
@@ -132,53 +115,51 @@ export function createClient(opts: ClientOptions): Client {
 		state.set(newState);
 	}
 
-	function flushQueue() {
-		while (queue.length > 0 && state.get() === "ready") {
-			const item = queue.shift()!;
-			send2(item);
-		}
-	}
-
-	function send2(data: any) {
-		let msg: string | ArrayBuffer;
-		if (typeof data === "string") {
-			msg = data;
-		} else if (useMsgpack && !opts.compress) {
-			msg = packData(data);
-		} else {
-			msg = JSON.stringify(data);
-		}
-
-		ws.send(msg);
-		opts.onSend?.(data);
-	}
-
 	function send(data: any, force = false) {
-		// maybe i should only send it when its sent to the websocket
-		// right now it might *say* its sent, but actually be in the queue
 		if (state.get() === "ready" || force) {
-			send2(data);
+			let msg: string | ArrayBuffer;
+			if (typeof data === "string") {
+				msg = data;
+			} else if (format === "msgpack" && !opts.compress) {
+				msg = packData(data);
+			} else {
+				msg = JSON.stringify(data);
+			}
+
+			ws?.send(msg);
+			opts.onSend?.(data);
 		} else {
 			queue.push(data);
 		}
 	}
 
-	function setupWebsocket() {
+	function flushQueue() {
+		while (queue.length > 0 && state.get() === "ready") {
+			send(queue.shift()!);
+		}
+	}
+
+	function connect() {
 		if (state.get() !== "connecting") return;
 		const url = new URL(`/api/v1/sync?version=1&format=${format}`, opts.apiUrl);
 		if (opts.compress) url.searchParams.set("compression", opts.compress);
 		ws = new WebSocket(url);
 		ws.binaryType = "arraybuffer";
 
+		const streamProcessor = opts.compress
+			? createDecompressor(opts.format ?? "json", handleMessage)
+			: null;
+
 		ws.addEventListener("message", (e) => {
-			if (opts.compress) {
-				decWriter.write(new Uint8Array(e.data));
-				processDecompressedStream();
+			const isBinary = e.data instanceof ArrayBuffer;
+
+			if (isBinary && streamProcessor) {
+				streamProcessor.write(new Uint8Array(e.data));
 				return;
 			}
 
 			let msg: MessageEnvelope;
-			if (e.data instanceof ArrayBuffer) {
+			if (isBinary) {
 				msg = unpack(new Uint8Array(e.data));
 			} else {
 				msg = JSON.parse(e.data);
@@ -201,7 +182,7 @@ export function createClient(opts: ClientOptions): Client {
 		ws.addEventListener("close", () => {
 			if (state.get() === "stopped") return;
 			setState("connecting");
-			setTimeout(setupWebsocket, 1000);
+			setTimeout(connect, 1000);
 		});
 	}
 
@@ -210,9 +191,9 @@ export function createClient(opts: ClientOptions): Client {
 		setState("connecting");
 		if (ws) {
 			ws.close();
-			setupWebsocket();
+			connect();
 		} else {
-			setupWebsocket();
+			connect();
 		}
 	}
 
@@ -234,3 +215,38 @@ export function createClient(opts: ClientOptions): Client {
 
 export const UUID_MIN = "00000000-0000-0000-0000-000000000000";
 export const UUID_MAX = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+
+function createDecompressor(
+	format: "json" | "msgpack",
+	onMessage: (msg: MessageEnvelope) => void,
+) {
+	const stream = new DecompressionStream("deflate");
+	const writer = stream.writable.getWriter();
+	const reader = stream.readable.getReader();
+	let buffer = new Uint8Array(0);
+
+	(async () => {
+		while (true) {
+			const { value, done } = await reader.read();
+			if (done) break;
+
+			const newBuf = new Uint8Array(buffer.length + value.length);
+			newBuf.set(buffer);
+			newBuf.set(value, buffer.length);
+			try {
+				if (format === "json") {
+					const msg = JSON.parse(new TextDecoder().decode(newBuf));
+					onMessage(msg);
+				} else {
+					const msgs = unpackMultiple(newBuf);
+					msgs.forEach(onMessage);
+				}
+				buffer = new Uint8Array(0);
+			} catch {
+				buffer = newBuf;
+			}
+		}
+	})();
+
+	return writer;
+}
