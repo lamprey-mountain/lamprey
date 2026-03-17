@@ -383,49 +383,49 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 						showVoiceTray={true}
 					>
 						<Show when={channel()}>
-							<Show when={channel()!.type !== "Voice"}>
-								<ChatHeader channel={channel()!} />
-							</Show>
-							<Show
-								when={channel()!.type === "Text" ||
-									channel()!.type === "Dm" ||
-									channel()!.type === "Gdm" ||
-									channel()!.type === "Announcement" ||
-									channel()!.type === "ThreadPublic" ||
-									channel()!.type === "ThreadPrivate"}
-							>
-								<ChatMain channel={channel()!} />
-							</Show>
-							<Show when={channel()!.type === "Voice"}>
-								<Voice channel={channel()!} />
-							</Show>
-							<Show when={channel()!.type === "Document"}>
-								<Document
-									channel={channel()!}
-									selectedSeq={selectedSeq()}
-									onSelectChangeset={setSelectedSeq}
-									hoverSeq={hoverSeq()}
-									onHoverChangeset={setHoverSeq}
-								/>
-							</Show>
-							<Show when={channel()!.type === "Wiki"}>
-								<Wiki channel={channel()!} />
-							</Show>
-							<Show when={channel()!.type === "Forum"}>
-								<Forum channel={channel()!} />
-							</Show>
-							<Show when={channel()!.type === "Forum2"}>
-								<Forum2 channel={channel()!} />
-							</Show>
-							<Show when={channel()!.type === "ThreadForum2"}>
-								<Forum2ThreadPage channel={channel()!} />
-							</Show>
-							<Show when={channel()!.type === "Calendar"}>
-								<Calendar channel={channel()!} />
-							</Show>
-							<Show when={channel()!.type === "Category"}>
-								<Category channel={channel()!} />
-							</Show>
+							<Switch>
+								<Match when={channel()!.type === "Voice"}>
+									<Voice channel={channel()!} />
+								</Match>
+								<Match
+									when={channel()!.type === "Text" ||
+										channel()!.type === "Dm" ||
+										channel()!.type === "Gdm" ||
+										channel()!.type === "Announcement" ||
+										channel()!.type === "ThreadPublic" ||
+										channel()!.type === "ThreadPrivate"}
+								>
+									<ChatHeader channel={channel()!} />
+									<ChatMain channel={channel()!} />
+								</Match>
+								<Match when={channel()!.type === "Document"}>
+									<Document
+										channel={channel()!}
+										selectedSeq={selectedSeq()}
+										onSelectChangeset={setSelectedSeq}
+										hoverSeq={hoverSeq()}
+										onHoverChangeset={setHoverSeq}
+									/>
+								</Match>
+								<Match when={channel()!.type === "Wiki"}>
+									<Wiki channel={channel()!} />
+								</Match>
+								<Match when={channel()!.type === "Forum"}>
+									<Forum channel={channel()!} />
+								</Match>
+								<Match when={channel()!.type === "Forum2"}>
+									<Forum2 channel={channel()!} />
+								</Match>
+								<Match when={channel()!.type === "ThreadForum2"}>
+									<Forum2ThreadPage channel={channel()!} />
+								</Match>
+								<Match when={channel()!.type === "Calendar"}>
+									<Calendar channel={channel()!} />
+								</Match>
+								<Match when={channel()!.type === "Category"}>
+									<Category channel={channel()!} />
+								</Match>
+							</Switch>
 							<ChannelSidebar
 								channel={channel()!}
 								selectedSeq={selectedSeq()}
