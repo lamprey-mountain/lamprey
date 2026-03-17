@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
-use common::v1::routes::user_get2;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::harvest::{Harvest, HarvestCreate};
@@ -25,7 +25,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::routes::util::{Auth, HeaderReason};
 use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};
-use crate::ServerState;
+use crate::{routes2, ServerState};
 
 use super::util::AuthRelaxed2;
 use crate::error::{Error, Result};
@@ -242,54 +242,14 @@ async fn user_undelete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[handler(user_get2)]
-async fn user_get2(
+#[handler(routes::user_get)]
+async fn user_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: user_get2::Request,
+    req: routes::user_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Identify])?;
     let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
-    let srv = s.services();
-    let data = s.data();
-    let mut user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
-    if !auth.scopes.iter().any(|s| s.implies(&Scope::Email)) {
-        user.emails = None;
-    }
-    let relationship = data
-        .user_relationship_get(auth.user.id, target_user_id)
-        .await?
-        .unwrap_or_default();
-    Ok(Json(UserWithRelationship {
-        inner: user,
-        relationship,
-    }))
-}
-
-/// User get
-///
-/// Get another user, including your relationship
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}",
-    params(
-        ("user_id", description = "User id"),
-    ),
-    tags = ["user", "badge.scope.identify", "badge.scope-opt.email"],
-    responses(
-        (status = OK, body = UserWithRelationship, description = "success"),
-    )
-)]
-async fn user_get(
-    Path(target_user_id): Path<UserIdReq>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Identify])?;
-    let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -709,8 +669,7 @@ async fn user_search(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
-        .routes(routes!(user_get))
-        .route(user_get2::metadata().path, axum::routing::get(user_get2)) // TODO: make this fully automatic (ie. dont require manually writing ::get(...))
+        .routes(routes2!(user_get))
         .routes(routes!(user_delete))
         .routes(routes!(user_undelete))
         .routes(routes!(user_audit_logs))

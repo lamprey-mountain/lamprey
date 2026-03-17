@@ -1,10 +1,8 @@
-use lamprey_macros::endpoint;
-
 use crate::v1::types::{oauth::Scope, Permission};
 
-mod prelude {
-    // pub use lamprey_macros::{request, response, route};
-}
+pub mod user;
+
+pub use user::user_get;
 
 /// Error type for path parameter extraction
 #[derive(Debug)]
@@ -116,28 +114,15 @@ pub enum EndpointMethod {
     Head,
 }
 
-/// User get 2
-///
-/// Get another user, including your relationship
-#[endpoint(
-    get,
-    path = "/user2/{user_id}",
-    tags = ["user"],
-    scopes = [Identify],
-    response(OK, body = UserWithRelationship, description = "success"),
-    errors(UnknownUser),
-)]
-pub mod user_get2 {
-    use crate::v1::types::{misc::UserIdReq, UserWithRelationship};
-
-    pub struct Request {
-        /// the user id
-        #[path]
-        pub user_id: UserIdReq,
-    }
-
-    pub struct Response {
-        #[json]
-        pub user: UserWithRelationship,
+impl From<EndpointMethod> for ::utoipa::openapi::HttpMethod {
+    fn from(m: EndpointMethod) -> Self {
+        match m {
+            EndpointMethod::Get => ::utoipa::openapi::HttpMethod::Get,
+            EndpointMethod::Post => ::utoipa::openapi::HttpMethod::Post,
+            EndpointMethod::Put => ::utoipa::openapi::HttpMethod::Put,
+            EndpointMethod::Patch => ::utoipa::openapi::HttpMethod::Patch,
+            EndpointMethod::Delete => ::utoipa::openapi::HttpMethod::Delete,
+            EndpointMethod::Head => ::utoipa::openapi::HttpMethod::Head,
+        }
     }
 }

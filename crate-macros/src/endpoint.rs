@@ -336,30 +336,41 @@ fn parse_doc_attrs(attrs: &[&Attribute]) -> (LitStr, TokenStream) {
     let mut doc_lines: Vec<String> = Vec::new();
 
     for attr in attrs {
-        if let Ok(meta) = attr.parse_args::<syn::Expr>() {
+        if let syn::Meta::NameValue(nv) = &attr.meta {
             if let syn::Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Str(lit),
                 ..
-            }) = meta
+            }) = &nv.value
             {
                 let value = lit.value();
-                // Strip leading space from doc comment lines (rustc adds it)
                 let trimmed = value.strip_prefix(' ').unwrap_or(&value);
                 doc_lines.push(trimmed.to_string());
             }
         }
     }
 
-    // First line is summary, rest is description
-    let summary = doc_lines.first().cloned().unwrap_or_default();
+    let summary = LitStr::new(
+        doc_lines.first().map(|s| s.as_str()).unwrap_or(""),
+        Span::call_site(),
+    );
+
     let description = if doc_lines.len() > 1 {
-        let desc = doc_lines[1..].join("\n");
-        quote! { Some(#desc) }
+        let rest = &doc_lines[1..];
+        let start = rest
+            .iter()
+            .position(|l| !l.is_empty())
+            .unwrap_or(rest.len());
+        let desc = rest[start..].join("\n");
+        if desc.is_empty() {
+            quote! { None }
+        } else {
+            quote! { Some(#desc) }
+        }
     } else {
         quote! { None }
     };
 
-    (LitStr::new(&summary, Span::call_site()), description)
+    (summary, description)
 }
 
 // ---------------------------------------------------------------------------

@@ -718,3 +718,35 @@ pub async fn audit_log_middleware(mut req: Request<Body>, next: Next) -> Respons
 
     response
 }
+
+#[macro_export]
+macro_rules! routes2 {
+    ($handler:ident) => {{
+        type __PathStruct = pastey::paste! { [<$handler:camel Path>] };
+
+        let path = <__PathStruct as ::utoipa::Path>::path();
+        let methods = <__PathStruct as ::utoipa::Path>::methods();
+        let operation = <__PathStruct as ::utoipa::Path>::operation();
+
+        let schemas = ::std::vec![];
+
+        let mut paths_builder = ::utoipa::openapi::path::PathsBuilder::new();
+        for method in &methods {
+            paths_builder = paths_builder.path(
+                path.clone(),
+                ::utoipa::openapi::PathItem::new(method.clone(), operation.clone()),
+            );
+        }
+        let paths = paths_builder.build();
+
+        let method_router =
+            methods
+                .iter()
+                .fold(::axum::routing::MethodRouter::new(), |router, method| {
+                    use ::utoipa_axum::PathItemExt as _;
+                    router.on(method.to_method_filter(), $handler)
+                });
+
+        (schemas, paths, method_router)
+    }};
+}
