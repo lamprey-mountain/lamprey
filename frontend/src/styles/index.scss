@@ -3234,6 +3234,35 @@ button.link {
 			filter: invert(0.95);
 		}
 	}
+
+	& .channel-name-display {
+		transition: all 0.2s;
+		border: solid 1px $bg-200;
+		padding: 2px 4px;
+		border-radius: 2px;
+		margin: 0 -2px;
+
+		&:hover {
+			color: $fg-100;
+			background-color: $bg-150;
+			border: solid 1px $sep-500;
+		}
+	}
+
+	& .channel-name-input {
+		background-color: $bg-150;
+		border: solid 1px $sep-300;
+		padding: 2px 4px;
+		border-radius: 2px;
+		font: inherit;
+		color: $fg-200;
+		min-width: 100px;
+
+		&:focus {
+			border: solid 1px $link-500;
+			outline: none;
+		}
+	}
 }
 
 .chat-header.select-mode-header {

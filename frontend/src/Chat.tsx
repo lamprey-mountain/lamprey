@@ -361,6 +361,8 @@ export const ChatHeader = (
 	const [, modalctl] = useModals();
 	const [hovered, setHovered] = createSignal(false);
 	const currentUser = useCurrentUser();
+	const [editingName, setEditingName] = createSignal<string | undefined>();
+	let inputRef!: HTMLInputElement;
 
 	const selected = () => channelState.selectedMessages;
 	const inSelectMode = () => channelState.selectMode;
@@ -370,8 +372,7 @@ export const ChatHeader = (
 		() => props.channel.room_id as string | undefined,
 		() => props.channel.id,
 	);
-	const canDelete = () => hasPermission("MessageDelete");
-	const canRemove = () => hasPermission("MessageRemove");
+	const canManageChannel = () => hasPermission("ChannelManage");
 
 	const exitSelectMode = () => {
 		setChannelState("selectMode", false);
@@ -417,6 +418,33 @@ export const ChatHeader = (
 		setChannelState("pinned_view", (v) => !v);
 	};
 
+	const startEditingName = () => {
+		if (!canManageChannel()) return;
+		setEditingName(name());
+		setTimeout(() => inputRef.focus());
+	};
+
+	const saveName = () => {
+		const newName = editingName()?.trim();
+		if (newName && newName !== name()) {
+			api.channels.update(props.channel.id, { name: newName });
+		}
+		setEditingName(undefined);
+	};
+
+	const cancelEditingName = () => {
+		setEditingName(undefined);
+	};
+
+	const handleKeyDown = (e: KeyboardEvent) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			saveName();
+		} else if (e.key === "Escape") {
+			cancelEditingName();
+		}
+	};
+
 	const name = () => {
 		if (props.channel.type === "Dm") {
 			const user_id = currentUser()?.id;
@@ -449,7 +477,31 @@ export const ChatHeader = (
 					onMouseLeave={() => setHovered(false)}
 				>
 					<ChannelIcon channel={props.channel} animate={hovered()} />
-					<b>{name()}</b>
+					<Show
+						when={editingName() !== undefined}
+						fallback={
+							<b
+								class="channel-name-display"
+								onClick={startEditingName}
+								title={canManageChannel()
+									? "Click to edit channel name"
+									: undefined}
+								style={canManageChannel() ? "cursor:pointer" : undefined}
+							>
+								{name()}
+							</b>
+						}
+					>
+						<input
+							ref={inputRef}
+							class="channel-name-input"
+							type="text"
+							value={editingName()}
+							onInput={(e) => setEditingName(e.currentTarget.value)}
+							onBlur={saveName}
+							onKeyDown={handleKeyDown}
+						/>
+					</Show>
 					<Show when={props.channel.description}>
 						<span class="dim" style="white-space:pre;font-size:1em">
 							{"  -  "}
