@@ -53,9 +53,11 @@ export const ChatMain = (props: ChatProps) => {
 
 	const anchor = (): MessageListAnchor => {
 		const a = channelState.anchor;
-		const r = read_marker_id();
 		if (a) return a;
+
+		const r = read_marker_id();
 		if (r) return { type: "context", limit: 50, message_id: r };
+
 		return { type: "backwards", limit: 50 };
 	};
 
@@ -99,7 +101,7 @@ export const ChatMain = (props: ChatProps) => {
 	const log = logger.for("timeline");
 
 	createEffect(() => {
-		log.debug("anchor", channelState.anchor);
+		log.debug("tl", { tl: [...tl()], msgs: messages() });
 	});
 
 	let last_thread_id: string | undefined;
@@ -124,6 +126,8 @@ export const ChatMain = (props: ChatProps) => {
 			const PAGINATE_LEN = SLICE_LEN / 3;
 
 			const msgs = messages()!;
+			const old = { ...channelState.anchor };
+
 			if (dir === "forwards") {
 				if (msgs.has_forward) {
 					setChannelState("anchor", {
@@ -132,6 +136,7 @@ export const ChatMain = (props: ChatProps) => {
 						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
 					});
 				} else {
+					// live timeline
 					setChannelState("anchor", {
 						type: "backwards",
 						limit: SLICE_LEN,
@@ -146,9 +151,17 @@ export const ChatMain = (props: ChatProps) => {
 					message_id: messages()?.items[PAGINATE_LEN]?.id,
 				});
 			}
+
+			const anchor = { ...channelState.anchor };
+
+			if (!deepEqual(old, anchor)) {
+				log.debug("set anchor", anchor);
+			}
 		},
 		onRestore() {
+			return;
 			const a = anchor();
+			log.info("restore", { ...a });
 			if (a.type === "context") {
 				const offset = list.getOffset(a.message_id);
 				if (offset !== null) {
@@ -283,8 +296,8 @@ export const ChatMain = (props: ChatProps) => {
 					const channel_id = props.channel.id;
 					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
 
-					// clear stored scroll to guarantee jump on restore
 					setChannelState("scroll_pos", -1);
+					setChannelState("read_marker_id", undefined);
 
 					setChannelState("anchor", {
 						type: "backwards",
@@ -292,7 +305,7 @@ export const ChatMain = (props: ChatProps) => {
 					});
 
 					const version_id =
-						messagesService.cacheRanges.get(channel_id)?.live.end ??
+						messagesService._ranges.get(channel_id)?.live.end ??
 							props.channel.last_version_id;
 
 					if (version_id) {
@@ -302,6 +315,30 @@ export const ChatMain = (props: ChatProps) => {
 					setTimeout(() => {
 						list.scrollTo(99999999);
 					});
+					// }
+
+					// 					const channel_id = props.channel.id;
+					// 					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+
+					// 					// clear stored scroll to guarantee jump on restore
+					// 					setChannelState("scroll_pos", -1);
+
+					// 					setChannelState("anchor", {
+					// 						type: "backwards",
+					// 						limit: SLICE_LEN,
+					// 					});
+
+					// 					const version_id =
+					// 						messagesService.cacheRanges.get(channel_id)?.live.end ??
+					// 							props.channel.last_version_id;
+
+					// 					if (version_id) {
+					// 						markChannelRead(channel_id, version_id, true, false);
+					// 					}
+
+					// 					setTimeout(() => {
+					// 						list.scrollTo(99999999);
+					// 					});
 				} else if (e.key === "PageDown") {
 					list.scrollBy(globalThis.innerHeight * .8, true);
 				} else if (e.key === "PageUp") {
@@ -381,6 +418,7 @@ import { useUploads } from "./contexts/uploads.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { MessageSkeleton } from "./MessageSkeleton.tsx";
 import { logger } from "./logger.ts";
+import { deepEqual } from "./utils/deepEqual.ts";
 
 export const ChatHeader = (
 	props: ChatProps & { showMembersButton?: boolean },

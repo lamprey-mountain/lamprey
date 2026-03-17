@@ -658,7 +658,7 @@ export function createApi(
 				const { message_id, channel_id: thread_id } = msg;
 				store.messages.handleMessageDelete(thread_id, message_id);
 
-				const ranges = store.messages.cacheRanges.get(thread_id);
+				const ranges = store.messages._ranges.get(thread_id);
 				const t = api.channels.cache.get(msg.channel_id);
 				if (t) {
 					const last_version_id =
@@ -681,7 +681,7 @@ export function createApi(
 					store.messages.handleMessageDelete(thread_id, message_id);
 				}
 
-				const ranges = store.messages.cacheRanges.get(thread_id);
+				const ranges = store.messages._ranges.get(thread_id);
 				const t = api.channels.cache.get(thread_id);
 				if (t) {
 					const last_version_id =

@@ -48,7 +48,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	};
 
 	function markUnread() {
-		const r = messagesService.cacheRanges.get(props.channel_id);
+		const r = messagesService._ranges.get(props.channel_id);
 		if (!r) return;
 		const tl = r.find(props.message_id)?.items;
 		if (!tl) return;

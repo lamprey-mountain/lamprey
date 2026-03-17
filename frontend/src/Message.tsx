@@ -114,7 +114,7 @@ function MessageEditor(
 			ArrowUp: (state) => {
 				if (state.selection.from !== 1) return false;
 
-				const ranges = messagesService.cacheRanges.get(
+				const ranges = messagesService._ranges.get(
 					props.message.channel_id,
 				);
 				if (!ranges) return false;
@@ -141,7 +141,7 @@ function MessageEditor(
 			ArrowDown: (state) => {
 				if (state.selection.to !== state.doc.content.size - 1) return false;
 
-				const ranges = messagesService.cacheRanges.get(
+				const ranges = messagesService._ranges.get(
 					props.message.channel_id,
 				);
 				if (!ranges) return false;
@@ -280,7 +280,7 @@ export function MessageView(props: MessageProps) {
 
 		const thread_id = props.message.channel_id;
 		const message_id = props.message.id;
-		const messages = messagesService.cacheRanges.get(thread_id)?.live.items ??
+		const messages = messagesService._ranges.get(thread_id)?.live.items ??
 			[];
 		const currentIndex = messages.findIndex((m) => m.id === message_id);
 
@@ -307,7 +307,7 @@ export function MessageView(props: MessageProps) {
 
 		if (e.shiftKey && selected.length > 0) {
 			const lastSelected = selected[selected.length - 1];
-			const messages = messagesService.cacheRanges.get(thread_id)?.live.items ??
+			const messages = messagesService._ranges.get(thread_id)?.live.items ??
 				[];
 			const lastIndex = messages.findIndex((m) => m.id === lastSelected);
 			const currentIndex = messages.findIndex((m) => m.id === message_id);

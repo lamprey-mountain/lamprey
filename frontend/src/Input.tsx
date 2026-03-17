@@ -154,7 +154,7 @@ export function Input(props: InputProps) {
 					return false; // not empty, do default behavior
 				}
 
-				const ranges = messagesService.cacheRanges.get(props.channel.id);
+				const ranges = messagesService._ranges.get(props.channel.id);
 				if (!ranges) return false;
 
 				const self_id = currentUser()?.id;

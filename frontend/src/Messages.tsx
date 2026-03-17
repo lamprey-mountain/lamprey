@@ -7,6 +7,7 @@ import { MessageView } from "./Message.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { Message, UserWithRelationship } from "sdk";
 import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
+import { ChannelIcon } from "./User.tsx";
 
 export type TimelineItemT =
 	& { id: string; class?: string }
@@ -89,6 +90,17 @@ export const TimelineItem = (props: {
 			return (
 				<li class="header">
 					<header>
+						<Show when={false}>
+							<div style="display:flex;align-items:center;gap:4px;">
+								<div style="background:red;border-radius:50%;display:grid;place-items:center;height:32px;width:32px;">
+									<ChannelIcon
+										style="height:24px;width:24px"
+										channel={props.thread}
+									/>
+								</div>
+								<h1>{props.thread.name}</h1>
+							</div>
+						</Show>
 						<h1>{props.thread.name}</h1>
 						<p>
 							This is the start of {props.thread.name}.{" "}

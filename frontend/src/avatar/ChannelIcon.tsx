@@ -19,7 +19,7 @@ import { cyrb53, LCG } from "../rng";
 import { AvatarWithStatus } from "./UserAvatar";
 
 export const ChannelIcon = (
-	props: { channel: Channel; animate?: boolean },
+	props: { channel: Channel; animate?: boolean; style?: string },
 ) => {
 	const api = useApi();
 
@@ -72,7 +72,7 @@ export const ChannelIcon = (
 						props.channel.type,
 					)}
 			>
-				<svg class="icon" viewBox="0 0 64 64">
+				<svg class="icon" viewBox="0 0 64 64" style={props.style}>
 					<mask id="nsfw">
 						<rect
 							width={64}
