@@ -1199,16 +1199,35 @@ impl Connection {
         };
 
         if let Some(Compression::Deflate { compressor, .. }) = compression {
-            let mut output = Vec::with_capacity(bytes.len() + 16);
-            let mut out_buf = [0u8; 4096];
+            // PERF: reuse this buffer?
+            let mut output = Vec::with_capacity(bytes.len() + 64);
+            let total_in = compressor.total_in() as usize;
 
-            let before_in = compressor.total_in();
-            let before_out = compressor.total_out();
+            loop {
+                if output.capacity() - output.len() < 1024 {
+                    output.reserve(1024);
+                }
 
-            compressor.compress(&bytes, &mut out_buf, FlushCompress::Sync)?;
+                let consumed = (compressor.total_in() as usize) - total_in;
+                let flush = FlushCompress::Sync;
+                match compressor.compress_vec(&bytes[consumed..], &mut output, flush)? {
+                    Status::StreamEnd => break,
+                    Status::BufError => {
+                        // we need more output space, loop will reserve more
+                    }
+                    Status::Ok => {
+                        if (compressor.total_in() as usize) - total_in == bytes.len() {
+                            break;
+                        }
+                    }
+                };
+            }
 
-            let produced = (compressor.total_out() - before_out) as usize;
-            output.extend_from_slice(&out_buf[..produced]);
+            debug!(
+                size_before = bytes.len(),
+                size_after = output.len(),
+                "compressed message"
+            );
 
             Ok(WsMessage::Binary(output.into()))
         } else {
