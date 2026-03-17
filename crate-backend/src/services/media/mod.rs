@@ -3,6 +3,7 @@ use std::{
     collections::HashMap,
     io::{Cursor, SeekFrom},
     sync::Arc,
+    time::Instant,
 };
 
 use async_tempfile::TempFile;
@@ -35,7 +36,7 @@ mod ffprobe;
 
 pub struct ServiceMedia {
     pub state: Arc<ServerStateInner>,
-    pub uploads: DashMap<MediaId, MediaUpload>,
+    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
 }
 
 pub struct MediaUpload {
@@ -45,6 +46,7 @@ pub struct MediaUpload {
     pub temp_writer: BufWriter<TempFile>,
     pub current_size: u64,
     pub max_size: u64,
+    pub finished_at: Instant,
 }
 
 impl MediaUpload {
@@ -88,8 +90,37 @@ impl ServiceMedia {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            uploads: DashMap::new(),
+            uploads: Arc::new(DashMap::new()),
         }
+    }
+
+    pub fn start_background_tasks(&self) {
+        let uploads = self.uploads.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                let now = Instant::now();
+                let cutoff = std::time::Duration::from_secs(300); // 5 minutes
+
+                // Collect keys to remove first to avoid borrow issues
+                let keys_to_remove: Vec<_> = uploads
+                    .iter()
+                    .filter_map(|entry| {
+                        let (key, upload) = entry.pair();
+                        if now.duration_since(upload.finished_at) > cutoff {
+                            Some(*key)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                for key in keys_to_remove {
+                    uploads.remove(&key);
+                }
+            }
+        });
     }
 
     pub async fn create_upload(
@@ -110,6 +141,7 @@ impl ServiceMedia {
                 temp_writer,
                 current_size: 0,
                 max_size: self.state.config.media_max_size,
+                finished_at: Instant::now(),
             },
         );
 
