@@ -42,7 +42,7 @@ pub async fn frontend_handler(
             return Ok(Response::builder()
                 .header(header::CONTENT_TYPE, mime_from_ext(&path))
                 .body(Body::from(content.data))
-                .unwrap());
+                .map_err(|e| Error::FrontendResponseBuilder(e.to_string()))?);
         }
     }
 
@@ -59,8 +59,9 @@ pub async fn frontend_handler(
 
     let env = Environment::new();
 
-    let tpl = Asset::get("index.html").unwrap();
-    let template = std::str::from_utf8(tpl.data.as_ref()).unwrap();
+    let tpl = Asset::get("index.html")
+        .ok_or_else(|| Error::FrontendAssetNotFound("index.html".to_string()))?;
+    let template = std::str::from_utf8(tpl.data.as_ref())?;
 
     let rendered = env
         .render_str(
@@ -70,7 +71,7 @@ pub async fn frontend_handler(
                 env   => env_json,
             },
         )
-        .unwrap();
+        .map_err(|e| Error::FrontendTemplate(e.to_string()))?;
 
     let rendered = rendered.replace(
         "<!-- VITE_JINJA_PLACEHOLDER:script -->",
@@ -80,7 +81,7 @@ pub async fn frontend_handler(
     Ok(Response::builder()
         .header(header::CONTENT_TYPE, "text/html")
         .body(Body::from(rendered))
-        .unwrap())
+        .map_err(|e| Error::FrontendResponseBuilder(e.to_string()))?)
 }
 
 pub async fn invite_meta_handler(
@@ -116,8 +117,9 @@ pub async fn invite_meta_handler(
 
     let env = Environment::new();
 
-    let tpl = Asset::get("index.html").unwrap();
-    let template = std::str::from_utf8(tpl.data.as_ref()).unwrap();
+    let tpl = Asset::get("index.html")
+        .ok_or_else(|| Error::FrontendAssetNotFound("index.html".to_string()))?;
+    let template = std::str::from_utf8(tpl.data.as_ref())?;
 
     let mut rendered = env
         .render_str(
@@ -127,7 +129,7 @@ pub async fn invite_meta_handler(
                 env   => env_json,
             },
         )
-        .unwrap();
+        .map_err(|e| Error::FrontendTemplate(e.to_string()))?;
 
     let og_tags = format!(
         r##"<meta property="og:title" content="{}">
@@ -154,7 +156,7 @@ pub async fn invite_meta_handler(
     Ok(Response::builder()
         .header(header::CONTENT_TYPE, "text/html")
         .body(Body::from(rendered))
-        .unwrap())
+        .map_err(|e| Error::FrontendResponseBuilder(e.to_string()))?)
 }
 
 fn mime_from_ext(path: &str) -> &'static str {

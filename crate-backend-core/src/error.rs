@@ -160,6 +160,18 @@ pub enum Error {
 
     #[error("service unavailable")]
     ServiceUnavailable,
+
+    #[error("frontend asset not found: {0}")]
+    FrontendAssetNotFound(String),
+
+    #[error("frontend asset invalid utf-8: {0}")]
+    FrontendAssetInvalidUtf8(#[from] std::str::Utf8Error),
+
+    #[error("frontend template error: {0}")]
+    FrontendTemplate(String),
+
+    #[error("frontend response builder error: {0}")]
+    FrontendResponseBuilder(String),
 }
 
 impl From<sqlx::Error> for Error {
@@ -217,6 +229,10 @@ impl Error {
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             Error::MissingScopes(_) => StatusCode::FORBIDDEN,
             Error::TantivyQuery(_) => StatusCode::BAD_REQUEST,
+            Error::FrontendAssetNotFound(_) => StatusCode::NOT_FOUND,
+            Error::FrontendAssetInvalidUtf8(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::FrontendTemplate(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::FrontendResponseBuilder(_) => StatusCode::INTERNAL_SERVER_ERROR,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -252,6 +268,10 @@ impl Error {
             Error::Tantivy(t) => Error::Tantivy(t.clone()),
             Error::TantivyQuery(s) => Error::TantivyQuery(s.clone()),
             Error::ServiceUnavailable => Error::ServiceUnavailable,
+            Error::FrontendAssetNotFound(s) => Error::FrontendAssetNotFound(s.clone()),
+            Error::FrontendAssetInvalidUtf8(e) => Error::FrontendAssetInvalidUtf8(*e),
+            Error::FrontendTemplate(e) => Error::FrontendTemplate(e.clone()),
+            Error::FrontendResponseBuilder(s) => Error::FrontendResponseBuilder(s.clone()),
             _ => Error::GenericError(self.to_string()),
         }
     }
