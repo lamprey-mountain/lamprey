@@ -1,3 +1,5 @@
+// TODO: use shared ./emoji.ts here
+
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import twemoji from "twemoji";
 import fuzzysort from "fuzzysort";
