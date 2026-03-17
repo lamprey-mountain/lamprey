@@ -12,6 +12,7 @@ use std::str::FromStr;
 use tracing::{debug, info};
 
 use crate::db::{AttachmentMetadata, Data, MessageMetadata, Puppet};
+use crate::mentions;
 use crate::portal::Portal;
 
 /// Format Discord message content, handling empty messages with attachments/embeds
@@ -309,6 +310,19 @@ impl Portal {
             !message.embeds.is_empty(),
             &message.kind,
         );
+
+        // Convert Discord mentions to Lamprey UUID mentions
+        if let Some(ref content) = req.content {
+            let (converted_content, mentions) = mentions::convert_discord_mentions_to_lamprey(
+                &self.globals,
+                content,
+                self.config.discord_guild_id,
+            )
+            .await?;
+            req.content = Some(converted_content);
+            req.mentions = mentions;
+        }
+
         match message.message_reference.map(|r| r.kind) {
             Some(MessageReferenceKind::Default) => {
                 if let Some(reply) = message.referenced_message {

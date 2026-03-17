@@ -83,6 +83,14 @@ pub struct Puppet {
     pub bot: Option<bool>,
 }
 
+/// Mapping between Lamprey and Discord role IDs
+#[derive(Debug)]
+pub struct DiscordRoleMapping {
+    pub lamprey_role_id: Uuid,
+    pub discord_role_id: String,
+    pub discord_guild_id: String,
+}
+
 pub(super) struct RealmConfigRow {
     pub lamprey_room_id: String,
     pub discord_guild_id: String,

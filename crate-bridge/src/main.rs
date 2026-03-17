@@ -26,6 +26,7 @@ mod config;
 mod db;
 mod discord;
 mod lamprey;
+mod mentions;
 mod portal;
 
 #[tokio::main]

@@ -2,12 +2,12 @@ use anyhow::Result;
 use common::v2::types::message::Message;
 use futures::future::try_join_all;
 use serenity::all::{
-    CreateAllowedMentions, CreateAttachment, CreateEmbed, EditAttachments, EditWebhookMessage,
-    ExecuteWebhook, Mentionable,
+    CreateAttachment, CreateEmbed, EditAttachments, EditWebhookMessage, ExecuteWebhook, Mentionable,
 };
 use tracing::debug;
 
 use crate::db::{AttachmentMetadata, Data, MessageMetadata};
+use crate::mentions;
 use crate::portal::Portal;
 
 /// Format reply content from a Discord message for display in a reply embed
@@ -66,6 +66,10 @@ impl Portal {
                 "".to_owned()
             }
         });
+
+        // Get mentions from message version
+        let mentions = &message.latest_version.mentions;
+
         if let Some(reply_ids) = reply_ids {
             let (discord_id, _chat_id) = reply_ids;
             // Get the reply message using Discord actor
@@ -116,15 +120,20 @@ impl Portal {
                     files = files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                 }
             }
+
+            // Convert Lamprey mentions to Discord format
+            let converted = mentions::convert_lamprey_to_discord(
+                &self.globals,
+                &content,
+                mentions,
+                self.config.discord_guild_id,
+            )
+            .await?;
+
             // Edit using Discord actor
             let mut payload = EditWebhookMessage::new()
-                .content(content)
-                .allowed_mentions(
-                    CreateAllowedMentions::new()
-                        .everyone(false)
-                        .all_roles(false)
-                        .all_users(true),
-                )
+                .content(converted.content)
+                .allowed_mentions(converted.allowed_mentions)
                 .embeds(embeds)
                 .attachments(files);
             if let Some(dc_tid) = self.config.discord_thread_id {
@@ -187,16 +196,21 @@ impl Portal {
             let files = try_join_all(download_futures).await?;
 
             let user = ly.user_fetch(message.author_id).await?;
+
+            // Convert Lamprey mentions to Discord format
+            let converted = mentions::convert_lamprey_to_discord(
+                &self.globals,
+                &content,
+                mentions,
+                self.config.discord_guild_id,
+            )
+            .await?;
+
             let mut payload = ExecuteWebhook::new()
                 .username(user.name)
                 .avatar_url("")
-                .content(content)
-                .allowed_mentions(
-                    CreateAllowedMentions::new()
-                        .everyone(false)
-                        .all_roles(false)
-                        .all_users(true),
-                )
+                .content(converted.content)
+                .allowed_mentions(converted.allowed_mentions)
                 .add_files(files)
                 .embeds(embeds);
             if let Some(dc_tid) = self.config.discord_thread_id {

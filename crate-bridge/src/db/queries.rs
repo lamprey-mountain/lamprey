@@ -35,7 +35,23 @@ pub trait Data {
     async fn delete_message(&self, message_id: MessageId) -> Result<()>;
     async fn delete_message_dc(&self, message_id: DcMessageId) -> Result<()>;
     async fn get_puppet(&self, ext_platform: &str, ext_id: &str) -> Result<Option<Puppet>>;
+    async fn get_puppet_by_lamprey_id(
+        &self,
+        ext_platform: &str,
+        lamprey_id: Uuid,
+    ) -> Result<Option<String>>;
     async fn insert_puppet(&self, data: Puppet) -> Result<()>;
+    async fn get_discord_role_mapping(
+        &self,
+        lamprey_role_id: Uuid,
+        discord_guild_id: serenity::all::GuildId,
+    ) -> Result<Option<String>>;
+    async fn insert_discord_role_mapping(
+        &self,
+        lamprey_role_id: Uuid,
+        discord_role_id: String,
+        discord_guild_id: String,
+    ) -> Result<()>;
     async fn get_realms(&self) -> Result<Vec<RealmConfig>>;
     async fn insert_realm(&self, config: RealmConfig) -> Result<()>;
     async fn delete_realm(&self, lamprey_room_id: RoomId) -> Result<()>;
@@ -254,6 +270,24 @@ impl Data for Globals {
         Ok(row)
     }
 
+    async fn get_puppet_by_lamprey_id(
+        &self,
+        ext_platform: &str,
+        lamprey_id: Uuid,
+    ) -> Result<Option<String>> {
+        let row = query!(
+            r#"
+            SELECT ext_id
+            FROM puppet WHERE id = ? AND ext_platform = ?
+            "#,
+            lamprey_id,
+            ext_platform,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|r| r.ext_id))
+    }
+
     async fn insert_puppet(&self, data: Puppet) -> Result<()> {
         query!(
             r#"
@@ -269,6 +303,45 @@ impl Data for Globals {
             data.avatar,
             data.banner,
             data.bot,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn get_discord_role_mapping(
+        &self,
+        lamprey_role_id: Uuid,
+        discord_guild_id: serenity::all::GuildId,
+    ) -> Result<Option<String>> {
+        let guild_id_str = discord_guild_id.to_string();
+        let row = query!(
+            r#"
+            SELECT discord_role_id
+            FROM discord_role_mapping WHERE lamprey_role_id = ? AND discord_guild_id = ?
+            "#,
+            lamprey_role_id,
+            guild_id_str,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|r| r.discord_role_id))
+    }
+
+    async fn insert_discord_role_mapping(
+        &self,
+        lamprey_role_id: Uuid,
+        discord_role_id: String,
+        discord_guild_id: String,
+    ) -> Result<()> {
+        query!(
+            r#"
+            INSERT OR REPLACE INTO discord_role_mapping (lamprey_role_id, discord_role_id, discord_guild_id)
+            VALUES (?, ?, ?)
+            "#,
+            lamprey_role_id,
+            discord_role_id,
+            discord_guild_id,
         )
         .execute(&self.pool)
         .await?;
