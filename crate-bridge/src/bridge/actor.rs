@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use kameo::actor::Spawn;
 use kameo::message::{Context, Message};
-use tracing::info;
+use tracing::{error, info};
 
 use crate::{
     bridge::messages::BridgeMessage,
@@ -37,7 +37,11 @@ impl Message<BridgeMessage> for Bridge {
         msg: BridgeMessage,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.handle_inner(msg).await
+        if let Err(e) = self.handle_inner(msg).await {
+            error!("bridge actor handler failed: {:?}", e);
+            return Err(e);
+        }
+        Ok(())
     }
 }
 

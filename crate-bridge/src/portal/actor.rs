@@ -6,6 +6,7 @@ use crate::bridge_common::{Globals, PortalConfig};
 use anyhow::Result;
 use kameo::message::{Context, Message};
 use serenity::all::ChannelId as DcChannelId;
+use tracing::error;
 
 use crate::portal::messages::PortalMessage;
 
@@ -57,7 +58,11 @@ impl Message<PortalMessage> for Portal {
         msg: PortalMessage,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.handle_inner(msg).await
+        if let Err(e) = self.handle_inner(msg).await {
+            error!("portal actor handler failed: {:?}", e);
+            return Err(e);
+        }
+        Ok(())
     }
 }
 

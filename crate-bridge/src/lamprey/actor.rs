@@ -15,7 +15,7 @@ use kameo::message::Context;
 use kameo::prelude::*;
 use sdk::{Client, Http};
 use tokio::sync::broadcast;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::bridge_common::Globals;
 use crate::db::Data;
@@ -79,13 +79,20 @@ impl Message<LampreyMessage> for Lamprey {
         msg: LampreyMessage,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        crate::lamprey::handlers::handle_lamprey_message(
+        let res = crate::lamprey::handlers::handle_lamprey_message(
             &self.http,
             self.globals.clone(),
             self.media_processed_tx.clone(),
             msg,
         )
-        .await
+        .await;
+
+        if let Err(e) = res {
+            error!("lamprey actor handler failed: {:?}", e);
+            return Err(e);
+        }
+
+        res
     }
 }
 
