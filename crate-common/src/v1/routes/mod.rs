@@ -1,8 +1,18 @@
+use crate::v1::types::ids::Id;
 use crate::v1::types::{oauth::Scope, Permission};
 
+pub mod channel;
+pub mod room;
 pub mod user;
 
 pub use user::user_get;
+
+impl<M: crate::v1::types::ids::Marker> PathParam for Id<M> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        s.parse()
+            .map_err(|_| PathParamError(format!("invalid id: {}", s)))
+    }
+}
 
 /// Error type for path parameter extraction
 #[derive(Debug)]
@@ -27,38 +37,38 @@ pub fn invalid_path_error() -> http::Response<bytes::Bytes> {
 
 /// Trait for types that can be parsed from a path parameter string
 pub trait PathParam: Sized {
-    fn from_str(s: &str) -> Result<Self, PathParamError>;
+    fn from_path_param(s: &str) -> Result<Self, PathParamError>;
 }
 
 impl PathParam for String {
-    fn from_str(s: &str) -> Result<Self, PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         Ok(s.to_string())
     }
 }
 
 impl PathParam for i64 {
-    fn from_str(s: &str) -> Result<Self, PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         s.parse()
             .map_err(|_| PathParamError(format!("invalid i64: {}", s)))
     }
 }
 
 impl PathParam for i32 {
-    fn from_str(s: &str) -> Result<Self, PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         s.parse()
             .map_err(|_| PathParamError(format!("invalid i32: {}", s)))
     }
 }
 
 impl PathParam for u64 {
-    fn from_str(s: &str) -> Result<Self, PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         s.parse()
             .map_err(|_| PathParamError(format!("invalid u64: {}", s)))
     }
 }
 
 impl PathParam for u32 {
-    fn from_str(s: &str) -> Result<Self, PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         s.parse()
             .map_err(|_| PathParamError(format!("invalid u32: {}", s)))
     }

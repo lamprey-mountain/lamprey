@@ -134,7 +134,7 @@ impl Display for UserIdReq {
 }
 
 impl PathParam for UserIdReq {
-    fn from_str(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
         if s == "@self" {
             Ok(UserIdReq::UserSelf)
         } else {
@@ -146,7 +146,7 @@ impl PathParam for UserIdReq {
 }
 
 impl PathParam for ApplicationIdReq {
-    fn from_str(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
         if s == "@self" {
             Ok(ApplicationIdReq::AppSelf)
         } else {
@@ -160,7 +160,7 @@ impl PathParam for ApplicationIdReq {
 }
 
 impl PathParam for SessionIdReq {
-    fn from_str(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
         if s == "@self" {
             Ok(SessionIdReq::SessionSelf)
         } else {

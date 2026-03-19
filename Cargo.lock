@@ -3793,6 +3793,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "str0m",
  "strum",
  "thiserror 2.0.18",

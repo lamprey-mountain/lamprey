@@ -115,7 +115,7 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
                 let ty = &f.ty;
                 let raw_name = format_ident!("{}_raw", f.ident);
                 quote! {
-                    let #ident: #ty = crate::v1::routes::PathParam::from_str(#raw_name)?;
+                    let #ident: #ty = crate::v1::routes::PathParam::from_path_param(#raw_name)?;
                 }
             })
             .collect();
@@ -171,20 +171,32 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
                     FieldKind::Header(Some(n)) => n.clone(),
                     _ => ident.to_string().replace('_', "-"),
                 };
-                quote! {
-                    let #ident: #ty = parts
-                        .headers
-                        .get(#header_name)
-                        .and_then(|v| v.to_str().ok())
-                        .and_then(|v| v.parse().ok())
-                        .ok_or_else(|| {
-                            ::http::Response::builder()
-                                .status(::http::StatusCode::BAD_REQUEST)
-                                .body(::bytes::Bytes::from(
-                                    format!("missing or invalid header: {}", #header_name)
-                                ))
-                                .unwrap()
-                        })?;
+                // Check if type is Option<T>
+                let is_option = matches!(ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
+                if is_option {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok());
+                    }
+                } else {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok())
+                            .ok_or_else(|| {
+                                ::http::Response::builder()
+                                    .status(::http::StatusCode::BAD_REQUEST)
+                                    .body(::bytes::Bytes::from(
+                                        format!("missing or invalid header: {}", #header_name)
+                                    ))
+                                    .unwrap()
+                            })?;
+                    }
                 }
             })
             .collect();

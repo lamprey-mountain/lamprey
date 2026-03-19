@@ -155,6 +155,7 @@ fn parse_response_parens(input: ParseStream) -> syn::Result<ResponseSpec> {
                 "CREATED" => "201",
                 "ACCEPTED" => "202",
                 "NO_CONTENT" => "204",
+                "NOT_MODIFIED" => "304",
                 "BAD_REQUEST" => "400",
                 "UNAUTHORIZED" => "401",
                 "FORBIDDEN" => "403",
