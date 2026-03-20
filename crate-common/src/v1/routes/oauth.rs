@@ -76,10 +76,16 @@ pub mod oauth_token {
 )]
 pub mod oauth_introspect {
     use crate::v1::types::oauth::OauthIntrospectResponse;
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize)]
+    pub struct IntrospectForm {
+        pub token: String,
+    }
 
     pub struct Request {
         #[form]
-        pub token: String,
+        pub form: IntrospectForm,
     }
 
     pub struct Response {
@@ -99,7 +105,7 @@ pub mod oauth_introspect {
 pub mod oauth_userinfo {
     use crate::v1::types::oauth::Userinfo;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]
@@ -115,12 +121,19 @@ pub mod oauth_userinfo {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod oauth_revoke {
-    pub struct Request {
-        #[form]
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize)]
+    pub struct RevokeForm {
         pub token: String,
     }
 
-    pub struct Response;
+    pub struct Request {
+        #[form]
+        pub form: RevokeForm,
+    }
+
+    pub struct Response {}
 }
 
 /// Oauth autoconfig
@@ -133,7 +146,7 @@ pub mod oauth_revoke {
 pub mod oauth_autoconfig {
     use crate::v1::types::oauth::Autoconfig;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]

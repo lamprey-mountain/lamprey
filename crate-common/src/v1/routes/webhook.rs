@@ -10,7 +10,8 @@ use lamprey_macros::endpoint;
     response(CREATED, body = Webhook, description = "Create webhook success"),
 )]
 pub mod webhook_create {
-    use crate::v1::types::{ChannelId, Webhook, WebhookCreate};
+    use crate::v1::types::webhook::{Webhook, WebhookCreate};
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -39,7 +40,9 @@ pub mod webhook_create {
     response(OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
 )]
 pub mod webhook_list_channel {
-    use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse, Webhook, WebhookId};
+    use crate::v1::types::webhook::Webhook;
+    use crate::v1::types::WebhookId;
+    use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[path]
@@ -65,7 +68,9 @@ pub mod webhook_list_channel {
     response(OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
 )]
 pub mod webhook_list_room {
-    use crate::v1::types::{PaginationQuery, PaginationResponse, RoomId, Webhook, WebhookId};
+    use crate::v1::types::webhook::Webhook;
+    use crate::v1::types::WebhookId;
+    use crate::v1::types::{PaginationQuery, PaginationResponse, RoomId};
 
     pub struct Request {
         #[path]
@@ -91,7 +96,8 @@ pub mod webhook_list_room {
     response(OK, body = Webhook, description = "Get webhook success"),
 )]
 pub mod webhook_get {
-    use crate::v1::types::{Webhook, WebhookId};
+    use crate::v1::types::webhook::Webhook;
+    use crate::v1::types::WebhookId;
 
     pub struct Request {
         #[path]
@@ -112,7 +118,8 @@ pub mod webhook_get {
     response(OK, body = Webhook, description = "Get webhook success"),
 )]
 pub mod webhook_get_with_token {
-    use crate::v1::types::{Webhook, WebhookId};
+    use crate::v1::types::webhook::Webhook;
+    use crate::v1::types::WebhookId;
 
     pub struct Request {
         #[path]
@@ -145,7 +152,7 @@ pub mod webhook_delete {
         pub webhook_id: WebhookId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Webhook delete with token
@@ -166,7 +173,7 @@ pub mod webhook_delete_with_token {
         pub token: String,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Webhook update
@@ -179,7 +186,8 @@ pub mod webhook_delete_with_token {
     response(OK, body = Webhook, description = "Update webhook success"),
 )]
 pub mod webhook_update {
-    use crate::v1::types::{Webhook, WebhookId, WebhookUpdate};
+    use crate::v1::types::webhook::{Webhook, WebhookUpdate};
+    use crate::v1::types::WebhookId;
 
     pub struct Request {
         #[path]
@@ -203,7 +211,8 @@ pub mod webhook_update {
     response(OK, body = Webhook, description = "Update webhook success"),
 )]
 pub mod webhook_update_with_token {
-    use crate::v1::types::{Webhook, WebhookId, WebhookUpdate};
+    use crate::v1::types::webhook::{Webhook, WebhookUpdate};
+    use crate::v1::types::WebhookId;
 
     pub struct Request {
         #[path]
@@ -328,5 +337,5 @@ pub mod webhook_message_delete {
         pub message_id: MessageId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

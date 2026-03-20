@@ -111,7 +111,7 @@ pub mod preferences_user_put {
 pub mod preferences_global_get {
     use crate::v1::types::preferences::PreferencesGlobal;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]

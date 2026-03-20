@@ -82,7 +82,7 @@ pub mod role_delete {
         pub fallback_role_id: Option<RoleId>,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Role list
@@ -155,7 +155,7 @@ pub mod role_reorder {
         pub reorder: RoleReorder,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Role member bulk patch
@@ -181,5 +181,5 @@ pub mod role_member_bulk_patch {
         pub patch: RoleMemberBulkPatch,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

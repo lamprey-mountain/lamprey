@@ -31,18 +31,7 @@ use super::util::AuthRelaxed2;
 use crate::error::{Error, Result};
 
 /// User update
-#[utoipa::path(
-    patch,
-    path = "/user/{user_id}",
-    params(
-        ("user_id", description = "User id"),
-    ),
-    tags = ["user", "badge.scope.full", "badge.audit-log.UserUpdate"],
-    responses(
-        (status = OK, body = User, description = "success"),
-        (status = NOT_MODIFIED, description = "not modified"),
-    )
-)]
+#[handler(routes::user_update)]
 async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
@@ -130,13 +119,7 @@ async fn user_update(
 }
 
 /// User delete
-#[utoipa::path(
-    delete,
-    path = "/user/{user_id}",
-    params(("user_id", description = "User id")),
-    tags = ["user", "badge.audit-log.UserDelete"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
+#[handler(routes::user_delete)]
 async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
@@ -179,13 +162,7 @@ async fn user_delete(
 /// User undelete
 ///
 /// Allows undeleting a user provided they haven't been garbage collected yet
-#[utoipa::path(
-    post,
-    path = "/user/{user_id}/undelete",
-    params(("user_id", description = "User id")),
-    tags = ["user", "badge.audit-log.UserUndelete"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
+#[handler(routes::user_undelete)]
 async fn user_undelete(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
@@ -272,18 +249,7 @@ async fn user_get(
 /// User rooms list
 ///
 /// List rooms a user is in. If you are not the user, lists mutual rooms.
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/room",
-    params(
-        PaginationQuery<RoomId>,
-        ("user_id", description = "user id"),
-    ),
-    tags = ["user"],
-    responses(
-        (status = OK, body = PaginationResponse<Room>, description = "success"),
-    )
-)]
+#[handler(routes::user_room_list)]
 async fn user_room_list(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
@@ -314,19 +280,7 @@ async fn user_room_list(
 }
 
 /// User audit logs
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/audit-logs",
-    params(
-        PaginationQuery<AuditLogEntryId>,
-        AuditLogFilter,
-        ("user_id", description = "User id"),
-    ),
-    tags = ["user"],
-    responses(
-        (status = OK, body = AuditLogPaginationResponse, description = "success"),
-    )
-)]
+#[handler(routes::user_audit_logs)]
 async fn user_audit_logs(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
@@ -358,12 +312,7 @@ async fn user_audit_logs(
 /// - guests can read but not write public rooms, threads, messages, etc
 /// - when using an invite, they can act like a standard account in that one specific room/thread
 /// - they can be given an invite to a public room to bypass
-#[utoipa::path(
-    post,
-    path = "/guest",
-    tags = ["user"],
-    responses((status = CREATED, body = User, description = "guest account created")),
-)]
+#[handler(routes::guest_create)]
 async fn guest_create(
     auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
@@ -430,16 +379,7 @@ async fn guest_create(
 }
 
 /// User suspend
-#[utoipa::path(
-    post,
-    path = "/user/{user_id}/suspend",
-    tags = ["user", "badge.audit-log.UserSuspend"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-    ),
-    request_body = SuspendRequest,
-    responses((status = OK, body = User, description = "success")),
-)]
+#[handler(routes::user_suspend)]
 async fn user_suspend(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
@@ -480,13 +420,7 @@ async fn user_suspend(
 }
 
 /// User unsuspend
-#[utoipa::path(
-    delete,
-    path = "/user/{user_id}/suspend",
-    params(("user_id", description = "User id")),
-    tags = ["user", "badge.audit-log.UserUnsuspend"],
-    responses((status = OK, body = User, description = "success")),
-)]
+#[handler(routes::user_unsuspend)]
 async fn user_unsuspend(
     Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
@@ -516,16 +450,7 @@ async fn user_unsuspend(
 /// User presence set
 ///
 /// for puppets
-#[utoipa::path(
-    post,
-    path = "/user/{user_id}/presence",
-    tags = ["user"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-    ),
-    request_body = Presence,
-    responses((status = NO_CONTENT, description = "success")),
-)]
+#[handler(routes::user_presence_set)]
 async fn user_presence_set(
     Path((target_user_id,)): Path<(UserIdReq,)>,
     auth: Auth,
@@ -553,18 +478,7 @@ async fn user_presence_set(
 ///
 /// Admin only. List all users on this server.
 // TODO: deprecate
-#[utoipa::path(
-    get,
-    path = "/user",
-    tags = ["user", "badge.admin_only"],
-    params(
-        PaginationQuery<UserId>,
-        UserListParams,
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<User>, description = "success"),
-    )
-)]
+#[handler(routes::user_list)]
 async fn user_list(
     Query(paginate): Query<PaginationQuery<UserId>>,
     Query(q): Query<UserListParams>,
@@ -587,15 +501,7 @@ async fn user_list(
 }
 
 /// Harvest get
-#[utoipa::path(
-    get,
-    path = "/user/@self/harvest",
-    tags = ["user"],
-    responses(
-        (status = OK, body = Harvest, description = "success"),
-        (status = NOT_FOUND, description = "no harvest found"),
-    )
-)]
+#[handler(routes::harvest_get)]
 async fn harvest_get(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
         return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
@@ -606,14 +512,7 @@ async fn harvest_get(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<i
 }
 
 /// Harvest create
-#[utoipa::path(
-    post,
-    path = "/user/@self/harvest",
-    tags = ["user"],
-    responses(
-        (status = ACCEPTED, description = "harvest has been queued"),
-    )
-)]
+#[handler(routes::harvest_create)]
 async fn harvest_create(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
@@ -628,18 +527,7 @@ async fn harvest_create(
 }
 
 /// Harvest download
-#[utoipa::path(
-    get,
-    path = "/internal/harvest/{harvest_id}/{token}/download",
-    params(
-        ("harvest_id", description = "Harvest ID"),
-        ("token", description = "Download token")
-    ),
-    tags = ["user"],
-    responses(
-        (status = OK, description = "success"),
-    )
-)]
+#[handler(routes::harvest_download)]
 async fn harvest_download(
     Path((_harvest_id, _token)): Path<(HarvestId, String)>,
     State(_s): State<Arc<ServerState>>,
@@ -648,12 +536,7 @@ async fn harvest_download(
 }
 
 /// User search (TODO)
-#[utoipa::path(
-    post,
-    path = "/user/search",
-    tags = ["user", "badge.admin_only"],
-    responses((status = OK, description = "success")),
-)]
+#[handler(routes::user_search)]
 async fn user_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
@@ -668,19 +551,19 @@ async fn user_search(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(user_update))
+        .routes(routes2!(user_update))
         .routes(routes2!(user_get))
-        .routes(routes!(user_delete))
-        .routes(routes!(user_undelete))
-        .routes(routes!(user_audit_logs))
-        .routes(routes!(user_room_list))
-        .routes(routes!(user_suspend))
-        .routes(routes!(user_unsuspend))
-        .routes(routes!(guest_create))
-        .routes(routes!(user_presence_set))
-        .routes(routes!(user_list))
-        .routes(routes!(harvest_get))
-        .routes(routes!(harvest_create))
-        .routes(routes!(harvest_download))
-        .routes(routes!(user_search))
+        .routes(routes2!(user_delete))
+        .routes(routes2!(user_undelete))
+        .routes(routes2!(user_audit_logs))
+        .routes(routes2!(user_room_list))
+        .routes(routes2!(user_suspend))
+        .routes(routes2!(user_unsuspend))
+        .routes(routes2!(guest_create))
+        .routes(routes2!(user_presence_set))
+        .routes(routes2!(user_list))
+        .routes(routes2!(harvest_get))
+        .routes(routes2!(harvest_create))
+        .routes(routes2!(harvest_download))
+        .routes(routes2!(user_search))
 }

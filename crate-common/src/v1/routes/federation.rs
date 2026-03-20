@@ -70,5 +70,5 @@ pub mod server_sync_handle {
         pub sync: Vec<u8>,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

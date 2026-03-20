@@ -24,5 +24,5 @@ pub mod permission_overwrite {
         pub overwrite: PermissionOverwriteSet,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

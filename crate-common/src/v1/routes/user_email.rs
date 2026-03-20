@@ -20,7 +20,7 @@ pub mod email_add {
         pub addr: String,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Email delete
@@ -42,7 +42,7 @@ pub mod email_delete {
         pub addr: String,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Email verify
@@ -67,7 +67,7 @@ pub mod email_verify {
         pub code: String,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Email set primary
@@ -89,7 +89,7 @@ pub mod email_set_primary {
         pub addr: String,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Email list

@@ -128,7 +128,7 @@ pub mod automod_rule_delete {
         pub rule_id: AutomodRuleId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Automod rule test

@@ -163,7 +163,7 @@ pub mod document_branch_delete {
         pub branch_id: DocumentBranchId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Document branch merge
@@ -190,7 +190,7 @@ pub mod document_branch_merge {
         pub merge: DocumentBranchMerge,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Document CRDT diff
@@ -245,7 +245,7 @@ pub mod document_tag_create {
         pub tag: DocumentTagCreate,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Document tag patch
@@ -272,7 +272,7 @@ pub mod document_tag_patch {
         pub patch: DocumentTagPatch,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Document tag delete
@@ -295,5 +295,5 @@ pub mod document_tag_delete {
         pub tag_id: DocumentTagId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

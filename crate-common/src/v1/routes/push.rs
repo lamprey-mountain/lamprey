@@ -35,8 +35,8 @@ pub mod push_register {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod push_delete {
-    pub struct Request;
-    pub struct Response;
+    pub struct Request {}
+    pub struct Response {}
 }
 
 /// Push get
@@ -52,7 +52,7 @@ pub mod push_delete {
 pub mod push_get {
     use crate::v1::types::push::PushInfo;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]

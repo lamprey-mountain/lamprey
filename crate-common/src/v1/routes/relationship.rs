@@ -66,7 +66,7 @@ pub mod friend_add {
         pub target_id: UserId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Friend remove
@@ -87,7 +87,7 @@ pub mod friend_remove {
         pub target_id: UserId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Block list
@@ -132,7 +132,7 @@ pub mod block_add {
         pub target_id: UserId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Block remove
@@ -153,7 +153,7 @@ pub mod block_remove {
         pub target_id: UserId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Ignore add
@@ -174,7 +174,7 @@ pub mod ignore_add {
         pub target_id: UserId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Ignore remove
@@ -195,5 +195,5 @@ pub mod ignore_remove {
         pub target_id: UserId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

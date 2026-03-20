@@ -16,5 +16,5 @@ pub mod ack_bulk {
         pub ack: AckBulk,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

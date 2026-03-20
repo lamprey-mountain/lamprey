@@ -8,7 +8,7 @@ use lamprey_macros::endpoint;
     response(OK, body = OauthInitResponse, description = "ready"),
 )]
 pub mod auth_oauth_init {
-    use crate::v1::types::Url;
+    pub use url::Url;
 
     pub struct Request {
         #[path]
@@ -22,8 +22,9 @@ pub mod auth_oauth_init {
 }
 
 /// Oauth init response
+#[derive(Debug, serde::Serialize)]
 pub struct OauthInitResponse {
-    pub url: Url,
+    pub url: url::Url,
 }
 
 /// Auth oauth redirect
@@ -45,7 +46,7 @@ pub mod auth_oauth_redirect {
         pub code: String,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Auth register
@@ -77,7 +78,14 @@ pub mod auth_register {
     response(OK, body = SessionWithToken, description = "success"),
 )]
 pub mod auth_login {
-    use crate::v1::types::{LoginRequest, SessionWithToken};
+    use crate::v1::types::SessionWithToken;
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize)]
+    pub struct LoginRequest {
+        pub username: String,
+        pub password: String,
+    }
 
     pub struct Request {
         #[json]
@@ -99,8 +107,8 @@ pub mod auth_login {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_logout {
-    pub struct Request;
-    pub struct Response;
+    pub struct Request {}
+    pub struct Response {}
 }
 
 /// Auth totp init
@@ -114,7 +122,7 @@ pub mod auth_logout {
 pub mod auth_totp_init {
     use crate::v1::types::auth::TotpInit;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]
@@ -138,7 +146,7 @@ pub mod auth_totp_enable {
         pub verification: TotpVerificationRequest,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Auth totp disable
@@ -157,7 +165,7 @@ pub mod auth_totp_disable {
         pub verification: TotpVerificationRequest,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Auth totp recovery codes
@@ -171,7 +179,7 @@ pub mod auth_totp_disable {
 pub mod auth_totp_recovery_codes {
     use crate::v1::types::auth::TotpRecoveryCodes;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]
@@ -195,7 +203,7 @@ pub mod auth_password_set {
         pub password: PasswordSet,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Auth password exec
@@ -214,7 +222,7 @@ pub mod auth_password_exec {
         pub password: PasswordExec,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Auth webauthn challenge
@@ -228,7 +236,7 @@ pub mod auth_password_exec {
 pub mod auth_webauthn_challenge {
     use crate::v1::types::auth::WebauthnChallenge;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]
@@ -252,7 +260,7 @@ pub mod auth_webauthn_finish {
         pub finish: WebauthnFinish,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Auth webauthn authenticators
@@ -266,7 +274,7 @@ pub mod auth_webauthn_finish {
 pub mod auth_webauthn_authenticators {
     use crate::v1::types::auth::WebauthnAuthenticator;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]
@@ -288,7 +296,7 @@ pub mod auth_webauthn_authenticator_delete {
         pub authenticator_id: String,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Auth captcha challenge
@@ -301,7 +309,7 @@ pub mod auth_webauthn_authenticator_delete {
 pub mod auth_captcha_challenge {
     use crate::v1::types::auth::CaptchaChallenge;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]

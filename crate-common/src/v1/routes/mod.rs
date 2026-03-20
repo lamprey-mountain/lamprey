@@ -1,16 +1,108 @@
 use crate::v1::types::ids::Id;
 use crate::v1::types::{oauth::Scope, Permission};
 
+pub mod ack;
+pub mod application;
+pub mod automod;
+pub mod auth;
+pub mod calendar;
 pub mod channel;
+pub mod dm;
+pub mod document;
+pub mod emoji;
+pub mod federation;
+pub mod invite;
+pub mod message;
+pub mod moderation;
+pub mod notification;
+pub mod oauth;
+pub mod permission_overwrite;
+pub mod preferences;
+pub mod push;
+pub mod reaction;
+pub mod relationship;
+pub mod role;
 pub mod room;
+pub mod room_analytics;
+pub mod room_member;
+pub mod room_template;
+pub mod search;
+pub mod server;
+pub mod session;
+pub mod tag;
+pub mod thread;
 pub mod user;
+pub mod user_connection;
+pub mod user_email;
+pub mod voice;
+pub mod webhook;
 
-pub use user::user_get;
+// Re-export all endpoint modules
+pub use ack::*;
+pub use application::*;
+pub use automod::*;
+pub use auth::*;
+pub use calendar::*;
+pub use channel::*;
+pub use dm::*;
+pub use document::*;
+pub use emoji::*;
+pub use federation::*;
+pub use invite::*;
+pub use message::*;
+pub use moderation::*;
+pub use notification::*;
+pub use oauth::*;
+pub use permission_overwrite::*;
+pub use preferences::*;
+pub use push::*;
+pub use reaction::*;
+pub use relationship::*;
+pub use role::*;
+pub use room::*;
+pub use room_analytics::*;
+pub use room_member::*;
+pub use room_template::*;
+pub use search::*;
+pub use server::*;
+pub use session::*;
+pub use tag::*;
+pub use thread::*;
+pub use user::*;
+pub use user_connection::*;
+pub use user_email::*;
+pub use voice::*;
+pub use webhook::*;
 
 impl<M: crate::v1::types::ids::Marker> PathParam for Id<M> {
     fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         s.parse()
             .map_err(|_| PathParamError(format!("invalid id: {}", s)))
+    }
+}
+
+impl PathParam for crate::v1::types::room_template::RoomTemplateCode {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        Ok(crate::v1::types::room_template::RoomTemplateCode(s.to_string()))
+    }
+}
+
+impl PathParam for crate::v1::types::invite::InviteCode {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        Ok(crate::v1::types::invite::InviteCode(s.to_string()))
+    }
+}
+
+impl PathParam for uuid::Uuid {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        s.parse()
+            .map_err(|_| PathParamError(format!("invalid uuid: {}", s)))
+    }
+}
+
+impl PathParam for crate::v1::types::reaction::ReactionKeyParam {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        Ok(crate::v1::types::reaction::ReactionKeyParam::Text(s.to_string()))
     }
 }
 

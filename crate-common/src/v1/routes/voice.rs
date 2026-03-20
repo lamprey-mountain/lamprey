@@ -38,7 +38,8 @@ pub mod voice_state_get {
 )]
 pub mod voice_state_patch {
     use crate::v1::types::voice::VoiceStatePatch;
-    use crate::v1::types::{ChannelId, VoiceState};
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
@@ -69,7 +70,8 @@ pub mod voice_state_patch {
 )]
 pub mod voice_state_move {
     use crate::v1::types::voice::VoiceStateMove;
-    use crate::v1::types::{ChannelId, VoiceState};
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
@@ -107,10 +109,10 @@ pub mod voice_state_move_bulk {
         pub channel_id: ChannelId,
 
         #[json]
-        pub move: VoiceStateMoveBulk,
+        pub r#move: VoiceStateMoveBulk,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Voice call create
@@ -123,7 +125,8 @@ pub mod voice_state_move_bulk {
 )]
 pub mod voice_call_create {
     use crate::v1::types::voice::CallCreate;
-    use crate::v1::types::{ChannelId, VoiceState};
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -159,7 +162,7 @@ pub mod voice_call_delete {
         pub params: CallDeleteParams,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Voice call patch
@@ -172,7 +175,8 @@ pub mod voice_call_delete {
 )]
 pub mod voice_call_patch {
     use crate::v1::types::voice::CallPatch;
-    use crate::v1::types::{ChannelId, VoiceState};
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -208,7 +212,7 @@ pub mod voice_ring_start {
         pub ring: RingStart,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Voice ring stop
@@ -231,7 +235,7 @@ pub mod voice_ring_stop {
         pub ring: RingStop,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Voice ring eligibility
@@ -273,5 +277,5 @@ pub mod voice_sfu_command {
         pub command: SfuCommand,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

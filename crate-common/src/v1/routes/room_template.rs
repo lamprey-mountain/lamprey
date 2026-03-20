@@ -32,7 +32,8 @@ pub mod room_template_create {
 )]
 pub mod room_template_list {
     use crate::v1::types::room_template::RoomTemplate;
-    use crate::v1::types::{PaginationQuery, PaginationResponse, RoomTemplateCode};
+    use crate::v1::types::room_template::RoomTemplateCode;
+    use crate::v1::types::{PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[query]
@@ -108,7 +109,7 @@ pub mod room_template_delete {
         pub code: RoomTemplateCode,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Room template apply

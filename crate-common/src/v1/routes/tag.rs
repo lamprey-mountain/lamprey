@@ -6,11 +6,12 @@ use lamprey_macros::endpoint;
     path = "/channel/{channel_id}/tag",
     tags = ["tag"],
     scopes = [Full],
-    permissions = [TagManage],
+    permissions = [ChannelEdit],
     response(CREATED, body = Tag, description = "Create tag success"),
 )]
 pub mod tag_create {
-    use crate::v1::types::{ChannelId, Tag, TagCreate};
+    use crate::v1::types::tag::{Tag, TagCreate};
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -35,11 +36,12 @@ pub mod tag_create {
     path = "/channel/{channel_id}/tag/{tag_id}",
     tags = ["tag"],
     scopes = [Full],
-    permissions = [TagManage],
+    permissions = [ChannelEdit],
     response(OK, body = Tag, description = "Update tag success"),
 )]
 pub mod tag_update {
-    use crate::v1::types::{ChannelId, Tag, TagId, TagPatch};
+    use crate::v1::types::tag::{Tag, TagPatch};
+    use crate::v1::types::{ChannelId, TagId};
 
     pub struct Request {
         #[path]
@@ -64,7 +66,7 @@ pub mod tag_update {
     path = "/channel/{channel_id}/tag/{tag_id}",
     tags = ["tag"],
     scopes = [Full],
-    permissions = [TagManage],
+    permissions = [ChannelEdit],
     response(NO_CONTENT, description = "Delete tag success"),
 )]
 pub mod tag_delete {
@@ -81,7 +83,7 @@ pub mod tag_delete {
         pub force: bool,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Tag list
@@ -93,7 +95,8 @@ pub mod tag_delete {
     response(OK, body = PaginationResponse<Tag>, description = "List tags success"),
 )]
 pub mod tag_list {
-    use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse, Tag, TagId, TagListQuery};
+    use crate::v1::types::tag::{Tag, TagListQuery};
+    use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse, TagId};
 
     pub struct Request {
         #[path]
@@ -121,7 +124,8 @@ pub mod tag_list {
     response(OK, body = Tag, description = "Get tag success"),
 )]
 pub mod tag_get {
-    use crate::v1::types::{ChannelId, Tag, TagId};
+    use crate::v1::types::tag::Tag;
+    use crate::v1::types::{ChannelId, TagId};
 
     pub struct Request {
         #[path]
@@ -146,7 +150,8 @@ pub mod tag_get {
     response(OK, body = PaginationResponse<Tag>, description = "Search tags success"),
 )]
 pub mod tag_search {
-    use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse, Tag, TagId, TagSearchQuery};
+    use crate::v1::types::tag::{Tag, TagSearchQuery};
+    use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse, TagId};
 
     pub struct Request {
         #[path]

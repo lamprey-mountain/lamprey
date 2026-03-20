@@ -11,7 +11,7 @@ use lamprey_macros::endpoint;
 pub mod server_info {
     use crate::v1::types::server::ServerInfo;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]
@@ -30,7 +30,7 @@ pub mod server_info {
 pub mod server_moderation {
     use crate::v1::types::server::ServerModeration;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]
@@ -50,7 +50,7 @@ pub mod server_moderation {
 pub mod server_voice {
     use crate::v1::types::server::ServerVoiceSfu;
 
-    pub struct Request;
+    pub struct Request {}
 
     pub struct Response {
         #[json]

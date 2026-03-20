@@ -17,7 +17,7 @@ pub mod invite_delete {
         pub invite_code: InviteCode,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Invite resolve
@@ -163,5 +163,5 @@ pub mod invite_use {
         pub invite_code: InviteCode,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

@@ -18,7 +18,7 @@ pub mod calendar_event_list_user {
         pub query: CalendarEventListQuery,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Calendar event list
@@ -108,7 +108,7 @@ pub mod calendar_event_get {
     path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [CalendarEventEdit],
+    permissions = [ChannelEdit],
     response(OK, body = CalendarEvent, description = "Update calendar event success"),
 )]
 pub mod calendar_event_update {
@@ -138,7 +138,7 @@ pub mod calendar_event_update {
     path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [CalendarEventEdit],
+    permissions = [ChannelEdit],
     response(NO_CONTENT, description = "Delete calendar event success"),
 )]
 pub mod calendar_event_delete {
@@ -152,7 +152,7 @@ pub mod calendar_event_delete {
         pub event_id: CalendarEventId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Calendar event participant list
@@ -191,7 +191,7 @@ pub mod calendar_event_participant_list {
     path = "/calendar/{channel_id}/event/{event_id}/participant/{user_id}",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [CalendarEventEdit],
+    permissions = [ChannelEdit],
     response(OK, body = CalendarEventParticipant, description = "ok"),
 )]
 pub mod calendar_event_participant_add {
@@ -225,7 +225,7 @@ pub mod calendar_event_participant_add {
     path = "/calendar/{channel_id}/event/{event_id}/participant/{user_id}",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [CalendarEventEdit],
+    permissions = [ChannelEdit],
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod calendar_event_participant_remove {
@@ -243,7 +243,7 @@ pub mod calendar_event_participant_remove {
         pub user_id: UserIdReq,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Calendar overwrite list
@@ -252,7 +252,7 @@ pub mod calendar_event_participant_remove {
     path = "/calendar/{channel_id}/overwrite",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [CalendarEventEdit],
+    permissions = [ChannelEdit],
     response(OK, body = Vec<CalendarOverwrite>, description = "ok"),
 )]
 pub mod calendar_overwrite_list {
@@ -276,7 +276,7 @@ pub mod calendar_overwrite_list {
     path = "/calendar/{channel_id}/overwrite/{user_id}",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [CalendarEventEdit],
+    permissions = [ChannelEdit],
     response(OK, body = CalendarOverwrite, description = "ok"),
 )]
 pub mod calendar_overwrite_put {

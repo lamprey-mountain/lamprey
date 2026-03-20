@@ -99,7 +99,7 @@ pub mod thread_member_delete {
         pub user_id: UserIdReq,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Thread list
@@ -241,7 +241,8 @@ pub mod thread_create_from_message {
     response(OK, body = ThreadListRoom, description = "List room threads success"),
 )]
 pub mod thread_list_room {
-    use crate::v1::types::{ChannelId, RoomId, ThreadListRoom};
+    use crate::v1::types::thread::ThreadListRoom;
+    use crate::v1::types::{ChannelId, RoomId};
 
     pub struct Request {
         #[path]

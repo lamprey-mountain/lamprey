@@ -68,7 +68,7 @@ pub mod inbox_mark_read {
         pub notification_id: NotificationId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Inbox delete
@@ -87,7 +87,7 @@ pub mod inbox_delete {
         pub notification_id: NotificationId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Inbox flush
@@ -106,5 +106,5 @@ pub mod inbox_flush {
         pub flush: NotificationFlush,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

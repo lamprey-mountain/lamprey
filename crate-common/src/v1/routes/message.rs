@@ -9,7 +9,7 @@ use lamprey_macros::endpoint;
     tags = ["message"],
     scopes = [Full],
     permissions = [MessageCreate],
-    permissions_optional = [MessageAttachments, MessageEmbeds, MemberBridge],
+    permissions_optional = [MessageAttachments, MessageEmbeds, IntegrationsBridge],
     response(CREATED, body = Message, description = "Create message success"),
 )]
 pub mod message_create {
@@ -174,7 +174,7 @@ pub mod message_delete {
         pub message_id: MessageId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Message version list
@@ -258,7 +258,7 @@ pub mod message_version_delete {
         pub version_id: MessageVerId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Message moderate
@@ -283,7 +283,7 @@ pub mod message_moderate {
         pub moderate: MessageModerate,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Message migrate
@@ -292,7 +292,7 @@ pub mod message_moderate {
     path = "/channel/{channel_id}/message/migrate",
     tags = ["message"],
     scopes = [Full],
-    permissions = [MessageManage],
+    permissions = [MessageDelete],
     response(OK, description = "success"),
 )]
 pub mod message_migrate {
@@ -306,7 +306,7 @@ pub mod message_migrate {
         pub migrate: MessageMigrate,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Message pin
@@ -329,7 +329,7 @@ pub mod message_pin {
         pub message_id: MessageId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Message unpin
@@ -352,7 +352,7 @@ pub mod message_unpin {
         pub message_id: MessageId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Message pins list
@@ -401,7 +401,7 @@ pub mod message_pins_reorder {
         pub reorder: PinsReorder,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Message replies list

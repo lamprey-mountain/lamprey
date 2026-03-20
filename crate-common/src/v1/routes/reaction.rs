@@ -12,7 +12,8 @@ use lamprey_macros::endpoint;
     response(OK, body = PaginationResponse<ReactionListItem>, description = "success"),
 )]
 pub mod reaction_list {
-    use crate::v1::types::{ChannelId, MessageId, PaginationQuery, PaginationResponse, ReactionKeyParam, ReactionListItem, UserId};
+    use crate::v1::types::reaction::{ReactionKeyParam, ReactionListItem};
+    use crate::v1::types::{ChannelId, MessageId, PaginationQuery, PaginationResponse, UserId};
 
     pub struct Request {
         #[path]
@@ -47,7 +48,8 @@ pub mod reaction_list {
     response(OK, description = "already exists"),
 )]
 pub mod reaction_add {
-    use crate::v1::types::{ChannelId, MessageId, ReactionKeyParam};
+    use crate::v1::types::reaction::ReactionKeyParam;
+    use crate::v1::types::{ChannelId, MessageId};
     use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
@@ -64,7 +66,7 @@ pub mod reaction_add {
         pub user_id: UserIdReq,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Reaction remove
@@ -75,11 +77,12 @@ pub mod reaction_add {
     path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}",
     tags = ["reaction"],
     scopes = [Full],
-    permissions_optional = [ReactionPurge],
+    permissions_optional = [ReactionManage],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod reaction_remove {
-    use crate::v1::types::{ChannelId, MessageId, ReactionKeyParam};
+    use crate::v1::types::reaction::ReactionKeyParam;
+    use crate::v1::types::{ChannelId, MessageId};
     use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
@@ -96,7 +99,7 @@ pub mod reaction_remove {
         pub user_id: UserIdReq,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Reaction remove all
@@ -107,7 +110,7 @@ pub mod reaction_remove {
     path = "/channel/{channel_id}/message/{message_id}/reaction",
     tags = ["reaction"],
     scopes = [Full],
-    permissions = [ReactionPurge],
+    permissions = [ReactionManage],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod reaction_remove_all {
@@ -121,7 +124,7 @@ pub mod reaction_remove_all {
         pub message_id: MessageId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Reaction remove emoji
@@ -132,11 +135,12 @@ pub mod reaction_remove_all {
     path = "/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}",
     tags = ["reaction"],
     scopes = [Full],
-    permissions = [ReactionPurge],
+    permissions = [ReactionManage],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod reaction_remove_emoji {
-    use crate::v1::types::{ChannelId, MessageId, ReactionKeyParam};
+    use crate::v1::types::reaction::ReactionKeyParam;
+    use crate::v1::types::{ChannelId, MessageId};
 
     pub struct Request {
         #[path]
@@ -149,5 +153,5 @@ pub mod reaction_remove_emoji {
         pub reaction_key: ReactionKeyParam,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }

@@ -9,7 +9,7 @@ use lamprey_macros::endpoint;
     response(CREATED, body = Application, description = "success"),
 )]
 pub mod app_create {
-    use crate::v1::types::{Application, ApplicationCreate};
+    use crate::v1::types::application::{Application, ApplicationCreate};
 
     pub struct Request {
         #[json]
@@ -30,7 +30,8 @@ pub mod app_create {
     response(OK, body = PaginationResponse<Application>, description = "success"),
 )]
 pub mod app_list {
-    use crate::v1::types::{Application, ApplicationId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::application::Application;
+    use crate::v1::types::{ApplicationId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[query]
@@ -51,7 +52,8 @@ pub mod app_list {
     response(OK, body = Application, description = "success"),
 )]
 pub mod app_get {
-    use crate::v1::types::{Application, ApplicationId};
+    use crate::v1::types::application::Application;
+    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::ApplicationIdReq;
 
     pub struct Request {
@@ -73,7 +75,8 @@ pub mod app_get {
     response(OK, body = Application, description = "success"),
 )]
 pub mod app_patch {
-    use crate::v1::types::{Application, ApplicationId, ApplicationPatch};
+    use crate::v1::types::application::{Application, ApplicationPatch};
+    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::ApplicationIdReq;
 
     pub struct Request {
@@ -105,7 +108,7 @@ pub mod app_delete {
         pub app_id: ApplicationId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// App create session
@@ -154,7 +157,7 @@ pub mod app_invite_bot {
         pub room_id: RoomId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Puppet ensure
@@ -194,7 +197,8 @@ pub mod puppet_ensure {
     response(OK, body = Application, description = "success"),
 )]
 pub mod app_rotate_secret {
-    use crate::v1::types::Application;
+    use crate::v1::types::application::Application;
+    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::ApplicationIdReq;
 
     pub struct Request {

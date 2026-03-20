@@ -57,7 +57,7 @@ pub mod room_member_get {
     path = "/room/{room_id}/member/{user_id}",
     tags = ["room_member"],
     scopes = [Full],
-    permissions_optional = [MemberBridge, VoiceMute, VoiceDeafen, MemberManage, RoleApply],
+    permissions_optional = [IntegrationsBridge, VoiceMute, VoiceDeafen, MemberKick, RoleApply],
     response(OK, body = RoomMember, description = "success"),
     response(NOT_MODIFIED, description = "not modified"),
 )]
@@ -88,7 +88,7 @@ pub mod room_member_add {
     path = "/room/{room_id}/member/{user_id}",
     tags = ["room_member"],
     scopes = [Full],
-    permissions_optional = [VoiceMute, VoiceDeafen, MemberManage, RoleApply, MemberTimeout, MemberNickname, MemberNicknameManage],
+    permissions_optional = [VoiceMute, VoiceDeafen, MemberKick, RoleApply, MemberTimeout, MemberNickname, MemberNicknameManage],
     response(OK, body = RoomMember, description = "success"),
     response(NOT_MODIFIED, description = "not modified"),
 )]
@@ -137,7 +137,7 @@ pub mod room_member_delete {
         pub origin: Option<RoomMemberOrigin>,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Room member search
@@ -210,7 +210,7 @@ pub mod room_ban_create {
         pub ban: RoomBanCreate,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Room ban list
@@ -285,7 +285,7 @@ pub mod room_ban_delete {
         pub user_id: UserId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Room ban bulk create
@@ -308,7 +308,7 @@ pub mod room_ban_bulk_create {
         pub ban: RoomBanBulkCreate,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Room prune begin

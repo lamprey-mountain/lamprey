@@ -75,7 +75,7 @@ pub mod user_connection_delete {
         pub app_id: ApplicationId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// User connection metadata get

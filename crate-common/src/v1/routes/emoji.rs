@@ -8,11 +8,12 @@ use lamprey_macros::endpoint;
     path = "/room/{room_id}/emoji",
     tags = ["emoji"],
     scopes = [Full],
-    permissions = [EmojiAdd],
+    permissions = [EmojiManage],
     response(CREATED, body = EmojiCustom, description = "new emoji created"),
 )]
 pub mod emoji_create {
-    use crate::v1::types::{EmojiCustom, EmojiCustomCreate, RoomId};
+    use crate::v1::types::emoji::{EmojiCustom, EmojiCustomCreate};
+    use crate::v1::types::RoomId;
 
     pub struct Request {
         #[path]
@@ -42,7 +43,8 @@ pub mod emoji_create {
     response(OK, body = EmojiCustom, description = "success"),
 )]
 pub mod emoji_get {
-    use crate::v1::types::{EmojiCustom, EmojiId, RoomId};
+    use crate::v1::types::emoji::EmojiCustom;
+    use crate::v1::types::{EmojiId, RoomId};
 
     pub struct Request {
         #[path]
@@ -80,7 +82,7 @@ pub mod emoji_delete {
         pub emoji_id: EmojiId,
     }
 
-    pub struct Response;
+    pub struct Response {}
 }
 
 /// Emoji update
@@ -95,7 +97,8 @@ pub mod emoji_delete {
     response(OK, body = EmojiCustom, description = "success"),
 )]
 pub mod emoji_update {
-    use crate::v1::types::{EmojiCustom, EmojiCustomPatch, EmojiId, RoomId};
+    use crate::v1::types::emoji::{EmojiCustom, EmojiCustomPatch};
+    use crate::v1::types::{EmojiId, RoomId};
 
     pub struct Request {
         #[path]
@@ -125,7 +128,8 @@ pub mod emoji_update {
     response(OK, body = PaginationResponse<EmojiCustom>, description = "success"),
 )]
 pub mod emoji_list {
-    use crate::v1::types::{EmojiCustom, EmojiId, PaginationQuery, PaginationResponse, RoomId};
+    use crate::v1::types::emoji::EmojiCustom;
+    use crate::v1::types::{EmojiId, PaginationQuery, PaginationResponse, RoomId};
 
     pub struct Request {
         #[path]
@@ -152,7 +156,8 @@ pub mod emoji_list {
     response(OK, body = PaginationResponse<EmojiCustom>, description = "success"),
 )]
 pub mod emoji_search {
-    use crate::v1::types::{EmojiCustom, EmojiId, EmojiSearchQuery, PaginationQuery, PaginationResponse};
+    use crate::v1::types::emoji::{EmojiCustom, EmojiSearchQuery};
+    use crate::v1::types::{EmojiId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[query]

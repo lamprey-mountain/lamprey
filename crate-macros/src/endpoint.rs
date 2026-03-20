@@ -28,7 +28,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let req_fields = extract_fields(request_struct)?;
     let _resp_fields = extract_fields(response_struct)?;
 
-    // Validate: at most one json field
+    // Validate: at most one json/form field
     let json_count = req_fields
         .iter()
         .filter(|f| matches!(f.kind, FieldKind::Json))
@@ -37,6 +37,24 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         return Err(syn::Error::new(
             Span::call_site(),
             "Request may have at most one #[json] field",
+        ));
+    }
+
+    let form_count = req_fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Form))
+        .count();
+    if form_count > 1 {
+        return Err(syn::Error::new(
+            Span::call_site(),
+            "Request may have at most one #[form] field",
+        ));
+    }
+
+    if json_count > 0 && form_count > 0 {
+        return Err(syn::Error::new(
+            Span::call_site(),
+            "Request cannot have both #[json] and #[form] fields",
         ));
     }
 
@@ -99,6 +117,8 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
         .collect();
     let json_field: Option<&EndpointField> =
         fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
+    let form_field: Option<&EndpointField> =
+        fields.iter().find(|f| matches!(f.kind, FieldKind::Form));
 
     // Parse path template at compile time to build match pattern
     let path_template = path.value();
@@ -220,6 +240,29 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
         quote! {}
     };
 
+    // --- form extraction ---
+    let form_extraction = if let Some(f) = form_field {
+        let ident = &f.ident;
+        let ty = &f.ty;
+        quote! {
+            let #ident: #ty = ::serde_urlencoded::from_str::<#ty>(
+                &std::str::from_utf8(&body).map_err(|e| {
+                    ::http::Response::builder()
+                        .status(::http::StatusCode::BAD_REQUEST)
+                        .body(::bytes::Bytes::from(format!("invalid form encoding: {}", e)))
+                        .unwrap()
+                })?
+            ).map_err(|e| {
+                ::http::Response::builder()
+                    .status(::http::StatusCode::BAD_REQUEST)
+                    .body(::bytes::Bytes::from(format!("invalid form data: {}", e)))
+                    .unwrap()
+            })?;
+        }
+    } else {
+        quote! {}
+    };
+
     // --- assemble Request struct ---
     let all_idents: Vec<_> = fields.iter().map(|f| &f.ident).collect();
 
@@ -238,6 +281,7 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
             #query_extraction
             #header_extraction
             #json_extraction
+            #form_extraction
 
             Ok(Request {
                 #(#all_idents,)*
@@ -456,10 +500,13 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
         if path.is_ident("json") {
             return Ok(FieldKind::Json);
         }
+        if path.is_ident("form") {
+            return Ok(FieldKind::Form);
+        }
     }
     Err(syn::Error::new(
         ident.span(),
-        "field must have one of: #[path], #[query], #[header], #[json]",
+        "field must have one of: #[path], #[query], #[header], #[json], #[form]",
     ))
 }
 
@@ -474,6 +521,7 @@ fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
                 && !attr.path().is_ident("query")
                 && !attr.path().is_ident("header")
                 && !attr.path().is_ident("json")
+                && !attr.path().is_ident("form")
         });
     }
     Ok(quote! { #original })
