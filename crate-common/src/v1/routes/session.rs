@@ -53,8 +53,8 @@ pub mod session_list {
     response(NOT_MODIFIED, body = Session, description = "not modified"),
 )]
 pub mod session_update {
-    use crate::v1::types::{Session, SessionId, SessionPatch};
     use crate::v1::types::misc::SessionIdReq;
+    use crate::v1::types::{Session, SessionId, SessionPatch};
 
     pub struct Request {
         #[path]
@@ -79,8 +79,8 @@ pub mod session_update {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod session_delete {
-    use crate::v1::types::SessionId;
     use crate::v1::types::misc::SessionIdReq;
+    use crate::v1::types::SessionId;
 
     pub struct Request {
         #[path]
@@ -99,8 +99,8 @@ pub mod session_delete {
     response(OK, body = Session, description = "success"),
 )]
 pub mod session_get {
-    use crate::v1::types::{Session, SessionId};
     use crate::v1::types::misc::SessionIdReq;
+    use crate::v1::types::{Session, SessionId};
 
     pub struct Request {
         #[path]
@@ -122,8 +122,8 @@ pub mod session_get {
     response(OK, body = Session, description = "success"),
 )]
 pub mod session_status_set {
-    use crate::v1::types::{Session, SessionId, SessionStatus};
     use crate::v1::types::misc::SessionIdReq;
+    use crate::v1::types::{Session, SessionId, SessionStatus};
 
     pub struct Request {
         #[path]
@@ -137,4 +137,18 @@ pub mod session_status_set {
         #[json]
         pub session: Session,
     }
+}
+
+/// Session delete all
+#[endpoint(
+    delete,
+    path = "/session/@all",
+    tags = ["session"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod session_delete_all {
+    pub struct Request {}
+
+    pub struct Response {}
 }

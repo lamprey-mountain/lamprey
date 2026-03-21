@@ -4,30 +4,24 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::push::{PushCreate, PushInfo};
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::error::Result;
 use crate::types::PushData;
-use crate::{Error, ServerState};
+use crate::{routes2, Error, ServerState};
 
 use super::util::Auth;
+use crate::error::Result;
 
 /// Push register
-///
-/// register web push for this session
-#[utoipa::path(
-    post,
-    path = "/push",
-    request_body = PushCreate,
-    tags = ["push", "badge.scope.full"],
-    responses((status = OK, body = PushInfo, description = "ok"))
-)]
+#[handler(routes::push_register)]
 async fn push_register(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<PushCreate>,
+    req: routes::push_register::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
@@ -36,9 +30,9 @@ async fn push_register(
     let push_data = PushData {
         session_id: auth.session.id,
         user_id: auth.user.id,
-        endpoint: json.endpoint.clone(),
-        key_p256dh: json.keys.p256dh,
-        key_auth: json.keys.auth,
+        endpoint: req.push.endpoint.clone(),
+        key_p256dh: req.push.keys.p256dh,
+        key_auth: req.push.keys.auth,
     };
 
     data.push_insert(push_data).await?;
@@ -49,36 +43,30 @@ async fn push_register(
         .ok_or_else(|| Error::Internal("internal config not initialized".to_string()))?;
 
     Ok(Json(PushInfo {
-        endpoint: json.endpoint,
+        endpoint: req.push.endpoint,
         server_key: config_internal.vapid_public_key,
     }))
 }
 
 /// Push delete
-///
-/// remove web push for this session
-#[utoipa::path(
-    delete,
-    path = "/push",
-    tags = ["push", "badge.scope.full"],
-    responses((status = NO_CONTENT, description = "ok"))
-)]
-async fn push_delete(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+#[handler(routes::push_delete)]
+async fn push_delete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::push_delete::Request,
+) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     s.data().push_delete(auth.session.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Push get
-///
-/// get web push subscription for this session/check if web push is enabled for this session
-#[utoipa::path(
-    get,
-    path = "/push",
-    tags = ["push", "badge.scope.full"],
-    responses((status = OK, body = PushInfo, description = "ok"))
-)]
-async fn push_get(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+#[handler(routes::push_get)]
+async fn push_get(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::push_get::Request,
+) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let push = data.push_get(auth.session.id).await?;
@@ -95,7 +83,7 @@ async fn push_get(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl 
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(push_register))
-        .routes(routes!(push_delete))
-        .routes(routes!(push_get))
+        .routes(routes2!(push_register))
+        .routes(routes2!(push_delete))
+        .routes(routes2!(push_get))
 }

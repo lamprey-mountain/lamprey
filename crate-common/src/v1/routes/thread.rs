@@ -32,8 +32,8 @@ pub mod thread_member_list {
     response(OK, body = ThreadMember, description = "success"),
 )]
 pub mod thread_member_get {
-    use crate::v1::types::{ChannelId, ThreadMember};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{ChannelId, ThreadMember};
 
     pub struct Request {
         #[path]
@@ -59,8 +59,8 @@ pub mod thread_member_get {
     response(NOT_MODIFIED, description = "not modified"),
 )]
 pub mod thread_member_add {
-    use crate::v1::types::{ChannelId, ThreadMember, ThreadMemberPut};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{ChannelId, ThreadMember, ThreadMemberPut};
 
     pub struct Request {
         #[path]
@@ -88,8 +88,8 @@ pub mod thread_member_add {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod thread_member_delete {
-    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]

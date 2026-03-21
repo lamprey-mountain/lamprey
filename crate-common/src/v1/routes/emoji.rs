@@ -172,3 +172,28 @@ pub mod emoji_search {
         pub emoji: PaginationResponse<EmojiCustom>,
     }
 }
+
+/// Emoji lookup
+///
+/// Get info about an emoji.
+#[endpoint(
+    get,
+    path = "/emoji/{emoji_id}",
+    tags = ["emoji"],
+    scopes = [Full],
+    response(OK, body = EmojiCustom, description = "success"),
+)]
+pub mod emoji_lookup {
+    use crate::v1::types::emoji::EmojiCustom;
+    use crate::v1::types::EmojiId;
+
+    pub struct Request {
+        #[path]
+        pub emoji_id: EmojiId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub emoji: EmojiCustom,
+    }
+}

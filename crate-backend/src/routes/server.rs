@@ -3,29 +3,27 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
     ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu, ServerWebPush,
 };
 use common::v1::types::Permission;
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::error::Result;
-use crate::ServerState;
+use crate::{routes2, ServerState};
 
 use super::util::Auth;
+use crate::error::Result;
 
 /// Server information
-#[utoipa::path(
-    get,
-    path = "/server/@self",
-    tags = ["server", "badge.scope.full"],
-    responses(
-        (status = OK, body = ServerInfo, description = "Get server info success"),
-    )
-)]
-async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+#[handler(routes::server_info)]
+async fn server_info(
+    State(s): State<Arc<ServerState>>,
+    _req: routes::server_info::Request,
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let config_internal = data.config_get().await?;
 
@@ -58,28 +56,21 @@ async fn server_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespo
             }),
         },
         version: ServerVersion {
-            implementation: "chat-server".to_string(), // or get from config/env
-            version: env!("CARGO_PKG_VERSION").to_string(), // get from cargo
-            extra: std::collections::HashMap::new(),   // could add custom metadata
+            implementation: "chat-server".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            extra: std::collections::HashMap::new(),
         },
     };
     Ok(Json(info))
 }
 
 /// Server moderation capabilities
-#[utoipa::path(
-    get,
-    path = "/server/@self/moderation",
-    tags = ["server", "badge.scope.full"],
-    responses(
-        (status = OK, body = ServerModeration, description = "Get server moderation capabilities success"),
-    )
-)]
+#[handler(routes::server_moderation)]
 async fn server_moderation(
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
+    _req: routes::server_moderation::Request,
 ) -> Result<impl IntoResponse> {
-    // TODO: let server admins configure this
     let moderation = ServerModeration {
         automod_lists: vec![],
         media_scanners: vec![],
@@ -88,15 +79,12 @@ async fn server_moderation(
 }
 
 /// Server voice sfus
-#[utoipa::path(
-    get,
-    path = "/server/@self/voice",
-    tags = ["server", "badge.scope.full", "badge.server-perm.Admin"],
-    responses(
-        (status = OK, body = Vec<ServerVoiceSfu>, description = "Get server voice sfus success"),
-    )
-)]
-async fn server_voice(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+#[handler(routes::server_voice)]
+async fn server_voice(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::server_voice::Request,
+) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;
@@ -107,7 +95,7 @@ async fn server_voice(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<i
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(server_info))
-        .routes(routes!(server_moderation))
-        .routes(routes!(server_voice))
+        .routes(routes2!(server_info))
+        .routes(routes2!(server_moderation))
+        .routes(routes2!(server_voice))
 }

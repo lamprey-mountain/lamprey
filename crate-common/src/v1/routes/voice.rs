@@ -9,9 +9,9 @@ use lamprey_macros::endpoint;
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_get {
+    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::voice::VoiceState;
     use crate::v1::types::{ChannelId, UserId};
-    use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
         #[path]
@@ -37,10 +37,10 @@ pub mod voice_state_get {
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_patch {
-    use crate::v1::types::voice::VoiceStatePatch;
-    use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::voice::VoiceStatePatch;
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -69,10 +69,10 @@ pub mod voice_state_patch {
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_move {
-    use crate::v1::types::voice::VoiceStateMove;
-    use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::voice::VoiceStateMove;
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]

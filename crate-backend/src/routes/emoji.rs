@@ -1,125 +1,77 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::emoji::{
-    EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner, EmojiSearchQuery,
-};
+use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    util::Changes, AuditLogEntryType, EmojiId, MessageSync, PaginationQuery, PaginationResponse,
-    Permission, RoomId,
+    util::Changes, AuditLogEntryType, EmojiId, MessageSync, Permission, RoomId,
 };
 use http::StatusCode;
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use super::util::{Auth, HeaderIdempotencyKey};
 use crate::error::Result;
-use crate::ServerState;
+use crate::{routes2, ServerState};
+
+use super::util::Auth;
 
 /// Emoji create
-///
-/// Create a custom emoji.
-#[utoipa::path(
-    post,
-    path = "/room/{room_id}/emoji",
-    tags = [
-        "emoji",
-        "badge.scope.full",
-        "badge.perm.EmojiAdd",
-        "badge.audit-log.EmojiCreate",
-    ],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    request_body = EmojiCustomCreate,
-    responses(
-        (status = CREATED, body = EmojiCustom, description = "new emoji created"),
-    )
-)]
+#[handler(routes::emoji_create)]
 async fn emoji_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(room_id): Path<RoomId>,
-    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
-    Json(json): Json<EmojiCustomCreate>,
+    req: routes::emoji_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
+    req.emoji.validate()?;
 
     let srv = s.services();
-    let emoji = srv.emoji.create(room_id, &auth, json, nonce).await?;
+    let emoji = srv
+        .emoji
+        .create(req.room_id, &auth, req.emoji, req.idempotency_key)
+        .await?;
 
     Ok(Json(emoji))
 }
 
 /// Emoji get
-///
-/// Get a custom emoji.
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/emoji/{emoji_id}",
-    tags = ["emoji", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
-    ),
-    responses(
-        (status = OK,  body = EmojiCustom, description = "success"),
-    )
-)]
+#[handler(routes::emoji_get)]
 async fn emoji_get(
-    Path((_room_id, emoji_id)): Path<(RoomId, EmojiId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::emoji_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let emoji = data.emoji_get(emoji_id).await?;
+    let emoji = data.emoji_get(req.emoji_id).await?;
     Ok(Json(emoji))
 }
 
 /// Emoji delete
-///
-/// Delete a custom emoji.
-#[utoipa::path(
-    delete,
-    path = "/room/{room_id}/emoji/{emoji_id}",
-    tags = [
-        "emoji",
-        "badge.scope.full",
-        "badge.perm.EmojiAdd",
-        "badge.audit-log.EmojiDelete",
-    ],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
-    ),
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
+#[handler(routes::emoji_delete)]
 async fn emoji_delete(
-    Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::emoji_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
-    let emoji = data.emoji_get(emoji_id).await?;
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let emoji = data.emoji_get(req.emoji_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::EmojiManage)?;
-    data.emoji_delete(emoji_id).await?;
+    data.emoji_delete(req.emoji_id).await?;
 
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::EmojiDelete {
-        emoji_id,
+        emoji_id: req.emoji_id,
         changes: Changes::new()
             .remove("name", &emoji.name)
             .remove("animated", &emoji.animated)
@@ -143,44 +95,28 @@ async fn emoji_delete(
 }
 
 /// Emoji update
-///
-/// Edit a custom emoji.
-#[utoipa::path(
-    patch,
-    path = "/room/{room_id}/emoji/{emoji_id}",
-    tags = ["emoji", "badge.scope.full", "badge.audit-log.EmojiUpdate"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
-    ),
-    request_body = EmojiCustomPatch,
-    responses(
-        (status = NOT_MODIFIED, description = "not modified"),
-        (status = OK, body = EmojiCustom, description = "success"),
-    )
-)]
+#[handler(routes::emoji_update)]
 async fn emoji_update(
-    Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<EmojiCustomPatch>,
+    req: routes::emoji_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     let data = s.data();
     perms.ensure(Permission::EmojiManage)?;
 
-    let emoji_before = data.emoji_get(emoji_id).await?;
-    if !patch.changes(&emoji_before) {
+    let emoji_before = data.emoji_get(req.emoji_id).await?;
+    if !req.patch.changes(&emoji_before) {
         return Ok(Json(emoji_before));
     }
 
-    data.emoji_update(emoji_id, patch).await?;
-    let emoji = data.emoji_get(emoji_id).await?;
+    data.emoji_update(req.emoji_id, req.patch).await?;
+    let emoji = data.emoji_get(req.emoji_id).await?;
 
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::EmojiUpdate {
         changes: Changes::new()
             .change("name", &emoji_before.name, &emoji.name)
@@ -203,57 +139,48 @@ async fn emoji_update(
 }
 
 /// Emoji list
-///
-/// List emoji in a room.
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/emoji",
-    tags = ["emoji", "badge.scope.full"],
-    params(
-        PaginationQuery<EmojiId>,
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
-    )
-)]
+#[handler(routes::emoji_list)]
 async fn emoji_list(
-    Path(room_id): Path<RoomId>,
     auth: Auth,
-    Query(q): Query<PaginationQuery<EmojiId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::emoji_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
-    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
 
-    let emoji = data.emoji_list(room_id, q).await?;
+    let emoji = data.emoji_list(req.room_id, req.pagination).await?;
     Ok(Json(emoji))
+}
+
+/// Emoji search
+#[handler(routes::emoji_search)]
+async fn emoji_search(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::emoji_search::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let data = s.data();
+    let emojis = data
+        .emoji_search(auth.user.id, req.search.query, req.pagination)
+        .await?;
+    Ok(Json(emojis))
 }
 
 /// Emoji lookup
 ///
 /// Get info about an emoji.
-#[utoipa::path(
-    get,
-    path = "/emoji/{emoji_id}",
-    tags = ["emoji", "badge.scope.full"],
-    params(
-        ("emoji_id" = EmojiId, Path, description = "Emoji id"),
-    ),
-    responses(
-        (status = OK, body = EmojiCustom, description = "success"),
-    )
-)]
+#[handler(routes::emoji_lookup)]
 async fn emoji_lookup(
-    Path(emoji_id): Path<EmojiId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::emoji_lookup::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let mut emoji = data.emoji_get(emoji_id).await?;
+    let mut emoji = data.emoji_get(req.emoji_id).await?;
 
     let original_owner = emoji.owner.clone();
     let original_creator_id = emoji.creator_id;
@@ -280,37 +207,13 @@ async fn emoji_lookup(
     Ok(Json(emoji))
 }
 
-/// Emoji search
-///
-/// Search all emoji the user can see.
-#[utoipa::path(
-    get,
-    path = "/emoji/search",
-    params(EmojiSearchQuery, PaginationQuery<EmojiId>),
-    tags = ["emoji", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
-    )
-)]
-async fn emoji_search(
-    auth: Auth,
-    Query(q): Query<EmojiSearchQuery>,
-    Query(pagination): Query<PaginationQuery<EmojiId>>,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
-    let emojis = data.emoji_search(auth.user.id, q.query, pagination).await?;
-    Ok(Json(emojis))
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(emoji_create))
-        .routes(routes!(emoji_get))
-        .routes(routes!(emoji_delete))
-        .routes(routes!(emoji_update))
-        .routes(routes!(emoji_list))
-        .routes(routes!(emoji_lookup))
-        .routes(routes!(emoji_search))
+        .routes(routes2!(emoji_create))
+        .routes(routes2!(emoji_get))
+        .routes(routes2!(emoji_delete))
+        .routes(routes2!(emoji_update))
+        .routes(routes2!(emoji_list))
+        .routes(routes2!(emoji_lookup))
+        .routes(routes2!(emoji_search))
 }

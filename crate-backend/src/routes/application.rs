@@ -1,24 +1,19 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{Path, Query, State},
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, response::IntoResponse, Json};
+use common::v1::routes;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::misc::ApplicationIdReq;
 use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch},
-    misc::ApplicationIdReq,
     util::{Changes, Diff, Time},
-    ApplicationId, AuditLogChange, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, Puppet, PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut,
-    SessionCreate, SessionStatus, SessionToken, SessionType, SessionWithToken, User, UserId,
+    ApplicationId, AuditLogChange, AuditLogEntryType, MessageSync, PaginationResponse, Permission,
+    Puppet, PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
+    SessionToken, SessionType, SessionWithToken, User, UserId,
 };
 use http::StatusCode;
-use serde::Deserialize;
+use lamprey_macros::handler;
 use serde_json::Value;
-use utoipa::ToSchema;
-use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -27,23 +22,17 @@ use crate::{
     types::{DbSessionCreate, DbUserCreate},
     ServerState,
 };
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::{Error, Result};
+use crate::routes2;
 
 /// App create
-#[utoipa::path(
-    post,
-    path = "/app",
-    tags = ["application", "badge.audit-log.ApplicationCreate"],
-    request_body = ApplicationCreate,
-    responses(
-        (status = CREATED, description = "success", body = Application)
-    )
-)]
+#[handler(routes::app_create)]
 async fn app_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ApplicationCreate>,
+    req: routes::app_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -54,6 +43,7 @@ async fn app_create(
         .ensure(Permission::ApplicationCreate)?;
 
     let al = auth.audit_log(auth.user.id.into_inner().into());
+    let json = req.application;
     if let Some(bridge) = &json.bridge {
         if bridge.platform_name.is_none() {
             return Err(ApiError::from_code(ErrorCode::PlatformNameRequiredForBridge).into());
@@ -98,22 +88,14 @@ async fn app_create(
 }
 
 /// App list
-#[utoipa::path(
-    get,
-    path = "/app",
-    tags = ["application"],
-    params(PaginationQuery<ApplicationId>),
-    responses(
-        (status = OK, description = "success", body = PaginationResponse<Application>)
-    )
-)]
+#[handler(routes::app_list)]
 async fn app_list(
     auth: Auth,
-    Query(q): Query<PaginationQuery<ApplicationId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::app_list::Request,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let mut list = data.application_list(auth.user.id, q).await?;
+    let mut list = data.application_list(auth.user.id, req.pagination).await?;
     for app in &mut list.items {
         app.oauth_secret = None;
     }
@@ -121,23 +103,13 @@ async fn app_list(
 }
 
 /// App get
-#[utoipa::path(
-    get,
-    path = "/app/{app_id}",
-    tags = ["application"],
-    params(
-        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
-    ),
-    responses(
-        (status = OK, description = "success", body = Application)
-    )
-)]
+#[handler(routes::app_get)]
 async fn app_get(
-    Path((app_id,)): Path<(ApplicationIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::app_get::Request,
 ) -> Result<impl IntoResponse> {
-    let app_id = match app_id {
+    let app_id = match req.app_id {
         ApplicationIdReq::AppSelf => (*auth.user.id).into(),
         ApplicationIdReq::ApplicationId(id) => id,
     };
@@ -154,30 +126,19 @@ async fn app_get(
 }
 
 /// App patch
-#[utoipa::path(
-    patch,
-    path = "/app/{app_id}",
-    tags = ["application", "badge.audit-log.ApplicationUpdate"],
-    params(
-        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
-    ),
-    request_body = ApplicationPatch,
-    responses(
-        (status = OK, description = "success", body = Application)
-    )
-)]
+#[handler(routes::app_patch)]
 async fn app_patch(
-    Path((app_id,)): Path<(ApplicationIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<ApplicationPatch>,
+    req: routes::app_patch::Request,
 ) -> Result<impl IntoResponse> {
-    let app_id = match app_id {
+    let app_id = match req.app_id {
         ApplicationIdReq::AppSelf => (*auth.user.id).into(),
         ApplicationIdReq::ApplicationId(id) => id,
     };
     auth.user.ensure_unsuspended()?;
     let al = auth.audit_log(auth.user.id.into_inner().into());
+    let patch = req.patch;
     patch.validate()?;
     let data = s.data();
     let start = data.application_get(app_id).await?;
@@ -230,31 +191,21 @@ async fn app_patch(
 }
 
 /// App delete
-#[utoipa::path(
-    delete,
-    path = "/app/{app_id}",
-    tags = ["application", "badge.audit-log.ApplicationDelete"],
-    params(
-        ("app_id" = ApplicationId, Path, description = "Application id"),
-    ),
-    responses(
-        (status = NO_CONTENT, description = "success")
-    )
-)]
+#[handler(routes::app_delete)]
 async fn app_delete(
-    Path((app_id,)): Path<(ApplicationId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::app_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let al = auth.audit_log(auth.user.id.into_inner().into());
     let data = s.data();
-    let app = data.application_get(app_id).await?;
+    let app = data.application_get(req.app_id).await?;
     if app.owner_id == auth.user.id {
-        data.application_delete(app_id).await?;
-        data.user_delete(app_id.into_inner().into()).await?;
+        data.application_delete(req.app_id).await?;
+        data.user_delete(req.app_id.into_inner().into()).await?;
         al.commit_success(AuditLogEntryType::ApplicationDelete {
-            application_id: app_id,
+            application_id: req.app_id,
             changes: Changes::new()
                 .remove("name", &app.name)
                 .remove("description", &app.description)
@@ -268,30 +219,19 @@ async fn app_delete(
 }
 
 /// App create session
-#[utoipa::path(
-    post,
-    path = "/app/{app_id}/session",
-    tags = ["application", "badge.audit-log.SessionLogin"],
-    params(
-        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
-    ),
-    request_body = SessionCreate,
-    responses(
-        (status = CREATED, description = "success", body = SessionWithToken)
-    )
-)]
+#[handler(routes::app_create_session)]
 async fn app_create_session(
-    Path((app_id,)): Path<(ApplicationIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<SessionCreate>,
+    req: routes::app_create_session::Request,
 ) -> Result<impl IntoResponse> {
-    let app_id = match app_id {
+    let app_id = match req.app_id {
         ApplicationIdReq::AppSelf => (*auth.user.id).into(),
         ApplicationIdReq::ApplicationId(id) => id,
     };
     auth.user.ensure_unsuspended()?;
     let al = auth.audit_log(auth.user.id.into_inner().into());
+    let json = req.session;
     json.validate()?;
     let data = s.data();
     let app = data.application_get(app_id).await?;
@@ -328,47 +268,30 @@ async fn app_create_session(
     }
 }
 
-#[derive(Deserialize, ToSchema)]
-struct AppInviteBot {
-    room_id: RoomId,
-}
-
 /// App invite bot
 ///
 /// Add a bot to a room
-#[utoipa::path(
-    post,
-    path = "/app/{app_id}/invite",
-    tags = ["application", "badge.perm.BotsAdd", "badge.audit-log.BotAdd"],
-    params(
-        ("app_id" = ApplicationId, Path, description = "Application id"),
-    ),
-    request_body = AppInviteBot,
-    responses(
-        (status = NO_CONTENT, description = "success")
-    )
-)]
+#[handler(routes::app_invite_bot)]
 async fn app_invite_bot(
-    Path((app_id,)): Path<(ApplicationId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<AppInviteBot>,
+    req: routes::app_invite_bot::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let data = s.data();
-    let app = data.application_get(app_id).await?;
+    let app = data.application_get(req.app_id).await?;
 
     if !app.public && app.owner_id != auth.user.id {
         return Err(Error::MissingPermissions);
     }
 
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, json.room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::IntegrationsManage)?;
 
     let bot_user_id: UserId = app.id.into_inner().into();
 
-    if data.room_ban_get(json.room_id, bot_user_id).await.is_ok() {
+    if data.room_ban_get(req.room_id, bot_user_id).await.is_ok() {
         return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
     }
 
@@ -376,18 +299,18 @@ async fn app_invite_bot(
         user_id: auth.user.id,
     };
     data.room_member_put(
-        json.room_id,
+        req.room_id,
         bot_user_id,
         Some(origin),
         RoomMemberPut::default(),
     )
     .await?;
 
-    let member = data.room_member_get(json.room_id, bot_user_id).await?;
+    let member = data.room_member_get(req.room_id, bot_user_id).await?;
     let user = srv.users.get(bot_user_id, None).await?;
 
     s.broadcast_room(
-        json.room_id,
+        req.room_id,
         auth.user.id,
         MessageSync::RoomMemberCreate {
             member: member.clone(),
@@ -396,41 +319,27 @@ async fn app_invite_bot(
     )
     .await?;
 
-    let al = auth.audit_log(json.room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::BotAdd {
         bot_id: bot_user_id,
     })
     .await?;
 
     srv.rooms
-        .send_welcome_message(json.room_id, bot_user_id)
+        .send_welcome_message(req.room_id, bot_user_id)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Puppet ensure
-#[utoipa::path(
-    put,
-    path = "/app/{app_id}/puppet/{puppet_id}",
-    tags = ["application"],
-    params(
-        ("app_id" = ApplicationIdReq, Path, description = "Application id"),
-        ("puppet_id" = String, Path, description = "Puppet id"),
-    ),
-    request_body = PuppetCreate,
-    responses(
-        (status = OK, description = "success", body = User),
-        (status = CREATED, description = "created", body = User)
-    )
-)]
+#[handler(routes::puppet_ensure)]
 async fn puppet_ensure(
-    Path((app_id, puppet_id)): Path<(ApplicationIdReq, String)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<PuppetCreate>,
+    req: routes::puppet_ensure::Request,
 ) -> Result<impl IntoResponse> {
-    let app_id = match app_id {
+    let app_id = match req.app_id {
         ApplicationIdReq::AppSelf => (*auth.user.id).into(),
         ApplicationIdReq::ApplicationId(id) => id,
     };
@@ -448,7 +357,9 @@ async fn puppet_ensure(
         // TODO: check if it is a bridge?
         return Err(ApiError::from_code(ErrorCode::CantCreateThatUser).into());
     };
-    let existing = data.user_lookup_puppet(auth.user.id, &puppet_id).await?;
+    let existing = data
+        .user_lookup_puppet(auth.user.id, &req.puppet_id)
+        .await?;
     if let Some(id) = existing {
         let user = data.user_get(id).await?;
         return Ok((StatusCode::OK, Json(user)));
@@ -457,11 +368,11 @@ async fn puppet_ensure(
         .user_create(DbUserCreate {
             id: None,
             parent_id,
-            name: json.name,
-            description: json.description,
+            name: req.puppet.name,
+            description: req.puppet.description,
             puppet: Some(Puppet {
                 owner_id: auth.user.id.into_inner().into(), // ApplicationId
-                external_id: puppet_id.clone(),
+                external_id: req.puppet_id.clone(),
                 external_url: None,
                 alias_id: None,
             }),
@@ -473,20 +384,13 @@ async fn puppet_ensure(
 }
 
 /// App rotate oauth secret
-#[utoipa::path(
-    post,
-    path = "/app/{app_id}/rotate-secret",
-    tags = ["application", "badge.audit-log.ApplicationUpdate"],
-    responses(
-        (status = OK, description = "success", body = Application)
-    )
-)]
+#[handler(routes::app_rotate_secret)]
 async fn app_rotate_secret(
-    Path((app_id,)): Path<(ApplicationIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::app_rotate_secret::Request,
 ) -> Result<impl IntoResponse> {
-    let app_id = match app_id {
+    let app_id = match req.app_id {
         ApplicationIdReq::AppSelf => (*auth.user.id).into(),
         ApplicationIdReq::ApplicationId(id) => id,
     };
@@ -512,13 +416,13 @@ async fn app_rotate_secret(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(app_create))
-        .routes(routes!(app_list))
-        .routes(routes!(app_get))
-        .routes(routes!(app_patch))
-        .routes(routes!(app_delete))
-        .routes(routes!(app_create_session))
-        .routes(routes!(puppet_ensure))
-        .routes(routes!(app_invite_bot))
-        .routes(routes!(app_rotate_secret))
+        .routes(routes2!(app_create))
+        .routes(routes2!(app_list))
+        .routes(routes2!(app_get))
+        .routes(routes2!(app_patch))
+        .routes(routes2!(app_delete))
+        .routes(routes2!(app_create_session))
+        .routes(routes2!(puppet_ensure))
+        .routes(routes2!(app_invite_bot))
+        .routes(routes2!(app_rotate_secret))
 }

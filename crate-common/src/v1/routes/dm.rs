@@ -61,8 +61,8 @@ pub mod dm_get {
     response(OK, body = PaginationResponse<Channel>, description = "success"),
 )]
 pub mod dm_list {
-    use crate::v1::types::{Channel, MessageVerId, PaginationQuery, PaginationResponse};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{Channel, MessageVerId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[path]

@@ -187,7 +187,9 @@ pub mod message_delete {
     response(OK, body = PaginationResponse<Message>, description = "success"),
 )]
 pub mod message_version_list {
-    use crate::v1::types::{ChannelId, Message, MessageId, MessageVerId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{
+        ChannelId, Message, MessageId, MessageVerId, PaginationQuery, PaginationResponse,
+    };
 
     pub struct Request {
         #[path]
@@ -414,7 +416,9 @@ pub mod message_pins_reorder {
     response(OK, body = PaginationResponse<Message>, description = "success"),
 )]
 pub mod message_replies_list {
-    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, RepliesQuery};
+    use crate::v1::types::{
+        ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, RepliesQuery,
+    };
 
     pub struct Request {
         #[path]

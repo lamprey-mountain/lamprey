@@ -91,7 +91,9 @@ pub mod room_analytics_members_leave {
     response(OK, body = Vec<RoomAnalyticsChannel>, description = "success"),
 )]
 pub mod room_analytics_channels {
-    use crate::v1::types::room_analytics::{RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsParams};
+    use crate::v1::types::room_analytics::{
+        RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsParams,
+    };
     use crate::v1::types::RoomId;
 
     pub struct Request {

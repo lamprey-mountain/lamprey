@@ -183,3 +183,88 @@ pub mod role_member_bulk_patch {
 
     pub struct Response {}
 }
+
+/// Role member list
+#[endpoint(
+    get,
+    path = "/room/{room_id}/role/{role_id}/member",
+    tags = ["role"],
+    scopes = [Full],
+    response(OK, body = PaginationResponse<RoomMember>, description = "success"),
+)]
+pub mod role_member_list {
+    use crate::v1::types::{
+        PaginationQuery, PaginationResponse, RoleId, RoomId, RoomMember, UserId,
+    };
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+
+        #[path]
+        pub role_id: RoleId,
+
+        #[query]
+        pub pagination: PaginationQuery<UserId>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub members: PaginationResponse<RoomMember>,
+    }
+}
+
+/// Role member add
+#[endpoint(
+    put,
+    path = "/room/{room_id}/role/{role_id}/member/{user_id}",
+    tags = ["role"],
+    scopes = [Full],
+    permissions = [RoleApply],
+    response(OK, body = RoomMember, description = "success"),
+)]
+pub mod role_member_add {
+    use crate::v1::types::{RoleId, RoomId, RoomMember, UserId};
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+
+        #[path]
+        pub role_id: RoleId,
+
+        #[path]
+        pub user_id: UserId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub member: RoomMember,
+    }
+}
+
+/// Role member remove
+#[endpoint(
+    delete,
+    path = "/room/{room_id}/role/{role_id}/member/{user_id}",
+    tags = ["role"],
+    scopes = [Full],
+    permissions = [RoleApply],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod role_member_remove {
+    use crate::v1::types::{RoleId, RoomId, UserId};
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+
+        #[path]
+        pub role_id: RoleId,
+
+        #[path]
+        pub user_id: UserId,
+    }
+
+    pub struct Response {}
+}

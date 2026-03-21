@@ -1,43 +1,34 @@
 use std::sync::Arc;
 
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
-use common::v1::types::ack::AckBulk;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::{MessageSync, Permission};
-use utoipa_axum::{router::OpenApiRouter, routes};
-use validator::Validate;
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 
-use crate::ServerState;
+use crate::{routes2, ServerState};
 
 use super::util::Auth;
 use crate::error::Result;
 
 /// Ack bulk
-#[utoipa::path(
-    post,
-    path = "/ack",
-    tags = ["ack", "badge.scope.full"],
-    request_body = AckBulk,
-    responses(
-        (status = NO_CONTENT, description = "ok"),
-    )
-)]
+#[handler(routes::ack_bulk)]
 async fn ack_bulk(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<AckBulk>,
+    req: routes::ack_bulk::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
 
     let data = s.data();
     let srv = s.services();
 
     let mut valid_acks = Vec::new();
 
-    for ack in json.acks {
+    for ack in req.ack.acks {
         let perms = srv.perms.for_channel(auth.user.id, ack.channel_id).await?;
         if !perms.has(Permission::ChannelView) {
             continue;
@@ -71,5 +62,5 @@ async fn ack_bulk(
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new().routes(routes!(ack_bulk))
+    OpenApiRouter::new().routes(routes2!(ack_bulk))
 }

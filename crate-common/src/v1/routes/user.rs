@@ -197,7 +197,7 @@ pub mod user_suspend {
         pub suspend: SuspendRequest,
 
         #[header]
-        pub reason: String,
+        pub reason: Option<String>,
     }
 
     pub struct Response {
@@ -262,14 +262,14 @@ pub mod user_presence_set {
     response(OK, body = PaginationResponse<User>, description = "success"),
 )]
 pub mod user_list {
-    use crate::v1::types::{PaginationQuery, PaginationResponse, User, UserId};
+    use crate::v1::types::{PaginationQuery, PaginationResponse, User, UserId, UserListFilter};
 
     pub struct Request {
         #[query]
         pub pagination: PaginationQuery<UserId>,
 
         #[query]
-        pub filter: Option<String>,
+        pub filter: Option<UserListFilter>,
     }
 
     pub struct Response {

@@ -48,9 +48,9 @@ pub mod reaction_list {
     response(OK, description = "already exists"),
 )]
 pub mod reaction_add {
+    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::reaction::ReactionKeyParam;
     use crate::v1::types::{ChannelId, MessageId};
-    use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
         #[path]
@@ -81,9 +81,9 @@ pub mod reaction_add {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod reaction_remove {
+    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::reaction::ReactionKeyParam;
     use crate::v1::types::{ChannelId, MessageId};
-    use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
         #[path]

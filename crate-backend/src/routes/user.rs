@@ -23,24 +23,22 @@ use lamprey_macros::handler;
 use tracing::warn;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::routes::util::{Auth, HeaderReason};
+use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};
 use crate::{routes2, ServerState};
 
-use super::util::AuthRelaxed2;
 use crate::error::{Error, Result};
 
 /// User update
 #[handler(routes::user_update)]
 async fn user_update(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<UserPatch>,
+    req: routes::user_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -53,23 +51,23 @@ async fn user_update(
     }
     let data = s.data();
     let start = srv.users.get(target_user_id, Some(auth.user.id)).await?;
-    if !patch.changes(&start) {
+    if !req.patch.changes(&start) {
         return Ok(Json(start));
     }
-    if let Some(Some(avatar_media_id)) = patch.avatar {
+    if let Some(Some(avatar_media_id)) = req.patch.avatar {
         let media = data.media_select(avatar_media_id).await?;
         if !media.metadata.is_image() {
             return Err(ApiError::from_code(ErrorCode::InvalidData).into());
         }
     }
-    if let Some(Some(banner_media_id)) = patch.banner {
+    if let Some(Some(banner_media_id)) = req.patch.banner {
         let media = data.media_select(banner_media_id).await?;
         if !media.metadata.is_image() {
             return Err(ApiError::from_code(ErrorCode::InvalidData).into());
         }
     }
-    data.user_update(target_user_id, patch.clone()).await?;
-    if let Some(maybe_avatar) = patch.avatar {
+    data.user_update(target_user_id, req.patch.clone()).await?;
+    if let Some(maybe_avatar) = req.patch.avatar {
         data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserAvatar)
             .await?;
         if let Some(avatar_media_id) = maybe_avatar {
@@ -81,7 +79,7 @@ async fn user_update(
             .await?;
         }
     }
-    if let Some(maybe_banner) = patch.banner {
+    if let Some(maybe_banner) = req.patch.banner {
         data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserBanner)
             .await?;
         if let Some(banner_media_id) = maybe_banner {
@@ -121,11 +119,11 @@ async fn user_update(
 /// User delete
 #[handler(routes::user_delete)]
 async fn user_delete(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::user_delete::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -164,13 +162,13 @@ async fn user_delete(
 /// Allows undeleting a user provided they haven't been garbage collected yet
 #[handler(routes::user_undelete)]
 async fn user_undelete(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::user_undelete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
@@ -219,6 +217,7 @@ async fn user_undelete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// User get
 #[handler(routes::user_get)]
 async fn user_get(
     auth: Auth,
@@ -251,12 +250,11 @@ async fn user_get(
 /// List rooms a user is in. If you are not the user, lists mutual rooms.
 #[handler(routes::user_room_list)]
 async fn user_room_list(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
-    Query(q): Query<PaginationQuery<RoomId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::user_room_list::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
@@ -264,9 +262,9 @@ async fn user_room_list(
     let data = s.data();
     let srv = s.services();
     let mut rooms = if auth.user.id == target_user_id {
-        data.room_list(auth.user.id, q, false).await?
+        data.room_list(auth.user.id, req.pagination, false).await?
     } else {
-        data.room_list_mutual(auth.user.id, target_user_id, q)
+        data.room_list_mutual(auth.user.id, target_user_id, req.pagination)
             .await?
     };
 
@@ -282,13 +280,11 @@ async fn user_room_list(
 /// User audit logs
 #[handler(routes::user_audit_logs)]
 async fn user_audit_logs(
-    Path(target_user_id): Path<UserIdReq>,
-    Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
-    Query(filter): Query<AuditLogFilter>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::user_audit_logs::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -300,7 +296,11 @@ async fn user_audit_logs(
     let logs = s
         .services()
         .audit_logs
-        .list(target_user_id.into_inner().into(), paginate, filter)
+        .list(
+            target_user_id.into_inner().into(),
+            req.pagination,
+            req.filter,
+        )
         .await?;
     Ok(Json(logs))
 }
@@ -316,7 +316,7 @@ async fn user_audit_logs(
 async fn guest_create(
     auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
-    Json(create): Json<UserCreate>,
+    req: routes::guest_create::Request,
 ) -> Result<impl IntoResponse> {
     let session = auth.session;
     let data = s.data();
@@ -326,8 +326,8 @@ async fn guest_create(
         .user_create(DbUserCreate {
             id: None,
             parent_id: None,
-            name: create.name,
-            description: create.description,
+            name: req.create.name.clone(),
+            description: req.create.description.clone(),
             puppet: None,
             registered_at: if s.config.require_server_invite {
                 None
@@ -381,16 +381,14 @@ async fn guest_create(
 /// User suspend
 #[handler(routes::user_suspend)]
 async fn user_suspend(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
-    Json(json): Json<SuspendRequest>,
+    req: routes::user_suspend::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -402,14 +400,14 @@ async fn user_suspend(
         target_user_id,
         Some(Suspended {
             created_at: Time::now_utc(),
-            expires_at: json.expires_at,
-            reason: reason.clone(),
+            expires_at: req.suspend.expires_at,
+            reason: req.reason.clone(),
         }),
     )
     .await?;
     let al = auth.audit_log(SERVER_ROOM_ID);
     al.commit_success(AuditLogEntryType::UserSuspend {
-        expires_at: json.expires_at,
+        expires_at: req.suspend.expires_at,
         user_id: target_user_id,
     })
     .await?;
@@ -422,14 +420,14 @@ async fn user_suspend(
 /// User unsuspend
 #[handler(routes::user_unsuspend)]
 async fn user_unsuspend(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::user_unsuspend::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -452,14 +450,13 @@ async fn user_unsuspend(
 /// for puppets
 #[handler(routes::user_presence_set)]
 async fn user_presence_set(
-    Path((target_user_id,)): Path<(UserIdReq,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<Presence>,
+    req: routes::user_presence_set::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
@@ -469,7 +466,9 @@ async fn user_presence_set(
     }
 
     let srv = s.services();
-    srv.presence.set_manual(target_user_id, json).await?;
+    srv.presence
+        .set_manual(target_user_id, req.presence)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -480,10 +479,9 @@ async fn user_presence_set(
 // TODO: deprecate
 #[handler(routes::user_list)]
 async fn user_list(
-    Query(paginate): Query<PaginationQuery<UserId>>,
-    Query(q): Query<UserListParams>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::user_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
@@ -491,7 +489,7 @@ async fn user_list(
     perms.ensure(Permission::MemberBan)?;
 
     let data = s.data();
-    let mut users = data.user_list(paginate, q.filter).await?;
+    let mut users = data.user_list(req.pagination, req.filter).await?;
 
     for user in &mut users.items {
         user.emails = Some(data.user_email_list(user.id).await?);
@@ -502,7 +500,11 @@ async fn user_list(
 
 /// Harvest get
 #[handler(routes::harvest_get)]
-async fn harvest_get(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+async fn harvest_get(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::harvest_get::Request,
+) -> Result<impl IntoResponse> {
     if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
         return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
     }
@@ -516,7 +518,7 @@ async fn harvest_get(auth: Auth, State(_s): State<Arc<ServerState>>) -> Result<i
 async fn harvest_create(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<HarvestCreate>,
+    _req: routes::harvest_create::Request,
 ) -> Result<impl IntoResponse> {
     if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
         return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
@@ -529,8 +531,8 @@ async fn harvest_create(
 /// Harvest download
 #[handler(routes::harvest_download)]
 async fn harvest_download(
-    Path((_harvest_id, _token)): Path<(HarvestId, String)>,
     State(_s): State<Arc<ServerState>>,
+    _req: routes::harvest_download::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -540,7 +542,7 @@ async fn harvest_download(
 async fn user_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<UserSearch>,
+    _req: routes::user_search::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_server(auth.user.id).await?;

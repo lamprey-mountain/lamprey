@@ -1,84 +1,60 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
-use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::{extract::State, response::IntoResponse, Json};
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission, Role,
-    RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, RoomId, RoomMember, UserId,
+    AuditLogEntryType, MessageSync, PaginationResponse, Permission, Role, RoleCreate, RoleId,
+    RoleMemberBulkPatch, RolePatch, RoleReorder, RoomId, RoomMember, UserId,
 };
 use http::StatusCode;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use lamprey_macros::handler;
 use validator::Validate;
 
+use crate::routes::util::{Auth, HeaderIdempotencyKey};
+use crate::routes2;
 use crate::ServerState;
-use common::v1::types::role::RoleDeleteQuery;
+use utoipa_axum::router::OpenApiRouter;
 
-use super::util::{Auth, HeaderIdempotencyKey};
 use crate::error::Result;
 
 /// Role create
-#[utoipa::path(
-    post,
-    path = "/room/{room_id}/role",
-    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleCreate"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    request_body = RoleCreate,
-    responses(
-        (status = CREATED, body = Role, description = "success"),
-    )
-)]
+#[handler(routes::role_create)]
 async fn role_create(
-    Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
-    Json(json): Json<RoleCreate>,
+    req: routes::role_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    json.validate()?;
+    req.role.validate()?;
 
     let srv = s.services();
-    let role = srv.role.create(room_id, &auth, json, nonce).await?;
+    let role = srv
+        .role
+        .create(req.room_id, &auth, req.role, req.idempotency_key)
+        .await?;
 
     Ok((StatusCode::CREATED, Json(role)))
 }
 
 /// Role update
-#[utoipa::path(
-    patch,
-    path = "/room/{room_id}/role/{role_id}",
-    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleUpdate"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-        ("role_id" = RoleId, Path, description = "Role id"),
-    ),
-    request_body = RolePatch,
-    responses(
-        (status = OK, body = Role, description = "success"),
-        (status = NOT_MODIFIED, description = "success"),
-    )
-)]
+#[handler(routes::role_update)]
 async fn role_update(
-    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<RolePatch>,
+    req: routes::role_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    json.validate()?;
+    req.patch.validate()?;
     let d = s.data();
     let srv = s.services();
 
-    let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+    let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
 
     if room.security.require_sudo {
         auth.ensure_sudo()?;
@@ -91,11 +67,11 @@ async fn role_update(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::RoleManage)?;
-    let start_role = d.role_select(room_id, role_id).await?;
+    let start_role = d.role_select(req.room_id, req.role_id).await?;
 
-    let mut json = json;
+    let mut json = req.patch;
     if json.allow.is_some() && json.deny.is_none() {
         let mut new_deny = start_role.deny.clone();
         new_deny.retain(|p| !json.allow.as_ref().unwrap().contains(p));
@@ -123,8 +99,8 @@ async fn role_update(
     if !json.changes(&start_role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }
-    let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-    let room = srv.rooms.get(room_id, None).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
     if rank <= start_role.position && room.owner_id != Some(auth.user.id) {
         return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
@@ -145,8 +121,9 @@ async fn role_update(
             perms.ensure(*p)?;
         }
     }
-    d.role_update(room_id, role_id, json.clone()).await?;
-    let end_role = d.role_select(room_id, role_id).await?;
+    d.role_update(req.room_id, req.role_id, json.clone())
+        .await?;
+    let end_role = d.role_select(req.room_id, req.role_id).await?;
 
     let changes = Changes::new()
         .change("name", &start_role.name, &end_role.name)
@@ -170,7 +147,7 @@ async fn role_update(
         .change("hoist", &start_role.hoist, &end_role.hoist)
         .build();
 
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::RoleUpdate { changes })
         .await?;
 
@@ -178,40 +155,28 @@ async fn role_update(
         role: end_role.clone(),
     };
     if end_role.allow != start_role.allow || end_role.deny != start_role.deny {
-        s.services().perms.invalidate_room_all(room_id).await;
+        s.services().perms.invalidate_room_all(req.room_id).await;
     }
-    s.broadcast_room(room_id, auth.user.id, msg).await?;
+    s.broadcast_room(req.room_id, auth.user.id, msg).await?;
     Ok(Json(end_role).into_response())
 }
 
 /// Role delete
-#[utoipa::path(
-    delete,
-    path = "/room/{room_id}/role/{role_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("role_id", description = "Role id"),
-    ),
-    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleDelete"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
+#[handler(routes::role_delete)]
 async fn role_delete(
-    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    Query(query): Query<RoleDeleteQuery>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::role_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    if room_id.into_inner() == role_id.into_inner() {
+    if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
     let d = s.data();
     let srv = s.services();
 
-    let room = srv.rooms.get(room_id, None).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
 
     if room.security.require_sudo {
         auth.ensure_sudo()?;
@@ -224,20 +189,20 @@ async fn role_delete(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::RoleManage)?;
-    let role = d.role_select(room_id, role_id).await?;
-    let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-    let room = srv.rooms.get(room_id, None).await?;
+    let role = d.role_select(req.room_id, req.role_id).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
     if rank <= role.position && room.owner_id != Some(auth.user.id) {
         return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
-    if role.member_count == 0 || query.force {
-        d.role_delete(room_id, role_id).await?;
+    if role.member_count == 0 || req.fallback_role_id.is_some() {
+        d.role_delete(req.room_id, req.role_id).await?;
 
-        let al = auth.audit_log(room_id);
+        let al = auth.audit_log(req.room_id);
         al.commit_success(AuditLogEntryType::RoleDelete {
-            role_id,
+            role_id: req.role_id,
             changes: Changes::new()
                 .remove("name", &role.name)
                 .remove("description", &role.description)
@@ -251,9 +216,12 @@ async fn role_delete(
         })
         .await?;
 
-        let msg = MessageSync::RoleDelete { room_id, role_id };
-        srv.perms.invalidate_room_all(room_id).await;
-        s.broadcast_room(room_id, auth.user.id, msg).await?;
+        let msg = MessageSync::RoleDelete {
+            room_id: req.room_id,
+            role_id: req.role_id,
+        };
+        srv.perms.invalidate_room_all(req.room_id).await;
+        s.broadcast_room(req.room_id, auth.user.id, msg).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         Ok(StatusCode::CONFLICT)
@@ -261,108 +229,71 @@ async fn role_delete(
 }
 
 /// Role get
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/role/{role_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("role_id", description = "Role id"),
-    ),
-    tags = ["role", "badge.scope.full"],
-    responses(
-        (status = OK, body = Role, description = "success"),
-    )
-)]
+#[handler(routes::role_get)]
 async fn role_get(
-    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::role_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    let role = d.role_select(room_id, role_id).await?;
+    let _perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, req.room_id)
+        .await?;
+    let role = d.role_select(req.room_id, req.role_id).await?;
     Ok(Json(role))
 }
 
 /// Role list
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/role",
-    params(
-        ("room_id", description = "Room id"),
-    ),
-    tags = ["role", "badge.scope.full"],
-    responses(
-        (status = OK, body = Vec<Role>, description = "success"),
-    )
-)]
+#[handler(routes::role_list)]
 async fn role_list(
-    Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::role_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    let roles = srv.role.list(room_id).await?;
+    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    let roles = srv.role.list(req.room_id).await?;
     Ok(Json(roles))
 }
 
-/// Role list members
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/role/{role_id}/member",
-    params(
-        ("room_id", description = "Room id"),
-        ("role_id", description = "Role id"),
-    ),
-    tags = ["role", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
-    )
-)]
+/// Role member list
+#[handler(routes::role_member_list)]
 async fn role_member_list(
-    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    Query(paginate): Query<PaginationQuery<UserId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::role_member_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let _perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    let res = d.role_member_list(role_id, paginate).await?;
+    let _perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, req.room_id)
+        .await?;
+    let res = d.role_member_list(req.role_id, req.pagination).await?;
     Ok(Json(res))
 }
 
-/// Role member apply
-#[utoipa::path(
-    put,
-    path = "/room/{room_id}/role/{role_id}/member/{user_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("role_id", description = "Role id"),
-        ("user_id", description = "User id"),
-    ),
-    tags = ["role", "badge.scope.full", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleApply"],
-    responses(
-        (status = OK, body = RoomMember, description = "success"),
-    )
-)]
+/// Role member add
+#[handler(routes::role_member_add)]
 async fn role_member_add(
-    Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::role_member_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    if room_id.into_inner() == role_id.into_inner() {
+    if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
     let d = s.data();
     let srv = s.services();
 
-    let room = srv.rooms.get(room_id, None).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
 
     if room.security.require_mfa {
         let user = srv.users.get(auth.user.id, None).await?;
@@ -372,63 +303,52 @@ async fn role_member_add(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::RoleApply)?;
 
-    let role = d.role_select(room_id, role_id).await?;
-    let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-    let room = srv.rooms.get(room_id, None).await?;
-    let self_apply = role.is_self_applicable && target_user_id == auth.user.id;
+    let role = d.role_select(req.room_id, req.role_id).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
+    let self_apply = role.is_self_applicable && req.user_id == auth.user.id;
     if rank <= role.position && room.owner_id != Some(auth.user.id) && !self_apply {
         return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
-    d.role_member_put(room_id, target_user_id, role_id).await?;
-    let member = d.room_member_get(room_id, target_user_id).await?;
-    let user = srv.users.get(target_user_id, None).await?;
+    d.role_member_put(req.room_id, req.user_id, req.role_id)
+        .await?;
+    let member = d.room_member_get(req.room_id, req.user_id).await?;
+    let user = srv.users.get(req.user_id, None).await?;
     let msg = MessageSync::RoomMemberUpdate {
         member: member.clone(),
         user,
     };
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::RoleApply {
-        user_id: target_user_id,
-        role_id,
+        user_id: req.user_id,
+        role_id: req.role_id,
     })
     .await?;
-    srv.perms.invalidate_room(target_user_id, room_id).await;
-    s.broadcast_room(room_id, auth.user.id, msg).await?;
+    srv.perms.invalidate_room(req.user_id, req.room_id).await;
+    s.broadcast_room(req.room_id, auth.user.id, msg).await?;
     Ok(Json(member))
 }
 
 /// Role member remove
-#[utoipa::path(
-    delete,
-    path = "/room/{room_id}/role/{role_id}/member/{user_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("role_id", description = "Role id"),
-        ("user_id", description = "User id"),
-    ),
-    tags = ["role", "badge.scope.full", "badge.perm.RoleApply", "badge.room-mfa-opt", "badge.audit-log.RoleUnapply"],
-    responses(
-        (status = OK, body = RoomMember, description = "success"),
-    )
-)]
+#[handler(routes::role_member_remove)]
 async fn role_member_remove(
-    Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::role_member_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    if room_id.into_inner() == role_id.into_inner() {
+    if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
     let d = s.data();
     let srv = s.services();
 
-    let room = srv.rooms.get(room_id, None).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
 
     if room.security.require_mfa {
         let user = srv.users.get(auth.user.id, None).await?;
@@ -438,68 +358,52 @@ async fn role_member_remove(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::RoleApply)?;
-    let role = d.role_select(room_id, role_id).await?;
-    let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-    let room = srv.rooms.get(room_id, None).await?;
-    let self_apply = role.is_self_applicable && target_user_id == auth.user.id;
-    if rank <= role.position && room.owner_id != Some(auth.user.id) && !self_apply {
+
+    let role = d.role_select(req.room_id, req.role_id).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
+    let self_remove = role.is_self_applicable && req.user_id == auth.user.id;
+    if rank <= role.position && room.owner_id != Some(auth.user.id) && !self_remove {
         return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
-    d.role_member_delete(room_id, target_user_id, role_id)
+    d.role_member_delete(req.room_id, req.user_id, req.role_id)
         .await?;
-    let member = d.room_member_get(room_id, target_user_id).await?;
-    let user = srv.users.get(target_user_id, None).await?;
+    let member = d.room_member_get(req.room_id, req.user_id).await?;
+    let user = srv.users.get(req.user_id, None).await?;
     let msg = MessageSync::RoomMemberUpdate {
         member: member.clone(),
         user,
     };
-
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::RoleUnapply {
-        user_id: target_user_id,
-        role_id,
+        user_id: req.user_id,
+        role_id: req.role_id,
     })
     .await?;
-
-    srv.perms.invalidate_room(target_user_id, room_id).await;
-    s.broadcast_room(room_id, auth.user.id, msg).await?;
-    Ok(Json(member))
+    srv.perms.invalidate_room(req.user_id, req.room_id).await;
+    s.broadcast_room(req.room_id, auth.user.id, msg).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Role member bulk edit
-#[utoipa::path(
-    patch,
-    path = "/room/{room_id}/role/{role_id}/member",
-    params(
-        ("room_id", description = "Room id"),
-        ("role_id", description = "Role id"),
-    ),
-    tags = ["role", "badge.scope.full", "badge.room-mfa", "badge.audit-log.RoleApply", "badge.audit-log.RoleUnapply"],
-    responses(
-        (status = NO_CONTENT, body = (), description = "success"),
-    )
-)]
-async fn role_member_bulk_edit(
-    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
+/// Role member bulk patch
+#[handler(routes::role_member_bulk_patch)]
+async fn role_member_bulk_patch(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(body): Json<RoleMemberBulkPatch>,
+    req: routes::role_member_bulk_patch::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    body.validate()?;
-
-    if room_id.into_inner() == role_id.into_inner() {
+    if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
-
     let d = s.data();
     let srv = s.services();
 
-    let room = srv.rooms.get(room_id, None).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
 
     if room.security.require_mfa {
         let user = srv.users.get(auth.user.id, None).await?;
@@ -509,92 +413,76 @@ async fn role_member_bulk_edit(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::RoleApply)?;
 
-    let role = d.role_select(room_id, role_id).await?;
-    let auth_user_rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-    let room = srv.rooms.get(room_id, None).await?;
+    let role = d.role_select(req.room_id, req.role_id).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
 
-    if auth_user_rank <= role.position && room.owner_id != Some(auth.user.id) {
-        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
-    }
-
-    let all_user_ids: Vec<UserId> = body
-        .apply
-        .iter()
-        .chain(body.remove.iter())
-        .copied()
-        .collect();
-
-    for target_user_id in &body.apply {
-        let target_rank = srv.perms.get_user_rank(room_id, *target_user_id).await?;
-        if auth_user_rank <= target_rank && room.owner_id != Some(auth.user.id) {
-            return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
+    // Process apply (add role to users)
+    for user_id in &req.patch.apply {
+        let self_apply = role.is_self_applicable && *user_id == auth.user.id;
+        if rank <= role.position && room.owner_id != Some(auth.user.id) && !self_apply {
+            return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
         }
-    }
 
-    for target_user_id in &body.remove {
-        let target_rank = srv.perms.get_user_rank(room_id, *target_user_id).await?;
-        if auth_user_rank <= target_rank && room.owner_id != Some(auth.user.id) {
-            return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
-        }
-    }
-
-    d.role_member_bulk_edit(room_id, role_id, &body.apply, &body.remove)
-        .await?;
-
-    for user_id in all_user_ids {
-        let member = d.room_member_get(room_id, user_id).await?;
-        let user = srv.users.get(user_id, None).await?;
+        d.role_member_put(req.room_id, *user_id, req.role_id)
+            .await?;
+        let member = d.room_member_get(req.room_id, *user_id).await?;
+        let user = srv.users.get(*user_id, None).await?;
         let msg = MessageSync::RoomMemberUpdate {
             member: member.clone(),
             user,
         };
+        let al = auth.audit_log(req.room_id);
+        al.commit_success(AuditLogEntryType::RoleApply {
+            user_id: *user_id,
+            role_id: req.role_id,
+        })
+        .await?;
+        srv.perms.invalidate_room(*user_id, req.room_id).await;
+        s.broadcast_room(req.room_id, auth.user.id, msg).await?;
+    }
 
-        if body.apply.contains(&user_id) {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::RoleApply { user_id, role_id })
-                .await?;
-        }
-
-        if body.remove.contains(&user_id) {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::RoleUnapply { user_id, role_id })
-                .await?;
-        }
-
-        srv.perms.invalidate_room(user_id, room_id).await;
-        s.broadcast_room(room_id, auth.user.id, msg).await?;
+    // Process remove (remove role from users)
+    for user_id in &req.patch.remove {
+        d.role_member_delete(req.room_id, *user_id, req.role_id)
+            .await?;
+        let member = d.room_member_get(req.room_id, *user_id).await?;
+        let user = srv.users.get(*user_id, None).await?;
+        let msg = MessageSync::RoomMemberUpdate {
+            member: member.clone(),
+            user,
+        };
+        let al = auth.audit_log(req.room_id);
+        al.commit_success(AuditLogEntryType::RoleUnapply {
+            user_id: *user_id,
+            role_id: req.role_id,
+        })
+        .await?;
+        srv.perms.invalidate_room(*user_id, req.room_id).await;
+        s.broadcast_room(req.room_id, auth.user.id, msg).await?;
     }
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Role reorder
-#[utoipa::path(
-    patch,
-    path = "/room/{room_id}/role",
-    params(("room_id", description = "Room id")),
-    tags = ["role", "badge.scope.full", "badge.perm.RoleManage", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.RoleReorder"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
+#[handler(routes::role_reorder)]
 async fn role_reorder(
-    Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(body): Json<RoleReorder>,
+    req: routes::role_reorder::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    body.validate()?;
+    req.reorder.validate()?;
 
     let d = s.data();
     let srv = s.services();
 
-    let room = srv.rooms.get(room_id, None).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
 
     if room.security.require_sudo {
         auth.ensure_sudo()?;
@@ -607,15 +495,14 @@ async fn role_reorder(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::RoleManage)?;
 
-    let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-    let room = srv.rooms.get(room_id, None).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let room = srv.rooms.get(req.room_id, None).await?;
 
-    // FIXME: prevent moving @everyone role from position 0
-    for r in &body.roles {
-        let role = d.role_select(room_id, r.role_id).await?;
+    for r in &req.reorder.roles {
+        let role = d.role_select(req.room_id, r.role_id).await?;
         if rank <= role.position && room.owner_id != Some(auth.user.id) {
             return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
         }
@@ -624,21 +511,21 @@ async fn role_reorder(
         }
     }
 
-    d.role_reorder(room_id, body.clone()).await?;
+    d.role_reorder(req.room_id, req.reorder.clone()).await?;
 
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::RoleReorder {
-        roles: body.roles.clone(),
+        roles: req.reorder.roles.clone(),
     })
     .await?;
 
-    s.services().perms.invalidate_room_all(room_id).await;
+    s.services().perms.invalidate_room_all(req.room_id).await;
     s.broadcast_room(
-        room_id,
+        req.room_id,
         auth.user.id,
         MessageSync::RoleReorder {
-            room_id,
-            roles: body.roles,
+            room_id: req.room_id,
+            roles: req.reorder.roles,
         },
     )
     .await?;
@@ -648,14 +535,14 @@ async fn role_reorder(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(role_create))
-        .routes(routes!(role_update))
-        .routes(routes!(role_delete))
-        .routes(routes!(role_get))
-        .routes(routes!(role_list))
-        .routes(routes!(role_reorder))
-        .routes(routes!(role_member_list))
-        .routes(routes!(role_member_add))
-        .routes(routes!(role_member_remove))
-        .routes(routes!(role_member_bulk_edit))
+        .routes(routes2!(role_create))
+        .routes(routes2!(role_update))
+        .routes(routes2!(role_delete))
+        .routes(routes2!(role_get))
+        .routes(routes2!(role_list))
+        .routes(routes2!(role_reorder))
+        .routes(routes2!(role_member_list))
+        .routes(routes2!(role_member_add))
+        .routes(routes2!(role_member_remove))
+        .routes(routes2!(role_member_bulk_patch))
 }

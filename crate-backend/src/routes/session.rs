@@ -1,41 +1,35 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate,
-    SessionId, SessionPatch, SessionStatus, SessionToken, SessionType, SessionWithToken,
+    AuditLogEntryType, MessageSync, PaginationResponse, Session, SessionStatus, SessionToken,
+    SessionType, SessionWithToken,
 };
-use utoipa_axum::{router::OpenApiRouter, routes};
+use lamprey_macros::handler;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::routes::util::Auth;
 use crate::types::{DbSessionCreate, SessionIdReq};
-use crate::ServerState;
+use crate::{routes2, ServerState};
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::{Error, Result};
 
 /// Session create
-#[utoipa::path(
-    post,
-    path = "/session",
-    tags = ["session"],
-    request_body = SessionCreate,
-    responses(
-        (status = CREATED, body = SessionWithToken, description = "success"),
-    )
-)]
+#[handler(routes::session_create)]
 pub async fn session_create(
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
-    Json(json): Json<SessionCreate>,
+    req: routes::session_create::Request,
 ) -> Result<impl IntoResponse> {
+    let json = req.session;
     json.validate()?;
     let data = s.data();
     let user_agent = headers
@@ -59,49 +53,29 @@ pub async fn session_create(
 }
 
 /// Session list
-#[utoipa::path(
-    get,
-    path = "/session",
-    tags = ["session", "badge.scope.full"],
-    params(PaginationQuery<SessionId>),
-    responses(
-        (status = OK, description = "List session success", body = PaginationResponse<Session>),
-    )
-)]
+#[handler(routes::session_list)]
 pub async fn session_list(
-    Query(q): Query<PaginationQuery<SessionId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::session_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let res = data.session_list(auth.user.id, q).await?;
+    let res = data.session_list(auth.user.id, req.pagination).await?;
     Ok(Json(res))
 }
 
 /// Session update
-#[utoipa::path(
-    patch,
-    path = "/session/{session_id}",
-    tags = ["session", "badge.scope.full", "badge.audit-log.SessionUpdate"],
-    params(
-        ("session_id" = SessionIdReq, Path, description = "Session id"),
-    ),
-    request_body = SessionPatch,
-    responses(
-        (status = OK, body = Session, description = "success"),
-        (status = NOT_MODIFIED, body = Session, description = "not modified"),
-    )
-)]
+#[handler(routes::session_update)]
 pub async fn session_update(
-    Path(target_session_id): Path<SessionIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<SessionPatch>,
+    req: routes::session_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    let json = req.patch;
     json.validate()?;
-    let target_session_id = match target_session_id {
+    let target_session_id = match req.session_id {
         SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
@@ -159,24 +133,14 @@ pub async fn session_update(
 }
 
 /// Session delete
-#[utoipa::path(
-    delete,
-    path = "/session/{session_id}",
-    params(
-        ("session_id", description = "Session id"),
-    ),
-    tags = ["session", "badge.scope.full", "badge.audit-log.SessionDelete"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
+#[handler(routes::session_delete)]
 pub async fn session_delete(
-    Path(target_session_id): Path<SessionIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::session_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_session_id = match target_session_id {
+    let target_session_id = match req.session_id {
         SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(target_session_id) => target_session_id,
     };
@@ -236,15 +200,11 @@ pub async fn session_delete(
 /// Session delete all
 ///
 /// Delete all sessions, *including the current one*
-#[utoipa::path(
-    delete,
-    path = "/session/@all",
-    tags = ["session", "badge.scope.full", "badge.audit-log.SessionDeleteAll"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
+#[handler(routes::session_delete_all)]
 pub async fn session_delete_all(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    _req: routes::session_delete_all::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let Some(user_id) = auth.session.user_id() else {
@@ -266,24 +226,14 @@ pub async fn session_delete_all(
 }
 
 /// Session get
-#[utoipa::path(
-    get,
-    path = "/session/{session_id}",
-    params(
-        ("session_id", description = "Session id"),
-    ),
-    tags = ["session", "badge.scope.full"],
-    responses(
-        (status = OK, body = Session, description = "success"),
-    )
-)]
+#[handler(routes::session_get)]
 pub async fn session_get(
-    Path(session_id): Path<SessionIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::session_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let session_id = match session_id {
+    let session_id = match req.session_id {
         SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
@@ -299,10 +249,10 @@ pub async fn session_get(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(session_create))
-        .routes(routes!(session_list))
-        .routes(routes!(session_update))
-        .routes(routes!(session_get))
-        .routes(routes!(session_delete))
-        .routes(routes!(session_delete_all))
+        .routes(routes2!(session_create))
+        .routes(routes2!(session_list))
+        .routes(routes2!(session_update))
+        .routes(routes2!(session_get))
+        .routes(routes2!(session_delete))
+        .routes(routes2!(session_delete_all))
 }

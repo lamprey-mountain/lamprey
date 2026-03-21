@@ -9,8 +9,8 @@ use lamprey_macros::endpoint;
 )]
 pub mod user_connection_list {
     use crate::v1::types::application::Connection;
-    use crate::v1::types::{ApplicationId, PaginationQuery, PaginationResponse};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{ApplicationId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[path]
@@ -35,9 +35,9 @@ pub mod user_connection_list {
 )]
 pub mod user_connection_update {
     use crate::v1::types::application::Connection;
-    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::user_connection::ConnectionPatch;
+    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]
@@ -64,8 +64,8 @@ pub mod user_connection_update {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod user_connection_delete {
-    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]
@@ -86,8 +86,8 @@ pub mod user_connection_delete {
     response(OK, body = ConnectionMetadata, description = "success"),
 )]
 pub mod user_connection_metadata_get {
-    use crate::v1::types::ApplicationId;
     use crate::v1::types::user_connection::ConnectionMetadata;
+    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]
@@ -108,8 +108,8 @@ pub mod user_connection_metadata_get {
     response(OK, body = ConnectionMetadata, description = "success"),
 )]
 pub mod user_connection_metadata_put {
-    use crate::v1::types::ApplicationId;
     use crate::v1::types::user_connection::ConnectionMetadata;
+    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]

@@ -1,89 +1,67 @@
 use std::sync::Arc;
 
-use axum::extract::Query;
+use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::search::{
     ChannelSearchRequest, MessageSearch, MessageSearchRequest, RoomSearchRequest,
 };
 use common::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse, Room, RoomId};
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::{Error, ServerState};
+use crate::{routes2, Error, ServerState};
 
 use super::util::Auth;
 use crate::error::Result;
 
 /// Search messages
-#[utoipa::path(
-    post,
-    path = "/search/message",
-    tags = ["search"],
-    responses(
-        (status = OK, body = MessageSearch, description = "success"),
-    )
-)]
+#[handler(routes::search_messages)]
 pub async fn search_messages(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(query): Json<MessageSearchRequest>,
+    req: routes::search_messages::Request,
 ) -> Result<impl IntoResponse> {
-    query.validate()?;
+    req.search.validate()?;
     let res = s
         .services()
         .search
-        .search_messages(auth.user.id, query)
+        .search_messages(auth.user.id, req.search)
         .await?;
     Ok(Json(res))
 }
 
 /// Search channels
-#[utoipa::path(
-    post,
-    path = "/search/channels",
-    tags = ["search"],
-    request_body = ChannelSearchRequest,
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "success"),
-    )
-)]
+#[handler(routes::search_channels)]
 pub async fn search_channels(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Query(q): Query<PaginationQuery<ChannelId>>,
-    Json(json): Json<ChannelSearchRequest>,
+    req: routes::search_channels::Request,
 ) -> Result<impl IntoResponse> {
-    json.validate()?;
+    req.search.validate()?;
     let res = s
         .services()
         .search
-        .search_channels(auth.user.id, json, q)
+        .search_channels(auth.user.id, req.search, req.pagination)
         .await?;
     Ok(Json(res))
 }
 
 /// Search rooms (TODO)
-#[utoipa::path(
-    post,
-    path = "/search/room",
-    tags = ["search"],
-    responses(
-        (status = OK, body = PaginationResponse<Room>, description = "success"),
-    )
-)]
+#[handler(routes::search_rooms)]
 pub async fn search_rooms(
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    Query(_q): Query<PaginationQuery<RoomId>>,
-    Json(_json): Json<RoomSearchRequest>,
+    _req: routes::search_rooms::Request,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(search_messages))
-        .routes(routes!(search_channels))
-        .routes(routes!(search_rooms))
+        .routes(routes2!(search_messages))
+        .routes(routes2!(search_channels))
+        .routes(routes2!(search_rooms))
 }

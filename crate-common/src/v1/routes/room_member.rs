@@ -34,8 +34,8 @@ pub mod room_member_list {
     response(OK, body = RoomMember, description = "success"),
 )]
 pub mod room_member_get {
-    use crate::v1::types::{RoomId, RoomMember};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{RoomId, RoomMember};
 
     pub struct Request {
         #[path]
@@ -62,8 +62,8 @@ pub mod room_member_get {
     response(NOT_MODIFIED, description = "not modified"),
 )]
 pub mod room_member_add {
-    use crate::v1::types::{RoomId, RoomMember, RoomMemberPut};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{RoomId, RoomMember, RoomMemberPut};
 
     pub struct Request {
         #[path]
@@ -93,8 +93,8 @@ pub mod room_member_add {
     response(NOT_MODIFIED, description = "not modified"),
 )]
 pub mod room_member_update {
-    use crate::v1::types::{RoomId, RoomMember, RoomMemberPatch};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{RoomId, RoomMember, RoomMemberPatch};
 
     pub struct Request {
         #[path]
@@ -123,8 +123,8 @@ pub mod room_member_update {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_member_delete {
-    use crate::v1::types::{RoomId, RoomMemberOrigin};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{RoomId, RoomMemberOrigin};
 
     pub struct Request {
         #[path]

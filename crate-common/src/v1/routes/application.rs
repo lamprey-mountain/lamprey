@@ -53,8 +53,8 @@ pub mod app_list {
 )]
 pub mod app_get {
     use crate::v1::types::application::Application;
-    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::ApplicationIdReq;
+    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]
@@ -76,8 +76,8 @@ pub mod app_get {
 )]
 pub mod app_patch {
     use crate::v1::types::application::{Application, ApplicationPatch};
-    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::ApplicationIdReq;
+    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]
@@ -119,8 +119,8 @@ pub mod app_delete {
     response(CREATED, body = SessionWithToken, description = "success"),
 )]
 pub mod app_create_session {
-    use crate::v1::types::{SessionCreate, SessionWithToken};
     use crate::v1::types::misc::ApplicationIdReq;
+    use crate::v1::types::{SessionCreate, SessionWithToken};
 
     pub struct Request {
         #[path]
@@ -169,8 +169,8 @@ pub mod app_invite_bot {
     response(CREATED, body = User, description = "created"),
 )]
 pub mod puppet_ensure {
-    use crate::v1::types::{PuppetCreate, User};
     use crate::v1::types::misc::ApplicationIdReq;
+    use crate::v1::types::{PuppetCreate, User};
 
     pub struct Request {
         #[path]
@@ -198,8 +198,8 @@ pub mod puppet_ensure {
 )]
 pub mod app_rotate_secret {
     use crate::v1::types::application::Application;
-    use crate::v1::types::ApplicationId;
     use crate::v1::types::misc::ApplicationIdReq;
+    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]

@@ -196,8 +196,8 @@ pub mod calendar_event_participant_list {
 )]
 pub mod calendar_event_participant_add {
     use crate::v1::types::calendar::{CalendarEventParticipant, CalendarEventParticipantPut};
-    use crate::v1::types::{CalendarEventId, ChannelId, UserId};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{CalendarEventId, ChannelId, UserId};
 
     pub struct Request {
         #[path]
@@ -229,8 +229,8 @@ pub mod calendar_event_participant_add {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod calendar_event_participant_remove {
-    use crate::v1::types::{CalendarEventId, ChannelId, UserId};
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{CalendarEventId, ChannelId, UserId};
 
     pub struct Request {
         #[path]
@@ -281,8 +281,8 @@ pub mod calendar_overwrite_list {
 )]
 pub mod calendar_overwrite_put {
     use crate::v1::types::calendar::{CalendarOverwrite, CalendarOverwritePut};
-    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]

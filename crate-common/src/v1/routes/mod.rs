@@ -3,8 +3,8 @@ use crate::v1::types::{oauth::Scope, Permission};
 
 pub mod ack;
 pub mod application;
-pub mod automod;
 pub mod auth;
+pub mod automod;
 pub mod calendar;
 pub mod channel;
 pub mod dm;
@@ -40,8 +40,8 @@ pub mod webhook;
 // Re-export all endpoint modules
 pub use ack::*;
 pub use application::*;
-pub use automod::*;
 pub use auth::*;
+pub use automod::*;
 pub use calendar::*;
 pub use channel::*;
 pub use dm::*;
@@ -83,7 +83,9 @@ impl<M: crate::v1::types::ids::Marker> PathParam for Id<M> {
 
 impl PathParam for crate::v1::types::room_template::RoomTemplateCode {
     fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        Ok(crate::v1::types::room_template::RoomTemplateCode(s.to_string()))
+        Ok(crate::v1::types::room_template::RoomTemplateCode(
+            s.to_string(),
+        ))
     }
 }
 
@@ -102,7 +104,9 @@ impl PathParam for uuid::Uuid {
 
 impl PathParam for crate::v1::types::reaction::ReactionKeyParam {
     fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        Ok(crate::v1::types::reaction::ReactionKeyParam::Text(s.to_string()))
+        Ok(crate::v1::types::reaction::ReactionKeyParam::Text(
+            s.to_string(),
+        ))
     }
 }
 
