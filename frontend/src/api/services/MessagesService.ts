@@ -364,7 +364,7 @@ export class MessagesService extends BaseService<Message> {
 						} else {
 							const data = await this.fetchList(channel_id, {
 								dir: "f",
-								limit: 100,
+								limit: Math.max(100, dir.limit),
 								from: r.end,
 							});
 							const nr = this.mergeAfter(ranges, r, data, data.has_more);
@@ -374,7 +374,7 @@ export class MessagesService extends BaseService<Message> {
 				} else {
 					const data = await this.fetchList(channel_id, {
 						dir: "f",
-						limit: 100,
+						limit: Math.max(100, dir.limit),
 						from: dir.message_id,
 					});
 					batch(() => {
@@ -392,7 +392,7 @@ export class MessagesService extends BaseService<Message> {
 				if (!r) {
 					const data = await this.fetchList(channel_id, {
 						dir: "f",
-						limit: 100,
+						limit: Math.max(100, dir.limit),
 					});
 					batch(() => {
 						const range = this.mergeAfter(
@@ -406,7 +406,7 @@ export class MessagesService extends BaseService<Message> {
 				} else if (r.len < dir.limit && r.has_forward) {
 					const data = await this.fetchList(channel_id, {
 						dir: "f",
-						limit: 100,
+						limit: Math.max(100, dir.limit),
 						from: r.end,
 					});
 					const nr = this.mergeAfter(ranges, r, data, data.has_more);
@@ -424,7 +424,7 @@ export class MessagesService extends BaseService<Message> {
 						} else if (r.has_backwards) {
 							const data = await this.fetchList(channel_id, {
 								dir: "b",
-								limit: 100,
+								limit: Math.max(100, dir.limit),
 								from: r.start,
 							});
 							const nr = this.mergeBefore(ranges, r, data, data.has_more);
@@ -434,7 +434,7 @@ export class MessagesService extends BaseService<Message> {
 				} else {
 					const data = await this.fetchList(channel_id, {
 						dir: "b",
-						limit: 100,
+						limit: Math.max(100, dir.limit),
 						from: dir.message_id,
 					});
 					batch(() => {
@@ -452,14 +452,14 @@ export class MessagesService extends BaseService<Message> {
 				if (range.isEmpty()) {
 					const data = await this.fetchList(channel_id, {
 						dir: "b",
-						limit: 100,
+						limit: Math.max(100, dir.limit),
 					});
 					const nr = this.mergeBefore(ranges, range, data, data.has_more);
 					ranges.replace(range, nr);
 				} else if (range.len < dir.limit && range.has_backwards) {
 					const data = await this.fetchList(channel_id, {
 						dir: "b",
-						limit: 100,
+						limit: Math.max(100, dir.limit),
 						from: range.start,
 					});
 					const nr = this.mergeBefore(ranges, range, data, data.has_more);
@@ -484,14 +484,14 @@ export class MessagesService extends BaseService<Message> {
 						if (!hasEnoughBackwards) {
 							dataBefore = await this.fetchList(channel_id, {
 								dir: "b",
-								limit: 100,
+								limit: Math.max(100, dir.limit),
 								from: r.start,
 							});
 						}
 						if (!hasEnoughForwards) {
 							dataAfter = await this.fetchList(channel_id, {
 								dir: "f",
-								limit: 100,
+								limit: Math.max(100, dir.limit),
 								from: r.end,
 							});
 						}

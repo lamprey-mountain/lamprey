@@ -123,17 +123,18 @@ export const ChatMain = (props: ChatProps) => {
 			);
 
 			// scroll a page at a time
-			const PAGINATE_LEN = SLICE_LEN / 3;
+			const PAGINATE_LEN = Math.floor(SLICE_LEN / 3);
 
 			const msgs = messages()!;
 			const old = { ...channelState.anchor };
 
 			if (dir === "forwards") {
 				if (msgs.has_forward) {
+					const idx = Math.max(0, msgs.items.length - PAGINATE_LEN);
 					setChannelState("anchor", {
 						type: "forwards",
 						limit: SLICE_LEN,
-						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
+						message_id: msgs.items[idx]?.id,
 					});
 				} else {
 					// live timeline
@@ -145,10 +146,11 @@ export const ChatMain = (props: ChatProps) => {
 					if (list.isAtBottom()) markRead();
 				}
 			} else {
+				const idx = Math.min(PAGINATE_LEN, msgs.items.length - 1);
 				setChannelState("anchor", {
 					type: "backwards",
 					limit: SLICE_LEN,
-					message_id: messages()?.items[PAGINATE_LEN]?.id,
+					message_id: msgs.items[idx]?.id,
 				});
 			}
 
@@ -159,7 +161,6 @@ export const ChatMain = (props: ChatProps) => {
 			}
 		},
 		onRestore() {
-			return;
 			const a = anchor();
 			log.info("restore", { ...a });
 			if (a.type === "context") {
