@@ -105,13 +105,25 @@ export class MessageRange {
 	}
 
 	mergeRange(other: MessageRange): MessageRange {
+		if (this.isEmpty()) return other;
+		if (other.isEmpty()) return this;
+
 		const byId = new Map<string, Message>();
-		for (const m of [...this.items, ...other.items]) byId.set(m.id, m);
-		return new MessageRange(
-			this.has_forward && other.has_forward,
-			this.has_backwards && other.has_backwards,
-			sortMessagesById([...byId.values()]),
-		);
+		for (const m of this.items) byId.set(m.id, m);
+		for (const m of other.items) byId.set(m.id, m);
+		const items = sortMessagesById([...byId.values()]);
+
+		let has_forward = false;
+		if (this.end > other.end) has_forward = this.has_forward;
+		else if (other.end > this.end) has_forward = other.has_forward;
+		else has_forward = this.has_forward && other.has_forward;
+
+		let has_backwards = false;
+		if (this.start < other.start) has_backwards = this.has_backwards;
+		else if (other.start < this.start) has_backwards = other.has_backwards;
+		else has_backwards = this.has_backwards && other.has_backwards;
+
+		return new MessageRange(has_forward, has_backwards, items);
 	}
 }
 
@@ -170,7 +182,8 @@ export class MessageRanges {
 		for (let i = 0; i < sorted.length - 1; i++) {
 			const a = sorted[i]!, b = sorted[i + 1]!;
 			const adjacent = !a.has_forward && !b.has_backwards;
-			const overlapping = a.end >= b.end;
+			const overlapping = a.end >= b.start;
+
 			if (adjacent || overlapping) {
 				this.ranges.delete(a);
 				this.ranges.delete(b);
@@ -238,9 +251,6 @@ export class MessagesService extends BaseService<Message> {
 		return m;
 	}
 
-	/**
-	 * Reactively fetch and list messages.
-	 */
 	useList(
 		thread_id: Accessor<string>,
 		dir: Accessor<MessageListAnchor>,
@@ -359,7 +369,7 @@ export class MessagesService extends BaseService<Message> {
 				if (r) {
 					const idx = r.items.findIndex((i) => i.id === dir.message_id);
 					if (idx !== -1) {
-						if (idx + dir.limit < r.len || !r.has_forward) {
+						if (idx + dir.limit <= r.len || !r.has_forward) {
 							// reuse
 						} else {
 							const data = await this.fetchList(channel_id, {
@@ -419,9 +429,9 @@ export class MessagesService extends BaseService<Message> {
 				if (r) {
 					const idx = r.items.findIndex((i) => i.id === dir.message_id);
 					if (idx !== -1) {
-						if (idx >= dir.limit) {
+						if (idx + 1 >= dir.limit || !r.has_backwards) {
 							// reuse
-						} else if (r.has_backwards) {
+						} else {
 							const data = await this.fetchList(channel_id, {
 								dir: "b",
 								limit: Math.max(100, dir.limit),
@@ -527,7 +537,7 @@ export class MessagesService extends BaseService<Message> {
 					batch(() => {
 						const range = this.mergeAfter(
 							ranges,
-							new MessageRange(false, false, []),
+							new MessageRange(false, data.has_before ?? false, []),
 							{ items: (data.items as Message[]), has_more: data.has_after },
 							data.has_after,
 						);
@@ -543,7 +553,7 @@ export class MessagesService extends BaseService<Message> {
 				batch(() => {
 					const range = this.mergeAfter(
 						ranges,
-						new MessageRange(false, false, []),
+						new MessageRange(false, data.has_before ?? false, []),
 						{ items: (data.items as Message[]), has_more: data.has_after },
 						data.has_after,
 					);
