@@ -478,58 +478,6 @@ async fn auth_totp_enable(
     Ok(Json(auth_state))
 }
 
-/// Auth totp disable
-#[handler(routes::auth_totp_disable)]
-async fn auth_totp_disable(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::auth_totp_disable::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_sudo()?;
-    let (secret, enabled) = s
-        .data()
-        .auth_totp_get(auth.user.id)
-        .await?
-        .ok_or_else(|| ApiError::from_code(ErrorCode::TotpNotEnabled))?;
-
-    if !enabled {
-        return Err(ApiError::from_code(ErrorCode::TotpNotEnabled).into());
-    }
-
-    let secret_bytes = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, &secret)
-        .ok_or_else(|| Error::Internal("failed to decode totp secret".to_owned()))?;
-
-    let totp = Totp::new(
-        TotpAlgorithm::SHA1,
-        6,
-        1,
-        30,
-        TotpSecret::Raw(secret_bytes).to_bytes().unwrap(),
-    )
-    .map_err(|e| {
-        tracing::error!("failed to create totp: {}", e);
-        Error::Internal("failed to create totp".to_owned())
-    })?;
-
-    if !totp.check_current(&req.verification.code).unwrap_or(false) {
-        return Err(ApiError::from_code(ErrorCode::InvalidTotpCode).into());
-    }
-
-    s.data()
-        .auth_totp_set(auth.user.id, Some(secret), false)
-        .await?;
-
-    let al = auth.audit_log(auth.user.id.into_inner().into());
-    al.commit_success(AuditLogEntryType::AuthUpdate {
-        changes: Changes::new().change("has_totp", &true, &false).build(),
-    })
-    .await?;
-
-    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
-
-    Ok(Json(auth_state))
-}
-
 /// Auth totp recovery codes get
 #[handler(routes::auth_totp_recovery_codes_get)]
 async fn auth_totp_recovery_codes_get(
@@ -1078,7 +1026,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(auth_logout))
         .routes(routes2!(auth_totp_init))
         .routes(routes2!(auth_totp_enable))
-        .routes(routes2!(auth_totp_disable))
         .routes(routes2!(auth_totp_delete))
         .routes(routes2!(auth_totp_exec))
         .routes(routes2!(auth_totp_recovery_codes_get))

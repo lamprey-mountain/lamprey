@@ -149,25 +149,6 @@ pub mod auth_totp_enable {
     pub struct Response {}
 }
 
-/// Auth totp disable
-#[endpoint(
-    delete,
-    path = "/auth/totp",
-    tags = ["auth"],
-    scopes = [Full],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod auth_totp_disable {
-    use crate::v1::types::auth::TotpVerificationRequest;
-
-    pub struct Request {
-        #[json]
-        pub verification: TotpVerificationRequest,
-    }
-
-    pub struct Response {}
-}
-
 /// Auth totp recovery codes get
 ///
 /// View existing recovery codes (does not invalidate them)
