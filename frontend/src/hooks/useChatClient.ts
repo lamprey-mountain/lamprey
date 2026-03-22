@@ -30,51 +30,7 @@ import {
 } from "../types.ts";
 import type { RevisionContent } from "../api/services/DocumentsService.ts";
 import type { ThreadMember } from "sdk";
-
-const DB_VERSION = 1;
-
-interface ApiDB extends DBSchema {
-	user: {
-		value: UserT;
-		key: string;
-	};
-	room: {
-		value: RoomT;
-		key: string;
-	};
-	channel: {
-		value: ChannelT;
-		key: string;
-	};
-	message: {
-		value: MessageT;
-		key: string;
-	};
-	role: {
-		value: RoleT;
-		key: string;
-	};
-	room_member: {
-		value: MemberT;
-		key: [string, string];
-	};
-	media: {
-		value: MediaT;
-		key: string;
-	};
-	session: {
-		value: SessionT;
-		key: string;
-	};
-	document: {
-		value: RevisionContent;
-		key: string;
-	};
-	thread_member: {
-		value: ThreadMember;
-		key: [string, string];
-	};
-}
+import { ApiDB, migrations } from "../db.ts";
 
 function loadSavedPreferences(): Preferences | null {
 	const c = localStorage.getItem("preferences");
@@ -152,27 +108,13 @@ export function useChatClient(config: Config) {
 
 	(async () => {
 		try {
-			const database = await openDB<ApiDB>("api", DB_VERSION, {
-				upgrade(database, oldVersion, newVersion) {
-					if (oldVersion < 1) {
-						// Initial schema - create all object stores
-						database.createObjectStore("user", { keyPath: "id" });
-						database.createObjectStore("room", { keyPath: "id" });
-						database.createObjectStore("channel", { keyPath: "id" });
-						database.createObjectStore("message", { keyPath: "id" });
-						database.createObjectStore("role", { keyPath: "id" });
-						database.createObjectStore("room_member", {
-							keyPath: ["room_id", "user_id"],
-						});
-						database.createObjectStore("media", { keyPath: "id" });
-						database.createObjectStore("session", { keyPath: "id" });
-						database.createObjectStore("document", { keyPath: "id" });
-						database.createObjectStore("thread_member", {
-							keyPath: ["thread_id", "user_id"],
-						});
-						logger.for("idb").info(
-							"IndexedDB initialized with all object stores",
-						);
+			const database = await openDB<ApiDB>("api", migrations.length, {
+				upgrade(db, oldVersion) {
+					const log = logger.for("idb");
+					for (let i = oldVersion; i < migrations.length; i++) {
+						const m = migrations[i];
+						m.migrate(db);
+						log.info(m.description, undefined, "migrate");
 					}
 				},
 			});
