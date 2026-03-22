@@ -1,4 +1,4 @@
-import type { Api } from "./api";
+import { type Api, useRooms2 } from "./api";
 import { type RoomsService } from "./api/services/RoomsService";
 import type {
 	Channel,
@@ -197,7 +197,8 @@ export function calculatePermissions(
 		};
 	}
 
-	const room = ctx.rooms.use(() => ctx.room_id!)();
+	const rooms = useRooms2();
+	const room = rooms.cache.get(ctx.room_id!);
 	if (room?.owner_id === user_id) {
 		// owners have full permissions (ViewChannel and Admin)
 		const ownerPerms = new Set<Permission>(adminPerms);
