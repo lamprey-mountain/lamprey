@@ -134,41 +134,47 @@ export const useAutocompleteData = () => {
 		const type = kind.type;
 
 		if (type === "mention") {
-			// Combined users, roles, and @everyone/@room search
+			// Combined users, roles, and @everyone search using fuzzysort
 			const users = allUsers();
 			const roles = allRoles();
-			const queryLower = query.toLowerCase();
 
 			const results: AutocompleteMentionItem[] = [];
 
-			// Filter users - include full user object for Avatar
-			const filteredUsers = users
-				.filter((u) => u.name.toLowerCase().includes(queryLower))
-				.map((u) => ({
+			// Use fuzzysort for users
+			const userResults = go(query, users, {
+				key: "name",
+				limit: 10,
+				all: true,
+			});
+			for (const result of userResults) {
+				results.push({
 					type: "user" as const,
-					user_id: u.id,
-					name: u.name,
-					user: u, // Include full user object for Avatar
-				}));
-			results.push(...filteredUsers);
-
-			// Filter roles
-			const filteredRoles = roles
-				.filter((r) => r.name.toLowerCase().includes(queryLower))
-				.map((r) => ({ type: "role" as const, role_id: r.id, name: r.name }));
-			results.push(...filteredRoles);
-
-			// Add @everyone/@room if has permission and matches query
-			if (hasMassMention()) {
-				if (kind.roomId && "room".startsWith(queryLower)) {
-					results.push({ type: "everyone" as const, mention_type: "room" });
-				}
-				if ("everyone".startsWith(queryLower)) {
-					results.push({ type: "everyone" as const, mention_type: "everyone" });
-				}
+					user_id: result.obj.id,
+					name: result.obj.name,
+					user: result.obj,
+				});
 			}
 
-			// Limit to 10 results
+			// Use fuzzysort for roles
+			const roleResults = go(query, roles, {
+				key: "name",
+				limit: 10,
+				all: true,
+			});
+			for (const result of roleResults) {
+				results.push({
+					type: "role" as const,
+					role_id: result.obj.id,
+					name: result.obj.name,
+				});
+			}
+
+			// Add @everyone if has permission and query matches
+			if (hasMassMention() && "everyone".startsWith(query.toLowerCase())) {
+				results.push({ type: "everyone" as const, mention_type: "everyone" });
+			}
+
+			// Limit to 10 results total
 			const limited = results.slice(0, 10);
 
 			// Convert to fuzzysort-like results
@@ -176,9 +182,7 @@ export const useAutocompleteData = () => {
 				obj: item,
 				score: 0,
 				hits: [{
-					value: item.type === "everyone"
-						? (item.mention_type === "room" ? "@room" : "@everyone")
-						: item.name,
+					value: item.type === "everyone" ? "@everyone" : item.name,
 				}],
 			}));
 		} else if (type === "channel") {

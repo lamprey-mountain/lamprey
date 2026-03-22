@@ -79,12 +79,7 @@ export const Autocomplete = () => {
 										(result.obj as AutocompleteMentionItem).type === "everyone"}
 								>
 									<div class="everyone-mention">
-										<span>
-											{(result.obj as AutocompleteMentionItem).mention_type ===
-													"room"
-												? "@room"
-												: "@everyone"}
-										</span>
+										<span>@everyone</span>
 									</div>
 								</Match>
 								<Match when={true}>

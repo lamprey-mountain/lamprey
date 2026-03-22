@@ -37,7 +37,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				return checker.has("ThreadCreatePublic") ||
 					checker.has("ThreadCreatePrivate");
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -50,7 +50,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const checker = createPermissionChecker(
 					{
 						api,
-						rooms: ctx.store.rooms,
+						rooms: store.rooms,
 						room_id,
 						channel_id: channel.id,
 					},
@@ -92,7 +92,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					)
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -104,7 +104,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					(channel.type !== "ThreadPublic" &&
 						channel.type !== "ThreadPrivate") ||
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id },
+						{ api, rooms: store.rooms, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -140,7 +140,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					)
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -152,7 +152,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					(channel.type !== "ThreadPublic" &&
 						channel.type !== "ThreadPrivate") ||
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id },
+						{ api, rooms: store.rooms, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -186,7 +186,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"ThreadManage",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -203,7 +203,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id },
+						{ api, rooms: store.rooms, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -235,7 +235,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"ThreadManage",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -252,7 +252,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id },
+						{ api, rooms: store.rooms, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -291,7 +291,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					permission,
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -305,7 +305,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id },
+						{ api, rooms: store.rooms, room_id, channel_id },
 						self_id,
 						permission,
 					)
@@ -349,7 +349,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					permission,
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -363,7 +363,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id },
+						{ api, rooms: store.rooms, room_id, channel_id },
 						self_id,
 						permission,
 					)
@@ -401,7 +401,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"MemberNickname",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -412,7 +412,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"MemberNickname",
 					)
@@ -457,7 +457,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"MemberBan",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -468,7 +468,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"MemberBan",
 					)
@@ -515,7 +515,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"MemberKick",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -526,7 +526,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"MemberKick",
 					)
@@ -569,7 +569,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"MessageCreate",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -579,7 +579,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"MessageCreate",
 					)
@@ -660,7 +660,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"MessageCreate",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -670,7 +670,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"MessageCreate",
 					)
@@ -720,7 +720,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"MemberTimeout",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -731,7 +731,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"MemberTimeout",
 					)
@@ -781,7 +781,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"ChannelManage",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -791,7 +791,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"ChannelManage",
 					)
@@ -853,7 +853,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"ThreadLock",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -870,7 +870,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"ThreadLock",
 					)
@@ -911,7 +911,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					"ThreadLock",
 				);
 			},
-			execute: async (ctx, api, channel_id, args) => {
+			execute: async (ctx, api, channel_id, args, store) => {
 				const channel = api.channels.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
@@ -928,7 +928,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: ctx.store.rooms, room_id, channel_id: channel.id },
+						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
 						self_id,
 						"ThreadLock",
 					)

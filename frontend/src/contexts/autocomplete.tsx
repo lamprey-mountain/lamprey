@@ -58,7 +58,7 @@ export type AutocompleteKind =
 export type AutocompleteMentionItem =
 	| { type: "user"; user_id: string; name: string; user: User }
 	| { type: "role"; role_id: string; name: string }
-	| { type: "everyone"; mention_type: "room" | "everyone" };
+	| { type: "everyone"; mention_type: "everyone" };
 
 const AutocompleteContext = createContext<AutocompleteContext>();
 

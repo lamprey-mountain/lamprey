@@ -11,8 +11,6 @@ const LINE_HEIGHT = 18;
 function getTriggerChar(type: AutocompleteKind["type"]): string {
 	switch (type) {
 		case "mention":
-		case "role":
-		case "everyone":
 			return "@";
 		case "channel":
 			return "#";
@@ -175,13 +173,16 @@ export function createAutocompletePlugin(
 			// For commands, replace from start of the current block/line
 			const $pos = state.selection.$from;
 			const parentStart = $pos.start($pos.depth);
+			const commandText = `/${item.id}`;
 			let tr = state.tr.replaceWith(
 				parentStart,
 				to,
-				state.schema.text(`/${item.id} `),
+				state.schema.text(commandText),
 			);
-			const posAfter = tr.mapping.map(to);
-			tr = tr.setSelection(TextSelection.create(tr.doc, posAfter + 1));
+			// Cursor should be after the command text
+			tr = tr.setSelection(
+				TextSelection.create(tr.doc, parentStart + commandText.length),
+			);
 			view.dispatch(tr);
 			autocomplete.hide();
 			return;
@@ -198,17 +199,14 @@ export function createAutocompletePlugin(
 					name: item.name ?? "",
 				});
 			} else if (item.type === "everyone") {
-				// @everyone or @room - insert as text
-				const mentionText = item.mention_type === "room"
-					? "@room"
-					: "@everyone";
+				// @everyone - insert as text, cursor after
 				let tr = state.tr.replaceWith(
 					triggerPos,
 					to,
-					state.schema.text(mentionText),
+					state.schema.text("@everyone"),
 				);
 				const posAfter = tr.mapping.map(to);
-				tr = tr.setSelection(TextSelection.create(tr.doc, posAfter + 1));
+				tr = tr.setSelection(TextSelection.create(tr.doc, posAfter));
 				view.dispatch(tr);
 				autocomplete.hide();
 				return;
