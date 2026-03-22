@@ -1,19 +1,30 @@
 import { Room } from "sdk";
 import { BaseService } from "../core/Service";
+import { batch, createResource, createSignal, type Resource } from "solid-js";
+import type { Pagination } from "sdk";
+import { ListState, PaginatedList } from "../../core/PaginatedList";
+import { logger } from "../../logger";
+
+const log = logger.for("api/rooms");
 
 export class RoomsService extends BaseService<Room> {
 	protected cacheName = "room";
+
+	public roomList = new PaginatedList();
+	private roomListAll = new PaginatedList();
 
 	getKey(item: Room): string {
 		return item.id;
 	}
 
 	async fetch(id: string): Promise<Room> {
-		return await this.retryWithBackoff<Room>(() =>
+		const data = await this.retryWithBackoff<Room>(() =>
 			this.client.http.GET("/api/v1/room/{room_id}", {
 				params: { path: { room_id: id } },
 			})
 		);
+		this.upsert(data);
+		return data;
 	}
 
 	async create(body: { name: string; public?: boolean | null }): Promise<Room> {
@@ -38,5 +49,75 @@ export class RoomsService extends BaseService<Room> {
 		);
 		this.upsert(data);
 		return data;
+	}
+
+	async fetchList(cursor?: string): Promise<Pagination<Room>> {
+		return this.retryWithBackoff(() =>
+			this.client.http.GET("/api/v1/user/{user_id}/room", {
+				params: {
+					path: { user_id: "@self" },
+					query: {
+						dir: "f",
+						limit: 100,
+						from: cursor,
+					},
+				},
+			})
+		);
+	}
+
+	private async fetchListAll(cursor?: string): Promise<Pagination<Room>> {
+		return this.retryWithBackoff(() =>
+			this.client.http.GET("/api/v1/room", {
+				params: {
+					query: {
+						dir: "f",
+						limit: 100,
+						from: cursor,
+					},
+				},
+			})
+		);
+	}
+
+	private async fetchPage(
+		list: PaginatedList,
+		fetch: (cursor?: string) => Promise<Pagination<Room>>,
+	): Promise<ListState> {
+		if (list.state.isLoading || !list.state.has_more) return list.state;
+		list.setLoading(true);
+
+		try {
+			const data = await fetch();
+			this.upsertBulk(data.items);
+
+			const newIds = data.items.map((room) => this.getKey(room));
+			list.appendPage(newIds, data.has_more, data.items.at(-1)?.id);
+
+			return list.state;
+		} catch (e) {
+			log.error(String(e));
+			list.setError(e);
+			throw e;
+		}
+	}
+
+	useList() {
+		if (
+			this.roomList.state.ids.length === 0 && !this.roomList.state.isLoading
+		) {
+			this.fetchPage(this.roomList, this.fetchList);
+		}
+		return this.roomList.state;
+	}
+
+	useListAll() {
+		if (
+			this.roomListAll.state.ids.length === 0 &&
+			!this.roomListAll.state.isLoading
+		) {
+			this.fetchPage(this.roomListAll, this.fetchListAll);
+		}
+		return this.roomListAll.state;
 	}
 }

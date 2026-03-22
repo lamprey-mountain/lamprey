@@ -1,6 +1,12 @@
 import { Client } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import { Accessor, createEffect, createResource, Resource } from "solid-js";
+import {
+	Accessor,
+	batch,
+	createEffect,
+	createResource,
+	Resource,
+} from "solid-js";
 import type { RootStore } from "./Store";
 import type { IDBPDatabase } from "idb";
 import { logger } from "../../logger";
@@ -187,6 +193,42 @@ export abstract class BaseService<T> {
 					error: e,
 				});
 			});
+		}
+	}
+
+	upsertBulk(items: T[]) {
+		if (items.length === 0) return;
+
+		// update in memory cache
+		batch(() => {
+			for (const item of items) {
+				this.cache.set(this.getKey(item), item);
+			}
+		});
+
+		// update indexeddb
+		const db = this.db;
+		const storeName = this.cacheName;
+
+		if (db && storeName) {
+			// run in background
+			(async () => {
+				try {
+					const tx = db.transaction(storeName, "readwrite");
+					const store = tx.objectStore(storeName);
+
+					for (const item of items) {
+						store.put(item);
+					}
+
+					await tx.done;
+				} catch (e) {
+					logger.for("idb").error(`Failed to bulk write to ${storeName}`, {
+						count: items.length,
+						error: e,
+					});
+				}
+			})();
 		}
 	}
 
