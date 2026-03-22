@@ -27,6 +27,7 @@ export type ChannelState = {
 	pinned_view: boolean;
 	voice_chat_sidebar_open: boolean;
 	history_view: boolean;
+	thread_chat_sidebar_thread_id?: string;
 	slowmode_expire_at: Date | null;
 	editingMessage?: {
 		message_id: string;
@@ -46,6 +47,7 @@ export function createInitialChannelState(): ChannelState {
 		pinned_view: false,
 		voice_chat_sidebar_open: false,
 		history_view: false,
+		thread_chat_sidebar_thread_id: undefined,
 		slowmode_expire_at: null,
 		selectMode: false,
 		selectedMessages: [],

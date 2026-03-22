@@ -65,6 +65,10 @@ export default {
 		spoilers_click: "On click",
 		spoilers_hover: "On hover",
 		spoilers_always: "Always",
+		threads_sidebar: "Threads sidebar",
+		threads_sidebar_text: "Open text channels in split view",
+		threads_sidebar_document: "Open document channels in split view",
+		threads_sidebar_forum: "Open forum channels in split view",
 		theme_description: "Choose your preferred theme",
 		message_style_description: "Choose how messages are displayed",
 		message_group_spacing_description:

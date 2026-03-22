@@ -37,6 +37,7 @@ import { useChannel } from "./channelctx.tsx";
 import { useRoom } from "./contexts/room.tsx";
 import { useReadTracking } from "./contexts/read-tracking.tsx";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { shouldUseThreadSidebar } from "./util/channel.ts";
 
 type ChatProps = {
 	channel: Channel;

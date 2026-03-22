@@ -4,10 +4,11 @@ import {
 	type Channel,
 	getTimestampFromUUID,
 	type Message,
+	type Preferences,
 	type ReactionKey,
 	User,
 } from "sdk";
-import { type MessageT, MessageType } from "./types.ts";
+import { type MessageT, MessageType, ThreadT } from "./types.ts";
 import {
 	createEffect,
 	createSignal,
@@ -19,7 +20,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useMessages2 } from "./api.tsx";
+import { useApi, useChannels2, useMessages2 } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { useMenu, useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
@@ -50,6 +51,11 @@ import icMemberJoin from "./assets/member-join.png";
 import icPin from "./assets/pin.png";
 import icThread from "./assets/threads.png";
 import { Markdown } from "./Markdown.tsx";
+import { openThread } from "./util/channel";
+import type { SetStoreFunction } from "solid-js/store";
+import type { ChannelState } from "./contexts/channel";
+import { useConfig } from "./config.tsx";
+import { useAppConfig } from "./hooks/useAppConfig.ts";
 
 type MessageProps = {
 	message: MessageT;
@@ -230,6 +236,48 @@ function MessageEditor(
 			<div class="edit-info dim">
 				escape to <button onClick={cancel}>cancel</button> • enter to{" "}
 				<button onClick={() => save(draft())}>save</button>
+			</div>
+		</div>
+	);
+}
+
+// TODO: make thread reactive (store thread in cache on message fetch, read thread from cache)
+export function MessageThread(
+	props: {
+		thread: ThreadT;
+		parentChannel: Channel;
+		preferences: Preferences;
+	},
+) {
+	const nav = useNavigate();
+	const [_chan, setChan] = useChannel()!;
+	const channels = useChannels2();
+	const ctx = useCtx();
+
+	const openThreadClick = () => {
+		openThread(
+			props.thread,
+			channels.get(props.thread.parent_id!)!,
+			ctx.preferences(),
+			setChan,
+			nav,
+		);
+	};
+
+	const lastActivityAt = () =>
+		getTimestampFromUUID(props.thread.last_version_id ?? props.thread.id);
+
+	return (
+		<div class="message-thread">
+			<div class="spine"></div>
+			<div class="main" onClick={openThreadClick}>
+				<div class="top">
+					<div class="name">{props.thread.name}</div>
+					<div class="count">{props.thread.message_count} messages</div>
+				</div>
+				<div>
+					last message <Time date={lastActivityAt()} />
+				</div>
 			</div>
 		</div>
 	);
@@ -787,6 +835,9 @@ export function MessageView(props: MessageProps) {
 							>
 								<Reactions message={props.message} />
 							</Show>
+							<Show when={props.message.thread}>
+								{(thread) => <MessageThread thread={thread()} />}
+							</Show>
 						</div>
 					</Show>
 					<Show when={!withAvatar}>
@@ -825,6 +876,9 @@ export function MessageView(props: MessageProps) {
 									props.message.reactions.length > 0}
 							>
 								<Reactions message={props.message} />
+							</Show>
+							<Show when={props.message.thread}>
+								{(thread) => <MessageThread thread={thread()} />}
 							</Show>
 						</div>
 						<Time date={date} animGroup="message-ts" />

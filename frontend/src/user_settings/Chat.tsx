@@ -119,6 +119,48 @@ export function Chat(props: VoidProps<{ user: User }>) {
 						]}
 					/>
 				</div>
+				<h3 class="dim">{t("user_settings.threads_sidebar")}</h3>
+				<CheckboxOption
+					id={`user-${props.user.id}-threads-sidebar-text`}
+					checked={ctx.preferences().frontend["threads_sidebar_text"] === "yes"}
+					onChange={toggle("threads_sidebar_text")}
+					seed={`user-${props.user.id}-threads-sidebar-text`}
+				>
+					<Checkbox
+						checked={ctx.preferences().frontend["threads_sidebar_text"] ===
+							"yes"}
+						seed={`user-${props.user.id}-threads-sidebar-text`}
+					/>
+					<span>{t("user_settings.threads_sidebar_text")}</span>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${props.user.id}-threads-sidebar-document`}
+					checked={ctx.preferences().frontend["threads_sidebar_document"] ===
+						"yes"}
+					onChange={toggle("threads_sidebar_document")}
+					seed={`user-${props.user.id}-threads-sidebar-document`}
+				>
+					<Checkbox
+						checked={ctx.preferences().frontend["threads_sidebar_document"] ===
+							"yes"}
+						seed={`user-${props.user.id}-threads-sidebar-document`}
+					/>
+					<span>{t("user_settings.threads_sidebar_document")}</span>
+				</CheckboxOption>
+				<CheckboxOption
+					id={`user-${props.user.id}-threads-sidebar-forum`}
+					checked={ctx.preferences().frontend["threads_sidebar_forum"] ===
+						"yes"}
+					onChange={toggle("threads_sidebar_forum")}
+					seed={`user-${props.user.id}-threads-sidebar-forum`}
+				>
+					<Checkbox
+						checked={ctx.preferences().frontend["threads_sidebar_forum"] ===
+							"yes"}
+						seed={`user-${props.user.id}-threads-sidebar-forum`}
+					/>
+					<span>{t("user_settings.threads_sidebar_forum")}</span>
+				</CheckboxOption>
 			</div>
 		</div>
 	);

@@ -12,6 +12,7 @@ import {
 	createMemo,
 	createResource,
 	createSignal,
+	For,
 	Match,
 	Show,
 	Switch,
@@ -52,6 +53,11 @@ import {
 	DocumentContext,
 	useDocument,
 } from "./contexts/document.tsx";
+import { shouldUseThreadSidebar } from "./util/channel.ts";
+import { useNavigate } from "@solidjs/router";
+import { useModals } from "./contexts/modal.tsx";
+import { ChannelIcon } from "./User.tsx";
+import icX from "./assets/x-1.png";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -218,6 +224,59 @@ type ChangesetSelection = {
 	end_seq: number;
 };
 
+const ThreadChatSidebar = (props: { thread_id: string }) => {
+	const api = useApi();
+	const thread = api.channels.fetch(() => props.thread_id);
+	const ctx = useCtx();
+	const [ch, setChannelState] = useChannel()!;
+
+	const getOrCreateChannelContext = () => {
+		const channelId = props.thread_id;
+		if (!channelId) return null;
+
+		if (!ctx.channel_contexts.has(channelId)) {
+			const store = createStore(createInitialChannelState());
+			ctx.channel_contexts.set(channelId, store);
+		}
+
+		return ctx.channel_contexts.get(channelId)!;
+	};
+
+	const getOrCreateDocumentContext = () => {
+		const channelId = props.thread_id;
+		if (!channelId) return null;
+
+		if (!ctx.document_contexts.has(channelId)) {
+			const store = createStore(createInitialDocumentState(channelId));
+			ctx.document_contexts.set(channelId, store);
+		}
+
+		return ctx.document_contexts.get(channelId)!;
+	};
+
+	const documentCtx = createMemo(() => getOrCreateDocumentContext());
+	const channelCtx = createMemo(() => getOrCreateChannelContext());
+
+	const onClose = () => {
+		setChannelState("thread_chat_sidebar_thread_id", undefined);
+	};
+
+	return (
+		<div class="thread-chat-sidebar">
+			<Show when={thread()}>
+				<ChannelContext.Provider value={channelCtx()!}>
+					<DocumentContext.Provider value={documentCtx()!}>
+						<button class="close" onClick={onClose}>
+							<img class="icon" src={icX} />
+						</button>
+						<ChatMain channel={thread()!} />
+					</DocumentContext.Provider>
+				</ChannelContext.Provider>
+			</Show>
+		</div>
+	);
+};
+
 const ChannelSidebar = (props: {
 	channel: Channel;
 	selectedSeq: ChangesetSelection | null;
@@ -240,9 +299,20 @@ const ChannelSidebar = (props: {
 	const showHistory = () =>
 		props.channel.type === "Document" &&
 		ch.history_view;
+	const showThreadChatSidebar = () => ch.thread_chat_sidebar_thread_id;
 
 	return (
 		<Switch>
+			<Match when={showThreadChatSidebar()}>
+				<Resizable
+					storageKey="thread-chat-sidebar-width"
+					initialWidth={400}
+					minWidth={300}
+					maxWidth={600}
+				>
+					<ThreadChatSidebar thread_id={ch.thread_chat_sidebar_thread_id!} />
+				</Resizable>
+			</Match>
 			<Match when={showHistory()}>
 				<Resizable storageKey="document-history-width" initialWidth={320}>
 					<DocumentHistory

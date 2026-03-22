@@ -9,7 +9,6 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 	const handleContextMenu = (e: MouseEvent) => {
 		console.log("[menu] open context menu");
 		const targetEl = e.target as HTMLElement;
-		const store = useApi2();
 
 		const menuEl = targetEl.closest(
 			".menu-room, .menu-channel, .menu-thread, .menu-message, .menu-user",
