@@ -20,7 +20,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 			| null;
 		console.log("[menu] target elements", { menuEl, mediaEl, targetEl });
 		if (!menuEl) return;
-		if (mediaEl && targetEl !== menuEl) return;
+		if (mediaEl && mediaEl !== menuEl) return;
 
 		const getData = (key: string) => {
 			const target = menuEl.closest(`[${key}]`) as HTMLElement | null;

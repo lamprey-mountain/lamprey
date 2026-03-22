@@ -1,318 +1,321 @@
 @use "./util.scss" as *;
 
+@mixin drag-indicator-line($position) {
+	content: "";
+	position: absolute;
+	left: 0;
+	width: 100%;
+	height: 4px;
+	background: $link-500;
+	z-index: 10;
+	border-radius: 2px;
+	pointer-events: none;
+
+	@if $position == "top" {
+		top: -2px;
+	} @else {
+		bottom: -2px;
+	}
+}
+
+@mixin drop-target-styles {
+	&[data-drag-mode="before"]::before {
+		@include drag-indicator-line("top");
+	}
+	&[data-drag-mode="after"]::after {
+		@include drag-indicator-line("bottom");
+	}
+	&[data-drag-mode="inside"] {
+		background: oklch(var(--color-link-500) / 0.2);
+		border: solid $link-500 1px;
+	}
+}
+
 #channel-nav {
+	grid-area: channel-nav;
+	display: flex;
+	flex-direction: column;
 	width: 100%;
 	height: 100%;
 	background-color: $bg-150;
 	color: $fg-200;
 	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
 	scrollbar-width: none;
-	grid-area: channel-nav;
 
 	& > header {
-		z-index: 1;
-		min-height: 48px;
-	}
-
-	& > ul {
-		padding-top: 8px;
-		padding-bottom: 240px;
-		display: flex;
-		flex-direction: column;
-	}
-
-	& li.toplevel {
-		border: solid transparent 1px;
-		margin-top: -1px;
-		margin-bottom: -1px;
-		position: relative;
-
-		&.channel-reorder-target {
-			background: oklch(var(--color-link-500) / 0.2);
-			border: solid $link-500 1px;
-		}
-
-		&.voice-channel-target {
-			background: oklch(var(--color-green) / 0.2);
-			border: solid $color-green 1px;
-		}
-
-		&.drop-before::before {
-			content: "";
-			position: absolute;
-			top: -2px;
-			left: 0;
-			width: 100%;
-			height: 4px;
-			background: $link-500;
-			z-index: 10;
-			border-radius: 2px;
-			pointer-events: none;
-		}
-
-		&.drop-after::after {
-			content: "";
-			position: absolute;
-			bottom: -2px;
-			left: 0;
-			width: 100%;
-			height: 4px;
-			background: $link-500;
-			z-index: 10;
-			border-radius: 2px;
-			pointer-events: none;
-		}
-	}
-
-	& a {
-		@include truncate;
-		display: block;
-		width: 100%;
-		padding: 2px 8px;
-		background-color: none;
-		text-decoration: none;
-		white-space: nowrap;
-		color: $fg-400;
-
-		&.active {
-			background-color: $bg-300;
-		}
-
-		&:hover,
-		&:focus {
-			background-color: $bg-400;
-		}
-
-		&.closed {
-			color: $sep-500;
-		}
-	}
-
-	& header {
-		/* TODO: make this its own root grid section */
 		position: sticky;
 		top: 0;
+		z-index: 1;
+		min-height: 48px;
 		background: $bg-100;
 		padding: 8px 16px;
 		border-bottom: solid $sep-300 1px;
 	}
 
-	li {
-		padding: 0 8px;
-
-		&.dragging {
-			opacity: 0.5;
-		}
-
-		&.unread > a {
-			font-weight: bold;
-			color: $fg-200;
-			position: relative;
-
-			&::before {
-				--size: 8px;
-				position: absolute;
-				top: 50%;
-				left: calc(var(--size) / -2);
-				content: "";
-				translate: 0 -50%;
-				border-radius: 50%;
-				background: $bg-400;
-				height: var(--size);
-				width: var(--size);
-			}
-		}
-
-		.menu-thread {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-
-			.avatar {
-				height: 24px;
-				width: 24px;
-			}
-		}
-
-		.threads {
-			margin-left: -8px;
-
-			& > li > a {
-				padding-left: 32px;
-			}
-		}
+	.channel-list {
+		display: flex;
+		flex-direction: column;
+		padding-top: 8px;
+		padding-bottom: 240px;
 	}
 
-	.category {
+	[data-is-dragging="true"] {
+		opacity: 0.5;
+	}
+
+	// categories
+	.category-group {
+		margin-top: 8px;
+	}
+
+	.category-header {
+		display: flex;
+		align-items: center;
+		padding: 4px 8px 4px 16px;
 		cursor: pointer;
 		position: relative;
+		font-weight: bold;
+		font-size: 0.85rem;
+		color: $fg-400;
 
-		&.drop-before::before {
-			content: "";
-			position: absolute;
-			top: -2px;
-			left: 0;
-			width: 100%;
-			height: 4px;
-			background: $link-500;
-			z-index: 10;
-			border-radius: 2px;
-			pointer-events: none;
-		}
+		@include drop-target-styles;
 
-		&.drop-after::after {
-			content: "";
-			position: absolute;
-			bottom: -2px;
-			left: 0;
-			width: 100%;
-			height: 4px;
-			background: $link-500;
-			z-index: 10;
-			border-radius: 2px;
-			pointer-events: none;
-		}
-
-		&.drop-inside {
-			background: oklch(var(--color-link-500) / 0.2);
-			border: solid $link-500 1px;
+		.category-toggle {
+			margin-right: 4px;
 		}
 	}
 
-	.category-toggle {
-		margin-right: 4px;
-	}
-
-	.voice-participant {
-		display: flex;
+	.empty-text {
+		color: $fg-500;
 		margin-left: 24px;
+		font-size: 0.9em;
+		font-style: italic;
+	}
+
+	// channels
+	.category-channels {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.channel-item {
+		position: relative;
+		border: solid transparent 1px;
+		padding: 0 8px;
+
+		@include drop-target-styles;
+
+		&[data-voice-target="true"] {
+			background: oklch(var(--color-green) / 0.2);
+			border: solid $color-green 1px;
+		}
+	}
+
+	.channel-link {
+		@include truncate;
+		display: flex;
 		align-items: center;
-		line-height: 1;
-		margin-top: 4px;
-		margin-bottom: 4px;
-		gap: 8px;
-		padding: 2px 0 2px 8px;
-		cursor: pointer;
+		width: 100%;
+		padding: 4px 8px;
+		text-decoration: none;
+		white-space: nowrap;
+		color: $fg-400;
+		gap: 4px;
 		border-radius: 2px;
 
+		&:hover, &:focus {
+			background-color: $bg-400;
+		}
+
+		&.active {
+			background-color: $bg-300;
+		}
+
+		&[data-muted="true"] {
+			color: $fg-500;
+			opacity: 0.6;
+		}
+
+		&[data-unread="true"] {
+			font-weight: bold;
+			color: $fg-200;
+
+			&::before {
+				content: "";
+				position: absolute;
+				left: -4px;
+				top: 8px;
+				height: 8px;
+				width: 8px;
+				background: $sep-500;
+				border-radius: 50%;
+			}
+		}
+
 		.avatar {
-			height: 20px;
-			width: 20px;
-		}
-
-		.fallback-avatar {
-			height: 1rem;
-			width: 1rem;
-			background: oklch(var(--color-sep));
-			border-radius: 2px;
-		}
-
-		img {
-			height: 1rem;
-			width: 1rem;
-			border-radius: 2px;
-		}
-
-		&.speaking img,
-		&.speaking .fallback-avatar {
-			border: solid $color-green 2px;
+			height: 32px;
+			width: 32px;
+			margin-right: 8px;
 		}
 
 		&:hover {
 			background-color: $bg-400;
-		}
-	}
 
-	.nav-channel {
-		display: flex;
-		align-items: center;
-		padding: 4px 8px;
+			.mentions {
+				display: none;
+			}
 
-		& > .avatar {
-			height: 32px;
-			width: 32px;
-			margin: 0;
-			margin-right: 8px;
+			.channel-actions {
+				display: flex;
+			}
 		}
 
 		& > .icon {
-			height: 16px;
-			width: 16px;
-			min-width: 16px;
-			margin-right: 4px;
 			filter: invert(0.6);
 		}
+	}
 
-		& > .mentions {
-			background: oklch(54.03% 0.1759 13.16);
-			height: 16px;
-			min-width: 16px;
-			border-radius: 10px;
+	.channel-details {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		line-height: 1.2;
+		overflow: hidden;
+
+		.channel-name {
+			text-overflow: ellipsis;
+			overflow: hidden;
+			white-space: nowrap;
+		}
+
+		.channel-status {
+			font-size: 0.8em;
+		}
+	}
+
+	.mentions {
+		background: oklch(54.03% 0.1759 13.16);
+		color: white;
+		height: 16px;
+		min-width: 16px;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: bold;
+		padding: 0 4px;
+		font-size: 0.75rem;
+	}
+
+	// actions (invite, settings)
+	.channel-actions {
+		display: none;
+		align-items: center;
+		margin-right: -4px;
+	}
+
+	.action-button {
+		background: none;
+		border: none;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		img {
+			width: 14px;
+			height: 14px;
+			filter: invert(0.6);
+			transition: filter 0.1s ease;
+		}
+
+		&:hover img {
+			filter: invert(0.9);
+		}
+	}
+
+	.channel-link:hover {
+		.channel-actions {
 			display: flex;
-			align-items: center;
-			justify-content: center;
-			font-weight: bold;
-			padding: 0 4px;
 		}
-
-		& > button {
-			display: none;
-			border: none;
-			background: none;
-			padding: 4px;
-			margin: -4px 0;
-			margin-right: -4px;
-			align-items: center;
-
-			& > .icon {
-				height: 14px;
-				width: 14px;
-				filter: invert(0.7);
-			}
-
-			&:hover > .icon {
-				filter: invert(0.9);
-			}
-		}
-
-		&:hover > button {
-			display: flex;
-		}
-
-		&:hover > .mentions {
+		.mentions {
 			display: none;
 		}
 	}
 
-	& a.muted {
-		color: $fg-500;
-		opacity: 0.6;
-	}
+	// threads
+	.thread-list {
+		margin-left: 16px;
 
-	.threads > li {
-		position: relative;
+		.channel-item {
+			position: relative;
+			padding-right: 0;
 
-		&::before {
-			content: "";
-			position: absolute;
-			left: 22px;
-			top: 0;
-			width: 8px;
-			height: 12px;
-			border-bottom: 2px solid $sep-400;
-			border-left: 2px solid $sep-400;
-			border-bottom-left-radius: 4px;
+			// horizontal spine
+			&::before {
+				content: "";
+				position: absolute;
+				left: -4px;
+				top: 0;
+				width: 8px;
+				height: 12px;
+				border-bottom: 2px solid $sep-400;
+				border-left: 2px solid $sep-400;
+				border-bottom-left-radius: 4px;
+			}
+
+			// vertical spine
+			&:not(:last-child)::after {
+				content: "";
+				position: absolute;
+				left: -4px;
+				top: 12px;
+				bottom: -12px;
+				border-left: 2px solid $sep-400;
+			}
 		}
 
-		&:not(:first-child)::after {
-			content: "";
-			position: absolute;
-			left: 22px;
-			top: -16px;
-			height: 24px;
-			border-left: 2px solid $sep-400;
+		.channel-link {
+			padding: 2px 8px;
+
+			// hackily realign the unread dot
+			&[data-unread="true"]::before {
+				transform: translateX(-25px);
+			}
+		}
+	}
+
+	// voice participant
+	.voice-participants {
+		margin-top: 4px;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.voice-participant {
+		display: flex;
+		align-items: center;
+		margin-left: 24px;
+		padding: 4px 8px;
+		gap: 8px;
+		cursor: pointer;
+		border-radius: 4px;
+		line-height: 1;
+
+		&:hover {
+			background-color: $bg-400;
+		}
+
+		.avatar {
+			height: 20px;
+			width: 20px;
+			border-radius: 50%;
+			border: solid transparent 2px;
+		}
+
+		&[data-speaking="true"] .avatar {
+			border-color: $color-green;
 		}
 	}
 }
@@ -394,7 +397,7 @@
 	.home-item .icon, .folder-header .icon {
 		height: 32px;
 		width: 32px;
-		filter: invert(0.8);
+		filter: invert(0.6);
 	}
 
 	.home-item {

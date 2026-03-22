@@ -581,6 +581,20 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		});
 	};
 
+	const getDragMode = (id: string) => {
+		if (dragging()?.type === "channel" && target()?.id === id) {
+			return target()?.mode; // "before", "after", "inside"
+		}
+		return undefined;
+	};
+
+	const isDraggingThis = (id: string) =>
+		dragging()?.type === "channel" && dragging()?.id === id;
+
+	const isVoiceTarget = (id: string) =>
+		dragging()?.type === "voice" && target()?.id === id &&
+		target()?.mode === "inside";
+
 	return (
 		<nav id="channel-nav">
 			<Show when={flags.has("nav_header")}>
@@ -606,11 +620,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				</header>
 			</Show>
 
-			<ul>
-				<li>
+			<ul class="channel-list">
+				<li class="channel-item">
 					<A
 						href={props.room_id ? `/room/${props.room_id}` : "/"}
-						class="menu-channel nav-channel"
+						class="channel-link"
 						draggable={false}
 						end
 					>
@@ -620,10 +634,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 				<Show when={!props.room_id}>
 					<Show when={flags.has("inbox")}>
-						<li>
+						<li class="channel-item">
 							<A
 								href="/inbox"
-								class="menu-channel nav-channel"
+								class="channel-link"
 								draggable={false}
 								end
 							>
@@ -638,8 +652,12 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						<>
 							<Show when={category}>
 								<div
-									class="dim"
-									style="margin-left:8px;margin-top:8px"
+									class="category-header"
+									classList={{
+										collapsed: collapsedCategories().has(category!.id),
+									}}
+									data-drag-mode={getDragMode(category!.id)}
+									data-is-dragging={isDraggingThis(category!.id)}
 									data-channel-id={category!.id}
 									draggable="true"
 									onDragStart={handleDragStart}
@@ -671,149 +689,127 @@ export const ChannelNav = (props: { room_id?: string }) => {
 											});
 										});
 									}}
-									classList={{
-										dragging: dragging()?.type === "channel" &&
-											dragging()?.id === category!.id,
-										collapsed: collapsedCategories().has(category!.id),
-										category: true,
-										"drop-before": dragging()?.type === "channel" &&
-											target()?.id === category!.id &&
-											target()?.mode === "before",
-										"drop-after": dragging()?.type === "channel" &&
-											target()?.id === category!.id &&
-											target()?.mode === "after",
-										"drop-inside": dragging()?.type === "channel" &&
-											target()?.id === category!.id &&
-											target()?.mode === "inside",
-									}}
 								>
 									<span class="category-toggle">
 										{collapsedCategories().has(category!.id) ? "▶" : "▼"}
 									</span>
-									{category!.name}
+									<span class="category-name">{category!.name}</span>
 								</div>
 							</Show>
 							<Show
 								when={!category || !collapsedCategories().has(category!.id)}
 							>
-								<For
-									each={channels}
-									fallback={
-										<div class="dim" style="margin-left: 16px">
-											(no channels)
-										</div>
-									}
-								>
-									{(channel) => (
-										<li
-											data-channel-id={channel.id}
-											draggable="true"
-											onDragStart={handleDragStart}
-											onDragOver={handleDragOver}
-											onDrop={handleDrop}
-											onDragEnd={() => {
-												setDragging(null);
-												setTarget(null);
-											}}
-											class="toplevel"
-											classList={{
-												dragging: dragging()?.type === "channel" &&
-													dragging()?.id === channel.id,
-												unread: channel.type !== "Voice" && !!channel.is_unread,
-												"voice-channel-target": dragging()?.type === "voice" &&
-													target()?.id === channel.id &&
-													target()?.mode === "inside",
-												"channel-reorder-target":
-													dragging()?.type === "channel" &&
-													target()?.id === channel.id &&
-													target()?.mode === "inside",
-												"drop-before": dragging()?.type === "channel" &&
-													target()?.id === channel.id &&
-													target()?.mode === "before",
-												"drop-after": dragging()?.type === "channel" &&
-													target()?.id === channel.id &&
-													target()?.mode === "after",
-											}}
-										>
-											<ItemChannel channel={channel} room_id={props.room_id} />
-											<Show when={(channel as any).threads?.length > 0}>
-												<ul class="threads">
-													<For each={(channel as any).threads}>
-														{(thread: Channel) => (
-															<li
-																data-channel-id={thread.id}
+								<ul class="category-channels">
+									<For
+										each={channels}
+										fallback={
+											<div class="empty-text" style="margin-left: 16px">
+												(no channels)
+											</div>
+										}
+									>
+										{(channel) => (
+											<li
+												class="channel-item"
+												data-drag-mode={getDragMode(channel.id)}
+												data-is-dragging={isDraggingThis(channel.id)}
+												data-voice-target={isVoiceTarget(channel.id)
+													? "true"
+													: undefined}
+												data-channel-id={channel.id}
+												draggable="true"
+												onDragStart={handleDragStart}
+												onDragOver={handleDragOver}
+												onDrop={handleDrop}
+												onDragEnd={() => {
+													setDragging(null);
+													setTarget(null);
+												}}
+											>
+												<ItemChannel
+													channel={channel}
+													room_id={props.room_id}
+												/>
+												<Show when={(channel as any).threads?.length > 0}>
+													<ul class="thread-list">
+														<For each={(channel as any).threads}>
+															{(thread: Channel) => (
+																<li
+																	class="channel-item"
+																	data-channel-id={thread.id}
+																	draggable={true}
+																	onDragStart={handleDragStart}
+																	onDragOver={handleDragOver}
+																	onDrop={handleDrop}
+																	onDragEnd={() => {
+																		setDragging(null);
+																		setTarget(null);
+																	}}
+																	classList={{
+																		unread: thread.type !== "Voice" &&
+																			!!thread.is_unread,
+																	}}
+																>
+																	<ItemChannel
+																		channel={thread}
+																		room_id={props.room_id}
+																	/>
+																</li>
+															)}
+														</For>
+													</ul>
+												</Show>
+												<For
+													each={[...api.voiceStates.values()].filter((i) =>
+														i.channel_id === channel.id
+													).sort((a, b) =>
+														Date.parse(a.joined_at) - Date.parse(b.joined_at)
+													)}
+												>
+													{(s) => {
+														const user = users2.use(() => s.user_id);
+														const room_member = props.room_id
+															? api.room_members.fetch(
+																() => props.room_id!,
+																() => s.user_id,
+															)
+															: () => null;
+														const name = () =>
+															room_member()?.override_name || user()?.name ||
+															"unknown user";
+														return (
+															<div
+																class="voice-participant menu-user"
+																classList={{
+																	speaking: ((voice.rtc?.speaking.get(s.user_id)
+																		?.flags ??
+																		0) &
+																		1) === 1,
+																}}
+																data-channel-id={s.channel_id}
+																data-user-id={s.user_id}
 																draggable={true}
-																onDragStart={handleDragStart}
-																onDragOver={handleDragOver}
-																onDrop={handleDrop}
+																onDragStart={(e) =>
+																	handleVoiceDragStart(
+																		e,
+																		s.user_id,
+																		s.channel_id,
+																	)}
 																onDragEnd={() => {
 																	setDragging(null);
 																	setTarget(null);
 																}}
-																classList={{
-																	unread: thread.type !== "Voice" &&
-																		!!thread.is_unread,
-																}}
 															>
-																<ItemChannel
-																	channel={thread}
-																	room_id={props.room_id}
-																/>
-															</li>
-														)}
-													</For>
-												</ul>
-											</Show>
-											<For
-												each={[...api.voiceStates.values()].filter((i) =>
-													i.channel_id === channel.id
-												).sort((a, b) =>
-													Date.parse(a.joined_at) - Date.parse(b.joined_at)
-												)}
-											>
-												{(s) => {
-													const user = users2.use(() => s.user_id);
-													const room_member = props.room_id
-														? api.room_members.fetch(
-															() => props.room_id!,
-															() => s.user_id,
-														)
-														: () => null;
-													const name = () =>
-														room_member()?.override_name || user()?.name ||
-														"unknown user";
-													return (
-														<div
-															class="voice-participant menu-user"
-															classList={{
-																speaking:
-																	((voice.rtc?.speaking.get(s.user_id)?.flags ??
-																		0) &
-																		1) === 1,
-															}}
-															data-channel-id={s.channel_id}
-															data-user-id={s.user_id}
-															draggable={true}
-															onDragStart={(e) =>
-																handleVoiceDragStart(
-																	e,
-																	s.user_id,
-																	s.channel_id,
-																)}
-															onDragEnd={() => {
-																setDragging(null);
-																setTarget(null);
-															}}
-														>
-															<Avatar user={user()} />
-															{name()}
-														</div>
-													);
-												}}
-											</For>
-										</li>
-									)}
-								</For>
+																<Avatar user={user()} />
+																{name()}
+															</div>
+														);
+													}}
+												</For>
+											</li>
+										)}
+									</For>
+								</ul>
 							</Show>
 						</>
 					)}
@@ -882,67 +878,70 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 		return permissions.has("InviteCreate");
 	});
 
+	const isDm = () =>
+		props.channel.type === "Dm" || props.channel.type === "Gdm";
+
 	return (
 		<A
 			href={`/channel/${props.channel.id}`}
-			class="menu-channel nav-channel"
-			classList={{
-				unread: props.channel.type !== "Voice" && !!props.channel.is_unread,
-				muted: isMuted(),
-			}}
+			class="menu-channel channel-link"
+			data-unread={props.channel.type !== "Voice" && !!props.channel.is_unread
+				? "true"
+				: undefined}
+			data-muted={isMuted() ? "true" : undefined}
 			data-channel-id={props.channel.id}
 			onClick={handleClick}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}
 		>
 			<ChannelIcon channel={props.channel} animate={hovered()} />
-			<div style="pointer-events:none;line-height:1;flex:1;overflow:hidden">
-				<div
-					style={{
-						"text-overflow": "ellipsis",
-						overflow: "hidden",
-						"white-space": "nowrap",
-					}}
-				>
-					{name()}
-				</div>
+
+			<div class="channel-details">
+				<span class="channel-name">{name()}</span>
 				<Show
 					when={otherUser()?.presence.activities.find((a) =>
 						a.type === "Custom"
 					)?.text}
 				>
-					{(t) => <div class="dim">{t()}</div>}
+					{(t) => <span class="channel-status dim">{t()}</span>}
 				</Show>
 			</div>
 			<Show when={props.channel.mention_count}>
 				<div class="mentions">{props.channel.mention_count}</div>
 			</Show>
-			<Show when={props.channel.type !== "Dm"}>
-				<Show when={canInvite()}>
+
+			<Show when={!isDm()}>
+				<div class="channel-actions">
+					<Show when={canInvite()}>
+						<button
+							class="action-button"
+							title="Create Invite"
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								modalCtl.open({
+									type: "invite_create",
+									room_id: props.room_id,
+									channel_id: props.channel.id,
+								});
+							}}
+						>
+							<img src={icMemberAdd} alt="Invite" />
+						</button>
+					</Show>
+
 					<button
+						class="action-button"
+						title="Channel Settings"
 						onClick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
-							modalCtl.open({
-								type: "invite_create",
-								room_id: props.room_id,
-								channel_id: props.channel.id,
-							});
+							nav(`/channel/${props.channel.id}/settings`);
 						}}
 					>
-						<img class="icon" src={icMemberAdd} />
+						<img src={icSettings} alt="Settings" />
 					</button>
-				</Show>
-				<button
-					onClick={(e) => {
-						nav(`/channel/${props.channel.id}/settings`);
-						e.preventDefault();
-						e.stopPropagation();
-						e.stopImmediatePropagation();
-					}}
-				>
-					<img class="icon" src={icSettings} />
-				</button>
+				</div>
 			</Show>
 		</A>
 	);
