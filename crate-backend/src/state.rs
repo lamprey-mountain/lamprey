@@ -36,12 +36,14 @@ pub struct MessageBroadcastInner {
     // store the serve where this message came from
 }
 
+// TODO: write a wrapper around blobs and jetstream instead of accessing them directly?
 pub struct ServerStateInner {
     pub tokio: TokioHandle,
     pub config: Config,
     pub pool: PgPool,
     pub services: Weak<Services>,
-    pub blobs: opendal::Operator, // TODO: write a wrapper around this?
+    pub blobs: opendal::Operator,
+    pub jetstream: Option<async_nats::jetstream::Context>,
     pub messaging: MessagingService,
 }
 
@@ -308,6 +310,7 @@ impl ServerState {
                 pool,
                 services: weak.to_owned(),
                 blobs,
+                jetstream: nats.clone().map(async_nats::jetstream::new),
                 messaging: match nats {
                     Some(c) => {
                         info!("using NATS for messaging");
