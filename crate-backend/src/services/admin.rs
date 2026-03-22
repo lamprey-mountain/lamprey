@@ -10,7 +10,7 @@ use subtle::ConstantTimeEq;
 use tokio::sync::RwLock;
 
 use crate::{
-    config::ConfigInternal, error::Result, services::search::IndexerCommand, ServerStateInner,
+    config::ConfigInternal, error::Result, services::search::IndexerCommandLegacy, ServerStateInner,
 };
 
 pub struct ServiceAdmin {
@@ -200,7 +200,7 @@ impl ServiceAdmin {
     pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
         let srv = self.state.services();
         srv.search
-            .send_indexer_command(IndexerCommand::ReindexChannel(channel_id))?;
+            .send_indexer_command(IndexerCommandLegacy::ReindexChannel(channel_id))?;
         Ok(())
     }
 }

@@ -1,302 +1,178 @@
 use std::{
-    collections::HashSet,
     path::PathBuf,
-    sync::{mpsc, Arc},
+    sync::{mpsc, Arc, Mutex},
+    thread::JoinHandle,
+    time::{Duration, Instant},
 };
 
 use common::v1::types::{
-    search::{
-        ChannelSearchOrderField, ChannelSearchRequest, MessageSearchOrderField,
-        MessageSearchRequest, Order,
-    },
-    ChannelId, MessageId, MessageSync, PaginationDirection, PaginationQuery, SERVER_USER_ID,
+    search::{MessageSearchOrderField, MessageSearchRequest, Order},
+    ChannelId, MessageId,
 };
-use kameo::Actor;
-use tantivy::{
-    collector::{Count, TopDocs},
-    query::{BooleanQuery, Query, QueryParser},
-    schema::Value,
-    DocAddress, Index, IndexReader, IndexWriter, TantivyDocument, Term,
+use kameo::{
+    actor::{ActorRef, Spawn},
+    prelude::{Context, Message},
+    Actor,
 };
-use tracing::{debug, error, trace};
+use lamprey_backend_core::prelude::*;
+use tantivy::{schema::Schema, IndexReader, IndexWriter, TantivyDocument, Term};
+use tracing::error;
 
 use crate::{
     services::search::{
         directory::ObjectDirectory,
-        schema::{tantivy_document_from_channel, tantivy_document_from_message, LampreySchema},
+        import::ImportActor,
+        schema::{content::ContentSchema, IndexDefinition},
         tokenizer::DynamicTokenizer,
     },
-    Error, Result, ServerStateInner,
+    ServerStateInner,
 };
 
-/// buffer size split between indexing threads
-///
-/// currently set to 100mb
-const INDEXING_BUFFER_SIZE: usize = 100_000_000;
+use super::util::{COMMIT_INTERVAL, INDEXING_BUFFER_SIZE, MAX_UNCOMMITTED};
 
-#[derive(Clone)]
-pub struct TantivySearcher {
-    pub index: Index,
-    pub schema: LampreySchema,
-    pub reader: IndexReader,
+pub struct IndexManager {
+    s: Arc<ServerStateInner>,
 }
 
-pub struct TantivyHandle {
-    pub(super) command_tx: std::sync::mpsc::SyncSender<IndexerCommand>,
-    pub(super) thread: std::thread::JoinHandle<()>,
-    pub(super) index: Index,
-    pub(super) schema: LampreySchema,
-    pub(super) searcher: TantivySearcher,
+enum IndexerCommand {
+    Add(TantivyDocument),
+    Delete(Term),
+    Commit,
 }
 
-pub enum IndexerCommand {
-    /// handle this event and update
-    Message(MessageSync),
+pub type IndexActorRef = ActorRef<IndexActor>;
 
-    /// reindex all messages in this channel
-    ReindexChannel(ChannelId),
+impl IndexManager {
+    pub fn new(s: Arc<ServerStateInner>) -> Self {
+        Self { s }
+    }
 
-    /// commit/flush then exit
-    Shutdown,
-}
+    pub async fn open<T: IndexDefinition>(&self, def: T) -> Result<(IndexActorRef, IndexReader)> {
+        let s = Arc::clone(&self.s);
+        let name = def.name();
+        let schema = def.schema().to_owned();
 
-/// create a new TantivyHandle
-pub fn spawn_indexer(s: Arc<ServerStateInner>) -> TantivyHandle {
-    let (tx, rx) = mpsc::sync_channel::<IndexerCommand>(1000);
-    let (init_tx, init_rx) = mpsc::sync_channel(0);
+        let (reader, writer) = tokio::task::spawn_blocking(move || {
+            let dir = ObjectDirectory::new(
+                s,
+                PathBuf::from(format!("tantivy/{name}")),
+                PathBuf::from(format!("/tmp/tantivy/{name}")),
+            );
 
-    let thread = std::thread::spawn(move || {
-        let rt = s.tokio.clone();
-        let dir = ObjectDirectory::new(
-            Arc::clone(&s),
-            PathBuf::from("tantivy/"),
-            PathBuf::from("/tmp/tantivy"),
-        );
-        let sch = LampreySchema::default();
-        let index = Index::open_or_create(dir, sch.schema.clone()).unwrap();
-        index
-            .tokenizers()
-            .register("dynamic", DynamicTokenizer::new());
+            let index = tantivy::Index::open_or_create(dir, schema)
+                .map_err(|e| Error::Internal(format!("Failed to open index: {e}")))?;
 
-        let reader = index.reader().expect("failed to create index reader");
+            index
+                .tokenizers()
+                .register("dynamic", DynamicTokenizer::new());
 
-        init_tx
-            .send((index.clone(), sch.clone(), reader))
-            .expect("failed to send init data");
+            let reader = index
+                .reader()
+                .map_err(|e| Error::Internal(format!("Failed to create reader: {e}")))?;
 
-        let mut index_writer: IndexWriter = index.writer(INDEXING_BUFFER_SIZE).unwrap();
+            let writer = index
+                .writer(INDEXING_BUFFER_SIZE)
+                .map_err(|e| Error::Internal(format!("Failed to create writer: {e}")))?;
 
-        let insert_message =
-            |index_writer: &IndexWriter, message: common::v2::types::message::Message| {
-                // TODO: add message.room_id
-                let (room_id, parent_channel_id) = rt.block_on(async {
-                    if let Ok(channel) = s.services().channels.get(message.channel_id, None).await {
-                        (channel.room_id, channel.parent_id)
-                    } else {
-                        (None, None)
-                    }
-                });
+            Ok::<(IndexReader, IndexWriter), Error>((reader, writer))
+        })
+        .await
+        .map_err(|e| Error::Internal(format!("Task join error: {e}")))??;
 
-                let doc = tantivy_document_from_message(&sch, message, room_id, parent_channel_id);
-                if let Err(e) = index_writer.add_document(doc) {
-                    error!("failed to add document: {}", e);
-                }
-            };
+        let actor_ref = IndexActor::spawn(IndexActor::new(writer, reader.clone()));
+        Ok((actor_ref, reader))
+    }
 
-        let mut last_commit = std::time::Instant::now();
-        let mut uncommitted_count = 0;
-        const COMMIT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
-        const MAX_UNCOMMITTED: usize = 1000;
-
-        loop {
-            let timeout = if uncommitted_count > 0 {
-                COMMIT_INTERVAL.saturating_sub(last_commit.elapsed())
-            } else {
-                std::time::Duration::from_secs(5)
-            };
-
-            // If we are overdue, poll immediately (small timeout)
-            let timeout = if timeout.is_zero() {
-                std::time::Duration::from_millis(1)
-            } else {
-                timeout
-            };
-
-            let cmd = match rx.recv_timeout(timeout) {
-                Ok(cmd) => Some(cmd),
-                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => None,
-                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
-            };
-
-            if let Some(cmd) = cmd {
-                match cmd {
-                    IndexerCommand::Message(msg) => {
-                        match msg {
-                            MessageSync::MessageCreate { message } => {
-                                insert_message(&index_writer, message);
-                            }
-                            MessageSync::MessageUpdate { message } => {
-                                index_writer.delete_term(Term::from_field_text(
-                                    sch.id,
-                                    &message.id.to_string(),
-                                ));
-                                insert_message(&index_writer, message);
-                            }
-                            MessageSync::MessageDelete {
-                                channel_id: _,
-                                message_id,
-                            } => {
-                                index_writer.delete_term(Term::from_field_text(
-                                    sch.id,
-                                    &message_id.to_string(),
-                                ));
-                            }
-                            MessageSync::MessageDeleteBulk { message_ids, .. } => {
-                                for message_id in message_ids {
-                                    index_writer.delete_term(Term::from_field_text(
-                                        sch.id,
-                                        &message_id.to_string(),
-                                    ));
-                                }
-                            }
-                            MessageSync::ChannelCreate { channel } => {
-                                let doc = tantivy_document_from_channel(&sch, *channel);
-                                if let Err(e) = index_writer.add_document(doc) {
-                                    error!("failed to add channel document: {}", e);
-                                }
-                            }
-                            MessageSync::ChannelUpdate { channel } => {
-                                index_writer.delete_term(Term::from_field_text(
-                                    sch.id,
-                                    &channel.id.to_string(),
-                                ));
-                                let doc = tantivy_document_from_channel(&sch, *channel);
-                                if let Err(e) = index_writer.add_document(doc) {
-                                    error!("failed to update channel document: {}", e);
-                                }
-                            }
-                            // TODO: handle Message{Remove,Restore}
-                            _ => {}
-                        }
-                        uncommitted_count += 1;
-                    }
-                    IndexerCommand::ReindexChannel(channel_id) => {
-                        index_writer.delete_term(Term::from_field_text(
-                            sch.channel_id,
-                            &channel_id.to_string(),
-                        ));
-                        // Force commit before potential long operation
-                        if let Err(e) = index_writer.commit() {
-                            error!("Commit failed: {}", e);
-                        }
-                        last_commit = std::time::Instant::now();
-                        uncommitted_count = 0;
-
-                        if let Err(e) =
-                            rt.block_on(s.data().search_reindex_queue_upsert(channel_id, None))
-                        {
-                            error!("Failed to upsert reindex queue: {}", e);
-                        }
-                    }
-                    IndexerCommand::Shutdown => break,
-                }
-            }
-
-            if uncommitted_count > 0
-                && (uncommitted_count >= MAX_UNCOMMITTED
-                    || last_commit.elapsed() >= COMMIT_INTERVAL)
-            {
-                if let Err(e) = index_writer.commit() {
-                    error!("Commit failed: {}", e);
-                }
-                last_commit = std::time::Instant::now();
-                uncommitted_count = 0;
-            }
-
-            // process reindex queue
-            let queue_result = rt.block_on(s.data().search_reindex_queue_list(1));
-            match queue_result {
-                Ok(items) => {
-                    if let Some((channel_id, last_message_id)) = items.first() {
-                        let limit = 1024;
-                        debug!(
-                            "reindexing channel {} from {:?}",
-                            channel_id, last_message_id
-                        );
-                        let res = rt.block_on(s.services().messages.list_all(
-                            *channel_id,
-                            SERVER_USER_ID,
-                            PaginationQuery {
-                                from: *last_message_id,
-                                to: None,
-                                dir: Some(PaginationDirection::F),
-                                limit: Some(limit),
-                            },
-                        ));
-
-                        match res {
-                            Ok(page) => {
-                                if page.items.is_empty() {
-                                    // finished reindexing this channel!
-                                    if let Err(e) = rt
-                                        .block_on(s.data().search_reindex_queue_delete(*channel_id))
-                                    {
-                                        error!("failed to delete from reindex queue: {}", e);
-                                    }
-                                } else {
-                                    let last_id = page.items.last().map(|m| m.id);
-                                    for msg_v2 in page.items {
-                                        insert_message(&index_writer, msg_v2);
-                                    }
-                                    uncommitted_count += limit as usize;
-
-                                    if let Some(lid) = last_id {
-                                        if let Err(e) =
-                                            rt.block_on(s.data().search_reindex_queue_upsert(
-                                                *channel_id,
-                                                Some(lid),
-                                            ))
-                                        {
-                                            error!("failed to update reindex queue: {}", e);
-                                        }
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                error!("failed to list messages for reindex: {}", e);
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!("failed to retrieve reindex queue: {}", e);
-                }
-            }
-        }
-
-        let _ = index_writer.commit();
-    });
-
-    let (index, schema, reader) = init_rx.recv().expect("failed to recv init data");
-
-    let searcher = TantivySearcher {
-        index: index.clone(),
-        schema: schema.clone(),
-        reader,
-    };
-
-    TantivyHandle {
-        command_tx: tx,
-        thread,
-        index,
-        schema,
-        searcher,
+    pub fn spawn_importer(&self) -> ActorRef<ImportActor> {
+        todo!()
     }
 }
 
-pub struct SearchMessagesResponseRaw {
-    pub items: Vec<SearchMessagesResponseRawItem>,
-    pub total: u64,
+/// actor representing an index that can be read from or written to
+pub struct IndexActor {
+    writer: Arc<Mutex<IndexWriter>>,
+    reader: IndexReader,
+    uncommitted_count: usize,
+    last_commit: Instant,
+}
+
+impl Actor for IndexActor {
+    type Args = IndexActor;
+    type Error = Error;
+
+    async fn on_start(args: Self::Args, actor_ref: ActorRef<Self>) -> Result<Self> {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            loop {
+                interval.tick().await;
+                let _ = actor_ref.tell(CommitIndex).await;
+            }
+        });
+
+        Ok(args)
+    }
+
+    async fn on_stop(
+        &mut self,
+        _actor_ref: kameo::prelude::WeakActorRef<Self>,
+        _reason: kameo::prelude::ActorStopReason,
+    ) -> Result<()> {
+        let writer = self.writer.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut writer = writer.lock().unwrap();
+            writer
+                .commit()
+                .expect("Final commit failed during shutdown");
+        })
+        .await
+        .unwrap();
+        Ok(())
+    }
+}
+
+pub struct Search {
+    pub req: MessageSearchRequest,
+    pub visible_channel_ids: Vec<(ChannelId, bool)>,
+}
+
+pub struct CommitIndex;
+
+pub struct AddDocument(pub TantivyDocument);
+
+pub struct DeleteTerm(pub Term);
+
+pub struct UpdateDocument {
+    pub term: Term,
+    pub doc: TantivyDocument,
+}
+
+impl Message<UpdateDocument> for IndexActor {
+    type Reply = ();
+    async fn handle(&mut self, msg: UpdateDocument, _ctx: &mut Context<Self, Self::Reply>) {
+        let writer = self.writer.clone();
+        tokio::task::spawn_blocking(move || {
+            let writer = writer.lock().unwrap();
+            writer.delete_term(msg.term); // Remove old version
+            writer.add_document(msg.doc); // Add new version
+        })
+        .await
+        .unwrap();
+
+        self.uncommitted_count += 1;
+        self.check_auto_commit().await;
+    }
+}
+
+/// actor for querying messages
+#[derive(Actor)]
+pub struct QueryMessagesActor {
+    reader: IndexReader,
+    schema: ContentSchema,
+}
+
+pub struct SearchMessages {
+    pub req: MessageSearchRequest,
+    pub visible_channel_ids: Vec<(ChannelId, bool)>,
 }
 
 pub struct SearchMessagesResponseRawItem {
@@ -304,194 +180,48 @@ pub struct SearchMessagesResponseRawItem {
     pub channel_id: ChannelId,
 }
 
-pub struct SearchChannelsResponseRaw {
-    pub items: Vec<ChannelId>,
+#[derive(kameo::Reply)]
+pub struct SearchMessagesResponseRaw {
+    pub items: Vec<SearchMessagesResponseRawItem>,
     pub total: u64,
 }
 
-impl TantivyHandle {
-    pub fn searcher(&self) -> TantivySearcher {
-        self.searcher.clone()
-    }
-}
+impl Message<SearchMessages> for QueryMessagesActor {
+    type Reply = SearchMessagesResponseRaw;
 
-impl TantivySearcher {
-    pub fn search_channels(
-        &self,
-        req: ChannelSearchRequest,
-        visible_channel_ids: &HashSet<ChannelId>,
-    ) -> Result<SearchChannelsResponseRaw> {
-        let s = &self.schema;
+    async fn handle(
+        &mut self,
+        msg: SearchMessages,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        use tantivy::{
+            collector::{Count, TopDocs},
+            query::{BooleanQuery, Query, QueryParser},
+            schema::Value,
+            DocAddress, TantivyDocument, Term,
+        };
+
         let searcher = self.reader.searcher();
-
         let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
 
-        query_clauses.push((
-            tantivy::query::Occur::Must,
-            Box::new(tantivy::query::TermQuery::new(
-                Term::from_field_text(s.doctype, "Channel"),
-                tantivy::schema::IndexRecordOption::Basic,
-            )),
-        ));
-
-        if let Some(q_str) = &req.query {
+        // Build query from request
+        if let Some(q_str) = &msg.req.query {
             if !q_str.is_empty() {
-                let mut query_parser =
-                    QueryParser::for_index(&self.index, vec![s.content, s.name, s.id]);
-                query_parser.set_field_boost(s.name, 1.5);
-                let q = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::TantivyQuery(format!("Invalid query syntax: {}", e)))?;
-                query_clauses.push((tantivy::query::Occur::Must, q));
+                // TODO: need index reference for QueryParser
+                // For now, skip full-text query building
             }
         }
 
         // Visibility filter
         let mut vis_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
-        for id in visible_channel_ids {
+        for (id, can_view_private_threads) in &msg.visible_channel_ids {
             vis_queries.push((
                 tantivy::query::Occur::Should,
                 Box::new(tantivy::query::TermQuery::new(
-                    Term::from_field_text(s.id, &id.to_string()),
-                    tantivy::schema::IndexRecordOption::Basic,
-                )),
-            ));
-        }
-
-        if vis_queries.is_empty() {
-            return Ok(SearchChannelsResponseRaw {
-                items: vec![],
-                total: 0,
-            });
-        }
-
-        query_clauses.push((
-            tantivy::query::Occur::Must,
-            Box::new(BooleanQuery::new(vis_queries)),
-        ));
-
-        let query = BooleanQuery::new(query_clauses);
-
-        let limit = req.limit as usize;
-        let cursor = req.offset as usize;
-
-        // "Activity" sort field requires resorting in memory if threads are active.
-        // For now, we'll just handle Relevancy, Created, and Archived in Tantivy.
-        // Activity will be handled by ServiceSearch by fetching more and resorting.
-
-        let (top_docs, total) = match (req.sort_field, req.sort_order) {
-            (ChannelSearchOrderField::Relevancy, _) => {
-                let (top_docs, count): (Vec<(f32, DocAddress)>, usize) = searcher.search(
-                    &query,
-                    &(TopDocs::with_limit(limit).and_offset(cursor), Count),
-                )?;
-                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
-                (top_docs, count as u64)
-            }
-            (ChannelSearchOrderField::Created, ord) => {
-                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
-                    .search(
-                        &query,
-                        &(
-                            TopDocs::with_limit(limit)
-                                .and_offset(cursor)
-                                .order_by_fast_field::<tantivy::DateTime>(
-                                    "created_at",
-                                    match ord {
-                                        Order::Ascending => tantivy::Order::Asc,
-                                        Order::Descending => tantivy::Order::Desc,
-                                    },
-                                ),
-                            Count,
-                        ),
-                    )?;
-                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
-                (top_docs, count as u64)
-            }
-            (ChannelSearchOrderField::Archived, ord) => {
-                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
-                    .search(
-                        &query,
-                        &(
-                            TopDocs::with_limit(limit)
-                                .and_offset(cursor)
-                                .order_by_fast_field::<tantivy::DateTime>(
-                                    "archived_at",
-                                    match ord {
-                                        Order::Ascending => tantivy::Order::Asc,
-                                        Order::Descending => tantivy::Order::Desc,
-                                    },
-                                ),
-                            Count,
-                        ),
-                    )?;
-                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
-                (top_docs, count as u64)
-            }
-            (ChannelSearchOrderField::Activity, ord) => {
-                // If we are sorting by Activity, we might need to fetch all candidates if we want to resort accurately.
-                // But for now, let's just sort by whatever is in Tantivy's last_activity_at (archived threads).
-                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
-                    .search(
-                        &query,
-                        &(
-                            TopDocs::with_limit(limit)
-                                .and_offset(cursor)
-                                .order_by_fast_field::<tantivy::DateTime>(
-                                    "metadata_fast.last_activity_at",
-                                    match ord {
-                                        Order::Ascending => tantivy::Order::Asc,
-                                        Order::Descending => tantivy::Order::Desc,
-                                    },
-                                ),
-                            Count,
-                        ),
-                    )?;
-                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
-                (top_docs, count as u64)
-            }
-        };
-
-        let mut items = vec![];
-        for doc_address in top_docs {
-            let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
-            let id = retrieved_doc.get_first(s.id).unwrap().as_str().unwrap();
-            items.push(id.parse().unwrap());
-        }
-
-        Ok(SearchChannelsResponseRaw { items, total })
-    }
-
-    pub fn search_messages(
-        &self,
-        req: MessageSearchRequest,
-        visible_channel_ids: &[(ChannelId, bool)],
-    ) -> Result<SearchMessagesResponseRaw> {
-        let s = &self.schema;
-        let searcher = self.reader.searcher();
-
-        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
-
-        if let Some(q_str) = &req.query {
-            if !q_str.is_empty() {
-                let mut query_parser =
-                    QueryParser::for_index(&self.index, vec![s.content, s.name, s.id]);
-                query_parser.set_field_boost(s.name, 1.5);
-                let q = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::TantivyQuery(format!("Invalid query syntax: {}", e)))?;
-                query_clauses.push((tantivy::query::Occur::Must, q));
-            }
-        }
-
-        // Visibility filter:
-        // (channel_id IS visible) OR (parent_channel_id IS visible_parent)
-        let mut vis_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
-        for (id, can_view_private_threads) in visible_channel_ids {
-            vis_queries.push((
-                tantivy::query::Occur::Should,
-                Box::new(tantivy::query::TermQuery::new(
-                    Term::from_field_text(s.channel_id, &id.to_string()),
+                    Term::from_field_text(
+                        tantivy::schema::Field::from_field_id(0), // TODO: get from schema
+                        &id.to_string(),
+                    ),
                     tantivy::schema::IndexRecordOption::Basic,
                 )),
             ));
@@ -500,7 +230,10 @@ impl TantivySearcher {
                 vis_queries.push((
                     tantivy::query::Occur::Should,
                     Box::new(tantivy::query::TermQuery::new(
-                        Term::from_field_text(s.parent_channel_id, &id.to_string()),
+                        Term::from_field_text(
+                            tantivy::schema::Field::from_field_id(0), // TODO: parent_channel_id
+                            &id.to_string(),
+                        ),
                         tantivy::schema::IndexRecordOption::Basic,
                     )),
                 ));
@@ -508,10 +241,10 @@ impl TantivySearcher {
         }
 
         if vis_queries.is_empty() {
-            return Ok(SearchMessagesResponseRaw {
+            return SearchMessagesResponseRaw {
                 items: vec![],
                 total: 0,
-            });
+            };
         }
 
         query_clauses.push((
@@ -519,37 +252,19 @@ impl TantivySearcher {
             Box::new(BooleanQuery::new(vis_queries)),
         ));
 
-        // User requested channel filter
-        if !req.channel_id.is_empty() {
-            let mut chan_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
-            for id in &req.channel_id {
-                chan_queries.push((
-                    tantivy::query::Occur::Should,
-                    Box::new(tantivy::query::TermQuery::new(
-                        Term::from_field_text(s.channel_id, &id.to_string()),
-                        tantivy::schema::IndexRecordOption::Basic,
-                    )),
-                ));
-            }
-            query_clauses.push((
-                tantivy::query::Occur::Must,
-                Box::new(BooleanQuery::new(chan_queries)),
-            ));
-        }
-
         let query = BooleanQuery::new(query_clauses);
 
-        trace!("calculated query");
+        let limit = msg.req.limit as usize;
+        let cursor = msg.req.offset as usize;
 
-        let limit = req.limit as usize;
-        let cursor = req.offset as usize;
-
-        let (top_docs, total) = match (req.sort_field, req.sort_order) {
+        let (top_docs, total) = match (msg.req.sort_field, msg.req.sort_order) {
             (MessageSearchOrderField::Relevancy, _) => {
-                let (top_docs, count): (Vec<(f32, DocAddress)>, usize) = searcher.search(
-                    &query,
-                    &(TopDocs::with_limit(limit).and_offset(cursor), Count),
-                )?;
+                let (top_docs, count): (Vec<(f32, DocAddress)>, usize) = searcher
+                    .search(
+                        &query,
+                        &(TopDocs::with_limit(limit).and_offset(cursor), Count),
+                    )
+                    .expect("search failed");
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
@@ -569,20 +284,24 @@ impl TantivySearcher {
                                 ),
                             Count,
                         ),
-                    )?;
+                    )
+                    .expect("search failed");
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
         };
-        trace!("got top docs and count in single pass");
 
         let mut items = vec![];
-
         for doc_address in top_docs {
-            let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
-            let id = retrieved_doc.get_first(s.id).unwrap().as_str().unwrap();
+            let retrieved_doc: TantivyDocument =
+                searcher.doc(doc_address).expect("doc fetch failed");
+            let id = retrieved_doc
+                .get_first(tantivy::schema::Field::from_field_id(0))
+                .unwrap()
+                .as_str()
+                .unwrap();
             let channel_id = retrieved_doc
-                .get_first(s.channel_id)
+                .get_first(tantivy::schema::Field::from_field_id(0))
                 .unwrap()
                 .as_str()
                 .unwrap();
@@ -592,19 +311,145 @@ impl TantivySearcher {
             });
         }
 
-        Ok(SearchMessagesResponseRaw { items, total })
+        SearchMessagesResponseRaw { items, total }
+    }
+}
+
+/// actor for querying channels
+#[derive(Actor)]
+pub struct QueryChannelsActor {
+    reader: IndexReader,
+}
+
+/// actor for querying rooms
+#[derive(Actor)]
+pub struct QueryRoomsActor {
+    reader: IndexReader,
+}
+
+/// actor for querying users
+#[derive(Actor)]
+pub struct QueryUsersActor {
+    reader: IndexReader,
+}
+
+/// actor for querying room analytics
+#[derive(Actor)]
+pub struct QueryRoomAnalyticsActor {
+    reader: IndexReader,
+}
+
+/// actor for querying document history
+#[derive(Actor)]
+pub struct QueryDocumentHistoryActor {
+    reader: IndexReader,
+}
+
+impl Message<CommitIndex> for IndexActor {
+    type Reply = ();
+
+    async fn handle(
+        &mut self,
+        _msg: CommitIndex,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.commit().await;
+    }
+}
+
+impl Message<AddDocument> for IndexActor {
+    type Reply = ();
+
+    async fn handle(
+        &mut self,
+        msg: AddDocument,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        let writer = self.writer.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let writer_guard = writer.lock().unwrap();
+            if let Err(e) = writer_guard.add_document(msg.0) {
+                error!("failed to add document: {}", e);
+            }
+        })
+        .await
+        .unwrap();
+
+        self.uncommitted_count += 1;
+        self.check_auto_commit().await;
+    }
+}
+
+impl Message<DeleteTerm> for IndexActor {
+    type Reply = ();
+
+    async fn handle(
+        &mut self,
+        msg: DeleteTerm,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        let writer = self.writer.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let writer_guard = writer.lock().unwrap();
+            writer_guard.delete_term(msg.0);
+        })
+        .await
+        .unwrap();
+
+        self.uncommitted_count += 1;
+        self.check_auto_commit().await;
+    }
+}
+
+impl Message<Search> for IndexActor {
+    type Reply = ();
+
+    async fn handle(&mut self, _msg: Search, ctx: &mut Context<Self, Self::Reply>) -> Self::Reply {
+        todo!()
+    }
+}
+
+impl IndexActor {
+    pub fn new(writer: IndexWriter, reader: IndexReader) -> Self {
+        Self {
+            writer: Arc::new(Mutex::new(writer)),
+            reader,
+            uncommitted_count: 0,
+            last_commit: Instant::now(),
+        }
     }
 
-    pub fn count_documents_for_channel(&self, channel_id: ChannelId) -> Result<u64> {
-        let s = &self.schema;
-        let searcher = self.reader.searcher();
+    async fn check_auto_commit(&mut self) {
+        if self.uncommitted_count > 0
+            && (self.uncommitted_count >= MAX_UNCOMMITTED
+                || self.last_commit.elapsed() >= COMMIT_INTERVAL)
+        {
+            self.commit().await;
+        }
+    }
 
-        let query = tantivy::query::TermQuery::new(
-            Term::from_field_text(s.channel_id, &channel_id.to_string()),
-            tantivy::schema::IndexRecordOption::Basic,
-        );
+    async fn commit(&mut self) {
+        let writer = self.writer.clone();
+        let reader = self.reader.clone();
 
-        let count = searcher.search(&query, &Count)?;
-        Ok(count as u64)
+        let res = tokio::task::spawn_blocking(move || {
+            let mut writer_lock = writer.lock().unwrap();
+            writer_lock.commit()?;
+            // readers MUST be reloaded after commits so searches see new data!
+            reader.reload()?;
+            Ok::<(), tantivy::TantivyError>(())
+        })
+        .await;
+
+        match res {
+            Ok(Ok(_)) => {
+                self.uncommitted_count = 0;
+                self.last_commit = Instant::now();
+            }
+            Ok(Err(e)) => error!("Tantivy commit error: {e}"),
+            Err(e) => error!("Blocking task error: {e}"),
+        }
     }
 }

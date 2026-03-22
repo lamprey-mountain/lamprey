@@ -2,37 +2,91 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use common::v1::types::search::{ChannelSearchOrderField, Order};
+use common::v1::types::MessageSync;
 use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, RoomId, UserId,
 };
 use common::v2::types::message::MessageType;
 use futures::stream::{FuturesUnordered, StreamExt};
+use kameo::actor::ActorRef;
 use lamprey_backend_core::types::admin::SearchIndexStats;
+use tokio::sync::OnceCell;
 use tracing::trace;
 
+use crate::services::search::index::{IndexActor, IndexActorRef, IndexManager};
+use crate::services::search::schema::content::ContentSchema;
+use crate::services::search::schema::{ContentIndex, IndexDefinition};
+use crate::services::search::searcher::{MessageSearcher, SearchMessages};
 use crate::Error;
-use crate::{error::Result, services::search::index::TantivyHandle, ServerStateInner};
+use crate::{error::Result, ServerStateInner};
 
 mod directory;
 mod import;
 mod index;
-mod index2;
 mod schema;
+mod searcher;
 mod tokenizer;
-
-pub use index::IndexerCommand;
+mod util;
 
 pub struct ServiceSearch {
     state: Arc<ServerStateInner>,
-    tantivy: TantivyHandle,
+    index_manager: IndexManager,
+
+    // /// index for messages, channels, rooms, and other generic content
+    // content: OnceCell<IndexActorRef>,
+    m: OnceCell<Arc<MessageSearcher>>,
+    // /// index for room (and server) analytics
+    // room_analytics: ActorRef<IndexActor>,
+
+    // /// index for document history
+    // document_history: ActorRef<IndexActor>,
+}
+
+pub enum IndexerCommandLegacy {
+    /// handle this event and update
+    Message(MessageSync),
+
+    /// reindex all messages in this channel
+    ReindexChannel(ChannelId),
+
+    /// commit/flush then exit
+    Shutdown,
 }
 
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        // let index_manager = index2::IndexManager::new(Arc::clone(&state));
-        let tantivy = index::spawn_indexer(Arc::clone(&state));
-        Self { state, tantivy }
+        let index_manager = IndexManager::new(Arc::clone(&state));
+        // let content = index_manager.open(ContentIndex::default()).await.unwrap();
+        // let m = Arc::new(MessageSearcher {
+        //     index_ref: content.0.clone(),
+        //     reader: content.1,
+        //     schema: ContentSchema::default(),
+        // });
+        // let room_analytics = index_manager.open("room_analytics", todo!());
+        // let document_history = index_manager.open("document_history", todo!());
+        Self {
+            state,
+            index_manager,
+            // content: content.0,
+            m: OnceCell::new(),
+            // room_analytics,
+            // document_history,
+        }
+    }
+
+    async fn get_message_searcher(&self) -> Result<Arc<MessageSearcher>> {
+        self.m
+            .get_or_try_init(|| async {
+                let (writer, reader) = self.index_manager.open(ContentIndex::default()).await?;
+                Ok(Arc::new(MessageSearcher {
+                    index_ref: writer,
+                    reader,
+                    schema: ContentSchema::default(),
+                }))
+            })
+            .await
+            .cloned()
     }
 
     pub async fn search_messages(
@@ -48,15 +102,19 @@ impl ServiceSearch {
 
         let offset = req.offset;
 
-        let searcher = self.tantivy.searcher();
         let req_clone = req.clone();
         let vis_clone = vis.clone();
 
         trace!("starting search task");
-        let raw_result =
-            tokio::task::spawn_blocking(move || searcher.search_messages(req_clone, &vis_clone))
-                .await
-                .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        let searcher = self.get_message_searcher().await?;
+        let raw_result = tokio::task::spawn_blocking(move || {
+            searcher.search_messages(SearchMessages {
+                req: req_clone,
+                visible_channel_ids: vis_clone,
+            })
+        })
+        .await
+        .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
         trace!("finished search task");
 
         // split messages by channel
@@ -181,114 +239,125 @@ impl ServiceSearch {
 
     pub async fn search_channels(
         &self,
-        user_id: UserId,
-        req: ChannelSearchRequest,
+        _user_id: UserId,
+        _req: ChannelSearchRequest,
         _q: PaginationQuery<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
-        let srv = self.state.services();
-
-        let vis = srv.channels.list_user_room_channels(user_id).await?;
-        let vis_ids: HashSet<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
-
-        let searcher = self.tantivy.searcher();
-        let mut req_clone = req.clone();
-
-        // If we are sorting by activity, we want to fetch a larger batch from Tantivy
-        // then resort in memory using the cache for active threads.
-        let is_activity_sort = req.sort_field == ChannelSearchOrderField::Activity;
-
-        if is_activity_sort {
-            // Fetch more results to allow for better resorting.
-            // This is still a bit of a hack, but without updating Tantivy on every message,
-            // we have to resort in memory.
-            req_clone.limit = req.limit.max(500);
-            req_clone.offset = 0;
-        }
-
-        let raw_result =
-            tokio::task::spawn_blocking(move || searcher.search_channels(req_clone, &vis_ids))
-                .await
-                .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
-
-        let channel_ids = raw_result.items;
-        let mut channels = srv.channels.get_many(&channel_ids, Some(user_id)).await?;
-
-        if is_activity_sort {
-            // Resort based on cache/real-time activity
-            channels.sort_by(|a, b| {
-                let a_time = a.archived_at.unwrap_or_else(|| {
-                    a.last_version_id
-                        .and_then(|id| id.try_into().ok())
-                        .unwrap_or_else(|| a.id.try_into().unwrap())
-                });
-                let b_time = b.archived_at.unwrap_or_else(|| {
-                    b.last_version_id
-                        .and_then(|id| id.try_into().ok())
-                        .unwrap_or_else(|| b.id.try_into().unwrap())
-                });
-
-                match req.sort_order {
-                    Order::Ascending => a_time.cmp(&b_time),
-                    Order::Descending => b_time.cmp(&a_time),
-                }
-            });
-
-            // Re-apply pagination after resorting
-            let total = channels.len();
-            let start = req.offset as usize;
-            let end = (start + req.limit as usize).min(total);
-
-            if start >= total {
-                return Ok(PaginationResponse {
-                    items: vec![],
-                    has_more: false,
-                    total: raw_result.total,
-                    cursor: None,
-                });
-            }
-
-            let paged_channels = channels[start..end].to_vec();
-            let has_more = end < total || raw_result.total > req.limit as u64;
-
-            Ok(PaginationResponse {
-                items: paged_channels,
-                has_more,
-                total: raw_result.total,
-                cursor: None, // TODO: implement cursors if needed
-            })
-        } else {
-            Ok(PaginationResponse {
-                items: channels,
-                has_more: (req.offset as u64 + channel_ids.len() as u64) < raw_result.total,
-                total: raw_result.total,
-                cursor: None,
-            })
-        }
+        todo!()
     }
 
-    pub fn send_indexer_command(&self, cmd: IndexerCommand) -> Result<()> {
-        self.tantivy
-            .command_tx
-            .send(cmd)
-            .map_err(|e| Error::Internal(format!("Failed to send reindex command: {}", e)))?;
-        Ok(())
+    // pub async fn search_channels(
+    //     &self,
+    //     user_id: UserId,
+    //     req: ChannelSearchRequest,
+    //     _q: PaginationQuery<ChannelId>,
+    // ) -> Result<PaginationResponse<Channel>> {
+    //     let srv = self.state.services();
+
+    //     let vis = srv.channels.list_user_room_channels(user_id).await?;
+    //     let vis_ids: HashSet<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
+
+    //     let searcher = self.tantivy.searcher();
+    //     let mut req_clone = req.clone();
+
+    //     // If we are sorting by activity, we want to fetch a larger batch from Tantivy
+    //     // then resort in memory using the cache for active threads.
+    //     let is_activity_sort = req.sort_field == ChannelSearchOrderField::Activity;
+
+    //     if is_activity_sort {
+    //         // Fetch more results to allow for better resorting.
+    //         // This is still a bit of a hack, but without updating Tantivy on every message,
+    //         // we have to resort in memory.
+    //         req_clone.limit = req.limit.max(500);
+    //         req_clone.offset = 0;
+    //     }
+
+    //     let raw_result =
+    //         tokio::task::spawn_blocking(move || searcher.search_channels(req_clone, &vis_ids))
+    //             .await
+    //             .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+
+    //     let channel_ids = raw_result.items;
+    //     let mut channels = srv.channels.get_many(&channel_ids, Some(user_id)).await?;
+
+    //     if is_activity_sort {
+    //         // Resort based on cache/real-time activity
+    //         channels.sort_by(|a, b| {
+    //             let a_time = a.archived_at.unwrap_or_else(|| {
+    //                 a.last_version_id
+    //                     .and_then(|id| id.try_into().ok())
+    //                     .unwrap_or_else(|| a.id.try_into().unwrap())
+    //             });
+    //             let b_time = b.archived_at.unwrap_or_else(|| {
+    //                 b.last_version_id
+    //                     .and_then(|id| id.try_into().ok())
+    //                     .unwrap_or_else(|| b.id.try_into().unwrap())
+    //             });
+
+    //             match req.sort_order {
+    //                 Order::Ascending => a_time.cmp(&b_time),
+    //                 Order::Descending => b_time.cmp(&a_time),
+    //             }
+    //         });
+
+    //         // Re-apply pagination after resorting
+    //         let total = channels.len();
+    //         let start = req.offset as usize;
+    //         let end = (start + req.limit as usize).min(total);
+
+    //         if start >= total {
+    //             return Ok(PaginationResponse {
+    //                 items: vec![],
+    //                 has_more: false,
+    //                 total: raw_result.total,
+    //                 cursor: None,
+    //             });
+    //         }
+
+    //         let paged_channels = channels[start..end].to_vec();
+    //         let has_more = end < total || raw_result.total > req.limit as u64;
+
+    //         Ok(PaginationResponse {
+    //             items: paged_channels,
+    //             has_more,
+    //             total: raw_result.total,
+    //             cursor: None, // TODO: implement cursors if needed
+    //         })
+    //     } else {
+    //         Ok(PaginationResponse {
+    //             items: channels,
+    //             has_more: (req.offset as u64 + channel_ids.len() as u64) < raw_result.total,
+    //             total: raw_result.total,
+    //             cursor: None,
+    //         })
+    //     }
+    // }
+
+    pub fn send_indexer_command(&self, cmd: IndexerCommandLegacy) -> Result<()> {
+        todo!()
+        //     self.tantivy
+        //         .command_tx
+        //         .send(cmd)
+        //         .map_err(|e| Error::Internal(format!("Failed to send reindex command: {}", e)))?;
+        //     Ok(())
     }
 
     pub async fn get_channel_stats(&self, channel_id: ChannelId) -> Result<SearchIndexStats> {
-        let data = self.state.data();
-        let searcher = self.tantivy.searcher();
+        todo!()
+        // let data = self.state.data();
+        // let searcher = self.tantivy.searcher();
 
-        let documents_indexed =
-            tokio::task::spawn_blocking(move || searcher.count_documents_for_channel(channel_id))
-                .await
-                .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))?
-                .map_err(|e| Error::Internal(format!("Failed to count documents: {}", e)))?;
+        // let documents_indexed =
+        //     tokio::task::spawn_blocking(move || searcher.count_documents_for_channel(channel_id))
+        //         .await
+        //         .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))?
+        //         .map_err(|e| Error::Internal(format!("Failed to count documents: {}", e)))?;
 
-        let last_message_id = data.search_reindex_queue_get(channel_id).await?;
+        // let last_message_id = data.search_reindex_queue_get(channel_id).await?;
 
-        Ok(SearchIndexStats {
-            documents_indexed,
-            last_message_id,
-        })
+        // Ok(SearchIndexStats {
+        //     documents_indexed,
+        //     last_message_id,
+        // })
     }
 }
