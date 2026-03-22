@@ -52,7 +52,7 @@ pub mod invite_resolve {
     permissions_optional = [InviteManage],
     response(CREATED, body = Invite, description = "success"),
 )]
-pub mod invite_create {
+pub mod invite_room_create {
     use crate::v1::types::{Invite, InviteCreate, RoomId};
 
     pub struct Request {
@@ -78,7 +78,7 @@ pub mod invite_create {
     permissions_optional = [InviteManage],
     response(OK, body = PaginationResponse<Invite>, description = "success"),
 )]
-pub mod invite_list_room {
+pub mod invite_room_list {
     use crate::v1::types::{Invite, InviteCode, PaginationQuery, PaginationResponse, RoomId};
 
     pub struct Request {
@@ -104,7 +104,7 @@ pub mod invite_list_room {
     permissions_optional = [InviteManage],
     response(OK, body = PaginationResponse<Invite>, description = "success"),
 )]
-pub mod invite_list_channel {
+pub mod invite_channel_list {
     use crate::v1::types::{ChannelId, Invite, InviteCode, PaginationQuery, PaginationResponse};
 
     pub struct Request {
@@ -118,6 +118,32 @@ pub mod invite_list_channel {
     pub struct Response {
         #[json]
         pub invites: PaginationResponse<Invite>,
+    }
+}
+
+/// Invite channel create
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    permissions_optional = [InviteManage],
+    response(CREATED, body = Invite, description = "success"),
+)]
+pub mod invite_channel_create {
+    use crate::v1::types::{ChannelId, Invite, InviteCreate};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[json]
+        pub invite: InviteCreate,
+    }
+
+    pub struct Response {
+        #[json]
+        pub invite: Invite,
     }
 }
 
@@ -164,4 +190,103 @@ pub mod invite_use {
     }
 
     pub struct Response {}
+}
+
+/// Invite server create
+#[endpoint(
+    post,
+    path = "/server/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    permissions_optional = [InviteCreate],
+    response(CREATED, body = Invite, description = "success"),
+)]
+pub mod invite_server_create {
+    use crate::v1::types::{Invite, InviteCreate};
+
+    pub struct Request {
+        #[json]
+        pub invite: InviteCreate,
+    }
+
+    pub struct Response {
+        #[json]
+        pub invite: Invite,
+    }
+}
+
+/// Invite server list
+#[endpoint(
+    get,
+    path = "/server/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    permissions_optional = [InviteManage],
+    response(OK, body = PaginationResponse<Invite>, description = "success"),
+)]
+pub mod invite_server_list {
+    use crate::v1::types::{Invite, InviteCode, PaginationQuery, PaginationResponse};
+
+    pub struct Request {
+        #[query]
+        pub pagination: PaginationQuery<InviteCode>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub invites: PaginationResponse<Invite>,
+    }
+}
+
+/// Invite user create
+#[endpoint(
+    post,
+    path = "/user/{user_id}/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    permissions_optional = [InviteCreate],
+    response(CREATED, body = Invite, description = "success"),
+)]
+pub mod invite_user_create {
+    use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{Invite, InviteCreate};
+
+    pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
+        #[json]
+        pub invite: InviteCreate,
+    }
+
+    pub struct Response {
+        #[json]
+        pub invite: Invite,
+    }
+}
+
+/// Invite user list
+#[endpoint(
+    get,
+    path = "/user/{user_id}/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    response(OK, body = PaginationResponse<Invite>, description = "success"),
+)]
+pub mod invite_user_list {
+    use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{Invite, InviteCode, PaginationQuery, PaginationResponse};
+
+    pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
+        #[query]
+        pub pagination: PaginationQuery<InviteCode>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub invites: PaginationResponse<Invite>,
+    }
 }

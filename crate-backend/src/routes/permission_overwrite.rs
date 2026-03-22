@@ -1,10 +1,8 @@
 use std::{collections::HashSet, sync::Arc};
 
-use axum::{
-    extract::{Path, State},
-    response::IntoResponse,
-    Json,
-};
+use axum::extract::State;
+use axum::response::IntoResponse;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
@@ -12,46 +10,36 @@ use common::v1::types::{
     PermissionOverwriteType,
 };
 use http::StatusCode;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 
-use super::util::Auth;
 use crate::error::Result;
-use crate::ServerState;
+use crate::routes::util::Auth;
+use crate::{routes2, ServerState};
 
 /// Permission overwrite
-#[utoipa::path(
-    put,
-    path = "/channel/{channel_id}/permission/{overwrite_id}",
-    tags = ["channel", "badge.scope.full", "badge.perm.RoleManage"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "channel id"),
-        ("overwrite_id" = Uuid, Path, description = "Role or user id"),
-    ),
-    request_body = PermissionOverwriteSet,
-    responses((status = NO_CONTENT, description = "success"))
-)]
-async fn permission_overwrite(
+#[handler(routes::permission_set)]
+async fn permission_set(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
-    Json(json): Json<PermissionOverwriteSet>,
+    req: routes::permission_set::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let allow_set: HashSet<_> = json.allow.iter().collect();
-    let deny_set: HashSet<_> = json.deny.iter().collect();
+    let allow_set: HashSet<_> = req.overwrite.allow.iter().collect();
+    let deny_set: HashSet<_> = req.overwrite.deny.iter().collect();
 
     if !allow_set.is_disjoint(&deny_set) {
         return Err(ApiError::from_code(ErrorCode::PermissionConflict).into());
     }
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::RoleManage)?;
-    let channel = srv.channels.get(channel_id, None).await?;
+    let channel = srv.channels.get(req.channel_id, None).await?;
     if channel.is_thread() {
         return Err(ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into());
     }
@@ -61,14 +49,17 @@ async fn permission_overwrite(
 
     if let Some(room_id) = channel.room_id {
         let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-        let other_rank = match json.ty {
+        let other_rank = match req.overwrite.ty {
             PermissionOverwriteType::Role => {
-                let role = s.data().role_select(room_id, overwrite_id.into()).await?;
+                let role = s
+                    .data()
+                    .role_select(room_id, req.overwrite_id.into())
+                    .await?;
                 role.position
             }
             PermissionOverwriteType::User => {
                 srv.perms
-                    .get_user_rank(room_id, overwrite_id.into())
+                    .get_user_rank(room_id, req.overwrite_id.into())
                     .await?
             }
         };
@@ -80,11 +71,10 @@ async fn permission_overwrite(
         return Err(ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into());
     }
 
-    // you can't grant/unset/deny permissions you do not have, and if someone else already set them you can't edit them
     let existing = channel
         .permission_overwrites
         .iter()
-        .find(|o| o.ty == json.ty && o.id == overwrite_id);
+        .find(|o| o.ty == req.overwrite.ty && o.id == req.overwrite_id);
 
     if existing.is_none()
         && channel.permission_overwrites.len() >= crate::consts::MAX_PERMISSION_OVERWRITES as usize
@@ -95,59 +85,65 @@ async fn permission_overwrite(
     if let Some(existing) = &existing {
         let ea: HashSet<Permission> = existing.allow.iter().cloned().collect();
         let ed: HashSet<Permission> = existing.deny.iter().cloned().collect();
-        let ja: HashSet<Permission> = json.allow.iter().cloned().collect();
-        let jd: HashSet<Permission> = json.deny.iter().cloned().collect();
+        let ja: HashSet<Permission> = req.overwrite.allow.iter().cloned().collect();
+        let jd: HashSet<Permission> = req.overwrite.deny.iter().cloned().collect();
 
-        // must have permission to add/remove allows
         for p in ea.symmetric_difference(&ja) {
             perms.ensure(*p)?;
         }
 
-        // must have permission to add/remove denies
         for p in ed.symmetric_difference(&jd) {
             perms.ensure(*p)?;
         }
     } else {
-        for p in &json.allow {
+        for p in &req.overwrite.allow {
             perms.ensure(*p)?;
         }
-        for p in &json.deny {
+        for p in &req.overwrite.deny {
             perms.ensure(*p)?;
         }
     }
 
     srv.perms
         .permission_overwrite_upsert(
-            channel_id,
-            overwrite_id,
-            json.ty.clone(),
-            json.allow.clone(),
-            json.deny.clone(),
+            req.channel_id,
+            req.overwrite_id,
+            req.overwrite.ty.clone(),
+            req.overwrite.allow.clone(),
+            req.overwrite.deny.clone(),
         )
         .await?;
-    srv.channels.invalidate(channel_id).await;
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    srv.channels.invalidate(req.channel_id).await;
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
         let audit_log_entry = if existing.is_some() {
             AuditLogEntryType::PermissionOverwriteUpdate {
-                channel_id,
-                overwrite_id,
-                ty: json.ty,
+                channel_id: req.channel_id,
+                overwrite_id: req.overwrite_id,
+                ty: req.overwrite.ty,
                 changes: Changes::new()
-                    .change("allow", &existing.as_ref().unwrap().allow, &json.allow)
-                    .change("deny", &existing.as_ref().unwrap().deny, &json.deny)
+                    .change(
+                        "allow",
+                        &existing.as_ref().unwrap().allow,
+                        &req.overwrite.allow,
+                    )
+                    .change(
+                        "deny",
+                        &existing.as_ref().unwrap().deny,
+                        &req.overwrite.deny,
+                    )
                     .build(),
             }
         } else {
             AuditLogEntryType::PermissionOverwriteCreate {
-                channel_id,
-                overwrite_id,
-                ty: json.ty,
+                channel_id: req.channel_id,
+                overwrite_id: req.overwrite_id,
+                ty: req.overwrite.ty,
                 changes: Changes::new()
-                    .add("allow", &json.allow)
-                    .add("deny", &json.deny)
+                    .add("allow", &req.overwrite.allow)
+                    .add("deny", &req.overwrite.deny)
                     .build(),
             }
         };
@@ -155,40 +151,31 @@ async fn permission_overwrite(
     }
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::ChannelUpdate {
             channel: Box::new(channel),
         },
     )
     .await?;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 /// Permission delete
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/permission/{overwrite_id}",
-    params(
-        ("channel_id", description = "channel id"),
-        ("overwrite_id", description = "Role or user id"),
-    ),
-    tags = ["channel", "badge.scope.full", "badge.perm.RoleManage"],
-    responses((status = NO_CONTENT, description = "success"))
-)]
-async fn permission_delete(
+#[handler(routes::permission_remove)]
+async fn permission_remove(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
+    req: routes::permission_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::RoleManage)?;
 
-    let channel = srv.channels.get(channel_id, None).await?;
+    let channel = srv.channels.get(req.channel_id, None).await?;
     channel.ensure_unarchived()?;
     channel.ensure_unremoved()?;
     perms.ensure_unlocked()?;
@@ -196,18 +183,21 @@ async fn permission_delete(
     let existing = if let Some(existing) = channel
         .permission_overwrites
         .iter()
-        .find(|o| o.id == overwrite_id)
+        .find(|o| o.id == req.overwrite_id)
     {
         if let Some(room_id) = channel.room_id {
             let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
             let other_rank = match existing.ty {
                 PermissionOverwriteType::Role => {
-                    let role = s.data().role_select(room_id, overwrite_id.into()).await?;
+                    let role = s
+                        .data()
+                        .role_select(room_id, req.overwrite_id.into())
+                        .await?;
                     role.position
                 }
                 PermissionOverwriteType::User => {
                     srv.perms
-                        .get_user_rank(room_id, overwrite_id.into())
+                        .get_user_rank(room_id, req.overwrite_id.into())
                         .await?
                 }
             };
@@ -229,38 +219,38 @@ async fn permission_delete(
         }
         existing
     } else {
-        return Ok(StatusCode::NO_CONTENT);
+        return Ok(StatusCode::NO_CONTENT.into_response());
     };
 
     srv.perms
-        .permission_overwrite_delete(channel_id, overwrite_id)
+        .permission_overwrite_delete(req.channel_id, req.overwrite_id)
         .await?;
-    srv.channels.invalidate(channel_id).await;
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    srv.channels.invalidate(req.channel_id).await;
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::PermissionOverwriteDelete {
-            channel_id,
-            overwrite_id,
+            channel_id: req.channel_id,
+            overwrite_id: req.overwrite_id,
             ty: existing.ty,
         })
         .await?;
     }
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::ChannelUpdate {
             channel: Box::new(channel),
         },
     )
     .await?;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(permission_overwrite))
-        .routes(routes!(permission_delete))
+        .routes(routes2!(permission_set))
+        .routes(routes2!(permission_remove))
 }

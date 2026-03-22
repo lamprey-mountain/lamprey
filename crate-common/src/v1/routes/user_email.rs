@@ -48,12 +48,12 @@ pub mod email_delete {
 /// Email verify
 #[endpoint(
     post,
-    path = "/user/{user_id}/email/{addr}/verify",
+    path = "/user/{user_id}/email/{addr}/verify/{code}",
     tags = ["user_email"],
     scopes = [Full],
     response(NO_CONTENT, description = "success"),
 )]
-pub mod email_verify {
+pub mod email_verification_finish {
     use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
@@ -63,7 +63,7 @@ pub mod email_verify {
         #[path]
         pub addr: String,
 
-        #[json]
+        #[path]
         pub code: String,
     }
 
@@ -143,4 +143,26 @@ pub mod email_update {
         #[json]
         pub email: EmailInfo,
     }
+}
+
+/// Email verification resend
+#[endpoint(
+    post,
+    path = "/user/{user_id}/email/{addr}/resend-verification",
+    tags = ["user_email"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod email_verification_resend {
+    use crate::v1::types::misc::UserIdReq;
+
+    pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
+        #[path]
+        pub addr: String,
+    }
+
+    pub struct Response {}
 }

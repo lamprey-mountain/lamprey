@@ -1,89 +1,64 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{
-    tag::{Tag, TagCreate, TagDeleteQuery, TagListQuery, TagPatch, TagSearchQuery},
-    util::Changes,
-    AuditLogEntryType, ChannelId, MessageSync, PaginationQuery, PaginationResponse, Permission,
-    TagId,
-};
-use utoipa_axum::{router::OpenApiRouter, routes};
+use common::v1::types::tag::{Tag, TagCreate, TagPatch};
+use common::v1::types::util::Changes;
+use common::v1::types::{AuditLogEntryType, ChannelId, MessageSync, Permission, TagId};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::{error::Result, routes::util::Auth, Error, ServerState};
-
-use super::util::HeaderIdempotencyKey;
+use crate::error::Result;
+use crate::routes::util::Auth;
+use crate::{routes2, ServerState};
 
 /// Tag create
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/tag",
-    tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel to create the tag in."),
-    ),
-    request_body = TagCreate,
-    responses(
-        (status = CREATED, body = Tag, description = "Create tag success"),
-    )
-)]
+#[handler(routes::tag_create)]
 async fn tag_create(
-    Path(channel_id): Path<ChannelId>,
-    State(s): State<Arc<ServerState>>,
     auth: Auth,
-    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
-    Json(create): Json<TagCreate>,
+    State(s): State<Arc<ServerState>>,
+    req: routes::tag_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
+    req.tag.validate()?;
 
     let srv = s.services();
-    let tag = srv.tag.create(channel_id, &auth, create, nonce).await?;
+    let tag = srv
+        .tag
+        .create(req.channel_id, &auth, req.tag, req.idempotency_key)
+        .await?;
 
     Ok((StatusCode::CREATED, Json(tag)))
 }
 
 /// Tag update
-#[utoipa::path(
-    patch,
-    path = "/channel/{channel_id}/tag/{tag_id}",
-    tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel the tag belongs to."),
-        ("tag_id" = TagId, Path, description = "The ID of the tag to update.")
-    ),
-    request_body = TagPatch,
-    responses(
-        (status = OK, body = Tag, description = "Update tag success"),
-    )
-)]
+#[handler(routes::tag_update)]
 async fn tag_update(
-    Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
-    State(s): State<Arc<ServerState>>,
     auth: Auth,
-    Json(patch): Json<TagPatch>,
+    State(s): State<Arc<ServerState>>,
+    req: routes::tag_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    patch.validate()?;
+    req.patch.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelEdit)?;
 
-    let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
-    if channel_id != tag_channel_id {
-        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
+    let tag_channel_id = s.data().tag_get_forum_id(req.tag_id).await?;
+    if req.channel_id != tag_channel_id {
+        return Err(ApiError::from_code(ErrorCode::UnknownTag).into());
     }
 
-    let tag_old = s.data().tag_get(tag_id).await?;
-    let tag = s.data().tag_update(tag_id, patch).await?;
+    let tag_old = s.data().tag_get(req.tag_id).await?;
+    let tag = s.data().tag_update(req.tag_id, req.patch).await?;
 
     let channel = srv
         .channels
@@ -92,8 +67,8 @@ async fn tag_update(
     if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::TagUpdate {
-            channel_id,
-            tag_id,
+            channel_id: req.channel_id,
+            tag_id: req.tag_id,
             changes: Changes::new()
                 .change("name", &tag_old.name, &tag.name)
                 .change("description", &tag_old.description, &tag.description)
@@ -106,7 +81,7 @@ async fn tag_update(
     }
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::TagUpdate { tag: tag.clone() },
     )
@@ -116,156 +91,123 @@ async fn tag_update(
 }
 
 /// Tag delete
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/tag/{tag_id}",
-    tags = ["tag", "badge.scope.full", "badge.perm.TagManage", "badge.audit-log.ChannelUpdate"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel the tag belongs to."),
-        ("tag_id" = TagId, Path, description = "The ID of the tag to delete.")
-    ),
-    responses(
-        (status = NO_CONTENT, description = "Delete tag success"),
-    )
-)]
+#[handler(routes::tag_delete)]
 async fn tag_delete(
-    Path((channel_id, tag_id)): Path<(ChannelId, TagId)>,
-    Query(query): Query<TagDeleteQuery>,
-    State(s): State<Arc<ServerState>>,
     auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::tag_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelEdit)?;
 
-    let tag_channel_id = s.data().tag_get_forum_id(tag_id).await?;
-    if channel_id != tag_channel_id {
-        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
+    let tag_channel_id = s.data().tag_get_forum_id(req.tag_id).await?;
+    if req.channel_id != tag_channel_id {
+        return Err(ApiError::from_code(ErrorCode::UnknownTag).into());
     }
 
-    let tag = s.data().tag_get(tag_id).await?;
+    let tag = s.data().tag_get(req.tag_id).await?;
 
-    if tag.total_thread_count > 0 && !query.force {
+    if tag.total_thread_count > 0 && !req.force {
         return Ok(StatusCode::CONFLICT.into_response());
     }
 
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    s.data().tag_delete(tag_id).await?;
+    s.data().tag_delete(req.tag_id).await?;
 
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::TagDelete {
-            channel_id,
-            tag_id,
+            channel_id: req.channel_id,
+            tag_id: req.tag_id,
             changes: Changes::new()
                 .remove("name", &tag.name)
                 .remove("description", &tag.description)
-                .remove("color", &tag.color)
-                .remove("restricted", &tag.restricted)
                 .build(),
         })
         .await?;
     }
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
-        MessageSync::TagDelete { channel_id, tag_id },
+        MessageSync::TagDelete {
+            tag_id: req.tag_id,
+            channel_id: req.channel_id,
+        },
     )
     .await?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
-/// Tag search
-///
-/// Search for tags in a forum channel.
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/tag/search",
-    tags = ["tag", "badge.scope.full"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel to search for tags in."),
-        TagSearchQuery,
-        PaginationQuery<TagId>,
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<Tag>, description = "success"),
-    )
-)]
-async fn tag_search(
-    Path(channel_id): Path<ChannelId>,
+/// Tag list
+#[handler(routes::tag_list)]
+async fn tag_list(
     auth: Auth,
-    Query(q): Query<TagSearchQuery>,
-    Query(pagination): Query<PaginationQuery<TagId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::tag_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
-
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !channel.ty.has_tags() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
-    }
 
     let tags = s
         .data()
-        .tag_search(channel_id, q.query, q.archived, pagination)
+        .tag_list(req.channel_id, req.list.archived, req.pagination)
         .await?;
-
     Ok(Json(tags))
 }
 
-/// Tag list
-///
-/// List all tags in a forum channel.
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/tag",
-    tags = ["tag", "badge.scope.full"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "The ID of the forum channel to list tags from."),
-        TagListQuery,
-        PaginationQuery<TagId>,
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<Tag>, description = "success"),
-    )
-)]
-async fn tag_list(
-    Path(channel_id): Path<ChannelId>,
+/// Tag get
+#[handler(routes::tag_get)]
+async fn tag_get(
     auth: Auth,
-    Query(q): Query<TagListQuery>,
-    Query(pagination): Query<PaginationQuery<TagId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::tag_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
 
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    if !channel.ty.has_tags() {
-        return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
-    }
+    let tag = s.data().tag_get(req.tag_id).await?;
+    Ok(Json(tag))
+}
+
+/// Tag search
+#[handler(routes::tag_search)]
+async fn tag_search(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::tag_search::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(Permission::ChannelView)?;
 
     let tags = s
         .data()
-        .tag_list(channel_id, q.archived, pagination)
+        .tag_search(
+            req.channel_id,
+            req.search.query,
+            req.search.archived,
+            req.pagination,
+        )
         .await?;
-
     Ok(Json(tags))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(tag_create))
-        .routes(routes!(tag_update))
-        .routes(routes!(tag_delete))
-        .routes(routes!(tag_search))
-        .routes(routes!(tag_list))
+        .routes(routes2!(tag_create))
+        .routes(routes2!(tag_update))
+        .routes(routes2!(tag_delete))
+        .routes(routes2!(tag_list))
+        .routes(routes2!(tag_get))
+        .routes(routes2!(tag_search))
 }

@@ -1,246 +1,179 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::Json;
+use common::v1::routes;
+use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    application::Scope,
-    error::{ApiError, ErrorCode},
     AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate, MessageModerate, MessagePin,
     MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
 };
 use common::v2::types::message::{Message, MessagePatch};
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::{
-    error::Error,
-    routes::util::HeaderTimestamp,
-    types::{
-        ChannelId, DbMessageCreate, MessageCreate, MessageId, MessageSync, MessageVerId,
-        PaginationQuery, PaginationResponse, Permission,
-    },
-    ServerState,
+use crate::routes::util::Auth;
+use crate::routes2;
+use crate::types::{
+    ChannelId, DbMessageCreate, MessageCreate, MessageId, MessageSync, MessageVerId,
+    PaginationQuery, PaginationResponse, Permission,
 };
-
-use super::util::{Auth, HeaderIdempotencyKey};
-use crate::error::Result;
+use crate::{error::Result, Error, ServerState};
 
 /// Message create
-///
-/// Send a message to a channel
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/message",
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm.MessageCreate",
-        "badge.perm-opt.MessageAttachments",
-        "badge.perm-opt.MessageEmbeds",
-        "badge.perm-opt.MemberBridge",
-    ],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Channel id"),
-    ),
-    request_body = MessageCreate,
-    responses(
-        (status = CREATED, body = Message, description = "Create message success"),
-    )
-)]
+#[handler(routes::message_create)]
 async fn message_create(
-    Path((channel_id,)): Path<(ChannelId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
-    HeaderTimestamp(header_timestamp): HeaderTimestamp,
-    Json(json): Json<MessageCreate>,
+    req: routes::message_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     chan.ensure_has_text()?;
+
+    let header_timestamp = req.timestamp.and_then(|ts| {
+        let ts_secs = ts / 1000;
+        let ts_nanos = ((ts % 1000) * 1_000_000) as i128;
+        let ts_nanos_total = (ts_secs as i128 * 1_000_000_000) + ts_nanos;
+        time::OffsetDateTime::from_unix_timestamp_nanos(ts_nanos_total)
+            .ok()
+            .map(common::v1::types::util::Time::from)
+    });
 
     let message = srv
         .messages
-        .create(channel_id, &auth, nonce, json, header_timestamp)
+        .create(
+            req.channel_id,
+            &auth,
+            req.idempotency_key,
+            req.message,
+            header_timestamp,
+        )
         .await?;
 
     Ok((StatusCode::CREATED, Json(message)))
 }
 
 /// Message context
-///
-/// More efficient than calling List messages twice
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/context/{message_id}",
-    params(
-        ContextQuery,
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id"),
-    ),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = ContextResponse, description = "List thread messages success"),
-    )
-)]
+#[handler(routes::message_context)]
 async fn message_context(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Query(q): Query<ContextQuery>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_context::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
 
     let res = srv
         .messages
-        .list_context(channel_id, message_id, auth.user.id, q)
+        .list_context(req.channel_id, req.message_id, auth.user.id, req.context)
         .await?;
 
     Ok(Json(res))
 }
 
 /// Messages list
-///
-/// Paginate messages in a thread
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message",
-    params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
-    )
-)]
+#[handler(routes::message_list)]
 async fn message_list(
-    Path((channel_id,)): Path<(ChannelId,)>,
-    Query(q): Query<PaginationQuery<MessageId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
-    let res = srv.messages.list(channel_id, auth.user.id, q).await?;
+    let res = srv
+        .messages
+        .list(req.channel_id, auth.user.id, req.pagination)
+        .await?;
     Ok(Json(res))
 }
 
 /// Message get
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message/{message_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id")
-    ),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = Message, description = "List thread messages success"),
-    )
-)]
+#[handler(routes::message_get)]
 async fn message_get(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let message = srv
         .messages
-        .get(channel_id, message_id, auth.user.id)
+        .get(req.channel_id, req.message_id, auth.user.id)
         .await?;
     Ok(Json(message))
 }
 
 /// Message edit
-#[utoipa::path(
-    patch,
-    path = "/channel/{channel_id}/message/{message_id}",
-    tags = ["message", "badge.scope.full"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Channel id"),
-        ("message_id" = MessageId, Path, description = "Message id")
-    ),
-    request_body = MessagePatch,
-    responses(
-        (status = OK, body = Message, description = "edit message success"),
-        (status = NOT_MODIFIED, description = "no change"),
-    )
-)]
+#[handler(routes::message_edit)]
 async fn message_edit(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderTimestamp(header_timestamp): HeaderTimestamp,
-    Json(json): Json<MessagePatch>,
+    req: routes::message_edit::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure_unlocked()?;
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     thread.ensure_has_text()?;
 
+    let header_timestamp = req.timestamp.and_then(|ts| {
+        let ts_secs = ts / 1000;
+        let ts_nanos = ((ts % 1000) * 1_000_000) as i128;
+        let ts_nanos_total = (ts_secs as i128 * 1_000_000_000) + ts_nanos;
+        time::OffsetDateTime::from_unix_timestamp_nanos(ts_nanos_total)
+            .ok()
+            .map(common::v1::types::util::Time::from)
+    });
+
     let (_status, message) = srv
         .messages
-        .edit(channel_id, message_id, auth.user.id, json, header_timestamp)
+        .edit(
+            req.channel_id,
+            req.message_id,
+            auth.user.id,
+            req.patch,
+            header_timestamp,
+        )
         .await?;
-    Ok((StatusCode::OK, Json(message)))
+    Ok(Json(message))
 }
 
-/// Message delete (TEMP?)
-///
-/// Note that this endpoint allows deleting your own messages, while message
-/// moderate always requires the full permission
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/message/{message_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id")
-    ),
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm-opt.MessageDelete",
-        "badge.room-mfa-opt",
-        "badge.audit-log.MessageDelete",
-    ],
-    responses(
-        (status = NO_CONTENT, description = "delete message success"),
-    )
-)]
+/// Message delete
+#[handler(routes::message_delete)]
 async fn message_delete(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let message = data
-        .message_get(channel_id, message_id, auth.user.id)
+        .message_get(req.channel_id, req.message_id, auth.user.id)
         .await?;
     if !message.latest_version.message_type.is_deletable() {
         return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
@@ -253,7 +186,6 @@ async fn message_delete(
         }));
     }
 
-    // Require MFA only if user is not the message author
     if message.author_id != auth.user.id {
         if let Some(room_id) = thread.room_id {
             let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -272,14 +204,15 @@ async fn message_delete(
     thread.ensure_has_text()?;
     perms.ensure_unlocked()?;
 
-    data.message_delete(channel_id, message_id).await?;
-    data.media_link_delete_all(message_id.into_inner()).await?;
+    data.message_delete(req.channel_id, req.message_id).await?;
+    data.media_link_delete_all(req.message_id.into_inner())
+        .await?;
 
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MessageDelete {
-            channel_id,
-            message_id,
+            channel_id: req.channel_id,
+            message_id: req.message_id,
         })
         .await?;
     }
@@ -288,114 +221,68 @@ async fn message_delete(
         thread.id,
         auth.user.id,
         MessageSync::MessageDelete {
-            channel_id,
-            message_id,
+            channel_id: req.channel_id,
+            message_id: req.message_id,
         },
     )
     .await?;
-    s.services().channels.invalidate(channel_id).await; // last version id, message count
+    s.services().channels.invalidate(req.channel_id).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Message version list
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message/{message_id}/version",
-    params(
-        PaginationQuery<MessageVerId>,
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id")
-    ),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "success"),
-    )
-)]
+#[handler(routes::message_version_list)]
 async fn message_version_list(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Query(q): Query<PaginationQuery<MessageVerId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_version_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let res = srv
         .messages
-        .list_versions(channel_id, message_id, auth.user.id, q)
+        .list_versions(req.channel_id, req.message_id, auth.user.id, req.pagination)
         .await?;
     Ok(Json(res))
 }
 
 /// Message version get
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message/{message_id}/version/{version_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id"),
-        ("version_id", description = "Version id"),
-    ),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = Message, description = "success"),
-    )
-)]
+#[handler(routes::message_version_get)]
 async fn message_version_get(
-    Path((channel_id, _message_id, version_id)): Path<(ChannelId, MessageId, MessageVerId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_version_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let message = srv
         .messages
-        .get_version(channel_id, version_id, auth.user.id)
+        .get_version(req.channel_id, req.version_id, auth.user.id)
         .await?;
     Ok(Json(message))
 }
 
 /// Message version delete
-///
-/// Note that this endpoint allows deleting message versions, while message
-/// moderate always requires the full permission
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/message/{message_id}/version/{version_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id"),
-        ("version_id", description = "Version id")
-    ),
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm-opt.MessageDelete",
-        "badge.room-mfa-opt",
-        "badge.audit-log.MessageVersionDelete",
-    ],
-    responses(
-        (status = NO_CONTENT, description = "delete message version success"),
-    )
-)]
+#[handler(routes::message_version_delete)]
 async fn message_version_delete(
-    Path((channel_id, message_id, version_id)): Path<(ChannelId, MessageId, MessageVerId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_version_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
     thread.ensure_has_text()?;
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure_unlocked()?;
     perms.ensure(Permission::ChannelView)?;
 
@@ -403,15 +290,15 @@ async fn message_version_delete(
     thread.ensure_unremoved()?;
 
     let message = data
-        .message_get(channel_id, message_id, auth.user.id)
+        .message_get(req.channel_id, req.message_id, auth.user.id)
         .await?;
 
-    if message.latest_version.version_id == version_id {
+    if message.latest_version.version_id == req.version_id {
         return Err(ApiError::from_code(ErrorCode::CannotDeleteLatestMessageVersion).into());
     }
 
     let version = data
-        .message_version_get(channel_id, version_id, auth.user.id)
+        .message_version_get(req.channel_id, req.version_id, auth.user.id)
         .await?;
 
     if !version.message_type.is_deletable() {
@@ -426,7 +313,6 @@ async fn message_version_delete(
         }));
     }
 
-    // Require MFA only if user is not the message author
     if message.author_id != auth.user.id {
         if let Some(room_id) = thread.room_id {
             let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -440,14 +326,15 @@ async fn message_version_delete(
         }
     }
 
-    data.message_version_delete(channel_id, version_id).await?;
+    data.message_version_delete(req.channel_id, req.version_id)
+        .await?;
 
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MessageVersionDelete {
-            channel_id,
-            message_id,
-            version_id,
+            channel_id: req.channel_id,
+            message_id: req.message_id,
+            version_id: req.version_id,
         })
         .await?;
     }
@@ -456,75 +343,40 @@ async fn message_version_delete(
         thread.id,
         auth.user.id,
         MessageSync::MessageVersionDelete {
-            channel_id,
-            message_id,
-            version_id,
+            channel_id: req.channel_id,
+            message_id: req.message_id,
+            version_id: req.version_id,
         },
     )
     .await?;
 
-    // no need to invalidate channel cache as message count doesn't change
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Message moderate
-///
-/// Bulk remove, restore, or delete messages.
-///
-/// Deleting a message:
-/// - Deleted messages remain visible to moderators (and sender, although there's no ui for this).
-/// - Deleted messages cannot be restored by moderators (ask your local server admin if needed).
-/// - Deleted messages are garbage collected after 7 days.
-///
-/// Removing a message:
-/// - Removing a message hides it from all non-moderators and the sender.
-/// - Removal is reversible via restoration, unlike deletion.
-/// - Removed messages are never garbage collected.
-/// - This is a "softer" form of deletion, intended for moderators you don't fully trust.
-///
-/// Permissions:
-/// - `MessageDelete` allows deleting messages and viewing deleted messages.
-/// - `MessageRemove` allows removing/restoring messages and viewing removed messages.
-/// - Users can always delete (but not remove) their own messages.
-#[utoipa::path(
-    patch,
-    path = "/channel/{channel_id}/message",
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm-opt.MessageDelete",
-        "badge.perm-opt.MessageRemove",
-        "badge.room-mfa",
-        "badge.audit-log.MessageDeleteBulk",
-        "badge.audit-log.MessageRemove",
-        "badge.audit-log.MessageRestore",
-    ],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Channel id"),
-    ),
-    request_body = MessageModerate,
-    responses((status = OK, description = "success")),
-)]
+#[handler(routes::message_moderate)]
 async fn message_moderate(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MessageModerate>,
+    req: routes::message_moderate::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
+    req.moderate.validate()?;
 
-    if json.delete.is_empty() && json.remove.is_empty() && json.restore.is_empty() {
+    if req.moderate.delete.is_empty()
+        && req.moderate.remove.is_empty()
+        && req.moderate.restore.is_empty()
+    {
         return Ok(StatusCode::OK);
     }
 
     let data = s.data();
     let srv = s.services();
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
 
     thread.ensure_unarchived()?;
@@ -533,38 +385,32 @@ async fn message_moderate(
     thread.ensure_has_text()?;
     perms.ensure_unlocked()?;
 
-    // Check MFA requirement only for messages not authored by the user
     let mut needs_mfa = false;
-    if !json.delete.is_empty() {
+    if !req.moderate.delete.is_empty() {
         perms.ensure(Permission::MessageDelete)?;
-        // TODO: fix n+1 query
-        for id in &json.delete {
-            let message = data.message_get(channel_id, *id, auth.user.id).await?;
+        for id in &req.moderate.delete {
+            let message = data.message_get(req.channel_id, *id, auth.user.id).await?;
             if !message.latest_version.message_type.is_deletable() {
                 return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
             }
-            // If message is not authored by the user, MFA is required
             if message.author_id != auth.user.id {
                 needs_mfa = true;
             }
         }
     }
 
-    if !json.remove.is_empty() {
+    if !req.moderate.remove.is_empty() {
         perms.ensure(Permission::MessageRemove)?;
-        // TODO: fix n+1 query
-        for id in &json.remove {
-            let message = data.message_get(channel_id, *id, auth.user.id).await?;
+        for id in &req.moderate.remove {
+            let message = data.message_get(req.channel_id, *id, auth.user.id).await?;
             if !message.latest_version.message_type.is_deletable() {
                 return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
             }
         }
-        // Removing messages always requires MFA (moderation action)
         needs_mfa = true;
     }
 
-    // Restore operations also require MFA in MFA-enabled rooms
-    if !json.restore.is_empty() {
+    if !req.moderate.restore.is_empty() {
         perms.ensure(Permission::MessageRemove)?;
         needs_mfa = true;
     }
@@ -582,19 +428,19 @@ async fn message_moderate(
         }
     }
 
-    if !json.delete.is_empty() {
-        // TODO: fix n+1 query
-        for id in &json.delete {
+    if !req.moderate.delete.is_empty() {
+        for id in &req.moderate.delete {
             data.media_link_delete_all(id.into_inner()).await?;
         }
 
-        data.message_delete_bulk(channel_id, &json.delete).await?;
+        data.message_delete_bulk(req.channel_id, &req.moderate.delete)
+            .await?;
 
         if let Some(room_id) = thread.room_id {
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::MessageDeleteBulk {
-                channel_id,
-                message_ids: json.delete.clone(),
+                channel_id: req.channel_id,
+                message_ids: req.moderate.delete.clone(),
             })
             .await?;
         }
@@ -603,21 +449,22 @@ async fn message_moderate(
             thread.id,
             auth.user.id,
             MessageSync::MessageDeleteBulk {
-                channel_id,
-                message_ids: json.delete.clone(),
+                channel_id: req.channel_id,
+                message_ids: req.moderate.delete.clone(),
             },
         )
         .await?;
     }
 
-    if !json.remove.is_empty() {
-        data.message_remove_bulk(channel_id, &json.remove).await?;
+    if !req.moderate.remove.is_empty() {
+        data.message_remove_bulk(req.channel_id, &req.moderate.remove)
+            .await?;
 
         if let Some(room_id) = thread.room_id {
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::MessageRemove {
-                channel_id,
-                message_ids: json.remove.clone(),
+                channel_id: req.channel_id,
+                message_ids: req.moderate.remove.clone(),
             })
             .await?;
         }
@@ -626,22 +473,23 @@ async fn message_moderate(
             thread.id,
             auth.user.id,
             MessageSync::MessageRemove {
-                channel_id,
-                message_ids: json.remove.clone(),
+                channel_id: req.channel_id,
+                message_ids: req.moderate.remove.clone(),
             },
         )
         .await?;
     }
 
-    if !json.restore.is_empty() {
+    if !req.moderate.restore.is_empty() {
         perms.ensure(Permission::MessageRemove)?;
-        data.message_restore_bulk(channel_id, &json.restore).await?;
+        data.message_restore_bulk(req.channel_id, &req.moderate.restore)
+            .await?;
 
         if let Some(room_id) = thread.room_id {
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::MessageRestore {
-                channel_id,
-                message_ids: json.restore.clone(),
+                channel_id: req.channel_id,
+                message_ids: req.moderate.restore.clone(),
             })
             .await?;
         }
@@ -650,142 +498,40 @@ async fn message_moderate(
             thread.id,
             auth.user.id,
             MessageSync::MessageRestore {
-                channel_id,
-                message_ids: json.restore.clone(),
+                channel_id: req.channel_id,
+                message_ids: req.moderate.restore.clone(),
             },
         )
         .await?;
     }
 
-    srv.channels.invalidate(channel_id).await; // last version id, message count
+    srv.channels.invalidate(req.channel_id).await;
     Ok(StatusCode::OK)
 }
 
-/// Message move (TODO)
-///
-/// Move messages from one thread to another. Requires `MessageMove` in both the
-/// source and target thread.
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/move-messages",
-    params(("channel_id", description = "Channel id")),
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm.MessageMove",
-    ],
-    responses((status = NO_CONTENT, description = "move success")),
-)]
-async fn message_move(
-    Path(_channel_id): Path<ChannelId>,
+/// Message migrate
+#[handler(routes::message_migrate)]
+async fn message_migrate(
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<MessageMigrate>,
+    _req: routes::message_migrate::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
 
-/// Message reply query
-///
-/// Get replies to a message
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/reply/{message_id}",
-    params(
-        RepliesQuery,
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id"),
-    ),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
-    ),
-)]
-async fn message_reply_query(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    Query(q): Query<RepliesQuery>,
-    Query(pagination): Query<PaginationQuery<MessageId>>,
+/// Message pin
+#[handler(routes::message_pin)]
+async fn message_pin(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    q.validate()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    let res = srv
-        .messages
-        .list_replies(channel_id, Some(message_id), auth.user.id, q, pagination)
-        .await?;
-    Ok(Json(res))
-}
-
-/// Message reply roots
-///
-/// Get messages that don't reply to any other messages
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/reply",
-    params(
-        RepliesQuery,
-        ("channel_id", description = "Channel id"),
-    ),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
-    ),
-)]
-async fn message_reply_roots(
-    Path((channel_id,)): Path<(ChannelId,)>,
-    Query(q): Query<RepliesQuery>,
-    Query(pagination): Query<PaginationQuery<MessageId>>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    q.validate()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    let res = srv
-        .messages
-        .list_replies(channel_id, None, auth.user.id, q, pagination)
-        .await?;
-    Ok(Json(res))
-}
-
-/// Pin create
-///
-/// - Newly pinned messages are pinned to the top (position 0).
-/// - There can be a maximum of 1024 pinned messages.
-#[utoipa::path(
-    put,
-    path = "/channel/{channel_id}/pin/{message_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id")
-    ),
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm.MessagePin",
-        "badge.audit-log.MessagePin",
-    ],
-    responses(
-        (status = OK, description = "success"),
-    ),
-)]
-async fn message_pin_create(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
+    req: routes::message_pin::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = thread.room_id {
         let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -798,22 +544,23 @@ async fn message_pin_create(
         }
     }
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
     thread.ensure_has_text()?;
-
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
 
-    let created = data.message_pin_create(channel_id, message_id).await?;
+    let created = data
+        .message_pin_create(req.channel_id, req.message_id)
+        .await?;
 
     let message = data
-        .message_get(channel_id, message_id, auth.user.id)
+        .message_get(req.channel_id, req.message_id, auth.user.id)
         .await?;
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::MessageUpdate { message },
     )
@@ -826,12 +573,12 @@ async fn message_pin_create(
     let notice_message_id = data
         .message_create(DbMessageCreate {
             id: None,
-            channel_id,
+            channel_id: req.channel_id,
             attachment_ids: vec![],
             author_id: auth.user.id,
             embeds: vec![],
             message_type: MessageType::MessagePinned(MessagePin {
-                pinned_message_id: message_id,
+                pinned_message_id: req.message_id,
             })
             .into(),
             created_at: None,
@@ -840,28 +587,28 @@ async fn message_pin_create(
         })
         .await?;
     let mut notice_message = data
-        .message_get(channel_id, notice_message_id, auth.user.id)
+        .message_get(req.channel_id, notice_message_id, auth.user.id)
         .await?;
 
     let user_id = auth.user.id;
-    let tm = data.thread_member_get(channel_id, user_id).await;
+    let tm = data.thread_member_get(req.channel_id, user_id).await;
     if tm.is_err() {
-        data.thread_member_put(channel_id, user_id, ThreadMemberPut::default())
+        data.thread_member_put(req.channel_id, user_id, ThreadMemberPut::default())
             .await?;
-        let thread_member = data.thread_member_get(channel_id, user_id).await?;
+        let thread_member = data.thread_member_get(req.channel_id, user_id).await?;
         let msg = MessageSync::ThreadMemberUpsert {
             room_id: thread.room_id,
-            thread_id: channel_id,
+            thread_id: req.channel_id,
             added: vec![thread_member],
             removed: vec![],
         };
-        s.broadcast_channel(channel_id, user_id, msg).await?;
+        s.broadcast_channel(req.channel_id, user_id, msg).await?;
     }
 
     s.presign_message(&mut notice_message).await?;
-    srv.channels.invalidate(channel_id).await; // message count
+    srv.channels.invalidate(req.channel_id).await;
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::MessageCreate {
             message: notice_message,
@@ -872,8 +619,8 @@ async fn message_pin_create(
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MessagePin {
-            channel_id,
-            message_id,
+            channel_id: req.channel_id,
+            message_id: req.message_id,
         })
         .await?;
     }
@@ -881,35 +628,19 @@ async fn message_pin_create(
     Ok(StatusCode::OK)
 }
 
-/// Pin delete
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/pin/{message_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("message_id", description = "Message id")
-    ),
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm.MessagePin",
-        "badge.audit-log.MessageUnpin",
-    ],
-    responses(
-        (status = OK, description = "success"),
-    ),
-)]
-async fn message_pin_delete(
-    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
+/// Message unpin
+#[handler(routes::message_unpin)]
+async fn message_unpin(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_unpin::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = thread.room_id {
         let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
         if room.security.require_mfa {
@@ -921,23 +652,24 @@ async fn message_pin_delete(
         }
     }
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
     thread.ensure_has_text()?;
-
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
 
-    s.data().message_pin_delete(channel_id, message_id).await?;
+    s.data()
+        .message_pin_delete(req.channel_id, req.message_id)
+        .await?;
 
     let message = s
         .data()
-        .message_get(channel_id, message_id, auth.user.id)
+        .message_get(req.channel_id, req.message_id, auth.user.id)
         .await?;
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::MessageUpdate { message },
     )
@@ -946,8 +678,8 @@ async fn message_pin_delete(
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MessageUnpin {
-            channel_id,
-            message_id,
+            channel_id: req.channel_id,
+            message_id: req.message_id,
         })
         .await?;
     }
@@ -955,38 +687,38 @@ async fn message_pin_delete(
     Ok(StatusCode::OK)
 }
 
-/// Pin reorder
-#[utoipa::path(
-    patch,
-    path = "/channel/{channel_id}/pin",
-    tags = [
-        "message",
-        "badge.scope.full",
-        "badge.perm.MessagePin",
-        "badge.room-mfa",
-        "badge.audit-log.MessagePinReorder",
-    ],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Channel id"),
-    ),
-    request_body = PinsReorder,
-    responses(
-        (status = OK, description = "Reorder pinned messages success"),
-    ),
-)]
-async fn message_pin_reorder(
-    Path((channel_id,)): Path<(ChannelId,)>,
+/// Message pins list
+#[handler(routes::message_pins_list)]
+async fn message_pins_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<PinsReorder>,
+    req: routes::message_pins_list::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(Permission::ChannelView)?;
+    let res = srv
+        .messages
+        .list_pins(req.channel_id, auth.user.id, req.pagination)
+        .await?;
+    Ok(Json(res))
+}
+
+/// Message pins reorder
+#[handler(routes::message_pins_reorder)]
+async fn message_pins_reorder(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::message_pins_reorder::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
+    req.reorder.validate()?;
     let srv = s.services();
     let data = s.data();
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = thread.room_id {
         let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
         if room.security.require_mfa {
@@ -998,26 +730,24 @@ async fn message_pin_reorder(
         }
     }
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
     thread.ensure_has_text()?;
-
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
 
     s.data()
-        .message_pin_reorder(channel_id, json.clone())
+        .message_pin_reorder(req.channel_id, req.reorder.clone())
         .await?;
 
-    // broadcast update for all affected messages
-    for item in json.messages {
+    for item in req.reorder.messages {
         let message = s
             .data()
-            .message_get(channel_id, item.id, auth.user.id)
+            .message_get(req.channel_id, item.id, auth.user.id)
             .await?;
         s.broadcast_channel(
-            channel_id,
+            req.channel_id,
             auth.user.id,
             MessageSync::MessageUpdate { message },
         )
@@ -1026,157 +756,116 @@ async fn message_pin_reorder(
 
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::MessagePinReorder { channel_id })
-            .await?;
+        al.commit_success(AuditLogEntryType::MessagePinReorder {
+            channel_id: req.channel_id,
+        })
+        .await?;
     }
 
     Ok(StatusCode::OK)
 }
 
-/// Pin list
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/pin",
-    params(
-        PaginationQuery<MessageId>,
-        ("channel_id", description = "Channel id"),
-    ),
-    tags = ["message", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "List pinned messages success"),
-    ),
-)]
-async fn message_pin_list(
-    Path(channel_id): Path<ChannelId>,
-    Query(q): Query<PaginationQuery<MessageId>>,
+/// Message replies list
+#[handler(routes::message_replies_list)]
+async fn message_replies_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_replies_list::Request,
 ) -> Result<impl IntoResponse> {
+    req.replies.validate()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
-    let res = srv.messages.list_pins(channel_id, auth.user.id, q).await?;
+    let res = srv
+        .messages
+        .list_replies(
+            req.channel_id,
+            Some(req.message_id),
+            auth.user.id,
+            req.replies,
+            req.pagination,
+        )
+        .await?;
     Ok(Json(res))
 }
 
 /// Message list deleted
-///
-/// Paginate deleted messages in a thread
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message/deleted",
-    params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
-    tags = ["message", "badge.scope.full", "badge.perm-opt.MessageDelete"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "success"),
-    )
-)]
+#[handler(routes::message_list_deleted)]
 async fn message_list_deleted(
-    Path((channel_id,)): Path<(ChannelId,)>,
-    Query(q): Query<PaginationQuery<MessageId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_list_deleted::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::MessageDelete)?;
     let res = srv
         .messages
-        .list_deleted(channel_id, auth.user.id, q)
+        .list_deleted(req.channel_id, auth.user.id, req.pagination)
         .await?;
     Ok(Json(res))
 }
 
 /// Message list removed
-///
-/// Paginate removed messages in a thread
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message/removed",
-    params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
-    tags = ["message", "badge.scope.full", "badge.perm-opt.MessageRemove"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "success"),
-    )
-)]
+#[handler(routes::message_list_removed)]
 async fn message_list_removed(
-    Path((channel_id,)): Path<(ChannelId,)>,
-    Query(q): Query<PaginationQuery<MessageId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::message_list_removed::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::MessageRemove)?;
     let res = srv
         .messages
-        .list_removed(channel_id, auth.user.id, q)
+        .list_removed(req.channel_id, auth.user.id, req.pagination)
         .await?;
     Ok(Json(res))
 }
 
 /// Message list atom/rss (TODO)
-///
-/// Get an atom or rss feed of messages for this channel
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/message.atom",
-    params(
-        ("channel_id", description = "Channel id"),
-        PaginationQuery<ChannelId>
-    ),
-    tags = ["message", "badge.scope.full"],
-)]
+#[handler(routes::message_list_atom)]
 pub async fn message_list_atom(
-    Path(_channel_id): Path<ChannelId>,
-    Query(_pagination): Query<PaginationQuery<ChannelId>>,
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
+    _req: routes::message_list_atom::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
 
 /// Nudge (TODO)
-///
-/// Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/nudge",
-    params(("channel_id", description = "Channel id")),
-    tags = ["message", "badge.scope.full"],
-)]
+#[handler(routes::message_nudge)]
 pub async fn message_nudge(
-    Path(_channel_id): Path<ChannelId>,
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
+    _req: routes::message_nudge::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(message_create))
-        .routes(routes!(message_get))
-        .routes(routes!(message_list))
-        .routes(routes!(message_list_deleted))
-        .routes(routes!(message_list_removed))
-        .routes(routes!(message_list_atom))
-        .routes(routes!(message_context))
-        .routes(routes!(message_edit))
-        .routes(routes!(message_delete))
-        .routes(routes!(message_version_list))
-        .routes(routes!(message_version_get))
-        .routes(routes!(message_version_delete))
-        .routes(routes!(message_reply_query))
-        .routes(routes!(message_reply_roots))
-        .routes(routes!(message_moderate))
-        .routes(routes!(message_move))
-        .routes(routes!(message_pin_create))
-        .routes(routes!(message_pin_delete))
-        .routes(routes!(message_pin_reorder))
-        .routes(routes!(message_pin_list))
-        .routes(routes!(message_nudge))
+        .routes(routes2!(message_create))
+        .routes(routes2!(message_get))
+        .routes(routes2!(message_list))
+        .routes(routes2!(message_list_deleted))
+        .routes(routes2!(message_list_removed))
+        .routes(routes2!(message_list_atom))
+        .routes(routes2!(message_context))
+        .routes(routes2!(message_edit))
+        .routes(routes2!(message_delete))
+        .routes(routes2!(message_version_list))
+        .routes(routes2!(message_version_get))
+        .routes(routes2!(message_version_delete))
+        .routes(routes2!(message_replies_list))
+        .routes(routes2!(message_moderate))
+        .routes(routes2!(message_migrate))
+        .routes(routes2!(message_pin))
+        .routes(routes2!(message_unpin))
+        .routes(routes2!(message_pins_reorder))
+        .routes(routes2!(message_pins_list))
+        .routes(routes2!(message_nudge))
 }

@@ -1,47 +1,40 @@
 use std::{collections::HashSet, str::FromStr, sync::Arc, time::Duration};
 
-use axum::{
-    extract::{Query, State},
-    response::IntoResponse,
-    Form, Json,
-};
+use axum::extract::State;
+use axum::response::IntoResponse;
+use axum::Json;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use common::v1::routes;
 use common::v1::types::{
     application::{Application, Scope, Scopes},
     oauth::{
-        Autoconfig, OauthAuthorizeInfo, OauthAuthorizeParams, OauthAuthorizeResponse,
-        OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
+        Autoconfig, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
+        OauthTokenRequest, OauthTokenResponse, Userinfo,
     },
     util::Time,
     AuditLogEntryType, SessionStatus, SessionToken, SessionType,
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
+use lamprey_macros::handler;
 use sha2::{Digest, Sha256};
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 
-use crate::{routes::util::Auth, types::DbSessionCreate, ServerState};
+use crate::error::{Error, Result};
+use crate::routes::util::Auth;
+use crate::types::DbSessionCreate;
+use crate::{routes2, ServerState};
 use common::v1::types::error::{ApiError, ErrorCode};
 
-use crate::error::{Error, Result};
-
 /// Oauth info
-#[utoipa::path(
-    get,
-    path = "/oauth/authorize",
-    tags = ["oauth", "badge.scope.identify"],
-    params(OauthAuthorizeParams),
-    responses(
-        (status = OK, description = "success", body = OauthAuthorizeInfo)
-    )
-)]
+#[handler(routes::oauth_info)]
 async fn oauth_info(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Query(q): Query<OauthAuthorizeParams>,
+    req: routes::oauth_info::Request,
 ) -> Result<impl IntoResponse> {
-    let (app, _redirect_uri, scopes) = validate_authorize(&s, &auth, &q).await?;
+    let (app, _redirect_uri, scopes) = validate_authorize(&s, &auth, &req.params).await?;
     let data = s.data();
     let srv = s.services();
     let auth_user = srv.users.get(auth.user.id, None).await?;
@@ -60,28 +53,20 @@ async fn oauth_info(
 }
 
 /// Oauth authorize
-#[utoipa::path(
-    post,
-    path = "/oauth/authorize",
-    tags = ["oauth", "badge.scope.identify", "badge.audit-log.ConnectionCreate"],
-    params(OauthAuthorizeParams),
-    responses(
-        (status = OK, description = "success", body = OauthAuthorizeResponse)
-    )
-)]
+#[handler(routes::oauth_authorize)]
 async fn oauth_authorize(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Query(q): Query<OauthAuthorizeParams>,
+    req: routes::oauth_authorize::Request,
 ) -> Result<impl IntoResponse> {
-    let (app, redirect_uri, scopes) = validate_authorize(&s, &auth, &q).await?;
+    let (app, redirect_uri, scopes) = validate_authorize(&s, &auth, &req.params).await?;
     let data = s.data();
     let scopes = Scopes(scopes.into_iter().collect());
     data.connection_create(auth.user.id, app.id, scopes.clone())
         .await?;
     let al = auth.audit_log(auth.user.id.into_inner().into());
     al.commit_success(AuditLogEntryType::ConnectionCreate {
-        application_id: q.client_id,
+        application_id: req.params.client_id,
         scopes: scopes.clone(),
     })
     .await?;
@@ -93,14 +78,14 @@ async fn oauth_authorize(
         auth.user.id,
         redirect_uri.to_string(),
         scopes,
-        q.code_challenge,
-        q.code_challenge_method,
+        req.params.code_challenge,
+        req.params.code_challenge_method,
     )
     .await?;
 
     let mut redirect_uri = redirect_uri;
     redirect_uri.query_pairs_mut().append_pair("code", &code);
-    if let Some(state) = q.state {
+    if let Some(state) = req.params.state {
         redirect_uri.query_pairs_mut().append_pair("state", &state);
     }
 
@@ -110,7 +95,7 @@ async fn oauth_authorize(
 async fn validate_authorize(
     s: &Arc<ServerState>,
     auth: &Auth,
-    q: &OauthAuthorizeParams,
+    q: &common::v1::types::oauth::OauthAuthorizeParams,
 ) -> Result<(Application, url::Url, HashSet<Scope>)> {
     let data = s.data();
     let app = data.application_get(q.client_id).await?;
@@ -148,19 +133,11 @@ async fn validate_authorize(
 /// Oauth exchange token
 ///
 /// exchange an authorization token for an access token
-#[utoipa::path(
-    post,
-    path = "/oauth/token",
-    tags = ["oauth"],
-    request_body = OauthTokenRequest,
-    responses(
-        (status = OK, description = "success", body = OauthTokenResponse)
-    )
-)]
+#[handler(routes::oauth_token)]
 async fn oauth_token(
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
-    Form(form): Form<OauthTokenRequest>,
+    req: routes::oauth_token::Request,
 ) -> Result<impl IntoResponse> {
     let user_agent = headers
         .get("user-agent")
@@ -168,7 +145,7 @@ async fn oauth_token(
         .map(ToString::to_string);
     let credentials: Option<headers::Authorization<headers::authorization::Basic>> =
         headers.typed_get();
-    let client_id = if let Some(client_id) = form.client_id {
+    let client_id = if let Some(client_id) = req.token.client_id {
         client_id
     } else if let Some(creds) = &credentials {
         creds
@@ -179,7 +156,7 @@ async fn oauth_token(
         return Err(Error::InvalidCredentials);
     };
 
-    let client_secret = if let Some(client_secret) = form.client_secret {
+    let client_secret = if let Some(client_secret) = req.token.client_secret {
         client_secret
     } else if let Some(creds) = &credentials {
         creds.password().to_string()
@@ -199,12 +176,14 @@ async fn oauth_token(
         }
     }
 
-    match form.grant_type.as_str() {
+    match req.token.grant_type.as_str() {
         "authorization_code" => {
-            let code = form
+            let code = req
+                .token
                 .code
                 .ok_or(ApiError::from_code(ErrorCode::MissingCode))?;
-            let redirect_uri = form
+            let redirect_uri = req
+                .token
                 .redirect_uri
                 .ok_or(ApiError::from_code(ErrorCode::MissingRedirectUri))?;
 
@@ -216,7 +195,8 @@ async fn oauth_token(
             }
 
             if let Some(code_challenge) = code_challenge {
-                let code_verifier = form
+                let code_verifier = req
+                    .token
                     .code_verifier
                     .ok_or(ApiError::from_code(ErrorCode::MissingCodeVerifier))?;
                 let method = code_challenge_method.unwrap_or_else(|| "plain".to_string());
@@ -240,14 +220,9 @@ async fn oauth_token(
                 }
             }
 
-            // create a new session for the user
             let token = SessionToken(Uuid::new_v4().to_string());
-            let expires_in = 3600; // 1 hour
+            let expires_in = 3600;
             let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
-            let user_agent = headers
-                .get("user-agent")
-                .and_then(|h| h.to_str().ok())
-                .map(ToString::to_string);
             let session = data
                 .session_create(DbSessionCreate {
                     token: token.clone(),
@@ -281,7 +256,8 @@ async fn oauth_token(
             Ok(Json(response))
         }
         "refresh_token" => {
-            let refresh_token = form
+            let refresh_token = req
+                .token
                 .refresh_token
                 .ok_or(ApiError::from_code(ErrorCode::MissingRefreshToken))?;
 
@@ -296,13 +272,11 @@ async fn oauth_token(
                 .user_id()
                 .ok_or(Error::Internal("session has no user".to_string()))?;
 
-            // Invalidate old session
             data.session_delete(old_session_id).await?;
             s.services().sessions.invalidate(old_session_id).await;
 
-            // Create new access token and session
             let token = SessionToken(Uuid::new_v4().to_string());
-            let expires_in = 3600; // 1 hour
+            let expires_in = 3600;
             let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
             let new_session = data
                 .session_create(DbSessionCreate {
@@ -318,7 +292,6 @@ async fn oauth_token(
             data.session_set_status(new_session.id, SessionStatus::Authorized { user_id })
                 .await?;
 
-            // Create new refresh token
             let new_refresh_token_string = Uuid::new_v4().to_string();
             data.oauth_refresh_token_create(new_refresh_token_string.clone(), new_session.id)
                 .await?;
@@ -345,17 +318,11 @@ async fn oauth_token(
 }
 
 /// Oauth introspect
-#[utoipa::path(
-    post,
-    path = "/oauth/introspect",
-    tags = ["oauth", "badge.scope.identify"],
-    responses(
-        (status = OK, description = "success", body = OauthIntrospectResponse)
-    )
-)]
+#[handler(routes::oauth_introspect)]
 async fn oauth_introspect(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    _req: routes::oauth_introspect::Request,
 ) -> Result<impl IntoResponse> {
     let Some(app_id) = auth.session.app_id else {
         return Err(ApiError::from_code(ErrorCode::NotAnOauthToken).into());
@@ -372,15 +339,12 @@ async fn oauth_introspect(
 }
 
 /// Oauth revoke
-#[utoipa::path(
-    post,
-    path = "/oauth/revoke",
-    tags = ["oauth", "badge.scope.identify"],
-    responses(
-        (status = NO_CONTENT, description = "success")
-    )
-)]
-async fn oauth_revoke(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+#[handler(routes::oauth_revoke)]
+async fn oauth_revoke(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::oauth_revoke::Request,
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     data.session_delete(auth.session.id).await?;
@@ -389,15 +353,11 @@ async fn oauth_revoke(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<i
 }
 
 /// Oauth autoconfig
-#[utoipa::path(
-    get,
-    path = "/oauth/.well-known/openid-configuration",
-    tags = ["oauth"],
-    responses(
-        (status = OK, description = "success", body = Autoconfig)
-    )
-)]
-async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
+#[handler(routes::oauth_autoconfig)]
+async fn oauth_autoconfig(
+    State(s): State<Arc<ServerState>>,
+    _req: routes::oauth_autoconfig::Request,
+) -> Result<impl IntoResponse> {
     let config = Autoconfig {
         issuer: s.config.api_url.clone(),
         authorization_endpoint: s.config.html_url.join("/authorize")?,
@@ -421,17 +381,11 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
 }
 
 /// Oauth userinfo
-#[utoipa::path(
-    get,
-    path = "/oauth/userinfo",
-    tags = ["oauth", "badge.scope.identify", "badge.scope-opt.email"],
-    responses(
-        (status = OK, description = "success", body = Userinfo)
-    )
-)]
+#[handler(routes::oauth_userinfo)]
 async fn oauth_userinfo(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    _req: routes::oauth_userinfo::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
@@ -459,11 +413,11 @@ async fn oauth_userinfo(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(oauth_info))
-        .routes(routes!(oauth_authorize))
-        .routes(routes!(oauth_token))
-        .routes(routes!(oauth_introspect))
-        .routes(routes!(oauth_revoke))
-        .routes(routes!(oauth_userinfo))
-        .routes(routes!(oauth_autoconfig))
+        .routes(routes2!(oauth_info))
+        .routes(routes2!(oauth_authorize))
+        .routes(routes2!(oauth_token))
+        .routes(routes2!(oauth_introspect))
+        .routes(routes2!(oauth_revoke))
+        .routes(routes2!(oauth_userinfo))
+        .routes(routes2!(oauth_autoconfig))
 }

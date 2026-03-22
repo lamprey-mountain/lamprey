@@ -1,41 +1,37 @@
 use std::sync::Arc;
 
-use axum::extract::Query;
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationCreate, NotificationFlush, NotificationMarkRead,
     NotificationPagination, NotificationType,
 };
-use common::v1::types::{util::Time, NotificationId, PaginationQuery, Permission};
-use utoipa_axum::{router::OpenApiRouter, routes};
+use common::v1::types::util::Time;
+use common::v1::types::{NotificationId, PaginationQuery, Permission};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 
-use super::util::Auth;
 use crate::error::Result;
-use crate::ServerState;
+use crate::routes::util::Auth;
+use crate::{routes2, ServerState};
 
 /// Inbox get
 ///
 /// List notifications
-#[utoipa::path(
-    get,
-    path = "/inbox",
-    params(PaginationQuery<NotificationId>, InboxListParams),
-    tags = ["inbox", "badge.scope.full"],
-    responses((status = OK, body = NotificationPagination, description = "success"))
-)]
+#[handler(routes::inbox_get)]
 async fn inbox_get(
     auth: Auth,
-    Query(pagination): Query<PaginationQuery<NotificationId>>,
-    Query(params): Query<InboxListParams>,
     State(s): State<Arc<ServerState>>,
+    req: routes::inbox_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let notifications = s
         .data()
-        .notification_list(auth.user.id, pagination, params)
+        .notification_list(auth.user.id, req.pagination, req.params)
         .await?;
 
     let mut channel_ids = std::collections::HashSet::new();
@@ -98,31 +94,24 @@ async fn inbox_get(
 /// Inbox post
 ///
 /// Create a reminder for later
-#[utoipa::path(
-    post,
-    path = "/inbox",
-    tags = ["inbox", "badge.scope.full"],
-    request_body = NotificationCreate,
-    responses((status = CREATED, body = Notification, description = "success"))
-)]
+#[handler(routes::inbox_post)]
 async fn inbox_post(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<NotificationCreate>,
+    req: routes::inbox_post::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let perms = s
         .services()
         .perms
-        .for_channel(auth.user.id, json.channel_id)
+        .for_channel(auth.user.id, req.notification.channel_id)
         .await?;
     perms.ensure(Permission::ChannelView)?;
 
-    // Get room_id for the channel
     let room_id = s
         .services()
         .channels
-        .get(json.channel_id, Some(auth.user.id))
+        .get(req.notification.channel_id, Some(auth.user.id))
         .await
         .ok()
         .and_then(|ch| ch.room_id);
@@ -131,10 +120,10 @@ async fn inbox_post(
         id: NotificationId::new(),
         ty: NotificationType::Message {
             room_id,
-            channel_id: json.channel_id,
-            message_id: json.message_id,
+            channel_id: req.notification.channel_id,
+            message_id: req.notification.message_id,
         },
-        added_at: json.added_at.unwrap_or_else(Time::now_utc),
+        added_at: req.notification.added_at.unwrap_or_else(Time::now_utc),
         read_at: None,
         note: None,
     };
@@ -147,68 +136,50 @@ async fn inbox_post(
 }
 
 /// Inbox mark read
-#[utoipa::path(
-    post,
-    path = "/inbox/mark-read",
-    tags = ["inbox", "badge.scope.full"],
-    request_body = NotificationMarkRead,
-    responses((status = OK, body = (), description = "success"))
-)]
+#[handler(routes::inbox_mark_read)]
 async fn inbox_mark_read(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<NotificationMarkRead>,
+    _req: routes::inbox_mark_read::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    s.data().notification_mark_read(auth.user.id, json).await?;
+    // TODO: implement notification mark read
     Ok(StatusCode::OK)
 }
 
-/// Inbox mark unread
-#[utoipa::path(
-    post,
-    path = "/inbox/mark-unread",
-    tags = ["inbox", "badge.scope.full"],
-    request_body = NotificationMarkRead,
-    responses((status = OK, body = (), description = "success"))
-)]
-async fn inbox_mark_unread(
+/// Inbox delete
+#[handler(routes::inbox_delete)]
+async fn inbox_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<NotificationMarkRead>,
+    req: routes::inbox_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     s.data()
-        .notification_mark_unread(auth.user.id, json)
+        .notification_delete(auth.user.id, req.notification_id)
         .await?;
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Inbox flush
 ///
 /// Deletes read notifications from the inbox
-#[utoipa::path(
-    post,
-    path = "/inbox/flush",
-    tags = ["inbox", "badge.scope.full"],
-    request_body = NotificationFlush,
-    responses((status = OK, body = (), description = "success"))
-)]
+#[handler(routes::inbox_flush)]
 async fn inbox_flush(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<NotificationFlush>,
+    req: routes::inbox_flush::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    s.data().notification_flush(auth.user.id, json).await?;
+    s.data().notification_flush(auth.user.id, req.flush).await?;
     Ok(StatusCode::OK)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(inbox_get))
-        .routes(routes!(inbox_post))
-        .routes(routes!(inbox_mark_read))
-        .routes(routes!(inbox_mark_unread))
-        .routes(routes!(inbox_flush))
+        .routes(routes2!(inbox_get))
+        .routes(routes2!(inbox_post))
+        .routes(routes2!(inbox_mark_read))
+        .routes(routes2!(inbox_delete))
+        .routes(routes2!(inbox_flush))
 }

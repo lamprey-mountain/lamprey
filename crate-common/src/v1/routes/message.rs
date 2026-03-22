@@ -439,3 +439,99 @@ pub mod message_replies_list {
         pub replies: PaginationResponse<Message>,
     }
 }
+
+/// Message list deleted
+///
+/// Paginate deleted messages in a thread
+#[endpoint(
+    get,
+    path = "/channel/{channel_id}/message/deleted",
+    tags = ["message"],
+    scopes = [Full],
+    permissions = [MessageDelete],
+    response(OK, body = PaginationResponse<Message>, description = "success"),
+)]
+pub mod message_list_deleted {
+    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[query]
+        pub pagination: PaginationQuery<MessageId>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub messages: PaginationResponse<Message>,
+    }
+}
+
+/// Message list removed
+///
+/// Paginate removed messages in a thread
+#[endpoint(
+    get,
+    path = "/channel/{channel_id}/message/removed",
+    tags = ["message"],
+    scopes = [Full],
+    permissions = [MessageRemove],
+    response(OK, body = PaginationResponse<Message>, description = "success"),
+)]
+pub mod message_list_removed {
+    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[query]
+        pub pagination: PaginationQuery<MessageId>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub messages: PaginationResponse<Message>,
+    }
+}
+
+/// Message list atom/rss (TODO)
+///
+/// Get an atom or rss feed of messages for this channel
+#[endpoint(
+    get,
+    path = "/channel/{channel_id}/message.atom",
+    tags = ["message"],
+    scopes = [Full],
+)]
+pub mod message_list_atom {
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {}
+}
+
+/// Nudge (TODO)
+///
+/// Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/nudge",
+    tags = ["message"],
+    scopes = [Full],
+)]
+pub mod message_nudge {
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {}
+}

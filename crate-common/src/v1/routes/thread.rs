@@ -306,3 +306,25 @@ pub mod channel_member_search {
         pub results: ChannelMemberSearchResponse,
     }
 }
+
+/// Thread list atom/rss (TODO)
+///
+/// Get an atom or rss feed of threads for this channel
+#[endpoint(
+    get,
+    path = "/channel/{channel_id}/thread.atom",
+    tags = ["thread"],
+)]
+pub mod thread_list_atom {
+    use crate::v1::types::{ChannelId, PaginationQuery};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[query]
+        pub pagination: PaginationQuery<ChannelId>,
+    }
+
+    pub struct Response {}
+}

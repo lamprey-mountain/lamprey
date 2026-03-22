@@ -112,28 +112,24 @@ pub mod room_template_delete {
     pub struct Response {}
 }
 
-/// Room template apply
+/// Room template sync
 #[endpoint(
     post,
-    path = "/room-template/{code}/apply",
+    path = "/room-template/{code}/sync",
     tags = ["room_template"],
     scopes = [Full],
-    response(CREATED, body = Room, description = "Apply template success"),
+    response(OK, body = RoomTemplate, description = "Sync template success"),
 )]
-pub mod room_template_apply {
-    use crate::v1::types::room_template::RoomTemplateCode;
-    use crate::v1::types::Room;
+pub mod room_template_sync {
+    use crate::v1::types::room_template::{RoomTemplate, RoomTemplateCode};
 
     pub struct Request {
         #[path]
         pub code: RoomTemplateCode,
-
-        #[json]
-        pub name: String,
     }
 
     pub struct Response {
         #[json]
-        pub room: Room,
+        pub template: RoomTemplate,
     }
 }

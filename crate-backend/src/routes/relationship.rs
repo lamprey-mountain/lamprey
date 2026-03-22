@@ -1,92 +1,66 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::user::Ignore;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission,
-    RelationshipPatch, RelationshipType, RelationshipWithUserId, UserId,
+    AuditLogEntryType, MessageSync, Permission, RelationshipPatch, RelationshipType, UserId,
 };
 use http::StatusCode;
-use utoipa_axum::{router::OpenApiRouter, routes};
-
-use crate::routes::util::Auth;
-use crate::ServerState;
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::{Error, Result};
+use crate::routes::util::Auth;
+use crate::{routes2, ServerState};
 
 /// Friend list
 ///
 /// List (mutual) friends.
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/friend",
-    tags = ["relationship", "badge.scope.full"],
-    params(
-        PaginationQuery<UserId>,
-        ("user_id" = UserId, Path, description = "User id to list friends from"),
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
-    )
-)]
+#[handler(routes::friend_list)]
 async fn friend_list(
     auth: Auth,
-    Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::friend_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let rels = data.user_relationship_list_friends(auth.user.id, q).await?;
+    let rels = data
+        .user_relationship_list_friends(auth.user.id, req.pagination)
+        .await?;
     Ok(Json(rels))
 }
 
 /// Friend list pending
 ///
 /// List pending friend requests (both incoming and outgoing).
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/friend/pending",
-    tags = ["relationship", "badge.scope.full"],
-    params(
-        PaginationQuery<UserId>,
-        ("user_id" = UserId, Path, description = "User id to list friends from"),
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
-    )
-)]
+#[handler(routes::friend_list_pending)]
 async fn friend_list_pending(
     auth: Auth,
-    Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::friend_list_pending::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let rels = data.user_relationship_list_pending(auth.user.id, q).await?;
+    let rels = data
+        .user_relationship_list_pending(auth.user.id, req.pagination)
+        .await?;
     Ok(Json(rels))
 }
 
 /// Friend add
 ///
 /// Send or accept a friend request.
-#[utoipa::path(
-    put,
-    path = "/user/@self/friend/{target_id}",
-    tags = ["relationship", "badge.scope.full", "badge.audit-log.FriendRequest", "badge.audit-log.FriendAccept"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::friend_add)]
 async fn friend_add(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::friend_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
@@ -94,17 +68,17 @@ async fn friend_add(
     let data = s.data();
     let srv = s.services();
 
-    let target_user = data.user_get(target_user_id).await?;
+    let target_user = data.user_get(req.target_id).await?;
     if !target_user.can_friend() {
         return Err(ApiError::from_code(ErrorCode::CannotFriendThisUser).into());
     }
 
     let existing = data
-        .user_relationship_get(auth.user.id, target_user_id)
+        .user_relationship_get(auth.user.id, req.target_id)
         .await?;
 
     let reverse = data
-        .user_relationship_get(target_user_id, auth.user.id)
+        .user_relationship_get(req.target_id, auth.user.id)
         .await?;
 
     match (
@@ -115,7 +89,7 @@ async fn friend_add(
             // accept friend request
             data.user_relationship_edit(
                 auth.user.id,
-                target_user_id,
+                req.target_id,
                 RelationshipPatch {
                     ignore: None,
                     relation: Some(Some(RelationshipType::Friend)),
@@ -123,7 +97,7 @@ async fn friend_add(
             )
             .await?;
             data.user_relationship_edit(
-                target_user_id,
+                req.target_id,
                 auth.user.id,
                 RelationshipPatch {
                     ignore: None,
@@ -133,7 +107,7 @@ async fn friend_add(
             .await?;
             let al = auth.audit_log(auth.user.id.into_inner().into());
             al.commit_success(AuditLogEntryType::FriendAccept {
-                user_id: target_user_id,
+                user_id: req.target_id,
             })
             .await?;
         }
@@ -144,27 +118,21 @@ async fn friend_add(
                 .await?
                 .ensure(Permission::FriendCreate)?;
 
-            let target_prefs = srv.cache.preferences_get(target_user_id).await?;
+            let target_prefs = srv.cache.preferences_get(req.target_id).await?;
             let friends_prefs = &target_prefs.privacy.friends;
 
             if let Some(pause_until) = &friends_prefs.pause_until {
                 if pause_until > &Time::now_utc() {
-                    // NOTE: do i want to return a more generic error message here?
                     return Err(ApiError::from_code(ErrorCode::FriendRequestsPaused).into());
                 }
             }
 
-            // a friend request can be started with the target user iff
-            // 1. friend requests are enabled globally, OR
-            // 2. mutual rooms are allowed and friend requests are enabled in any shared room OR
-            // 3. mutual friends are allowed and both users have a mutual friend
             let allowed = if friends_prefs.allow_everyone {
                 true
             } else {
                 let mutual_room_allowed = if friends_prefs.allow_mutual_room {
-                    // check shared rooms
                     srv.perms
-                        .allows_friend_request_from_user(auth.user.id, target_user_id)
+                        .allows_friend_request_from_user(auth.user.id, req.target_id)
                         .await?
                 } else {
                     false
@@ -172,7 +140,7 @@ async fn friend_add(
 
                 let mutual_friend_allowed = friends_prefs.allow_mutual_friend
                     && data
-                        .user_has_mutual_friend(auth.user.id, target_user_id)
+                        .user_has_mutual_friend(auth.user.id, req.target_id)
                         .await?;
 
                 mutual_room_allowed || mutual_friend_allowed
@@ -182,10 +150,9 @@ async fn friend_add(
                 return Err(ApiError::from_code(ErrorCode::InvalidData).into());
             }
 
-            // send friend request
             data.user_relationship_edit(
                 auth.user.id,
-                target_user_id,
+                req.target_id,
                 RelationshipPatch {
                     ignore: None,
                     relation: Some(Some(RelationshipType::Outgoing)),
@@ -193,7 +160,7 @@ async fn friend_add(
             )
             .await?;
             data.user_relationship_edit(
-                target_user_id,
+                req.target_id,
                 auth.user.id,
                 RelationshipPatch {
                     ignore: None,
@@ -203,42 +170,39 @@ async fn friend_add(
             .await?;
             let al = auth.audit_log(auth.user.id.into_inner().into());
             al.commit_success(AuditLogEntryType::FriendRequest {
-                user_id: target_user_id,
+                user_id: req.target_id,
             })
             .await?;
         }
         (Some(RelationshipType::Friend), Some(RelationshipType::Friend)) => {
-            // already friends
             return Ok(StatusCode::NO_CONTENT);
         }
         (Some(RelationshipType::Outgoing), Some(RelationshipType::Incoming)) => {
-            // already sent a request
             return Ok(StatusCode::NO_CONTENT);
         }
         (Some(RelationshipType::Block), _) => {
-            // you blocked them
             return Err(ApiError::from_code(ErrorCode::UnblockUserFirst).into());
         }
         _ => unreachable!("invalid data in database?"),
     }
 
     if let Some(rel) = data
-        .user_relationship_get(auth.user.id, target_user_id)
+        .user_relationship_get(auth.user.id, req.target_id)
         .await?
     {
         s.broadcast(MessageSync::RelationshipUpsert {
             user_id: auth.user.id,
-            target_user_id,
+            target_user_id: req.target_id,
             relationship: rel,
         })?;
     }
 
     if let Some(rel) = data
-        .user_relationship_get(target_user_id, auth.user.id)
+        .user_relationship_get(req.target_id, auth.user.id)
         .await?
     {
         s.broadcast(MessageSync::RelationshipUpsert {
-            user_id: target_user_id,
+            user_id: req.target_id,
             target_user_id: auth.user.id,
             relationship: rel,
         })?;
@@ -250,19 +214,11 @@ async fn friend_add(
 /// Friend remove
 ///
 /// Remove friend or reject a friend request.
-#[utoipa::path(
-    delete,
-    path = "/user/@self/friend/{target_id}",
-    tags = ["relationship", "badge.scope.full", "badge.audit-log.FriendDelete"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::friend_remove)]
 async fn friend_remove(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::friend_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
@@ -270,41 +226,41 @@ async fn friend_remove(
     let data = s.data();
 
     let existing = data
-        .user_relationship_get(auth.user.id, target_user_id)
+        .user_relationship_get(auth.user.id, req.target_id)
         .await?;
 
     match existing.as_ref().and_then(|r| r.relation.as_ref()) {
         r @ Some(RelationshipType::Friend)
         | r @ Some(RelationshipType::Incoming)
         | r @ Some(RelationshipType::Outgoing) => {
-            data.user_relationship_delete(auth.user.id, target_user_id)
+            data.user_relationship_delete(auth.user.id, req.target_id)
                 .await?;
             s.broadcast(MessageSync::RelationshipDelete {
                 user_id: auth.user.id,
-                target_user_id,
+                target_user_id: req.target_id,
             })?;
 
             if r == Some(&RelationshipType::Friend) {
                 let al = auth.audit_log(auth.user.id.into_inner().into());
                 al.commit_success(AuditLogEntryType::FriendDelete {
-                    user_id: target_user_id,
+                    user_id: req.target_id,
                 })
                 .await?;
             }
 
             if let Some(r) = data
-                .user_relationship_get(target_user_id, auth.user.id)
+                .user_relationship_get(req.target_id, auth.user.id)
                 .await?
             {
                 match r.relation {
                     Some(RelationshipType::Friend)
                     | Some(RelationshipType::Incoming)
                     | Some(RelationshipType::Outgoing) => {
-                        data.user_relationship_delete(target_user_id, auth.user.id)
+                        data.user_relationship_delete(req.target_id, auth.user.id)
                             .await?;
 
                         s.broadcast(MessageSync::RelationshipDelete {
-                            user_id: target_user_id,
+                            user_id: req.target_id,
                             target_user_id: auth.user.id,
                         })?;
                     }
@@ -321,52 +277,35 @@ async fn friend_remove(
 /// Block list
 ///
 /// List blocked users.
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/block",
-    tags = ["relationship", "badge.scope.full"],
-    params(
-        PaginationQuery<UserId>,
-        ("user_id" = UserId, Path, description = "User id to list blocks from"),
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
-    )
-)]
+#[handler(routes::block_list)]
 async fn block_list(
     auth: Auth,
-    Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::block_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let rels = data.user_relationship_list_blocked(auth.user.id, q).await?;
+    let rels = data
+        .user_relationship_list_blocked(auth.user.id, req.pagination)
+        .await?;
     Ok(Json(rels))
 }
 
 /// Block add
 ///
 /// Block a user. Removes them as a friend if they are one.
-#[utoipa::path(
-    put,
-    path = "/user/@self/block/{target_id}",
-    tags = ["relationship", "badge.scope.full", "badge.audit-log.BlockCreate"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::block_add)]
 async fn block_add(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::block_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     data.user_relationship_edit(
         auth.user.id,
-        target_user_id,
+        req.target_id,
         RelationshipPatch {
             ignore: None,
             relation: Some(Some(RelationshipType::Block)),
@@ -375,36 +314,36 @@ async fn block_add(
     .await?;
 
     let reverse = data
-        .user_relationship_get(target_user_id, auth.user.id)
+        .user_relationship_get(req.target_id, auth.user.id)
         .await?;
     if !matches!(
         reverse.as_ref().and_then(|r| r.relation.as_ref()),
         Some(&RelationshipType::Block)
     ) {
         if reverse.is_some() {
-            data.user_relationship_delete(target_user_id, auth.user.id)
+            data.user_relationship_delete(req.target_id, auth.user.id)
                 .await?;
             s.broadcast(MessageSync::RelationshipDelete {
-                user_id: target_user_id,
+                user_id: req.target_id,
                 target_user_id: auth.user.id,
             })?;
         }
     }
 
     let rel = data
-        .user_relationship_get(auth.user.id, target_user_id)
+        .user_relationship_get(auth.user.id, req.target_id)
         .await?
         .unwrap();
 
     s.broadcast(MessageSync::RelationshipUpsert {
         user_id: auth.user.id,
-        target_user_id,
+        target_user_id: req.target_id,
         relationship: rel,
     })?;
 
     let al = auth.audit_log(auth.user.id.into_inner().into());
     al.commit_success(AuditLogEntryType::BlockCreate {
-        user_id: target_user_id,
+        user_id: req.target_id,
     })
     .await?;
 
@@ -414,42 +353,34 @@ async fn block_add(
 /// Block remove
 ///
 /// Unblock a user.
-#[utoipa::path(
-    delete,
-    path = "/user/@self/block/{target_id}",
-    tags = ["relationship", "badge.scope.full", "badge.audit-log.BlockDelete"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::block_remove)]
 async fn block_remove(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::block_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     let existing = data
-        .user_relationship_get(auth.user.id, target_user_id)
+        .user_relationship_get(auth.user.id, req.target_id)
         .await?;
 
     if existing
         .as_ref()
         .is_some_and(|r| r.relation == Some(RelationshipType::Block))
     {
-        data.user_relationship_delete(auth.user.id, target_user_id)
+        data.user_relationship_delete(auth.user.id, req.target_id)
             .await?;
 
         s.broadcast(MessageSync::RelationshipDelete {
             user_id: auth.user.id,
-            target_user_id,
+            target_user_id: req.target_id,
         })?;
 
         let al = auth.audit_log(auth.user.id.into_inner().into());
         al.commit_success(AuditLogEntryType::BlockDelete {
-            user_id: target_user_id,
+            user_id: req.target_id,
         })
         .await?;
     }
@@ -460,75 +391,56 @@ async fn block_remove(
 /// Ignore list
 ///
 /// List ignored users.
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/ignore",
-    tags = ["relationship", "badge.scope.full"],
-    params(
-        PaginationQuery<UserId>,
-        ("user_id" = UserId, Path, description = "User id to list ignored users from"),
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
-    )
-)]
+#[handler(routes::ignore_list)]
 async fn ignore_list(
     auth: Auth,
-    Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::ignore_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let rels = data.user_relationship_list_ignored(auth.user.id, q).await?;
+    let rels = data
+        .user_relationship_list_ignored(auth.user.id, req.pagination)
+        .await?;
     Ok(Json(rels))
 }
 
 /// Ignore add
 ///
 /// Ignore a user.
-#[utoipa::path(
-    put,
-    path = "/user/@self/ignore/{target_id}",
-    tags = ["relationship", "badge.scope.full", "badge.audit-log.IgnoreAdd"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    request_body = Ignore,
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::ignore_add)]
 async fn ignore_add(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(ignore): Json<Ignore>,
+    req: routes::ignore_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     data.user_relationship_edit(
         auth.user.id,
-        target_user_id,
+        req.target_id,
         RelationshipPatch {
-            ignore: Some(Some(ignore)),
+            ignore: Some(Some(req.ignore)),
             relation: None,
         },
     )
     .await?;
 
     let rel = data
-        .user_relationship_get(auth.user.id, target_user_id)
+        .user_relationship_get(auth.user.id, req.target_id)
         .await?
         .unwrap();
 
     s.broadcast(MessageSync::RelationshipUpsert {
         user_id: auth.user.id,
-        target_user_id,
+        target_user_id: req.target_id,
         relationship: rel,
     })?;
 
     let al = auth.audit_log(auth.user.id.into_inner().into());
     al.commit_success(AuditLogEntryType::IgnoreAdd {
-        user_id: target_user_id,
+        user_id: req.target_id,
     })
     .await?;
 
@@ -538,31 +450,23 @@ async fn ignore_add(
 /// Ignore remove
 ///
 /// Unignore a user.
-#[utoipa::path(
-    delete,
-    path = "/user/@self/ignore/{target_id}",
-    tags = ["relationship", "badge.scope.full", "badge.audit-log.IgnoreRemove"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::ignore_remove)]
 async fn ignore_remove(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::ignore_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
 
     let existing = data
-        .user_relationship_get(auth.user.id, target_user_id)
+        .user_relationship_get(auth.user.id, req.target_id)
         .await?;
 
     if existing.as_ref().is_some_and(|r| r.ignore.is_some()) {
         data.user_relationship_edit(
             auth.user.id,
-            target_user_id,
+            req.target_id,
             RelationshipPatch {
                 ignore: Some(None),
                 relation: None,
@@ -575,13 +479,13 @@ async fn ignore_remove(
 
         s.broadcast(MessageSync::RelationshipUpsert {
             user_id: auth.user.id,
-            target_user_id,
+            target_user_id: req.target_id,
             relationship: updated_rel,
         })?;
 
         let al = auth.audit_log(auth.user.id.into_inner().into());
         al.commit_success(AuditLogEntryType::IgnoreRemove {
-            user_id: target_user_id,
+            user_id: req.target_id,
         })
         .await?;
     }
@@ -591,14 +495,14 @@ async fn ignore_remove(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(friend_list))
-        .routes(routes!(friend_list_pending))
-        .routes(routes!(friend_add))
-        .routes(routes!(friend_remove))
-        .routes(routes!(block_list))
-        .routes(routes!(block_add))
-        .routes(routes!(block_remove))
-        .routes(routes!(ignore_list))
-        .routes(routes!(ignore_add))
-        .routes(routes!(ignore_remove))
+        .routes(routes2!(friend_list))
+        .routes(routes2!(friend_list_pending))
+        .routes(routes2!(friend_add))
+        .routes(routes2!(friend_remove))
+        .routes(routes2!(block_list))
+        .routes(routes2!(block_add))
+        .routes(routes2!(block_remove))
+        .routes(routes2!(ignore_list))
+        .routes(routes2!(ignore_add))
+        .routes(routes2!(ignore_remove))
 }

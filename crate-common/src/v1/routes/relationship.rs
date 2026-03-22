@@ -156,6 +156,30 @@ pub mod block_remove {
     pub struct Response {}
 }
 
+/// Ignore list
+///
+/// List ignored users.
+#[endpoint(
+    get,
+    path = "/user/@self/ignore",
+    tags = ["relationship"],
+    scopes = [Full],
+    response(OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
+)]
+pub mod ignore_list {
+    use crate::v1::types::{PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId};
+
+    pub struct Request {
+        #[query]
+        pub pagination: PaginationQuery<UserId>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub ignored: PaginationResponse<RelationshipWithUserId>,
+    }
+}
+
 /// Ignore add
 ///
 /// Ignore a user's messages.
@@ -167,11 +191,15 @@ pub mod block_remove {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod ignore_add {
+    use crate::v1::types::user::Ignore;
     use crate::v1::types::UserId;
 
     pub struct Request {
         #[path]
         pub target_id: UserId,
+
+        #[json]
+        pub ignore: Ignore,
     }
 
     pub struct Response {}

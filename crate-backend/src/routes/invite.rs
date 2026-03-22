@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::automod::AutomodAction;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -15,37 +16,28 @@ use common::v1::types::{
     RoomMemberPut, SERVER_ROOM_ID,
 };
 use http::StatusCode;
+use lamprey_macros::handler;
 use nanoid::nanoid;
 use serde::Serialize;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
 use crate::routes::auth::fetch_auth_state;
-use crate::{Error, ServerState};
+use crate::{routes2, Error, ServerState};
 
 use super::util::Auth;
 
 /// Invite delete
-#[utoipa::path(
-    delete,
-    path = "/invite/{invite_code}",
-    params(
-        ("invite_code", description = "The code identifying this invite"),
-    ),
-    tags = ["invite", "badge.scope.full", "badge.perm-opt.InviteManage", "badge.audit-log.InviteDelete"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
+#[handler(routes::invite_delete)]
 async fn invite_delete(
-    Path(code): Path<InviteCode>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::invite_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let invite = d.invite_select(code.clone()).await?;
+    let invite = d.invite_select(req.invite_code.clone()).await?;
     let (has_perm, id_target) = match &invite.invite.target {
         InviteTarget::Room {
             room,
@@ -85,7 +77,7 @@ async fn invite_delete(
     };
     let can_delete = auth.user.id == invite.invite.creator_id || has_perm;
     if can_delete {
-        d.invite_delete(code.clone()).await?;
+        d.invite_delete(req.invite_code.clone()).await?;
         let room_id = match id_target {
             InviteTargetId::Room { room_id, .. } => Some(room_id),
             InviteTargetId::Gdm { .. } => None,
@@ -102,7 +94,7 @@ async fn invite_delete(
 
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::InviteDelete {
-                code: code.clone(),
+                code: req.invite_code.clone(),
                 changes: Changes::new()
                     .remove("description", &invite.invite.description)
                     .remove("role_ids", &role_ids)
@@ -116,7 +108,7 @@ async fn invite_delete(
                     room_id,
                     auth.user.id,
                     MessageSync::InviteDelete {
-                        code,
+                        code: req.invite_code,
                         target: id_target,
                         creator_id: invite.invite.creator_id,
                     },
@@ -128,7 +120,7 @@ async fn invite_delete(
                     channel_id,
                     auth.user.id,
                     MessageSync::InviteDelete {
-                        code,
+                        code: req.invite_code,
                         target: id_target,
                         creator_id: invite.invite.creator_id,
                     },
@@ -140,7 +132,7 @@ async fn invite_delete(
                     SERVER_ROOM_ID,
                     auth.user.id,
                     MessageSync::InviteDelete {
-                        code,
+                        code: req.invite_code,
                         target: id_target,
                         creator_id: invite.invite.creator_id,
                     },
@@ -149,7 +141,7 @@ async fn invite_delete(
             }
             InviteTargetId::User { .. } => {
                 s.broadcast(MessageSync::InviteDelete {
-                    code,
+                    code: req.invite_code,
                     target: id_target,
                     creator_id: invite.invite.creator_id,
                 })?;
@@ -160,27 +152,16 @@ async fn invite_delete(
 }
 
 /// Invite resolve
-#[utoipa::path(
-    get,
-    path = "/invite/{invite_code}",
-    params(
-        ("invite_code", description = "The code identifying this invite"),
-    ),
-    tags = ["invite", "badge.scope.full"],
-    responses(
-        (status = OK, body = Invite, description = "success"),
-        (status = OK, body = InviteWithMetadata, description = "success with metadata"),
-    )
-)]
+#[handler(routes::invite_resolve)]
 async fn invite_resolve(
-    Path(code): Path<InviteCode>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::invite_resolve::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let s = s.services();
-    let invite = d.invite_select(code).await?;
+    let invite = d.invite_select(req.invite_code).await?;
     if invite.invite.creator_id == auth.user.id {
         return Ok(Json(invite).into_response());
     }
@@ -216,26 +197,16 @@ async fn invite_resolve(
 ///
 /// - solve an antispam challenge, such as a captcha
 /// - add an authentication method, such as (email && password) || oauth
-#[utoipa::path(
-    post,
-    path = "/invite/{invite_code}",
-    params(
-        ("invite_code", description = "The code identifying this invite"),
-    ),
-    tags = ["invite", "badge.scope.full", "badge.audit-log.UserRegistered"],
-    responses(
-        (status = OK, description = "success"),
-    )
-)]
+#[handler(routes::invite_use)]
 async fn invite_use(
-    Path(code): Path<InviteCode>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::invite_use::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let srv = s.services();
-    let invite = d.invite_select(code.clone()).await?;
+    let invite = d.invite_select(req.invite_code.clone()).await?;
     if invite.is_dead() {
         return Err(Error::ApiError(ApiError::from_code(
             ErrorCode::UnknownInvite,
@@ -406,7 +377,7 @@ async fn invite_use(
             // TODO: should i append to user audit logs here?
         }
     }
-    d.invite_incr_use(code).await?;
+    d.invite_incr_use(req.invite_code).await?;
 
     // TODO: send welcome message to gdm
     let room_id = match &invite.invite.target {
@@ -425,45 +396,33 @@ async fn invite_use(
 /// Invite room create
 ///
 /// Create an invite that goes to a room
-#[utoipa::path(
-    post,
-    path = "/room/{room_id}/invite",
-    tags = ["invite", "badge.scope.full", "badge.perm.InviteCreate", "badge.audit-log.InviteCreate"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    request_body = InviteCreate,
-    responses(
-        (status = OK, body = Invite, description = "success"),
-    )
-)]
+#[handler(routes::invite_room_create)]
 async fn invite_room_create(
-    Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<InviteCreate>,
+    req: routes::invite_room_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let d = s.data();
-    let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
+    let perms = s.services.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::InviteCreate)?;
 
-    if room_id == SERVER_ROOM_ID {
+    if req.room_id == SERVER_ROOM_ID {
         return Err(ApiError::from_code(ErrorCode::CannotCreateInviteForServerRoom).into());
     }
 
-    if let Some(role_ids) = &json.role_ids {
+    if let Some(role_ids) = &req.invite.role_ids {
         if !role_ids.is_empty() {
             perms.ensure(Permission::RoleApply)?;
             let rank = s
                 .services()
                 .perms
-                .get_user_rank(room_id, auth.user.id)
+                .get_user_rank(req.room_id, auth.user.id)
                 .await?;
-            let room = s.services().rooms.get(room_id, None).await?;
-            let roles = d.role_get_many(room_id, role_ids).await?;
+            let room = s.services().rooms.get(req.room_id, None).await?;
+            let roles = d.role_get_many(req.room_id, role_ids).await?;
             if roles.len() != role_ids.len() {
                 return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)));
             }
@@ -480,12 +439,12 @@ async fn invite_room_create(
         .collect();
     let code = InviteCode(nanoid!(8, &alphabet));
     d.invite_insert_room(
-        room_id,
+        req.room_id,
         auth.user.id,
         code.clone(),
-        json.expires_at,
-        json.max_uses,
-        json.role_ids.as_deref().unwrap_or_default(),
+        req.invite.expires_at,
+        req.invite.max_uses,
+        req.invite.role_ids.as_deref().unwrap_or_default(),
     )
     .await?;
     let invite = d.invite_select(code).await?;
@@ -495,15 +454,15 @@ async fn invite_room_create(
         .add("description", &invite.invite.description)
         .add("expires_at", &invite.invite.expires_at)
         .add("max_uses", &invite.max_uses)
-        .add("role_ids", &json.role_ids)
+        .add("role_ids", &req.invite.role_ids)
         .build();
 
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
     al.commit_success(AuditLogEntryType::InviteCreate { changes })
         .await?;
 
     s.broadcast_room(
-        room_id,
+        req.room_id,
         auth.user.id,
         MessageSync::InviteCreate {
             invite: Box::new(invite.clone()),
@@ -523,29 +482,17 @@ enum InviteWithPotentialMetadata {
 /// Invite room list
 ///
 /// List invites that go to a room
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/invite",
-    params(
-        PaginationQuery<InviteCode>,
-        ("room_id", description = "Room id"),
-    ),
-    tags = ["invite", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Invite>, description = "success"),
-    )
-)]
+#[handler(routes::invite_room_list)]
 async fn invite_room_list(
-    Path(room_id): Path<RoomId>,
-    Query(paginate): Query<PaginationQuery<InviteCode>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::invite_room_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
+    let perms = s.services.perms.for_room(auth.user.id, req.room_id).await?;
 
-    let res = d.invite_list_room(room_id, paginate).await?;
+    let res = d.invite_list_room(req.room_id, req.pagination).await?;
     let items: Vec<_> = res
         .items
         .into_iter()
@@ -575,29 +522,17 @@ async fn invite_room_list(
 /// Invite channel create
 ///
 /// Create an invite that goes to a channel
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/invite",
-    tags = ["invite", "badge.scope.full", "badge.perm-opt.InviteCreate", "badge.audit-log.InviteCreate"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Channel id"),
-    ),
-    request_body = InviteCreate,
-    responses(
-        (status = OK, body = Invite, description = "success"),
-    )
-)]
+#[handler(routes::invite_channel_create)]
 async fn invite_channel_create(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<InviteCreate>,
+    req: routes::invite_channel_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let d = s.data();
-    let channel = d.channel_get(channel_id).await?;
+    let channel = d.channel_get(req.channel_id).await?;
 
     let room_id = if channel.ty == ChannelType::Gdm {
         // anyone can create invites for a gdm
@@ -615,7 +550,7 @@ async fn invite_channel_create(
         .collect();
     let code = InviteCode(nanoid!(8, &alphabet));
 
-    if let Some(role_ids) = &json.role_ids {
+    if let Some(role_ids) = &req.invite.role_ids {
         if !role_ids.is_empty() {
             if let Some(room_id) = room_id {
                 let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
@@ -642,12 +577,12 @@ async fn invite_channel_create(
     }
 
     d.invite_insert_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         code.clone(),
-        json.expires_at,
-        json.max_uses,
-        json.role_ids.as_deref().unwrap_or_default(),
+        req.invite.expires_at,
+        req.invite.max_uses,
+        req.invite.role_ids.as_deref().unwrap_or_default(),
     )
     .await?;
     let invite = d.invite_select(code).await?;
@@ -657,7 +592,7 @@ async fn invite_channel_create(
         .add("description", &invite.invite.description)
         .add("expires_at", &invite.invite.expires_at)
         .add("max_uses", &invite.max_uses)
-        .add("role_ids", &json.role_ids)
+        .add("role_ids", &req.invite.role_ids)
         .build();
 
     if let Some(room_id) = room_id {
@@ -667,7 +602,7 @@ async fn invite_channel_create(
     }
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::InviteCreate {
             invite: Box::new(invite.clone()),
@@ -680,27 +615,15 @@ async fn invite_channel_create(
 /// Invite channel list
 ///
 /// List invites that go to a channel
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/invite",
-    params(
-        PaginationQuery<InviteCode>,
-        ("channel_id", description = "Channel id"),
-    ),
-    tags = ["invite", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Invite>, description = "success"),
-    )
-)]
+#[handler(routes::invite_channel_list)]
 async fn invite_channel_list(
-    Path(channel_id): Path<ChannelId>,
-    Query(paginate): Query<PaginationQuery<InviteCode>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::invite_channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let channel = d.channel_get(channel_id).await?;
+    let channel = d.channel_get(req.channel_id).await?;
 
     let has_perm = if channel.ty == ChannelType::Gdm {
         true
@@ -714,7 +637,9 @@ async fn invite_channel_list(
         false
     };
 
-    let res = d.invite_list_channel(channel_id, paginate).await?;
+    let res = d
+        .invite_list_channel(req.channel_id, req.pagination)
+        .await?;
     let items: Vec<_> = res
         .items
         .into_iter()
@@ -744,27 +669,15 @@ async fn invite_channel_list(
 /// Invite patch
 ///
 /// Edit an invite
-#[utoipa::path(
-    patch,
-    path = "/invite/{invite_code}",
-    params(
-        ("invite_code", description = "The code identifying this invite"),
-    ),
-    tags = ["invite", "badge.scope.full", "badge.perm-opt.InviteManage", "badge.audit-log.InviteUpdate"],
-    responses(
-        (status = NOT_MODIFIED, description = "not modified"),
-        (status = OK, body = Invite, description = "success"),
-    )
-)]
-async fn invite_patch(
-    Path(code): Path<InviteCode>,
+#[handler(routes::invite_update)]
+async fn invite_update(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<InvitePatch>,
+    req: routes::invite_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let start_invite = d.invite_select(code.clone()).await?;
+    let start_invite = d.invite_select(req.invite_code.clone()).await?;
 
     let (has_perm, _id_target) = match &start_invite.invite.target {
         InviteTarget::Room {
@@ -812,7 +725,7 @@ async fn invite_patch(
         return Err(Error::MissingPermissions);
     }
 
-    if let Some(role_ids) = &patch.role_ids {
+    if let Some(role_ids) = &req.patch.role_ids {
         if !role_ids.is_empty() {
             let room_id = match &start_invite.invite.target {
                 InviteTarget::Room { room, .. } => Some(room.id),
@@ -842,7 +755,7 @@ async fn invite_patch(
         }
     }
 
-    let updated_invite = d.invite_update(code.clone(), patch).await?;
+    let updated_invite = d.invite_update(req.invite_code.clone(), req.patch).await?;
 
     let start_role_ids: Option<Vec<_>> = match &start_invite.invite.target {
         InviteTarget::Room { roles, .. } => Some(roles.iter().map(|r| r.id).collect()),
@@ -891,17 +804,11 @@ async fn invite_patch(
 /// Invite server create
 ///
 /// Create an invite that allows registration on a server.
-#[utoipa::path(
-    post,
-    path = "/server/invite",
-    tags = ["invite", "badge.scope.full", "badge.perm.InviteCreate"],
-    request_body = InviteCreate,
-    responses((status = OK, body = Invite, description = "success")),
-)]
+#[handler(routes::invite_server_create)]
 async fn invite_server_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<InviteCreate>,
+    req: routes::invite_server_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
@@ -920,8 +827,13 @@ async fn invite_server_create(
         .chars()
         .collect();
     let code = InviteCode(nanoid!(8, &alphabet));
-    d.invite_insert_server(user.id, code.clone(), json.expires_at, json.max_uses)
-        .await?;
+    d.invite_insert_server(
+        user.id,
+        code.clone(),
+        req.invite.expires_at,
+        req.invite.max_uses,
+    )
+    .await?;
     let invite = d.invite_select(code).await?;
 
     let changes = Changes::new()
@@ -950,21 +862,11 @@ async fn invite_server_create(
 /// Invite server list
 ///
 /// List invites that allow registration on a server
-#[utoipa::path(
-    get,
-    path = "/server/invite",
-    params(
-        PaginationQuery<InviteCode>,
-    ),
-    tags = ["invite", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Invite>, description = "success"),
-    )
-)]
+#[handler(routes::invite_server_list)]
 async fn invite_server_list(
-    Query(paginate): Query<PaginationQuery<InviteCode>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::invite_server_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
@@ -976,9 +878,10 @@ async fn invite_server_list(
 
     let perms = srv.perms.for_server(user.id).await?;
     let res = if perms.has(Permission::InviteManage) {
-        d.invite_list_server(paginate).await?
+        d.invite_list_server(req.pagination).await?
     } else {
-        d.invite_list_server_by_creator(user.id, paginate).await?
+        d.invite_list_server_by_creator(user.id, req.pagination)
+            .await?
     };
     Ok(Json(res))
 }
@@ -986,26 +889,16 @@ async fn invite_server_list(
 /// Invite user create
 ///
 /// Creates an invite that adds this user as a friend when used
-#[utoipa::path(
-    post,
-    path = "/user/{user_id}/invite",
-    tags = ["invite", "badge.scope.full"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-    ),
-    request_body = InviteCreate,
-    responses((status = OK, body = Invite, description = "success")),
-)]
+#[handler(routes::invite_user_create)]
 async fn invite_user_create(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<InviteCreate>,
+    req: routes::invite_user_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
@@ -1024,8 +917,8 @@ async fn invite_user_create(
         auth.user.id,
         auth.user.id,
         code.clone(),
-        json.expires_at,
-        json.max_uses,
+        req.invite.expires_at,
+        req.invite.max_uses,
     )
     .await?;
     let invite = d.invite_select(code).await?;
@@ -1049,26 +942,14 @@ async fn invite_user_create(
 }
 
 /// Invite user list
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/invite",
-    params(
-        PaginationQuery<InviteCode>,
-        ("user_id", description = "User id"),
-    ),
-    tags = ["invite", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Invite>, description = "success"),
-    ),
-)]
+#[handler(routes::invite_user_list)]
 async fn invite_user_list(
-    Path(target_user_id): Path<UserIdReq>,
-    Query(paginate): Query<PaginationQuery<InviteCode>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::invite_user_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
@@ -1078,7 +959,7 @@ async fn invite_user_list(
     }
 
     let d = s.data();
-    let res = d.invite_list_user(target_user_id, paginate).await?;
+    let res = d.invite_list_user(target_user_id, req.pagination).await?;
 
     let items: Vec<_> = res
         .items
@@ -1108,16 +989,16 @@ async fn invite_user_list(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(invite_delete))
-        .routes(routes!(invite_resolve))
-        .routes(routes!(invite_patch))
-        .routes(routes!(invite_use))
-        .routes(routes!(invite_room_create))
-        .routes(routes!(invite_room_list))
-        .routes(routes!(invite_channel_create))
-        .routes(routes!(invite_channel_list))
-        .routes(routes!(invite_server_create))
-        .routes(routes!(invite_server_list))
-        .routes(routes!(invite_user_create))
-        .routes(routes!(invite_user_list))
+        .routes(routes2!(invite_delete))
+        .routes(routes2!(invite_resolve))
+        .routes(routes2!(invite_use))
+        .routes(routes2!(invite_room_create))
+        .routes(routes2!(invite_room_list))
+        .routes(routes2!(invite_channel_create))
+        .routes(routes2!(invite_channel_list))
+        .routes(routes2!(invite_update))
+        .routes(routes2!(invite_server_create))
+        .routes(routes2!(invite_server_list))
+        .routes(routes2!(invite_user_create))
+        .routes(routes2!(invite_user_list))
 }

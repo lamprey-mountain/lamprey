@@ -1,17 +1,19 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::thread::ThreadListRoom;
 use common::v1::types::{
     error::{ApiError, ErrorCode},
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
     ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message, MessageId,
-    MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission,
-    RelationshipType, RoomId, ThreadMember, ThreadMemberPut, UserId, SERVER_ROOM_ID,
+    MessageMember, MessageSync, MessageType, RelationshipType, RoomId, ThreadMember,
+    ThreadMemberPut, UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -20,56 +22,34 @@ use crate::ServerState;
 
 use super::util::Auth;
 use crate::error::{Error, Result};
+use crate::routes2;
 
 /// Thread member list
-#[utoipa::path(
-    get,
-    path = "/thread/{thread_id}/member",
-    params(
-        PaginationQuery<UserId>,
-        ("thread_id" = ChannelId, description = "Thread id"),
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = PaginationResponse<ThreadMember>, description = "success"),
-    )
-)]
+#[handler(routes::thread_member_list)]
 async fn thread_member_list(
-    Path(thread_id): Path<ChannelId>,
-    Query(paginate): Query<PaginationQuery<UserId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_member_list::Request,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s
         .services()
         .perms
-        .for_channel(auth.user.id, thread_id)
+        .for_channel(auth.user.id, req.thread_id)
         .await?;
-    perms.ensure(Permission::ChannelView)?;
-    let res = d.thread_member_list(thread_id, paginate).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
+    let res = d.thread_member_list(req.thread_id, req.pagination).await?;
     Ok(Json(res))
 }
 
 /// Thread member get
-#[utoipa::path(
-    get,
-    path = "/thread/{thread_id}/member/{user_id}",
-    params(
-        ("thread_id" = ChannelId, description = "Thread id"),
-        ("user_id" = String, description = "User id"),
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = ThreadMember, description = "success"),
-    )
-)]
+#[handler(routes::thread_member_get)]
 async fn thread_member_get(
-    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_member_get::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
@@ -77,50 +57,36 @@ async fn thread_member_get(
     let perms = s
         .services()
         .perms
-        .for_channel(auth.user.id, thread_id)
+        .for_channel(auth.user.id, req.thread_id)
         .await?;
-    perms.ensure(Permission::ChannelView)?;
-    let res = d.thread_member_get(thread_id, target_user_id).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
+    let res = d.thread_member_get(req.thread_id, target_user_id).await?;
     Ok(Json(res))
 }
 
 /// Thread member add
-#[utoipa::path(
-    put,
-    path = "/thread/{thread_id}/member/{user_id}",
-    tags = ["thread", "badge.perm-opt.MemberKick", "badge.audit-log.ThreadMemberAdd"],
-    params(
-        ("thread_id" = ChannelId, Path, description = "Thread id"),
-        ("user_id" = UserIdReq, Path, description = "User id"),
-    ),
-    request_body = ThreadMemberPut,
-    responses(
-        (status = OK, body = ThreadMember, description = "success"),
-        (status = NOT_MODIFIED, description = "not modified"),
-    )
-)]
+#[handler(routes::thread_member_add)]
 async fn thread_member_add(
-    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ThreadMemberPut>,
+    req: routes::thread_member_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    json.validate()?;
-    let target_user_id = match target_user_id {
+    // ThreadMemberPut is empty, no validation needed
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.thread_id).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
+    let thread = srv.channels.get(req.thread_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     if target_user_id != auth.user.id {
         if !thread.invitable {
-            perms.ensure(Permission::MemberKick)?;
+            perms.ensure(common::v1::types::Permission::MemberKick)?;
         }
     }
     if !thread.ty.has_members() {
@@ -129,20 +95,17 @@ async fn thread_member_add(
     perms.ensure_unlocked()?;
 
     if thread.ty == ChannelType::Gdm {
-        // if the thread member is not found (errors) then that means they're joining the gdm
-        // there might be a cleaner way to do this but eh
         let is_joining = d
-            .thread_member_get(thread_id, target_user_id)
+            .thread_member_get(req.thread_id, target_user_id)
             .await
             .is_err();
 
         if is_joining {
-            let count = d.thread_member_list_all(thread_id).await?.len() as u32;
+            let count = d.thread_member_list_all(req.thread_id).await?.len() as u32;
             if count >= crate::consts::MAX_GDM_MEMBERS {
                 return Err(ApiError::from_code(ErrorCode::GdmTooManyMembers).into());
             }
 
-            // inviter must be friends to add recipients
             let relationship = d
                 .user_relationship_get(auth.user.id, target_user_id)
                 .await?;
@@ -156,15 +119,15 @@ async fn thread_member_add(
         }
     }
 
-    d.thread_member_put(thread_id, target_user_id, ThreadMemberPut {})
+    d.thread_member_put(req.thread_id, target_user_id, req.member)
         .await?;
-    let res = d.thread_member_get(thread_id, target_user_id).await?;
+    let res = d.thread_member_get(req.thread_id, target_user_id).await?;
 
     if target_user_id != auth.user.id {
         let message_id = d
             .message_create(crate::types::DbMessageCreate {
                 id: None,
-                channel_id: thread_id,
+                channel_id: req.thread_id,
                 attachment_ids: vec![],
                 author_id: auth.user.id,
                 embeds: vec![],
@@ -174,7 +137,6 @@ async fn thread_member_add(
                 mentions: Mentions {
                     users: vec![MentionsUser {
                         id: target_user_id,
-                        // data serialization code ignores resolved_name
                         resolved_name: "(this should be ignored)".to_owned(),
                     }],
                     ..Default::default()
@@ -183,11 +145,11 @@ async fn thread_member_add(
             .await?;
         let message = srv
             .messages
-            .get(thread_id, message_id, auth.user.id)
+            .get(req.thread_id, message_id, auth.user.id)
             .await?;
-        srv.channels.invalidate(thread_id).await; // message count
+        srv.channels.invalidate(req.thread_id).await;
         s.broadcast_channel(
-            thread_id,
+            req.thread_id,
             auth.user.id,
             MessageSync::MessageCreate {
                 message: message.clone(),
@@ -198,7 +160,7 @@ async fn thread_member_add(
         if let Some(room_id) = thread.room_id {
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::ThreadMemberAdd {
-                thread_id,
+                thread_id: req.thread_id,
                 user_id: target_user_id,
             })
             .await?;
@@ -206,51 +168,40 @@ async fn thread_member_add(
     }
 
     s.broadcast_channel(
-        thread_id,
+        req.thread_id,
         auth.user.id,
         MessageSync::ThreadMemberUpsert {
             room_id: thread.room_id,
-            thread_id,
+            thread_id: req.thread_id,
             added: vec![res.clone()],
             removed: vec![],
         },
     )
     .await?;
-    Ok(Json(res).into_response())
+    Ok(Json(res))
 }
 
 /// Thread member delete
-#[utoipa::path(
-    delete,
-    path = "/thread/{thread_id}/member/{user_id}",
-    params(
-        ("thread_id" = ChannelId, description = "Thread id"),
-        ("user_id" = String, description = "User id"),
-    ),
-    tags = ["thread", "badge.perm-opt.MemberKick", "badge.audit-log.ThreadMemberRemove"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
+#[handler(routes::thread_member_delete)]
 async fn thread_member_delete(
-    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_member_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, thread_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.thread_id).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
+    let thread = srv.channels.get(req.thread_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     if target_user_id != auth.user.id {
-        perms.ensure(Permission::MemberKick)?;
+        perms.ensure(common::v1::types::Permission::MemberKick)?;
     }
 
     if !thread.ty.has_members() {
@@ -258,18 +209,18 @@ async fn thread_member_delete(
     }
     perms.ensure_unlocked()?;
 
-    d.thread_member_leave(thread_id, target_user_id).await?;
+    d.thread_member_leave(req.thread_id, target_user_id).await?;
 
     s.services()
         .perms
-        .invalidate_thread(target_user_id, thread_id)
+        .invalidate_thread(target_user_id, req.thread_id)
         .await;
 
     if target_user_id != auth.user.id {
         let message_id = d
             .message_create(crate::types::DbMessageCreate {
                 id: None,
-                channel_id: thread_id,
+                channel_id: req.thread_id,
                 attachment_ids: vec![],
                 author_id: auth.user.id,
                 embeds: vec![],
@@ -281,11 +232,11 @@ async fn thread_member_delete(
             .await?;
         let message = srv
             .messages
-            .get(thread_id, message_id, auth.user.id)
+            .get(req.thread_id, message_id, auth.user.id)
             .await?;
-        srv.channels.invalidate(thread_id).await; // message count
+        srv.channels.invalidate(req.thread_id).await;
         s.broadcast_channel(
-            thread_id,
+            req.thread_id,
             auth.user.id,
             MessageSync::MessageCreate {
                 message: message.clone(),
@@ -296,7 +247,7 @@ async fn thread_member_delete(
         if let Some(room_id) = thread.room_id {
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::ThreadMemberRemove {
-                thread_id,
+                thread_id: req.thread_id,
                 user_id: target_user_id,
             })
             .await?;
@@ -304,11 +255,11 @@ async fn thread_member_delete(
     }
 
     s.broadcast_channel(
-        thread_id,
+        req.thread_id,
         auth.user.id,
         MessageSync::ThreadMemberUpsert {
             room_id: thread.room_id,
-            thread_id,
+            thread_id: req.thread_id,
             added: vec![],
             removed: vec![target_user_id],
         },
@@ -319,32 +270,20 @@ async fn thread_member_delete(
 }
 
 /// Thread list
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/thread",
-    params(
-        ("channel_id", description = "Channel id"),
-        PaginationQuery<ChannelId>
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List channel threads success"),
-    )
-)]
+#[handler(routes::thread_list)]
 async fn thread_list(
-    Path(channel_id): Path<ChannelId>,
-    Query(pagination): Query<PaginationQuery<ChannelId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_list::Request,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
 
-    let include_all = perms.has(Permission::ThreadManage);
+    let include_all = perms.has(common::v1::types::Permission::ThreadManage);
     let mut res = data
-        .thread_list_active(auth.user.id, pagination, channel_id, include_all)
+        .thread_list_active(auth.user.id, req.pagination, req.channel_id, include_all)
         .await?;
 
     let channel_ids: Vec<ChannelId> = res.items.iter().map(|c| c.id).collect();
@@ -356,38 +295,20 @@ async fn thread_list(
 }
 
 /// Thread list archived
-///
-/// Lists archived threads in this channel.
-///
-/// - Includes all archived public threads.
-/// - If you have the `ThreadManage` permission, includes all archived private threads.
-/// - Otherwise, only includes archived private threads you're a member of.
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/thread/archived",
-    params(
-        ("channel_id", description = "Channel id"),
-        PaginationQuery<ChannelId>
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List channel archived threads success"),
-    )
-)]
+#[handler(routes::thread_list_archived)]
 async fn thread_list_archived(
-    Path(channel_id): Path<ChannelId>,
-    Query(pagination): Query<PaginationQuery<ChannelId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_list_archived::Request,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
 
-    let include_all = perms.has(Permission::ThreadManage);
+    let include_all = perms.has(common::v1::types::Permission::ThreadManage);
     let mut res = data
-        .thread_list_archived(auth.user.id, pagination, channel_id, include_all)
+        .thread_list_archived(auth.user.id, req.pagination, req.channel_id, include_all)
         .await?;
 
     let channel_ids: Vec<ChannelId> = res.items.iter().map(|c| c.id).collect();
@@ -399,31 +320,19 @@ async fn thread_list_archived(
 }
 
 /// Thread list removed
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/thread/removed",
-    params(
-        ("channel_id", description = "Channel id"),
-        PaginationQuery<ChannelId>
-    ),
-    tags = ["thread", "badge.perm.ThreadManage"],
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List channel removed threads success"),
-    )
-)]
+#[handler(routes::thread_list_removed)]
 async fn thread_list_removed(
-    Path(channel_id): Path<ChannelId>,
-    Query(pagination): Query<PaginationQuery<ChannelId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_list_removed::Request,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ThreadManage)?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(common::v1::types::Permission::ThreadManage)?;
 
     let mut res = data
-        .thread_list_removed(auth.user.id, pagination, channel_id, true)
+        .thread_list_removed(auth.user.id, req.pagination, req.channel_id, true)
         .await?;
 
     let channel_ids: Vec<ChannelId> = res.items.iter().map(|c| c.id).collect();
@@ -435,50 +344,26 @@ async fn thread_list_removed(
 }
 
 /// Thread list atom/rss (TODO)
-///
-/// Get an atom or rss feed of threads for this channel
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/thread.atom",
-    params(
-        ("channel_id", description = "Channel id"),
-        PaginationQuery<ChannelId>
-    ),
-    tags = ["thread"],
-)]
+#[handler(routes::thread_list_atom)]
 async fn thread_list_atom(
-    Path(_channel_id): Path<ChannelId>,
-    Query(_pagination): Query<PaginationQuery<ChannelId>>,
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
+    _req: routes::thread_list_atom::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
 
 /// Thread create
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/thread",
-    params(("channel_id", description = "Parent channel id")),
-    tags = [
-        "thread",
-        "badge.perm-opt.ThreadCreatePublic",
-        "badge.perm-opt.ThreadCreatePrivate",
-    ],
-    responses(
-        (status = CREATED, body = Channel, description = "Create thread success"),
-    )
-)]
+#[handler(routes::thread_create)]
 async fn thread_create(
-    Path(parent_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(mut json): Json<ChannelCreate>,
+    req: routes::thread_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
     if !matches!(
-        json.ty,
+        req.thread.ty,
         ChannelType::ThreadPublic
             | ChannelType::ThreadPrivate
             | ChannelType::ThreadForum2
@@ -490,15 +375,16 @@ async fn thread_create(
     let parent_channel = s
         .services()
         .channels
-        .get(parent_id, Some(auth.user.id))
+        .get(req.channel_id, Some(auth.user.id))
         .await?;
     let room_id = parent_channel.room_id;
 
+    let mut json = req.thread;
     if json.auto_archive_duration.is_none() {
         json.auto_archive_duration = parent_channel.default_auto_archive_duration;
     }
 
-    json.parent_id = Some(parent_id);
+    json.parent_id = Some(req.channel_id);
     json.validate()?;
 
     let channel = s
@@ -507,85 +393,52 @@ async fn thread_create(
         .create_channel(&auth, room_id, json, None)
         .await?;
 
-    Ok((StatusCode::CREATED, Json(channel)))
+    Ok(Json(channel))
 }
 
 /// Thread create from message
-///
-/// Starts a new thread from a message. Requires the channel the message was
-/// sent in to be threadable, ie. Text, Dm, Gdm. Forums will not work as threads
-/// can't be created inside of other threads.
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/message/{message_id}/thread",
-    tags = [
-        "thread",
-        "badge.perm.ThreadCreatePublic",
-    ],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Parent channel id"),
-        ("message_id" = MessageId, Path, description = "Source message id")
-    ),
-    request_body = ChannelCreate,
-    responses(
-        (status = CREATED, body = Channel, description = "Create thread success"),
-        (status = CONFLICT, description = "A thread for this message already exists"),
-    )
-)]
+#[handler(routes::thread_create_from_message)]
 async fn thread_create_from_message(
-    Path((parent_channel_id, source_message_id)): Path<(ChannelId, MessageId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ChannelCreate>,
+    req: routes::thread_create_from_message::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
     let channel = s
         .services()
         .channels
-        .create_thread_from_message(&auth, parent_channel_id, source_message_id, json)
+        .create_thread_from_message(&auth, req.channel_id, req.message_id, req.thread)
         .await?;
 
-    Ok((StatusCode::CREATED, Json(channel)))
+    Ok(Json(channel))
 }
 
 /// Thread list room
-///
-/// List all active threads in a room
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/thread",
-    params(("room_id", description = "Room id")),
-    tags = ["thread"],
-    responses((status = OK, body = ThreadListRoom, description = "List room threads success")),
-)]
+#[handler(routes::thread_list_room)]
 async fn thread_list_room(
-    Path(room_id): Path<RoomId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_list_room::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let user_id = auth.user.id;
 
-    // just check if the user is a room member
-    let _perms = srv.perms.for_room(user_id, room_id).await?;
+    let _perms = srv.perms.for_room(user_id, req.room_id).await?;
+    let snapshot = srv.cache.load_room(req.room_id, false).await?;
 
-    // load room from cache
-    let snapshot = srv.cache.load_room(room_id, false).await?;
-
-    // collect thread ids and thread members from cache
     let mut filtered_thread_ids = vec![];
 
     for thread in snapshot.get_data().unwrap().threads.values() {
         let thread_channel = &thread.thread;
         let thread_id = thread_channel.id;
 
-        // check permissions
         let perms = srv.perms.for_channel(user_id, thread_id).await?;
         let can_view = if thread_channel.ty == ChannelType::ThreadPublic {
-            perms.has(Permission::ChannelView)
+            perms.has(common::v1::types::Permission::ChannelView)
         } else {
-            perms.has(Permission::ThreadManage) || thread.members.contains_key(&user_id)
+            perms.has(common::v1::types::Permission::ThreadManage)
+                || thread.members.contains_key(&user_id)
         };
 
         if can_view {
@@ -602,104 +455,64 @@ async fn thread_list_room(
 }
 
 /// Thread activity
-///
-/// List activity in this thread
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/activity",
-    params(
-        ("channel_id", description = "Channel id"),
-        PaginationQuery<MessageId>
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = PaginationResponse<Message>, description = "List activity success"),
-    )
-)]
+#[handler(routes::thread_activity)]
 async fn thread_activity(
-    Path((channel_id,)): Path<(ChannelId,)>,
-    Query(q): Query<PaginationQuery<MessageId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::thread_activity::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
 
     let res = srv
         .messages
-        .list_activity(channel_id, auth.user.id, q)
+        .list_activity(req.channel_id, auth.user.id, req.pagination)
         .await?;
 
     Ok(Json(res))
 }
 
 /// Channel member search
-///
-/// If this is a thread, search thread members. Otherwise, search all room members who can view this thread.
-///
-/// For mention autocomplete
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}/member/search",
-    params(
-        ChannelMemberSearch,
-        ("channel_id" = ChannelId, description = "Channel id"),
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = ChannelMemberSearchResponse, description = "success"),
-    )
-)]
+#[handler(routes::channel_member_search)]
 async fn channel_member_search(
-    Path(channel_id): Path<ChannelId>,
-    Query(search): Query<ChannelMemberSearch>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_member_search::Request,
 ) -> Result<impl IntoResponse> {
     let _d = s.data();
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(common::v1::types::Permission::ChannelView)?;
 
-    let chan = srv.channels.get(channel_id, None).await?;
+    let chan = srv.channels.get(req.channel_id, None).await?;
 
-    // extra permission check to prevent returning the entire list of registered users
     if chan.room_id == Some(SERVER_ROOM_ID) {
-        perms.ensure(Permission::ServerOversee)?;
+        perms.ensure(common::v1::types::Permission::ServerOversee)?;
     }
 
-    let _limit = search.limit.unwrap_or(10).min(100);
-    // let room_members = d.room_member_search(room_id, search.query, limit).await?;
-    // let user_ids: Vec<UserId> = room_members.iter().map(|m| m.user_id).collect();
-    // let users = srv.users.get_many(&user_ids).await?;
-
-    // Ok(Json(ChannelMemberSearchResponse {
-    //     room_members,
-    //     thread_members,
-    //     users,
-    // }))
+    let _limit = req.search.limit.unwrap_or(10).min(100);
 
     Ok(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(thread_create))
-        .routes(routes!(thread_create_from_message))
-        .routes(routes!(thread_member_list))
-        .routes(routes!(thread_member_get))
-        .routes(routes!(thread_member_add))
-        .routes(routes!(thread_member_delete))
-        .routes(routes!(thread_list))
-        .routes(routes!(thread_list_archived))
-        .routes(routes!(thread_list_removed))
-        .routes(routes!(thread_list_atom))
-        .routes(routes!(thread_list_room))
-        .routes(routes!(thread_activity))
-        .routes(routes!(channel_member_search))
+        .routes(routes2!(thread_create))
+        .routes(routes2!(thread_create_from_message))
+        .routes(routes2!(thread_member_list))
+        .routes(routes2!(thread_member_get))
+        .routes(routes2!(thread_member_add))
+        .routes(routes2!(thread_member_delete))
+        .routes(routes2!(thread_list))
+        .routes(routes2!(thread_list_archived))
+        .routes(routes2!(thread_list_removed))
+        .routes(routes2!(thread_list_atom))
+        .routes(routes2!(thread_list_room))
+        .routes(routes2!(thread_activity))
+        .routes(routes2!(channel_member_search))
 }

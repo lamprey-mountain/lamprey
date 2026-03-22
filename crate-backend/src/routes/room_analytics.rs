@@ -1,43 +1,29 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{Path, Query, State},
-    response::IntoResponse,
-    Json,
-};
+use axum::extract::State;
+use axum::response::IntoResponse;
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::{
-    room_analytics::{
-        RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
-        RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
-        RoomAnalyticsOverview, RoomAnalyticsParams,
-    },
-    Permission, RoomId,
+use common::v1::types::room_analytics::{
+    RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
+    RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
+    RoomAnalyticsOverview, RoomAnalyticsParams,
 };
-use utoipa_axum::{router::OpenApiRouter, routes};
+use common::v1::types::{Permission, RoomId};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 
-use crate::{
-    error::{Error, Result},
-    ServerState,
-};
-
-use super::util::Auth;
+use crate::error::{Error, Result};
+use crate::routes::util::Auth;
+use crate::{routes2, ServerState};
 
 /// Room analytics members count
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/analytics/members-count",
-    tags = ["room_analytics", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersCount>)),
-)]
+#[handler(routes::room_analytics_members_count)]
 async fn room_analytics_members_count(
     auth: Auth,
-    Path(room_id): Path<RoomId>,
-    Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
+    req: routes::room_analytics_members_count::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
@@ -45,127 +31,111 @@ async fn room_analytics_members_count(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::AnalyticsView)?;
 
-    let datapoints = data.room_analytics_members_count(room_id, q).await?;
+    let datapoints = data
+        .room_analytics_members_count(req.room_id, req.params)
+        .await?;
     Ok(Json(datapoints))
 }
 
 /// Room analytics members joined
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/analytics/members-join",
-    tags = ["room_analytics", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersJoin>)),
-)]
+#[handler(routes::room_analytics_members_join)]
 async fn room_analytics_members_join(
     auth: Auth,
-    Path(room_id): Path<RoomId>,
-    Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
+    req: routes::room_analytics_members_join::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, req.room_id)
+        .await?;
     perms.ensure(Permission::AnalyticsView)?;
-    let res = s.data().room_analytics_members_join(room_id, q).await?;
+    let res = s
+        .data()
+        .room_analytics_members_join(req.room_id, req.params)
+        .await?;
     Ok(Json(res))
 }
 
 /// Room analytics members left
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/analytics/members-leave",
-    tags = ["room_analytics", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    responses((status = 200, description = "success", body = Vec<RoomAnalyticsMembersLeave>)),
-)]
+#[handler(routes::room_analytics_members_leave)]
 async fn room_analytics_members_leave(
     auth: Auth,
-    Path(room_id): Path<RoomId>,
-    Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
+    req: routes::room_analytics_members_leave::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, req.room_id)
+        .await?;
     perms.ensure(Permission::AnalyticsView)?;
-    let res = s.data().room_analytics_members_leave(room_id, q).await?;
+    let res = s
+        .data()
+        .room_analytics_members_leave(req.room_id, req.params)
+        .await?;
     Ok(Json(res))
 }
 
 /// Room analytics channels
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/analytics/channels",
-    tags = ["room_analytics", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    responses((status = 200, description = "success", body = Vec<RoomAnalyticsChannel>)),
-)]
+#[handler(routes::room_analytics_channels)]
 async fn room_analytics_channels(
     auth: Auth,
-    Path(room_id): Path<RoomId>,
-    Query(q): Query<RoomAnalyticsParams>,
-    Query(q2): Query<RoomAnalyticsChannelParams>,
     State(s): State<Arc<ServerState>>,
+    req: routes::room_analytics_channels::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, req.room_id)
+        .await?;
     perms.ensure(Permission::AnalyticsView)?;
-    let res = s.data().room_analytics_channels(room_id, q, q2).await?;
+    let res = s
+        .data()
+        .room_analytics_channels(req.room_id, req.params, req.channel_params)
+        .await?;
     Ok(Json(res))
 }
 
 /// Room analytics overview
 ///
 /// aggregate all stats from all channels
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/analytics/overview",
-    tags = ["room_analytics", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    responses((status = 200, description = "success", body = Vec<RoomAnalyticsOverview>)),
-)]
+#[handler(routes::room_analytics_overview)]
 async fn room_analytics_overview(
     auth: Auth,
-    Path(room_id): Path<RoomId>,
-    Query(q): Query<RoomAnalyticsParams>,
     State(s): State<Arc<ServerState>>,
+    req: routes::room_analytics_overview::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_room(auth.user.id, req.room_id)
+        .await?;
     perms.ensure(Permission::AnalyticsView)?;
-    let res = s.data().room_analytics_overview(room_id, q).await?;
+    let res = s
+        .data()
+        .room_analytics_overview(req.room_id, req.params)
+        .await?;
     Ok(Json(res))
 }
 
 /// Room analytics invites (TODO)
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/analytics/invites",
-    tags = ["room_analytics", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    responses((status = 200, description = "success", body = Vec<RoomAnalyticsInvites>)),
-)]
+#[handler(routes::room_analytics_invites)]
 async fn room_analytics_invites(
     auth: Auth,
-    Path(_room_id): Path<RoomId>,
-    Query(_q): Query<RoomAnalyticsParams>,
     State(_s): State<Arc<ServerState>>,
+    _req: routes::room_analytics_invites::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
@@ -175,10 +145,10 @@ async fn room_analytics_invites(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(room_analytics_members_count))
-        .routes(routes!(room_analytics_members_join))
-        .routes(routes!(room_analytics_members_leave))
-        .routes(routes!(room_analytics_channels))
-        .routes(routes!(room_analytics_overview))
-        .routes(routes!(room_analytics_invites))
+        .routes(routes2!(room_analytics_members_count))
+        .routes(routes2!(room_analytics_members_join))
+        .routes(routes2!(room_analytics_members_leave))
+        .routes(routes2!(room_analytics_channels))
+        .routes(routes2!(room_analytics_overview))
+        .routes(routes2!(room_analytics_invites))
 }

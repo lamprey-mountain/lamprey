@@ -279,3 +279,93 @@ pub mod voice_sfu_command {
 
     pub struct Response {}
 }
+
+/// Voice state disconnect
+#[endpoint(
+    delete,
+    path = "/voice/{channel_id}/member/{user_id}",
+    tags = ["voice"],
+    scopes = [Full],
+    permissions_optional = [VoiceMove],
+    response(NO_CONTENT, description = "ok"),
+)]
+pub mod voice_state_disconnect {
+    use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub user_id: UserIdReq,
+    }
+
+    pub struct Response {}
+}
+
+/// Voice state disconnect all
+#[endpoint(
+    delete,
+    path = "/voice/{channel_id}/member",
+    tags = ["voice"],
+    scopes = [Full],
+    permissions_optional = [VoiceMove],
+    response(NO_CONTENT, description = "ok"),
+)]
+pub mod voice_state_disconnect_all {
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {}
+}
+
+/// Voice state list
+#[endpoint(
+    get,
+    path = "/voice/{channel_id}/member",
+    tags = ["voice"],
+    scopes = [Full],
+    response(OK, body = PaginationResponse<VoiceState>, description = "ok"),
+)]
+pub mod voice_state_list {
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::{ChannelId, PaginationResponse};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub states: PaginationResponse<VoiceState>,
+    }
+}
+
+/// Voice call get
+#[endpoint(
+    get,
+    path = "/voice/{channel_id}",
+    tags = ["voice"],
+    scopes = [Full],
+    response(OK, body = Call, description = "ok"),
+)]
+pub mod voice_call_get {
+    use crate::v1::types::voice::Call;
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub call: Call,
+    }
+}

@@ -1,155 +1,119 @@
 use std::sync::Arc;
 
-use axum::extract::Path;
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::preferences::{
     PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser,
 };
 use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
+use lamprey_macros::handler;
 use tower_http::limit::RequestBodyLimitLayer;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 
-use super::util::Auth;
 use crate::error::Result;
-use crate::ServerState;
+use crate::routes::util::Auth;
+use crate::{routes2, ServerState};
 
 /// Preferences global put
-#[utoipa::path(
-    put,
-    path = "/preferences",
-    tags = ["preferences", "badge.scope.full"],
-    request_body = PreferencesGlobal,
-    responses((status = OK, body = PreferencesGlobal, description = "success"))
-)]
+#[handler(routes::preferences_global_put)]
 async fn preferences_global_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<PreferencesGlobal>,
+    req: routes::preferences_global_put::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    s.data().preferences_set(auth.user.id, &json).await?;
+    s.data()
+        .preferences_set(auth.user.id, &req.preferences)
+        .await?;
     s.services()
         .cache
         .preferences_invalidate(auth.user.id)
         .await;
     s.broadcast(MessageSync::PreferencesGlobal {
         user_id: auth.user.id,
-        config: json.clone(),
+        config: req.preferences.clone(),
     })?;
-    Ok(Json(json))
+    Ok(Json(req.preferences))
 }
 
 /// Preferences room put
-#[utoipa::path(
-    put,
-    path = "/preferences/room/{room_id}",
-    tags = ["preferences", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    request_body = PreferencesRoom,
-    responses((status = OK, body = PreferencesRoom, description = "success"))
-)]
+#[handler(routes::preferences_room_put)]
 async fn preferences_room_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(room_id): Path<RoomId>,
-    Json(json): Json<PreferencesRoom>,
+    req: routes::preferences_room_put::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     s.data()
-        .preferences_room_set(auth.user.id, room_id, &json)
+        .preferences_room_set(auth.user.id, req.room_id, &req.preferences)
         .await?;
     s.services()
         .cache
-        .preferences_room_invalidate(auth.user.id, room_id)
+        .preferences_room_invalidate(auth.user.id, req.room_id)
         .await;
     s.broadcast(MessageSync::PreferencesRoom {
         user_id: auth.user.id,
-        room_id,
-        config: json.clone(),
+        room_id: req.room_id,
+        config: req.preferences.clone(),
     })?;
-    Ok(Json(json))
+    Ok(Json(req.preferences))
 }
 
 /// Preferences channel put
-#[utoipa::path(
-    put,
-    path = "/preferences/channel/{channel_id}",
-    tags = ["preferences", "badge.scope.full"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Channel id"),
-    ),
-    request_body = PreferencesChannel,
-    responses((status = OK, body = PreferencesChannel, description = "success"))
-)]
+#[handler(routes::preferences_channel_put)]
 async fn preferences_channel_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(channel_id): Path<ChannelId>,
-    Json(json): Json<PreferencesChannel>,
+    req: routes::preferences_channel_put::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     s.data()
-        .preferences_channel_set(auth.user.id, channel_id, &json)
+        .preferences_channel_set(auth.user.id, req.channel_id, &req.preferences)
         .await?;
     s.services()
         .cache
-        .preferences_channel_invalidate(auth.user.id, channel_id)
+        .preferences_channel_invalidate(auth.user.id, req.channel_id)
         .await;
     s.broadcast(MessageSync::PreferencesChannel {
         user_id: auth.user.id,
-        channel_id,
-        config: json.clone(),
+        channel_id: req.channel_id,
+        config: req.preferences.clone(),
     })?;
-    Ok(Json(json))
+    Ok(Json(req.preferences))
 }
 
 /// Preferences user put
-#[utoipa::path(
-    put,
-    path = "/preferences/user/{user_id}",
-    tags = ["preferences", "badge.scope.full"],
-    params(
-        ("user_id" = UserId, Path, description = "User id"),
-    ),
-    request_body = PreferencesUser,
-    responses((status = OK, body = PreferencesUser, description = "success"))
-)]
+#[handler(routes::preferences_user_put)]
 async fn preferences_user_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(user_id): Path<UserId>,
-    Json(json): Json<PreferencesUser>,
+    req: routes::preferences_user_put::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     s.data()
-        .preferences_user_set(auth.user.id, user_id, &json)
+        .preferences_user_set(auth.user.id, req.user_id, &req.preferences)
         .await?;
     s.services()
         .cache
-        .preferences_user_invalidate(auth.user.id, user_id)
+        .preferences_user_invalidate(auth.user.id, req.user_id)
         .await;
     s.broadcast(MessageSync::PreferencesUser {
         user_id: auth.user.id,
-        target_user_id: user_id,
-        config: json.clone(),
+        target_user_id: req.user_id,
+        config: req.preferences.clone(),
     })?;
-    Ok(Json(json))
+    Ok(Json(req.preferences))
 }
 
 /// Preferences global get
-#[utoipa::path(
-    get,
-    path = "/preferences",
-    tags = ["preferences", "badge.scope.full"],
-    responses((status = OK, body = PreferencesGlobal, description = "success"))
-)]
+#[handler(routes::preferences_global_get)]
 async fn preferences_global_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    _req: routes::preferences_global_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let config = s.services().cache.preferences_get(auth.user.id).await?;
@@ -157,87 +121,69 @@ async fn preferences_global_get(
 }
 
 /// Preferences room get
-#[utoipa::path(
-    get,
-    path = "/preferences/room/{room_id}",
-    params(("room_id", description = "Room id")),
-    tags = ["preferences", "badge.scope.full"],
-    responses((status = OK, body = PreferencesRoom, description = "success"))
-)]
+#[handler(routes::preferences_room_get)]
 async fn preferences_room_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(room_id): Path<RoomId>,
+    req: routes::preferences_room_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let config = s
         .services()
         .cache
-        .preferences_room_get(auth.user.id, room_id)
+        .preferences_room_get(auth.user.id, req.room_id)
         .await?;
     Ok(Json(config))
 }
 
 /// Preferences channel get
-#[utoipa::path(
-    get,
-    path = "/preferences/channel/{channel_id}",
-    params(("channel_id", description = "Channel id")),
-    tags = ["preferences", "badge.scope.full"],
-    responses((status = OK, body = PreferencesChannel, description = "success"))
-)]
+#[handler(routes::preferences_channel_get)]
 async fn preferences_channel_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(channel_id): Path<ChannelId>,
+    req: routes::preferences_channel_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let config = s
         .services()
         .cache
-        .preferences_channel_get(auth.user.id, channel_id)
+        .preferences_channel_get(auth.user.id, req.channel_id)
         .await?;
     Ok(Json(config))
 }
 
 /// Preferences user get
-#[utoipa::path(
-    get,
-    path = "/preferences/user/{user_id}",
-    params(("user_id", description = "User id")),
-    tags = ["preferences", "badge.scope.full"],
-    responses((status = OK, body = PreferencesUser, description = "success"))
-)]
+#[handler(routes::preferences_user_get)]
 async fn preferences_user_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(user_id): Path<UserId>,
+    req: routes::preferences_user_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let config = s
         .services()
         .cache
-        .preferences_user_get(auth.user.id, user_id)
+        .preferences_user_get(auth.user.id, req.user_id)
         .await?;
     Ok(Json(config))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     let global_config_put_routes = OpenApiRouter::new()
-        .routes(routes!(preferences_global_put))
+        .routes(routes2!(preferences_global_put))
         .layer(RequestBodyLimitLayer::new(65536)); // 64KiB
 
     let other_config_put_routes = OpenApiRouter::new()
-        .routes(routes!(preferences_room_put))
-        .routes(routes!(preferences_channel_put))
-        .routes(routes!(preferences_user_put))
+        .routes(routes2!(preferences_room_put))
+        .routes(routes2!(preferences_channel_put))
+        .routes(routes2!(preferences_user_put))
         .layer(RequestBodyLimitLayer::new(16384)); // 16KiB
 
     OpenApiRouter::new()
         .merge(global_config_put_routes)
         .merge(other_config_put_routes)
-        .routes(routes!(preferences_global_get))
-        .routes(routes!(preferences_room_get))
-        .routes(routes!(preferences_channel_get))
-        .routes(routes!(preferences_user_get))
+        .routes(routes2!(preferences_global_get))
+        .routes(routes2!(preferences_room_get))
+        .routes(routes2!(preferences_channel_get))
+        .routes(routes2!(preferences_user_get))
 }

@@ -1,43 +1,33 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Permission,
-    RelationshipType, UserId,
+    RelationshipType,
 };
 use http::StatusCode;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 
-use crate::types::UserIdReq;
-use crate::ServerState;
-
-use super::util::Auth;
 use crate::error::{Error, Result};
+use crate::routes::util::Auth;
+use crate::types::UserIdReq;
+use crate::{routes2, ServerState};
 
 // TODO: merge with channel_create_dm
 /// Dm initialize
 ///
 /// Get or create a direct message thread.
-#[utoipa::path(
-    post,
-    path = "/user/@self/dm/{target_id}",
-    tags = ["dm", "badge.scope.full"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    responses(
-        (status = CREATED, description = "new dm created"),
-        (status = OK, description = "already exists"),
-    )
-)]
+#[handler(routes::dm_init)]
 async fn dm_init(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::dm_init::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
@@ -50,7 +40,7 @@ async fn dm_init(
         .ensure(Permission::DmCreate)?;
 
     // you can't dm webhooks
-    let target_user = data.user_get(target_user_id).await?;
+    let target_user = data.user_get(req.target_id).await?;
     if !target_user.can_dm() {
         return Err(ApiError::from_code(ErrorCode::CannotDmThisUser).into());
     }
@@ -58,18 +48,14 @@ async fn dm_init(
     let perms = srv.perms.for_server(auth.user.id).await?;
     perms.ensure(Permission::DmCreate)?;
 
-    // a dm can be started with the target user iff
-    // 1. dms are enabled globally, OR
-    // 2. dms enabled in any shared room
     let target_allows_dms = srv
         .perms
-        .allows_dm_from_user(auth.user.id, target_user_id)
+        .allows_dm_from_user(auth.user.id, req.target_id)
         .await?;
 
     if !target_allows_dms {
-        // friends can always DM
         let is_friend = data
-            .user_relationship_get(auth.user.id, target_user_id)
+            .user_relationship_get(auth.user.id, req.target_id)
             .await?
             .is_some_and(|r| r.relation == Some(RelationshipType::Friend));
 
@@ -80,7 +66,7 @@ async fn dm_init(
 
     let (thread, is_new) = srv
         .users
-        .init_dm(auth.user.id, target_user_id, false)
+        .init_dm(auth.user.id, req.target_id, false)
         .await?;
 
     s.broadcast(MessageSync::ChannelCreate {
@@ -97,25 +83,15 @@ async fn dm_init(
 /// Dm get
 ///
 /// Get a direct message room.
-#[utoipa::path(
-    get,
-    path = "/user/@self/dm/{target_id}",
-    tags = ["dm", "badge.scope.full"],
-    params(
-        ("target_id" = UserId, Path, description = "Target user's id"),
-    ),
-    responses(
-        (status = OK, description = "success"),
-    )
-)]
+#[handler(routes::dm_get)]
 async fn dm_get(
-    Path(target_user_id): Path<UserId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::dm_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
-    let Some(thread_id) = data.dm_get(auth.user.id, target_user_id).await? else {
+    let Some(thread_id) = data.dm_get(auth.user.id, req.target_id).await? else {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownDm)));
     };
     let srv = s.services();
@@ -129,26 +105,14 @@ async fn dm_get(
 ///
 /// List direct message channels. Ordered by the last message version id, so
 /// recently active dms come first.
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/dm",
-    tags = ["dm", "badge.scope.full"],
-    params(
-        PaginationQuery<MessageVerId>,
-        ("user_id" = UserIdReq, Path, description = "user id"),
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "success"),
-    )
-)]
+#[handler(routes::dm_list)]
 async fn dm_list(
-    Path(target_user_id): Path<UserIdReq>,
     auth: Auth,
-    Query(q): Query<PaginationQuery<MessageVerId>>,
     State(s): State<Arc<ServerState>>,
+    req: routes::dm_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match target_user_id {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(id) => id,
     };
@@ -158,7 +122,7 @@ async fn dm_list(
     }
 
     let data = s.data();
-    let mut res = data.dm_list(auth.user.id, q).await?;
+    let mut res = data.dm_list(auth.user.id, req.pagination).await?;
 
     let srv = s.services();
     let mut threads = vec![];
@@ -172,7 +136,7 @@ async fn dm_list(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(dm_init))
-        .routes(routes!(dm_get))
-        .routes(routes!(dm_list))
+        .routes(routes2!(dm_init))
+        .routes(routes2!(dm_get))
+        .routes(routes2!(dm_list))
 }

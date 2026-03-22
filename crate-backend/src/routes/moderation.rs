@@ -1,29 +1,26 @@
 use common::v1::types::RoomId;
 use std::sync::Arc;
 
+use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
+use common::v1::routes;
 use common::v1::types::moderation::{Report, ReportCreate};
-use utoipa_axum::{router::OpenApiRouter, routes};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 
-use super::util::Auth;
 use crate::error::{Error, Result};
-use crate::ServerState;
+use crate::routes::util::Auth;
+use crate::{routes2, ServerState};
 
 /// Report create server (TODO)
 ///
 /// Create and send a report to the server operators
-#[utoipa::path(
-    post,
-    path = "/server/report",
-    tags = ["moderation", "badge.scope.full"],
-    request_body = ReportCreate,
-    responses((status = OK, body = Report, description = "success"))
-)]
+#[handler(routes::report_create_server)]
 async fn report_create_server(
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<ReportCreate>,
+    _req: routes::report_create_server::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -31,20 +28,11 @@ async fn report_create_server(
 /// Report create room (TODO)
 ///
 /// Create and send a report to the room admins/moderators
-#[utoipa::path(
-    post,
-    path = "/room/{room_id}/report",
-    tags = ["moderation", "badge.scope.full"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    request_body = ReportCreate,
-    responses((status = OK, body = Report, description = "success"))
-)]
+#[handler(routes::report_create_room)]
 async fn report_create_room(
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<ReportCreate>,
+    _req: routes::report_create_room::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -55,6 +43,6 @@ async fn report_create_room(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(report_create_server))
-        .routes(routes!(report_create_room))
+        .routes(routes2!(report_create_server))
+        .routes(routes2!(report_create_room))
 }

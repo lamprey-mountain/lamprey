@@ -193,18 +193,22 @@ pub mod room_member_search_advanced {
 /// Room ban create
 #[endpoint(
     post,
-    path = "/room/{room_id}/ban",
+    path = "/room/{room_id}/ban/{user_id}",
     tags = ["room_member"],
     scopes = [Full],
     permissions = [MemberBan],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_ban_create {
+    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::{RoomBanCreate, RoomId};
 
     pub struct Request {
         #[path]
         pub room_id: RoomId,
+
+        #[path]
+        pub user_id: UserIdReq,
 
         #[json]
         pub ban: RoomBanCreate,
@@ -249,14 +253,15 @@ pub mod room_ban_list {
     response(OK, body = RoomBan, description = "success"),
 )]
 pub mod room_ban_get {
-    use crate::v1::types::{RoomBan, RoomId, UserId};
+    use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{RoomBan, RoomId};
 
     pub struct Request {
         #[path]
         pub room_id: RoomId,
 
         #[path]
-        pub user_id: UserId,
+        pub user_id: UserIdReq,
     }
 
     pub struct Response {
@@ -275,14 +280,15 @@ pub mod room_ban_get {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_ban_delete {
-    use crate::v1::types::{RoomId, UserId};
+    use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::RoomId;
 
     pub struct Request {
         #[path]
         pub room_id: RoomId,
 
         #[path]
-        pub user_id: UserId,
+        pub user_id: UserIdReq,
     }
 
     pub struct Response {}
@@ -334,5 +340,34 @@ pub mod room_prune_begin {
     pub struct Response {
         #[json]
         pub prune: PruneResponse,
+    }
+}
+
+/// Room ban search
+#[endpoint(
+    get,
+    path = "/room/{room_id}/ban/search",
+    tags = ["room_member"],
+    scopes = [Full],
+    permissions = [MemberBan],
+    response(OK, body = PaginationResponse<RoomBan>, description = "success"),
+)]
+pub mod room_ban_search {
+    use crate::v1::types::{PaginationQuery, PaginationResponse, RoomBan, RoomId, UserId};
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+
+        #[query]
+        pub query: String,
+
+        #[query]
+        pub pagination: PaginationQuery<UserId>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub bans: PaginationResponse<RoomBan>,
     }
 }

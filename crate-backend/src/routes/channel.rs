@@ -1,68 +1,44 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::Json;
+use common::v1::routes;
+use common::v1::types::ack::{AckReq, AckRes};
+use common::v1::types::application::Scope;
+use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::util::Changes;
 use common::v1::types::{
-    ack::{AckReq, AckRes},
-    application::Scope,
-    error::{ApiError, ErrorCode},
-    util::Changes,
     AuditLogEntryType, ChannelReorder, ChannelType, RatelimitPut, RelationshipType, Room,
     RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
 };
-use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::{
-    types::{
-        Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelCreate, DbChannelType,
-        DbRoomCreate, MediaLinkType, MessageSync, Permission, RoomId,
-    },
-    Error, ServerState,
+use crate::routes::util::Auth;
+use crate::routes2;
+use crate::types::{
+    Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate,
+    MediaLinkType, MessageSync, Permission, RoomId,
 };
+use crate::{error::Result, Error, ServerState};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
-use super::util::{Auth, HeaderIdempotencyKey};
-use crate::error::Result;
-
-/// Room channel create
-///
-/// Create a channel in a room
-#[utoipa::path(
-    post,
-    path = "/room/{room_id}/channel",
-    tags = [
-        "channel",
-        "badge.scope.full",
-        "badge.perm-opt.ChannelManage",
-        "badge.perm-opt.ThreadCreatePublic",
-        "badge.perm-opt.ThreadCreatePrivate",
-    ],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    request_body = ChannelCreate,
-    responses(
-        (status = CREATED, body = Channel, description = "Create thread success"),
-    )
-)]
+/// Channel create room
+#[handler(routes::channel_create_room)]
 async fn channel_create_room(
-    Path((room_id,)): Path<(RoomId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
-    Json(mut json): Json<ChannelCreate>,
+    req: routes::channel_create_room::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
+    let mut json = req.channel;
     if json.ty.is_thread() {
         if let Some(parent_id) = json.parent_id {
             let parent_channel = s
@@ -80,43 +56,30 @@ async fn channel_create_room(
     let channel = s
         .services()
         .channels
-        .create_channel(&auth, Some(room_id), json, nonce)
+        .create_channel(&auth, Some(req.room_id), json, req.idempotency_key)
         .await?;
     Ok((StatusCode::CREATED, Json(channel)))
 }
 
-// TODO: rename to /api/v1/user/@self/channel
-// TODO: move to channels service
-// TODO: unhardcode bitrate
 /// Channel create dm
-///
-/// Create a dm or group dm thread (outside of a room)
-#[utoipa::path(
-    post,
-    path = "/channel",
-    tags = ["channel", "badge.scope.full"],
-    responses(
-        (status = CREATED, body = Channel, description = "Create thread success"),
-    )
-)]
+#[handler(routes::channel_create_dm)]
 async fn channel_create_dm(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderIdempotencyKey(_nonce): HeaderIdempotencyKey,
-    Json(mut json): Json<ChannelCreate>,
+    req: routes::channel_create_dm::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
+    req.channel.validate()?;
     let srv = s.services();
     let data = s.data();
     srv.perms
         .for_server(auth.user.id)
         .await?
         .ensure(Permission::DmCreate)?;
-    match json.ty {
+    match req.channel.ty {
         ChannelType::Dm => {
-            let Some(recipients) = &json.recipients else {
+            let Some(recipients) = &req.channel.recipients else {
                 return Err(ApiError::from_code(ErrorCode::DmThreadMissingRecipients).into());
             };
             if recipients.len() != 1 {
@@ -137,16 +100,14 @@ async fn channel_create_dm(
             }
         }
         ChannelType::Gdm => {
-            let Some(recipients) = &mut json.recipients else {
-                return Err(ApiError::from_code(ErrorCode::GdmThreadMissingRecipients).into());
-            };
+            let recipients = req.channel.recipients.clone().unwrap_or_default();
+            let mut recipients = recipients;
             recipients.push(auth.user.id);
 
             if recipients.len() as u32 > crate::consts::MAX_GDM_MEMBERS {
                 return Err(ApiError::from_code(ErrorCode::GdmTooManyMembers).into());
             }
 
-            // creator must be friends to add recipients
             for recipient_id in recipients.iter().filter(|id| **id != auth.user.id) {
                 let relationship = data
                     .user_relationship_get(auth.user.id, *recipient_id)
@@ -163,6 +124,7 @@ async fn channel_create_dm(
         _ => return Err(ApiError::from_code(ErrorCode::DmGdmOnlyOutsideRoom).into()),
     };
 
+    let mut json = req.channel;
     if json.bitrate.is_some_and(|b| b > 393216) {
         return Err(ApiError::from_code(ErrorCode::BitrateTooHigh).into());
     }
@@ -239,64 +201,39 @@ async fn channel_create_dm(
 }
 
 /// Channel get
-#[utoipa::path(
-    get,
-    path = "/channel/{channel_id}",
-    params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.scope.full"],
-    responses(
-        (status = OK, body = Channel, description = "Get thread success"),
-    )
-)]
+#[handler(routes::channel_get)]
 async fn channel_get(
-    Path((channel_id,)): Path<(ChannelId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let perms = s
         .services()
         .perms
-        .for_channel(auth.user.id, channel_id)
+        .for_channel(auth.user.id, req.channel_id)
         .await?;
     perms.ensure(Permission::ChannelView)?;
     let channel = s
         .services()
         .channels
-        .get(channel_id, Some(auth.user.id))
+        .get(req.channel_id, Some(auth.user.id))
         .await?;
-    Ok((StatusCode::OK, Json(channel)))
-}
-
-#[derive(Deserialize, ToSchema, IntoParams)]
-struct ChannelListQuery {
-    parent_id: Option<ChannelId>,
+    Ok(Json(channel))
 }
 
 /// Room channel list
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/channel",
-    params(
-        ("room_id", description = "Room id"),
-        PaginationQuery<channelId>
-    ),
-    tags = ["channel", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List room channels success"),
-    )
-)]
+#[handler(routes::channel_list)]
 async fn channel_list(
-    Path((room_id,)): Path<(RoomId,)>,
-    Query(_pagination): Query<PaginationQuery<ChannelId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
-    let channels = data.channel_list(room_id).await?;
+    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    let channels = data.channel_list(req.room_id).await?;
     let ids: Vec<_> = channels.iter().map(|t| t.id).collect();
     let channels = srv.channels.get_many(&ids, Some(auth.user.id)).await?;
     let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
@@ -314,35 +251,19 @@ async fn channel_list(
 }
 
 /// Room channel list removed
-///
-/// List removed threads in a room. Requires the `ChannelManage` permission.
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/channel/removed",
-    params(
-        ("room_id", description = "Room id"),
-        ChannelListQuery,
-        PaginationQuery<channelId>
-    ),
-    tags = ["channel", "badge.scope.full"],
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List removed room threads success"),
-    )
-)]
+#[handler(routes::channel_list_removed)]
 async fn channel_list_removed(
-    Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<ChannelListQuery>,
-    Query(pagination): Query<PaginationQuery<ChannelId>>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_list_removed::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::ChannelManage)?;
     let mut res = data
-        .channel_list_removed(room_id, pagination, q.parent_id)
+        .channel_list_removed(req.room_id, req.pagination, req.parent_id)
         .await?;
 
     let mut items = Vec::new();
@@ -374,37 +295,23 @@ async fn channel_list_removed(
 }
 
 /// Room channel reorder
-///
-/// Reorder the channels in a room. Requires the `ChannelManage` permission.
-#[utoipa::path(
-    patch,
-    path = "/room/{room_id}/channel",
-    tags = ["channel", "badge.scope.full", "badge.perm.ChannelManage", "badge.audit-log.ChannelReorder"],
-    params(
-        ("room_id" = RoomId, Path, description = "Room id"),
-    ),
-    request_body = ChannelReorder,
-    responses(
-        (status = OK, body = (), description = "Reorder channels success"),
-    )
-)]
+#[handler(routes::channel_reorder)]
 async fn channel_reorder(
-    Path((room_id,)): Path<(RoomId,)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ChannelReorder>,
+    req: routes::channel_reorder::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, room_id).await?;
+    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
 
-    let al = auth.audit_log(room_id);
+    let al = auth.audit_log(req.room_id);
 
     let mut channels_old = HashMap::new();
 
-    for channel in &json.channels {
+    for channel in &req.reorder.channels {
         let channel_data = srv.channels.get(channel.id, None).await?;
         channels_old.insert(channel_data.id, channel_data.clone());
 
@@ -424,10 +331,10 @@ async fn channel_reorder(
         }
     }
 
-    data.channel_reorder(json.clone()).await?;
-    data.room_template_mark_dirty(room_id).await?;
+    data.channel_reorder(req.reorder.clone()).await?;
+    data.room_template_mark_dirty(req.room_id).await?;
 
-    for chan in &json.channels {
+    for chan in &req.reorder.channels {
         srv.channels.invalidate(chan.id).await;
         let chan_old = channels_old.get(&chan.id);
         let chan = srv.channels.get(chan.id, None).await?;
@@ -437,7 +344,7 @@ async fn channel_reorder(
             }
         }
         s.broadcast_room(
-            room_id,
+            req.room_id,
             auth.user.id,
             MessageSync::ChannelUpdate {
                 channel: Box::new(chan),
@@ -447,56 +354,46 @@ async fn channel_reorder(
     }
 
     al.commit_success(AuditLogEntryType::ChannelReorder {
-        channels: json.channels,
+        channels: req.reorder.channels,
     })
     .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Channel edit
-#[utoipa::path(
-    patch,
-    path = "/channel/{channel_id}",
-    tags = ["channel", "badge.scope.full", "badge.perm-opt.ChannelEdit", "badge.perm-opt.ThreadEdit", "badge.audit-log.ChannelUpdate"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "channel id"),
-    ),
-    request_body = ChannelPatch,
-    responses(
-        (status = OK, body = Channel, description = "edit message success"),
-        (status = NOT_MODIFIED, body = Channel, description = "no change"),
-    )
-)]
+/// Channel update
+#[handler(routes::channel_update)]
 async fn channel_update(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ChannelPatch>,
+    req: routes::channel_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
-    if json.owner_id.is_some() {
+    req.patch.validate()?;
+    if req.patch.owner_id.is_some() {
         return Err(ApiError::from_code(ErrorCode::OwnerIdCannotBeChanged).into());
     }
 
     let srv = s.services();
-    let chan_pre = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let chan_pre = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = chan_pre.room_id {
         let room_perms = srv.perms.for_room(auth.user.id, room_id).await?;
         room_perms.ensure_view()?;
     }
 
-    let chan = srv.channels.update(&auth, channel_id, json.clone()).await?;
+    let chan = srv
+        .channels
+        .update(&auth, req.channel_id, req.patch.clone())
+        .await?;
 
-    if let Some(icon) = json.icon {
+    if let Some(icon) = req.patch.icon {
         s.data()
-            .media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
+            .media_link_delete(*req.channel_id, MediaLinkType::ChannelIcon)
             .await?;
         if let Some(icon) = icon {
             s.data()
-                .media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
+                .media_link_create_exclusive(icon, *req.channel_id, MediaLinkType::ChannelIcon)
                 .await?;
         }
     }
@@ -505,50 +402,38 @@ async fn channel_update(
 }
 
 /// Channel ack
-///
-/// Mark a channel as read (or unread).
-#[utoipa::path(
-    put,
-    path = "/channel/{channel_id}/ack",
-    tags = ["channel", "badge.scope.full"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "channel id"),
-    ),
-    request_body = AckReq,
-    responses(
-        (status = OK, description = "success"),
-    )
-)]
+#[handler(routes::channel_ack)]
 async fn channel_ack(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<AckReq>,
+    req: routes::channel_ack::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
-    let version_id = json.version_id;
-    let message_id = if let Some(message_id) = json.message_id {
+    let version_id = req.ack.version_id;
+    let message_id = if let Some(message_id) = req.ack.message_id {
         message_id
     } else {
-        data.message_id_get_by_version(channel_id, version_id)
+        data.message_id_get_by_version(req.channel_id, version_id)
             .await?
     };
     data.unread_ack(
         auth.user.id,
-        channel_id,
+        req.channel_id,
         message_id,
         version_id,
-        Some(json.mention_count),
+        Some(req.ack.mention_count),
     )
     .await?;
-    srv.channels.invalidate_user(channel_id, auth.user.id).await;
+    srv.channels
+        .invalidate_user(req.channel_id, auth.user.id)
+        .await;
     s.broadcast(MessageSync::ChannelAck {
         user_id: auth.user.id,
-        channel_id,
+        channel_id: req.channel_id,
         message_id,
         version_id,
     })?;
@@ -559,25 +444,19 @@ async fn channel_ack(
 }
 
 /// Channel remove
-#[utoipa::path(
-    put,
-    path = "/channel/{channel_id}/remove",
-    params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.scope.full", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
+#[handler(routes::channel_remove)]
 async fn channel_remove(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
 
-    let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     if chan_before.is_thread() {
         perms.ensure(Permission::ThreadManage)?;
     } else {
@@ -598,18 +477,18 @@ async fn channel_remove(
             }
         }
 
-        let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
         if chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
-        data.channel_delete(channel_id).await?;
+        data.channel_delete(req.channel_id).await?;
         data.room_template_mark_dirty(room_id).await?;
-        srv.channels.invalidate(channel_id).await;
-        srv.voice.disconnect_everyone(channel_id).await?;
-        let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        srv.channels.invalidate(req.channel_id).await;
+        srv.voice.disconnect_everyone(req.channel_id).await?;
+        let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
         al.commit_success(AuditLogEntryType::ChannelUpdate {
-            channel_id,
+            channel_id: req.channel_id,
             channel_type: chan.ty,
             changes: Changes::new()
                 .change("deleted_at", &chan_before.deleted_at, &chan.deleted_at)
@@ -626,36 +505,30 @@ async fn channel_remove(
         )
         .await?;
     } else {
-        let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
         if chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
-        data.channel_delete(channel_id).await?;
-        srv.channels.invalidate(channel_id).await;
-        srv.voice.disconnect_everyone(channel_id).await?;
+        data.channel_delete(req.channel_id).await?;
+        srv.channels.invalidate(req.channel_id).await;
+        srv.voice.disconnect_everyone(req.channel_id).await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Channel restore
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/remove",
-    params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.scope.full", "badge.perm.ThreadDelete", "badge.room-sudo", "badge.room-mfa", "badge.audit-log.ChannelUpdate"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
+#[handler(routes::channel_restore)]
 async fn channel_restore(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_restore::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = channel.room_id {
         let al = auth.audit_log(room_id);
         let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -670,23 +543,23 @@ async fn channel_restore(
             }
         }
 
-        let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+        let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
         if channel.is_thread() {
             perms.ensure(Permission::ThreadManage)?;
         } else {
             perms.ensure(Permission::ChannelManage)?;
         }
-        let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
         if !chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
-        data.channel_undelete(channel_id).await?;
+        data.channel_undelete(req.channel_id).await?;
         data.room_template_mark_dirty(room_id).await?;
-        srv.channels.invalidate(channel_id).await;
-        let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        srv.channels.invalidate(req.channel_id).await;
+        let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
         al.commit_success(AuditLogEntryType::ChannelUpdate {
-            channel_id,
+            channel_id: req.channel_id,
             channel_type: chan.ty,
             changes: Changes::new()
                 .change("deleted_at", &chan_before.deleted_at, &chan.deleted_at)
@@ -703,62 +576,53 @@ async fn channel_restore(
         )
         .await?;
     } else {
-        let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+        let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
         if channel.is_thread() {
             perms.ensure(Permission::ThreadManage)?;
         } else {
             perms.ensure(Permission::ChannelManage)?;
         }
-        let chan_before = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
         if !chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
-        data.channel_undelete(channel_id).await?;
-        srv.channels.invalidate(channel_id).await;
+        data.channel_undelete(req.channel_id).await?;
+        srv.channels.invalidate(req.channel_id).await;
     }
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Channel trigger typing indicator
-///
-/// Send a typing notification to a thread
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/typing",
-    params(
-        ("channel_id", description = "channel id"),
-    ),
-    tags = ["channel", "badge.scope.full", "badge.perm.MessageCreate"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
+/// Channel typing
+#[handler(routes::channel_typing)]
 async fn channel_typing(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_typing::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     perms.ensure(Permission::MessageCreate)?;
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     perms.ensure_unlocked()?;
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     srv.channels
-        .typing_set(channel_id, auth.user.id, until)
+        .typing_set(req.channel_id, auth.user.id, until)
         .await;
+    let until_time: common::v1::types::util::Time = until
+        .try_into()
+        .expect("typing indicator time is always valid");
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::ChannelTyping {
-            channel_id,
+            channel_id: req.channel_id,
             user_id: auth.user.id,
-            until: until.into(),
+            until: until_time,
         },
     )
     .await?;
@@ -766,26 +630,18 @@ async fn channel_typing(
 }
 
 /// Channel upgrade
-///
-/// Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/upgrade",
-    params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.scope.full"],
-    responses((status = OK, body = Room, description = "success")),
-)]
+#[handler(routes::channel_upgrade)]
 async fn channel_upgrade(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::channel_upgrade::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
 
-    let chan = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
     if chan.ty != ChannelType::Gdm {
         return Err(ApiError::from_code(ErrorCode::OnlyGdmCanUpgrade).into());
@@ -796,7 +652,6 @@ async fn channel_upgrade(
     }
 
     if chan.room_id.is_some() {
-        // NOTE: should this be a panic? gdms can't be in rooms anyways?
         return Err(ApiError::from_code(ErrorCode::ThreadAlreadyInRoom).into());
     }
 
@@ -814,16 +669,14 @@ async fn channel_upgrade(
             DbRoomCreate {
                 id: None,
                 ty: RoomType::Default,
-                welcome_channel_id: Some(channel_id),
+                welcome_channel_id: Some(req.channel_id),
             },
             None,
         )
         .await?;
 
-    // TODO: run in a transaction
-    // TODO: move to room create? i need to delete the thread icon before linking the room avatar
     if let Some(icon) = chan.icon {
-        data.media_link_delete(*channel_id, MediaLinkType::ChannelIcon)
+        data.media_link_delete(*req.channel_id, MediaLinkType::ChannelIcon)
             .await?;
         data.media_link_create_exclusive(icon, *room.id, MediaLinkType::RoomIcon)
             .await?;
@@ -834,7 +687,7 @@ async fn channel_upgrade(
     loop {
         let page = data
             .thread_member_list(
-                channel_id,
+                req.channel_id,
                 PaginationQuery {
                     limit: Some(100),
                     from: after.map(|i| i.into()),
@@ -857,7 +710,7 @@ async fn channel_upgrade(
         }
     }
 
-    data.channel_upgrade_gdm(channel_id, room.id).await?;
+    data.channel_upgrade_gdm(req.channel_id, room.id).await?;
 
     for member in &members {
         data.room_member_put(
@@ -869,8 +722,8 @@ async fn channel_upgrade(
         .await?;
     }
 
-    srv.channels.invalidate(channel_id).await;
-    let upgraded_thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    srv.channels.invalidate(req.channel_id).await;
+    let upgraded_thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
     s.broadcast(MessageSync::ChannelUpdate {
         channel: Box::new(upgraded_thread),
@@ -890,10 +743,9 @@ async fn channel_upgrade(
         .await?;
     }
 
-    // FIXME: started_at is incorrect here since i don't have the room id yet
     let al = auth.audit_log(room.id);
     al.commit_success(AuditLogEntryType::ChannelUpdate {
-        channel_id,
+        channel_id: req.channel_id,
         channel_type: ChannelType::Text,
         changes: Changes::new()
             .change("type", &chan.ty, &ChannelType::Text)
@@ -902,45 +754,29 @@ async fn channel_upgrade(
     })
     .await?;
 
-    Ok((StatusCode::OK, Json(room)))
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
-struct TransferOwnership {
-    owner_id: UserId,
+    Ok(Json(room))
 }
 
 /// Channel transfer ownership
-#[utoipa::path(
-    post,
-    path = "/channel/{channel_id}/transfer-ownership",
-    tags = ["channel", "badge.scope.full", "badge.sudo"],
-    params(
-        ("channel_id" = ChannelId, Path, description = "channel id"),
-    ),
-    request_body = TransferOwnership,
-    responses((status = OK, description = "success"))
-)]
+#[handler(routes::channel_transfer_ownership)]
 async fn channel_transfer_ownership(
-    Path(channel_id): Path<ChannelId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<TransferOwnership>,
+    req: routes::channel_transfer_ownership::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     auth.ensure_sudo()?;
 
     let srv = s.services();
-    let target_user_id = json.owner_id;
+    let target_user_id = req.owner_id;
 
-    // ensure that target user is a thread member
     s.data()
-        .thread_member_get(channel_id, target_user_id)
+        .thread_member_get(req.channel_id, target_user_id)
         .await?;
 
-    let _perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-    let thread_start = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let _perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    let thread_start = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if thread_start.owner_id != Some(auth.user.id) {
         return Err(ApiError::from_code(ErrorCode::NotThreadOwner).into());
     }
@@ -949,7 +785,7 @@ async fn channel_transfer_ownership(
         .channels
         .update(
             &auth,
-            channel_id,
+            req.channel_id,
             ChannelPatch {
                 owner_id: Some(Some(target_user_id)),
                 ..Default::default()
@@ -960,181 +796,23 @@ async fn channel_transfer_ownership(
     let msg = MessageSync::ChannelUpdate {
         channel: Box::new(thread.clone()),
     };
-    s.broadcast_channel(channel_id, auth.user.id, msg).await?;
+    s.broadcast_channel(req.channel_id, auth.user.id, msg)
+        .await?;
     Ok(Json(thread))
 }
 
-/// Ratelimit delete
-///
-/// Immediately expires a slowmode ratelimit, allowing the target user to send a message again
-/// Requires either ChannelManage, ThreadManage, or MemberTimeout
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/ratelimit/{user_id}",
-    params(
-        ("channel_id", description = "Channel id"),
-        ("user_id", description = "User id")
-    ),
-    tags = [
-        "channel",
-        "badge.scope.full",
-        "badge.perm-opt.ChannelManage",
-        "badge.perm-opt.ThreadManage",
-        "badge.perm-opt.MemberTimeout",
-    ],
-    responses(
-        (status = NO_CONTENT, description = "Rate limit expired"),
-    )
-)]
-async fn channel_ratelimit_delete(
-    Path((channel_id, user_id)): Path<(ChannelId, UserId)>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-
-    let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-
-    if !perms.has(Permission::ChannelManage)
-        && !perms.has(Permission::ThreadManage)
-        && !perms.has(Permission::MemberTimeout)
-    {
-        return Err(Error::MissingPermissions);
-    }
-
-    s.data()
-        .channel_set_message_slowmode_expire_at(
-            channel_id,
-            user_id,
-            (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1))).into(),
-        )
-        .await?;
-    s.data()
-        .channel_set_thread_slowmode_expire_at(
-            channel_id,
-            user_id,
-            (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1))).into(),
-        )
-        .await?;
-
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-
-    if let Some(room_id) = channel.room_id {
-        // FIXME: correct started_at
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::RatelimitDelete {
-            channel_id,
-            user_id,
-        })
-        .await?;
-    }
-
-    s.broadcast_channel(
-        channel_id,
-        auth.user.id,
-        MessageSync::RatelimitUpdate {
-            channel_id,
-            user_id,
-            slowmode_thread_expire_at: None,
-            slowmode_message_expire_at: None,
-        },
-    )
-    .await?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Ratelimit delete all (TODO)
-///
-/// Immediately expires a slowmode ratelimit for all users, allowing all users to send messages again
-/// Requires either ChannelManage, ThreadManage, or MemberTimeout
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/ratelimit",
-    params(
-        ("channel_id", description = "Channel id"),
-    ),
-    tags = [
-        "channel",
-        "badge.scope.full",
-        "badge.perm-opt.ChannelManage",
-        "badge.perm-opt.ThreadManage",
-        "badge.perm-opt.MemberTimeout",
-    ],
-    responses(
-        (status = NO_CONTENT, description = "Rate limit expired"),
-    )
-)]
-async fn channel_ratelimit_delete_all(
-    Path((channel_id,)): Path<(ChannelId,)>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-
-    let srv = s.services();
-    let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
-
-    if !perms.has(Permission::ChannelManage)
-        && !perms.has(Permission::ThreadManage)
-        && !perms.has(Permission::MemberTimeout)
-    {
-        return Err(Error::MissingPermissions);
-    }
-
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
-
-    if let Some(room_id) = channel.room_id {
-        let al = auth.audit_log(room_id);
-        data.channel_ratelimit_delete_all(channel_id).await?;
-
-        al.commit_success(AuditLogEntryType::RatelimitDeleteAll { channel_id })
-            .await?;
-    } else {
-        data.channel_ratelimit_delete_all(channel_id).await?;
-    }
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
 /// Ratelimit update
-///
-/// Immediately creates a slowmode ratelimit
-/// Requires either ChannelManage or ThreadManage, or MemberTimeout
-#[utoipa::path(
-    put,
-    path = "/channel/{channel_id}/ratelimit/{user_id}",
-    tags = [
-        "channel",
-        "badge.scope.full",
-        "badge.perm-opt.ChannelManage",
-        "badge.perm-opt.ThreadManage",
-        "badge.perm-opt.MemberTimeout",
-    ],
-    params(
-        ("channel_id" = ChannelId, Path, description = "Channel id"),
-        ("user_id" = UserId, Path, description = "User id")
-    ),
-    request_body = RatelimitPut,
-    responses(
-        (status = OK, description = "Rate limit updated"),
-    )
-)]
+#[handler(routes::channel_ratelimit_update)]
 async fn channel_ratelimit_update(
-    Path((channel_id, user_id)): Path<(ChannelId, UserId)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<RatelimitPut>,
+    req: routes::channel_ratelimit_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
 
     if !perms.has(Permission::ChannelManage)
         && !perms.has(Permission::ThreadManage)
@@ -1146,17 +824,17 @@ async fn channel_ratelimit_update(
     let mut message_expire_at = None;
     let mut thread_expire_at = None;
 
-    if let Some(expire_at_opt) = json.slowmode_message_expire_at {
+    if let Some(expire_at_opt) = req.ratelimit.slowmode_message_expire_at {
         if let Some(expire_at) = expire_at_opt {
             s.data()
-                .channel_set_message_slowmode_expire_at(channel_id, user_id, expire_at)
+                .channel_set_message_slowmode_expire_at(req.channel_id, req.user_id, expire_at)
                 .await?;
             message_expire_at = Some(expire_at);
         } else {
             s.data()
                 .channel_set_message_slowmode_expire_at(
-                    channel_id,
-                    user_id,
+                    req.channel_id,
+                    req.user_id,
                     (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1)))
                         .into(),
                 )
@@ -1165,17 +843,17 @@ async fn channel_ratelimit_update(
         }
     }
 
-    if let Some(expire_at_opt) = json.slowmode_thread_expire_at {
+    if let Some(expire_at_opt) = req.ratelimit.slowmode_thread_expire_at {
         if let Some(expire_at) = expire_at_opt {
             s.data()
-                .channel_set_thread_slowmode_expire_at(channel_id, user_id, expire_at)
+                .channel_set_thread_slowmode_expire_at(req.channel_id, req.user_id, expire_at)
                 .await?;
             thread_expire_at = Some(expire_at);
         } else {
             s.data()
                 .channel_set_thread_slowmode_expire_at(
-                    channel_id,
-                    user_id,
+                    req.channel_id,
+                    req.user_id,
                     (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1)))
                         .into(),
                 )
@@ -1184,14 +862,13 @@ async fn channel_ratelimit_update(
         }
     }
 
-    let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
     if let Some(room_id) = channel.room_id {
-        // FIXME: correct started_at
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::RatelimitUpdate {
-            channel_id,
-            user_id,
+            channel_id: req.channel_id,
+            user_id: req.user_id,
             slowmode_thread_expire_at: thread_expire_at,
             slowmode_message_expire_at: message_expire_at,
         })
@@ -1199,11 +876,11 @@ async fn channel_ratelimit_update(
     }
 
     s.broadcast_channel(
-        channel_id,
+        req.channel_id,
         auth.user.id,
         MessageSync::RatelimitUpdate {
-            channel_id,
-            user_id,
+            channel_id: req.channel_id,
+            user_id: req.user_id,
             slowmode_thread_expire_at: thread_expire_at,
             slowmode_message_expire_at: message_expire_at,
         },
@@ -1213,22 +890,121 @@ async fn channel_ratelimit_update(
     Ok(StatusCode::OK)
 }
 
+/// Ratelimit delete
+#[handler(routes::channel_ratelimit_delete)]
+async fn channel_ratelimit_delete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::channel_ratelimit_delete::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+
+    if !perms.has(Permission::ChannelManage)
+        && !perms.has(Permission::ThreadManage)
+        && !perms.has(Permission::MemberTimeout)
+    {
+        return Err(Error::MissingPermissions);
+    }
+
+    s.data()
+        .channel_set_message_slowmode_expire_at(
+            req.channel_id,
+            req.user_id,
+            (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1))).into(),
+        )
+        .await?;
+    s.data()
+        .channel_set_thread_slowmode_expire_at(
+            req.channel_id,
+            req.user_id,
+            (time::OffsetDateTime::now_utc().saturating_sub(time::Duration::seconds(1))).into(),
+        )
+        .await?;
+
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+
+    if let Some(room_id) = channel.room_id {
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::RatelimitDelete {
+            channel_id: req.channel_id,
+            user_id: req.user_id,
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        req.channel_id,
+        auth.user.id,
+        MessageSync::RatelimitUpdate {
+            channel_id: req.channel_id,
+            user_id: req.user_id,
+            slowmode_thread_expire_at: None,
+            slowmode_message_expire_at: None,
+        },
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Ratelimit delete all
+#[handler(routes::channel_ratelimit_delete_all)]
+async fn channel_ratelimit_delete_all(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::channel_ratelimit_delete_all::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = s.services();
+    let data = s.data();
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+
+    if !perms.has(Permission::ChannelManage)
+        && !perms.has(Permission::ThreadManage)
+        && !perms.has(Permission::MemberTimeout)
+    {
+        return Err(Error::MissingPermissions);
+    }
+
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+
+    if let Some(room_id) = channel.room_id {
+        let al = auth.audit_log(room_id);
+        data.channel_ratelimit_delete_all(req.channel_id).await?;
+
+        al.commit_success(AuditLogEntryType::RatelimitDeleteAll {
+            channel_id: req.channel_id,
+        })
+        .await?;
+    } else {
+        data.channel_ratelimit_delete_all(req.channel_id).await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(channel_create_room))
-        .routes(routes!(channel_create_dm))
-        .routes(routes!(channel_get))
-        .routes(routes!(channel_list))
-        .routes(routes!(channel_list_removed))
-        .routes(routes!(channel_reorder))
-        .routes(routes!(channel_update))
-        .routes(routes!(channel_ack))
-        .routes(routes!(channel_remove))
-        .routes(routes!(channel_restore))
-        .routes(routes!(channel_typing))
-        .routes(routes!(channel_upgrade))
-        .routes(routes!(channel_transfer_ownership))
-        .routes(routes!(channel_ratelimit_update))
-        .routes(routes!(channel_ratelimit_delete))
-        .routes(routes!(channel_ratelimit_delete_all))
+        .routes(routes2!(channel_create_room))
+        .routes(routes2!(channel_create_dm))
+        .routes(routes2!(channel_get))
+        .routes(routes2!(channel_list))
+        .routes(routes2!(channel_list_removed))
+        .routes(routes2!(channel_reorder))
+        .routes(routes2!(channel_update))
+        .routes(routes2!(channel_ack))
+        .routes(routes2!(channel_remove))
+        .routes(routes2!(channel_restore))
+        .routes(routes2!(channel_typing))
+        .routes(routes2!(channel_upgrade))
+        .routes(routes2!(channel_transfer_ownership))
+        .routes(routes2!(channel_ratelimit_update))
+        .routes(routes2!(channel_ratelimit_delete))
+        .routes(routes2!(channel_ratelimit_delete_all))
 }

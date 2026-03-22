@@ -1,23 +1,23 @@
 use std::sync::Arc;
 
-use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
+use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::UserId;
 use common::v1::types::{AuditLogEntryType, MessageSync};
-use utoipa_axum::{router::OpenApiRouter, routes};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 
+use crate::error::Result;
 use crate::routes::util::Auth;
 use crate::types::UserIdReq;
-use crate::ServerState;
-
-use crate::error::{Error, Result};
+use crate::{routes2, Error, ServerState};
 
 use super::auth::fetch_auth_state;
 
@@ -29,22 +29,13 @@ async fn ensure_can_still_login_after_email_removal(
 ) -> Result<()> {
     let mut auth_state = fetch_auth_state(s, user_id).await?;
 
-    // Temporarily "remove" the email auth method to simulate the state after removal
     auth_state.has_email = false;
 
-    // Check if the user can still login with remaining methods
-    // According to AuthState::can_login logic:
-    // - has_email: if there is at least one verified and primary email address
-    // - oauth_providers: if there are any OAuth providers
-    // - authenticators: if there are any WebAuthn authenticators (currently not implemented properly)
     if !auth_state.has_email
         && auth_state.oauth_providers.is_empty()
         && auth_state.authenticators.is_empty()
     {
-        // Special case: password alone is not sufficient for login according to can_login()
-        // A password requires an email to be useful for login (password reset, etc.)
         if auth_state.has_password {
-            // If only password remains, they still can't login (based on can_login logic)
             return Err(ApiError::from_code(ErrorCode::CannotRemoveLastAuthMethod).into());
         }
 
@@ -55,28 +46,16 @@ async fn ensure_can_still_login_after_email_removal(
 }
 
 /// Email add
-#[utoipa::path(
-    put,
-    path = "/user/{user_id}/email/{addr}",
-    tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailCreate"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-        ("addr" = String, Path, description = "email address"),
-    ),
-    responses(
-        (status = CREATED, description = "success"),
-        (status = OK, description = "already exists"),
-    ),
-)]
+#[handler(routes::email_add)]
 async fn email_add(
-    Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::email_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let email_addr: EmailAddr = email_addr.try_into()?;
-    let target_user_id = match target_user_id_req {
+    let email_addr: EmailAddr = req.addr.try_into()?;
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -148,27 +127,17 @@ async fn email_add(
 }
 
 /// Email delete
-#[utoipa::path(
-    delete,
-    path = "/user/{user_id}/email/{addr}",
-    tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailDelete"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-        ("addr" = String, Path, description = "email address"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::email_delete)]
 async fn email_delete(
-    Path((target_user_id_req, email)): Path<(UserIdReq, String)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::email_delete::Request,
 ) -> Result<impl IntoResponse> {
-    // we need to keep email addresses in case we need to tell the suspended user anything
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let email: EmailAddr = email.try_into()?;
-    let target_user_id = match target_user_id_req {
+    let email: EmailAddr = req.addr.try_into()?;
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -212,22 +181,14 @@ async fn email_delete(
 }
 
 /// Email list
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/email",
-    tags = ["user_email", "badge.scope.full"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-    ),
-    responses((status = OK, body = Vec<EmailInfo>, description = "success"))
-)]
+#[handler(routes::email_list)]
 async fn email_list(
-    Path(target_user_id_req): Path<UserIdReq>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::email_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match target_user_id_req {
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -241,26 +202,15 @@ async fn email_list(
 }
 
 /// Email update
-#[utoipa::path(
-    patch,
-    path = "/user/{user_id}/email/{addr}",
-    tags = ["user_email", "badge.scope.full", "badge.audit-log.EmailUpdate"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-        ("addr" = String, Path, description = "email address"),
-    ),
-    request_body = EmailInfoPatch,
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::email_update)]
 async fn email_update(
-    Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<EmailInfoPatch>,
+    req: routes::email_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let email_addr: EmailAddr = email_addr.try_into()?;
-    let target_user_id = match target_user_id_req {
+    let email_addr: EmailAddr = req.addr.try_into()?;
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -276,15 +226,14 @@ async fn email_update(
             ErrorCode::UnknownUserEmail,
         )))?;
 
-    // you can only set an email as primary if it's verified.
-    if patch.is_primary == Some(true) {
+    if req.patch.is_primary == Some(true) {
         if !email_info.is_verified {
             return Err(ApiError::from_code(ErrorCode::InvalidData).into());
         }
     }
 
     s.data()
-        .user_email_update(target_user_id, email_addr.clone(), patch)
+        .user_email_update(target_user_id, email_addr.clone(), req.patch)
         .await?;
 
     let emails_new = s.data().user_email_list(target_user_id).await?;
@@ -320,25 +269,16 @@ async fn email_update(
 }
 
 /// Email verification resend
-#[utoipa::path(
-    post,
-    path = "/user/{user_id}/email/{addr}/resend-verification",
-    tags = ["user_email", "badge.scope.full"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-        ("addr" = String, Path, description = "email address"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::email_verification_resend)]
 async fn email_verification_resend(
-    Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::email_verification_resend::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let email_addr: EmailAddr = email_addr.try_into()?;
-    let target_user_id = match target_user_id_req {
+    let email_addr: EmailAddr = req.addr.try_into()?;
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -389,26 +329,16 @@ async fn email_verification_resend(
 }
 
 /// Email verify finish
-#[utoipa::path(
-    post,
-    path = "/user/{user_id}/email/{addr}/verify/{code}",
-    tags = ["user_email", "badge.scope.full"],
-    params(
-        ("user_id" = UserIdReq, Path, description = "User id"),
-        ("addr" = String, Path, description = "email address"),
-        ("code" = String, Path, description = "Verification code"),
-    ),
-    responses((status = NO_CONTENT, description = "success"))
-)]
+#[handler(routes::email_verification_finish)]
 async fn email_verification_finish(
-    Path((target_user_id_req, email_addr, code)): Path<(UserIdReq, String, String)>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
+    req: routes::email_verification_finish::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let email_addr: EmailAddr = email_addr.try_into()?;
-    let target_user_id = match target_user_id_req {
+    let email_addr: EmailAddr = req.addr.try_into()?;
+    let target_user_id = match req.user_id {
         UserIdReq::UserSelf => auth.user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
@@ -417,7 +347,7 @@ async fn email_verification_finish(
     }
 
     s.data()
-        .user_email_verify_use(target_user_id, email_addr.clone(), code)
+        .user_email_verify_use(target_user_id, email_addr.clone(), req.code)
         .await?;
 
     let al = auth.audit_log(target_user_id.into_inner().into());
@@ -439,10 +369,10 @@ async fn email_verification_finish(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(email_add))
-        .routes(routes!(email_list))
-        .routes(routes!(email_delete))
-        .routes(routes!(email_update))
-        .routes(routes!(email_verification_resend))
-        .routes(routes!(email_verification_finish))
+        .routes(routes2!(email_add))
+        .routes(routes2!(email_list))
+        .routes(routes2!(email_delete))
+        .routes(routes2!(email_update))
+        .routes(routes2!(email_verification_resend))
+        .routes(routes2!(email_verification_finish))
 }
