@@ -1,4 +1,5 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
+import type { RoomT } from "../types";
 import {
 	createEffect,
 	createResource,
@@ -8,8 +9,8 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { type Application, createUpload, type User } from "sdk";
-import { useApi } from "../api.tsx";
+import { type Application, createUpload, type Room, type User } from "sdk";
+import { useApi, useRooms2 } from "../api.tsx";
 import { Copyable } from "../util.tsx";
 import { createStore, reconcile } from "solid-js/store";
 import { useCtx } from "../context.ts";
@@ -724,7 +725,12 @@ const InviteToRoom = (
 	props: { x: number; y: number; app: Application },
 ) => {
 	const api = useApi();
-	const rooms = api.rooms.list();
+	const api2 = useRooms2();
+	const rooms = api2.useList();
+	const roomItems = () =>
+		rooms.ids.map((id) => api2.get(id) ?? null).filter((r): r is Room =>
+			r !== null
+		);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 
@@ -769,7 +775,7 @@ const InviteToRoom = (
 			}}
 			ref={setMenuRef}
 		>
-			<For each={rooms()?.items ?? []} fallback="no rooms?">
+			<For each={roomItems() ?? []} fallback="no rooms?">
 				{(r) => (
 					<RoomInviteButton
 						room={r}

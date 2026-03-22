@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { timeAgo } from "../Time.tsx";
-import { useApi } from "../api.tsx";
+import { useApi, useRooms2 } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";
@@ -14,8 +14,9 @@ import { useCurrentUser } from "../contexts/currentUser.tsx";
 export function RoomMenu(props: { room_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
+	const api2 = useRooms2();
 	const nav = useNavigate();
-	const room = api.rooms.fetch(() => props.room_id);
+	const room = api2.use(() => props.room_id);
 	const [, modalctl] = useModals();
 
 	const currentUser = useCurrentUser();
@@ -115,6 +116,7 @@ export function RoomMenu(props: { room_id: string }) {
 
 function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	const api = useApi();
+	const api2 = useRooms2();
 	const roomConfig = () => props.room.preferences;
 
 	const setNotifs = (notifs: Partial<import("sdk").NotifsRoom>) => {
@@ -126,7 +128,7 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 			...current,
 			notifs: { ...current.notifs, ...notifs },
 		};
-		api.rooms.cache.set(props.room.id, {
+		api2.cache.set(props.room.id, {
 			...props.room,
 			preferences: newConfig as any,
 		});

@@ -13,7 +13,7 @@ import icEmojiObjects from "./assets/emoji-objects.png";
 import icEmojiPeople from "./assets/emoji-people.png";
 import icEmojiPlaces from "./assets/emoji-places.png";
 import icEmojiSymbols from "./assets/emoji-symbols.png";
-import { useApi } from "./api";
+import { useApi, useRooms2 } from "./api";
 import { getThumbFromId } from "./media/util";
 import { RoomIcon } from "./User";
 import type { EmojiCustom, Room } from "sdk";
@@ -144,43 +144,48 @@ type EmojiPickerProps = {
 
 export const EmojiPicker = (props: EmojiPickerProps) => {
 	const api = useApi();
+	const api2 = useRooms2();
 	const [search, setSearch] = createSignal("");
 	const [hover, setHover] = createSignal<UnifiedEmoji>();
 
-	const rooms = api.rooms.list();
+	const rooms = api2.useList();
 	const [groupsResource] = createResource(async () => {
 		const standard = await parseEmoji();
 		return standard;
 	});
 
 	const [customGroupsResource] = createResource(
-		() => rooms()?.items,
-		async (roomItems) => {
-			await api.emoji.listAllCustom(roomItems.map((r) => r.id));
-			return roomItems.map((room) => {
-				const emojis = [...api.emoji.cache.values()].filter((e) => {
-					if (e.owner?.owner === "Room") {
-						return e.owner.room_id === room.id;
-					}
-					return false;
-				});
+		() => rooms.ids,
+		async (roomIds) => {
+			await api.emoji.listAllCustom(roomIds);
+			return roomIds
+				.map((id) => api2.get(id))
+				.filter((r): r is Room => r !== undefined)
+				.map((room) => {
+					const emojis = [...api.emoji.cache.values()].filter((e) => {
+						if (e.owner?.owner === "Room") {
+							return e.owner.room_id === room.id;
+						}
+						return false;
+					});
 
-				if (emojis.length === 0) return null;
+					if (emojis.length === 0) return null;
 
-				return {
-					id: `room-${room.id}`,
-					name: room.name,
-					room,
-					emojis: emojis.map((e) => ({
-						type: "custom",
-						label: e.name,
-						id: e.id,
-						media_id: e.media_id,
-						animated: e.animated,
-						room_id: room.id,
-					})),
-				} as EmojiGroup;
-			}).filter((r) => r !== null) as EmojiGroup[];
+					return {
+						id: `room-${room.id}`,
+						name: room.name,
+						room,
+						emojis: emojis.map((e) => ({
+							type: "custom",
+							label: e.name,
+							id: e.id,
+							media_id: e.media_id,
+							animated: e.animated,
+							room_id: room.id,
+						})),
+					} as EmojiGroup;
+				})
+				.filter((r) => r !== null) as EmojiGroup[];
 		},
 	);
 

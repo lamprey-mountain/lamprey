@@ -15,6 +15,7 @@ import {
 import type { Api } from "../api.tsx";
 import type { Message } from "sdk";
 import { logger } from "../logger.ts";
+import type { RoomsService } from "./services/RoomsService";
 
 const log = logger.for("api/inbox");
 
@@ -26,6 +27,7 @@ export interface NotificationPagination extends Pagination<Notification> {
 
 export class Inbox {
 	api: Api = null as unknown as Api;
+	rooms: RoomsService = null as unknown as RoomsService;
 	cache = new Map<string, Notification>();
 	_listings = new Map<string, { refetch: () => void }>();
 
@@ -67,7 +69,7 @@ export class Inbox {
 					this.api.store.messages.upsert(message as any);
 				}
 				for (const room of data.rooms) {
-					this.api.rooms.cache.set(room.id, room as any);
+					this.rooms.cache.set(room.id, room as any);
 				}
 			});
 

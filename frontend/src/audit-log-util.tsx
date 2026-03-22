@@ -1,7 +1,7 @@
 import { type AuditLogChange, type AuditLogEntry } from "sdk";
 import { ChangeObject, diffArrays } from "diff";
 import { JSX, untrack } from "solid-js";
-import { useApi } from "./api";
+import { useApi, useRooms2 } from "./api";
 import { useCtx } from "./context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -115,7 +115,8 @@ const resolveName = (
 			return webhook?.name ?? metadataName ?? id;
 		}
 		case "room": {
-			const room = api.rooms.cache.get(id);
+			const rooms = useRooms2();
+			const room = rooms.cache.get(id);
 			return room?.name ?? metadataName ?? id;
 		}
 	}

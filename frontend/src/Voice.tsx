@@ -16,7 +16,7 @@ import iconScreenshare from "./assets/screenshare.png";
 import iconSettings from "./assets/settings.png";
 import iconMusic from "./assets/music.png";
 import iconExit from "./assets/exit.png";
-import { useApi } from "./api.tsx";
+import { useApi, useRooms2 } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
 import { useVoice } from "./voice-provider.tsx";
 import { useConfig } from "./config.tsx";
@@ -261,12 +261,13 @@ export const Voice = (p: { channel: Channel }) => {
 
 export const VoiceTray = () => {
 	const api = useApi();
+	const api2 = useRooms2();
 	const currentUser = useCurrentUser();
 	const [voice, actions] = useVoice();
 	const thread = () =>
 		voice.threadId ? api.channels.fetch(() => voice.threadId!)() : null;
 	const room = () =>
-		thread()?.room_id ? api.rooms.fetch(() => thread()?.room_id!)() : null;
+		thread()?.room_id ? api2.use(() => thread()?.room_id!)() : null;
 	const user = () => currentUser();
 
 	const calcConnectedDuration = () => {

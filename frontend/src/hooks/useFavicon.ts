@@ -1,11 +1,12 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useLocation } from "@solidjs/router";
-import { useApi } from "../api.tsx";
+import { useApi, useApi2 } from "../api.tsx";
 import { generateFavicon } from "../drawing.ts";
 
 export function useFavicon() {
 	const api = useApi();
+	const store = useApi2();
 	const location = useLocation();
 
 	const totalMentions = createMemo(() => {
@@ -22,7 +23,7 @@ export function useFavicon() {
 		const path = location.pathname;
 		const roomMatch = path.match(/^\/room\/([^/]+)/);
 		if (roomMatch) {
-			const room = api.rooms.cache.get(roomMatch[1]);
+			const room = store.rooms.cache.get(roomMatch[1]);
 			if (room) return { type: "room" as const, room };
 		}
 

@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi } from "../api";
+import { useApi, useRooms2 } from "../api";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
 import { ChannelIcon } from "../User";
@@ -14,6 +14,7 @@ import icMembers from "../assets/members.png";
 
 export const ModalPalette = () => {
 	const api = useApi();
+	const api2 = useRooms2();
 	const ctx = useCtx();
 	const navigate = useNavigate();
 	const [, modalCtl] = useModals();
@@ -22,7 +23,7 @@ export const ModalPalette = () => {
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
 
 	// try to load all threads
-	const rooms = api.rooms.list();
+	const rooms = api2.useList();
 	api.dms.list();
 
 	type PaletteItem = {
@@ -35,7 +36,7 @@ export const ModalPalette = () => {
 	};
 
 	const allItems = createMemo((): PaletteItem[] => {
-		const rooms = [...api.rooms.cache.values()].map((room) => ({
+		const rooms = [...api2.cache.values()].map((room) => ({
 			type: "room" as const,
 			id: room.id,
 			name: room.name,

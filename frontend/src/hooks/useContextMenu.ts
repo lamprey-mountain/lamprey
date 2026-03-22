@@ -9,6 +9,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 	const handleContextMenu = (e: MouseEvent) => {
 		console.log("[menu] open context menu");
 		const targetEl = e.target as HTMLElement;
+		const store = useApi2();
 
 		const menuEl = targetEl.closest(
 			".menu-room, .menu-channel, .menu-thread, .menu-message, .menu-user",
@@ -75,7 +76,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		} else if (menuEl.classList.contains("menu-user")) {
 			if (!user_id) return;
 			const thread = api.channels.cache.get(thread_id!);
-			const room = api.rooms.cache.get(room_id!);
+			const room = store.rooms.cache.get(room_id!);
 			if (thread?.room_id && room?.id && thread.room_id !== room.id) {
 				console.warn("mismatched thread/room ids!");
 			}

@@ -1,6 +1,7 @@
 import type { ChannelType } from "sdk";
 import type { Api } from "../api";
 import { canUseCommand as checkCommandPermission } from "../permission-calculator";
+import { useRooms2 } from "../api";
 
 /**
  * Check if a command should be available based on channel type and permissions
@@ -16,7 +17,7 @@ export function canUseCommand(
 
 	// Use the centralized permission calculator
 	return checkCommandPermission(
-		{ api, room_id, channel_id: channel?.id },
+		{ api, rooms: useRooms2(), room_id, channel_id: channel?.id },
 		self_id,
 		commandName,
 		channel,

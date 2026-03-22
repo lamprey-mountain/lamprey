@@ -1,5 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
-import { useApi } from "../api.tsx";
+import { useApi, useRooms2 } from "../api.tsx";
 import { Avatar } from "../User.tsx";
 import { Time } from "../Time.tsx";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -8,11 +8,12 @@ import { getTimestampFromUUID } from "sdk";
 
 export function Rooms() {
 	const api = useApi();
-	const rooms = api.rooms.list_all();
+	const api2 = useRooms2();
+	const rooms = api2.useListAll();
 
 	const fetchMore = () => {
-		if (rooms()?.has_more) {
-			api.rooms.list_all();
+		if (rooms.has_more) {
+			api2.fetchListAll(rooms.cursor);
 		}
 	};
 
@@ -34,33 +35,37 @@ export function Rooms() {
 				<div class="name">name</div>
 				<div class="joined">created</div>
 			</header>
-			<Show when={rooms()}>
+			<Show when={rooms.ids.length > 0}>
 				<ul>
-					<For each={rooms()!.items}>
-						{(room) => (
-							<li>
-								<div class="profile">
-									<Show
-										when={room.icon}
-										fallback={<div class="avatar">{room.name}</div>}
-									>
-										<img
-											src={getThumbFromId(room.icon!, 64)}
-											class="avatar"
-										/>
-									</Show>
-									<div>
-										<h3 class="name">{room.name}</h3>
-										<div class="dim">{room.id}</div>
+					<For each={rooms.ids}>
+						{(id) => {
+							const room = api2.get(id);
+							if (!room) return null;
+							return (
+								<li>
+									<div class="profile">
+										<Show
+											when={room.icon}
+											fallback={<div class="avatar">{room.name}</div>}
+										>
+											<img
+												src={getThumbFromId(room.icon!, 64)}
+												class="avatar"
+											/>
+										</Show>
+										<div>
+											<h3 class="name">{room.name}</h3>
+											<div class="dim">{room.id}</div>
+										</div>
 									</div>
-								</div>
-								<div class="joined">
-									<Time date={getTimestampFromUUID(room.id)} />
-								</div>
-								<div style="flex:1"></div>
-								<button>options</button>
-							</li>
-						)}
+									<div class="joined">
+										<Time date={getTimestampFromUUID(room.id)} />
+									</div>
+									<div style="flex:1"></div>
+									<button>options</button>
+								</li>
+							);
+						}}
 					</For>
 				</ul>
 				<div ref={setBottom}></div>

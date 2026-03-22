@@ -1,6 +1,6 @@
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useCtx } from "../context.ts";
-import { useApi } from "../api.tsx";
+import { useApi, useRooms2 } from "../api.tsx";
 import type { RoomNavItem } from "../RoomNav.tsx";
 import { useModals } from "../contexts/modal";
 
@@ -25,9 +25,10 @@ export function FolderMenu(props: FolderMenuProps) {
 	const markAsRead = () => {
 		const folder = getFolder();
 		if (folder) {
+			const api2 = useRooms2();
 			for (const item of folder.items) {
 				if (item.type === "room") {
-					api.rooms.markRead(item.room_id);
+					api2.markRead(item.room_id);
 				}
 			}
 		}

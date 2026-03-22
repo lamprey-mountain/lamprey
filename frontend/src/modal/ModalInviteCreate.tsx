@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { Dropdown, MultiDropdown } from "../Dropdown";
 import { Modal } from "./mod";
-import { useApi } from "../api";
+import { useApi, useRooms2 } from "../api";
 import { Time } from "sdk";
 import {
 	calculatePermissions,
@@ -29,6 +29,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [creating, setCreating] = createSignal(false);
 	const currentUser = useCurrentUser();
 
+	const api2 = useRooms2();
 	const roles = api.roles.list(() => props.room_id as string);
 
 	const currentUserId = () => currentUser()?.id;
@@ -39,6 +40,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		if (!roomId || !userId) return false;
 		const permissionContext: PermissionContext = {
 			api,
+			rooms: api2,
 			room_id: roomId,
 			channel_id: props.channel_id,
 		};
@@ -48,7 +50,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		);
 		const hasRoleApply = permissions.has("RoleApply") ||
 			permissions.has("Admin");
-		const room = api.rooms.fetch(() => roomId)();
+		const room = api2.use(() => roomId)();
 		const isOwner = room?.owner_id === userId;
 		return { canApply: hasRoleApply, rank, isOwner };
 	});

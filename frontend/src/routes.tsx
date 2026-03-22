@@ -1,7 +1,7 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
 import type { ParentProps, VoidProps } from "solid-js";
-import { useApi } from "./api.tsx";
+import { useApi, useRooms2 } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { type ChannelSearch } from "./context.ts";
 import { flags } from "./flags.ts";
@@ -143,7 +143,8 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api = useApi();
-	const room = api.rooms.fetch(() => p.params.room_id);
+	const rooms = useRooms2();
+	const room = rooms.use(() => p.params.room_id);
 
 	const getOrCreateRoomContext = () => {
 		const roomId = p.params.room_id;
@@ -182,7 +183,8 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>) => {
 export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const api = useApi();
-	const room = api.rooms.fetch(() => p.params.room_id);
+	const rooms = useRooms2();
+	const room = rooms.use(() => p.params.room_id);
 	const title = () =>
 		room() ? t("page.settings_room", room()!.name) : t("loading");
 	return (
@@ -291,8 +293,9 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api = useApi();
+	const rooms = useRooms2();
 	const channel = api.channels.fetch(() => p.params.channel_id);
-	const room = api.rooms.fetch(() => channel()?.room_id!);
+	const room = rooms.use(() => channel()?.room_id!);
 
 	const getOrCreateChannelContext = () => {
 		const channelId = p.params.channel_id;

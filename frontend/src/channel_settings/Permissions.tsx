@@ -16,7 +16,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import { useApi } from "../api.tsx";
+import { useApi, useRooms2 } from "../api.tsx";
 import { PermissionSelector } from "../components/PermissionSelector";
 import { OverwriteDropdown } from "../components/OverwriteDropdown";
 import { permissions } from "../permissions.ts";
@@ -91,8 +91,9 @@ const createDefaultOverwrite = (id: string): PermissionOverwrite => ({
 
 export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();
+	const api2 = useRooms2();
 	const roles = api.roles.list(() => props.channel.room_id ?? "");
-	const room = api.rooms.fetch(() => props.channel.room_id ?? "");
+	const room = api2.use(() => props.channel.room_id ?? "");
 
 	const [overwrites, setOverwrites] = createStore(
 		structuredClone(props.channel.permission_overwrites),
