@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use common::v1::types::search::{ChannelSearchOrderField, Order};
 use common::v1::types::MessageSync;
 use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
@@ -9,14 +8,13 @@ use common::v1::types::{
 };
 use common::v2::types::message::MessageType;
 use futures::stream::{FuturesUnordered, StreamExt};
-use kameo::actor::ActorRef;
 use lamprey_backend_core::types::admin::SearchIndexStats;
 use tokio::sync::OnceCell;
 use tracing::trace;
 
-use crate::services::search::index::{IndexActor, IndexActorRef, IndexManager};
+use crate::services::search::index::IndexManager;
 use crate::services::search::schema::content::ContentSchema;
-use crate::services::search::schema::{ContentIndex, IndexDefinition};
+use crate::services::search::schema::ContentIndex;
 use crate::services::search::searcher::{MessageSearcher, SearchMessages};
 use crate::Error;
 use crate::{error::Result, ServerStateInner};
@@ -333,7 +331,7 @@ impl ServiceSearch {
     //     }
     // }
 
-    pub fn send_indexer_command(&self, cmd: IndexerCommandLegacy) -> Result<()> {
+    pub fn send_indexer_command(&self, _cmd: IndexerCommandLegacy) -> Result<()> {
         todo!()
         //     self.tantivy
         //         .command_tx
@@ -342,7 +340,7 @@ impl ServiceSearch {
         //     Ok(())
     }
 
-    pub async fn get_channel_stats(&self, channel_id: ChannelId) -> Result<SearchIndexStats> {
+    pub async fn get_channel_stats(&self, _channel_id: ChannelId) -> Result<SearchIndexStats> {
         todo!()
         // let data = self.state.data();
         // let searcher = self.tantivy.searcher();

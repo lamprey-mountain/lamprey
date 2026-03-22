@@ -4,12 +4,11 @@ use lamprey_backend_core::prelude::*;
 use tantivy::query::TermSetQuery;
 use tantivy::{
     collector::{Count, TopDocs},
-    query::{BooleanQuery, Query, QueryParser},
+    query::{BooleanQuery, Query},
     schema::Value,
     DocAddress, IndexReader, TantivyDocument, Term,
 };
 
-use crate::services::search::index::IndexActor;
 use crate::services::search::schema::content::ContentSchema;
 
 use super::index::IndexActorRef;

@@ -5,7 +5,6 @@ use common::v1::types::util::Time;
 use common::v1::types::{Channel, ChannelId, ChannelType, Room, RoomId, User};
 use common::v2::types::media::Media;
 use common::v2::types::message::{Message, MessageType};
-use kameo::actor::ActorRef;
 use tantivy::schema::{OwnedValue, Schema};
 use tantivy::TantivyDocument;
 
@@ -22,12 +21,8 @@ pub mod document_history;
 pub mod room_analytics;
 
 pub use content::ContentIndex;
-pub use document_history::DocumentHistoryIndex;
-pub use room_analytics::RoomAnalyticsIndex;
 
 use content::ContentSchema as LampreySchema;
-
-use crate::services::search::index::{IndexActor, IndexActorRef};
 
 /// create a tantivy document from a message
 pub fn tantivy_document_from_message(

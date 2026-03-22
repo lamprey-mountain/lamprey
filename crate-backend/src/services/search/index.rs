@@ -1,7 +1,6 @@
 use std::{
     path::PathBuf,
-    sync::{mpsc, Arc, Mutex},
-    thread::JoinHandle,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -15,7 +14,7 @@ use kameo::{
     Actor,
 };
 use lamprey_backend_core::prelude::*;
-use tantivy::{schema::Schema, IndexReader, IndexWriter, TantivyDocument, Term};
+use tantivy::{IndexReader, IndexWriter, TantivyDocument, Term};
 use tracing::error;
 
 use crate::{
@@ -196,7 +195,7 @@ impl Message<SearchMessages> for QueryMessagesActor {
     ) -> Self::Reply {
         use tantivy::{
             collector::{Count, TopDocs},
-            query::{BooleanQuery, Query, QueryParser},
+            query::{BooleanQuery, Query},
             schema::Value,
             DocAddress, TantivyDocument, Term,
         };
@@ -406,7 +405,7 @@ impl Message<DeleteTerm> for IndexActor {
 impl Message<Search> for IndexActor {
     type Reply = ();
 
-    async fn handle(&mut self, _msg: Search, ctx: &mut Context<Self, Self::Reply>) -> Self::Reply {
+    async fn handle(&mut self, _msg: Search, _ctx: &mut Context<Self, Self::Reply>) -> Self::Reply {
         todo!()
     }
 }

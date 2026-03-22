@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tantivy::schema::{
     self, IndexRecordOption, JsonObjectOptions, Schema, SchemaBuilder, TextFieldIndexing,
-    TextOptions, FAST, STORED, STRING, TEXT,
+    TextOptions, FAST, STORED, STRING,
 };
 
 use super::IndexDefinition;
