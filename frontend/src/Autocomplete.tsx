@@ -1,7 +1,6 @@
 import {
 	createEffect,
 	createMemo,
-	createResource,
 	createSignal,
 	For,
 	Match,
@@ -17,17 +16,7 @@ import { getEmojiUrl } from "./media/util";
 import { Avatar } from "./User";
 import twemoji from "twemoji";
 import { type Command, useSlashCommands } from "./contexts/slash-commands";
-import { emojiResource } from "./emoji";
-
-type Emoji = {
-	group?: number;
-	label: string;
-	hexcode: string;
-	order: number;
-	unicode: string;
-	tags?: string[];
-	shortcode?: string | string[];
-};
+import { type EmojiData, emojiResource } from "./emoji";
 
 type UnicodeEmoji = {
 	char: string;
@@ -51,44 +40,9 @@ export const Autocomplete = () => {
 
 	const { state, setResults, navigate, select, setIndex } = useAutocomplete();
 
-	// Load unicode emoji data
-	const [unicodeEmoji] = createResource(async () => {
-		const [
-			{ default: emojis },
-			{ default: shortJoypixels },
-			{ default: shortEmojibase },
-		] = await Promise.all([
-			import("emojibase-data/en/compact.json"),
-			import("emojibase-data/en/shortcodes/joypixels.json"),
-			import("emojibase-data/en/shortcodes/emojibase.json"),
-		]);
-
-		const getShortcodes = (hex: string) => {
-			const codes1 = (shortJoypixels as Record<string, string | string[]>)[hex];
-			const codes2 = (shortEmojibase as Record<string, string | string[]>)[hex];
-			const all_codes = [];
-			if (codes1) {
-				all_codes.push(...(Array.isArray(codes1) ? codes1 : [codes1]));
-			}
-			if (codes2) {
-				all_codes.push(...(Array.isArray(codes2) ? codes2 : [codes2]));
-			}
-			return all_codes;
-		};
-
-		return (emojis as any[]).map((e: any) => ({
-			char: e.unicode,
-			name: e.label,
-			id: `unicode:${e.label.replace(/ /g, "_")}`,
-			shortcodes: getShortcodes(e.hexcode) ?? [],
-		}));
-	});
-
 	const [allUsers, setAllUsers] = createSignal<User[]>([]);
 	const [allChannels, setAllChannels] = createSignal<Channel[]>([]);
-	const [allEmoji, setAllEmoji] = createSignal<(EmojiCustom | UnicodeEmoji)[]>(
-		[],
-	);
+	const [allEmoji, setAllEmoji] = createSignal<(EmojiCustom | EmojiData)[]>([]);
 	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
 
 	// Fetch data based on autocomplete type
@@ -137,7 +91,7 @@ export const Autocomplete = () => {
 			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
-			const combined = [];
+			const combined: (EmojiCustom | EmojiData)[] = [];
 			if (roomId) {
 				// Get custom emoji from cache for this room
 				const roomEmoji = [...api.emoji.cache.values()].filter(
@@ -145,8 +99,9 @@ export const Autocomplete = () => {
 				);
 				combined.push(...roomEmoji);
 			}
-			if (unicodeEmoji()) {
-				combined.push(...(unicodeEmoji() as any));
+			const unicodeEmoji = emojiResource();
+			if (unicodeEmoji) {
+				combined.push(...unicodeEmoji);
 			}
 			setAllEmoji(combined);
 		} else if (kind.type === "command") {
@@ -174,7 +129,7 @@ export const Autocomplete = () => {
 		const type = kind.type;
 
 		let results: Fuzzysort.KeyResults<
-			User | Channel | EmojiCustom | UnicodeEmoji | Command
+			User | Channel | EmojiCustom | EmojiData | Command
 		>;
 
 		if (type === "mention") {
@@ -190,8 +145,13 @@ export const Autocomplete = () => {
 				all: true,
 			});
 		} else if (type === "emoji") {
-			results = go(query, allEmoji(), {
-				keys: ["name", "shortcodes"],
+			// Normalize emoji for search - custom emoji use 'name', unicode use 'label'
+			const normalizedEmoji = allEmoji().map((e) => ({
+				...e,
+				searchLabel: "label" in e ? e.label : e.name,
+			}));
+			results = go(query, normalizedEmoji, {
+				keys: ["searchLabel", "shortcodes"],
 				limit: 10,
 				all: true,
 			}) as any;
@@ -233,7 +193,7 @@ export const Autocomplete = () => {
 							<Switch>
 								<Match when={"char" in result.obj}>
 									<span
-										innerHTML={getTwemoji((result.obj as UnicodeEmoji).char)}
+										innerHTML={getTwemoji((result.obj as EmojiData).char)}
 									>
 									</span>
 								</Match>
@@ -263,7 +223,9 @@ export const Autocomplete = () => {
 									</div>
 								</Match>
 								<Match when={true}>
-									{result.obj.name}
+									{"label" in result.obj
+										? result.obj.label ?? result.obj.name
+										: result.obj.name}
 								</Match>
 							</Switch>
 						</div>

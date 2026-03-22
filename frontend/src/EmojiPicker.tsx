@@ -1,5 +1,3 @@
-// TODO: use shared ./emoji.ts here
-
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import twemoji from "twemoji";
 import fuzzysort from "fuzzysort";
@@ -17,16 +15,7 @@ import { useApi, useRooms2 } from "./api";
 import { getThumbFromId } from "./media/util";
 import { RoomIcon } from "./User";
 import type { EmojiCustom, Room } from "sdk";
-
-type Emoji = {
-	group?: number;
-	label: string;
-	hexcode: string;
-	order: number;
-	unicode: string;
-	tags?: string[];
-	shortcode?: string | string[];
-};
+import { type EmojiData, emojiResource } from "./emoji";
 
 type UnifiedEmoji = {
 	type: "standard" | "custom";
@@ -48,21 +37,23 @@ type EmojiGroup = {
 	emojis: UnifiedEmoji[];
 };
 
-const parseEmoji = async (): Promise<EmojiGroup[]> => {
-	const { default: emojis } = await import("emojibase-data/en/compact.json");
-	const groups: Emoji[][] = [[], [], [], [], [], [], [], [], [], []];
-	for (let emoji of emojis as Emoji[]) {
+const parseEmoji = (): EmojiGroup[] => {
+	const emojis = emojiResource();
+	if (!emojis) return [];
+
+	const groups: EmojiData[][] = [[], [], [], [], [], [], [], [], [], []];
+	for (let emoji of emojis) {
 		if (emoji.group === 2) continue;
 		groups[emoji.group ?? 8].push(emoji);
 	}
-	return groups.map((emojis, i) => ({
+	return groups.map((groupEmojis, i) => ({
 		id: i,
 		name: getGroupName(i) || "Unknown",
 		icon: getGroupIcon(i),
-		emojis: emojis.map((e) => ({
+		emojis: groupEmojis.map((e) => ({
 			type: "standard" as const,
 			label: e.label,
-			unicode: e.unicode,
+			unicode: e.char,
 			hexcode: e.hexcode,
 			order: e.order,
 		})),
@@ -118,17 +109,6 @@ const getGroupName = (id: number) => {
 	}
 };
 
-const getShortcode = async (hex: string) => {
-	const [{ default: shortJoypixels }, { default: shortEmojibase }] =
-		await Promise.all([
-			import("emojibase-data/en/shortcodes/joypixels.json"),
-			import("emojibase-data/en/shortcodes/emojibase.json"),
-		]);
-	const codes = (shortJoypixels as Record<string, string | string[]>)[hex] ??
-		(shortEmojibase as Record<string, string | string[]>)[hex];
-	return Array.isArray(codes) ? codes[0] : codes;
-};
-
 const getTwemoji = (unicode: string) => {
 	return twemoji.parse(unicode, {
 		base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
@@ -149,10 +129,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 	const [hover, setHover] = createSignal<UnifiedEmoji>();
 
 	const rooms = api2.useList();
-	const [groupsResource] = createResource(async () => {
-		const standard = await parseEmoji();
-		return standard;
-	});
+	const standardGroups = createMemo(() => parseEmoji());
 
 	const [customGroupsResource] = createResource(
 		() => rooms.ids,
@@ -190,7 +167,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 	);
 
 	const allGroups = createMemo(() => {
-		const standard = groupsResource() || [];
+		const standard = standardGroups();
 		const custom = customGroupsResource() || [];
 		return [...custom, ...standard];
 	});
@@ -198,7 +175,11 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 	const [shortcode] = createResource(hover, async (h) => {
 		if (!h) return "";
 		if (h.type === "custom") return h.label;
-		return getShortcode(h.hexcode!);
+		// Get first shortcode from emojiResource data
+		const emojis = emojiResource();
+		if (!emojis) return "";
+		const emoji = emojis.find((e) => e.char === h.unicode);
+		return emoji?.shortcodes?.[0] ?? h.label;
 	});
 
 	const filtered = () => {
@@ -324,7 +305,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 					)}
 				</For>
 				<Show
-					when={!groupsResource.loading &&
+					when={!emojiResource.loading &&
 						filtered().every((i) => i.emojis.length === 0)}
 				>
 					<div style="display: flex; align-items: center; justify-content: center; width 100%; height: 100%">

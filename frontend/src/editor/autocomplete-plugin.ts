@@ -153,7 +153,7 @@ export function createAutocompletePlugin(
 			} else {
 				node = state.schema.nodes.emoji.create({
 					id: item.id,
-					name: item.name,
+					name: item.label ?? item.name,
 				});
 			}
 		} else if (type === "command") {
