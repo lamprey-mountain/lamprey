@@ -9,6 +9,15 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 		return `${item.thread_id}:${item.user_id}`;
 	}
 
+	private compositeId(thread_id: string, user_id: string): string {
+		return `${thread_id}:${user_id}`;
+	}
+
+	protected getDbKey(id: string): IDBValidKey {
+		const [thread_id, user_id] = id.split(":");
+		return [thread_id, user_id];
+	}
+
 	override upsert(item: ThreadMember) {
 		this.cache.set(this.getKey(item), item);
 
@@ -48,6 +57,7 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 		}
 	}
 
+	// TODO: rename to useThreadMember
 	useMember(
 		thread_id: Accessor<string>,
 		user_id: Accessor<string>,
@@ -55,9 +65,7 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 		const id = () => {
 			const t = thread_id();
 			const u = user_id();
-			return t && u
-				? this.getKey({ thread_id: t, user_id: u } as any)
-				: undefined;
+			return t && u ? this.compositeId(t, u) : undefined;
 		};
 		return this.use(id);
 	}

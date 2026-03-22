@@ -41,6 +41,10 @@ export abstract class BaseService<T> {
 		return this.getDb?.();
 	}
 
+	protected getDbKey(id: string): IDBValidKey {
+		return id;
+	}
+
 	/**
 	 * Retry a failed HTTP request with exponential backoff and jitter.
 	 * Automatically extracts data from the response and throws on error.
@@ -131,22 +135,12 @@ export abstract class BaseService<T> {
 			// Attempt to load from IndexedDB first
 			if (this.db && this.cacheName) {
 				try {
-					// HACK: theres probably a better way of doing this than hardcoding
-					let dbKey: string | [string, string] = itemId;
-					if (
-						this.cacheName === "room_member" ||
-						this.cacheName === "thread_member"
-					) {
-						const parts = itemId.split(":");
-						if (parts.length === 2) {
-							dbKey = [parts[0], parts[1]] as [string, string];
-						}
-					}
-					const cached = await this.db.get(this.cacheName, dbKey);
+					const cached = await this.db.get(
+						this.cacheName,
+						this.getDbKey(itemId),
+					);
 					if (cached) {
-						// Load stale data into cache immediately
 						this.upsert(cached);
-						// Fetch fresh data in background without awaiting
 						this.fetchOrQueue(itemId).catch(() => {});
 						return cached;
 					}

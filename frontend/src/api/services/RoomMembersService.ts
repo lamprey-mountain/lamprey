@@ -6,14 +6,17 @@ import { ReactiveMap } from "@solid-primitives/map";
 export class RoomMembersService extends BaseService<RoomMember> {
 	protected cacheName = "room_member";
 
-	// For now, let's use the key convention "room_id:user_id" for the main cache
-	// so `use()` works with a composite ID.
-
-	getKey(item: RoomMember | string, user_id?: string): string {
-		if (typeof item === "string") {
-			return `${item}:${user_id}`;
-		}
+	getKey(item: RoomMember): string {
 		return `${item.room_id}:${item.user_id}`;
+	}
+
+	private compositeId(room_id: string, user_id: string): string {
+		return `${room_id}:${user_id}`;
+	}
+
+	protected getDbKey(id: string): IDBValidKey {
+		const [room_id, user_id] = id.split(":");
+		return [room_id, user_id];
 	}
 
 	async fetch(id: string): Promise<RoomMember> {
@@ -59,6 +62,7 @@ export class RoomMembersService extends BaseService<RoomMember> {
 		}
 	}
 
+	// TODO: rename to useRoomMember
 	useMember(
 		room_id: Accessor<string>,
 		user_id: Accessor<string>,
@@ -66,7 +70,7 @@ export class RoomMembersService extends BaseService<RoomMember> {
 		const id = () => {
 			const r = room_id();
 			const u = user_id();
-			return r && u ? this.getKey(r, u) : undefined;
+			return r && u ? this.compositeId(r, u) : undefined;
 		};
 		return this.use(id);
 	}
