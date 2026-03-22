@@ -42,15 +42,23 @@ use super::{
 
 // TODO: include nonce/seq for MessageClient too, so theres some way to associate an error response to a request
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MessageClient {
     /// initial message
     Hello {
         token: SessionToken,
-
         presence: Option<Presence>,
+        // TODO: add
+        // properties: ConnectionProperties,
+        // TODO: remove
+        #[cfg_attr(feature = "serde", serde(flatten))]
+        resume: Option<SyncResume>,
+    },
+
+    #[cfg(any())]
+    Resume {
+        token: SessionToken,
 
         #[cfg_attr(feature = "serde", serde(flatten))]
         resume: Option<SyncResume>,
@@ -118,6 +126,19 @@ pub enum MessageClient {
     Subscribe(SyncSubscribe),
 }
 
+/// metadata for this connection
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct ConnectionProperties {
+    /// a valid user agent string
+    pub user_agent: String,
+
+    /// git commit of the official frontend, ignore for bots
+    pub client_commit: Option<String>,
+}
+
 /// update what the client is subscribed to
 ///
 /// leaving a field as None will skip updating. set it to an empty vec to clear.
@@ -135,8 +156,24 @@ pub struct SyncSubscribe {
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
     #[cfg_attr(feature = "validator", validate(length(max = 8)))]
     pub documents: Option<Vec<SyncSubscribeDocument>>,
-    // TODO: subscribing to user profiles
-    // TODO: subscribing to invites
+
+    #[cfg(any())]
+    /// the user profiles to subscribe to
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    pub users: Option<Vec<UserId>>,
+
+    #[cfg(any())]
+    /// the invite to subscribe to
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    pub invites: Option<Vec<InviteCode>>,
+
+    #[cfg(any())]
+    /// the rooms to subscribe to (lurking)
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    pub rooms: Option<Vec<RoomId>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
