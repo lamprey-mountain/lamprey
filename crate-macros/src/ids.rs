@@ -15,13 +15,15 @@ pub fn expand_typed_id(lit: LitStr, phantom_ty: &str) -> TokenStream {
     };
 
     let b = uuid.as_bytes();
-    let phantom_ty =
-        syn::parse_str::<syn::Type>(phantom_ty).expect("phantom_ty must be a valid Rust type");
+    let marker_ty = phantom_ty.strip_suffix("Id").unwrap_or(phantom_ty);
+    let marker_ty = format!("Marker{}", marker_ty);
+    let marker_ty =
+        syn::parse_str::<syn::Type>(&marker_ty).expect("marker_ty must be a valid Rust type");
 
     quote! {
         Id {
             inner: ::uuid::Uuid::from_bytes([#(#b),*]),
-            phantom: ::std::marker::PhantomData::<#phantom_ty>,
+            phantom: ::std::marker::PhantomData::<#marker_ty>,
         }
     }
     .into()
