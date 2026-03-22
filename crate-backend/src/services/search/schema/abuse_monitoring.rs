@@ -59,7 +59,7 @@ pub struct AbuseEvent {
 
 impl IndexDefinition for AbuseMonitoringIndex {
     fn schema(&self) -> &Schema {
-        &self.schema()
+        &self.schema.schema
     }
 
     fn name(&self) -> String {

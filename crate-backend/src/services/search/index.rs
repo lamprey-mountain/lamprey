@@ -4,7 +4,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use common::v1::types::{search::MessageSearchRequest, ChannelId};
 use dashmap::DashMap;
 use kameo::{
     actor::{ActorRef, Spawn},
@@ -146,7 +145,7 @@ impl Message<UpdateDocument> for IndexActor {
         tokio::task::spawn_blocking(move || {
             let writer = writer.lock().unwrap();
             writer.delete_term(msg.term);
-            if let Err(e) = writer.add_document(msg.0) {
+            if let Err(e) = writer.add_document(msg.doc) {
                 error!("failed to add document: {}", e);
             }
         })

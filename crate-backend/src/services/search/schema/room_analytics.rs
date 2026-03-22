@@ -1,4 +1,4 @@
-use common::v1::types::{ChannelId, MediaId, RoomId, RoomMemberOrigin, SessionId, UserId};
+use common::v1::types::RoomId;
 use lamprey_backend_core::types::analytics::AnalyticsEventPayload;
 use time::Time;
 use uuid::Uuid;
@@ -51,7 +51,7 @@ pub struct AnalyticsEvent {
 
 impl IndexDefinition for RoomAnalyticsIndex {
     fn schema(&self) -> &Schema {
-        &self.schema()
+        &self.schema.schema
     }
 
     fn name(&self) -> String {

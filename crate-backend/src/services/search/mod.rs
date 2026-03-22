@@ -1,7 +1,9 @@
+#![allow(dead_code)] // TEMP
+
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use common::v1::types::MessageSync;
+use common::v1::types::search::{ChannelSearchOrderField, Order};
 use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, RoomId, UserId,
@@ -17,7 +19,7 @@ use crate::services::search::import::ChannelReindexerManager;
 use crate::services::search::index::IndexManager;
 use crate::services::search::schema::content::ContentSchema;
 use crate::services::search::schema::ContentIndex;
-use crate::services::search::searcher::content::{ContentSearcher, SearchMessages};
+use crate::services::search::searcher::content::{ContentSearcher, SearchChannels, SearchMessages};
 use crate::Error;
 use crate::{error::Result, ServerStateInner};
 
@@ -229,107 +231,126 @@ impl ServiceSearch {
 
     pub async fn search_channels(
         &self,
-        _user_id: UserId,
-        _req: ChannelSearchRequest,
+        user_id: UserId,
+        req: ChannelSearchRequest,
         _q: PaginationQuery<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
-        todo!()
-    }
+        let srv = self.state.services();
+        let data = self.state.data();
 
-    // pub async fn search_channels(
-    //     &self,
-    //     user_id: UserId,
-    //     req: ChannelSearchRequest,
-    //     _q: PaginationQuery<ChannelId>,
-    // ) -> Result<PaginationResponse<Channel>> {
-    //     let srv = self.state.services();
+        let vis = srv.channels.list_user_room_channels(user_id).await?;
+        trace!(count = vis.len(), "visible channels for search");
 
-    //     let vis = srv.channels.list_user_room_channels(user_id).await?;
-    //     let vis_ids: HashSet<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
+        let visible_room_ids: Vec<RoomId> = {
+            if vis.is_empty() {
+                vec![]
+            } else {
+                let channel_ids: Vec<ChannelId> = vis.iter().map(|(id, _)| *id).collect();
+                let channels = srv.channels.get_many(&channel_ids, Some(user_id)).await?;
+                let mut room_ids: HashSet<RoomId> = HashSet::new();
+                for chan in &channels {
+                    if let Some(room_id) = chan.room_id {
+                        room_ids.insert(room_id);
+                    }
+                }
+                room_ids.into_iter().collect()
+            }
+        };
 
-    //     let searcher = self.tantivy.searcher();
-    //     let mut req_clone = req.clone();
+        if visible_room_ids.is_empty() {
+            return Ok(PaginationResponse {
+                items: vec![],
+                has_more: false,
+                total: 0,
+                cursor: None,
+            });
+        }
 
-    //     // If we are sorting by activity, we want to fetch a larger batch from Tantivy
-    //     // then resort in memory using the cache for active threads.
-    //     let is_activity_sort = req.sort_field == ChannelSearchOrderField::Activity;
+        let is_activity_sort = req.sort_field == ChannelSearchOrderField::Activity;
+        let req_clone = req.clone();
 
-    //     if is_activity_sort {
-    //         // Fetch more results to allow for better resorting.
-    //         // This is still a bit of a hack, but without updating Tantivy on every message,
-    //         // we have to resort in memory.
-    //         req_clone.limit = req.limit.max(500);
-    //         req_clone.offset = 0;
-    //     }
+        // HACK: for activity sorting, fetch more results to re-sort in memory
+        let search_req = if is_activity_sort {
+            let mut modified = req.clone();
+            modified.limit = req.limit.max(500);
+            modified.offset = 0;
+            modified
+        } else {
+            req.clone()
+        };
 
-    //     let raw_result =
-    //         tokio::task::spawn_blocking(move || searcher.search_channels(req_clone, &vis_ids))
-    //             .await
-    //             .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("starting channel search task");
+        let searcher = self.get_content_searcher().await?;
+        let raw_result = tokio::task::spawn_blocking(move || {
+            searcher.search_channels(SearchChannels {
+                req: search_req,
+                visible_room_ids,
+            })
+        })
+        .await
+        .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("finished channel search task");
 
-    //     let channel_ids = raw_result.items;
-    //     let mut channels = srv.channels.get_many(&channel_ids, Some(user_id)).await?;
+        let channel_ids: Vec<ChannelId> = raw_result.items.iter().map(|i| i.id).collect();
+        let mut channels = if channel_ids.is_empty() {
+            vec![]
+        } else {
+            srv.channels.get_many(&channel_ids, Some(user_id)).await?
+        };
 
-    //     if is_activity_sort {
-    //         // Resort based on cache/real-time activity
-    //         channels.sort_by(|a, b| {
-    //             let a_time = a.archived_at.unwrap_or_else(|| {
-    //                 a.last_version_id
-    //                     .and_then(|id| id.try_into().ok())
-    //                     .unwrap_or_else(|| a.id.try_into().unwrap())
-    //             });
-    //             let b_time = b.archived_at.unwrap_or_else(|| {
-    //                 b.last_version_id
-    //                     .and_then(|id| id.try_into().ok())
-    //                     .unwrap_or_else(|| b.id.try_into().unwrap())
-    //             });
+        // re-sort if needed
+        if is_activity_sort {
+            channels.sort_by(|a, b| {
+                let a_time = a.archived_at.unwrap_or_else(|| {
+                    a.last_version_id
+                        .and_then(|id| id.try_into().ok())
+                        .unwrap_or_else(|| a.id.try_into().unwrap())
+                });
+                let b_time = b.archived_at.unwrap_or_else(|| {
+                    b.last_version_id
+                        .and_then(|id| id.try_into().ok())
+                        .unwrap_or_else(|| b.id.try_into().unwrap())
+                });
 
-    //             match req.sort_order {
-    //                 Order::Ascending => a_time.cmp(&b_time),
-    //                 Order::Descending => b_time.cmp(&a_time),
-    //             }
-    //         });
+                match req.sort_order {
+                    Order::Ascending => a_time.cmp(&b_time),
+                    Order::Descending => b_time.cmp(&a_time),
+                }
+            });
 
-    //         // Re-apply pagination after resorting
-    //         let total = channels.len();
-    //         let start = req.offset as usize;
-    //         let end = (start + req.limit as usize).min(total);
+            // re-apply pagination after resorting
+            let total = channels.len();
+            let start = req.offset as usize;
+            let end = (start + req.limit as usize).min(total);
 
-    //         if start >= total {
-    //             return Ok(PaginationResponse {
-    //                 items: vec![],
-    //                 has_more: false,
-    //                 total: raw_result.total,
-    //                 cursor: None,
-    //             });
-    //         }
+            if start >= total {
+                return Ok(PaginationResponse {
+                    items: vec![],
+                    has_more: false,
+                    total: raw_result.total,
+                    cursor: None,
+                });
+            }
 
-    //         let paged_channels = channels[start..end].to_vec();
-    //         let has_more = end < total || raw_result.total > req.limit as u64;
+            let paged_channels = channels[start..end].to_vec();
+            let has_more = end < total || raw_result.total > req.limit as u64;
 
-    //         Ok(PaginationResponse {
-    //             items: paged_channels,
-    //             has_more,
-    //             total: raw_result.total,
-    //             cursor: None, // TODO: implement cursors if needed
-    //         })
-    //     } else {
-    //         Ok(PaginationResponse {
-    //             items: channels,
-    //             has_more: (req.offset as u64 + channel_ids.len() as u64) < raw_result.total,
-    //             total: raw_result.total,
-    //             cursor: None,
-    //         })
-    //     }
-    // }
+            return Ok(PaginationResponse {
+                items: paged_channels,
+                has_more,
+                total: raw_result.total,
+                cursor: None,
+            });
+        }
 
-    pub fn send_indexer_command(&self, _cmd: IndexerCommandLegacy) -> Result<()> {
-        todo!()
-        //     self.tantivy
-        //         .command_tx
-        //         .send(cmd)
-        //         .map_err(|e| Error::Internal(format!("Failed to send reindex command: {}", e)))?;
-        //     Ok(())
+        let has_more = (req.offset as u64 + channel_ids.len() as u64) < raw_result.total;
+
+        Ok(PaginationResponse {
+            items: channels,
+            has_more,
+            total: raw_result.total,
+            cursor: None,
+        })
     }
 
     pub fn reindex_channel(&self, _channel_id: ChannelId) -> Result<()> {

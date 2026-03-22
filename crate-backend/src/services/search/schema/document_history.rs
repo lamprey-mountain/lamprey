@@ -32,7 +32,7 @@ pub struct DocumentHistorySchema {
 
 impl IndexDefinition for DocumentHistoryIndex {
     fn schema(&self) -> &Schema {
-        &self.schema()
+        &self.schema.schema
     }
 
     fn name(&self) -> String {
