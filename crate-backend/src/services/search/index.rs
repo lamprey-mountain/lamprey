@@ -128,11 +128,6 @@ impl Actor for IndexActor {
     }
 }
 
-pub struct Search {
-    pub req: MessageSearchRequest,
-    pub visible_channel_ids: Vec<(ChannelId, bool)>,
-}
-
 pub struct CommitIndex;
 
 pub struct AddDocument(pub TantivyDocument);
@@ -150,8 +145,10 @@ impl Message<UpdateDocument> for IndexActor {
         let writer = self.writer.clone();
         tokio::task::spawn_blocking(move || {
             let writer = writer.lock().unwrap();
-            writer.delete_term(msg.term); // Remove old version
-            writer.add_document(msg.doc); // Add new version
+            writer.delete_term(msg.term);
+            if let Err(e) = writer.add_document(msg.0) {
+                error!("failed to add document: {}", e);
+            }
         })
         .await
         .unwrap();
@@ -216,14 +213,6 @@ impl Message<DeleteTerm> for IndexActor {
 
         self.uncommitted_count += 1;
         self.check_auto_commit().await;
-    }
-}
-
-impl Message<Search> for IndexActor {
-    type Reply = ();
-
-    async fn handle(&mut self, _msg: Search, _ctx: &mut Context<Self, Self::Reply>) -> Self::Reply {
-        todo!()
     }
 }
 

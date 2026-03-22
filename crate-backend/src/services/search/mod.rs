@@ -42,31 +42,9 @@ pub struct ServiceSearch {
     // document_history: ActorRef<IndexActor>,
 }
 
-pub enum IndexerCommandLegacy {
-    /// handle this event and update
-    Message(MessageSync),
-
-    /// reindex all messages in this channel
-    ReindexChannel(ChannelId),
-
-    /// commit/flush then exit
-    Shutdown,
-}
-
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         let index_manager = IndexManager::new(Arc::clone(&state));
-
-        // // In ServiceSearch::new or an init method
-        // let reindexer = ReindexActor::spawn(ReindexActor {
-        //     state: self.state.clone(),
-        //     index_writer: content_writer_actor_ref,
-        //     schema: ContentSchema::default(),
-        //     is_running: false,
-        // });
-
-        // // To trigger it (e.g., from an Admin API endpoint)
-        // let _ = reindexer.tell(StartFullReindex).await;
 
         Self {
             state,
@@ -88,15 +66,14 @@ impl ServiceSearch {
                 // begin reindexing channels
                 ChannelReindexerManager::spawn((
                     server_state,
-                    writer.clone(),
+                    writer,
                     4, // TODO: finetune (maybe allow setting in config?)
                 ));
 
-                Ok(Arc::new(ContentSearcher {
-                    index_ref: writer,
+                Ok(Arc::new(ContentSearcher::new(
                     reader,
-                    schema: ContentSchema::default(),
-                }))
+                    ContentSchema::default(),
+                )))
             })
             .await
             .cloned()

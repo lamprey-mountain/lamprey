@@ -9,9 +9,7 @@ use lamprey_backend_core::types::admin::{
 use subtle::ConstantTimeEq;
 use tokio::sync::RwLock;
 
-use crate::{
-    config::ConfigInternal, error::Result, services::search::IndexerCommandLegacy, ServerStateInner,
-};
+use crate::{config::ConfigInternal, error::Result, ServerStateInner};
 
 pub struct ServiceAdmin {
     state: Arc<ServerStateInner>,

@@ -10,14 +10,17 @@ use tantivy::{
 };
 use tracing::warn;
 
-use crate::services::search::index::IndexActorRef;
 use crate::services::search::schema::content::ContentSchema;
 
-// TEMP: public
 pub struct ContentSearcher {
-    pub(crate) index_ref: IndexActorRef,
-    pub(crate) reader: IndexReader,
-    pub(crate) schema: ContentSchema,
+    reader: IndexReader,
+    schema: ContentSchema,
+}
+
+impl ContentSearcher {
+    pub fn new(reader: IndexReader, schema: ContentSchema) -> Self {
+        Self { reader, schema }
+    }
 }
 
 pub struct SearchMessages {
@@ -88,12 +91,13 @@ impl ContentSearcher {
 
         if let Some(q_str) = &msg.req.query {
             if !q_str.is_empty() {
-                // TODO: cache query parser?
                 let mut query_parser = QueryParser::for_index(
                     searcher.index(),
                     vec![self.schema.content, self.schema.name],
                 );
-                query_parser.set_field_boost(self.schema.name, 2.0); // useless for messages, but necessary if i have one query parser for everything
+
+                // i know this is useless for messages, this is for reference
+                query_parser.set_field_boost(self.schema.name, 2.0);
 
                 let parsed_query = query_parser
                     .parse_query(q_str)
