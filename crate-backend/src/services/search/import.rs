@@ -213,7 +213,6 @@ impl Message<StartReindexing> for ChannelReindexer {
             return;
         }
 
-        let data = self.s.data();
         let channel_id = msg.0;
 
         self.state = ChannelReindexerState::Active(channel_id);

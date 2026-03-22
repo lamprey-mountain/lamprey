@@ -1,4 +1,4 @@
-use common::v1::types::{ChannelId, RoomId, RoomMemberOrigin, SessionId, UserId};
+use common::v1::types::RoomId;
 use lamprey_backend_core::types::analytics::{AbuseMetadata, AnalyticsEventPayload};
 use time::Time;
 use uuid::Uuid;

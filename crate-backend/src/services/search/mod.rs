@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TEMP
-
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -236,7 +234,7 @@ impl ServiceSearch {
         _q: PaginationQuery<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
         let srv = self.state.services();
-        let data = self.state.data();
+        let _data = self.state.data();
 
         let vis = srv.channels.list_user_room_channels(user_id).await?;
         trace!(count = vis.len(), "visible channels for search");
@@ -267,7 +265,6 @@ impl ServiceSearch {
         }
 
         let is_activity_sort = req.sort_field == ChannelSearchOrderField::Activity;
-        let req_clone = req.clone();
 
         // HACK: for activity sorting, fetch more results to re-sort in memory
         let search_req = if is_activity_sort {
@@ -358,7 +355,9 @@ impl ServiceSearch {
 
         if let Some(index_actor) = self.index_manager.get_index_actor("content") {
             let delete_term = index::delete_term_for_channel(channel_id);
-            let _ = index_actor.tell(delete_term).await;
+            if let Err(e) = index_actor.tell(delete_term).await {
+                tracing::warn!("failed to delete documents for channel {}: {}", channel_id, e);
+            }
         }
 
         data.search_reindex_queue_upsert(channel_id, None).await?;
@@ -370,7 +369,9 @@ impl ServiceSearch {
 
         if let Some(index_actor) = self.index_manager.get_index_actor("content") {
             let delete_term = index::delete_term_for_room(room_id);
-            let _ = index_actor.tell(delete_term).await;
+            if let Err(e) = index_actor.tell(delete_term).await {
+                tracing::warn!("failed to delete documents for room {}: {}", room_id, e);
+            }
         }
 
         data.search_reindex_queue_upsert_room(room_id).await?;
@@ -379,7 +380,9 @@ impl ServiceSearch {
 
     pub async fn reindex_everything(&self) -> Result<()> {
         if let Some(index_actor) = self.index_manager.get_index_actor("content") {
-            let _ = index_actor.tell(index::DeleteAllDocuments).await;
+            if let Err(e) = index_actor.tell(index::DeleteAllDocuments).await {
+                tracing::warn!("failed to delete all documents: {}", e);
+            }
         }
 
         let data = self.state.data();
