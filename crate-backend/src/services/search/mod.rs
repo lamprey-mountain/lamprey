@@ -8,14 +8,16 @@ use common::v1::types::{
 };
 use common::v2::types::message::MessageType;
 use futures::stream::{FuturesUnordered, StreamExt};
+use kameo::actor::Spawn;
 use lamprey_backend_core::types::admin::SearchIndexStats;
 use tokio::sync::OnceCell;
 use tracing::trace;
 
+use crate::services::search::import::ChannelReindexerManager;
 use crate::services::search::index::IndexManager;
 use crate::services::search::schema::content::ContentSchema;
 use crate::services::search::schema::ContentIndex;
-use crate::services::search::searcher::{ContentSearcher, SearchMessages};
+use crate::services::search::searcher::content::{ContentSearcher, SearchMessages};
 use crate::Error;
 use crate::{error::Result, ServerStateInner};
 
@@ -54,6 +56,18 @@ pub enum IndexerCommandLegacy {
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         let index_manager = IndexManager::new(Arc::clone(&state));
+
+        // // In ServiceSearch::new or an init method
+        // let reindexer = ReindexActor::spawn(ReindexActor {
+        //     state: self.state.clone(),
+        //     index_writer: content_writer_actor_ref,
+        //     schema: ContentSchema::default(),
+        //     is_running: false,
+        // });
+
+        // // To trigger it (e.g., from an Admin API endpoint)
+        // let _ = reindexer.tell(StartFullReindex).await;
+
         Self {
             state,
             index_manager,
@@ -63,10 +77,21 @@ impl ServiceSearch {
         }
     }
 
-    async fn get_message_searcher(&self) -> Result<Arc<ContentSearcher>> {
+    async fn get_content_searcher(&self) -> Result<Arc<ContentSearcher>> {
+        let server_state = Arc::clone(&self.state);
+
         self.content_searcher
             .get_or_try_init(|| async {
+                // open or create the index
                 let (writer, reader) = self.index_manager.open(ContentIndex::default()).await?;
+
+                // begin reindexing channels
+                ChannelReindexerManager::spawn((
+                    server_state,
+                    writer.clone(),
+                    4, // TODO: finetune (maybe allow setting in config?)
+                ));
+
                 Ok(Arc::new(ContentSearcher {
                     index_ref: writer,
                     reader,
@@ -94,7 +119,7 @@ impl ServiceSearch {
         let vis_clone = vis.clone();
 
         trace!("starting search task");
-        let searcher = self.get_message_searcher().await?;
+        let searcher = self.get_content_searcher().await?;
         let raw_result = tokio::task::spawn_blocking(move || {
             searcher.search_messages(SearchMessages {
                 req: req_clone,
@@ -136,7 +161,7 @@ impl ServiceSearch {
                     .await?;
                 msgs.extend(replies);
                 srv2.messages
-                    .populate_all(channel_id, auth_user_id, &mut msgs)
+                    .populate_all(channel_id, Some(auth_user_id), &mut msgs)
                     .await?;
                 Result::Ok(msgs)
             });
@@ -330,22 +355,33 @@ impl ServiceSearch {
         //     Ok(())
     }
 
-    pub async fn get_channel_stats(&self, _channel_id: ChannelId) -> Result<SearchIndexStats> {
+    pub fn reindex_channel(&self, _channel_id: ChannelId) -> Result<()> {
         todo!()
-        // let data = self.state.data();
-        // let searcher = self.tantivy.searcher();
+    }
 
-        // let documents_indexed =
-        //     tokio::task::spawn_blocking(move || searcher.count_documents_for_channel(channel_id))
-        //         .await
-        //         .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))?
-        //         .map_err(|e| Error::Internal(format!("Failed to count documents: {}", e)))?;
+    pub fn reindex_room(&self, _room_id: RoomId) -> Result<()> {
+        todo!()
+    }
 
-        // let last_message_id = data.search_reindex_queue_get(channel_id).await?;
+    pub fn reindex_everything(&self) -> Result<()> {
+        todo!()
+    }
 
-        // Ok(SearchIndexStats {
-        //     documents_indexed,
-        //     last_message_id,
-        // })
+    pub async fn get_channel_stats(&self, channel_id: ChannelId) -> Result<SearchIndexStats> {
+        let data = self.state.data();
+        let searcher = self.get_content_searcher().await?;
+
+        let documents_indexed =
+            tokio::task::spawn_blocking(move || searcher.count_documents_for_channel(channel_id))
+                .await
+                .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))?
+                .map_err(|e| Error::Internal(format!("Failed to count documents: {}", e)))?;
+
+        let last_message_id = data.search_reindex_queue_get(channel_id).await?;
+
+        Ok(SearchIndexStats {
+            documents_indexed,
+            last_message_id,
+        })
     }
 }

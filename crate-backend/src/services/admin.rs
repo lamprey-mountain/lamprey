@@ -199,8 +199,7 @@ impl ServiceAdmin {
 
     pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
         let srv = self.state.services();
-        srv.search
-            .send_indexer_command(IndexerCommandLegacy::ReindexChannel(channel_id))?;
+        srv.search.reindex_channel(channel_id)?;
         Ok(())
     }
 }

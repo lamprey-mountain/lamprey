@@ -8,6 +8,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::error;
+use uuid::Uuid;
 
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::Color;
@@ -56,7 +57,7 @@ impl ServiceMessages {
             .await?;
         self.state.presign_message(&mut message).await?;
 
-        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
+        self.populate_all(thread_id, Some(user_id), std::slice::from_mut(&mut message))
             .await?;
 
         Ok(message)
@@ -78,7 +79,7 @@ impl ServiceMessages {
             self.state.presign_message(message).await?;
         }
 
-        self.populate_all(channel_id, user_id, &mut messages)
+        self.populate_all(channel_id, Some(user_id), &mut messages)
             .await?;
 
         Ok(messages)
@@ -619,7 +620,7 @@ impl ServiceMessages {
             .await?;
         message.latest_version = ver;
 
-        self.populate_all(thread_id, user_id, std::slice::from_mut(message))
+        self.populate_all(thread_id, Some(user_id), std::slice::from_mut(message))
             .await?;
 
         if let Some(content) = content {
@@ -736,7 +737,7 @@ impl ServiceMessages {
     async fn fetch_mentions_data(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         messages: &[Message],
     ) -> Result<Vec<Mentions>> {
         if messages.is_empty() {
@@ -748,7 +749,7 @@ impl ServiceMessages {
             .state
             .services()
             .channels
-            .get(channel_id, Some(user_id))
+            .get(channel_id, user_id)
             .await?;
         let room_id = channel.room_id;
 
@@ -773,7 +774,7 @@ impl ServiceMessages {
 
     async fn fetch_threads_data(
         &self,
-        user_id: UserId,
+        user_id: Option<UserId>,
         messages: &[Message],
     ) -> Result<HashMap<ChannelId, Channel>> {
         let mut threads_map = HashMap::new();
@@ -785,7 +786,7 @@ impl ServiceMessages {
                 let srv2 = Arc::clone(&srv);
                 let cid: ChannelId = (*m.id).into();
                 async move {
-                    let thread = srv2.channels.get(cid, Some(user_id)).await;
+                    let thread = srv2.channels.get(cid, user_id).await;
                     (cid, thread)
                 }
             })
@@ -803,13 +804,17 @@ impl ServiceMessages {
     async fn fetch_reactions_data(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         messages: &[Message],
     ) -> Result<HashMap<MessageId, ReactionCounts>> {
         let data = self.state.data();
         let message_ids: Vec<MessageId> = messages.iter().map(|m| m.id).collect();
         let reactions = data
-            .reaction_fetch_all(channel_id, user_id, &message_ids)
+            .reaction_fetch_all(
+                channel_id,
+                user_id.unwrap_or(Uuid::nil().into()),
+                &message_ids,
+            )
             .await?;
         let reactions_raw: HashMap<MessageId, Vec<(ReactionKeyParam, u64, bool)>> =
             reactions.into_iter().collect();
@@ -841,7 +846,7 @@ impl ServiceMessages {
     pub async fn populate_all(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         messages: &mut [Message],
     ) -> Result<()> {
         if messages.is_empty() {
@@ -904,7 +909,7 @@ impl ServiceMessages {
             self.state.presign_message(message).await?;
         }
 
-        self.populate_all(channel_id, user_id, &mut ancestors)
+        self.populate_all(channel_id, Some(user_id), &mut ancestors)
             .await?;
 
         Ok(ancestors)
@@ -913,7 +918,7 @@ impl ServiceMessages {
     async fn process_message_list(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         mut res: PaginationResponse<Message>,
     ) -> Result<PaginationResponse<Message>> {
         self.populate_all(channel_id, user_id, &mut res.items)
@@ -929,13 +934,17 @@ impl ServiceMessages {
     pub async fn list(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
             .state
             .data()
-            .message_list(channel_id, user_id, pagination)
+            .message_list(
+                channel_id,
+                user_id.unwrap_or(Uuid::nil().into()),
+                pagination,
+            )
             .await?;
         self.process_message_list(channel_id, user_id, res).await
     }
@@ -951,7 +960,8 @@ impl ServiceMessages {
             .data()
             .message_list_deleted(channel_id, user_id, pagination)
             .await?;
-        self.process_message_list(channel_id, user_id, res).await
+        self.process_message_list(channel_id, Some(user_id), res)
+            .await
     }
 
     pub async fn list_removed(
@@ -965,7 +975,8 @@ impl ServiceMessages {
             .data()
             .message_list_removed(channel_id, user_id, pagination)
             .await?;
-        self.process_message_list(channel_id, user_id, res).await
+        self.process_message_list(channel_id, Some(user_id), res)
+            .await
     }
 
     pub async fn list_all(
@@ -979,7 +990,8 @@ impl ServiceMessages {
             .data()
             .message_list_all(channel_id, user_id, pagination)
             .await?;
-        self.process_message_list(channel_id, user_id, res).await
+        self.process_message_list(channel_id, Some(user_id), res)
+            .await
     }
 
     pub async fn list_context(
@@ -1028,7 +1040,8 @@ impl ServiceMessages {
             .chain(after.items)
             .collect();
 
-        self.populate_all(channel_id, user_id, &mut items).await?;
+        self.populate_all(channel_id, Some(user_id), &mut items)
+            .await?;
 
         for item in &mut items {
             s.presign_message(item).await?;
@@ -1106,7 +1119,7 @@ impl ServiceMessages {
             )
             .await?;
 
-        self.populate_all(channel_id, user_id, &mut res.items)
+        self.populate_all(channel_id, Some(user_id), &mut res.items)
             .await?;
 
         for message in &mut res.items {
@@ -1136,7 +1149,8 @@ impl ServiceMessages {
             .data()
             .message_pin_list(channel_id, user_id, pagination)
             .await?;
-        self.process_message_list(channel_id, user_id, res).await
+        self.process_message_list(channel_id, Some(user_id), res)
+            .await
     }
 
     pub async fn list_activity(
@@ -1150,7 +1164,8 @@ impl ServiceMessages {
             .data()
             .message_list_activity(channel_id, user_id, pagination)
             .await?;
-        self.process_message_list(channel_id, user_id, res).await
+        self.process_message_list(channel_id, Some(user_id), res)
+            .await
     }
 
     async fn fetch_media(
