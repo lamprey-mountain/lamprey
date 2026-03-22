@@ -8,9 +8,8 @@ use axum::response::{Html, IntoResponse};
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::auth::{
-    AuthEmailComplete, AuthState, CaptchaChallenge, PasswordExec, PasswordSet, TotpInit,
-    TotpRecoveryCode, TotpRecoveryCodes, TotpVerificationRequest, WebauthnAuthenticator,
-    WebauthnChallenge, WebauthnFinish, WebauthnPatch,
+    AuthState, CaptchaChallenge, TotpInit, TotpRecoveryCode, TotpRecoveryCodes,
+    WebauthnAuthenticator, WebauthnChallenge,
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -21,7 +20,6 @@ use common::v1::types::{
 };
 use http::StatusCode;
 use lamprey_macros::handler;
-use serde::Deserialize;
 use time::Duration;
 use totp_rs::{Algorithm as TotpAlgorithm, Secret as TotpSecret, TOTP as Totp};
 use tracing::debug;

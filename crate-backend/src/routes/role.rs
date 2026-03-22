@@ -6,15 +6,12 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
-use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationResponse, Permission, Role, RoleCreate, RoleId,
-    RoleMemberBulkPatch, RolePatch, RoleReorder, RoomId, RoomMember, UserId,
-};
+use common::v1::types::{AuditLogEntryType, MessageSync, Permission};
 use http::StatusCode;
 use lamprey_macros::handler;
 use validator::Validate;
 
-use crate::routes::util::{Auth, HeaderIdempotencyKey};
+use crate::routes::util::Auth;
 use crate::routes2;
 use crate::ServerState;
 use utoipa_axum::router::OpenApiRouter;

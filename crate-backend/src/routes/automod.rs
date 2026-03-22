@@ -5,12 +5,9 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::automod::{
-    AutomodRule, AutomodRuleCreate, AutomodRuleTest, AutomodRuleTestRequest, AutomodRuleUpdate,
-};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
-use common::v1::types::{AuditLogEntryType, MessageSync, Permission, RoomId};
+use common::v1::types::{AuditLogEntryType, MessageSync, Permission};
 use http::StatusCode;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -18,7 +15,6 @@ use validator::Validate;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::types::AutomodRuleId;
 use crate::{routes2, Error, ServerState};
 
 /// Automod rule list

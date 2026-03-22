@@ -6,10 +6,9 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::user::Ignore;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, Permission, RelationshipPatch, RelationshipType, UserId,
+    AuditLogEntryType, MessageSync, Permission, RelationshipPatch, RelationshipType,
 };
 use http::StatusCode;
 use lamprey_macros::handler;

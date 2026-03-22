@@ -5,10 +5,7 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::preferences::{
-    PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser,
-};
-use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
+use common::v1::types::MessageSync;
 use lamprey_macros::handler;
 use tower_http::limit::RequestBodyLimitLayer;
 use utoipa_axum::router::OpenApiRouter;

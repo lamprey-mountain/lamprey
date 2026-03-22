@@ -1,15 +1,11 @@
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
-use common::v1::types::search::{
-    ChannelSearchRequest, MessageSearch, MessageSearchRequest, RoomSearchRequest,
-};
-use common::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse, Room, RoomId};
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::{routes2, Error, ServerState};

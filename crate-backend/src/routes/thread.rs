@@ -7,14 +7,12 @@ use common::v1::routes;
 use common::v1::types::thread::ThreadListRoom;
 use common::v1::types::{
     error::{ApiError, ErrorCode},
-    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelMemberSearch,
-    ChannelMemberSearchResponse, ChannelType, Mentions, MentionsUser, Message, MessageId,
-    MessageMember, MessageSync, MessageType, RelationshipType, RoomId, ThreadMember,
-    ThreadMemberPut, UserId, SERVER_ROOM_ID,
+    AuditLogEntryType, ChannelId, ChannelType, Mentions, MentionsUser, MessageMember, MessageSync,
+    MessageType, RelationshipType, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::types::UserIdReq;

@@ -8,8 +8,7 @@ use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationResponse, Session, SessionStatus, SessionToken,
-    SessionType, SessionWithToken,
+    AuditLogEntryType, MessageSync, SessionStatus, SessionToken, SessionType, SessionWithToken,
 };
 use lamprey_macros::handler;
 use uuid::Uuid;

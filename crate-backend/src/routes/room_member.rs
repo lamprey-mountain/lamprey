@@ -11,13 +11,10 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse, Permission, PruneBegin,
-    PruneResponse, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomMemberSearch,
-    RoomMemberSearchAdvanced, RoomMemberSearchResponse, UserId,
+    AuditLogEntryType, MessageSync, PaginationResponse, Permission, RoomMemberSearchResponse,
+    UserId,
 };
-use common::v1::types::{
-    RoleId, RoomBan, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
-};
+use common::v1::types::{RoleId, RoomMemberOrigin, SERVER_ROOM_ID};
 use http::StatusCode;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -26,7 +23,7 @@ use validator::Validate;
 use crate::types::UserIdReq;
 use crate::{routes2, ServerState};
 
-use super::util::{Auth, HeaderReason};
+use super::util::Auth;
 use crate::error::{Error, Result};
 
 /// Room member list

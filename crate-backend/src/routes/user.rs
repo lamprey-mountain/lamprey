@@ -1,27 +1,21 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query, State};
+use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::harvest::{Harvest, HarvestCreate};
-use common::v1::types::presence::Presence;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, Room, RoomId, SessionStatus, User, UserCreate, UserId, UserPatch,
-    UserSearch, UserWithRelationship,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, SessionStatus, UserPatch,
+    UserWithRelationship,
 };
-use common::v1::types::{
-    AuditLogEntryStatus, AuditLogFilter, AuditLogPaginationResponse, HarvestId, Permission,
-    SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID,
-};
+use common::v1::types::{AuditLogEntryStatus, Permission, Suspended, SERVER_ROOM_ID};
 use http::StatusCode;
 use lamprey_macros::handler;
 use tracing::warn;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};

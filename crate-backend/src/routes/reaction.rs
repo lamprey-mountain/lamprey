@@ -5,10 +5,8 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::UserIdReq;
-use common::v1::types::reaction::{ReactionKey, ReactionKeyParam, ReactionListItem};
-use common::v1::types::{
-    AuditLogEntryType, ChannelId, MessageId, MessageSync, PaginationResponse, Permission, UserId,
-};
+use common::v1::types::reaction::{ReactionKey, ReactionKeyParam};
+use common::v1::types::{AuditLogEntryType, MessageSync, Permission};
 use http::StatusCode;
 use lamprey_macros::handler;
 

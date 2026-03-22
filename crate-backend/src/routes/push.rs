@@ -6,9 +6,9 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::push::{PushCreate, PushInfo};
+use common::v1::types::push::PushInfo;
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::types::PushData;
 use crate::{routes2, Error, ServerState};

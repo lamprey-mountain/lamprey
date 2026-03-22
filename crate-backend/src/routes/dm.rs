@@ -6,10 +6,7 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{
-    Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Permission,
-    RelationshipType,
-};
+use common::v1::types::{MessageSync, Permission, RelationshipType};
 use http::StatusCode;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;

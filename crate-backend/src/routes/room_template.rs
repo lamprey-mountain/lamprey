@@ -7,9 +7,6 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::room_template::{
-    RoomTemplate, RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch,
-};
 use common::v1::types::Permission;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -17,7 +14,6 @@ use validator::Validate;
 
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
-use crate::types::{PaginationQuery, PaginationResponse};
 use crate::{routes2, ServerState};
 
 /// Room template create

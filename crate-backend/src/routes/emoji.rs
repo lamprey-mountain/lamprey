@@ -5,14 +5,12 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
+use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::util::Diff;
-use common::v1::types::{
-    util::Changes, AuditLogEntryType, EmojiId, MessageSync, Permission, RoomId,
-};
+use common::v1::types::{util::Changes, AuditLogEntryType, MessageSync, Permission};
 use http::StatusCode;
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::error::Result;

@@ -5,11 +5,10 @@ use common::v1::routes;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::ApplicationIdReq;
 use common::v1::types::{
-    application::{Application, ApplicationCreate, ApplicationPatch},
+    application::Application,
     util::{Changes, Diff, Time},
-    ApplicationId, AuditLogChange, AuditLogEntryType, MessageSync, PaginationResponse, Permission,
-    Puppet, PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
-    SessionToken, SessionType, SessionWithToken, User, UserId,
+    AuditLogChange, AuditLogEntryType, MessageSync, Permission, Puppet, RoomMemberOrigin,
+    RoomMemberPut, SessionStatus, SessionToken, SessionType, SessionWithToken, UserId,
 };
 use http::StatusCode;
 use lamprey_macros::handler;

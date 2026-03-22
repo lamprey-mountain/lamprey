@@ -11,7 +11,7 @@ use common::v1::types::server::{
 };
 use common::v1::types::Permission;
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::{routes2, ServerState};
 

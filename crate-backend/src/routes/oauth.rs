@@ -9,7 +9,7 @@ use common::v1::types::{
     application::{Application, Scope, Scopes},
     oauth::{
         Autoconfig, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
-        OauthTokenRequest, OauthTokenResponse, Userinfo,
+        OauthTokenResponse, Userinfo,
     },
     util::Time,
     AuditLogEntryType, SessionStatus, SessionToken, SessionType,

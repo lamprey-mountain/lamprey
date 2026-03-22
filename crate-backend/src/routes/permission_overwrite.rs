@@ -6,13 +6,11 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    util::Changes, AuditLogEntryType, ChannelId, MessageSync, Permission, PermissionOverwriteSet,
-    PermissionOverwriteType,
+    util::Changes, AuditLogEntryType, MessageSync, Permission, PermissionOverwriteType,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
-use uuid::Uuid;
 
 use crate::error::Result;
 use crate::routes::util::Auth;

@@ -7,21 +7,14 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{
-    AuditLogEntryType, ContextQuery, ContextResponse, MessageMigrate, MessageModerate, MessagePin,
-    MessageType, PinsReorder, RepliesQuery, ThreadMemberPut,
-};
-use common::v2::types::message::{Message, MessagePatch};
+use common::v1::types::{AuditLogEntryType, MessagePin, MessageType, ThreadMemberPut};
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::routes::util::Auth;
 use crate::routes2;
-use crate::types::{
-    ChannelId, DbMessageCreate, MessageCreate, MessageId, MessageSync, MessageVerId,
-    PaginationQuery, PaginationResponse, Permission,
-};
+use crate::types::{DbMessageCreate, MessageSync, Permission};
 use crate::{error::Result, Error, ServerState};
 
 /// Message create

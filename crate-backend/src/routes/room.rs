@@ -8,24 +8,17 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::misc::time::Time;
-use common::v1::types::search::RoomSearchRequest;
 use common::v1::types::util::Changes;
-use common::v1::types::{
-    ApplicationId, AuditLogEntryId, AuditLogEntryType, AuditLogFilter, AuditLogPaginationResponse,
-    RoomSecurityUpdate, RoomType, TransferOwnership, SERVER_ROOM_ID,
-};
+use common::v1::types::{AuditLogEntryType, RoomType, SERVER_ROOM_ID};
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::routes::util::Auth;
 use crate::routes2;
-use crate::types::{
-    DbRoomCreate, MediaLinkType, MessageSync, PaginationQuery, PaginationResponse, Permission,
-    Room, RoomCreate, RoomId, RoomPatch,
-};
+use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
 use crate::{error::Result, Error, ServerState};
 use common::v1::types::error::{ApiError, ErrorCode};
 

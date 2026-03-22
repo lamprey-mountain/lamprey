@@ -4,12 +4,8 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
-use common::v1::types::application::Connection;
 use common::v1::types::misc::UserIdReq;
-use common::v1::types::user_connection::{ConnectionMetadata, ConnectionPatch};
-use common::v1::types::{
-    ApplicationId, AuditLogEntryType, MessageSync, PaginationQuery, PaginationResponse,
-};
+use common::v1::types::{AuditLogEntryType, MessageSync};
 use http::StatusCode;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;

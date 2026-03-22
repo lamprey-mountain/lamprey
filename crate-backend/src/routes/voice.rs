@@ -8,12 +8,9 @@ use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::voice::{
-    CallCreate, CallDeleteParams, CallPatch, RingEligibility, RingStart, RingStop, SfuCommand,
-    SfuPermissions, VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
-};
+use common::v1::types::voice::{RingEligibility, SfuCommand, SfuPermissions, VoiceState};
 use common::v1::types::{
-    AuditLogEntryType, ChannelId, ChannelType, MessageSync, PaginationResponse, Permission,
+    AuditLogEntryType, ChannelType, MessageSync, PaginationResponse, Permission,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -538,7 +535,7 @@ async fn voice_ring_eligibility(
 async fn voice_ring_start(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    req: routes::voice_ring_start::Request,
+    _req: routes::voice_ring_start::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
@@ -550,7 +547,7 @@ async fn voice_ring_start(
 async fn voice_ring_stop(
     auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    req: routes::voice_ring_stop::Request,
+    _req: routes::voice_ring_stop::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;

@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
+use common::v1::types::email::{EmailAddr, EmailInfo};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::UserId;

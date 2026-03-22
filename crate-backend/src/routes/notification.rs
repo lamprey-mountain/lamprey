@@ -6,12 +6,9 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::notifications::{
-    InboxListParams, Notification, NotificationCreate, NotificationFlush, NotificationMarkRead,
-    NotificationPagination, NotificationType,
-};
+use common::v1::types::notifications::{Notification, NotificationPagination, NotificationType};
 use common::v1::types::util::Time;
-use common::v1::types::{NotificationId, PaginationQuery, Permission};
+use common::v1::types::{NotificationId, Permission};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -139,7 +136,7 @@ async fn inbox_post(
 #[handler(routes::inbox_mark_read)]
 async fn inbox_mark_read(
     auth: Auth,
-    State(s): State<Arc<ServerState>>,
+    State(_s): State<Arc<ServerState>>,
     _req: routes::inbox_mark_read::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;

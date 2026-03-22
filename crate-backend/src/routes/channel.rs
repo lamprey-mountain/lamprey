@@ -6,24 +6,24 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
-use common::v1::types::ack::{AckReq, AckRes};
+use common::v1::types::ack::AckRes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
-    AuditLogEntryType, ChannelReorder, ChannelType, RatelimitPut, RelationshipType, Room,
-    RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
+    AuditLogEntryType, ChannelType, RelationshipType, RoomCreate, RoomMemberOrigin, RoomType,
+    ThreadMemberPut,
 };
 use lamprey_macros::handler;
-use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::routes::util::Auth;
 use crate::routes2;
 use crate::types::{
-    Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate,
-    MediaLinkType, MessageSync, Permission, RoomId,
+    ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
+    Permission,
 };
 use crate::{error::Result, Error, ServerState};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
@@ -126,7 +126,7 @@ async fn channel_create_dm(
         _ => return Err(ApiError::from_code(ErrorCode::DmGdmOnlyOutsideRoom).into()),
     };
 
-    let mut json = req.channel;
+    let json = req.channel;
     if json.bitrate.is_some_and(|b| b > 393216) {
         return Err(ApiError::from_code(ErrorCode::BitrateTooHigh).into());
     }
