@@ -14,24 +14,14 @@ import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import { Avatar } from "./User";
-import twemoji from "twemoji";
 import { type Command, useSlashCommands } from "./contexts/slash-commands";
-import { type EmojiData, emojiResource } from "./emoji";
+import { type EmojiData, emojiResource, getTwemoji } from "./emoji";
 
 type UnicodeEmoji = {
 	char: string;
 	name: string;
 	id: string;
 	shortcodes: string[];
-};
-
-const getTwemoji = (unicode: string) => {
-	return twemoji.parse(unicode, {
-		base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-		attributes: () => ({ loading: "lazy" }),
-		folder: "svg",
-		ext: ".svg",
-	});
 };
 
 export const Autocomplete = () => {

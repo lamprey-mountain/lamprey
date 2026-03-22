@@ -16,7 +16,7 @@ import { md } from "./markdown_utils";
 import { useNavigate } from "@solidjs/router";
 import { useUserPopout } from "./contexts/mod";
 import { getEmojiUrl } from "./media/util";
-import twemoji from "twemoji";
+import { getTwemoji } from "./emoji";
 import type { Token, Tokens } from "marked";
 import type { Channel } from "sdk";
 import { flags } from "./flags";
@@ -210,13 +210,7 @@ function TwemojiText(props: { text: string }) {
 		).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	};
 
-	const html = createMemo(() => {
-		return twemoji.parse(escape(props.text), {
-			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-			folder: "svg",
-			ext: ".svg",
-		});
-	});
+	const html = createMemo(() => getTwemoji(escape(props.text)));
 
 	return <span innerHTML={html()} />;
 }

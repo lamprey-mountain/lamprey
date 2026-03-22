@@ -38,7 +38,6 @@ import { Dropdown } from "./Dropdown";
 import { Author, MessageToolbar } from "./Message";
 import { Markdown } from "./Markdown";
 import { render } from "solid-js/web";
-import twemoji from "twemoji";
 import { getEmojiUrl, type MediaProps } from "./media/util";
 import { Reactions } from "./Reactions";
 import {

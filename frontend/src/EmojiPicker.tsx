@@ -1,5 +1,4 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import twemoji from "twemoji";
 import fuzzysort from "fuzzysort";
 import { Search } from "./atoms/Search";
 import icEmojiActivities from "./assets/emoji-activities.png";
@@ -15,7 +14,7 @@ import { useApi, useRooms2 } from "./api";
 import { getThumbFromId } from "./media/util";
 import { RoomIcon } from "./User";
 import type { EmojiCustom, Room } from "sdk";
-import { type EmojiData, emojiResource } from "./emoji";
+import { type EmojiData, emojiResource, getTwemoji } from "./emoji";
 
 type UnifiedEmoji = {
 	type: "standard" | "custom";
@@ -107,15 +106,6 @@ const getGroupName = (id: number) => {
 		case 9:
 			return "Flags";
 	}
-};
-
-const getTwemoji = (unicode: string) => {
-	return twemoji.parse(unicode, {
-		base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-		attributes: () => ({ loading: "lazy" }),
-		folder: "svg",
-		ext: ".svg",
-	});
 };
 
 type EmojiPickerProps = {

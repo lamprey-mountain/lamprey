@@ -11,6 +11,7 @@ import type { User } from "sdk";
 import { Modal } from "./mod";
 import { useApi, useMessages2 } from "../api";
 import { Avatar } from "../User";
+import { renderReactionKey } from "../emoji";
 
 interface ModalReactionsProps {
 	channel_id: string;
@@ -96,16 +97,21 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 			<div class="reactions-modal">
 				<div class="reactions">
 					<For each={reactions()}>
-						{(reaction) =>
-							(
+						{(reaction) => {
+							const key = (reaction as any).key;
+							return (
 								<button
-									onClick={() => setSelectedReaction((reaction as any).key)}
-									data-selected={selectedReaction() === (reaction as any).key}
+									onClick={() => setSelectedReaction(key)}
+									data-selected={selectedReaction() === key}
 								>
-									<div>{(reaction as any).key}</div>
+									<div
+										style="display:contents"
+										innerHTML={renderReactionKey(key)}
+									/>
 									<div>{(reaction as any).count}</div>
 								</button>
-							) as any}
+							);
+						}}
 					</For>
 				</div>
 				<div class="users">

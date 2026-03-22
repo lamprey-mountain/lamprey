@@ -1,10 +1,10 @@
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
-import twemoji from "twemoji";
 import { useCtx } from "./context.ts";
 import { createTooltip } from "./Tooltip.tsx";
 import type { Message } from "sdk";
 import { useApi } from "./api.tsx";
 import icReactionAdd from "./assets/reaction-add.png";
+import { renderReactionKey } from "./emoji";
 
 type ReactionsProps = {
 	message: Message;
@@ -15,20 +15,6 @@ export const Reactions = (props: ReactionsProps) => {
 	const api = useApi();
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
-
-	const getTwemoji = (key: any) => {
-		if (key.type === "Text") {
-			return twemoji.parse(key.content, {
-				base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-				attributes: () => ({ loading: "lazy" }),
-				folder: "svg",
-				ext: ".svg",
-			});
-		} else if (key.type === "Custom") {
-			// FIXME: custom emoji reactions
-			return "(unknown emoji)";
-		}
-	};
 
 	const reactionKeyToParam = (key: any): string => {
 		if (key.type === "Text") {
@@ -128,7 +114,7 @@ export const Reactions = (props: ReactionsProps) => {
 							classList={{ self: reaction.self }}
 							onClick={() => handleClick(reaction.key, !!reaction.self)}
 						>
-							<div class="key" innerHTML={getTwemoji(reaction.key)} />
+							<div class="key" innerHTML={renderReactionKey(reaction.key)} />
 							<div class="count">{reaction.count}</div>
 						</div>
 					);

@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup } from "solid-js";
-import twemoji from "twemoji";
 import { useCtx } from "../context";
+import { getTwemoji } from "../emoji";
 
 type EmojiButtonProps = {
 	picked: (emoji: string, keepOpen: boolean) => void;
@@ -69,14 +69,7 @@ export const EmojiButton = (props: EmojiButtonProps) => {
 				onClick={handleClick}
 				classList={{ shown: show() }}
 			>
-				<div
-					class="icon"
-					innerHTML={twemoji.parse(emoji(), {
-						base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-						folder: "svg",
-						ext: ".svg",
-					})}
-				/>
+				<div class="icon" innerHTML={getTwemoji(emoji())} />
 			</div>
 		</div>
 	);
