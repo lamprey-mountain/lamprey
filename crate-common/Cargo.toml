@@ -28,6 +28,7 @@ lamprey-macros = { version = "0.1", path = "../crate-macros" }
 base64 = "0.22.1"
 http = "1.4.0"
 bytes = "1.11.1"
+percent-encoding = "2.3.2"
 
 [features]
 serde = ["dep:serde", "dep:serde_json"]

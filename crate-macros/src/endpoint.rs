@@ -160,7 +160,10 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
             })
             .collect();
         quote! {
-            let segments = path.split('/').collect::<Vec<_>>();
+            let decoded_path = percent_encoding::percent_decode_str(path)
+                .decode_utf8()
+                .unwrap_or_else(|_| path.into());
+            let segments = decoded_path.split('/').collect::<Vec<_>>();
             let (#extract_bindings) = match segments.as_slice() {
                 #match_arm_pattern => (#extract_bindings),
                 _ => return Err(crate::v1::routes::invalid_path_error()),
