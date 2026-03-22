@@ -1012,7 +1012,13 @@ export class MessagesService extends BaseService<Message> {
 		for (const item of newItems) this.upsert(item);
 
 		const merged = range.mergeMessages(newItems);
-		return new MessageRange(has_more, merged.has_backwards, merged.items);
+		// If no items were fetched, treat as no more to prevent infinite loops
+		const effectiveHasMore = newItems.length === 0 ? false : has_more;
+		return new MessageRange(
+			effectiveHasMore,
+			merged.has_backwards,
+			merged.items,
+		);
 	}
 
 	private mergeBefore(
@@ -1025,6 +1031,8 @@ export class MessagesService extends BaseService<Message> {
 		for (const item of newItems) this.upsert(item);
 
 		const merged = range.mergeMessages(newItems);
-		return new MessageRange(merged.has_forward, has_more, merged.items);
+		// If no items were fetched, treat as no more to prevent infinite loops
+		const effectiveHasMore = newItems.length === 0 ? false : has_more;
+		return new MessageRange(merged.has_forward, effectiveHasMore, merged.items);
 	}
 }
