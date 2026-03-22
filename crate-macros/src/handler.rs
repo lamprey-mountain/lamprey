@@ -34,7 +34,8 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                         .all(|(a, b)| a.ident == b.ident);
                 if is_request {
                     if let Pat::Ident(pi) = &*pt.pat {
-                        req_ident = quote! { #pi };
+                        let ident = &pi.ident;
+                        req_ident = quote! { #ident };
                     }
                     continue;
                 }
@@ -50,7 +51,9 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         if let FnArg::Typed(pt) = arg {
             if let Pat::Ident(pi) = &*pt.pat {
                 forward_args.push(quote! { #pi });
-                outer_inputs.push(quote! { #arg });
+                let ty = &pt.ty;
+                let ident = &pi.ident;
+                outer_inputs.push(quote! { #ident: #ty });
                 continue;
             }
 

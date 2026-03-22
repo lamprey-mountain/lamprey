@@ -45,6 +45,14 @@ pub struct TotpRecoveryCode {
     pub used_at: Option<Time>,
 }
 
+/// Request body for email authentication completion
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AuthEmailComplete {
+    pub code: String,
+}
+
 // TODO(#267): look into zeroing out/erasing passwords after handling
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

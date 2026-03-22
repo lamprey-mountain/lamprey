@@ -339,3 +339,185 @@ pub mod auth_captcha_challenge {
         pub captcha: CaptchaChallenge,
     }
 }
+
+/// Auth oauth delete
+///
+/// Remove an oauth provider
+#[endpoint(
+    delete,
+    path = "/auth/oauth/{provider}",
+    tags = ["auth"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod auth_oauth_delete {
+    pub struct Request {
+        #[path]
+        pub provider: String,
+    }
+
+    pub struct Response {}
+}
+
+/// Auth email exec
+///
+/// Send a magic link email to login
+#[endpoint(
+    post,
+    path = "/auth/email/{addr}",
+    tags = ["auth"],
+    response(ACCEPTED, description = "success"),
+)]
+pub mod auth_email_exec {
+    pub struct Request {
+        #[path]
+        pub addr: String,
+    }
+
+    pub struct Response {}
+}
+
+/// Auth email reset
+///
+/// Send a password reset email
+#[endpoint(
+    post,
+    path = "/auth/email/{addr}/reset",
+    tags = ["auth"],
+    response(ACCEPTED, description = "success"),
+)]
+pub mod auth_email_reset {
+    pub struct Request {
+        #[path]
+        pub addr: String,
+    }
+
+    pub struct Response {}
+}
+
+/// Auth email complete
+///
+/// Complete email authentication
+#[endpoint(
+    post,
+    path = "/auth/email/{addr}/complete",
+    tags = ["auth"],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod auth_email_complete {
+    use crate::v1::types::auth::AuthEmailComplete;
+
+    pub struct Request {
+        #[path]
+        pub addr: String,
+
+        #[json]
+        pub complete: AuthEmailComplete,
+    }
+
+    pub struct Response {}
+}
+
+/// Auth totp exec
+///
+/// Execute totp authentication
+#[endpoint(
+    post,
+    path = "/auth/totp",
+    tags = ["auth"],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_totp_exec {
+    use crate::v1::types::auth::{AuthState, TotpVerificationRequest};
+
+    pub struct Request {
+        #[json]
+        pub verification: TotpVerificationRequest,
+    }
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}
+
+/// Auth totp recovery exec
+///
+/// Use a recovery code
+#[endpoint(
+    post,
+    path = "/auth/totp/recovery",
+    tags = ["auth"],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_totp_recovery_exec {
+    use crate::v1::types::auth::{AuthState, TotpVerificationRequest};
+
+    pub struct Request {
+        #[json]
+        pub verification: TotpVerificationRequest,
+    }
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}
+
+/// Auth totp delete
+///
+/// Delete totp configuration
+#[endpoint(
+    delete,
+    path = "/auth/totp",
+    tags = ["auth"],
+    scopes = [Full],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_totp_delete {
+    use crate::v1::types::auth::AuthState;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}
+
+/// Auth password delete
+///
+/// Remove password authentication
+#[endpoint(
+    delete,
+    path = "/auth/password",
+    tags = ["auth"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod auth_password_delete {
+    pub struct Request {}
+
+    pub struct Response {}
+}
+
+/// Auth state
+///
+/// Get the available auth methods for this user
+#[endpoint(
+    get,
+    path = "/auth/state",
+    tags = ["auth"],
+    scopes = [Full],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_state {
+    use crate::v1::types::auth::AuthState;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}

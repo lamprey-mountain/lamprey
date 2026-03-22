@@ -8,27 +8,23 @@ use axum::response::{Html, IntoResponse};
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::auth::{
-    AuthState, CaptchaChallenge, CaptchaResponse, PasswordExec, PasswordExecIdent, PasswordSet,
-    TotpInit, TotpRecoveryCode, TotpRecoveryCodes, TotpVerificationRequest, WebauthnAuthenticator,
+    AuthEmailComplete, AuthState, CaptchaChallenge, PasswordExec, PasswordSet, TotpInit,
+    TotpRecoveryCode, TotpRecoveryCodes, TotpVerificationRequest, WebauthnAuthenticator,
     WebauthnChallenge, WebauthnFinish, WebauthnPatch,
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::AuditLogEntryStatus;
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, RoomMemberPut,
-    SessionStatus, UserId, SERVER_ROOM_ID,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, MessageSync,
+    RoomMemberPut, SessionStatus, UserId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde::Deserialize;
 use time::Duration;
 use totp_rs::{Algorithm as TotpAlgorithm, Secret as TotpSecret, TOTP as Totp};
 use tracing::debug;
-use url::Url;
-use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 
@@ -37,11 +33,6 @@ use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
 use crate::{routes2, ServerState};
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct OauthInitResponse {
-    url: Url,
-}
 
 /// Auth oauth init
 #[handler(routes::auth_oauth_init)]
@@ -54,7 +45,7 @@ async fn auth_oauth_init(
         .services()
         .oauth
         .create_url(&req.provider, auth.session.id)?;
-    Ok(Json(OauthInitResponse { url }))
+    Ok(Json(routes::OauthInitResponse { url }))
 }
 
 /// Auth oauth redirect
@@ -674,6 +665,386 @@ async fn auth_captcha_challenge(
     }))
 }
 
+/// Auth oauth delete
+///
+/// Remove an oauth provider
+#[handler(routes::auth_oauth_delete)]
+async fn auth_oauth_delete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_oauth_delete::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+
+    ensure_can_still_login_after_removal(&s, auth.user.id, "oauth", Some(&req.provider)).await?;
+
+    let start_state = fetch_auth_state(&s, auth.user.id).await?;
+    let data = s.data();
+    data.auth_oauth_delete(req.provider, auth.user.id).await?;
+    let end_state = fetch_auth_state(&s, auth.user.id).await?;
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new()
+            .change(
+                "oauth_providers",
+                &start_state.oauth_providers,
+                &end_state.oauth_providers,
+            )
+            .build(),
+    })
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth email exec
+///
+/// Send a "magic link" email to login
+#[handler(routes::auth_email_exec)]
+async fn auth_email_exec(
+    auth: AuthRelaxed2,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_email_exec::Request,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let code = Uuid::new_v4().to_string();
+    let email: EmailAddr = req
+        .addr
+        .try_into()
+        .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
+    d.auth_email_create(
+        code.clone(),
+        email.clone(),
+        auth.session.id,
+        EmailPurpose::Authn,
+    )
+    .await?;
+    let mut url = s.config.html_url.join("email-auth")?;
+    url.set_query(Some(&format!("code={code}")));
+    let message = format!(
+        "click this link to login: {url}\n\nif you didn't request this, ignore this email."
+    );
+    srv.email
+        .send(email, "Login to lamprey".to_string(), message, None)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth email reset
+///
+/// Like exec, but the link also resets the password
+#[handler(routes::auth_email_reset)]
+async fn auth_email_reset(
+    auth: AuthRelaxed2,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_email_reset::Request,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let code = Uuid::new_v4().to_string();
+    let email: EmailAddr = req
+        .addr
+        .try_into()
+        .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
+    d.auth_email_create(
+        code.clone(),
+        email.clone(),
+        auth.session.id,
+        EmailPurpose::Reset,
+    )
+    .await?;
+    let mut url = s.config.html_url.join("email-auth")?;
+    url.set_query(Some(&format!("code={code}")));
+    let message = format!("click this link to reset password: {url}\n\nif you didn't request this, ignore this email.");
+    srv.email
+        .send(email, "Lamprey password reset".to_string(), message, None)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth email complete
+///
+/// Consume an email auth code to log in
+#[handler(routes::auth_email_complete)]
+async fn auth_email_complete(
+    auth: AuthRelaxed2,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_email_complete::Request,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let email: EmailAddr = req
+        .addr
+        .try_into()
+        .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
+    let (req_addr, req_session, purpose) = d.auth_email_use(req.complete.code).await?;
+
+    if req_addr != email {
+        debug!("wrong email");
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    if req_session != auth.session.id {
+        debug!("wrong session");
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    if auth.session.status != SessionStatus::Unauthorized {
+        debug!("already authenticated");
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    let user_id = d.user_email_lookup(&email).await?;
+    let status = match purpose {
+        EmailPurpose::Authn => SessionStatus::Authorized { user_id },
+
+        // TODO: there's probably a better way of implementing password resets than directly entering sudo mode
+        // maybe some "semi sudo mode" that only allows changing password?
+        // this isn't *that* bad though and chances are if someone reset their password they may want to do other stuff too
+        EmailPurpose::Reset => SessionStatus::Sudo {
+            user_id,
+            sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
+        },
+    };
+    d.session_set_status(auth.session.id, status.clone())
+        .await?;
+    srv.sessions.invalidate(auth.session.id).await;
+    let session = srv.sessions.get(auth.session.id).await?;
+    s.broadcast(MessageSync::SessionCreate {
+        session: session.clone(),
+    })?;
+
+    match purpose {
+        EmailPurpose::Authn => {
+            let srv = s.services();
+            let user = srv.users.get(user_id, None).await?;
+            let al = Auth {
+                user: user.clone(),
+                real_user: None,
+                session: session.clone(),
+                scopes: auth.scopes.clone(),
+                reason: auth.reason.clone(),
+                audit_log_slot: auth.audit_log_slot.clone(),
+                s: auth.s.clone(),
+            }
+            .audit_log(user_id.into_inner().into());
+            al.commit_success(AuditLogEntryType::SessionLogin {
+                user_id,
+                session_id: session.id,
+            })
+            .await?;
+        }
+        EmailPurpose::Reset => {
+            let srv = s.services();
+            let user = srv.users.get(user_id, None).await?;
+            let al = Auth {
+                user: user.clone(),
+                real_user: None,
+                session: session.clone(),
+                scopes: auth.scopes.clone(),
+                reason: auth.reason.clone(),
+                audit_log_slot: auth.audit_log_slot.clone(),
+                s: auth.s.clone(),
+            }
+            .audit_log(user_id.into_inner().into());
+            al.commit_success(AuditLogEntryType::AuthSudo {
+                session_id: session.id,
+            })
+            .await?;
+        }
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth totp exec
+#[handler(routes::auth_totp_exec)]
+async fn auth_totp_exec(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_totp_exec::Request,
+) -> Result<impl IntoResponse> {
+    let (secret, enabled) = s
+        .data()
+        .auth_totp_get(auth.user.id)
+        .await?
+        .ok_or_else(|| ApiError::from_code(ErrorCode::TotpNotEnabled))?;
+
+    if !enabled {
+        return Err(ApiError::from_code(ErrorCode::TotpNotEnabled).into());
+    }
+
+    let secret_bytes = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, &secret)
+        .ok_or_else(|| Error::Internal("failed to decode totp secret".to_owned()))?;
+
+    let totp = Totp::new(
+        TotpAlgorithm::SHA1,
+        6,
+        1,
+        30,
+        TotpSecret::Raw(secret_bytes).to_bytes().unwrap(),
+    )
+    .map_err(|e| {
+        tracing::error!("failed to create totp: {}", e);
+        Error::Internal("failed to create totp".to_owned())
+    })?;
+
+    if !totp.check_current(&req.verification.code).unwrap_or(false) {
+        return Err(ApiError::from_code(ErrorCode::InvalidTotpCode).into());
+    }
+
+    let expires_at = Time::now_utc().saturating_add(Duration::minutes(5));
+    s.data()
+        .session_set_status(
+            auth.session.id,
+            SessionStatus::Sudo {
+                user_id: auth.user.id,
+                sudo_expires_at: expires_at.into(),
+            },
+        )
+        .await?;
+    s.services().sessions.invalidate(auth.session.id).await;
+
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthSudo {
+        session_id: auth.session.id,
+    })
+    .await?;
+
+    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
+    Ok(Json(auth_state))
+}
+
+/// Auth totp recovery exec
+#[handler(routes::auth_totp_recovery_exec)]
+async fn auth_totp_recovery_exec(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_totp_recovery_exec::Request,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+
+    // Try to use the recovery code
+    data.auth_totp_recovery_use(auth.user.id, &req.verification.code)
+        .await?;
+
+    let expires_at = Time::now_utc().saturating_add(Duration::minutes(5));
+    data.session_set_status(
+        auth.session.id,
+        SessionStatus::Sudo {
+            user_id: auth.user.id,
+            sudo_expires_at: expires_at.into(),
+        },
+    )
+    .await?;
+    s.services().sessions.invalidate(auth.session.id).await;
+
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthSudo {
+        session_id: auth.session.id,
+    })
+    .await?;
+
+    let auth_state = fetch_auth_state(&s, auth.user.id).await?;
+    Ok(Json(auth_state))
+}
+
+/// Auth totp delete
+#[handler(routes::auth_totp_delete)]
+async fn auth_totp_delete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::auth_totp_delete::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    let data = s.data();
+
+    let start_state = fetch_auth_state(&s, auth.user.id).await?;
+    data.auth_totp_set(auth.user.id, None, false).await?;
+    let end_state = fetch_auth_state(&s, auth.user.id).await?;
+
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new()
+            .change("has_totp", &start_state.has_totp, &end_state.has_totp)
+            .build(),
+    })
+    .await?;
+
+    Ok(Json(end_state))
+}
+
+/// Auth password delete
+#[handler(routes::auth_password_delete)]
+async fn auth_password_delete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::auth_password_delete::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+
+    ensure_can_still_login_after_removal(&s, auth.user.id, "password", None).await?;
+
+    let start_state = fetch_auth_state(&s, auth.user.id).await?;
+    let data = s.data();
+    data.auth_password_delete(auth.user.id).await?;
+    let end_state = fetch_auth_state(&s, auth.user.id).await?;
+
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new()
+            .change(
+                "has_password",
+                &start_state.has_password,
+                &end_state.has_password,
+            )
+            .build(),
+    })
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth state
+///
+/// Get the available auth methods for this user
+#[handler(routes::auth_state)]
+async fn auth_state(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::auth_state::Request,
+) -> Result<impl IntoResponse> {
+    let state = fetch_auth_state(&s, auth.user.id).await?;
+    Ok(Json(state))
+}
+
+// Helper function to check if user can still login after removing an auth method
+async fn ensure_can_still_login_after_removal(
+    s: &ServerState,
+    user_id: UserId,
+    method: &str,
+    provider: Option<&str>,
+) -> Result<()> {
+    let mut auth_state = fetch_auth_state(s, user_id).await?;
+
+    // Temporarily "remove" the auth method to simulate the state after removal
+    match method {
+        "oauth" => {
+            if let Some(provider) = provider {
+                auth_state.oauth_providers.retain(|p| p != provider);
+            }
+        }
+        "password" => auth_state.has_password = false,
+        _ => {}
+    }
+
+    // Check if the user can still login with remaining methods
+    if !auth_state.can_login() {
+        return Err(ApiError::from_code(ErrorCode::CannotRemoveLastAuthMethod).into());
+    }
+
+    Ok(())
+}
+
 // Helper function - used by other routes
 pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthState> {
     let data = s.data();
@@ -700,16 +1071,25 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(auth_oauth_init))
         .routes(routes2!(auth_oauth_redirect))
+        .routes(routes2!(auth_oauth_delete))
+        .routes(routes2!(auth_email_exec))
+        .routes(routes2!(auth_email_reset))
+        .routes(routes2!(auth_email_complete))
         .routes(routes2!(auth_register))
         .routes(routes2!(auth_login))
         .routes(routes2!(auth_logout))
         .routes(routes2!(auth_totp_init))
         .routes(routes2!(auth_totp_enable))
         .routes(routes2!(auth_totp_disable))
+        .routes(routes2!(auth_totp_delete))
+        .routes(routes2!(auth_totp_exec))
         .routes(routes2!(auth_totp_recovery_codes_get))
         .routes(routes2!(auth_totp_recovery_codes_rotate))
+        .routes(routes2!(auth_totp_recovery_exec))
         .routes(routes2!(auth_password_set))
+        .routes(routes2!(auth_password_delete))
         .routes(routes2!(auth_password_exec))
+        .routes(routes2!(auth_state))
         .routes(routes2!(auth_webauthn_challenge))
         .routes(routes2!(auth_webauthn_finish))
         .routes(routes2!(auth_webauthn_authenticators))
