@@ -8,6 +8,7 @@ use common::v1::types::{
     search::{MessageSearchOrderField, MessageSearchRequest, Order},
     ChannelId, MessageId,
 };
+use dashmap::DashMap;
 use kameo::{
     actor::{ActorRef, Spawn},
     prelude::{Context, Message},
@@ -31,31 +32,37 @@ use super::util::{COMMIT_INTERVAL, INDEXING_BUFFER_SIZE, MAX_UNCOMMITTED};
 
 pub struct IndexManager {
     s: Arc<ServerStateInner>,
-}
 
-enum IndexerCommand {
-    Add(TantivyDocument),
-    Delete(Term),
-    Commit,
+    /// Registry to ensure we only open one writer/reader per index name
+    registry: DashMap<String, (IndexActorRef, IndexReader)>,
 }
 
 pub type IndexActorRef = ActorRef<IndexActor>;
 
 impl IndexManager {
     pub fn new(s: Arc<ServerStateInner>) -> Self {
-        Self { s }
+        Self {
+            s,
+            registry: DashMap::new(),
+        }
     }
 
     pub async fn open<T: IndexDefinition>(&self, def: T) -> Result<(IndexActorRef, IndexReader)> {
-        let s = Arc::clone(&self.s);
         let name = def.name();
+
+        if let Some(entry) = self.registry.get(&name) {
+            return Ok(entry.value().clone());
+        }
+
+        let s = Arc::clone(&self.s);
         let schema = def.schema().to_owned();
+        let name_clone = name.clone();
 
         let (reader, writer) = tokio::task::spawn_blocking(move || {
             let dir = ObjectDirectory::new(
                 s,
-                PathBuf::from(format!("tantivy/{name}")),
-                PathBuf::from(format!("/tmp/tantivy/{name}")),
+                PathBuf::from(format!("tantivy/{name_clone}")),
+                PathBuf::from(format!("/tmp/tantivy/{name_clone}")),
             );
 
             let index = tantivy::Index::open_or_create(dir, schema)
@@ -79,7 +86,9 @@ impl IndexManager {
         .map_err(|e| Error::Internal(format!("Task join error: {e}")))??;
 
         let actor_ref = IndexActor::spawn(IndexActor::new(writer, reader.clone()));
-        Ok((actor_ref, reader))
+        let handles = (actor_ref, reader);
+        self.registry.insert(name, handles.clone());
+        Ok(handles)
     }
 
     pub fn spawn_importer(&self) -> ActorRef<ImportActor> {

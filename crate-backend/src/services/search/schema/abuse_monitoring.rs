@@ -1,15 +1,15 @@
-use common::v1::types::{ChannelId, MediaId, RoomId, RoomMemberOrigin, SessionId, UserId};
-use lamprey_backend_core::types::analytics::AnalyticsEventPayload;
+use common::v1::types::{ChannelId, RoomId, RoomMemberOrigin, SessionId, UserId};
+use lamprey_backend_core::types::analytics::{AbuseMetadata, AnalyticsEventPayload};
 use time::Time;
 use uuid::Uuid;
 
-use tantivy::schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING};
+use tantivy::schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING, TEXT};
 
 use crate::services::search::schema::IndexDefinition;
 
-pub struct RoomAnalyticsIndex;
+pub struct AbuseMonitoringIndex;
 
-pub struct RoomAnalyticsSchema {
+pub struct AbuseMonitoringSchema {
     /// the tantivy schema itself
     pub schema: Schema,
 
@@ -37,29 +37,37 @@ pub struct RoomAnalyticsSchema {
     /// whether the action was successful
     pub success: schema::Field,
 
-    /// count for aggregated events
-    pub count: schema::Field,
+    /// IP address of the request
+    pub ip_addr: schema::Field,
+
+    /// user agent of the request
+    pub user_agent: schema::Field,
+
+    /// session ID
+    pub session_id: schema::Field,
 }
 
-/// a single room/server analytics event
-pub struct AnalyticsEvent {
+/// a single abuse monitoring event
+pub struct AbuseEvent {
     pub id: Uuid,
+    /// the room id this happened in, or SERVER_ROOM_ID otherwise
     pub room_id: RoomId,
     pub time: Time,
     pub payload: AnalyticsEventPayload,
+    pub abuse_metadata: Option<AbuseMetadata>,
 }
 
-impl IndexDefinition for RoomAnalyticsIndex {
+impl IndexDefinition for AbuseMonitoringIndex {
     fn schema(&self) -> &Schema {
         &self.schema()
     }
 
     fn name(&self) -> String {
-        "room_analytics".to_owned()
+        "abuse_monitoring".to_owned()
     }
 }
 
-impl Default for RoomAnalyticsSchema {
+impl Default for AbuseMonitoringSchema {
     fn default() -> Self {
         let mut sb = SchemaBuilder::new();
 
@@ -71,7 +79,9 @@ impl Default for RoomAnalyticsSchema {
         let action = sb.add_text_field("action", STRING | FAST);
         let channel_id = sb.add_text_field("channel_id", STRING | FAST);
         let success = sb.add_bool_field("success", FAST);
-        let count = sb.add_u64_field("count", FAST);
+        let ip_addr = sb.add_ip_addr_field("ip_addr", FAST);
+        let user_agent = sb.add_text_field("user_agent", TEXT | STORED);
+        let session_id = sb.add_text_field("session_id", STRING | FAST);
 
         let schema = sb.build();
 
@@ -85,7 +95,9 @@ impl Default for RoomAnalyticsSchema {
             action,
             channel_id,
             success,
-            count,
+            ip_addr,
+            user_agent,
+            session_id,
         }
     }
 }

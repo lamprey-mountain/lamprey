@@ -1,7 +1,7 @@
 use common::v1::types::search::{MessageSearchOrderField, MessageSearchRequest, Order};
 use common::v1::types::{ChannelId, MessageId};
 use lamprey_backend_core::prelude::*;
-use tantivy::query::TermSetQuery;
+use tantivy::query::{QueryParser, TermSetQuery};
 use tantivy::{
     collector::{Count, TopDocs},
     query::{BooleanQuery, Query},
@@ -14,7 +14,7 @@ use crate::services::search::schema::content::ContentSchema;
 use super::index::IndexActorRef;
 
 // TEMP: public
-pub struct MessageSearcher {
+pub struct ContentSearcher {
     pub(crate) index_ref: IndexActorRef,
     pub(crate) reader: IndexReader,
     pub(crate) schema: ContentSchema,
@@ -35,23 +35,15 @@ pub struct SearchMessagesResponseRaw {
     pub total: u64,
 }
 
-impl MessageSearcher {
-    pub fn search_messages(&self, msg: SearchMessages) -> Result<SearchMessagesResponseRaw> {
-        let searcher = self.reader.searcher();
-        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
-
-        // Build query from request
-        if let Some(q_str) = &msg.req.query {
-            if !q_str.is_empty() {
-                // TODO: need index reference for QueryParser
-                // For now, skip full-text query building
-            }
-        }
-
-        // restrict visibility
+impl ContentSearcher {
+    /// generate a tantivy query to restrict visibility
+    pub fn generate_visibility_query(
+        &self,
+        visible_channel_ids: &[(ChannelId, bool)],
+    ) -> BooleanQuery {
         let mut channel_terms = vec![];
         let mut parent_channel_terms = vec![];
-        for (id, can_view_private_threads) in &msg.visible_channel_ids {
+        for (id, can_view_private_threads) in visible_channel_ids {
             let id_str = id.to_string();
             channel_terms.push(Term::from_field_text(self.schema.channel_id, &id_str));
 
@@ -61,13 +53,6 @@ impl MessageSearcher {
                     &id_str,
                 ));
             }
-        }
-
-        if channel_terms.is_empty() && parent_channel_terms.is_empty() {
-            return Ok(SearchMessagesResponseRaw {
-                items: vec![],
-                total: 0,
-            });
         }
 
         let mut vis_queries: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
@@ -86,9 +71,33 @@ impl MessageSearcher {
             ));
         }
 
+        BooleanQuery::new(vis_queries)
+    }
+
+    pub fn search_messages(&self, msg: SearchMessages) -> Result<SearchMessagesResponseRaw> {
+        let searcher = self.reader.searcher();
+        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+
+        if let Some(q_str) = &msg.req.query {
+            if !q_str.is_empty() {
+                // TODO: cache query parser?
+                let mut query_parser = QueryParser::for_index(
+                    searcher.index(),
+                    vec![self.schema.content, self.schema.name],
+                );
+                query_parser.set_field_boost(self.schema.name, 2.0); // useless for messages, but necessary if i have one query parser for everything
+
+                let parsed_query = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
+
+                query_clauses.push((tantivy::query::Occur::Must, parsed_query));
+            }
+        }
+
         query_clauses.push((
             tantivy::query::Occur::Must,
-            Box::new(BooleanQuery::new(vis_queries)),
+            Box::new(self.generate_visibility_query(&msg.visible_channel_ids)),
         ));
 
         let query = BooleanQuery::new(query_clauses);
@@ -152,4 +161,6 @@ impl MessageSearcher {
 
         Ok(SearchMessagesResponseRaw { items, total })
     }
+
+    // pub fn search_channels(&self, q: SearchChannels) -> Result<_> {}
 }

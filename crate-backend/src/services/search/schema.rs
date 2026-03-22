@@ -16,6 +16,7 @@ pub trait IndexDefinition {
     fn name(&self) -> String;
 }
 
+pub mod abuse_monitoring;
 pub mod content;
 pub mod document_history;
 pub mod room_analytics;

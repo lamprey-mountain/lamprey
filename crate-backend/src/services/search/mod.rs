@@ -15,7 +15,7 @@ use tracing::trace;
 use crate::services::search::index::IndexManager;
 use crate::services::search::schema::content::ContentSchema;
 use crate::services::search::schema::ContentIndex;
-use crate::services::search::searcher::{MessageSearcher, SearchMessages};
+use crate::services::search::searcher::{ContentSearcher, SearchMessages};
 use crate::Error;
 use crate::{error::Result, ServerStateInner};
 
@@ -31,9 +31,8 @@ pub struct ServiceSearch {
     state: Arc<ServerStateInner>,
     index_manager: IndexManager,
 
-    // /// index for messages, channels, rooms, and other generic content
-    // content: OnceCell<IndexActorRef>,
-    m: OnceCell<Arc<MessageSearcher>>,
+    /// searcher for messages, channels, rooms, and other generic content
+    content_searcher: OnceCell<Arc<ContentSearcher>>,
     // /// index for room (and server) analytics
     // room_analytics: ActorRef<IndexActor>,
 
@@ -55,29 +54,20 @@ pub enum IndexerCommandLegacy {
 impl ServiceSearch {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         let index_manager = IndexManager::new(Arc::clone(&state));
-        // let content = index_manager.open(ContentIndex::default()).await.unwrap();
-        // let m = Arc::new(MessageSearcher {
-        //     index_ref: content.0.clone(),
-        //     reader: content.1,
-        //     schema: ContentSchema::default(),
-        // });
-        // let room_analytics = index_manager.open("room_analytics", todo!());
-        // let document_history = index_manager.open("document_history", todo!());
         Self {
             state,
             index_manager,
-            // content: content.0,
-            m: OnceCell::new(),
+            content_searcher: OnceCell::new(),
             // room_analytics,
             // document_history,
         }
     }
 
-    async fn get_message_searcher(&self) -> Result<Arc<MessageSearcher>> {
-        self.m
+    async fn get_message_searcher(&self) -> Result<Arc<ContentSearcher>> {
+        self.content_searcher
             .get_or_try_init(|| async {
                 let (writer, reader) = self.index_manager.open(ContentIndex::default()).await?;
-                Ok(Arc::new(MessageSearcher {
+                Ok(Arc::new(ContentSearcher {
                     index_ref: writer,
                     reader,
                     schema: ContentSchema::default(),
