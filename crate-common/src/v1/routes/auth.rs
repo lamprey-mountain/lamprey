@@ -168,7 +168,9 @@ pub mod auth_totp_disable {
     pub struct Response {}
 }
 
-/// Auth totp recovery codes
+/// Auth totp recovery codes get
+///
+/// View existing recovery codes (does not invalidate them)
 #[endpoint(
     get,
     path = "/auth/totp/recovery-codes",
@@ -176,7 +178,28 @@ pub mod auth_totp_disable {
     scopes = [Full],
     response(OK, body = TotpRecoveryCodes, description = "success"),
 )]
-pub mod auth_totp_recovery_codes {
+pub mod auth_totp_recovery_codes_get {
+    use crate::v1::types::auth::TotpRecoveryCodes;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub codes: TotpRecoveryCodes,
+    }
+}
+
+/// Auth totp recovery codes rotate
+///
+/// Generate new recovery codes (invalidates old ones)
+#[endpoint(
+    post,
+    path = "/auth/totp/recovery-codes",
+    tags = ["auth"],
+    scopes = [Full],
+    response(OK, body = TotpRecoveryCodes, description = "success"),
+)]
+pub mod auth_totp_recovery_codes_rotate {
     use crate::v1::types::auth::TotpRecoveryCodes;
 
     pub struct Request {}

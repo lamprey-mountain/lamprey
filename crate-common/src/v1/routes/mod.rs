@@ -1,5 +1,6 @@
-use crate::v1::types::ids::Id;
 use crate::v1::types::{oauth::Scope, Permission};
+
+// export all routes
 
 pub mod ack;
 pub mod application;
@@ -37,7 +38,6 @@ pub mod user_email;
 pub mod voice;
 pub mod webhook;
 
-// Re-export all endpoint modules
 pub use ack::*;
 pub use application::*;
 pub use auth::*;
@@ -74,54 +74,9 @@ pub use user_email::*;
 pub use voice::*;
 pub use webhook::*;
 
-impl<M: crate::v1::types::ids::Marker> PathParam for Id<M> {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        s.parse()
-            .map_err(|_| PathParamError(format!("invalid id: {}", s)))
-    }
-}
+mod path_param;
 
-impl PathParam for crate::v1::types::room_template::RoomTemplateCode {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        Ok(crate::v1::types::room_template::RoomTemplateCode(
-            s.to_string(),
-        ))
-    }
-}
-
-impl PathParam for crate::v1::types::invite::InviteCode {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        Ok(crate::v1::types::invite::InviteCode(s.to_string()))
-    }
-}
-
-impl PathParam for uuid::Uuid {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        s.parse()
-            .map_err(|_| PathParamError(format!("invalid uuid: {}", s)))
-    }
-}
-
-impl PathParam for crate::v1::types::reaction::ReactionKeyParam {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        Ok(crate::v1::types::reaction::ReactionKeyParam::Text(
-            s.to_string(),
-        ))
-    }
-}
-
-/// Error type for path parameter extraction
-#[derive(Debug)]
-pub struct PathParamError(pub String);
-
-impl From<PathParamError> for http::Response<bytes::Bytes> {
-    fn from(err: PathParamError) -> Self {
-        http::Response::builder()
-            .status(http::StatusCode::BAD_REQUEST)
-            .body(bytes::Bytes::from(err.0))
-            .unwrap()
-    }
-}
+pub use path_param::{PathParam, PathParamError};
 
 /// Create an error response for invalid path matches
 pub fn invalid_path_error() -> http::Response<bytes::Bytes> {
@@ -129,45 +84,6 @@ pub fn invalid_path_error() -> http::Response<bytes::Bytes> {
         .status(http::StatusCode::NOT_FOUND)
         .body(bytes::Bytes::from("invalid path"))
         .unwrap()
-}
-
-/// Trait for types that can be parsed from a path parameter string
-pub trait PathParam: Sized {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError>;
-}
-
-impl PathParam for String {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        Ok(s.to_string())
-    }
-}
-
-impl PathParam for i64 {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        s.parse()
-            .map_err(|_| PathParamError(format!("invalid i64: {}", s)))
-    }
-}
-
-impl PathParam for i32 {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        s.parse()
-            .map_err(|_| PathParamError(format!("invalid i32: {}", s)))
-    }
-}
-
-impl PathParam for u64 {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        s.parse()
-            .map_err(|_| PathParamError(format!("invalid u64: {}", s)))
-    }
-}
-
-impl PathParam for u32 {
-    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
-        s.parse()
-            .map_err(|_| PathParamError(format!("invalid u32: {}", s)))
-    }
 }
 
 /// Metadata describing an API endpoint.

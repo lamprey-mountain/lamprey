@@ -541,17 +541,42 @@ async fn auth_totp_disable(
     Ok(Json(auth_state))
 }
 
-/// Auth totp recovery codes
-#[handler(routes::auth_totp_recovery_codes)]
-async fn auth_totp_recovery_codes(
+/// Auth totp recovery codes get
+#[handler(routes::auth_totp_recovery_codes_get)]
+async fn auth_totp_recovery_codes_get(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    _req: routes::auth_totp_recovery_codes::Request,
+    _req: routes::auth_totp_recovery_codes_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    let codes: Vec<common::v1::types::auth::TotpRecoveryCode> = (0..10)
-        .map(|_| common::v1::types::auth::TotpRecoveryCode {
-            code: Uuid::new_v4().to_string()[..8].to_string(),
+    let data = s.data();
+
+    // Get existing recovery codes without generating new ones
+    let existing_codes: Vec<(String, Option<Time>)> =
+        data.auth_totp_recovery_get_all(auth.user.id).await?;
+
+    let codes: Vec<TotpRecoveryCode> = existing_codes
+        .into_iter()
+        .map(|(code_str, used_at)| TotpRecoveryCode {
+            code: code_str,
+            used_at,
+        })
+        .collect();
+
+    Ok(Json(TotpRecoveryCodes { codes }))
+}
+
+/// Auth totp recovery codes rotate
+#[handler(routes::auth_totp_recovery_codes_rotate)]
+async fn auth_totp_recovery_codes_rotate(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    _req: routes::auth_totp_recovery_codes_rotate::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    let codes: Vec<TotpRecoveryCode> = (0..10)
+        .map(|_| TotpRecoveryCode {
+            code: Uuid::new_v4().to_string(),
             used_at: None,
         })
         .collect();
@@ -561,7 +586,7 @@ async fn auth_totp_recovery_codes(
         .auth_totp_recovery_generate(auth.user.id, &code_strings)
         .await?;
 
-    Ok(Json(common::v1::types::auth::TotpRecoveryCodes { codes }))
+    Ok(Json(TotpRecoveryCodes { codes }))
 }
 
 /// Auth password set
@@ -681,7 +706,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(auth_totp_init))
         .routes(routes2!(auth_totp_enable))
         .routes(routes2!(auth_totp_disable))
-        .routes(routes2!(auth_totp_recovery_codes))
+        .routes(routes2!(auth_totp_recovery_codes_get))
+        .routes(routes2!(auth_totp_recovery_codes_rotate))
         .routes(routes2!(auth_password_set))
         .routes(routes2!(auth_password_exec))
         .routes(routes2!(auth_webauthn_challenge))

@@ -66,7 +66,7 @@ async fn channel_create_room(
 async fn channel_create_dm(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::channel_create_dm::Request,
+    mut req: routes::channel_create_dm::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
@@ -120,6 +120,8 @@ async fn channel_create_dm(
                     return Err(ApiError::from_code(ErrorCode::GdmRequiresFriend).into());
                 }
             }
+
+            req.channel.recipients = Some(recipients);
         }
         _ => return Err(ApiError::from_code(ErrorCode::DmGdmOnlyOutsideRoom).into()),
     };
