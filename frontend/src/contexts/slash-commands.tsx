@@ -2,6 +2,7 @@ import { Channel } from "sdk";
 import type { Api } from "../api.tsx";
 import type { ChatCtx } from "../context.ts";
 import { createContext, type ParentProps, useContext } from "solid-js";
+import { RootStore } from "../api/core/Store.ts";
 
 export type CommandOption = {
 	name: string;
@@ -15,12 +16,18 @@ export type Command = {
 	name: string;
 	description: string;
 	options: CommandOption[];
-	canUse?: (api: Api, room_id: string | undefined, channel: Channel) => boolean;
+	canUse?: (
+		api: Api,
+		room_id: string | undefined,
+		channel: Channel,
+		store: RootStore,
+	) => boolean;
 	execute: (
 		ctx: ChatCtx,
 		api: Api,
 		channel_id: string,
 		args: string[],
+		store: RootStore,
 	) => Promise<void>;
 };
 
@@ -39,14 +46,20 @@ export class SlashCommands {
 		return this.commands.find((cmd) => cmd.name === name);
 	}
 
-	async run(ctx: ChatCtx, api: Api, channel_id: string, text: string) {
+	async run(
+		ctx: ChatCtx,
+		api: Api,
+		channel_id: string,
+		text: string,
+		store: RootStore,
+	) {
 		const [cmd, ...args] = text.slice(1).split(" ");
 		const command = this.find(cmd);
 		if (!command) {
 			console.error(`Command not found: ${cmd}`);
 			return;
 		}
-		await command.execute(ctx, api, channel_id, args);
+		await command.execute(ctx, api, channel_id, args, store);
 	}
 }
 

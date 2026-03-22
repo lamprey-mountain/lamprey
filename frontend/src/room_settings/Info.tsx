@@ -67,6 +67,8 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	);
 
 	const editor = createEditor({
+		channelId: () => props.room.id,
+		roomId: () => props.room.id,
 		initialContent: props.room.description as string | undefined,
 	});
 

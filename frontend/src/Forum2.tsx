@@ -650,6 +650,8 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	};
 
 	const editor = createEditor({
+		channelId: () => props.thread.id,
+		roomId: () => props.thread.room_id,
 		initialContent: (() => {
 			const draft = localStorage.getItem(storageKey());
 			if (!draft) return "";
@@ -1035,6 +1037,8 @@ function CommentEditor(
 	};
 
 	const editor = createEditor({
+		channelId: () => props.message.channel_id,
+		roomId: () => props.message.room_id,
 		initialContent: draft(),
 		initialSelection: "end",
 	});

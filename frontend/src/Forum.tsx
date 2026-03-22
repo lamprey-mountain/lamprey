@@ -191,7 +191,10 @@ const QuickCreate = (
 	const uploads = useUploads();
 	const submit = useMessageSubmit(props.channel.id);
 
-	const editor = createEditor({});
+	const editor = createEditor({
+		channelId: () => props.channel.id,
+		roomId: () => props.channel.room_id,
+	});
 
 	function uploadFile(e: InputEvent) {
 		const target = e.target! as HTMLInputElement;

@@ -1,11 +1,12 @@
 import { For, Match, Show, Switch } from "solid-js";
 import { useAutocomplete } from "./contexts/autocomplete";
-import { type EmojiCustom, type User } from "sdk";
+import { type EmojiCustom } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import { Avatar } from "./User";
 import { type EmojiData, getTwemoji } from "./emoji";
 import { type Command } from "./contexts/slash-commands";
 import { useAutocompleteData } from "./hooks/useAutocompleteData";
+import type { AutocompleteMentionItem } from "./contexts/autocomplete";
 
 export const Autocomplete = () => {
 	const { state, select, setIndex } = useAutocomplete();
@@ -54,11 +55,36 @@ export const Autocomplete = () => {
 								</Match>
 								<Match
 									when={state.kind?.type === "mention" &&
-										"avatar" in result.obj}
+										(result.obj as AutocompleteMentionItem).type === "user"}
 								>
 									<div class="mention-user">
-										<Avatar user={result.obj as User} pad={0} />
-										<span>{(result.obj as User).name}</span>
+										<Avatar
+											user={(result.obj as AutocompleteMentionItem).user}
+											pad={0}
+										/>
+										<span>{(result.obj as AutocompleteMentionItem).name}</span>
+									</div>
+								</Match>
+								<Match
+									when={state.kind?.type === "mention" &&
+										(result.obj as AutocompleteMentionItem).type === "role"}
+								>
+									<div class="mention-role">
+										<span class="role-badge">#</span>
+										<span>{(result.obj as AutocompleteMentionItem).name}</span>
+									</div>
+								</Match>
+								<Match
+									when={state.kind?.type === "mention" &&
+										(result.obj as AutocompleteMentionItem).type === "everyone"}
+								>
+									<div class="everyone-mention">
+										<span>
+											{(result.obj as AutocompleteMentionItem).mention_type ===
+													"room"
+												? "@room"
+												: "@everyone"}
+										</span>
 									</div>
 								</Match>
 								<Match when={true}>

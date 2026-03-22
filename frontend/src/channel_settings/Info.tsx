@@ -63,6 +63,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	let iconInputEl!: HTMLInputElement;
 
 	const editor = createEditor({
+		channelId: () => props.channel.id,
+		roomId: () => props.channel.room_id,
 		initialContent: props.channel.description as string | undefined,
 	});
 

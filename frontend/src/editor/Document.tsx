@@ -609,6 +609,8 @@ const DocumentMain = (
 	);
 
 	const ed = createEditor({
+		channelId: () => props.channel.id,
+		roomId: () => props.channel.room_id,
 		diffMode: () => mode() !== "edit",
 	});
 

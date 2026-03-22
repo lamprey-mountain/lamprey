@@ -11,6 +11,8 @@ const LINE_HEIGHT = 18;
 function getTriggerChar(type: AutocompleteKind["type"]): string {
 	switch (type) {
 		case "mention":
+		case "role":
+		case "everyone":
 			return "@";
 		case "channel":
 			return "#";
@@ -73,7 +75,7 @@ function isValidTriggerChar(char: string): char is "@" | "#" | ":" | "/" {
 function getAutocompleteType(char: string): AutocompleteKind["type"] | null {
 	switch (char) {
 		case "@":
-			return "mention";
+			return "mention"; // Will be refined based on query
 		case "#":
 			return "channel";
 		case ":":
@@ -87,6 +89,7 @@ function getAutocompleteType(char: string): AutocompleteKind["type"] | null {
 
 export function createAutocompletePlugin(
 	channelId: () => string,
+	roomId: () => string,
 ): Plugin {
 	const autocomplete = useAutocomplete();
 
@@ -118,13 +121,25 @@ export function createAutocompletePlugin(
 
 		const refElement = createRefElement(view);
 
-		autocomplete.show(refElement, {
-			type,
-			onSelect: (item: any) => {
-				applyAutocompleteReplacement(view, triggerChar, type, item);
-			},
-			channelId: channelId(),
-		});
+		// For "@" trigger, show combined mention/role/everyone autocomplete
+		if (type === "mention") {
+			autocomplete.show(refElement, {
+				type: "mention",
+				onSelect: (item) => {
+					applyAutocompleteReplacement(view, triggerChar, "mention", item);
+				},
+				channelId: channelId(),
+				roomId: roomId(),
+			});
+		} else {
+			autocomplete.show(refElement, {
+				type,
+				onSelect: (item: any) => {
+					applyAutocompleteReplacement(view, triggerChar, type, item);
+				},
+				channelId: channelId(),
+			});
+		}
 
 		// Set initial query immediately after show
 		autocomplete.updateQuery(initialQuery);
@@ -170,14 +185,38 @@ export function createAutocompletePlugin(
 			view.dispatch(tr);
 			autocomplete.hide();
 			return;
+		} else if (type === "mention") {
+			// Handle user, role, or everyone mention
+			if (item.type === "user") {
+				node = state.schema.nodes.mention.create({
+					user: item.user_id,
+					name: item.name ?? "",
+				});
+			} else if (item.type === "role") {
+				node = state.schema.nodes.mentionRole.create({
+					role: item.role_id,
+					name: item.name ?? "",
+				});
+			} else if (item.type === "everyone") {
+				// @everyone or @room - insert as text
+				const mentionText = item.mention_type === "room"
+					? "@room"
+					: "@everyone";
+				let tr = state.tr.replaceWith(
+					triggerPos,
+					to,
+					state.schema.text(mentionText),
+				);
+				const posAfter = tr.mapping.map(to);
+				tr = tr.setSelection(TextSelection.create(tr.doc, posAfter + 1));
+				view.dispatch(tr);
+				autocomplete.hide();
+				return;
+			}
 		} else {
-			// mention or channel
-			const nodeType = type === "mention"
-				? state.schema.nodes.mention
-				: state.schema.nodes.mentionChannel;
-			const attrs = type === "mention"
-				? { user: item.id, name: item.name ?? "" }
-				: { channel: item.id, name: item.name ?? "" };
+			// channel mention
+			const nodeType = state.schema.nodes.mentionChannel;
+			const attrs = { channel: item.id, name: item.name ?? "" };
 			node = nodeType.create(attrs);
 		}
 

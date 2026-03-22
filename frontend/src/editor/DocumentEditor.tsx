@@ -65,15 +65,18 @@ export const createEditor = (
 } => {
 	const api = useApi();
 	const toolbarPlugin = createToolbarPlugin();
-	const autocompletePlugin = createAutocompletePlugin(currentChannelId);
-
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
 	const [currentChannelId, setCurrentChannelId] = createSignal(
 		"no channel id!",
 	);
+	const [currentRoomId, setCurrentRoomId] = createSignal<string>("");
 	const [currentBranchId, setCurrentBranchId] = createSignal("no branch id!");
 	const [diffMarks, setDiffMarksSignal] = createSignal<DiffMark[]>(
 		opts.diffMarks ?? [],
+	);
+	const autocompletePlugin = createAutocompletePlugin(
+		currentChannelId,
+		() => currentRoomId(),
 	);
 
 	const createYDoc = () => {
@@ -203,11 +206,16 @@ export const createEditor = (
 			return;
 		}
 
+		// Get room_id from channel
+		const channel = api.channels.cache.get(channelId);
+		const roomId = channel?.room_id ?? "";
+
 		// reset document state
 		ydoc = createYDoc();
 		editor.setState(createState());
 
 		setCurrentChannelId(channelId);
+		setCurrentRoomId(roomId);
 		setCurrentBranchId(branchId);
 		setIsSubscribed(false);
 

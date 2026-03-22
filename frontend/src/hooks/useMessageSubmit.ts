@@ -19,7 +19,7 @@ export function useMessageSubmit(channel_id: string) {
 		const dest = target_channel_id ?? channel_id;
 
 		if (text.startsWith("/")) {
-			await ctx.slashCommands.run(ctx, api, dest, text);
+			await ctx.slashCommands.run(ctx, api, dest, text, store);
 			return true;
 		}
 

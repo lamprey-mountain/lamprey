@@ -1,19 +1,41 @@
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { useAutocomplete } from "../contexts/autocomplete";
-import { useApi } from "../api";
+import { useApi, useApi2, useRoles2 } from "../api";
 import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
+import type { Role } from "sdk";
 import { type Command, useSlashCommands } from "../contexts/slash-commands";
 import { type EmojiData, emojiResource } from "../emoji";
+import { usePermissions } from "./usePermissions";
+import { useCurrentUser } from "../contexts/currentUser";
+import type { AutocompleteMentionItem } from "../contexts/autocomplete";
 
 export const useAutocompleteData = () => {
 	const api = useApi();
+	const store = useApi2();
+	const rolesApi = useRoles2();
+	const currentUser = useCurrentUser();
 	const { state, setResults } = useAutocomplete();
+
+	// Get permissions for @everyone/@room mentions
+	const channelForPerms = () => {
+		if (state.kind?.type === "mention") {
+			return api.channels.cache.get(state.kind.channelId);
+		}
+		return null;
+	};
+	const perms = usePermissions(
+		() => currentUser()?.id ?? "",
+		() => channelForPerms()?.room_id,
+		() => state.kind?.type === "mention" ? state.kind.channelId : "",
+	);
+	const hasMassMention = () => perms.has("MessageMassMention");
 
 	const [allUsers, setAllUsers] = createSignal<User[]>([]);
 	const [allChannels, setAllChannels] = createSignal<Channel[]>([]);
 	const [allEmoji, setAllEmoji] = createSignal<(EmojiCustom | EmojiData)[]>([]);
 	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
+	const [allRoles, setAllRoles] = createSignal<Role[]>([]);
 
 	// Fetch data based on autocomplete type
 	createEffect(() => {
@@ -22,7 +44,7 @@ export const useAutocompleteData = () => {
 
 		if (kind.type === "mention") {
 			const channel = api.channels.cache.get(kind.channelId);
-			const roomId = channel?.room_id;
+			const roomId = kind.roomId ?? channel?.room_id;
 
 			const threadMembers = api.thread_members.list(() => kind.channelId)();
 			const roomMembers = roomId
@@ -49,6 +71,14 @@ export const useAutocompleteData = () => {
 				} as User;
 			});
 			setAllUsers(users);
+
+			// Also fetch mentionable roles for combined autocomplete
+			if (roomId) {
+				const mentionableRoles = [...rolesApi.cache.values()].filter(
+					(r) => r.room_id === roomId && r.is_mentionable,
+				);
+				setAllRoles(mentionableRoles);
+			}
 		} else if (kind.type === "channel") {
 			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
@@ -81,7 +111,12 @@ export const useAutocompleteData = () => {
 
 			const filteredCommands = allCommands.filter((cmd) => {
 				if (cmd.canUse) {
-					return cmd.canUse(api, channel?.room_id ?? undefined, channel!);
+					return cmd.canUse(
+						api,
+						channel?.room_id ?? undefined,
+						channel!,
+						store,
+					);
 				}
 				return true;
 			});
@@ -98,44 +133,83 @@ export const useAutocompleteData = () => {
 		const query = state.query;
 		const type = kind.type;
 
-		let results: Fuzzysort.KeyResults<
-			User | Channel | EmojiCustom | EmojiData | Command
-		>;
-
 		if (type === "mention") {
-			results = go(query, allUsers(), {
-				key: "name",
-				limit: 10,
-				all: true,
-			});
+			// Combined users, roles, and @everyone/@room search
+			const users = allUsers();
+			const roles = allRoles();
+			const queryLower = query.toLowerCase();
+
+			const results: AutocompleteMentionItem[] = [];
+
+			// Filter users - include full user object for Avatar
+			const filteredUsers = users
+				.filter((u) => u.name.toLowerCase().includes(queryLower))
+				.map((u) => ({
+					type: "user" as const,
+					user_id: u.id,
+					name: u.name,
+					user: u, // Include full user object for Avatar
+				}));
+			results.push(...filteredUsers);
+
+			// Filter roles
+			const filteredRoles = roles
+				.filter((r) => r.name.toLowerCase().includes(queryLower))
+				.map((r) => ({ type: "role" as const, role_id: r.id, name: r.name }));
+			results.push(...filteredRoles);
+
+			// Add @everyone/@room if has permission and matches query
+			if (hasMassMention()) {
+				if (kind.roomId && "room".startsWith(queryLower)) {
+					results.push({ type: "everyone" as const, mention_type: "room" });
+				}
+				if ("everyone".startsWith(queryLower)) {
+					results.push({ type: "everyone" as const, mention_type: "everyone" });
+				}
+			}
+
+			// Limit to 10 results
+			const limited = results.slice(0, 10);
+
+			// Convert to fuzzysort-like results
+			return limited.map((item) => ({
+				obj: item,
+				score: 0,
+				hits: [{
+					value: item.type === "everyone"
+						? (item.mention_type === "room" ? "@room" : "@everyone")
+						: item.name,
+				}],
+			}));
 		} else if (type === "channel") {
-			results = go(query, allChannels(), {
+			const results = go(query, allChannels(), {
 				key: "name",
 				limit: 10,
 				all: true,
 			});
+			return results;
 		} else if (type === "emoji") {
 			// Normalize emoji for search - custom emoji use 'name', unicode use 'label'
 			const normalizedEmoji = allEmoji().map((e) => ({
 				...e,
 				searchLabel: "label" in e ? e.label : e.name,
 			}));
-			results = go(query, normalizedEmoji, {
+			const results = go(query, normalizedEmoji, {
 				keys: ["searchLabel", "shortcodes"],
 				limit: 10,
 				all: true,
 			}) as any;
+			return results;
 		} else if (type === "command") {
-			results = go(query, allCommands(), {
+			const results = go(query, allCommands(), {
 				key: "name",
 				limit: 10,
 				all: true,
 			}) as any;
-		} else {
-			results = [] as any;
+			return results;
 		}
 
-		return results;
+		return [] as any;
 	});
 
 	// NOTE: this is kind of ugly, maybe i should remove it?
@@ -149,5 +223,6 @@ export const useAutocompleteData = () => {
 		allChannels,
 		allEmoji,
 		allCommands,
+		allRoles,
 	};
 };

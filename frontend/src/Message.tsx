@@ -114,6 +114,8 @@ function MessageEditor(
 	}
 
 	const editor = createEditor({
+		channelId: () => props.message.channel_id,
+		roomId: () => props.message.room_id,
 		initialContent: draft(),
 		initialSelection: ch.editingMessage
 			?.selection,

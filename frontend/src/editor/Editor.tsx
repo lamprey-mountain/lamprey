@@ -13,7 +13,6 @@ import { createToolbarPlugin } from "./toolbar-plugin.ts";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { useApi } from "../api.tsx";
 import { createEditorNodeViews } from "./node-views.tsx";
-import { createEffect, createSignal } from "solid-js";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -31,11 +30,15 @@ type EditorProps = {
 	mentionChannelRenderer?: (node: HTMLElement, channelId: string) => void;
 };
 
-export const createEditor = (opts: EditorProps) => {
+export const createEditor = (
+	opts: EditorProps & { channelId: () => string; roomId?: () => string },
+) => {
 	const api = useApi();
 	const toolbarPlugin = createToolbarPlugin();
-	const [channelId, setChannelId] = createSignal("");
-	const autocompletePlugin = createAutocompletePlugin(() => channelId());
+	const autocompletePlugin = createAutocompletePlugin(
+		opts.channelId,
+		opts.roomId ?? (() => ""),
+	);
 
 	const createState = () => {
 		let doc;
@@ -98,17 +101,12 @@ export const createEditor = (opts: EditorProps) => {
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: createEditorNodeViews(api, { currentChannelId: channelId }),
+		nodeViews: createEditorNodeViews(api, { currentChannelId: opts.channelId }),
 	});
 
 	return {
 		...editor,
 		View: (props: Parameters<typeof editor.View>[0]) => {
-			createEffect(() => {
-				if (props.channelId) {
-					setChannelId(props.channelId);
-				}
-			});
 			return <editor.View {...props} />;
 		},
 	};

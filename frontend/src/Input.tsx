@@ -148,6 +148,8 @@ export function Input(props: InputProps) {
 	};
 
 	const editor = createEditor({
+		channelId: () => props.channel.id,
+		roomId: () => props.channel.room_id,
 		keymap: {
 			ArrowUp: (state) => {
 				if (state.doc.textContent.length > 0) {
