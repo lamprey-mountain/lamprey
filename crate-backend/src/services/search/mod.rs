@@ -356,7 +356,11 @@ impl ServiceSearch {
         if let Some(index_actor) = self.index_manager.get_index_actor("content") {
             let delete_term = index::delete_term_for_channel(channel_id);
             if let Err(e) = index_actor.tell(delete_term).await {
-                tracing::warn!("failed to delete documents for channel {}: {}", channel_id, e);
+                tracing::warn!(
+                    "failed to delete documents for channel {}: {}",
+                    channel_id,
+                    e
+                );
             }
         }
 

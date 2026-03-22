@@ -85,9 +85,8 @@ async fn message_list(
     perms.ensure(Permission::ChannelView)?;
     let res = srv
         .messages
-        .list(req.channel_id, auth.user.id, req.pagination)
+        .list(req.channel_id, Some(auth.user.id), req.pagination)
         .await?;
-    let res = srv.messages.list(channel_id, Some(auth.user.id), q).await?;
     Ok(Json(res))
 }
 
