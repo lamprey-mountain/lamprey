@@ -1,6 +1,24 @@
 import { createResource } from "solid-js";
 
-const fetchEmojiData = async () => {
+export type EmojiData = {
+	char: string;
+	label: string;
+	id: string;
+	shortcodes: string[];
+	hexcode: string;
+	order: number;
+	group: number;
+};
+
+type RawEmoji = {
+	unicode: string;
+	label: string;
+	hexcode: string;
+	order: number;
+	group?: number;
+};
+
+const fetchEmojiData = async (): Promise<EmojiData[]> => {
 	const [
 		{ default: emojis },
 		{ default: shortJoypixels },
@@ -28,7 +46,7 @@ const fetchEmojiData = async () => {
 		return Array.from(all);
 	};
 
-	return (emojis as any).map((e) => ({
+	return (emojis as RawEmoji[]).map((e) => ({
 		char: e.unicode,
 		label: e.label,
 		// Canonical ID for usage in search/lookup
@@ -42,8 +60,8 @@ const fetchEmojiData = async () => {
 
 export const [emojiResource] = createResource(fetchEmojiData);
 
-export const getEmojiByShortcode = (code: string) => {
+export const getEmojiByShortcode = (code: string): EmojiData | null => {
 	const data = emojiResource();
 	if (!data) return null;
-	return data.find((e) => e.shortcodes.includes(code));
+	return data.find((e) => e.shortcodes.includes(code)) ?? null;
 };

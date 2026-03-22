@@ -28,6 +28,7 @@ import { useApi, useMessages2 } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
 import { A, useNavigate } from "@solidjs/router";
+import { serializeToMarkdown } from "./editor/serializer.ts";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { usePermissions } from "./hooks/usePermissions";
@@ -670,7 +671,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const onChange = (state: EditorState) => {
 		chUpdate("editor_state", state);
-		const content = state.doc.textContent;
+		const content = serializeToMarkdown(state.doc);
 		localStorage.setItem(
 			storageKey(),
 			JSON.stringify({
@@ -711,7 +712,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		if (locked()) return;
 		const state = ch.editor_state;
 		if (!state) return;
-		const content = state.doc.textContent.trim();
+		const content = serializeToMarkdown(state.doc).trim();
 		if (!content) return;
 		if (onSubmit(content)) {
 			const tr = state.tr.deleteRange(0, state.doc.nodeSize - 2);

@@ -39,6 +39,7 @@ import { Time } from "./Time.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { createEditor } from "./editor/Editor.tsx";
+import { serializeToMarkdown } from "./editor/serializer.ts";
 import { uuidv7 } from "uuidv7";
 import { Reactions } from "./Reactions.tsx";
 import icReply from "./assets/reply.png";
@@ -229,7 +230,7 @@ function MessageEditor(
 					return true;
 				}}
 				onChange={(state) => {
-					const text = state.doc.textContent;
+					const text = serializeToMarkdown(state.doc);
 					setDraft(text);
 				}}
 			/>

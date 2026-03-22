@@ -7,11 +7,10 @@ import {
 } from "prosemirror-view";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { useCtx } from "../context";
-import { useAutocomplete } from "../contexts/mod.tsx";
 import { initTurndownService } from "../turndown.ts";
 import { decorate, md } from "../markdown_utils.tsx";
-import { handleAutocomplete } from "./editor-utils.ts";
 import { schema as defaultSchema } from "./schema";
+import { serializeToMarkdown } from "./serializer.ts";
 
 const turndown = initTurndownService();
 
@@ -56,7 +55,7 @@ export const createEditor = (opts: EditorOptions) => {
 	let currentProps: EditorViewProps = {};
 
 	const submitCommand: Command = (state, dispatch) => {
-		const res = currentProps.onSubmit?.(state.doc.textContent.trim());
+		const res = currentProps.onSubmit?.(serializeToMarkdown(state.doc).trim());
 		if (res instanceof Promise) {
 			res.then((shouldClear) => {
 				if (shouldClear) {
@@ -84,7 +83,6 @@ export const createEditor = (opts: EditorOptions) => {
 		},
 		View(props: EditorViewProps) {
 			const ctx = useCtx();
-			const autocompleteCtx = useAutocomplete();
 
 			createEffect(() => {
 				currentProps = props;
@@ -192,14 +190,7 @@ export const createEditor = (opts: EditorOptions) => {
 							return submitCommand(view.state, view.dispatch);
 						}
 
-						return handleAutocomplete(
-							view,
-							event,
-							ctx,
-							autocompleteCtx,
-							schema,
-							props.channelId || "",
-						);
+						return false;
 					},
 					editable: () => !(props.disabled ?? false),
 					dispatchTransaction(tr) {

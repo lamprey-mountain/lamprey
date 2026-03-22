@@ -31,6 +31,7 @@ import {
 	diffPluginKey,
 } from "./diff-plugin.ts";
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
+import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createEditorNodeViews } from "./node-views.tsx";
 
 let isApplyingFormat = false;
@@ -64,6 +65,7 @@ export const createEditor = (
 } => {
 	const api = useApi();
 	const toolbarPlugin = createToolbarPlugin();
+	const autocompletePlugin = createAutocompletePlugin(currentChannelId);
 
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
 	const [currentChannelId, setCurrentChannelId] = createSignal(
@@ -181,6 +183,7 @@ export const createEditor = (
 					...opts.keymap,
 				}),
 				toolbarPlugin,
+				autocompletePlugin,
 			],
 		});
 	};

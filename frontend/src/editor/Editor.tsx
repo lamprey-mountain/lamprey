@@ -10,8 +10,10 @@ import {
 	createWrapCommand,
 } from "./editor-utils.ts";
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
+import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { useApi } from "../api.tsx";
 import { createEditorNodeViews } from "./node-views.tsx";
+import { createEffect, createSignal } from "solid-js";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -32,6 +34,8 @@ type EditorProps = {
 export const createEditor = (opts: EditorProps) => {
 	const api = useApi();
 	const toolbarPlugin = createToolbarPlugin();
+	const [channelId, setChannelId] = createSignal("");
+	const autocompletePlugin = createAutocompletePlugin(() => channelId());
 
 	const createState = () => {
 		let doc;
@@ -86,6 +90,7 @@ export const createEditor = (opts: EditorProps) => {
 					...opts.keymap,
 				}),
 				toolbarPlugin,
+				autocompletePlugin,
 			],
 		});
 	};
@@ -93,12 +98,17 @@ export const createEditor = (opts: EditorProps) => {
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: createEditorNodeViews(api),
+		nodeViews: createEditorNodeViews(api, { currentChannelId: channelId }),
 	});
 
 	return {
 		...editor,
 		View: (props: Parameters<typeof editor.View>[0]) => {
+			createEffect(() => {
+				if (props.channelId) {
+					setChannelId(props.channelId);
+				}
+			});
 			return <editor.View {...props} />;
 		},
 	};

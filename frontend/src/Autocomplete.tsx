@@ -5,13 +5,11 @@ import {
 	createSignal,
 	For,
 	Match,
-	on,
-	onCleanup,
 	Show,
 	Switch,
 } from "solid-js";
 import { useCtx } from "./context";
-import { useAutocomplete } from "./contexts/mod.tsx";
+import { useAutocomplete } from "./contexts/autocomplete";
 import { useApi } from "./api";
 import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
@@ -19,6 +17,7 @@ import { getEmojiUrl } from "./media/util";
 import { Avatar } from "./User";
 import twemoji from "twemoji";
 import { type Command, useSlashCommands } from "./contexts/slash-commands";
+import { emojiResource } from "./emoji";
 
 type Emoji = {
 	group?: number;
@@ -48,9 +47,11 @@ const getTwemoji = (unicode: string) => {
 
 export const Autocomplete = () => {
 	const ctx = useCtx();
-	const { autocomplete, setAutocomplete } = useAutocomplete();
 	const api = useApi();
 
+	const { state, setResults, navigate, select, setIndex } = useAutocomplete();
+
+	// Load unicode emoji data
 	const [unicodeEmoji] = createResource(async () => {
 		const [
 			{ default: emojis },
@@ -90,13 +91,16 @@ export const Autocomplete = () => {
 	);
 	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
 
-	createEffect(on(autocomplete, (state) => {
-		if (state?.type === "mention") {
-			const channelId = state.channelId;
-			const channel = api.channels.cache.get(channelId);
+	// Fetch data based on autocomplete type
+	createEffect(() => {
+		const kind = state.kind;
+		if (!kind) return;
+
+		if (kind.type === "mention") {
+			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
-			const threadMembers = api.thread_members.list(() => channelId)();
+			const threadMembers = api.thread_members.list(() => kind.channelId)();
 			const roomMembers = roomId
 				? api.room_members.list(() => roomId)()
 				: undefined;
@@ -105,89 +109,94 @@ export const Autocomplete = () => {
 			threadMembers?.items.forEach((m) => userIds.add(m.user_id));
 			roomMembers?.items.forEach((m) => userIds.add(m.user_id));
 
-			const users = [...userIds].map((id) => api.users.cache.get(id)).filter(
-				Boolean,
-			) as User[];
+			// Build user list from cache or use member data as fallback
+			const users = [...userIds].map((id) => {
+				const cachedUser = api.users.cache.get(id);
+				if (cachedUser && cachedUser.id) {
+					return cachedUser;
+				}
+				// Fallback: create a minimal user object from the member data
+				// Find the member to get any available name info
+				const member = threadMembers?.items.find((m) => m.user_id === id) ||
+					roomMembers?.items.find((m) => m.user_id === id);
+				return {
+					id: id,
+					name: member?.override_name || id,
+				} as User;
+			});
 			setAllUsers(users);
-		} else if (state?.type === "channel") {
-			const channelId = state.channelId;
-			const channel = api.channels.cache.get(channelId);
+		} else if (kind.type === "channel") {
+			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
 			const channels = [...api.channels.cache.values()].filter(
 				(c) => c.type !== "Category" && c.room_id === roomId,
 			);
 			setAllChannels(channels);
-		} else if (state?.type === "emoji") {
-			const channelId = state.channelId;
-			const channel = api.channels.cache.get(channelId);
+		} else if (kind.type === "emoji") {
+			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
-			const customEmojiResource = roomId
-				? api.emoji.list(() => roomId!)
-				: undefined;
-			const customEmoji = customEmojiResource
-				? customEmojiResource()
-				: undefined;
-
 			const combined = [];
-			if (customEmoji?.items) {
-				combined.push(...customEmoji.items);
+			if (roomId) {
+				// Get custom emoji from cache for this room
+				const roomEmoji = [...api.emoji.cache.values()].filter(
+					(e) => e.owner?.owner === "Room" && e.owner.room_id === roomId,
+				);
+				combined.push(...roomEmoji);
 			}
 			if (unicodeEmoji()) {
 				combined.push(...(unicodeEmoji() as any));
 			}
 			setAllEmoji(combined);
-		} else if (state?.type === "command") {
+		} else if (kind.type === "command") {
 			const slashCommands = useSlashCommands();
 			const allCommands = slashCommands.getAll();
-			const channel = api.channels.cache.get(state.channelId);
+			const channel = api.channels.cache.get(kind.channelId);
 
-			// Filter commands based on whether they can be used in the current context
 			const filteredCommands = allCommands.filter((cmd) => {
-				// If the command has a canUse function, use it to check permissions
 				if (cmd.canUse) {
 					return cmd.canUse(api, channel?.room_id ?? undefined, channel!);
 				}
-				// If no canUse function is defined, assume the command can be used
 				return true;
 			});
 
 			setAllCommands(filteredCommands);
 		}
-	}));
+	});
 
-	const [filtered, setFiltered] = createSignal<
-		Fuzzysort.KeyResult<User | Channel | EmojiCustom | UnicodeEmoji | Command>[]
-	>([]);
-	const [hoveredIndex, setHoveredIndex] = createSignal(0);
-	const hovered = () => filtered()[hoveredIndex()]?.obj;
+	// Filter results based on query
+	const filtered = createMemo(() => {
+		const kind = state.kind;
+		if (!kind) return [];
 
-	createEffect(() => {
-		const state = autocomplete();
+		const query = state.query;
+		const type = kind.type;
+
 		let results: Fuzzysort.KeyResults<
 			User | Channel | EmojiCustom | UnicodeEmoji | Command
 		>;
-		if (state?.type === "mention") {
-			results = go(state.query, allUsers(), {
+
+		if (type === "mention") {
+			results = go(query, allUsers(), {
 				key: "name",
 				limit: 10,
 				all: true,
 			});
-		} else if (state?.type === "channel") {
-			results = go(state.query, allChannels(), {
+		} else if (type === "channel") {
+			results = go(query, allChannels(), {
 				key: "name",
 				limit: 10,
 				all: true,
 			});
-		} else if (state?.type === "emoji") {
-			results = go(state.query, allEmoji(), {
+		} else if (type === "emoji") {
+			results = go(query, allEmoji(), {
 				keys: ["name", "shortcodes"],
 				limit: 10,
 				all: true,
 			}) as any;
-		} else if (state?.type === "command") {
-			results = go(state.query, allCommands(), {
+		} else if (type === "command") {
+			results = go(query, allCommands(), {
 				key: "name",
 				limit: 10,
 				all: true,
@@ -195,77 +204,30 @@ export const Autocomplete = () => {
 		} else {
 			results = [] as any;
 		}
-		setFiltered(results as any);
-		if (hoveredIndex() >= results.length) {
-			setHoveredIndex(0);
-		}
+
+		return results;
 	});
 
-	const select = (
-		item: User | Channel | EmojiCustom | UnicodeEmoji | Command,
-	) => {
-		const state = autocomplete();
-		if (state) {
-			if (state.type === "emoji") {
-				const name = item.name;
-				const id = item.id;
-				const char = "char" in item ? item.char : undefined;
-				state.onSelect(id, name, char);
-			} else if (state.type === "command") {
-				state.onSelect(item.name);
-			} else {
-				state.onSelect(item.id, item.name);
-			}
-			setAutocomplete(null);
-		}
-	};
-
-	const onKeyDown = (e: KeyboardEvent) => {
-		if (!autocomplete()) return;
-
-		if (e.key === "ArrowUp") {
-			e.preventDefault();
-			e.stopPropagation();
-			setHoveredIndex((i) => (i - 1 + filtered().length) % filtered().length);
-		} else if (e.key === "ArrowDown") {
-			e.preventDefault();
-			e.stopPropagation();
-			setHoveredIndex((i) => (i + 1) % filtered().length);
-		} else if (e.key === "Enter" || e.key === "Tab") {
-			e.preventDefault();
-			e.stopPropagation();
-			const item = hovered();
-			if (item) {
-				select(item);
-			}
-		} else if (e.key === "Escape") {
-			e.preventDefault();
-			e.stopPropagation();
-			setAutocomplete(null);
-		}
-	};
-
 	createEffect(() => {
-		if (autocomplete()) {
-			document.addEventListener("keydown", onKeyDown, { capture: true });
-			onCleanup(() => {
-				document.removeEventListener("keydown", onKeyDown, { capture: true });
-			});
-		}
+		setResults(filtered().map((i) => i.obj));
 	});
 
 	return (
-		<Show when={autocomplete() && filtered().length > 0}>
+		<Show
+			when={state.visible && state.kind &&
+				filtered().length > 0}
+		>
 			<div class="autocomplete">
 				<For each={filtered()}>
 					{(result, i) => (
 						<div
 							class="item"
-							classList={{ hovered: i() === hoveredIndex() }}
-							onMouseEnter={() => setHoveredIndex(i())}
+							classList={{ hovered: i() === state.activeIndex }}
+							onMouseEnter={() => setIndex(i())}
 							onMouseDown={(e) => {
 								e.preventDefault();
-								select(result.obj);
+								setIndex(i());
+								select();
 							}}
 						>
 							<Switch>
@@ -275,13 +237,15 @@ export const Autocomplete = () => {
 									>
 									</span>
 								</Match>
-								<Match when={"media_id" in result.obj}>
+								<Match
+									when={state.kind?.type === "emoji" && !("char" in result.obj)}
+								>
 									<img
 										src={getEmojiUrl((result.obj as EmojiCustom).id)}
 										class="emoji-img"
 									/>
 								</Match>
-								<Match when={autocomplete()?.type === "command"}>
+								<Match when={state.kind?.type === "command"}>
 									<div class="command">
 										<div class="name">/{(result.obj as Command).name}</div>
 										<div class="description dim">
@@ -290,7 +254,7 @@ export const Autocomplete = () => {
 									</div>
 								</Match>
 								<Match
-									when={autocomplete()?.type === "mention" &&
+									when={state.kind?.type === "mention" &&
 										"avatar" in result.obj}
 								>
 									<div class="mention-user">

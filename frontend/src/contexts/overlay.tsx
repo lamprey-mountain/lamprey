@@ -46,7 +46,7 @@ import { Modal, useModals } from "./modal.tsx";
 export function OverlayProvider(props: ParentProps) {
 	const ctx = useCtx();
 	const { menu } = useMenu();
-	const { autocomplete } = useAutocomplete();
+	const { state: autocompleteState } = useAutocomplete();
 	const { userView } = useUserPopout();
 	const { toolbar, hideToolbar } = useFormattingToolbar();
 	const api = useApi();
@@ -147,7 +147,7 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	createEffect(() => {
-		const reference = autocomplete()?.ref;
+		const reference = autocompleteState.reference;
 		const floating = autocompleteRef();
 		if (!reference || !floating) return;
 		const cleanup = autoUpdate(
@@ -379,7 +379,7 @@ export function OverlayProvider(props: ParentProps) {
 						<ThreadPopout channel_id={ctx.threadsView()!.channel_id} />
 					</div>
 				</Show>
-				<Show when={autocomplete()}>
+				<Show when={autocompleteState.visible}>
 					<div
 						ref={setAutocompleteRef}
 						style={{

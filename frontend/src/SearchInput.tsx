@@ -1,6 +1,6 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useMessages2 } from "./api";
+import { useApi, useMessages2, useRoles2 } from "./api";
 import { useCtx } from "./context";
 import type { RoomT, ThreadT } from "./types";
 import type { ChannelSearch } from "./context";
@@ -316,7 +316,6 @@ const AutocompleteDropdown = (props: {
 	onSelectFilter: (text: string) => void;
 }) => {
 	const api = useApi();
-	const messagesService = useMessages2();
 	const threadMembers = api.thread_members.list(
 		() => (props.channel?.id as any),
 	);
@@ -326,8 +325,10 @@ const AutocompleteDropdown = (props: {
 	const roomThreads = api.channels.list(() =>
 		(props.channel?.room_id as any) ?? props.room?.id ?? ""
 	);
-	const roomRoles = api.roles.list(() =>
-		(props.channel?.room_id as any) ?? props.room?.id ?? ""
+	const roles = useRoles2();
+	const roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
+	const roomRoles = createMemo(() =>
+		[...roles.cache.values()].filter((r) => r.room_id === roomId())
 	);
 
 	const authorSuggestions = createMemo(() => {
@@ -411,7 +412,7 @@ const AutocompleteDropdown = (props: {
 					({ id: `user-${u.id}`, name: u.name, type: "user" }) as Mentionable,
 			);
 
-		const roles = (roomRoles()?.items ?? [])
+		const roles = (roomRoles() ?? [])
 			.filter((r) => r.name.toLowerCase().includes(query))
 			.map(
 				(r) =>
