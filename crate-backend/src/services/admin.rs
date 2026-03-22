@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::v1::types::ChannelId;
+use common::v1::types::{ChannelId, RoomId};
 use lamprey_backend_core::types::admin::{
     AdminCollectGarbage, AdminCollectGarbageMode, AdminCollectGarbageResponse,
     AdminCollectGarbageStat, AdminCollectGarbageTarget, AdminPurgeCache, AdminPurgeCacheResponse,
@@ -197,7 +197,19 @@ impl ServiceAdmin {
 
     pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
         let srv = self.state.services();
-        srv.search.reindex_channel(channel_id)?;
+        srv.search.reindex_channel(channel_id).await?;
+        Ok(())
+    }
+
+    pub async fn reindex_room(&self, room_id: RoomId) -> Result<()> {
+        let srv = self.state.services();
+        srv.search.reindex_room(room_id).await?;
+        Ok(())
+    }
+
+    pub async fn reindex_everything(&self) -> Result<()> {
+        let srv = self.state.services();
+        srv.search.reindex_everything().await?;
         Ok(())
     }
 }

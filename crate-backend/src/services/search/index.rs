@@ -16,10 +16,13 @@ use tracing::error;
 
 use crate::{
     services::search::{
-        directory::ObjectDirectory, schema::IndexDefinition, tokenizer::DynamicTokenizer,
+        directory::ObjectDirectory,
+        schema::{content::ContentSchema, IndexDefinition},
+        tokenizer::DynamicTokenizer,
     },
     ServerStateInner,
 };
+use common::v1::types::{ChannelId, RoomId};
 
 use super::util::{COMMIT_INTERVAL, INDEXING_BUFFER_SIZE, MAX_UNCOMMITTED};
 
@@ -83,6 +86,25 @@ impl IndexManager {
         self.registry.insert(name, handles.clone());
         Ok(handles)
     }
+
+    pub fn get_index_actor(&self, name: &str) -> Option<IndexActorRef> {
+        self.registry.get(name).map(|entry| entry.value().0.clone())
+    }
+}
+
+/// Helper to create a delete term for channel_id
+pub fn delete_term_for_channel(channel_id: ChannelId) -> DeleteTerm {
+    let schema = ContentSchema::default();
+    DeleteTerm(Term::from_field_text(
+        schema.channel_id,
+        &channel_id.to_string(),
+    ))
+}
+
+/// Helper to create a delete term for room_id
+pub fn delete_term_for_room(room_id: RoomId) -> DeleteTerm {
+    let schema = ContentSchema::default();
+    DeleteTerm(Term::from_field_text(schema.room_id, &room_id.to_string()))
 }
 
 /// actor representing an index that can be read from or written to
@@ -133,6 +155,8 @@ pub struct AddDocument(pub TantivyDocument);
 
 pub struct DeleteTerm(pub Term);
 
+pub struct DeleteAllDocuments;
+
 pub struct UpdateDocument {
     pub term: Term,
     pub doc: TantivyDocument,
@@ -166,6 +190,30 @@ impl Message<CommitIndex> for IndexActor {
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         self.commit().await;
+    }
+}
+
+impl Message<DeleteAllDocuments> for IndexActor {
+    type Reply = ();
+
+    async fn handle(
+        &mut self,
+        _msg: DeleteAllDocuments,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        let writer = self.writer.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let writer_guard = writer.lock().unwrap();
+            if let Err(e) = writer_guard.delete_all_documents() {
+                error!("failed to delete all documents: {}", e);
+            }
+        })
+        .await
+        .unwrap();
+
+        self.uncommitted_count += 1;
+        self.check_auto_commit().await;
     }
 }
 

@@ -4,7 +4,7 @@ use sqlx::query;
 use crate::{
     data::DataSearchQueue,
     error::Result,
-    types::{ChannelId, MessageId},
+    types::{ChannelId, MessageId, RoomId},
 };
 
 use super::Postgres;
@@ -60,5 +60,24 @@ impl DataSearchQueue for Postgres {
         .fetch_optional(&self.pool)
         .await?;
         Ok(row.and_then(|r| r.last_message_id.map(|id| id.into())))
+    }
+
+    async fn search_reindex_queue_upsert_room(&self, room_id: RoomId) -> Result<()> {
+        query!(
+            r#"INSERT INTO search_reindex_queue (channel_id) SELECT id FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (channel_id) DO NOTHING"#,
+            *room_id,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn search_reindex_queue_upsert_all(&self) -> Result<()> {
+        query!(
+            r#"INSERT INTO search_reindex_queue (channel_id) SELECT id FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (channel_id) DO NOTHING"#,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 }

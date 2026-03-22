@@ -17,7 +17,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use super::util::Auth;
 
 use crate::{error::Result, ServerState};
-use common::v1::types::ChannelId;
+use common::v1::types::{ChannelId, RoomId};
 
 /// Admin whisper
 ///
@@ -274,6 +274,72 @@ async fn admin_reindex_channel(
     Ok(StatusCode::ACCEPTED)
 }
 
+/// Admin reindex room
+///
+/// Queue all channels in a room to be reindexed for search
+#[utoipa::path(
+    post,
+    path = "/admin/reindex-room/{room_id}",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin", "badge.audit-log.RoomReindex"],
+    params(
+        ("room_id" = String, Path, description = "Room id to reindex"),
+    ),
+    responses(
+        (status = ACCEPTED, description = "Room reindexing queued"),
+    )
+)]
+async fn admin_reindex_room(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    let srv = s.services();
+
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::Admin)?;
+
+    srv.admin.reindex_room(room_id).await?;
+
+    al.commit_success(AuditLogEntryType::RoomReindex { room_id })
+        .await?;
+
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// Admin reindex everything
+///
+/// Queue all channels to be reindexed for search. This deletes all existing search index data first.
+#[utoipa::path(
+    post,
+    path = "/admin/reindex-everything",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin", "badge.audit-log.ReindexEverything"],
+    responses(
+        (status = ACCEPTED, description = "Full reindexing queued"),
+    )
+)]
+async fn admin_reindex_everything(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    let srv = s.services();
+
+    let perms = srv.perms.for_server(auth.user.id).await?;
+    perms.ensure(Permission::Admin)?;
+
+    srv.admin.reindex_everything().await?;
+
+    al.commit_success(AuditLogEntryType::ReindexEverything)
+        .await?;
+
+    Ok(StatusCode::ACCEPTED)
+}
+
 /// Admin channel search index stats
 ///
 /// Get search index statistics for a channel
@@ -312,5 +378,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(admin_purge_cache))
         .routes(routes!(admin_collect_garbage))
         .routes(routes!(admin_reindex_channel))
+        .routes(routes!(admin_reindex_room))
+        .routes(routes!(admin_reindex_everything))
         .routes(routes!(admin_channel_search_index_stats))
 }

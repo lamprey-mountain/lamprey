@@ -595,6 +595,12 @@ pub enum AuditLogEntryType {
         channel_id: ChannelId,
     },
 
+    RoomReindex {
+        room_id: RoomId,
+    },
+
+    ReindexEverything,
+
     ServerUpdate {
         hostname: String,
         changes: Vec<AuditLogChange>,
@@ -731,6 +737,8 @@ impl AuditLogEntryType {
                 | ChannelUpdate { .. }
                 | ChannelReorder { .. }
                 | ChannelReindex { .. }
+                | RoomReindex { .. }
+                | ReindexEverything
                 | MessageDelete { .. }
                 | MessageVersionDelete { .. }
                 | MessageDeleteBulk { .. }

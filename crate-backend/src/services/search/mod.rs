@@ -353,16 +353,38 @@ impl ServiceSearch {
         })
     }
 
-    pub fn reindex_channel(&self, _channel_id: ChannelId) -> Result<()> {
-        todo!()
+    pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
+        let data = self.state.data();
+
+        if let Some(index_actor) = self.index_manager.get_index_actor("content") {
+            let delete_term = index::delete_term_for_channel(channel_id);
+            let _ = index_actor.tell(delete_term).await;
+        }
+
+        data.search_reindex_queue_upsert(channel_id, None).await?;
+        Ok(())
     }
 
-    pub fn reindex_room(&self, _room_id: RoomId) -> Result<()> {
-        todo!()
+    pub async fn reindex_room(&self, room_id: RoomId) -> Result<()> {
+        let data = self.state.data();
+
+        if let Some(index_actor) = self.index_manager.get_index_actor("content") {
+            let delete_term = index::delete_term_for_room(room_id);
+            let _ = index_actor.tell(delete_term).await;
+        }
+
+        data.search_reindex_queue_upsert_room(room_id).await?;
+        Ok(())
     }
 
-    pub fn reindex_everything(&self) -> Result<()> {
-        todo!()
+    pub async fn reindex_everything(&self) -> Result<()> {
+        if let Some(index_actor) = self.index_manager.get_index_actor("content") {
+            let _ = index_actor.tell(index::DeleteAllDocuments).await;
+        }
+
+        let data = self.state.data();
+        data.search_reindex_queue_upsert_all().await?;
+        Ok(())
     }
 
     pub async fn get_channel_stats(&self, channel_id: ChannelId) -> Result<SearchIndexStats> {

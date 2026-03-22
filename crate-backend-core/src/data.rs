@@ -461,6 +461,8 @@ pub trait DataSearchQueue {
     ) -> Result<Vec<(ChannelId, Option<MessageId>)>>;
     async fn search_reindex_queue_delete(&self, channel_id: ChannelId) -> Result<()>;
     async fn search_reindex_queue_get(&self, channel_id: ChannelId) -> Result<Option<MessageId>>;
+    async fn search_reindex_queue_upsert_room(&self, room_id: RoomId) -> Result<()>;
+    async fn search_reindex_queue_upsert_all(&self) -> Result<()>;
 }
 
 #[async_trait]
