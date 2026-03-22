@@ -7,7 +7,9 @@ use tantivy::schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING};
 
 use crate::services::search::schema::IndexDefinition;
 
-pub struct RoomAnalyticsIndex;
+pub struct RoomAnalyticsIndex {
+    schema: RoomAnalyticsSchema,
+}
 
 pub struct RoomAnalyticsSchema {
     /// the tantivy schema itself
@@ -56,6 +58,14 @@ impl IndexDefinition for RoomAnalyticsIndex {
 
     fn name(&self) -> String {
         "room_analytics".to_owned()
+    }
+}
+
+impl Default for RoomAnalyticsIndex {
+    fn default() -> Self {
+        Self {
+            schema: RoomAnalyticsSchema::default(),
+        }
     }
 }
 

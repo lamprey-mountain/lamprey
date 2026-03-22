@@ -7,7 +7,9 @@ use tantivy::schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING, TEXT};
 
 use crate::services::search::schema::IndexDefinition;
 
-pub struct AbuseMonitoringIndex;
+pub struct AbuseMonitoringIndex {
+    schema: AbuseMonitoringSchema,
+}
 
 pub struct AbuseMonitoringSchema {
     /// the tantivy schema itself
@@ -64,6 +66,14 @@ impl IndexDefinition for AbuseMonitoringIndex {
 
     fn name(&self) -> String {
         "abuse_monitoring".to_owned()
+    }
+}
+
+impl Default for AbuseMonitoringIndex {
+    fn default() -> Self {
+        Self {
+            schema: AbuseMonitoringSchema::default(),
+        }
     }
 }
 

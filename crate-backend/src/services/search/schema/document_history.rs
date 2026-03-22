@@ -2,7 +2,9 @@ use tantivy::schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING};
 
 use crate::services::search::schema::IndexDefinition;
 
-pub struct DocumentHistoryIndex;
+pub struct DocumentHistoryIndex {
+    schema: DocumentHistorySchema,
+}
 
 pub struct DocumentHistorySchema {
     /// the tantivy schema itself
@@ -40,9 +42,11 @@ impl IndexDefinition for DocumentHistoryIndex {
     }
 }
 
-impl DocumentHistorySchema {
-    pub fn schema(&self) -> &Schema {
-        &self.schema
+impl Default for DocumentHistoryIndex {
+    fn default() -> Self {
+        Self {
+            schema: DocumentHistorySchema::default(),
+        }
     }
 }
 
