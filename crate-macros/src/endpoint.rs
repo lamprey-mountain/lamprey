@@ -173,28 +173,57 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
     let query_extraction = if query_fields.is_empty() {
         quote! {}
     } else {
-        let q_idents: Vec<_> = query_fields.iter().map(|f| &f.ident).collect();
-        let q_tys: Vec<_> = query_fields.iter().map(|f| &f.ty).collect();
-        let q_renames: Vec<_> = query_fields
-            .iter()
-            .map(|f| match &f.kind {
-                FieldKind::Query(Some(name)) => quote! { #[serde(rename = #name)] },
-                _ => quote! {},
-            })
-            .collect();
-        quote! {
-            #[derive(::serde::Deserialize)]
-            struct __QueryParams {
-                #(#q_renames #q_idents: #q_tys,)*
+        let mut stmts = Vec::new();
+        let mut named_idents = Vec::new();
+        let mut named_tys = Vec::new();
+        let mut named_renames = Vec::new();
+
+        for f in &query_fields {
+            match &f.kind {
+                FieldKind::Query(Some(name)) => {
+                    named_idents.push(&f.ident);
+                    named_tys.push(&f.ty);
+                    named_renames.push(quote! { #[serde(rename = #name)] });
+                }
+                FieldKind::Query(None) => {
+                    let ident = &f.ident;
+                    let ty = &f.ty;
+                    stmts.push(quote! {
+                        let #ident: #ty = ::serde_urlencoded::from_str(query_str)
+                            .map_err(|e| {
+                                ::http::Response::builder()
+                                    .status(::http::StatusCode::BAD_REQUEST)
+                                    .body(::bytes::Bytes::from(format!("invalid query: {}", e)))
+                                    .unwrap()
+                            })?;
+                    });
+                }
+                _ => {}
             }
-            let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
-                .map_err(|e| {
-                    ::http::Response::builder()
-                        .status(::http::StatusCode::BAD_REQUEST)
-                        .body(::bytes::Bytes::from(format!("invalid query: {}", e)))
-                        .unwrap()
-                })?;
-            #(let #q_idents = __qp.#q_idents;)*
+        }
+
+        let named_extraction = if named_idents.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                #[derive(::serde::Deserialize)]
+                struct __QueryParams {
+                    #(#named_renames #named_idents: #named_tys,)*
+                }
+                let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
+                    .map_err(|e| {
+                        ::http::Response::builder()
+                            .status(::http::StatusCode::BAD_REQUEST)
+                            .body(::bytes::Bytes::from(format!("invalid query: {}", e)))
+                            .unwrap()
+                    })?;
+                #(let #named_idents = __qp.#named_idents;)*
+            }
+        };
+
+        quote! {
+            #named_extraction
+            #(#stmts)*
         }
     };
 
