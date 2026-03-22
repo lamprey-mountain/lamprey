@@ -54,49 +54,51 @@ pub mod inbox_post {
 
 /// Inbox mark read
 #[endpoint(
-    put,
-    path = "/inbox/{notification_id}/read",
+    post,
+    path = "/inbox/mark-read",
     tags = ["inbox"],
     scopes = [Full],
-    response(NO_CONTENT, description = "success"),
+    response(OK, description = "success"),
 )]
 pub mod inbox_mark_read {
-    use crate::v1::types::NotificationId;
+    use crate::v1::types::notifications::NotificationMarkRead;
 
     pub struct Request {
-        #[path]
-        pub notification_id: NotificationId,
+        #[json]
+        pub mark_read: NotificationMarkRead,
     }
 
     pub struct Response {}
 }
 
-/// Inbox delete
+/// Inbox mark unread
 #[endpoint(
-    delete,
-    path = "/inbox/{notification_id}",
+    post,
+    path = "/inbox/mark-unread",
     tags = ["inbox"],
     scopes = [Full],
-    response(NO_CONTENT, description = "success"),
+    response(OK, description = "success"),
 )]
-pub mod inbox_delete {
-    use crate::v1::types::NotificationId;
+pub mod inbox_mark_unread {
+    use crate::v1::types::notifications::NotificationMarkRead;
 
     pub struct Request {
-        #[path]
-        pub notification_id: NotificationId,
+        #[json]
+        pub mark_unread: NotificationMarkRead,
     }
 
     pub struct Response {}
 }
 
 /// Inbox flush
+///
+/// Deletes read notifications from the inbox
 #[endpoint(
     post,
     path = "/inbox/flush",
     tags = ["inbox"],
     scopes = [Full],
-    response(NO_CONTENT, description = "success"),
+    response(OK, description = "success"),
 )]
 pub mod inbox_flush {
     use crate::v1::types::notifications::NotificationFlush;

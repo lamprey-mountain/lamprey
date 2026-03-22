@@ -57,7 +57,7 @@ pub mod oauth_token {
     use crate::v1::types::oauth::{OauthTokenRequest, OauthTokenResponse};
 
     pub struct Request {
-        #[json]
+        #[form]
         pub token: OauthTokenRequest,
     }
 

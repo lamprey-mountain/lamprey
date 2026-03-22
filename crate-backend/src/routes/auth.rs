@@ -1,6 +1,3 @@
-// Auth routes - fully migrated with #[handler] pattern
-// Behavior preserved from original implementation
-
 use std::sync::Arc;
 
 use axum::extract::State;
@@ -8,8 +5,7 @@ use axum::response::{Html, IntoResponse};
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::auth::{
-    AuthState, CaptchaChallenge, TotpInit, TotpRecoveryCode, TotpRecoveryCodes,
-    WebauthnAuthenticator, WebauthnChallenge,
+    AuthState, CaptchaChallenge, PasswordExecIdent, TotpInit, TotpRecoveryCode, TotpRecoveryCodes,
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -334,77 +330,6 @@ async fn auth_oauth_redirect(
     }
 }
 
-/// Auth register
-#[handler(routes::auth_register)]
-async fn auth_register(
-    State(s): State<Arc<ServerState>>,
-    req: routes::auth_register::Request,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let srv = s.services();
-
-    let user = data
-        .user_create(DbUserCreate {
-            id: None,
-            parent_id: None,
-            name: req.register.name.clone(),
-            description: req.register.description.clone(),
-            puppet: None,
-            registered_at: Some(Time::now_utc()),
-            system: false,
-        })
-        .await?;
-
-    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
-        .await?;
-    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
-
-    let token = common::v1::types::SessionToken(Uuid::new_v4().to_string());
-    let session = data
-        .session_create(crate::types::DbSessionCreate {
-            token: token.clone(),
-            name: None,
-            expires_at: None,
-            ty: common::v1::types::SessionType::User,
-            application_id: None,
-            ip_addr: None,
-            user_agent: None,
-        })
-        .await?;
-
-    data.session_set_status(session.id, SessionStatus::Authorized { user_id: user.id })
-        .await?;
-    srv.sessions.invalidate(session.id).await;
-    let session = srv.sessions.get(session.id).await?;
-
-    let session_with_token = common::v1::types::SessionWithToken { session, token };
-    Ok((StatusCode::CREATED, Json(session_with_token)))
-}
-
-/// Auth login
-#[handler(routes::auth_login)]
-async fn auth_login(
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::auth_login::Request,
-) -> Result<impl IntoResponse> {
-    // TODO: implement full login with email lookup
-    Ok(Error::Unimplemented)
-}
-
-/// Auth logout
-#[handler(routes::auth_logout)]
-async fn auth_logout(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    _req: routes::auth_logout::Request,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let srv = s.services();
-    data.session_delete(auth.session.id).await?;
-    srv.sessions.invalidate(auth.session.id).await;
-    Ok(StatusCode::NO_CONTENT)
-}
-
 /// Auth totp init
 #[handler(routes::auth_totp_init)]
 async fn auth_totp_init(
@@ -511,7 +436,7 @@ async fn auth_totp_recovery_codes_rotate(
     _req: routes::auth_totp_recovery_codes_rotate::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    let codes: Vec<TotpRecoveryCode> = (0..10)
+    let codes: Vec<TotpRecoveryCode> = (0..5)
         .map(|_| TotpRecoveryCode {
             code: Uuid::new_v4().to_string(),
             used_at: None,
@@ -523,6 +448,14 @@ async fn auth_totp_recovery_codes_rotate(
         .auth_totp_recovery_generate(auth.user.id, &code_strings)
         .await?;
 
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new()
+            .change("totp_recovery_codes_rotated", &true, &true)
+            .build(),
+    })
+    .await?;
+
     Ok(Json(TotpRecoveryCodes { codes }))
 }
 
@@ -530,73 +463,111 @@ async fn auth_totp_recovery_codes_rotate(
 #[handler(routes::auth_password_set)]
 async fn auth_password_set(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::auth_password_set::Request,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_password_set::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    // TODO: implement password hashing
-    Ok(Error::Unimplemented)
+
+    let salt: [u8; 32] = rand::random();
+    let config = argon2::Config::default();
+    let hash = argon2::hash_raw(req.password.password.as_bytes(), &salt, &config).map_err(|e| {
+        tracing::error!("failed to hash password: {}", e);
+        Error::Internal("failed to hash password".to_owned())
+    })?;
+
+    s.data()
+        .auth_password_set(auth.user.id, &hash, &salt)
+        .await?;
+
+    let start_state = fetch_auth_state(&s, auth.user.id).await?;
+    let end_state = fetch_auth_state(&s, auth.user.id).await?;
+
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthUpdate {
+        changes: Changes::new()
+            .change(
+                "has_password",
+                &start_state.has_password,
+                &end_state.has_password,
+            )
+            .build(),
+    })
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth password exec
 #[handler(routes::auth_password_exec)]
 async fn auth_password_exec(
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::auth_password_exec::Request,
-) -> Result<impl IntoResponse> {
-    // TODO: implement password verification
-    Ok(Error::Unimplemented)
-}
-
-/// Auth webauthn challenge
-#[handler(routes::auth_webauthn_challenge)]
-async fn auth_webauthn_challenge(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::auth_webauthn_challenge::Request,
+    State(s): State<Arc<ServerState>>,
+    req: routes::auth_password_exec::Request,
 ) -> Result<impl IntoResponse> {
-    auth.ensure_sudo()?;
-    // TODO: implement WebAuthn
-    Ok(Json(WebauthnChallenge {
-        challenge: String::new(),
-    }))
-}
+    if auth.session.status != SessionStatus::Unauthorized {
+        return Err(ApiError::from_code(ErrorCode::AlreadyAuthenticated).into());
+    }
 
-/// Auth webauthn finish
-#[handler(routes::auth_webauthn_finish)]
-async fn auth_webauthn_finish(
-    auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::auth_webauthn_finish::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_sudo()?;
-    // TODO: implement WebAuthn
-    Ok(StatusCode::NO_CONTENT)
-}
+    let user_id = match &req.password.ident {
+        PasswordExecIdent::UserId { user_id } => *user_id,
+        PasswordExecIdent::Email { email } => s.data().user_email_lookup(email).await?,
+    };
 
-/// Auth webauthn authenticators
-#[handler(routes::auth_webauthn_authenticators)]
-async fn auth_webauthn_authenticators(
-    auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::auth_webauthn_authenticators::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_sudo()?;
-    // TODO: implement WebAuthn
-    Ok(Json(Vec::<WebauthnAuthenticator>::new()))
-}
+    let Some((stored_hash, stored_salt)) = s.data().auth_password_get(user_id).await? else {
+        return Err(ApiError::from_code(ErrorCode::InvalidPassword).into());
+    };
 
-/// Auth webauthn authenticator delete
-#[handler(routes::auth_webauthn_authenticator_delete)]
-async fn auth_webauthn_authenticator_delete(
-    auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::auth_webauthn_authenticator_delete::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_sudo()?;
-    // TODO: implement WebAuthn
-    Ok(StatusCode::NO_CONTENT)
+    let config = argon2::Config::default();
+    let valid = argon2::verify_raw(
+        &stored_hash,
+        &stored_salt,
+        req.password.password.as_bytes(),
+        &config,
+    )
+    .unwrap_or(false);
+
+    if !valid {
+        return Err(ApiError::from_code(ErrorCode::InvalidPassword).into());
+    }
+
+    let user = s.services().users.get(user_id, None).await?;
+    let session = auth.session.clone();
+
+    let (_totp_secret, totp_enabled) = s
+        .data()
+        .auth_totp_get(user_id)
+        .await?
+        .unwrap_or((String::new(), false));
+
+    let status = if totp_enabled {
+        SessionStatus::Unauthorized
+    } else {
+        SessionStatus::Authorized { user_id }
+    };
+
+    s.data().session_set_status(session.id, status).await?;
+    s.services().sessions.invalidate(session.id).await;
+
+    if !totp_enabled {
+        let al = Auth {
+            user: user.clone(),
+            real_user: None,
+            session: session.clone(),
+            scopes: auth.scopes.clone(),
+            reason: auth.reason.clone(),
+            audit_log_slot: auth.audit_log_slot.clone(),
+            s: auth.s.clone(),
+        }
+        .audit_log(user_id.into_inner().into());
+        al.commit_success(AuditLogEntryType::SessionLogin {
+            user_id,
+            session_id: session.id,
+        })
+        .await?;
+    }
+
+    let auth_state = fetch_auth_state(&s, user_id).await?;
+    Ok(Json(auth_state))
 }
 
 /// Auth captcha challenge
@@ -609,6 +580,96 @@ async fn auth_captcha_challenge(
     Ok(Json(CaptchaChallenge {
         code: String::new(),
     }))
+}
+
+/// Auth captcha init
+#[handler(routes::auth_captcha_init)]
+async fn auth_captcha_init(
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_captcha_init::Request,
+) -> Result<impl IntoResponse> {
+    // TODO: implement captcha
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth captcha submit
+#[handler(routes::auth_captcha_submit)]
+async fn auth_captcha_submit(
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_captcha_submit::Request,
+) -> Result<impl IntoResponse> {
+    // TODO: implement captcha
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth webauthn init
+#[handler(routes::auth_webauthn_init)]
+async fn auth_webauthn_init(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_webauthn_init::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    // TODO: implement WebAuthn
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth webauthn exec
+#[handler(routes::auth_webauthn_exec)]
+async fn auth_webauthn_exec(
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_webauthn_exec::Request,
+) -> Result<impl IntoResponse> {
+    // TODO: implement WebAuthn
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth webauthn patch
+#[handler(routes::auth_webauthn_patch)]
+async fn auth_webauthn_patch(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_webauthn_patch::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    // TODO: implement WebAuthn
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth webauthn delete
+#[handler(routes::auth_webauthn_delete)]
+async fn auth_webauthn_delete(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_webauthn_delete::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    // TODO: implement WebAuthn
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth sudo upgrade
+#[handler(routes::auth_sudo_upgrade)]
+async fn auth_sudo_upgrade(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_sudo_upgrade::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    // TODO: implement sudo upgrade
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Auth sudo delete
+#[handler(routes::auth_sudo_delete)]
+async fn auth_sudo_delete(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::auth_sudo_delete::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_sudo()?;
+    // TODO: implement sudo delete
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth oauth delete
@@ -869,6 +930,15 @@ async fn auth_totp_recovery_exec(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
 
+    let (_secret, enabled) = data
+        .auth_totp_get(auth.user.id)
+        .await?
+        .ok_or_else(|| ApiError::from_code(ErrorCode::TotpNotEnabled))?;
+
+    if !enabled {
+        return Err(ApiError::from_code(ErrorCode::TotpNotEnabled).into());
+    }
+
     // Try to use the recovery code
     data.auth_totp_recovery_use(auth.user.id, &req.verification.code)
         .await?;
@@ -902,21 +972,32 @@ async fn auth_totp_delete(
     _req: routes::auth_totp_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    let data = s.data();
 
-    let start_state = fetch_auth_state(&s, auth.user.id).await?;
-    data.auth_totp_set(auth.user.id, None, false).await?;
-    let end_state = fetch_auth_state(&s, auth.user.id).await?;
+    ensure_can_still_login_after_removal(&s, auth.user.id, "totp", None).await?;
+
+    let had_totp = s
+        .data()
+        .auth_totp_get(auth.user.id)
+        .await?
+        .map(|(_, enabled)| enabled)
+        .unwrap_or(false);
+
+    if !had_totp {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
+    if s.data().user_owns_room_requiring_mfa(auth.user.id).await? {
+        return Err(ApiError::from_code(ErrorCode::InvalidData).into());
+    }
+
+    s.data().auth_totp_set(auth.user.id, None, false).await?;
 
     let al = auth.audit_log(auth.user.id.into_inner().into());
     al.commit_success(AuditLogEntryType::AuthUpdate {
-        changes: Changes::new()
-            .change("has_totp", &start_state.has_totp, &end_state.has_totp)
-            .build(),
+        changes: Changes::new().change("has_totp", &true, &false).build(),
     })
     .await?;
-
-    Ok(Json(end_state))
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth password delete
@@ -927,6 +1008,12 @@ async fn auth_password_delete(
     _req: routes::auth_password_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
+
+    let has_password = s.data().auth_password_get(auth.user.id).await?.is_some();
+
+    if !has_password {
+        return Ok(StatusCode::NO_CONTENT);
+    }
 
     ensure_can_still_login_after_removal(&s, auth.user.id, "password", None).await?;
 
@@ -955,11 +1042,16 @@ async fn auth_password_delete(
 /// Get the available auth methods for this user
 #[handler(routes::auth_state)]
 async fn auth_state(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
+    auth: AuthRelaxed2,
+    State(_s): State<Arc<ServerState>>,
     _req: routes::auth_state::Request,
 ) -> Result<impl IntoResponse> {
-    let state = fetch_auth_state(&s, auth.user.id).await?;
+    let s = auth.s.clone();
+    let user_id = auth
+        .session
+        .user_id()
+        .ok_or_else(|| Error::BadStatic("unknown user for session"))?;
+    let state = fetch_auth_state(&s, user_id).await?;
     Ok(Json(state))
 }
 
@@ -1021,9 +1113,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(auth_email_exec))
         .routes(routes2!(auth_email_reset))
         .routes(routes2!(auth_email_complete))
-        .routes(routes2!(auth_register))
-        .routes(routes2!(auth_login))
-        .routes(routes2!(auth_logout))
         .routes(routes2!(auth_totp_init))
         .routes(routes2!(auth_totp_enable))
         .routes(routes2!(auth_totp_delete))
@@ -1035,9 +1124,13 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(auth_password_delete))
         .routes(routes2!(auth_password_exec))
         .routes(routes2!(auth_state))
-        .routes(routes2!(auth_webauthn_challenge))
-        .routes(routes2!(auth_webauthn_finish))
-        .routes(routes2!(auth_webauthn_authenticators))
-        .routes(routes2!(auth_webauthn_authenticator_delete))
+        .routes(routes2!(auth_webauthn_init))
+        .routes(routes2!(auth_webauthn_exec))
+        .routes(routes2!(auth_webauthn_patch))
+        .routes(routes2!(auth_webauthn_delete))
         .routes(routes2!(auth_captcha_challenge))
+        .routes(routes2!(auth_captcha_init))
+        .routes(routes2!(auth_captcha_submit))
+        .routes(routes2!(auth_sudo_upgrade))
+        .routes(routes2!(auth_sudo_delete))
 }

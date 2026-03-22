@@ -124,7 +124,7 @@ pub mod room_member_update {
 )]
 pub mod room_member_delete {
     use crate::v1::types::misc::UserIdReq;
-    use crate::v1::types::{RoomId, RoomMemberOrigin};
+    use crate::v1::types::RoomId;
 
     pub struct Request {
         #[path]
@@ -133,8 +133,8 @@ pub mod room_member_delete {
         #[path]
         pub user_id: UserIdReq,
 
-        #[json]
-        pub origin: Option<RoomMemberOrigin>,
+        #[query]
+        pub soft: bool,
     }
 
     pub struct Response {}

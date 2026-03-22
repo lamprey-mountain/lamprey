@@ -86,34 +86,7 @@ pub mod document_branch_get {
     }
 }
 
-/// Document branch create
-#[endpoint(
-    post,
-    path = "/document/{channel_id}/branch",
-    tags = ["document"],
-    scopes = [Full],
-    permissions = [DocumentEdit],
-    response(CREATED, body = DocumentBranch, description = "ok"),
-)]
-pub mod document_branch_create {
-    use crate::v1::types::document::{DocumentBranch, DocumentBranchCreate};
-    use crate::v1::types::ChannelId;
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-
-        #[json]
-        pub branch: DocumentBranchCreate,
-    }
-
-    pub struct Response {
-        #[json]
-        pub branch: DocumentBranch,
-    }
-}
-
-/// Document branch patch
+/// Document branch update
 #[endpoint(
     patch,
     path = "/document/{channel_id}/branch/{branch_id}",
@@ -122,7 +95,7 @@ pub mod document_branch_create {
     permissions = [DocumentEdit],
     response(OK, body = DocumentBranch, description = "ok"),
 )]
-pub mod document_branch_patch {
+pub mod document_branch_update {
     use crate::v1::types::document::{DocumentBranch, DocumentBranchPatch};
     use crate::v1::types::{ChannelId, DocumentBranchId};
 
@@ -143,16 +116,17 @@ pub mod document_branch_patch {
     }
 }
 
-/// Document branch delete
+/// Document branch close
 #[endpoint(
-    delete,
-    path = "/document/{channel_id}/branch/{branch_id}",
+    post,
+    path = "/document/{channel_id}/branch/{branch_id}/close",
     tags = ["document"],
     scopes = [Full],
     permissions = [DocumentEdit],
-    response(NO_CONTENT, description = "ok"),
+    response(OK, body = DocumentBranch, description = "ok"),
 )]
-pub mod document_branch_delete {
+pub mod document_branch_close {
+    use crate::v1::types::document::DocumentBranch;
     use crate::v1::types::{ChannelId, DocumentBranchId};
 
     pub struct Request {
@@ -163,7 +137,40 @@ pub mod document_branch_delete {
         pub branch_id: DocumentBranchId,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub branch: DocumentBranch,
+    }
+}
+
+/// Document branch fork
+#[endpoint(
+    post,
+    path = "/document/{channel_id}/branch/{parent_id}/fork",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [DocumentEdit],
+    response(OK, body = DocumentBranch, description = "ok"),
+)]
+pub mod document_branch_fork {
+    use crate::v1::types::document::{DocumentBranch, DocumentBranchCreate};
+    use crate::v1::types::{ChannelId, DocumentBranchId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub parent_id: DocumentBranchId,
+
+        #[json]
+        pub branch: DocumentBranchCreate,
+    }
+
+    pub struct Response {
+        #[json]
+        pub branch: DocumentBranch,
+    }
 }
 
 /// Document branch merge
@@ -193,37 +200,6 @@ pub mod document_branch_merge {
     pub struct Response {}
 }
 
-/// Document CRDT diff
-#[endpoint(
-    get,
-    path = "/document/{channel_id}/branch/{branch_id}/diff",
-    tags = ["document"],
-    scopes = [Full],
-    permissions = [ChannelView],
-    response(OK, body = Serdoc, description = "ok"),
-)]
-pub mod document_crdt_diff {
-    use crate::v1::types::document::serialized::Serdoc;
-    use crate::v1::types::document::DocumentCrdtDiffParams;
-    use crate::v1::types::{ChannelId, DocumentBranchId};
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-
-        #[path]
-        pub branch_id: DocumentBranchId,
-
-        #[query]
-        pub params: DocumentCrdtDiffParams,
-    }
-
-    pub struct Response {
-        #[json]
-        pub diff: Serdoc,
-    }
-}
-
 /// Document tag create
 #[endpoint(
     post,
@@ -248,17 +224,68 @@ pub mod document_tag_create {
     pub struct Response {}
 }
 
-/// Document tag patch
+/// Document tag list
+#[endpoint(
+    get,
+    path = "/document/{channel_id}/tag",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = Vec<DocumentTag>, description = "ok"),
+)]
+pub mod document_tag_list {
+    use crate::v1::types::document::DocumentTag;
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub tags: Vec<DocumentTag>,
+    }
+}
+
+/// Document tag get
+#[endpoint(
+    get,
+    path = "/document/{channel_id}/tag/{tag_id}",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = DocumentTag, description = "ok"),
+)]
+pub mod document_tag_get {
+    use crate::v1::types::document::DocumentTag;
+    use crate::v1::types::{ChannelId, DocumentTagId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub tag_id: DocumentTagId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub tag: DocumentTag,
+    }
+}
+
+/// Document tag update
 #[endpoint(
     patch,
     path = "/document/{channel_id}/tag/{tag_id}",
     tags = ["document"],
     scopes = [Full],
     permissions = [DocumentEdit],
-    response(OK, description = "ok"),
+    response(OK, body = DocumentTag, description = "ok"),
 )]
-pub mod document_tag_patch {
-    use crate::v1::types::document::DocumentTagPatch;
+pub mod document_tag_update {
+    use crate::v1::types::document::{DocumentTag, DocumentTagPatch};
     use crate::v1::types::{ChannelId, DocumentTagId};
 
     pub struct Request {
@@ -269,10 +296,13 @@ pub mod document_tag_patch {
         pub tag_id: DocumentTagId,
 
         #[json]
-        pub patch: DocumentTagPatch,
+        pub tag: DocumentTagPatch,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub tag: DocumentTag,
+    }
 }
 
 /// Document tag delete
@@ -293,6 +323,148 @@ pub mod document_tag_delete {
 
         #[path]
         pub tag_id: DocumentTagId,
+    }
+
+    pub struct Response {}
+}
+
+/// Document history
+///
+/// Query edit history for a document
+#[endpoint(
+    get,
+    path = "/document/{channel_id}/branch/{branch_id}/history",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = HistoryPagination, description = "ok"),
+)]
+pub mod document_history {
+    use crate::v1::types::document::{HistoryPagination, HistoryParams};
+    use crate::v1::types::{ChannelId, DocumentBranchId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub branch_id: DocumentBranchId,
+
+        #[query]
+        pub query: HistoryParams,
+    }
+
+    pub struct Response {
+        #[json]
+        pub history: HistoryPagination,
+    }
+}
+
+/// Document CRDT diff
+#[endpoint(
+    get,
+    path = "/document/{channel_id}/branch/{branch_id}/crdt",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, description = "ok"),
+)]
+pub mod document_crdt_diff {
+    use crate::v1::types::document::DocumentCrdtDiffParams;
+    use crate::v1::types::{ChannelId, DocumentBranchId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub branch_id: DocumentBranchId,
+
+        #[query]
+        pub params: DocumentCrdtDiffParams,
+    }
+
+    pub struct Response {}
+}
+
+/// Document CRDT apply
+/// Note: Uses base64-encoded update in JSON body since raw binary isn't supported
+#[endpoint(
+    patch,
+    path = "/document/{channel_id}/branch/{branch_id}/crdt",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [DocumentEdit],
+    response(NO_CONTENT, description = "ok"),
+)]
+pub mod document_crdt_apply {
+    use crate::v1::types::{ChannelId, DocumentBranchId};
+    use bytes::Bytes;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub branch_id: DocumentBranchId,
+
+        #[body]
+        pub data: Bytes,
+    }
+
+    pub struct Response {}
+}
+
+/// Document content get
+#[endpoint(
+    get,
+    path = "/document/{channel_id}/revision/{revision_id}/content",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = Serdoc, description = "ok"),
+)]
+pub mod document_content_get {
+    use crate::v1::types::document::serialized::Serdoc;
+    use crate::v1::types::document::DocumentRevisionId;
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub revision_id: DocumentRevisionId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub content: Serdoc,
+    }
+}
+
+/// Document content put
+#[endpoint(
+    put,
+    path = "/document/{channel_id}/branch/{branch_id}/content",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [DocumentEdit],
+    response(NO_CONTENT, description = "ok"),
+)]
+pub mod document_content_put {
+    use crate::v1::types::document::SerdocPut;
+    use crate::v1::types::{ChannelId, DocumentBranchId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub branch_id: DocumentBranchId,
+
+        #[json]
+        pub content: SerdocPut,
     }
 
     pub struct Response {}

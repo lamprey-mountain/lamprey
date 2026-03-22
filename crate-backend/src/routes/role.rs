@@ -417,48 +417,67 @@ async fn role_member_bulk_patch(
     let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
     let room = srv.rooms.get(req.room_id, None).await?;
 
-    // Process apply (add role to users)
-    for user_id in &req.patch.apply {
-        let self_apply = role.is_self_applicable && *user_id == auth.user.id;
-        if rank <= role.position && room.owner_id != Some(auth.user.id) && !self_apply {
-            return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
-        }
-
-        d.role_member_put(req.room_id, *user_id, req.role_id)
-            .await?;
-        let member = d.room_member_get(req.room_id, *user_id).await?;
-        let user = srv.users.get(*user_id, None).await?;
-        let msg = MessageSync::RoomMemberUpdate {
-            member: member.clone(),
-            user,
-        };
-        let al = auth.audit_log(req.room_id);
-        al.commit_success(AuditLogEntryType::RoleApply {
-            user_id: *user_id,
-            role_id: req.role_id,
-        })
-        .await?;
-        srv.perms.invalidate_room(*user_id, req.room_id).await;
-        s.broadcast_room(req.room_id, auth.user.id, msg).await?;
+    if rank <= role.position && room.owner_id != Some(auth.user.id) {
+        return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
-    // Process remove (remove role from users)
+    for user_id in &req.patch.apply {
+        let target_rank = srv.perms.get_user_rank(req.room_id, *user_id).await?;
+        if rank <= target_rank && room.owner_id != Some(auth.user.id) {
+            return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
+        }
+    }
+
     for user_id in &req.patch.remove {
-        d.role_member_delete(req.room_id, *user_id, req.role_id)
-            .await?;
-        let member = d.room_member_get(req.room_id, *user_id).await?;
-        let user = srv.users.get(*user_id, None).await?;
+        let target_rank = srv.perms.get_user_rank(req.room_id, *user_id).await?;
+        if rank <= target_rank && room.owner_id != Some(auth.user.id) {
+            return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
+        }
+    }
+
+    d.role_member_bulk_edit(
+        req.room_id,
+        req.role_id,
+        &req.patch.apply,
+        &req.patch.remove,
+    )
+    .await?;
+
+    let all_user_ids: Vec<_> = req
+        .patch
+        .apply
+        .iter()
+        .chain(req.patch.remove.iter())
+        .copied()
+        .collect();
+
+    for user_id in all_user_ids {
+        let member = d.room_member_get(req.room_id, user_id).await?;
+        let user = srv.users.get(user_id, None).await?;
         let msg = MessageSync::RoomMemberUpdate {
             member: member.clone(),
             user,
         };
-        let al = auth.audit_log(req.room_id);
-        al.commit_success(AuditLogEntryType::RoleUnapply {
-            user_id: *user_id,
-            role_id: req.role_id,
-        })
-        .await?;
-        srv.perms.invalidate_room(*user_id, req.room_id).await;
+
+        if req.patch.apply.contains(&user_id) {
+            let al = auth.audit_log(req.room_id);
+            al.commit_success(AuditLogEntryType::RoleApply {
+                user_id,
+                role_id: req.role_id,
+            })
+            .await?;
+        }
+
+        if req.patch.remove.contains(&user_id) {
+            let al = auth.audit_log(req.room_id);
+            al.commit_success(AuditLogEntryType::RoleUnapply {
+                user_id,
+                role_id: req.role_id,
+            })
+            .await?;
+        }
+
+        srv.perms.invalidate_room(user_id, req.room_id).await;
         s.broadcast_room(req.room_id, auth.user.id, msg).await?;
     }
 

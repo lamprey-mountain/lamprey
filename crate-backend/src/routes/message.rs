@@ -7,6 +7,7 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::util::Time;
 use common::v1::types::{AuditLogEntryType, MessagePin, MessageType, ThreadMemberPut};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -31,13 +32,10 @@ async fn message_create(
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     chan.ensure_has_text()?;
 
-    let header_timestamp = req.timestamp.and_then(|ts| {
-        let ts_secs = ts / 1000;
-        let ts_nanos = ((ts % 1000) * 1_000_000) as i128;
-        let ts_nanos_total = (ts_secs as i128 * 1_000_000_000) + ts_nanos;
-        time::OffsetDateTime::from_unix_timestamp_nanos(ts_nanos_total)
+    let header_timestamp = req.timestamp.and_then(|secs| {
+        time::OffsetDateTime::from_unix_timestamp(secs)
             .ok()
-            .map(common::v1::types::util::Time::from)
+            .map(Time::from)
     });
 
     let message = srv
@@ -127,13 +125,10 @@ async fn message_edit(
     thread.ensure_unremoved()?;
     thread.ensure_has_text()?;
 
-    let header_timestamp = req.timestamp.and_then(|ts| {
-        let ts_secs = ts / 1000;
-        let ts_nanos = ((ts % 1000) * 1_000_000) as i128;
-        let ts_nanos_total = (ts_secs as i128 * 1_000_000_000) + ts_nanos;
-        time::OffsetDateTime::from_unix_timestamp_nanos(ts_nanos_total)
+    let header_timestamp = req.timestamp.and_then(|secs| {
+        time::OffsetDateTime::from_unix_timestamp(secs)
             .ok()
-            .map(common::v1::types::util::Time::from)
+            .map(Time::from)
     });
 
     let (_status, message) = srv

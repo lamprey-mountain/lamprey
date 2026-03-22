@@ -321,6 +321,107 @@ pub mod auth_captcha_challenge {
     }
 }
 
+/// Auth captcha init
+#[endpoint(
+    post,
+    path = "/auth/captcha/init",
+    tags = ["auth"],
+    response(OK, description = "success"),
+)]
+pub mod auth_captcha_init {
+    pub struct Request {}
+    pub struct Response {}
+}
+
+/// Auth captcha submit
+#[endpoint(
+    post,
+    path = "/auth/captcha/submit",
+    tags = ["auth"],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod auth_captcha_submit {
+    pub struct Request {}
+    pub struct Response {}
+}
+
+/// Auth webauthn init
+#[endpoint(
+    post,
+    path = "/auth/webauthn/init",
+    tags = ["auth"],
+    scopes = [Full],
+    response(OK, description = "success"),
+)]
+pub mod auth_webauthn_init {
+    pub struct Request {}
+    pub struct Response {}
+}
+
+/// Auth webauthn exec
+#[endpoint(
+    post,
+    path = "/auth/webauthn/exec",
+    tags = ["auth"],
+    response(OK, description = "success"),
+)]
+pub mod auth_webauthn_exec {
+    pub struct Request {}
+    pub struct Response {}
+}
+
+/// Auth webauthn patch
+#[endpoint(
+    patch,
+    path = "/auth/webauthn",
+    tags = ["auth"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod auth_webauthn_patch {
+    pub struct Request {}
+    pub struct Response {}
+}
+
+/// Auth webauthn delete
+#[endpoint(
+    delete,
+    path = "/auth/webauthn",
+    tags = ["auth"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod auth_webauthn_delete {
+    pub struct Request {}
+    pub struct Response {}
+}
+
+/// Auth sudo upgrade
+#[endpoint(
+    post,
+    path = "/auth/sudo/upgrade",
+    tags = ["auth"],
+    scopes = [Full],
+    response(OK, description = "success"),
+)]
+pub mod auth_sudo_upgrade {
+    pub struct Request {}
+    pub struct Response {}
+}
+
+/// Auth sudo delete
+#[endpoint(
+    delete,
+    path = "/auth/sudo",
+    tags = ["auth"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod auth_sudo_delete {
+    pub struct Request {}
+    pub struct Response {}
+}
+
 /// Auth oauth delete
 ///
 /// Remove an oauth provider

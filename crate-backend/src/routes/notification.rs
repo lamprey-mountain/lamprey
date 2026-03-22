@@ -136,26 +136,28 @@ async fn inbox_post(
 #[handler(routes::inbox_mark_read)]
 async fn inbox_mark_read(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::inbox_mark_read::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    // TODO: implement notification mark read
-    Ok(StatusCode::OK)
-}
-
-/// Inbox delete
-#[handler(routes::inbox_delete)]
-async fn inbox_delete(
-    auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::inbox_delete::Request,
+    req: routes::inbox_mark_read::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     s.data()
-        .notification_delete(auth.user.id, req.notification_id)
+        .notification_mark_read(auth.user.id, req.mark_read)
         .await?;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(StatusCode::OK)
+}
+
+/// Inbox mark unread
+#[handler(routes::inbox_mark_unread)]
+async fn inbox_mark_unread(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::inbox_mark_unread::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    s.data()
+        .notification_mark_unread(auth.user.id, req.mark_unread)
+        .await?;
+    Ok(StatusCode::OK)
 }
 
 /// Inbox flush
@@ -177,6 +179,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(inbox_get))
         .routes(routes2!(inbox_post))
         .routes(routes2!(inbox_mark_read))
-        .routes(routes2!(inbox_delete))
+        .routes(routes2!(inbox_mark_unread))
         .routes(routes2!(inbox_flush))
 }

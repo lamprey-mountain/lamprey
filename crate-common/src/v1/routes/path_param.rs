@@ -1,5 +1,6 @@
 use crate::v1::types::{
-    reaction::ReactionKeyParam, room_template::RoomTemplateCode, Id, InviteCode,
+    document::DocumentRevisionId, reaction::ReactionKeyParam, room_template::RoomTemplateCode, Id,
+    InviteCode,
 };
 
 /// Trait for types that can be parsed from a path parameter string
@@ -84,5 +85,12 @@ impl PathParam for ReactionKeyParam {
     fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         s.parse::<ReactionKeyParam>()
             .map_err(|_| PathParamError(format!("invalid reaction key: {}", s)))
+    }
+}
+
+impl PathParam for DocumentRevisionId {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        s.parse()
+            .map_err(|e: String| PathParamError(format!("invalid document revision id: {}", e)))
     }
 }

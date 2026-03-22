@@ -25,7 +25,7 @@ pub mod message_create {
         #[header]
         pub idempotency_key: Option<String>,
 
-        #[header]
+        #[header(rename = "x-timestamp")]
         pub timestamp: Option<i64>,
     }
 
@@ -142,7 +142,7 @@ pub mod message_edit {
         #[json]
         pub patch: MessagePatch,
 
-        #[header]
+        #[header(rename = "X-Timestamp")]
         pub timestamp: Option<i64>,
     }
 

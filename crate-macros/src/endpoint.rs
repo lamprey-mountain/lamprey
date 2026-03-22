@@ -58,6 +58,24 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         ));
     }
 
+    let body_count = req_fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Body))
+        .count();
+    if body_count > 1 {
+        return Err(syn::Error::new(
+            Span::call_site(),
+            "Request may have at most one #[body] field",
+        ));
+    }
+
+    if body_count > 0 && (json_count > 0 || form_count > 0) {
+        return Err(syn::Error::new(
+            Span::call_site(),
+            "Request cannot have #[body] field with #[json] or #[form] fields",
+        ));
+    }
+
     let request_clean = build_clean_struct(request_struct.clone())?;
     let response_clean = build_clean_struct(response_struct.clone())?;
     let extract_fn = build_extract_fn(&req_fields, &args.path)?;
@@ -119,6 +137,8 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
         fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
     let form_field: Option<&EndpointField> =
         fields.iter().find(|f| matches!(f.kind, FieldKind::Form));
+    let body_field: Option<&EndpointField> =
+        fields.iter().find(|f| matches!(f.kind, FieldKind::Body));
 
     // Parse path template at compile time to build match pattern
     let path_template = path.value();
@@ -263,6 +283,16 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
         quote! {}
     };
 
+    // --- body extraction (raw bytes) ---
+    let body_extraction = if let Some(f) = body_field {
+        let ident = &f.ident;
+        quote! {
+            let #ident = body;
+        }
+    } else {
+        quote! {}
+    };
+
     // --- assemble Request struct ---
     let all_idents: Vec<_> = fields.iter().map(|f| &f.ident).collect();
 
@@ -282,6 +312,7 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
             #header_extraction
             #json_extraction
             #form_extraction
+            #body_extraction
 
             Ok(Request {
                 #(#all_idents,)*
@@ -489,13 +520,13 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
     for attr in attrs {
         let path = attr.path();
         if path.is_ident("path") {
-            return Ok(FieldKind::Path(try_parse_str_arg(attr)));
+            return Ok(FieldKind::Path(try_parse_header_or_path_arg(attr)));
         }
         if path.is_ident("query") {
-            return Ok(FieldKind::Query(try_parse_str_arg(attr)));
+            return Ok(FieldKind::Query(try_parse_header_or_path_arg(attr)));
         }
         if path.is_ident("header") {
-            return Ok(FieldKind::Header(try_parse_str_arg(attr)));
+            return Ok(FieldKind::Header(try_parse_header_or_path_arg(attr)));
         }
         if path.is_ident("json") {
             return Ok(FieldKind::Json);
@@ -503,15 +534,38 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
         if path.is_ident("form") {
             return Ok(FieldKind::Form);
         }
+        if path.is_ident("body") {
+            return Ok(FieldKind::Body);
+        }
     }
     Err(syn::Error::new(
         ident.span(),
-        "field must have one of: #[path], #[query], #[header], #[json], #[form]",
+        "field must have one of: #[path], #[query], #[header], #[json], #[form], #[body]",
     ))
 }
 
-fn try_parse_str_arg(attr: &Attribute) -> Option<String> {
-    attr.parse_args::<LitStr>().ok().map(|s| s.value())
+fn try_parse_header_or_path_arg(attr: &Attribute) -> Option<String> {
+    // Try parsing as rename = "..." first
+    attr.parse_args::<syn::Meta>()
+        .ok()
+        .and_then(|meta| {
+            if let syn::Meta::NameValue(nv) = meta {
+                if nv.path.is_ident("rename") {
+                    if let syn::Expr::Lit(syn::ExprLit {
+                        lit: syn::Lit::Str(lit),
+                        ..
+                    }) = nv.value
+                    {
+                        return Some(lit.value());
+                    }
+                }
+            }
+            None
+        })
+        .or_else(|| {
+            // Fall back to simple string literal
+            attr.parse_args::<LitStr>().ok().map(|s| s.value())
+        })
 }
 
 fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
@@ -522,6 +576,7 @@ fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
                 && !attr.path().is_ident("header")
                 && !attr.path().is_ident("json")
                 && !attr.path().is_ident("form")
+                && !attr.path().is_ident("body")
         });
     }
     Ok(quote! { #original })

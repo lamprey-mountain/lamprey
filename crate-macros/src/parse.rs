@@ -32,6 +32,7 @@ pub enum FieldKind {
     Header(Option<String>),
     Json,
     Form,
+    Body,
 }
 
 #[derive(Clone)]

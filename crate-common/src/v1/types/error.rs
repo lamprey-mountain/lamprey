@@ -804,6 +804,14 @@ pub enum ErrorCode {
     #[error("totp not enabled")]
     TotpNotEnabled,
 
+    /// already authenticated
+    #[error("already authenticated")]
+    AlreadyAuthenticated,
+
+    /// invalid password
+    #[error("invalid password")]
+    InvalidPassword,
+
     /// not bot owner
     #[error("not bot owner")]
     NotBotOwner,
@@ -1023,6 +1031,8 @@ impl ErrorCode {
             ErrorCode::TotpAlreadyEnabled => 400,
             ErrorCode::InvalidTotpCode => 400,
             ErrorCode::TotpNotEnabled => 400,
+            ErrorCode::AlreadyAuthenticated => 403,
+            ErrorCode::InvalidPassword => 401,
             ErrorCode::NotBotOwner => 403,
             ErrorCode::UserIsNotABot => 403,
             ErrorCode::NotFound => 404,
