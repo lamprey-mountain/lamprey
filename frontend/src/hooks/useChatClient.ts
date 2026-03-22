@@ -109,11 +109,11 @@ export function useChatClient(config: Config) {
 	(async () => {
 		try {
 			const database = await openDB<ApiDB>("api", migrations.length, {
-				upgrade(db, oldVersion) {
+				upgrade(db, oldVersion, _newVersion, txn) {
 					const log = logger.for("idb");
 					for (let i = oldVersion; i < migrations.length; i++) {
 						const m = migrations[i];
-						m.migrate(db);
+						m.migrate(db, txn);
 						log.info(m.description, undefined, "migrate");
 					}
 				},

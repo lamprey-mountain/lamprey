@@ -1,4 +1,10 @@
-import { DBSchema, type IDBPDatabase, openDB } from "idb";
+import {
+	DBSchema,
+	type IDBPDatabase,
+	IDBPTransaction,
+	openDB,
+	StoreNames,
+} from "idb";
 import {
 	ChannelT,
 	MediaT,
@@ -28,6 +34,7 @@ export interface ApiDB extends DBSchema {
 	message: {
 		value: MessageT;
 		key: string;
+		indexes: { channel_id: string };
 	};
 	role: {
 		value: RoleT;
@@ -53,31 +60,67 @@ export interface ApiDB extends DBSchema {
 		value: ThreadMember;
 		key: [string, string];
 	};
+	message_ranges: {
+		value: IDBMessageRange;
+		key: string;
+		indexes: { channel_id: string };
+	};
+}
+
+interface IDBMessageRange {
+	/** random uuid for this range */
+	id: string;
+	channel_id: string;
+
+	/** id of the first message in this range */
+	start_id: string;
+
+	/** id of the last message in this range */
+	end_id: string;
+
+	has_backwards: boolean;
+	has_forward: boolean;
 }
 
 export type Migration = {
 	description: string;
-	migrate(db: IDBPDatabase<ApiDB>): void;
+	migrate(
+		db: IDBPDatabase<ApiDB>,
+		tx: IDBPTransaction<ApiDB, StoreNames<ApiDB>[], "versionchange">,
+	): void;
 };
 
 export const migrations: Array<Migration> = [
 	{
 		description: "stores for various resources",
-		migrate(database) {
-			database.createObjectStore("user", { keyPath: "id" });
-			database.createObjectStore("room", { keyPath: "id" });
-			database.createObjectStore("channel", { keyPath: "id" });
-			database.createObjectStore("message", { keyPath: "id" });
-			database.createObjectStore("role", { keyPath: "id" });
-			database.createObjectStore("room_member", {
+		migrate(db) {
+			db.createObjectStore("user", { keyPath: "id" });
+			db.createObjectStore("room", { keyPath: "id" });
+			db.createObjectStore("channel", { keyPath: "id" });
+			db.createObjectStore("message", { keyPath: "id" });
+			db.createObjectStore("role", { keyPath: "id" });
+			db.createObjectStore("room_member", {
 				keyPath: ["room_id", "user_id"],
 			});
-			database.createObjectStore("media", { keyPath: "id" });
-			database.createObjectStore("session", { keyPath: "id" });
-			database.createObjectStore("document", { keyPath: "id" });
-			database.createObjectStore("thread_member", {
+			db.createObjectStore("media", { keyPath: "id" });
+			db.createObjectStore("session", { keyPath: "id" });
+			db.createObjectStore("document", { keyPath: "id" });
+			db.createObjectStore("thread_member", {
 				keyPath: ["thread_id", "user_id"],
 			});
+		},
+	},
+	{
+		description: "channel id index for messages",
+		migrate(_db, txn) {
+			txn.objectStore("message").createIndex("channel_id", "channel_id");
+		},
+	},
+	{
+		description: "stores for message ranges",
+		migrate(db) {
+			const ranges = db.createObjectStore("message_ranges", { keyPath: "id" });
+			ranges.createIndex("channel_id", "channel_id");
 		},
 	},
 ];

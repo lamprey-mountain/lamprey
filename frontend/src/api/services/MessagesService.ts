@@ -40,6 +40,7 @@ export class MessageRange {
 		public has_forward: boolean,
 		public has_backwards: boolean,
 		public items: Array<Message>,
+		public stale = false,
 	) {}
 
 	isEmpty(): boolean {
@@ -73,7 +74,7 @@ export class MessageRange {
 	}
 
 	// NOTE: has_forwards/has_backwards may act strangely here
-	mergeMessages(newItems: Message[]): MessageRange {
+	mergeMessages(newItems: Message[], markFresh = false): MessageRange {
 		const byId = new Map<string, Message>();
 		for (const m of this.items) byId.set(m.id, m);
 		for (const m of newItems) byId.set(m.id, m);
@@ -81,6 +82,7 @@ export class MessageRange {
 			this.has_forward,
 			this.has_backwards,
 			sortMessagesById([...byId.values()]),
+			markFresh ? false : this.stale,
 		);
 	}
 
@@ -107,6 +109,7 @@ export class MessageRange {
 	mergeRange(other: MessageRange): MessageRange {
 		if (this.isEmpty()) return other;
 		if (other.isEmpty()) return this;
+		const isStale = this.stale && other.stale;
 
 		const byId = new Map<string, Message>();
 		for (const m of this.items) byId.set(m.id, m);
@@ -123,7 +126,7 @@ export class MessageRange {
 		else if (other.start < this.start) has_backwards = other.has_backwards;
 		else has_backwards = this.has_backwards && other.has_backwards;
 
-		return new MessageRange(has_forward, has_backwards, items);
+		return new MessageRange(has_forward, has_backwards, items, isStale);
 	}
 }
 
@@ -255,16 +258,25 @@ export class MessagesService extends BaseService<Message> {
 		thread_id: Accessor<string>,
 		dir: Accessor<MessageListAnchor>,
 	): Resource<MessageRange> {
-		const [resource] = createResource(
+		const [resource, { mutate }] = createResource(
 			() => ({
 				thread_id: thread_id(),
 				dir: dir(),
 				_v: this._versions.get(thread_id()) ?? 0,
 			}),
 			async ({ thread_id, dir }) => {
+				await this.ensureHydrated(thread_id);
 				const cache = this.getOrCreateCache(thread_id);
-				return this.getSlice(cache, dir) ??
-					await this.fetchRange(thread_id, dir, cache);
+				const slice = this.getSlice(cache, dir);
+
+				if (slice && !slice.stale) return slice;
+
+				if (slice?.stale) {
+					// immediately show stale data, but keep fetching
+					mutate(slice);
+				}
+
+				return await this.fetchRange(thread_id, dir, cache);
 			},
 		);
 
@@ -1007,17 +1019,19 @@ export class MessagesService extends BaseService<Message> {
 		range: MessageRange,
 		data: { items: any[]; has_more?: boolean },
 		has_more: boolean,
+		markFresh = false,
 	): MessageRange {
 		const newItems = (data.items as unknown) as Message[];
 		for (const item of newItems) this.upsert(item);
 
-		const merged = range.mergeMessages(newItems);
+		const merged = range.mergeMessages(newItems, markFresh);
 		// If no items were fetched, treat as no more to prevent infinite loops
 		const effectiveHasMore = newItems.length === 0 ? false : has_more;
 		return new MessageRange(
 			effectiveHasMore,
 			merged.has_backwards,
 			merged.items,
+			merged.stale,
 		);
 	}
 
@@ -1026,13 +1040,91 @@ export class MessagesService extends BaseService<Message> {
 		range: MessageRange,
 		data: { items: any[]; has_more?: boolean },
 		has_more: boolean,
+		markFresh = false,
 	): MessageRange {
 		const newItems = (data.items as unknown) as Message[];
 		for (const item of newItems) this.upsert(item);
 
-		const merged = range.mergeMessages(newItems);
+		const merged = range.mergeMessages(newItems, markFresh);
 		// If no items were fetched, treat as no more to prevent infinite loops
 		const effectiveHasMore = newItems.length === 0 ? false : has_more;
-		return new MessageRange(merged.has_forward, effectiveHasMore, merged.items);
+		return new MessageRange(
+			merged.has_forward,
+			effectiveHasMore,
+			merged.items,
+			merged.stale,
+		);
+	}
+
+	private _hydrated = new Set<string>();
+
+	private async ensureHydrated(channel_id: string) {
+		// TODO: hydration logic is extremely sketchy
+		return;
+
+		if (this._hydrated.has(channel_id)) return;
+		const rehydrated = await this.rehydrateRanges(channel_id);
+		this._ranges.set(channel_id, rehydrated);
+		this._hydrated.add(channel_id);
+	}
+
+	private async rehydrateRanges(
+		channel_id: string,
+	): Promise<MessageRanges> {
+		const cache = new MessageRanges();
+		if (!this.db) return cache;
+
+		const tx = this.db.transaction(["message_ranges", "messages"], "readonly");
+		const rangeStore = tx.objectStore("message_ranges");
+		const messageStore = tx.objectStore("messages");
+
+		const allRanges = await rangeStore.index("channel_id").getAll(channel_id);
+
+		for (const r of allRanges) {
+			const bound = IDBKeyRange.bound(r.start_id, r.end_id);
+			const messages = await messageStore.index("channel_id").getAll(bound);
+
+			const memoryRange = new MessageRange(
+				r.has_forward,
+				r.has_backwards,
+				sortMessagesById(messages),
+				true,
+			);
+			cache.ranges.add(memoryRange);
+		}
+
+		// try to remerge ranges just in case
+		while (cache.tryMerge());
+
+		const live = Array.from(cache.ranges).find((r) => !r.has_forward);
+		if (live) cache.live = live;
+
+		return cache;
+	}
+
+	private async persistRanges(channel_id: string) {
+		if (!this.db) return;
+
+		const ranges = this._ranges.get(channel_id);
+		if (!ranges) return;
+
+		const tx = this.db.transaction("message_ranges", "readwrite");
+		const store = tx.objectStore("message_ranges");
+
+		// for now, just delete all ranges and recreate
+		const existing = await store.index("channel_id").getAllKeys(channel_id);
+		for (const key of existing) await store.delete(key);
+
+		for (const r of ranges.ranges) {
+			if (r.isEmpty()) continue;
+			await store.put({
+				id: uuidv7(),
+				channel_id,
+				start_id: r.start,
+				end_id: r.end,
+				has_forward: r.has_forward,
+				has_backwards: r.has_backwards,
+			});
+		}
 	}
 }
