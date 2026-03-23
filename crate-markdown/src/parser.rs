@@ -345,6 +345,47 @@ impl<'a> ParseContext<'a> {
                         self.pos += 4;
                         continue;
                     }
+
+                    // Handle <@&uuid> role mentions
+                    if self.pos + 3 < self.tokens.len()
+                        && self.token_at_is(self.pos + 1, TokenKind::At)
+                        && self.token_at_is(self.pos + 2, TokenKind::Ampersand)
+                        && self.token_at_is(self.pos + 3, TokenKind::Uuid)
+                        && self.token_at_is(self.pos + 4, TokenKind::AngleClose)
+                    {
+                        self.builder.start_node(SyntaxKind::MentionRole.into());
+                        self.builder.token(SyntaxKind::MentionMarker.into(), "<");
+                        self.builder.token(SyntaxKind::MentionMarker.into(), "@");
+                        self.builder.token(SyntaxKind::MentionMarker.into(), "&");
+                        if let Some(range) = self.range_at(self.pos + 3) {
+                            self.builder
+                                .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                        }
+                        self.builder.token(SyntaxKind::MentionMarker.into(), ">");
+                        self.builder.finish_node();
+                        self.pos += 5;
+                        continue;
+                    }
+
+                    // Handle <#uuid> channel mentions
+                    if self.pos + 2 < self.tokens.len()
+                        && self.token_at_is(self.pos + 1, TokenKind::Hash)
+                        && self.token_at_is(self.pos + 2, TokenKind::Uuid)
+                        && self.token_at_is(self.pos + 3, TokenKind::AngleClose)
+                    {
+                        self.builder.start_node(SyntaxKind::MentionChannel.into());
+                        self.builder.token(SyntaxKind::MentionMarker.into(), "<");
+                        self.builder.token(SyntaxKind::MentionMarker.into(), "#");
+                        if let Some(range) = self.range_at(self.pos + 2) {
+                            self.builder
+                                .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                        }
+                        self.builder.token(SyntaxKind::MentionMarker.into(), ">");
+                        self.builder.finish_node();
+                        self.pos += 4;
+                        continue;
+                    }
+
                     // Handle <url> angle bracket links
                     if self.token_at_is(self.pos + 1, TokenKind::Url)
                         && self.token_at_is(self.pos + 2, TokenKind::AngleClose)
@@ -998,6 +1039,9 @@ pub enum TokenKind {
     #[token("@")]
     At,
 
+    #[token("&")]
+    Ampersand,
+
     #[token(":")]
     Colon,
 
@@ -1010,7 +1054,7 @@ pub enum TokenKind {
     Url,
 
     /// any other text (words, punctuation, etc.) - excluding special chars
-    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-]+")]
+    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-&]+")]
     Text,
 }
 
@@ -1052,6 +1096,8 @@ pub enum SyntaxKind {
     AngleBracketLink,
     Mention,
     MentionMarker,
+    MentionRole,
+    MentionChannel,
     Emoji,
     EmojiName,
     EmojiMarker,

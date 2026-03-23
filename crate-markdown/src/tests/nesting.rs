@@ -113,3 +113,33 @@ fn test_emoji_inside_italic() {
     assert!(has_emphasis, "Should have italic");
     assert!(has_emoji, "Should have emoji inside italic");
 }
+
+#[test]
+fn test_role_mention_inside_bold() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("**hello <@&12345678-1234-1234-1234-123456789abc> world**");
+    let root = parsed.syntax();
+
+    let has_strong = root.descendants().any(|n| n.kind() == SyntaxKind::Strong);
+    let has_role = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::MentionRole);
+
+    assert!(has_strong, "Should have bold");
+    assert!(has_role, "Should have role mention inside bold");
+}
+
+#[test]
+fn test_channel_mention_inside_italic() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("*hello <#12345678-1234-1234-1234-123456789abc> world*");
+    let root = parsed.syntax();
+
+    let has_emphasis = root.descendants().any(|n| n.kind() == SyntaxKind::Emphasis);
+    let has_channel = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::MentionChannel);
+
+    assert!(has_emphasis, "Should have italic");
+    assert!(has_channel, "Should have channel mention inside italic");
+}

@@ -1029,6 +1029,36 @@ impl<'a> Iterator for MentionsIter<'a> {
                         return Some(MentionId::User(uuid));
                     }
                 }
+                SyntaxKind::MentionRole => {
+                    // Extract UUID from role mention
+                    let mut uuid_str = String::new();
+                    for child in node.children_with_tokens() {
+                        if let rowan::NodeOrToken::Token(token) = child {
+                            if token.kind() != SyntaxKind::MentionMarker {
+                                uuid_str.push_str(token.text());
+                            }
+                        }
+                    }
+
+                    if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
+                        return Some(MentionId::Role(uuid));
+                    }
+                }
+                SyntaxKind::MentionChannel => {
+                    // Extract UUID from channel mention
+                    let mut uuid_str = String::new();
+                    for child in node.children_with_tokens() {
+                        if let rowan::NodeOrToken::Token(token) = child {
+                            if token.kind() != SyntaxKind::MentionMarker {
+                                uuid_str.push_str(token.text());
+                            }
+                        }
+                    }
+
+                    if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
+                        return Some(MentionId::Channel(uuid));
+                    }
+                }
                 SyntaxKind::Emoji => {
                     let mut name = String::new();
                     let mut uuid_str = String::new();
@@ -1109,6 +1139,8 @@ impl Ast {
     ///
     /// This extracts:
     /// - User mentions: <@uuid>
+    /// - Role mentions: <@&uuid>
+    /// - Channel mentions: <#uuid>
     /// - Emoji mentions: <:name:uuid> or <a:name:uuid>
     /// - @everyone mentions
     ///
@@ -1118,7 +1150,7 @@ impl Ast {
     /// use lamprey_markdown::ast::{MentionId, MentionIds};
     ///
     /// let parser = Parser::default();
-    /// let ast = Ast::new(parser.parse("hello <@uuid> and <:emoji:uuid>"));
+    /// let ast = Ast::new(parser.parse("hello <@12345678-1234-1234-1234-123456789abc> and <:emoji:87654321-4321-4321-4321-cba987654321>"));
     ///
     /// let mentions: MentionIds = ast.mentions().collect();
     /// assert!(!mentions.users.is_empty());

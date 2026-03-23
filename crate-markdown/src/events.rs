@@ -6,7 +6,7 @@
 //! # Example
 //! ```
 //! use lamprey_markdown::{Parser, Ast};
-//! use lamprey_markdown::events::{Event, EventIterator, EventFilter};
+//! use lamprey_markdown::events::{Event, EventIterator, EventFilter, Tag};
 //!
 //! let parser = Parser::default();
 //! let ast = Ast::new(parser.parse("**hello** world"));

@@ -233,6 +233,22 @@ fn test_mention() {
 }
 
 #[test]
+fn test_role_mention() {
+    let root = parse("<@&12345678-1234-1234-1234-123456789abc>");
+    let kinds = collect_kinds(&root);
+    assert!(kinds.contains(&SyntaxKind::MentionRole));
+    assert!(kinds.contains(&SyntaxKind::MentionMarker));
+}
+
+#[test]
+fn test_channel_mention() {
+    let root = parse("<#12345678-1234-1234-1234-123456789abc>");
+    let kinds = collect_kinds(&root);
+    assert!(kinds.contains(&SyntaxKind::MentionChannel));
+    assert!(kinds.contains(&SyntaxKind::MentionMarker));
+}
+
+#[test]
 fn test_emoji() {
     let root = parse("<:smile:12345678-1234-1234-1234-123456789abc>");
     let kinds = collect_kinds(&root);
@@ -382,4 +398,54 @@ fn test_strip_emoji_reader_mixed() {
         !result.contains("22222222-2222-2222-2222-222222222222"),
         "Disallowed emoji UUID should not be in output"
     );
+}
+
+#[test]
+fn test_role_mention_in_code_ignored() {
+    let root = parse("check `<@&12345678-1234-1234-1234-123456789abc>` out");
+    // Role mention inside inline code should not be parsed as MentionRole
+    let has_role_mention = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::MentionRole);
+    assert!(
+        !has_role_mention,
+        "Role mention inside code should not create MentionRole node"
+    );
+}
+
+#[test]
+fn test_channel_mention_in_code_ignored() {
+    let root = parse("check `<#12345678-1234-1234-1234-123456789abc>` out");
+    // Channel mention inside inline code should not be parsed as MentionChannel
+    let has_channel_mention = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::MentionChannel);
+    assert!(
+        !has_channel_mention,
+        "Channel mention inside code should not create MentionChannel node"
+    );
+}
+
+#[test]
+fn test_role_mention_inside_bold() {
+    let root = parse("**<@&12345678-1234-1234-1234-123456789abc>**");
+    let has_role = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::MentionRole);
+    let has_strong = root.descendants().any(|n| n.kind() == SyntaxKind::Strong);
+
+    assert!(has_role, "Should have role mention inside bold");
+    assert!(has_strong, "Should have strong/bold");
+}
+
+#[test]
+fn test_channel_mention_inside_italic() {
+    let root = parse("*<#12345678-1234-1234-1234-123456789abc>*");
+    let has_channel = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::MentionChannel);
+    let has_emphasis = root.descendants().any(|n| n.kind() == SyntaxKind::Emphasis);
+
+    assert!(has_channel, "Should have channel mention inside italic");
+    assert!(has_emphasis, "Should have emphasis/italic");
 }
