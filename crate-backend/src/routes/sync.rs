@@ -1,19 +1,18 @@
 use std::sync::Arc;
 
-use axum::extract::ws::{CloseFrame, Message, WebSocket};
+use axum::extract::ws::WebSocket;
 use axum::extract::WebSocketUpgrade;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::routing::any;
 use common::v1::types::presence::Presence;
 use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 use utoipa_axum::router::OpenApiRouter;
 
+use crate::sync::transport::{Transport, TransportEvent, TransportSink, WebsocketTransport};
 use crate::sync::{Connection, Timeout};
 use crate::ServerState;
-
-type WsMessage = axum::extract::ws::Message;
 
 /// Sync init
 ///
@@ -36,7 +35,10 @@ async fn sync(
 }
 
 #[tracing::instrument(skip(s, ws))]
-async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
+async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
+    let (mut transport, mut client_messages) =
+        WebsocketTransport::new(ws, params.format, params.compression.is_some()).split();
+
     let mut timeout = Timeout::for_ping();
     let mut sushi = s.inner.subscribe_sushi().await.unwrap();
     let mut conn = Connection::new(s.clone(), params);
@@ -53,17 +55,16 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                     }
                     Err(err) => {
                         tracing::error!("member list poll error: {err}");
-                        if let Ok(msg) = conn.serialize(&MessageEnvelope {
-                            payload: MessagePayload::Error { error: err.to_string(), code: None },
-                        }) {
-                            if let Err(send_err) = ws.send(msg).await {
-                                tracing::error!("failed to send error message: {send_err}");
-                            }
+                        let err_str: String = err.to_string();
+                        if let Err(send_err) = transport.send(MessageEnvelope {
+                            payload: MessagePayload::Error { error: err_str, code: None },
+                        }).await {
+                            tracing::error!("failed to send error message: {send_err}");
                         }
-                        if let Err(err) = conn.drain(&mut ws).await {
+                        if let Err(err) = conn.drain(&mut *transport).await {
                             tracing::error!("failed to drain messages on error: {err}");
                         }
-                        if let Err(err) = ws.close().await {
+                        if let Err(err) = transport.close().await {
                             tracing::error!("failed to close websocket: {err}");
                         }
                         break;
@@ -79,55 +80,50 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                     }
                     Err(err) => {
                         tracing::error!("document poll error: {err}");
-                        if let Ok(msg) = conn.serialize(&MessageEnvelope {
-                            payload: MessagePayload::Error { error: err.to_string(), code: None },
-                        }) {
-                            if let Err(send_err) = ws.send(msg).await {
-                                tracing::error!("failed to send error message: {send_err}");
-                            }
+                        let err_str: String = err.to_string();
+                        if let Err(send_err) = transport.send(MessageEnvelope {
+                            payload: MessagePayload::Error { error: err_str, code: None },
+                        }).await {
+                            tracing::error!("failed to send error message: {send_err}");
                         }
-                        if let Err(err) = conn.drain(&mut ws).await {
+                        if let Err(err) = conn.drain(&mut *transport).await {
                             tracing::error!("failed to drain messages on error: {err}");
                         }
-                        if let Err(err) = ws.close().await {
+                        if let Err(err) = transport.close().await {
                             tracing::error!("failed to close websocket: {err}");
                         }
                         break;
                     }
                 }
             }
-            ws_msg = ws.recv() => {
+            ws_msg = client_messages.next() => {
                 match ws_msg {
-                    Some(Ok(Message::Close(Some(CloseFrame { code, .. })))) => {
-                        // 1000 = Normal Closure, 1001 = Going Away
-                        if code == 1000 || code == 1001 {
-                            normal_close = true;
-                        }
+                    Some(Ok(TransportEvent::Closed(clean))) => {
+                        normal_close = clean;
                         break;
                     }
-                    Some(Ok(Message::Close(None))) => break,
-                    Some(Ok(ws_msg)) => {
-                        if let Err(err) = conn.handle_message(ws_msg, &mut ws, &mut timeout).await {
+                    Some(Ok(TransportEvent::Message(ws_msg))) => {
+                        if let Err(err) = conn.handle_message_client(ws_msg, &mut *transport, &mut timeout).await {
                             tracing::error!("error handling websocket message: {err}");
-                            if let Ok(msg) = conn.serialize(&MessageEnvelope {
-                                payload: MessagePayload::Error { error: err.to_string(), code: None },
-                            }) {
-                                if let Err(send_err) = ws.send(msg).await {
-                                    tracing::error!("failed to send error message: {send_err}");
-                                }
+
+                            let err_str: String = err.to_string();
+                            if let Err(send_err) = transport.send(MessageEnvelope {
+                                payload: MessagePayload::Error { error: err_str, code: None },
+                            }).await {
+                                tracing::error!("failed to send error message: {send_err}");
                             }
-                            if let Ok(msg) = conn.serialize(&MessageEnvelope {
+
+                            if let Err(send_err) = transport.send(MessageEnvelope {
                                 payload: MessagePayload::Reconnect { can_resume: false },
-                            }) {
-                                if let Err(send_err) = ws.send(msg).await {
-                                    tracing::error!("failed to send reconnect message: {send_err}");
-                                }
+                            }).await {
+                                tracing::error!("failed to send reconnect message: {send_err}");
                             }
+
                             // TODO: don't close ws on *every* error - most are recoverable
-                            if let Err(err) = conn.drain(&mut ws).await {
+                            if let Err(err) = conn.drain(&mut *transport).await {
                                 tracing::error!("failed to drain messages on error: {err}");
                             }
-                            if let Err(err) = ws.close().await {
+                            if let Err(err) = transport.close().await {
                                 tracing::error!("failed to close websocket: {err}");
                             }
                             break;
@@ -143,26 +139,24 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                 }
             }
             _ = tokio::time::sleep_until(timeout.get_instant()) => {
-                if !handle_timeout(&mut timeout, &mut ws, &mut conn).await {
+                if !handle_timeout(&mut timeout, &mut *transport, &mut conn).await {
                     tracing::warn!("connection timeout, sending reconnect");
-                    if let Ok(msg) = conn.serialize(&MessageEnvelope {
+                    if let Err(send_err) = transport.send(MessageEnvelope {
                         payload: MessagePayload::Reconnect { can_resume: true },
-                    }) {
-                        if let Err(send_err) = ws.send(msg).await {
-                            tracing::error!("failed to send reconnect message: {send_err}");
-                        }
+                    }).await {
+                        tracing::error!("failed to send reconnect message: {send_err}");
                     }
-                    if let Err(err) = conn.drain(&mut ws).await {
+                    if let Err(err) = conn.drain(&mut *transport).await {
                         tracing::error!("failed to drain messages on timeout: {err}");
                     }
-                    if let Err(err) = ws.close().await {
+                    if let Err(err) = transport.close().await {
                         tracing::error!("failed to close websocket on timeout: {err}");
                     }
                     break;
                 }
             }
         }
-        if let Err(err) = conn.drain(&mut ws).await {
+        if let Err(err) = conn.drain(&mut *transport).await {
             tracing::error!("failed to drain messages: {err}");
         }
     }
@@ -186,32 +180,28 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
     s.syncers.insert(conn.get_id(), conn);
 }
 
-async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket, conn: &mut Connection) -> bool {
+async fn handle_timeout(
+    timeout: &mut Timeout,
+    transport: &mut dyn TransportSink,
+    conn: &mut Connection,
+) -> bool {
     match timeout {
         Timeout::Ping(_) => {
             let ping = MessageEnvelope {
                 payload: MessagePayload::Ping {},
             };
-            match conn.serialize(&ping) {
-                Ok(msg) => {
-                    if let Err(err) = ws.send(msg).await {
-                        tracing::error!("failed to send ping: {err}");
-                        return false;
-                    }
-                }
-                Err(err) => {
-                    tracing::error!("failed to serialize ping: {err}");
-                    return false;
-                }
+            if let Err(err) = transport.send(ping).await {
+                tracing::error!("failed to send ping: {err}");
+                return false;
             }
-            if let Err(err) = conn.drain(ws).await {
+            if let Err(err) = conn.drain(transport).await {
                 tracing::error!("failed to drain messages after ping: {err}");
             }
             *timeout = Timeout::for_close();
             true
         }
         Timeout::Close(_) => {
-            if let Err(err) = ws.close().await {
+            if let Err(err) = transport.close().await {
                 tracing::error!("failed to close websocket on timeout close: {err}");
             }
             false
