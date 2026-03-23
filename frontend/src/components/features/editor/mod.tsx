@@ -36,17 +36,20 @@ export type EditorViewProps = {
 };
 
 function isInsideCodeBlock(state: EditorState): boolean {
-	const pos = state.selection.from;
-	const textBefore = state.doc.textBetween(0, pos, "\n");
-	const lines = textBefore.split("\n");
-	let count = 0;
-	for (const line of lines) {
-		if (line.trim().startsWith("```")) {
-			count++;
-		}
+	const { $from } = state.selection;
+	for (let d = $from.depth; d > 0; d--) {
+		if ($from.node(d).type.name === "code_block") return true;
 	}
-	return count % 2 === 1;
+	return false;
 }
+
+// function isInsideCodeBlock(state: EditorState): boolean {
+//   const { $from } = state.selection;
+//   for (let d = $from.depth; d >= 0; d--) {
+//     if ($from.node(d).type === state.schema.nodes.code_block) return true;
+//   }
+//   return false;
+// }
 
 export const createEditor = (opts: EditorOptions) => {
 	const schema = opts.schema ?? defaultSchema;
@@ -166,14 +169,14 @@ export const createEditor = (opts: EditorOptions) => {
 
 						if (event.key === "Enter" && !event.shiftKey) {
 							if (isInsideCodeBlock(view.state)) {
-								view.dispatch(view.state.tr.insertText("\n"));
+								view.dispatch(view.state.tr.insertText("\n").scrollIntoView());
 								return true;
 							}
 							if (props.submitOnEnter ?? true) {
 								return submitCommand(view.state, view.dispatch);
 							} else {
 								// submitOnEnter is false, insert newline instead
-								view.dispatch(view.state.tr.insertText("\n"));
+								view.dispatch(view.state.tr.insertText("\n").scrollIntoView());
 								return true;
 							}
 						}

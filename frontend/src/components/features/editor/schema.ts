@@ -15,6 +15,49 @@ export const schema = new Schema({
 				preserveWhitespace: "full",
 			})),
 		},
+		code_block: {
+			content: "text*",
+			group: "block",
+			code: true,
+			defining: true,
+			attrs: { language: { default: null } },
+			toDOM: (
+				node,
+			) => ["pre", ["code", { "data-language": node.attrs.language }, 0]],
+			parseDOM: [{
+				tag: "pre",
+				preserveWhitespace: "full",
+				getAttrs: (el) => ({
+					language:
+						(el as HTMLElement).querySelector("code")?.dataset.language ?? null,
+				}),
+			}],
+		},
+		blockquote: {
+			content: "block+",
+			group: "block",
+			parseDOM: [{ tag: "blockquote" }],
+			toDOM() {
+				return ["blockquote", 0];
+			},
+		},
+		heading: {
+			attrs: { level: { default: 1 } },
+			content: "inline*",
+			group: "block",
+			defining: true,
+			parseDOM: [
+				{ tag: "h1", attrs: { level: 1 } },
+				{ tag: "h2", attrs: { level: 2 } },
+				{ tag: "h3", attrs: { level: 3 } },
+				{ tag: "h4", attrs: { level: 4 } },
+				{ tag: "h5", attrs: { level: 5 } },
+				{ tag: "h6", attrs: { level: 6 } },
+			],
+			toDOM(node) {
+				return ["h" + node.attrs.level, 0];
+			},
+		},
 		mention: {
 			group: "inline",
 			atom: true,
