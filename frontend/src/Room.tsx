@@ -10,7 +10,6 @@ import { useApi, useChannels2 } from "./api.tsx";
 import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { Time } from "./Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { md } from "./markdown_utils.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useMemberList } from "./contexts/memberlist.tsx";
@@ -182,16 +181,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const threadsResource = createMemo(() =>
 		[...channels2.cache.values()].filter((c) => c.room_id === room_id())
 	);
-
-	const [bottom, setBottom] = createSignal<Element | undefined>();
-
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) {
-				// No-op for cache-based filtering
-			}
-		}
-	});
 
 	const categorizedChannels = createMemo(() => {
 		const items = threadsResource();
@@ -423,7 +412,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 					</>
 				)}
 			</For>
-			<div ref={setBottom}></div>
 		</div>
 	);
 };

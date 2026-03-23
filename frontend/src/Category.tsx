@@ -11,7 +11,6 @@ import { RenderUploadItem } from "./Input.tsx";
 import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { md } from "./markdown_utils.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
@@ -30,16 +29,6 @@ export const Category = (props: { channel: Channel }) => {
 	const threadsResource = createMemo(() =>
 		[...channels2.cache.values()].filter((c) => c.room_id === room_id())
 	);
-
-	const [bottom, setBottom] = createSignal<Element | undefined>();
-
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) {
-				// No-op for cache-based filtering
-			}
-		}
-	});
 
 	const getThreads = () => {
 		const items = threadsResource();
@@ -160,7 +149,6 @@ export const Category = (props: { channel: Channel }) => {
 					)}
 				</For>
 			</ul>
-			<div ref={setBottom}></div>
 		</div>
 	);
 };
