@@ -6,7 +6,7 @@ import { useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi } from "./api.tsx";
+import { useApi, useChannels2 } from "./api.tsx";
 import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { Time } from "./Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -178,30 +178,23 @@ export const RoomHome = (props: { room: RoomT }) => {
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
-	const fetchMore = () => {
-		return api.channels.list(room_id);
-		// const filter = threadFilter();
-		// if (filter === "active") {
-		// 	return api.threads.list(room_id);
-		// } else if (filter === "archived") {
-		// 	return api.threads.listArchived(room_id);
-		// } else if (filter === "removed") {
-		// 	return api.threads.listRemoved(room_id);
-		// }
-	};
-
-	const threadsResource = createMemo(fetchMore);
+	const channels2 = useChannels2();
+	const threadsResource = createMemo(() =>
+		[...channels2.cache.values()].filter((c) => c.room_id === room_id())
+	);
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
 	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
 		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
+			if (entry.isIntersecting) {
+				// No-op for cache-based filtering
+			}
 		}
 	});
 
 	const categorizedChannels = createMemo(() => {
-		const items = threadsResource()?.()?.items;
+		const items = threadsResource();
 		if (!items) return [];
 
 		const allChannels: Channel[] = [...items];
@@ -256,7 +249,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 		}
 		const list = [...categories.entries()]
 			.map(([cid, cs]) => ({
-				category: cid ? api.channels.cache.get(cid)! : null,
+				category: cid ? channels2.cache.get(cid)! : null,
 				channels: cs,
 			}))
 			.sort((a, b) => {
@@ -341,7 +334,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			</div>
 			<div style="display:flex; align-items:center">
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
-					{threadsResource()?.()?.total} channels
+					{threadsResource().length} channels
 				</h3>
 				{
 					/*

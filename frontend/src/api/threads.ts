@@ -41,7 +41,7 @@ export class Threads {
 
 			batch(() => {
 				for (const item of data.items) {
-					this.api.channels.cache.set(item.id, item);
+					this.store.channels.cache.set(item.id, item);
 				}
 			});
 

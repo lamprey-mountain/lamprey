@@ -58,7 +58,7 @@ export class AuditLogs {
 			}
 
 			for (const thread of data.threads) {
-				this.api.channels.cache.set(thread.id, thread);
+				this.store.channels.cache.set(thread.id, thread);
 			}
 			for (const user of data.users) {
 				const userWithRelationship: UserWithRelationship = {

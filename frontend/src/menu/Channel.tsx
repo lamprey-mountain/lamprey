@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { useApi } from "../api.tsx";
+import { useApi, useChannels2 } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
@@ -23,14 +23,15 @@ import { useCurrentUser } from "../contexts/currentUser.tsx";
 export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const { markThreadRead, markCategoryRead } = useReadTracking();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 
 	const currentUser = useCurrentUser();
 	const self_id = () => currentUser()?.id ?? "";
-	const channel = api.channels.fetch(() => props.channel_id);
-	const parentChan = api.channels.fetch(() =>
+	const channel = channels2.use(() => props.channel_id);
+	const parentChan = channels2.use(() =>
 		(channel() as any)?.parent_id as string
 	);
 
@@ -51,7 +52,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	);
 	const copyId = () => navigator.clipboard.writeText(props.channel_id);
 	const markRead = async () => {
-		const c = api.channels.cache.get(props.channel_id);
+		const c = channels2.cache.get(props.channel_id);
 		if (!c) return;
 
 		if (c.type === "Category") {
@@ -88,18 +89,18 @@ export function ChannelMenu(props: { channel_id: string }) {
 		nav(`/channel/${props.channel_id}/settings${to}`);
 
 	const archiveChannel = () => {
-		api.channels.archive(props.channel_id);
+		channels2.archive(props.channel_id);
 	};
 
 	const unarchiveChannel = () => {
-		api.channels.unarchive(props.channel_id);
+		channels2.unarchive(props.channel_id);
 	};
 
 	const toggleLock = () => {
 		if (channel()?.locked) {
-			api.channels.unlock(props.channel_id);
+			channels2.unlock(props.channel_id);
 		} else {
-			api.channels.lock(props.channel_id);
+			channels2.lock(props.channel_id);
 		}
 	};
 
@@ -111,7 +112,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 			? currentTags.filter((t) => t !== tagId)
 			: [...currentTags, tagId];
 
-		api.channels.update(props.channel_id, { tags: newTags });
+		channels2.update(props.channel_id, { tags: newTags });
 	};
 
 	const joinOrLeaveChannel = () => {
@@ -302,6 +303,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 function ChannelNotificationMenu(props: { channel: Channel }) {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const channelConfig = () => props.channel.preferences;
 
 	const setNotifs = (notifs: Partial<NotifsChannel>) => {
@@ -317,7 +319,7 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 				delete newConfig.notifs[key as keyof typeof newConfig.notifs];
 			}
 		}
-		api.channels.cache.set(props.channel.id, {
+		channels2.cache.set(props.channel.id, {
 			...props.channel,
 			preferences: newConfig as any,
 		});

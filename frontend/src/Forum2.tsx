@@ -24,7 +24,7 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
 import { useMenu, useUserPopout } from "./contexts/mod.tsx";
-import { useApi, useMessages2 } from "./api";
+import { useApi, useChannels2, useMessages2 } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
 import { A, useNavigate } from "@solidjs/router";
@@ -155,6 +155,7 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const nav = useNavigate();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
@@ -240,7 +241,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 	function createThread(room_id: string) {
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
-			api.channels.create(room_id, {
+			channels2.create(room_id, {
 				name,
 				parent_id: props.channel.id,
 			});
@@ -506,7 +507,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 			</Resizable>
 			<Show when={threadId()}>
 				{(tid) => {
-					const threadChannel = api.channels.cache.get(tid());
+					const threadChannel = channels2.cache.get(tid());
 					if (!threadChannel) return;
 					const threadCtx = getOrCreateChannelContext(tid());
 					return (
@@ -527,14 +528,15 @@ function EditorUserMention(props: { id: string }) {
 }
 
 function EditorChannelMention(props: { id: string }) {
-	const api = useApi();
-	const channel = createMemo(() => api.channels.cache.get(props.id));
+	const channels2 = useChannels2();
+	const channel = createMemo(() => channels2.cache.get(props.id));
 	return <span class="mention-channel">#{channel()?.name ?? props.id}</span>;
 }
 
 export const Forum2Thread = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
 	const submit = useMessageSubmit(props.channel.id);
@@ -561,7 +563,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const sendTyping = leading(
 		throttle,
 		() => {
-			api.channels.typing(props.channel.id);
+			channels2.typing(props.channel.id);
 		},
 		8000,
 	);
@@ -650,8 +652,8 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	};
 
 	const editor = createEditor({
-		channelId: () => props.thread.id,
-		roomId: () => props.thread.room_id,
+		channelId: () => props.channel.id,
+		roomId: () => props.channel.room_id!,
 		initialContent: (() => {
 			const draft = localStorage.getItem(storageKey());
 			if (!draft) return "";
@@ -1038,7 +1040,7 @@ function CommentEditor(
 
 	const editor = createEditor({
 		channelId: () => props.message.channel_id,
-		roomId: () => props.message.room_id,
+		roomId: () => props.message.room_id!,
 		initialContent: draft(),
 		initialSelection: "end",
 	});

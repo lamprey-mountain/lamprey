@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 import type { Permission } from "sdk";
-import { useApi, useRooms2 } from "../api";
+import { useApi, useChannels2, useRooms2 } from "../api";
 import {
 	calculatePermissions,
 	type PermissionContext,
@@ -44,6 +44,7 @@ export function usePermissions(
 
 		const permissionContext: PermissionContext = {
 			api,
+			channels: useChannels2(),
 			rooms: useRooms2(),
 			room_id: room_id(),
 			channel_id: thread_id(),

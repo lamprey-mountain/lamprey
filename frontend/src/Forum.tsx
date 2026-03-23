@@ -3,7 +3,7 @@ import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi } from "./api.tsx";
+import { useApi, useChannels2 } from "./api.tsx";
 import { ChannelIcon } from "./User";
 import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
@@ -22,6 +22,7 @@ import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
 export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const nav = useNavigate();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
@@ -63,7 +64,7 @@ export const Forum = (props: { channel: Channel }) => {
 	function createThread(room_id: string) {
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
-			api.channels.create(room_id, {
+			channels2.create(room_id, {
 				name,
 				parent_id: props.channel.id,
 			});
@@ -186,6 +187,7 @@ const QuickCreate = (
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const n = useNavigate();
 	const [ch, chUpdate] = useChannel()!;
 	const uploads = useUploads();
@@ -193,7 +195,7 @@ const QuickCreate = (
 
 	const editor = createEditor({
 		channelId: () => props.channel.id,
-		roomId: () => props.channel.room_id,
+		roomId: () => props.channel.room_id!,
 	});
 
 	function uploadFile(e: InputEvent) {
@@ -212,7 +214,7 @@ const QuickCreate = (
 
 	const onSubmit = (text: string) => {
 		if (!text) return false;
-		api.channels.create(props.channel.room_id!, {
+		channels2.create(props.channel.room_id!, {
 			name: "thread",
 			parent_id: props.channel.id,
 		}).then((t) => {

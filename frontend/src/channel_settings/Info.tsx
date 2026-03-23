@@ -1,7 +1,7 @@
 import type { Channel } from "sdk";
 import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
-import { useApi } from "../api.tsx";
+import { useApi, useChannels2 } from "../api.tsx";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
 import { DurationInput, type DurationPreset } from "../DurationInput.tsx";
@@ -35,6 +35,7 @@ const slowmodePresets: DurationPreset[] = [
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const [, modalctl] = useModals();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
 	const [editingName, setEditingName] = createSignal(props.channel.name);
@@ -107,7 +108,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	};
 
 	const hasVoice = () => {
-		const type = api.channels.cache.get(props.channel.id)?.type;
+		const type = channels2.cache.get(props.channel.id)?.type;
 		return type === "Voice" || type === "Broadcast";
 	};
 
@@ -152,17 +153,17 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const toggleArchived = () => {
 		if (props.channel.archived_at) {
-			api.channels.unarchive(props.channel.id);
+			channels2.unarchive(props.channel.id);
 		} else {
-			api.channels.archive(props.channel.id);
+			channels2.archive(props.channel.id);
 		}
 	};
 
 	const toggleLocked = () => {
 		if (props.channel.locked) {
-			api.channels.unlock(props.channel.id);
+			channels2.unlock(props.channel.id);
 		} else {
-			api.channels.lock(props.channel.id);
+			channels2.lock(props.channel.id);
 		}
 	};
 
@@ -262,8 +263,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				/>
 			</div>
 			<Show
-				when={api.channels.cache.get(props.channel.id)?.type === "Forum" ||
-					api.channels.cache.get(props.channel.id)?.type === "Text"}
+				when={channels2.cache.get(props.channel.id)?.type === "Forum" ||
+					channels2.cache.get(props.channel.id)?.type === "Text"}
 			>
 				<div>
 					<div class="dim">slowmode (messages default for threads)</div>

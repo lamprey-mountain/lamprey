@@ -353,7 +353,7 @@ export function createApi(
 			}
 		} else if (msg.type === "ChannelCreate") {
 			const { channel } = msg;
-			api.channels.normalize(channel);
+			store.channels.normalize(channel);
 			channels.cache.set(channel.id, channel);
 			if (channel.room_id) {
 				const l = channels._cachedListings.get(channel.room_id);
@@ -372,7 +372,7 @@ export function createApi(
 			}
 		} else if (msg.type === "ChannelUpdate") {
 			const { channel: thread } = msg;
-			api.channels.normalize(thread);
+			store.channels.normalize(thread);
 			const old_thread = channels.cache.get(thread.id);
 			channels.cache.set(thread.id, thread);
 
@@ -615,9 +615,9 @@ export function createApi(
 
 				const isOwnMessage = m.author_id === users.cache.get("@self")?.id;
 				const is_unread = !isOwnMessage;
-				const t = api.channels.cache.get(m.channel_id);
+				const t = store.channels.cache.get(m.channel_id);
 				if (t) {
-					api.channels.cache.set(m.channel_id, {
+					store.channels.cache.set(m.channel_id, {
 						...t,
 						message_count: (t.message_count ?? 0) + 1,
 						mention_count: !is_unread
@@ -660,13 +660,13 @@ export function createApi(
 				store.messages.handleMessageDelete(thread_id, message_id);
 
 				const ranges = store.messages._ranges.get(thread_id);
-				const t = api.channels.cache.get(msg.channel_id);
+				const t = store.channels.cache.get(msg.channel_id);
 				if (t) {
 					const last_version_id =
 						ranges?.live.items.at(-1)?.latest_version.version_id ??
 							t.last_version_id;
 					console.log({ last_version_id });
-					api.channels.cache.set(msg.channel_id, {
+					store.channels.cache.set(msg.channel_id, {
 						...t,
 						message_count: (t.message_count ?? 0) - 1,
 						last_version_id,
@@ -683,12 +683,12 @@ export function createApi(
 				}
 
 				const ranges = store.messages._ranges.get(thread_id);
-				const t = api.channels.cache.get(thread_id);
+				const t = store.channels.cache.get(thread_id);
 				if (t) {
 					const last_version_id =
 						ranges?.live.items.at(-1)?.latest_version.version_id ??
 							t.last_version_id;
-					api.channels.cache.set(thread_id, {
+					store.channels.cache.set(thread_id, {
 						...t,
 						message_count: (t.message_count ?? 0) - message_ids.length,
 						last_version_id,

@@ -132,7 +132,9 @@ export abstract class BaseService<T> {
 		const [resource, { mutate }] = createResource(id, async (itemId) => {
 			if (!itemId) return undefined;
 
-			// Attempt to load from IndexedDB first
+			const cached = this.cache.get(itemId);
+			if (cached) return cached;
+
 			if (this.db && this.cacheName) {
 				try {
 					const cached = await this.db.get(
@@ -149,21 +151,15 @@ export abstract class BaseService<T> {
 				}
 			}
 
-			// Use fetchOrQueue to handle loading/dedup logic
 			return this.fetchOrQueue(itemId);
 		});
 
-		// Reactively update resource when cache changes.
-		// This splits the "source of truth" to be the cache, overriding the resource's internal value logic
-		// if the cache changes independently of the fetch.
 		createEffect(() => {
 			const itemId = id();
 			if (!itemId) return;
 
-			// Track the cache entry
 			if (this.cache.has(itemId)) {
 				const item = this.cache.get(itemId);
-				// Mutate the resource to match the cache
 				if (resource() !== item) {
 					mutate(item as any);
 				}

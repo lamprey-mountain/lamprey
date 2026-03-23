@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { useAutocomplete } from "../contexts/autocomplete";
-import { useApi, useApi2, useRoles2 } from "../api";
+import { useApi, useApi2, useChannels2, useRoles2 } from "../api";
 import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import type { Role } from "sdk";
@@ -12,6 +12,7 @@ import type { AutocompleteMentionItem } from "../contexts/autocomplete";
 
 export const useAutocompleteData = () => {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const store = useApi2();
 	const rolesApi = useRoles2();
 	const currentUser = useCurrentUser();
@@ -20,7 +21,7 @@ export const useAutocompleteData = () => {
 	// Get permissions for @everyone/@room mentions
 	const channelForPerms = () => {
 		if (state.kind?.type === "mention") {
-			return api.channels.cache.get(state.kind.channelId);
+			return channels2.cache.get(state.kind.channelId);
 		}
 		return null;
 	};
@@ -43,7 +44,7 @@ export const useAutocompleteData = () => {
 		if (!kind) return;
 
 		if (kind.type === "mention") {
-			const channel = api.channels.cache.get(kind.channelId);
+			const channel = channels2.cache.get(kind.channelId);
 			const roomId = kind.roomId ?? channel?.room_id;
 
 			const threadMembers = api.thread_members.list(() => kind.channelId)();
@@ -80,15 +81,15 @@ export const useAutocompleteData = () => {
 				setAllRoles(mentionableRoles);
 			}
 		} else if (kind.type === "channel") {
-			const channel = api.channels.cache.get(kind.channelId);
+			const channel = channels2.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
-			const channels = [...api.channels.cache.values()].filter(
+			const channels = [...channels2.cache.values()].filter(
 				(c) => c.type !== "Category" && c.room_id === roomId,
 			);
 			setAllChannels(channels);
 		} else if (kind.type === "emoji") {
-			const channel = api.channels.cache.get(kind.channelId);
+			const channel = channels2.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
 			const combined: (EmojiCustom | EmojiData)[] = [];
@@ -107,7 +108,7 @@ export const useAutocompleteData = () => {
 		} else if (kind.type === "command") {
 			const slashCommands = useSlashCommands();
 			const allCommands = slashCommands.getAll();
-			const channel = api.channels.cache.get(kind.channelId);
+			const channel = channels2.cache.get(kind.channelId);
 
 			const filteredCommands = allCommands.filter((cmd) => {
 				if (cmd.canUse) {

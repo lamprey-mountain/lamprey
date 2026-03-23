@@ -18,7 +18,6 @@ type ImageViewProps = MediaProps & {
 };
 
 export const ImageView = (props: ImageViewProps) => {
-	const ctx = useCtx();
 	const [, modalctl] = useModals();
 	const [loaded, setLoaded] = createSignal(false);
 	const thumbUrl = () => getThumb(props.media, props.thumb_width ?? 320)!;
@@ -39,10 +38,6 @@ export const ImageView = (props: ImageViewProps) => {
 		return 0;
 	};
 
-	createEffect(() => {
-		console.log("img", loaded());
-	});
-
 	return (
 		<Resize height={height()} width={width()} ratio={width() / height()}>
 			<article
@@ -58,6 +53,9 @@ export const ImageView = (props: ImageViewProps) => {
 					alt={props.media.alt ?? undefined}
 					height={height()!}
 					width={width()!}
+					ref={(el) => {
+						if (el.complete && el.naturalWidth > 0) setLoaded(true);
+					}}
 					onLoad={() => setLoaded(true)}
 					onEmptied={() => setLoaded(false)}
 				/>

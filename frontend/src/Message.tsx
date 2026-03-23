@@ -288,12 +288,13 @@ export function MessageThread(
 
 export function MessageView(props: MessageProps) {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const ctx = useCtx();
 	const { menu } = useMenu();
 	const { userView, setUserView } = useUserPopout();
 	const { t } = ctx;
-	const thread = api.channels.fetch(() => props.message.channel_id);
+	const thread = channels2.use(() => props.message.channel_id);
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 	let messageArticleRef: HTMLElement | undefined;
 	const [hovered, setHovered] = createSignal(false);
@@ -924,12 +925,13 @@ type ReplyProps = {
 function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const { setUserView } = useUserPopout();
 	const reply = messagesService.use(
 		() => props.reply_id,
 	);
-	const thread = api.channels.fetch(() => props.thread_id);
+	const thread = channels2.use(() => props.thread_id);
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 
 	const content = () => {

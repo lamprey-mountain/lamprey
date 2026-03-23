@@ -10,7 +10,7 @@ import {
 } from "y-prosemirror";
 import { keymap } from "prosemirror-keymap";
 import { md } from "../markdown_utils.tsx";
-import { useApi } from "../api.tsx";
+import { useApi, useChannels2 } from "../api.tsx";
 import { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
 import {
@@ -64,6 +64,7 @@ export const createEditor = (
 	createReadonlyStateFromHtml: (html: string) => any;
 } => {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const toolbarPlugin = createToolbarPlugin();
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
 	const [currentChannelId, setCurrentChannelId] = createSignal(
@@ -194,7 +195,7 @@ export const createEditor = (
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: createEditorNodeViews(api, { currentChannelId }),
+		nodeViews: createEditorNodeViews(api, channels2, { currentChannelId }),
 	});
 
 	const subscribe = (channelId: string, branchId: string) => {
@@ -207,7 +208,7 @@ export const createEditor = (
 		}
 
 		// Get room_id from channel
-		const channel = api.channels.cache.get(channelId);
+		const channel = channels2.cache.get(channelId);
 		const roomId = channel?.room_id ?? "";
 
 		// reset document state

@@ -2,7 +2,7 @@ import { createSignal, onMount } from "solid-js";
 import { Modal } from "./mod";
 import { useCtx } from "../context";
 import { Tag, TagCreate, TagPatch } from "sdk";
-import { useApi } from "../api";
+import { useApi, useChannels2 } from "../api";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
 import { Colorpicker } from "../Colorpicker";
@@ -18,6 +18,7 @@ interface ModalTagEditorProps {
 export const ModalTagEditor = (props: ModalTagEditorProps) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const [, modalCtl] = useModals();
 
 	const [name, setName] = createSignal(props.tag?.name || "");
@@ -39,7 +40,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 		try {
 			if (props.tag) {
 				// update existing tag
-				const result = await api.channels.updateTag(
+				const result = await channels2.updateTag(
 					props.forumChannelId,
 					props.tag.id,
 					{
@@ -52,7 +53,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 				props.onSave?.(result);
 			} else {
 				// create new tag
-				const result = await api.channels.createTag(props.forumChannelId, {
+				const result = await channels2.createTag(props.forumChannelId, {
 					name: name(),
 					description: description() || undefined,
 					color: color(),

@@ -12,7 +12,7 @@ import {
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createEmojiPlugin } from "./emoji-plugin.ts";
-import { useApi } from "../api.tsx";
+import { useApi, useChannels2 } from "../api.tsx";
 import { createEditorNodeViews } from "./node-views.tsx";
 
 let isApplyingFormat = false;
@@ -35,6 +35,7 @@ export const createEditor = (
 	opts: EditorProps & { channelId: () => string; roomId?: () => string },
 ) => {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const toolbarPlugin = createToolbarPlugin();
 	const autocompletePlugin = createAutocompletePlugin(
 		opts.channelId,
@@ -104,7 +105,9 @@ export const createEditor = (
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: createEditorNodeViews(api, { currentChannelId: opts.channelId }),
+		nodeViews: createEditorNodeViews(api, channels2, {
+			currentChannelId: opts.channelId,
+		}),
 	});
 
 	return {

@@ -9,7 +9,7 @@ import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
 import { getThumbFromId, getUrl } from "../media/util.tsx";
 import { createUpload } from "sdk";
-import { useApi } from "../api.tsx";
+import { useApi, useChannels2 } from "../api.tsx";
 import { Checkbox } from "../icons";
 import { useModals } from "../contexts/modal";
 import { RoomIcon } from "../User.tsx";
@@ -105,13 +105,15 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
-	const threads = api.channels.list(() => props.room.id);
+	const channels2 = useChannels2();
+	const threads = () =>
+		[...channels2.cache.values()].filter((c) => c.room_id === props.room.id);
 	const archiveAllThreads = () => {
 		modalCtl.confirm("really archive everything?", (confirmed) => {
 			if (!confirmed) return;
 			console.log(threads());
-			for (const thread of threads()?.items ?? []) {
-				api.channels.archive(thread.id);
+			for (const thread of threads()) {
+				channels2.archive(thread.id);
 			}
 		});
 	};

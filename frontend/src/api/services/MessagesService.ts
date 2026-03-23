@@ -11,6 +11,7 @@ import {
 	batch,
 	createComputed,
 	createEffect,
+	createMemo,
 	createResource,
 	onCleanup,
 	Resource,
@@ -18,6 +19,7 @@ import {
 import { uuidv7 } from "uuidv7";
 import { ReactiveMap } from "@solid-primitives/map";
 import { logger } from "../../logger";
+import { deepEqual } from "../../utils/deepEqual";
 
 export type MessageListAnchor =
 	| { type: "backwards"; message_id?: string; limit: number }
@@ -258,12 +260,22 @@ export class MessagesService extends BaseService<Message> {
 		thread_id: Accessor<string>,
 		dir: Accessor<MessageListAnchor>,
 	): Resource<MessageRange> {
-		const [resource, { mutate }] = createResource(
+		const source = createMemo(
 			() => ({
 				thread_id: thread_id(),
 				dir: dir(),
 				_v: this._versions.get(thread_id()) ?? 0,
 			}),
+			undefined,
+			{
+				equals: (a, b) =>
+					a._v === b._v && a.thread_id === b.thread_id &&
+					deepEqual(a.dir, b.dir),
+			},
+		);
+
+		const [resource, { mutate }] = createResource(
+			source,
 			async ({ thread_id, dir }) => {
 				await this.ensureHydrated(thread_id);
 				const cache = this.getOrCreateCache(thread_id);

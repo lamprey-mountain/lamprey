@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { Dropdown, MultiDropdown } from "../Dropdown";
 import { Modal } from "./mod";
-import { useApi, useRooms2 } from "../api";
+import { useApi, useChannels2, useRooms2 } from "../api";
 import { Time } from "sdk";
 import {
 	calculatePermissions,
@@ -40,6 +40,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		if (!roomId || !userId) return false;
 		const permissionContext: PermissionContext = {
 			api,
+			channels: useChannels2(),
 			rooms: api2,
 			room_id: roomId,
 			channel_id: props.channel_id,

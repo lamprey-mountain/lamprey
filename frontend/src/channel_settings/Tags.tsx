@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "../api.tsx";
+import { useApi, useChannels2 } from "../api.tsx";
 import type { Channel, Tag } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { usePermissions } from "../hooks/usePermissions.ts";
@@ -17,6 +17,7 @@ import icDelete from "../assets/delete.png";
 
 export function Tags(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 	const perms = usePermissions(
@@ -38,7 +39,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 			"Are you sure you want to delete this tag?",
 			(conf) => {
 				if (!conf) return;
-				api.channels.deleteTag(props.channel.id, tag_id).then(() => {
+				channels2.deleteTag(props.channel.id, tag_id).then(() => {
 					refetch();
 				});
 			},

@@ -4,6 +4,7 @@ import type { ChannelContextT } from "../channelctx";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type { SetStoreFunction } from "solid-js/store";
 import type { Data } from "../context.ts";
+import type { ChannelsService } from "../api/services/ChannelsService.ts";
 
 export type ReadTrackingContextT = {
 	markThreadRead: (
@@ -25,6 +26,7 @@ const ReadTrackingContext = createContext<ReadTrackingContextT>();
 
 export function createReadTrackingProvider(
 	api: Api,
+	channels2: ChannelsService,
 	channel_contexts: ReactiveMap<string, ChannelContextT>,
 	dataUpdate: SetStoreFunction<Data>,
 ) {
@@ -53,9 +55,9 @@ export function createReadTrackingProvider(
 			if (also_local) {
 				chUpdate("read_marker_id", version_id);
 			}
-			await api.channels.ack(thread_id, undefined, version_id);
+			await channels2.ack(thread_id, undefined, version_id);
 		} else {
-			const c = api.channels.cache.get(thread_id);
+			const c = channels2.cache.get(thread_id);
 			if (c) {
 				if (also_local) {
 					dataUpdate(
@@ -65,19 +67,19 @@ export function createReadTrackingProvider(
 						c.last_version_id!,
 					);
 				}
-				await api.channels.ack(thread_id, undefined, c.last_version_id!);
+				await channels2.ack(thread_id, undefined, c.last_version_id!);
 			}
 		}
 	};
 
 	const markCategoryRead = async (category_id: string) => {
-		const category = api.channels.cache.get(category_id);
+		const category = channels2.cache.get(category_id);
 		if (!category || category.type !== "Category") {
 			console.warn("not a category");
 			return;
 		}
 
-		const childChannels = Array.from(api.channels.cache.values()).filter(
+		const childChannels = Array.from(channels2.cache.values()).filter(
 			(c) => c.parent_id === category_id && c.room_id === category.room_id,
 		);
 
@@ -89,7 +91,7 @@ export function createReadTrackingProvider(
 			})
 			.filter((ack): ack is NonNullable<typeof ack> => ack !== null);
 
-		await api.channels.ackBulk(acks);
+		await channels2.ackBulk(acks);
 
 		for (const child of childChannels) {
 			if (child.last_version_id) {
@@ -121,9 +123,9 @@ export function createReadTrackingProvider(
 			if (also_local) {
 				chUpdate("read_marker_id", version_id);
 			}
-			await api.channels.ack(channel_id, undefined, version_id);
+			await channels2.ack(channel_id, undefined, version_id);
 		} else {
-			const c = api.channels.cache.get(channel_id);
+			const c = channels2.cache.get(channel_id);
 			if (c) {
 				if (also_local) {
 					dataUpdate(
@@ -133,7 +135,7 @@ export function createReadTrackingProvider(
 						c.last_version_id!,
 					);
 				}
-				await api.channels.ack(channel_id, undefined, c.last_version_id!);
+				await channels2.ack(channel_id, undefined, c.last_version_id!);
 			}
 		}
 	};
@@ -148,6 +150,7 @@ export function createReadTrackingProvider(
 export const ReadTrackingProvider = (
 	props: {
 		api: Api;
+		channels2: ChannelsService;
 		channel_contexts: ReactiveMap<string, ChannelContextT>;
 		dataUpdate: SetStoreFunction<Data>;
 		children: import("solid-js").JSX.Element;
@@ -155,6 +158,7 @@ export const ReadTrackingProvider = (
 ) => {
 	const value = createReadTrackingProvider(
 		props.api,
+		props.channels2,
 		props.channel_contexts,
 		props.dataUpdate,
 	);

@@ -135,6 +135,7 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 					<chatctx.Provider value={ctx}>
 						<ReadTrackingProvider
 							api={api}
+							channels2={store.channels}
 							channel_contexts={ctx.channel_contexts}
 							dataUpdate={ctx.dataUpdate}
 						>

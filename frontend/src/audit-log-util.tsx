@@ -1,7 +1,7 @@
 import { type AuditLogChange, type AuditLogEntry } from "sdk";
 import { ChangeObject, diffArrays } from "diff";
 import { JSX, untrack } from "solid-js";
-import { useApi, useRooms2 } from "./api";
+import { useApi, useChannels2, useRooms2 } from "./api";
 import { useCtx } from "./context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -87,6 +87,7 @@ function getTimestampFromUUID(uuid: string): Date {
 
 const resolveName = (
 	api: ReturnType<typeof useApi>,
+	channels2: ReturnType<typeof useChannels2>,
 	room_id: string,
 	id: string | undefined,
 	type: "user" | "channel" | "role" | "webhook" | "room",
@@ -103,7 +104,7 @@ const resolveName = (
 			return metadataName ?? id;
 		}
 		case "channel": {
-			const chan = api.channels.cache.get(id);
+			const chan = channels2.cache.get(id);
 			return chan?.name ?? metadataName ?? id;
 		}
 		case "role": {
@@ -136,15 +137,23 @@ export function formatAuditLogEntry(
 ): string {
 	const { t } = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 
 	const firstEntry = "entries" in ent ? ent.entries[0] : ent;
 
-	const actor = resolveName(api, room_id, firstEntry.user_id, "user");
+	const actor = resolveName(
+		api,
+		channels2,
+		room_id,
+		firstEntry.user_id,
+		"user",
+	);
 
 	const params: any = {
 		actor,
 		channel_name: resolveName(
 			api,
+			channels2,
 			room_id,
 			(ent as any).metadata?.channel_id,
 			"channel",
@@ -152,6 +161,7 @@ export function formatAuditLogEntry(
 		),
 		role_name: resolveName(
 			api,
+			channels2,
 			room_id,
 			(ent as any).metadata?.role_id,
 			"role",
@@ -159,6 +169,7 @@ export function formatAuditLogEntry(
 		),
 		webhook_name: resolveName(
 			api,
+			channels2,
 			room_id,
 			(ent as any).metadata?.webhook_id,
 			"webhook",
@@ -166,6 +177,7 @@ export function formatAuditLogEntry(
 		),
 		room_name: resolveName(
 			api,
+			channels2,
 			room_id,
 			(ent as any).metadata?.room_id,
 			"room",
@@ -173,6 +185,7 @@ export function formatAuditLogEntry(
 		),
 		thread_name: resolveName(
 			api,
+			channels2,
 			room_id,
 			(ent as any).metadata?.thread_id,
 			"channel",
@@ -180,6 +193,7 @@ export function formatAuditLogEntry(
 		),
 		target: resolveName(
 			api,
+			channels2,
 			room_id,
 			(ent as any).metadata?.user_id || (ent as any).metadata?.overwrite_id,
 			(ent as any).metadata?.type === "Role" ? "role" : "user",
@@ -210,10 +224,12 @@ export function formatChanges(
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
 	const api = useApi();
+	const channels2 = useChannels2();
 	const { t } = useCtx();
 
 	const channelName = resolveName(
 		api,
+		channels2,
 		room_id,
 		(ent as any).metadata?.channel_id,
 		"channel",
@@ -255,6 +271,7 @@ export function formatChanges(
 			const overwriteType = (ent as any).metadata?.type ?? "unknown";
 			const overwriteName = resolveName(
 				api,
+				channels2,
 				room_id,
 				(ent as any).metadata?.overwrite_id,
 				(ent as any).metadata?.type === "Role" ? "role" : "user",

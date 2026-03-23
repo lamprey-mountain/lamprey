@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { useApi } from "./api.tsx";
+import { useApi, useChannels2 } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { ChannelIcon } from "./User.tsx";
 import { useNavigate } from "@solidjs/router";
@@ -8,6 +8,7 @@ import { useModals } from "./contexts/modal.tsx";
 
 export const ThreadPopout = (props: { channel_id: string }) => {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const ctx = useCtx();
 	const navigate = useNavigate();
 	const [search, setSearch] = createSignal("");
@@ -51,11 +52,11 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 	const nav = useNavigate();
 	const onCreateThread = () => {
 		const channel_id = props.channel_id;
-		const channel = api.channels.cache.get(channel_id)!;
+		const channel = channels2.cache.get(channel_id)!;
 		ctx.setThreadsView(null);
 		modalctl.prompt("name?", async (name) => {
 			if (!name) return;
-			const chan = await api.channels.create(channel.room_id!, {
+			const chan = await channels2.create(channel.room_id!, {
 				name,
 				parent_id: channel_id,
 				type: "ThreadPublic" as any,

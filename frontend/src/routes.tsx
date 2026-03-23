@@ -1,7 +1,7 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
 import type { ParentProps, VoidProps } from "solid-js";
-import { useApi, useRooms2 } from "./api.tsx";
+import { useApi, useChannels2, useRooms2 } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { type ChannelSearch } from "./context.ts";
 import { flags } from "./flags.ts";
@@ -205,8 +205,8 @@ export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
 
 export const RouteChannelSettings = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
-	const api = useApi();
-	const channel = api.channels.fetch(() => p.params.channel_id);
+	const channels2 = useChannels2();
+	const channel = channels2.use(() => p.params.channel_id);
 	const title = () =>
 		channel() ? t("page.settings_channel", channel()!.name) : t("loading");
 	return (
@@ -225,8 +225,8 @@ type ChangesetSelection = {
 };
 
 const ThreadChatSidebar = (props: { thread_id: string }) => {
-	const api = useApi();
-	const thread = api.channels.fetch(() => props.thread_id);
+	const channels2 = useChannels2();
+	const thread = channels2.use(() => props.thread_id);
 	const ctx = useCtx();
 	const [ch, setChannelState] = useChannel()!;
 
@@ -364,7 +364,8 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const rooms = useRooms2();
-	const channel = api.channels.fetch(() => p.params.channel_id);
+	const channels2 = useChannels2();
+	const channel = channels2.use(() => p.params.channel_id);
 	const room = rooms.use(() => channel()?.room_id!);
 
 	const getOrCreateChannelContext = () => {

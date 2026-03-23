@@ -1,5 +1,6 @@
-import { type Api, useRooms2 } from "./api";
+import { type Api, useChannels2, useRooms2 } from "./api";
 import { type RoomsService } from "./api/services/RoomsService";
+import { type ChannelsService } from "./api/services/ChannelsService";
 import type {
 	Channel,
 	Permission,
@@ -11,6 +12,7 @@ import type {
 
 export interface PermissionContext {
 	api: Api;
+	channels: ChannelsService;
 	rooms: RoomsService;
 	room_id?: string;
 	channel_id?: string;
@@ -372,11 +374,11 @@ function applyChannelPermissions(
 	ctx: PermissionContext,
 	member: RoomMember,
 ) {
-	const channel = ctx.api.channels.fetch(() => ctx.channel_id!)();
+	const channel = ctx.channels.cache.get(ctx.channel_id!);
 	if (!channel) return;
 
 	if (channel.parent_id) {
-		const parentChannel = ctx.api.channels.fetch(() => channel.parent_id!)();
+		const parentChannel = ctx.channels.cache.get(channel.parent_id!);
 		if (parentChannel) {
 			applyChannelOverwrites(perms, parentChannel, member, ctx.room_id!);
 		}

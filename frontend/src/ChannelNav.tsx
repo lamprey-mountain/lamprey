@@ -99,6 +99,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 		const permissionContext: PermissionContext = {
 			api,
+			channels: channels2,
+			rooms: rooms2,
 			room_id: props.room_id,
 			channel_id: channel.id,
 		};
@@ -427,7 +429,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					toChannel.type === "Forum"
 				) {
 					if (fromChannel.parent_id !== toChannel.id) {
-						api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+						channels2.update(fromChannel.id, { parent_id: toChannel.id });
 					}
 				}
 				return;
@@ -436,7 +438,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			if (fromChannel.type === "ThreadForum2") {
 				if (toChannel.type === "Forum2") {
 					if (fromChannel.parent_id !== toChannel.id) {
-						api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+						channels2.update(fromChannel.id, { parent_id: toChannel.id });
 					}
 				}
 				return;
@@ -445,7 +447,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			if (fromChannel.type === "Document") {
 				if (toChannel.type === "Wiki") {
 					if (fromChannel.parent_id !== toChannel.id) {
-						api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+						channels2.update(fromChannel.id, { parent_id: toChannel.id });
 					}
 				}
 				return;
@@ -453,7 +455,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 			// Move channel into category
 			if (toChannel.type === "Category" && fromChannel.type !== "Category") {
-				api.channels.update(fromChannel.id, { parent_id: toChannel.id });
+				channels2.update(fromChannel.id, { parent_id: toChannel.id });
 				return;
 			}
 		}
@@ -822,6 +824,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const api = useApi();
+	const channels2 = useChannels2();
+	const rooms2 = useRooms2();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const user = useCurrentUser();
@@ -866,6 +870,8 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 
 		const permissionContext: PermissionContext = {
 			api,
+			channels: channels2,
+			rooms: rooms2,
 			room_id: props.room_id,
 			channel_id: props.channel.id,
 		};

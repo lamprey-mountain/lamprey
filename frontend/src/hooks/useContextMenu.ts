@@ -1,9 +1,10 @@
 import type { Setter } from "solid-js";
-import { useApi, useApi2 } from "../api.tsx";
+import { useApi, useApi2, useChannels2 } from "../api.tsx";
 import type { Menu } from "../context.ts";
 
 export function useContextMenu(setMenu: Setter<Menu | null>) {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const store = useApi2();
 
 	const handleContextMenu = (e: MouseEvent) => {
@@ -74,7 +75,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 			};
 		} else if (menuEl.classList.contains("menu-user")) {
 			if (!user_id) return;
-			const thread = api.channels.cache.get(thread_id!);
+			const thread = channels2.cache.get(thread_id!);
 			const room = store.rooms.cache.get(room_id!);
 			if (thread?.room_id && room?.id && thread.room_id !== room.id) {
 				console.warn("mismatched thread/room ids!");

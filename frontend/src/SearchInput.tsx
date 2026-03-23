@@ -1,6 +1,6 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useMessages2, useRoles2 } from "./api";
+import { useApi, useChannels2, useMessages2, useRoles2 } from "./api";
 import { useCtx } from "./context";
 import type { RoomT, ThreadT } from "./types";
 import type { ChannelSearch } from "./context";
@@ -316,15 +316,18 @@ const AutocompleteDropdown = (props: {
 	onSelectFilter: (text: string) => void;
 }) => {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const threadMembers = api.thread_members.list(
 		() => (props.channel?.id as any),
 	);
 	const roomMembers = api.room_members.list(() =>
 		(props.channel?.room_id as any) ?? props.room?.id ?? ""
 	);
-	const roomThreads = api.channels.list(() =>
-		(props.channel?.room_id as any) ?? props.room?.id ?? ""
-	);
+	const roomThreads = () =>
+		[...channels2.cache.values()].filter(
+			(c) =>
+				c.room_id === ((props.channel?.room_id as any) ?? props.room?.id ?? ""),
+		);
 	const roles = useRoles2();
 	const roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
 	const roomRoles = createMemo(() =>
@@ -725,9 +728,11 @@ export const SearchInput = (
 	const channelCtx = useChannel();
 	const roomCtx = useRoom();
 
-	const roomThreads = api.channels.list(() =>
-		props.channel?.room_id ?? props.room?.id ?? ""
-	);
+	const channels2 = useChannels2();
+	const roomThreads = () =>
+		[...channels2.cache.values()].filter(
+			(c) => c.room_id === (props.channel?.room_id ?? props.room?.id ?? ""),
+		);
 
 	const currentSearch = () => {
 		if (props.channel) return channelCtx?.[0].search;

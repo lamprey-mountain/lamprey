@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "../api.tsx";
+import { useApi, useChannels2 } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import type { Channel } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -23,9 +23,9 @@ import { useModals } from "../contexts/modal";
 import fuzzysort from "fuzzysort";
 
 export function Webhooks(props: VoidProps<{ channel: Channel }>) {
-	const ctx = useCtx();
 	const api = useApi();
 	const config = useConfig();
+	const channels2 = useChannels2();
 	const [, modalCtl] = useModals();
 
 	const [webhooks, { refetch }] = createResource(async () => {
@@ -126,7 +126,10 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 								preferences: null,
 							});
 
-							const channels = api.channels.list(() => i.room_id as string);
+							const channels = () =>
+								[...channels2.cache.values()].filter(
+									(c) => c.room_id === i.room_id,
+								);
 
 							createEffect(() => {
 								setName(i.name);
@@ -249,7 +252,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 																<Dropdown
 																	selected={i.channel_id}
 																	onSelect={(i) => console.log(i)}
-																	options={channels()?.items?.map((ch) => ({
+																	options={channels().map((ch) => ({
 																		label: ch.name ||
 																			`#${ch.id.substring(0, 8)}...`,
 																		value: ch.id,

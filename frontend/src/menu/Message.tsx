@@ -1,6 +1,6 @@
 // the context menu for messages
 
-import { useApi, useMessages2 } from "../api.tsx";
+import { useApi, useChannels2, useMessages2 } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
@@ -20,6 +20,7 @@ type MessageMenuProps = {
 export function MessageMenu(props: MessageMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const { markThreadRead } = useReadTracking();
 	const message = messagesService.use(() => props.message_id);
@@ -28,7 +29,7 @@ export function MessageMenu(props: MessageMenuProps) {
 
 	const currentUser = useCurrentUser();
 	const self_id = () => currentUser()?.id;
-	const channel = api.channels.fetch(() => props.channel_id);
+	const channel = channels2.use(() => props.channel_id);
 	const { has: hasPermission } = usePermissions(
 		self_id,
 		() => channel()?.room_id ?? undefined,
@@ -162,7 +163,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	const createThread = () => {
 		modalCtl.prompt("thread name?", (name) => {
 			if (!name) return;
-			api.channels.createThreadFromMessage(
+			channels2.createThreadFromMessage(
 				props.channel_id,
 				props.message_id,
 				{ name, type: "ThreadPublic" },

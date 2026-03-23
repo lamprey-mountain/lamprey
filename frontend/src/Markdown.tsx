@@ -11,7 +11,7 @@ import {
 	Switch,
 	useContext,
 } from "solid-js";
-import { useApi } from "./api";
+import { useApi, useChannels2 } from "./api";
 import { md } from "./markdown_utils";
 import { useNavigate } from "@solidjs/router";
 import { useUserPopout } from "./contexts/mod";
@@ -76,9 +76,9 @@ function RoleMention(props: { id: string }) {
 }
 
 function ChannelMention(props: { id: string }) {
-	const api = useApi();
+	const channels2 = useChannels2();
 	const navigate = useNavigate();
-	const channel = api.channels.fetch(() => props.id);
+	const channel = channels2.use(() => props.id);
 
 	return (
 		<span
@@ -412,10 +412,8 @@ export const Markdown = (
 		ref?: HTMLElement | ((el: HTMLElement) => void);
 	}>,
 ) => {
-	const api = useApi();
-	const channel = createMemo(() =>
-		props.channel_id ? api.channels.fetch(() => props.channel_id!)() : undefined
-	);
+	const channels2 = useChannels2();
+	const channel = channels2.use(() => props.channel_id);
 
 	const tokens = createMemo(() => {
 		const t = md.lexer(props.content);

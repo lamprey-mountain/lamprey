@@ -63,7 +63,7 @@ export class Inbox {
 					this.cache.set(item.id, item);
 				}
 				for (const channel of data.channels) {
-					this.api.channels.cache.set(channel.id, channel as any);
+					this.store.channels.cache.set(channel.id, channel as any);
 				}
 				for (const message of data.messages) {
 					this.api.store.messages.upsert(message as any);

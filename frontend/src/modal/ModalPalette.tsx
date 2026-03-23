@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useRooms2 } from "../api";
+import { useApi, useChannels2, useRooms2 } from "../api";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
 import { ChannelIcon } from "../User";
@@ -14,6 +14,7 @@ import icMembers from "../assets/members.png";
 
 export const ModalPalette = () => {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const api2 = useRooms2();
 	const ctx = useCtx();
 	const navigate = useNavigate();
@@ -43,7 +44,7 @@ export const ModalPalette = () => {
 			action: () => navigate(`/room/${room.id}`),
 			room: room,
 		}));
-		const threads = [...api.channels.cache.values()]
+		const threads = [...channels2.cache.values()]
 			.filter((channel) => channel.type !== "Category")
 			.map((thread) => ({
 				type: "thread" as const,
@@ -85,7 +86,7 @@ export const ModalPalette = () => {
 
 	const recentChannels = createMemo(() => {
 		return ctx.recentChannels().slice(1).map((i: any) =>
-			api.channels.cache.get(i)!
+			channels2.cache.get(i)!
 		)
 			.filter((channel: any) => channel.type !== "Category")
 			.map((
@@ -100,7 +101,7 @@ export const ModalPalette = () => {
 	});
 
 	const channelsWithMentions = createMemo(() => {
-		return [...api.channels.cache.values()]
+		return [...channels2.cache.values()]
 			.filter((channel) => channel.type !== "Category")
 			.filter((channel) => channel.mention_count && channel.mention_count > 0)
 			.sort((a, b) => {
@@ -124,7 +125,7 @@ export const ModalPalette = () => {
 			draftTimestamp: number;
 		}> = [];
 
-		for (const channel of api.channels.cache.values()) {
+		for (const channel of channels2.cache.values()) {
 			if (channel.type === "Category") continue;
 			// Check localStorage drafts (Forum2)
 			const draftKey = `editor_draft_${channel.id}`;

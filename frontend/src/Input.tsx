@@ -4,7 +4,7 @@ import { type Attachment, useCtx } from "./context.ts";
 import type { MessageT, ThreadT } from "./types.ts";
 import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
-import { useApi, useApi2, useMessages2 } from "./api.tsx";
+import { useApi, useApi2, useChannels2, useMessages2 } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import {
 	createEffect,
@@ -34,6 +34,7 @@ type InputProps = {
 
 export function Input(props: InputProps) {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const store = useApi2();
 	const [ch, chUpdate] = useChannel()!;
@@ -60,7 +61,7 @@ export function Input(props: InputProps) {
 	const atts = () => ch.attachments;
 
 	const sendTyping = leading(throttle, () => {
-		api.channels.typing(props.channel.id);
+		channels2.typing(props.channel.id);
 	}, 8000);
 
 	const getName = (user_id: string) => {

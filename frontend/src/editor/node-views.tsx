@@ -1,7 +1,7 @@
 import { getOwner, runWithOwner, VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { getEmojiUrl } from "../media/util.tsx";
-import { type Api } from "../api.tsx";
+import { type Api, useChannels2 } from "../api.tsx";
 import { getTwemoji, getTwemojiUrl } from "../emoji.ts";
 
 export const createNodeViews = () => {
@@ -30,6 +30,7 @@ export const createNodeViews = () => {
 
 export const createEditorNodeViews = (
 	api: Api,
+	channels2: ReturnType<typeof useChannels2>,
 	opts?: {
 		currentChannelId?: () => string;
 	},
@@ -42,7 +43,7 @@ export const createEditorNodeViews = (
 			(props) => {
 				const getUserId = () => props.id;
 				if (opts?.currentChannelId) {
-					const channel = api.channels.fetch(() => opts.currentChannelId!());
+					const channel = channels2.use(() => opts.currentChannelId!());
 					const user = api.users.fetch(getUserId);
 					const roomMember = api.room_members.fetch(
 						() => channel()?.room_id!,
@@ -68,7 +69,7 @@ export const createEditorNodeViews = (
 			(n) => ({ id: n.attrs.channel, name: n.attrs.name }),
 			(props) => {
 				const getChannelId = () => props.id;
-				const channel = api.channels.fetch(getChannelId);
+				const channel = channels2.use(getChannelId);
 				const name = () => channel()?.name ?? getChannelId() ?? "...";
 				return <span class="mention mention-channel">#{name()}</span>;
 			},

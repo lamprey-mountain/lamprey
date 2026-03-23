@@ -3,7 +3,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi } from "./api.tsx";
+import { useApi, useChannels2 } from "./api.tsx";
 import { createEditor } from "./editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
@@ -20,36 +20,29 @@ import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
 
 export const Category = (props: { channel: Channel }) => {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const room_id = () => props.channel.room_id!;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
-	const fetchMore = () => {
-		// const filter = threadFilter();
-		return api.channels.list(room_id);
-		// if (filter === "active") {
-		// 	return api.threads.list(room_id);
-		// } else if (filter === "archived") {
-		// 	return api.threads.listArchived(room_id);
-		// } else if (filter === "removed") {
-		// 	return api.threads.listRemoved(room_id);
-		// }
-	};
-
-	const threadsResource = createMemo(fetchMore);
+	const threadsResource = createMemo(() =>
+		[...channels2.cache.values()].filter((c) => c.room_id === room_id())
+	);
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
 	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
 		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
+			if (entry.isIntersecting) {
+				// No-op for cache-based filtering
+			}
 		}
 	});
 
 	const getThreads = () => {
-		const items = threadsResource()?.()?.items;
+		const items = threadsResource();
 		if (!items) return [];
 		// sort descending by id
 		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
@@ -61,7 +54,7 @@ export const Category = (props: { channel: Channel }) => {
 	function createThread(room_id: string) {
 		modalCtl.prompt("name?", (name) => {
 			if (!name) return;
-			api.channels.create(room_id, { name });
+			channels2.create(room_id, { name });
 		});
 	}
 
@@ -178,13 +171,14 @@ const QuickCreate = (
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const n = useNavigate();
 	const [ch, chUpdate] = useChannel()!;
 	const submit = useMessageSubmit(props.channel.id);
 
 	const editor = createEditor({
 		channelId: () => props.channel.id,
-		roomId: () => props.channel.room_id,
+		roomId: () => props.channel.room_id!,
 	});
 
 	function uploadFile(e: InputEvent) {
@@ -205,7 +199,7 @@ const QuickCreate = (
 
 	const onSubmit = (text: string) => {
 		if (!text) return false;
-		api.channels.create(props.channel.room_id!, {
+		channels2.create(props.channel.room_id!, {
 			name: "thread",
 			parent_id: props.channel.id,
 		}).then((t) => {

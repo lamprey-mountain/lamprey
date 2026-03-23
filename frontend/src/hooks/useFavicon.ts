@@ -1,17 +1,18 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useLocation } from "@solidjs/router";
-import { useApi, useApi2 } from "../api.tsx";
+import { useApi, useApi2, useChannels2 } from "../api.tsx";
 import { generateFavicon } from "../drawing.ts";
 
 export function useFavicon() {
 	const api = useApi();
+	const channels2 = useChannels2();
 	const store = useApi2();
 	const location = useLocation();
 
 	const totalMentions = createMemo(() => {
 		let count = 0;
-		for (const channel of [...api.channels.cache.values()]) {
+		for (const channel of [...channels2.cache.values()]) {
 			if (channel.mention_count && channel.mention_count > 0) {
 				count += channel.mention_count;
 			}
@@ -29,7 +30,7 @@ export function useFavicon() {
 
 		const channelMatch = path.match(/^\/(?:channel|thread)\/([^/]+)/);
 		if (channelMatch) {
-			const channel = api.channels.cache.get(channelMatch[1]);
+			const channel = channels2.cache.get(channelMatch[1]);
 			if (channel) {
 				if (channel.type === "Dm") {
 					const self = useCurrentUser();

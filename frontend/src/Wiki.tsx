@@ -11,7 +11,7 @@ import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
-import { useApi } from "./api";
+import { useApi, useChannels2 } from "./api";
 import { Time } from "./Time";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -28,6 +28,7 @@ import { useCurrentUser } from "./contexts/currentUser.tsx";
 export const Wiki = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
 	const wiki_id = () => props.channel.id;
@@ -113,7 +114,7 @@ export const Wiki = (props: { channel: Channel }) => {
 	function createDocument(room_id: string) {
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
-			api.channels.create(room_id, {
+			channels2.create(room_id, {
 				name,
 				parent_id: props.channel.id,
 				type: "Document" as any,
@@ -388,7 +389,7 @@ export const Wiki = (props: { channel: Channel }) => {
 			</Resizable>
 			<Show when={documentId()}>
 				{(did) => {
-					const documentChannel = api.channels.cache.get(did());
+					const documentChannel = channels2.cache.get(did());
 					if (!documentChannel) return;
 					const docCtx = getOrCreateChannelContext(did());
 					return (

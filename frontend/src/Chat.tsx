@@ -18,7 +18,7 @@ import {
 	type TimelineItemT,
 } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
-import { useApi, useMessages2 } from "./api.tsx";
+import { useApi, useChannels2, useMessages2 } from "./api.tsx";
 import { createSignal } from "solid-js";
 import type { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
@@ -427,6 +427,7 @@ export const ChatHeader = (
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
@@ -498,7 +499,7 @@ export const ChatHeader = (
 	const saveName = () => {
 		const newName = editingName()?.trim();
 		if (newName && newName !== name()) {
-			api.channels.update(props.channel.id, { name: newName });
+			channels2.update(props.channel.id, { name: newName });
 		}
 		setEditingName(undefined);
 	};
@@ -707,8 +708,8 @@ const SearchResultItem = (props: {
 	prevMessage?: Message;
 	onResultClick: (message: Message) => void;
 }) => {
-	const api = useApi();
-	const channel = api.channels.fetch(() => props.message.channel_id);
+	const channels2 = useChannels2();
+	const channel = channels2.use(() => props.message.channel_id);
 	const showHeader = () =>
 		!props.prevMessage ||
 		props.prevMessage.channel_id !== props.message.channel_id;

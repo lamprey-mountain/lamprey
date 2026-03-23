@@ -261,7 +261,7 @@ export class Rooms {
 
 			for (const thread of data.items) {
 				if (thread.last_version_id) {
-					await this.api.channels.ack(
+					await this.store.channels.ack(
 						thread.id,
 						undefined,
 						thread.last_version_id,
