@@ -5,7 +5,7 @@ import { useCtx } from "../context.ts";
 import { useMenu } from "../contexts/mod.tsx";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
-import { useVoice } from "../voice-provider.tsx";
+import { useVoice } from "../components/features/voice/voice-provider.tsx";
 import { useNavigate } from "@solidjs/router";
 import { Checkbox } from "../icons";
 import { useModals } from "../contexts/modal";

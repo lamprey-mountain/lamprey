@@ -16,7 +16,7 @@ import { useCtx } from "./context";
 import { useMenu } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
-import { useVoice } from "./voice-provider";
+import { useVoice } from "./components/features/voice/voice-provider";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import {
 	calculatePermissions,

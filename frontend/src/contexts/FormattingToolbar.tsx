@@ -6,7 +6,7 @@ import iconStrikethrough from "../assets/format-strikethrough.png";
 import { useFormattingToolbar } from "./formatting-toolbar.tsx";
 import { EditorView } from "prosemirror-view";
 import { TextSelection } from "prosemirror-state";
-import { setIsApplyingFormat } from "../editor/Editor";
+import { setIsApplyingFormat } from "../components/features/editor/Editor";
 
 type FormattingToolbarProps = {
 	onClose: () => void;

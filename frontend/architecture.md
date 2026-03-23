@@ -21,6 +21,7 @@ better
   - `menus/` context menus
   - `features/`
     - `user_settings/` user settings
+    - `channel_settings/` channel settings
     - `room_settings/` room settings
     - `admin_settings/` admin settings
     - `chat/` the main chat timeline

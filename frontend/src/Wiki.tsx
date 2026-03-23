@@ -20,7 +20,7 @@ import { md } from "./markdown_utils";
 import { flags } from "./flags";
 import { ChannelContext, createInitialChannelState } from "./channelctx";
 import { createStore } from "solid-js/store";
-import { Document } from "./editor/Document";
+import { Document } from "./components/features/editor/Document";
 import { Resizable } from "./Resizable";
 import { ChannelIcon } from "./User";
 import { useCurrentUser } from "./contexts/currentUser.tsx";

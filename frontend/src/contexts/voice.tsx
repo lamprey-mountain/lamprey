@@ -9,10 +9,10 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi } from "../api";
-import { createVoiceClient } from "../rtc";
+import { createVoiceClient } from "../components/features/voice/rtc";
 import { ReactiveMap } from "@solid-primitives/map";
 // @ts-ignore
-import vadProcessorUrl from "../vad-processor?url";
+import vadProcessorUrl from "../components/features/voice/vad-processor?url";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { colors, logger } from "../logger.ts";
 

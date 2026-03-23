@@ -1,6 +1,6 @@
 import { onMount, type ParentProps } from "solid-js";
 import { type Modal as ContextModal, useCtx } from "../context.ts";
-import { ModalResetPassword } from "../user_settings/mod.tsx";
+import { ModalResetPassword } from "../components/features/user_settings/mod.tsx";
 import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
 import { ModalMedia } from "./ModalMedia.tsx";

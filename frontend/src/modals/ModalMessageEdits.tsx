@@ -1,7 +1,7 @@
 import { diffChars } from "diff";
 import { createResource, For } from "solid-js";
 import { useApi } from "../api";
-import { MessageView } from "../Message";
+import { MessageView } from "../components/features/chat/Message";
 import { Modal } from "./mod";
 
 export const ModalMessageEdits = (

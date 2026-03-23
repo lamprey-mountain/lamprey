@@ -3,7 +3,7 @@ import { useApi } from "./api.tsx";
 import type { Channel, Message, Notification, Room } from "sdk";
 import { A } from "@solidjs/router";
 import { Time } from "./Time.tsx";
-import { MessageView } from "./Message.tsx";
+import { MessageView } from "./components/features/chat/Message.tsx";
 import type { NotificationPagination } from "./api/inbox.ts";
 
 export const Inbox = () => {

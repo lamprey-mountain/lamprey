@@ -1,12 +1,12 @@
-import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
 import type { ParentProps, VoidProps } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "./api.tsx";
-import { useCtx } from "./context.ts";
-import { type ChannelSearch } from "./context.ts";
-import { flags } from "./flags.ts";
-import { ChannelNav } from "./ChannelNav.tsx";
-import { RoomHome, RoomMembers } from "./Room.tsx";
+import { useApi, useChannels2, useRooms2 } from "../api.tsx";
+import { useCtx } from "../context.ts";
+import { type ChannelSearch } from "../context.ts";
+import { flags } from "../flags.ts";
+import { ChannelNav } from "../ChannelNav.tsx";
+import { RoomHome, RoomMembers } from "../Room.tsx";
 import {
 	createEffect,
 	createMemo,
@@ -17,51 +17,51 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { RoomSettings } from "./RoomSettings.tsx";
-import { ChannelSettings } from "./ChannelSettings.tsx";
-import { ChatMain } from "./Chat.tsx";
-import { ChatHeader } from "./ChatHeader.tsx";
-import { RoomHeader } from "./RoomHeader.tsx";
-import { SearchResults } from "./SearchResults.tsx";
-import { ThreadMembers } from "./Thread.tsx";
-import { Home } from "./Home.tsx";
-import { Voice, VoiceTray } from "./Voice.tsx";
-import { Feed } from "./Feed.tsx";
-import { RouteInviteInner } from "./Invite.tsx";
-import { Forum } from "./Forum.tsx";
-import { Forum2, Forum2Thread, Forum2ThreadPage } from "./Forum2.tsx";
-import { Category } from "./Category.tsx";
+import { RoomSettings } from "../RoomSettings.tsx";
+import { ChannelSettings } from "../ChannelSettings.tsx";
+import { ChatMain } from "../components/features/chat/Chat.tsx";
+import { ChatHeader } from "../components/features/chat/ChatHeader.tsx";
+import { RoomHeader } from "../RoomHeader.tsx";
+import { SearchResults } from "../components/features/chat/SearchResults.tsx";
+import { ThreadMembers } from "../components/features/chat/Thread.tsx";
+import { Home } from "../Home.tsx";
+import { Voice, VoiceTray } from "../components/features/voice/Voice.tsx";
+import { Feed } from "../Feed.tsx";
+import { RouteInviteInner } from "../Invite.tsx";
+import { Forum } from "../Forum.tsx";
+import { Forum2, Forum2Thread, Forum2ThreadPage } from "../Forum2.tsx";
+import { Category } from "../Category.tsx";
 import { type Channel, SERVER_ROOM_ID } from "sdk";
-import { PinnedMessages } from "./PinnedMessages.tsx";
-import { Resizable } from "./Resizable.tsx";
-import { UserProfile } from "./UserProfile.tsx";
-import { Inbox } from "./Inbox.tsx";
-import { RoomNav } from "./RoomNav.tsx";
-import { ChannelContext, useChannel } from "./channelctx.tsx";
-import { createInitialChannelState } from "./channelctx.tsx";
+import { PinnedMessages } from "../components/features/chat/PinnedMessages.tsx";
+import { Resizable } from "../Resizable.tsx";
+import { UserProfile } from "../UserProfile.tsx";
+import { Inbox } from "../Inbox.tsx";
+import { RoomNav } from "../RoomNav.tsx";
+import { ChannelContext, useChannel } from "../channelctx.tsx";
+import { createInitialChannelState } from "../channelctx.tsx";
 import {
 	createInitialRoomState,
 	RoomContext,
 	useRoom,
-} from "./contexts/room.tsx";
+} from "../contexts/room.tsx";
 import { createStore } from "solid-js/store";
-import { RoomT } from "./types.ts";
-import { Friends } from "./Friends.tsx";
-import { Calendar } from "./Calendar.tsx";
-import { Document } from "./editor/Document.tsx";
-import { Wiki } from "./Wiki.tsx";
-import { DocumentHistory } from "./editor/DocumentHistory.tsx";
+import { RoomT } from "../types.ts";
+import { Friends } from "../Friends.tsx";
+import { Calendar } from "../Calendar.tsx";
+import { Document } from "../components/features/editor/Document.tsx";
+import { Wiki } from "../Wiki.tsx";
+import { DocumentHistory } from "../components/features/editor/DocumentHistory.tsx";
 import {
 	createInitialDocumentState,
 	DocumentContext,
 	useDocument,
-} from "./contexts/document.tsx";
-import { shouldUseThreadSidebar } from "./utils/channel.ts";
+} from "../contexts/document.tsx";
+import { shouldUseThreadSidebar } from "../utils/channel.ts";
 import { useNavigate } from "@solidjs/router";
-import { useModals } from "./contexts/modals.tsx";
-import { ChannelIcon } from "./User.tsx";
-import icX from "./assets/x-1.png";
-export { RouteAuthorize } from "./Oauth.tsx";
+import { useModals } from "../contexts/modal.tsx";
+import { ChannelIcon } from "../User.tsx";
+import icX from "../assets/x-1.png";
+export { RouteAuthorize } from "../Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => (document.title = props.title ?? ""));

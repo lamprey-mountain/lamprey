@@ -28,18 +28,18 @@ import { useApi, useChannels2, useMessages2 } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
 import { A, useNavigate } from "@solidjs/router";
-import { serializeToMarkdown } from "./editor/serializer.ts";
+import { serializeToMarkdown } from "./components/features/editor/serializer.ts";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { usePermissions } from "./hooks/usePermissions";
 import { md } from "./markdown_utils";
 import { flags } from "./flags";
 import { Dropdown } from "./Dropdown";
-import { Author, MessageToolbar } from "./Message";
+import { Author, MessageToolbar } from "./components/features/chat/Message";
 import { Markdown } from "./Markdown";
 import { render } from "solid-js/web";
 import { getEmojiUrl, type MediaProps } from "./media/util";
-import { Reactions } from "./Reactions";
+import { Reactions } from "./components/features/chat/Reactions";
 import {
 	AudioView,
 	FileView,
@@ -54,7 +54,7 @@ import {
 } from "./channelctx";
 import { createStore } from "solid-js/store";
 import { useMessageSubmit } from "./hooks/useMessageSubmit";
-import { createEditor } from "./editor/Editor";
+import { createEditor } from "./components/features/editor/Editor";
 import type { EditorState } from "prosemirror-state";
 
 import { Resizable } from "./Resizable";

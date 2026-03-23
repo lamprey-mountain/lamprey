@@ -2,7 +2,7 @@ import { createResource, createSignal, For, Show } from "solid-js";
 import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
 import { useApi, useMessages2 } from "./api.tsx";
 import { useCtx } from "./context.ts";
-import { MessageView } from "./Message.tsx";
+import { MessageView } from "./components/features/chat/Message.tsx";
 import { flags } from "./flags.ts";
 import type { Embed, Message } from "sdk";
 import { EmbedView } from "./UrlEmbed.tsx";

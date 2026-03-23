@@ -18,7 +18,10 @@ import { useChatClient } from "./hooks/useChatClient.ts";
 import { useFavicon } from "./hooks/useFavicon.ts";
 import { useGlobalEventHandlers } from "./hooks/useGlobalEventHandlers.ts";
 import { OverlayProvider } from "./contexts/overlay.tsx";
-import { useVoice, VoiceProvider } from "./voice-provider.tsx";
+import {
+	useVoice,
+	VoiceProvider,
+} from "./components/features/voice/voice-provider.tsx";
 import {
 	RouteAuthorize,
 	RouteChannel,
