@@ -2,9 +2,13 @@ import { RoomMember } from "sdk";
 import { BaseService } from "../core/Service";
 import { Accessor, createEffect, createResource, Resource } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
+import { PaginatedList } from "../core/PaginatedList";
+import { logger } from "../../logger";
 
 export class RoomMembersService extends BaseService<RoomMember> {
 	protected cacheName = "room_member";
+
+	private _roomLists = new Map<string, PaginatedList>();
 
 	getKey(item: RoomMember): string {
 		return `${item.room_id}:${item.user_id}`;
@@ -96,5 +100,62 @@ export class RoomMembersService extends BaseService<RoomMember> {
 			})
 		);
 		return result;
+	}
+
+	private async fetchRoomPage(
+		room_id: string,
+		list: PaginatedList,
+		cursor?: string,
+	): Promise<void> {
+		if (list.state.isLoading || !list.state.has_more) return;
+		list.setLoading(true);
+
+		try {
+			const data = await this.retryWithBackoff<
+				{ items: RoomMember[]; has_more: boolean }
+			>(() =>
+				this.client.http.GET("/api/v1/room/{room_id}/member", {
+					params: {
+						path: { room_id },
+						query: {
+							dir: "f",
+							limit: 100,
+							from: cursor,
+						},
+					},
+				})
+			);
+
+			this.upsertBulk(data.items);
+
+			const newIds = data.items.map((member) => this.getKey(member));
+			list.appendPage(newIds, data.has_more, data.items.at(-1)?.user_id);
+		} catch (e) {
+			logger.for("api/room_members").error(String(e));
+			list.setError(e);
+			throw e;
+		}
+	}
+
+	useList(
+		room_id: () => string | undefined,
+	): Resource<PaginatedList | undefined> {
+		const [resource] = createResource(room_id, async (rid) => {
+			if (!rid) return undefined;
+
+			let list = this._roomLists.get(rid);
+			if (!list) {
+				list = new PaginatedList();
+				this._roomLists.set(rid, list);
+			}
+
+			if (list.state.ids.length === 0 && !list.state.isLoading) {
+				await this.fetchRoomPage(rid, list);
+			}
+
+			return list;
+		});
+
+		return resource;
 	}
 }

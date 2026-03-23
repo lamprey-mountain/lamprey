@@ -1,6 +1,72 @@
-import type { EditorView } from "prosemirror-view";
-import { md } from "../../../markdown_utils.tsx";
+import { md } from "@/markdown_utils";
+import { Fragment, Node as ProsemirrorNode, Slice } from "prosemirror-model";
+import { EditorView } from "prosemirror-view";
 import htmlTemplate from "./html-template.html?raw";
+
+/**
+ * Converts a ProseMirror Document, Fragment, or Slice into a Markdown string.
+ */
+export function serializeToMarkdown(
+	input: ProsemirrorNode | Fragment | Slice,
+): string {
+	// 1. Extract the fragment (the actual list of nodes)
+	let fragment: Fragment;
+	if (input instanceof Slice) {
+		fragment = input.content;
+	} else if (input instanceof ProsemirrorNode) {
+		fragment = input.content;
+	} else {
+		fragment = input;
+	}
+
+	let markdown = "";
+
+	fragment.forEach((node) => {
+		switch (node.type.name) {
+			case "blockquote": {
+				// every line should start with a "> "
+				node.forEach((child) => {
+					const lines = child.textContent.split("\n");
+					lines.forEach((line) => {
+						const cleanLine = line.trimStart().startsWith(">")
+							? line.trimStart().slice(1).trimStart()
+							: line;
+						markdown += `> ${cleanLine}\n`;
+					});
+				});
+				markdown += "\n";
+				break;
+			}
+
+			default: {
+				if (node.isInline) {
+					markdown += node.textContent;
+				} else {
+					markdown += node.textContent + "\n\n";
+				}
+			}
+		}
+	});
+
+	return markdown.trim();
+}
+
+export function exportAsMarkdown(view: EditorView, filename: string) {
+	const markdown = serializeToMarkdown(view.state.doc);
+	downloadFile(markdown, filename, "text/markdown");
+}
+
+export function exportAsHtml(
+	view: EditorView,
+	filename: string,
+	title: string,
+) {
+	const markdown = serializeToMarkdown(view.state.doc);
+	const tokens = md.lexer(markdown);
+	const htmlContent = md.parser(tokens);
+	const fullHtml = generateHtmlDocument(title, htmlContent);
+	downloadFile(fullHtml, filename, "text/html");
+}
 
 /**
  * Triggers a browser download for the given content.
@@ -22,23 +88,6 @@ export function downloadFile(
 }
 
 /**
- * Exports the current editor content as Markdown.
- * Gets the raw text content from the ProseMirror document.
- */
-export function exportAsMarkdown(
-	view: EditorView,
-	filename: string,
-) {
-	const state = view.state;
-	const doc = state.doc;
-
-	// Get raw text content - the editor stores markdown directly in the text
-	const markdown = doc.textContent;
-
-	downloadFile(markdown, filename, "text/markdown");
-}
-
-/**
  * Escapes HTML special characters.
  */
 function escapeHtml(text: string): string {
@@ -57,24 +106,6 @@ function generateHtmlDocument(title: string, content: string): string {
 	return htmlTemplate
 		.replace("TITLE", escapeHtml(title))
 		.replace("CONTENT", content);
-}
-
-/**
- * Exports the current editor content as a single-file HTML document.
- * Converts the markdown text to HTML using the marked parser.
- */
-export function exportAsHtml(
-	view: EditorView,
-	filename: string,
-	title: string,
-) {
-	const state = view.state;
-	const doc = state.doc;
-	const markdown = doc.textContent;
-	const tokens = md.lexer(markdown);
-	const htmlContent = md.parser(tokens);
-	const fullHtml = generateHtmlDocument(title, htmlContent);
-	downloadFile(fullHtml, filename, "text/html");
 }
 
 /**

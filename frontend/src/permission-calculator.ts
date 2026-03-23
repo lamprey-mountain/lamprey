@@ -224,9 +224,7 @@ export function calculatePermissions(
 	}
 
 	const member = ctx.api.roomMembers.cache.get(`${ctx.room_id!}:${user_id}`);
-	const roles = [...ctx.api.roles.cache.values()].filter((r) =>
-		r.room_id === ctx.room_id
-	);
+	const roles = ctx.api.roles.listByRoom(ctx.room_id);
 
 	permLog.debug("member and roles lookup", {
 		member_found: !!member,

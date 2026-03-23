@@ -1,9 +1,13 @@
 import { Role, RolePatch } from "sdk";
 import { BaseService } from "../core/Service";
 import { Accessor, createEffect, createResource, Resource } from "solid-js";
+import { ReactiveMap } from "@solid-primitives/map";
+import { ReactiveSet } from "@solid-primitives/set";
 
 export class RolesService extends BaseService<Role> {
 	protected cacheName = "role";
+
+	private rolesByRoom = new ReactiveMap<string, ReactiveSet<string>>();
 
 	getKey(item: Role): string {
 		return item.id;
@@ -24,6 +28,22 @@ export class RolesService extends BaseService<Role> {
 		);
 		this.upsert(data);
 		return data;
+	}
+
+	protected upsert(role: Role) {
+		super.upsert(role);
+
+		const r = this.rolesByRoom.get(role.room_id) ?? new ReactiveSet();
+		r.add(role.id);
+		this.rolesByRoom.set(role.room_id, r);
+	}
+
+	protected delete(role_id: string) {
+		const role = this.cache.get(role_id);
+		if (role) {
+			this.rolesByRoom.get(role.room_id)?.delete(role_id);
+		}
+		super.delete(role_id);
 	}
 
 	useRole(
@@ -116,5 +136,14 @@ export class RolesService extends BaseService<Role> {
 			},
 		);
 		if (error) throw error;
+	}
+
+	listByRoom(room_id: string): Role[] {
+		if (!room_id) return [];
+		const ids = this.rolesByRoom.get(room_id);
+		if (!ids) return [];
+		return [...ids]
+			.map((id) => this.cache.get(id))
+			.filter((r): r is Role => r != null);
 	}
 }

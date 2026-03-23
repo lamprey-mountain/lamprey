@@ -33,6 +33,21 @@ import {
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createEditorNodeViews } from "./node-views.tsx";
+import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
+import {
+	createMarkdownInputRulesPlugin,
+	joinBlockquoteBackward,
+	joinBlockquoteForward,
+} from "./input-rules-plugin.ts";
+import {
+	chainCommands,
+	deleteSelection,
+	joinBackward,
+	joinForward,
+	selectNodeBackward,
+	selectNodeForward,
+} from "prosemirror-commands";
+import { createEmojiPlugin } from "./emoji-plugin.ts";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -79,6 +94,7 @@ export const createEditor = (
 		currentChannelId,
 		() => currentRoomId(),
 	);
+	const emojiPlugin = createEmojiPlugin();
 
 	const createYDoc = () => {
 		const ydoc = new Y.Doc();
@@ -155,6 +171,9 @@ export const createEditor = (
 				),
 				yUndoPlugin(),
 				createDiffPlugin(() => diffMarks()),
+				createMarkdownInputRulesPlugin(),
+				createPastePlugin(),
+				createSubmitPlugin(),
 				keymap({
 					"Ctrl-z": undo,
 					"Ctrl-Shift-z": redo,
@@ -165,29 +184,26 @@ export const createEditor = (
 					"Ctrl-m": (_state) => {
 						return false;
 					},
-					"Shift-Enter": (state, dispatch) => {
-						dispatch?.(state.tr.insertText("\n"));
-						return true;
-					},
 					"Enter": (state, dispatch) => {
 						return createListContinueCommand()(state, dispatch);
 					},
-					"Backspace": (state, dispatch) => {
-						const sel = state.tr.selection;
-						if (sel.empty) {
-							const pos = sel.$anchor.pos - 1;
-							if (pos >= 0) {
-								dispatch?.(state.tr.deleteRange(pos, pos + 1));
-							}
-						} else {
-							dispatch?.(state.tr.deleteSelection());
-						}
-						return true;
-					},
+					"Backspace": chainCommands(
+						deleteSelection,
+						joinBlockquoteBackward,
+						joinBackward,
+						selectNodeBackward,
+					),
+					"Delete": chainCommands(
+						deleteSelection,
+						joinBlockquoteForward,
+						joinForward,
+						selectNodeForward,
+					),
 					...opts.keymap,
 				}),
 				toolbarPlugin,
 				autocompletePlugin,
+				emojiPlugin,
 			],
 		});
 	};

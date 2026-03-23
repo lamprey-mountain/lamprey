@@ -14,6 +14,20 @@ import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createEmojiPlugin } from "./emoji-plugin.ts";
 import { useApi2, useChannels2 } from "@/api";
 import { createEditorNodeViews } from "./node-views.tsx";
+import {
+	createMarkdownInputRulesPlugin,
+	joinBlockquoteBackward,
+	joinBlockquoteForward,
+} from "./input-rules-plugin.ts";
+import {
+	chainCommands,
+	deleteSelection,
+	joinBackward,
+	joinForward,
+	selectNodeBackward,
+	selectNodeForward,
+} from "prosemirror-commands";
+import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -66,6 +80,9 @@ export const createEditor = (
 			schema,
 			plugins: [
 				history(),
+				createMarkdownInputRulesPlugin(),
+				createPastePlugin(),
+				createSubmitPlugin(),
 				keymap({
 					"Ctrl-z": undo,
 					"Ctrl-Shift-z": redo,
@@ -73,26 +90,19 @@ export const createEditor = (
 					"Ctrl-b": createWrapCommand("**"),
 					"Ctrl-i": createWrapCommand("*"),
 					"Ctrl-`": createWrapCommand("`"),
-					"Ctrl-m": (_state) => {
-						return false;
-					},
 					"Shift-Enter": createListContinueCommand(),
-					"Enter": (state, dispatch) => {
-						// This is handled by mod.tsx but we keep list continue for Shift-Enter
-						return false;
-					},
-					"Backspace": (state, dispatch) => {
-						const sel = state.tr.selection;
-						if (sel.empty) {
-							const pos = sel.$anchor.pos - 1;
-							if (pos >= 0) {
-								dispatch?.(state.tr.deleteRange(pos, pos + 1));
-							}
-						} else {
-							dispatch?.(state.tr.deleteSelection());
-						}
-						return true;
-					},
+					"Backspace": chainCommands(
+						deleteSelection,
+						joinBlockquoteBackward,
+						joinBackward,
+						selectNodeBackward,
+					),
+					"Delete": chainCommands(
+						deleteSelection,
+						joinBlockquoteForward,
+						joinForward,
+						selectNodeForward,
+					),
 					...opts.keymap,
 				}),
 				toolbarPlugin,

@@ -1,9 +1,13 @@
 import { ThreadMember } from "sdk";
 import { BaseService } from "../core/Service";
 import { Accessor, createResource, Resource } from "solid-js";
+import { PaginatedList } from "../core/PaginatedList";
+import { logger } from "../../logger";
 
 export class ThreadMembersService extends BaseService<ThreadMember> {
 	protected cacheName = "thread_member";
+
+	private _threadLists = new Map<string, PaginatedList>();
 
 	getKey(item: ThreadMember): string {
 		return `${item.thread_id}:${item.user_id}`;
@@ -76,5 +80,62 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 			thread_id,
 			ranges,
 		});
+	}
+
+	private async fetchThreadPage(
+		thread_id: string,
+		list: PaginatedList,
+		cursor?: string,
+	): Promise<void> {
+		if (list.state.isLoading || !list.state.has_more) return;
+		list.setLoading(true);
+
+		try {
+			const data = await this.retryWithBackoff<
+				{ items: ThreadMember[]; has_more: boolean }
+			>(() =>
+				this.client.http.GET("/api/v1/thread/{thread_id}/member", {
+					params: {
+						path: { thread_id },
+						query: {
+							dir: "f",
+							limit: 100,
+							from: cursor,
+						},
+					},
+				})
+			);
+
+			this.upsertBulk(data.items);
+
+			const newIds = data.items.map((member) => this.getKey(member));
+			list.appendPage(newIds, data.has_more, data.items.at(-1)?.user_id);
+		} catch (e) {
+			logger.for("api/thread_members").error(String(e));
+			list.setError(e);
+			throw e;
+		}
+	}
+
+	useList(
+		thread_id: () => string | undefined,
+	): Resource<PaginatedList | undefined> {
+		const [resource] = createResource(thread_id, async (tid) => {
+			if (!tid) return undefined;
+
+			let list = this._threadLists.get(tid);
+			if (!list) {
+				list = new PaginatedList();
+				this._threadLists.set(tid, list);
+			}
+
+			if (list.state.ids.length === 0 && !list.state.isLoading) {
+				await this.fetchThreadPage(tid, list);
+			}
+
+			return list;
+		});
+
+		return resource;
 	}
 }

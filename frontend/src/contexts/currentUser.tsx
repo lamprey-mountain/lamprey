@@ -16,8 +16,6 @@ export const CurrentUserProvider = (props: { children: JSX.Element }) => {
 		currentUserLog.debug("currentUser memo", {
 			found: !!user,
 			user_id: user?.id,
-			cache_size: users2.cache.size,
-			cache_keys: [...users2.cache.keys()].slice(0, 10),
 		});
 		return user;
 	});

@@ -30,6 +30,7 @@
 	color: $fg-100;
 	background-color: $bg-100;
 	accent-color: $link-500;
+	tab-size: 4;
 }
 
 ::selection {
@@ -471,6 +472,14 @@ input[type="submit"] {
 
 	& .syn {
 		color: $fg-500;
+	}
+
+	& .syn-code-lang {
+		color: $color-blue;
+	}
+
+	& .link {
+		color: $link-500;
 	}
 
 	& .code-block {
