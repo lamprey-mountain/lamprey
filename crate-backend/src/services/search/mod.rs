@@ -8,12 +8,11 @@ use common::v1::types::{
 };
 use common::v2::types::message::MessageType;
 use futures::stream::{FuturesUnordered, StreamExt};
-use kameo::actor::Spawn;
 use lamprey_backend_core::types::admin::SearchIndexStats;
 use tokio::sync::OnceCell;
 use tracing::trace;
 
-use crate::services::search::import::ChannelReindexerManager;
+use crate::services::search::import::ContentIngestionManager;
 use crate::services::search::index::IndexManager;
 use crate::services::search::schema::content::ContentSchema;
 use crate::services::search::schema::ContentIndex;
@@ -63,12 +62,8 @@ impl ServiceSearch {
                 // open or create the index
                 let (writer, reader) = self.index_manager.open(ContentIndex::default()).await?;
 
-                // begin reindexing channels
-                ChannelReindexerManager::spawn((
-                    server_state,
-                    writer,
-                    4, // TODO: finetune (maybe allow setting in config?)
-                ));
+                // begin (re)indexing channels
+                ContentIngestionManager::start(server_state, writer).await?;
 
                 Ok(Arc::new(ContentSearcher::new(
                     reader,

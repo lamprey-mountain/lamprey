@@ -182,14 +182,14 @@ impl Message<UpdateDocument> for IndexActor {
 }
 
 impl Message<CommitIndex> for IndexActor {
-    type Reply = ();
+    type Reply = Result<()>;
 
     async fn handle(
         &mut self,
         _msg: CommitIndex,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.commit().await;
+        Ok(self.commit().await?)
     }
 }
 
@@ -278,18 +278,17 @@ impl IndexActor {
             && (self.uncommitted_count >= MAX_UNCOMMITTED
                 || self.last_commit.elapsed() >= COMMIT_INTERVAL)
         {
-            self.commit().await;
+            let _ = self.commit().await;
         }
     }
 
-    async fn commit(&mut self) {
+    async fn commit(&mut self) -> Result<()> {
         let writer = self.writer.clone();
         let reader = self.reader.clone();
 
         let res = tokio::task::spawn_blocking(move || {
             let mut writer_lock = writer.lock().unwrap();
             writer_lock.commit()?;
-            // readers MUST be reloaded after commits so searches see new data!
             reader.reload()?;
             Ok::<(), tantivy::TantivyError>(())
         })
@@ -299,9 +298,10 @@ impl IndexActor {
             Ok(Ok(_)) => {
                 self.uncommitted_count = 0;
                 self.last_commit = Instant::now();
+                Ok(())
             }
-            Ok(Err(e)) => error!("Tantivy commit error: {e}"),
-            Err(e) => error!("Blocking task error: {e}"),
+            Ok(Err(e)) => Err(Error::Internal(format!("Tantivy commit error: {e}"))),
+            Err(e) => Err(Error::Internal(format!("Blocking task error: {e}"))),
         }
     }
 }
