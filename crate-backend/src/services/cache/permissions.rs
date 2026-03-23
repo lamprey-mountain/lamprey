@@ -32,6 +32,66 @@ impl PermissionsCalculator {
         self.query_inner(user_id, channel)
     }
 
+    /// query permissions for a user
+    ///
+    /// - passing in `channel` will calculate permissions in that channel
+    /// - using `None` for user_id will calculate the default permissions (public room defaults)
+    pub fn query2(
+        &self,
+        user_id: Option<UserId>,
+        channel: Option<&Channel>,
+    ) -> Result<Permissions> {
+        let Some(user_id) = user_id else {
+            // calculate default room permissions
+            let mut p = Permissions::builder();
+
+            let Some(data) = self.room.get_data() else {
+                return Err(Error::ServiceUnavailable);
+            };
+
+            if self.public {
+                // use default perms (everyone role)
+                let everyone_role_id: RoleId = self.room_id.into_inner().into();
+
+                if let Some(role) = data.roles.get(&everyone_role_id) {
+                    p.perms.add_all(role.allow);
+                    p.perms.remove_all(role.deny);
+                }
+            } else {
+                // private room, no user = no perms
+                p.flags.set_cannot_view();
+            }
+
+            if self.public {
+                if let Some(channel) = channel {
+                    p.context = PermissionsContext::Channel;
+                    if let Some(cached_channel) = data.channels.get(&channel.id) {
+                        self.apply_channel_overwrites(&mut p, cached_channel, None);
+                    }
+                }
+            }
+
+            return Ok(p.build());
+        };
+
+        self.query_inner(user_id, channel)
+    }
+
+    /// get whether a user (or guest) can view this room
+    pub fn can_view_room(&self, user_id: Option<UserId>) -> bool {
+        let is_public = self.room.get_data().is_some_and(|d| d.room.public);
+        if is_public {
+            // anyone can view public rooms
+            true
+        } else if let Some(user_id) = user_id {
+            // you can view private rooms you're a member of
+            self.room.get_member(&user_id).is_some()
+        } else {
+            // otherwise, deny
+            false
+        }
+    }
+
     fn query_inner(&self, user_id: UserId, channel: Option<&Channel>) -> Result<Permissions> {
         let mut p = Permissions::builder();
 

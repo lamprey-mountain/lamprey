@@ -3,7 +3,8 @@ use std::sync::Arc;
 use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ChannelId, Permission, PermissionOverwriteType, RoomId, UserId, SERVER_ROOM_ID,
+    ChannelId, ConnectionId, Permission, PermissionOverwriteType, RoomId, Session, UserId,
+    SERVER_ROOM_ID,
 };
 use dashmap::DashMap;
 use lamprey_backend_core::types::permission::{Permissions, PermissionsContext};
@@ -12,6 +13,7 @@ use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::sync::permissions::AuthCheck;
 use crate::ServerStateInner;
 
 // TODO(#995): remove much of this code?
@@ -79,6 +81,12 @@ impl ServicePermissions {
         calc.query(user_id, None)
     }
 
+    pub async fn for_room2(&self, user_id: Option<UserId>, room_id: RoomId) -> Result<Permissions> {
+        let srv = self.state.services();
+        let calc = srv.cache.permissions(room_id, true).await?;
+        calc.query2(user_id, None)
+    }
+
     /// calculate the permissions a user has on this server
     pub async fn for_server(&self, user_id: UserId) -> Result<Permissions> {
         self.for_room(user_id, SERVER_ROOM_ID).await
@@ -87,26 +95,26 @@ impl ServicePermissions {
     /// actually calculate the permissions a user has in a channel
     async fn for_channel_inner(
         &self,
-        user_id: UserId,
+        user_id: Option<UserId>,
         channel_id: ChannelId,
     ) -> Result<Permissions> {
         let srv = self.state.services();
-        let chan = srv.channels.get(channel_id, Some(user_id)).await?;
+        let chan = srv.channels.get(channel_id, user_id).await?;
 
         if let Some(room_id) = chan.room_id {
             let calc = srv.cache.permissions(room_id, true).await?;
-            calc.query(user_id, Some(&chan))
+            calc.query2(user_id, Some(&chan))
         } else {
             if let Some(parent_id) = chan.parent_id {
-                Box::pin(self.for_channel(user_id, parent_id)).await
+                Box::pin(self.for_channel2(user_id, parent_id)).await
             } else {
-                // DMs/GDMs use Permissions2 builder directly
+                // DMs/GDMs use Permissions builder directly
                 let mut p = Permissions::builder();
                 p.context = PermissionsContext::Channel;
 
                 // if its not in a room and doesnt have a parent, it must be a dm or gdm
-                let is_recipient = chan.recipients.iter().any(|r| r.id == user_id);
-                let is_owner = chan.owner_id == Some(user_id);
+                let is_recipient = chan.recipients.iter().any(|r| Some(r.id) == user_id);
+                let is_owner = chan.owner_id == user_id;
 
                 if is_recipient || is_owner {
                     use lamprey_backend_core::types::permission::PermissionBits;
@@ -123,8 +131,17 @@ impl ServicePermissions {
     }
 
     /// calculate the permissions a user has in a channel
-    pub async fn for_channel(&self, user_id: UserId, thread_id: ChannelId) -> Result<Permissions> {
-        self.for_channel_inner(user_id, thread_id).await
+    pub async fn for_channel(&self, user_id: UserId, channel_id: ChannelId) -> Result<Permissions> {
+        // why is this wrapped?
+        self.for_channel_inner(Some(user_id), channel_id).await
+    }
+
+    pub async fn for_channel2(
+        &self,
+        user_id: Option<UserId>,
+        channel_id: ChannelId,
+    ) -> Result<Permissions> {
+        self.for_channel_inner(user_id, channel_id).await
     }
 
     pub async fn invalidate_room(&self, user_id: UserId, room_id: RoomId) {
@@ -235,6 +252,7 @@ impl ServicePermissions {
     /// get default permissions for the @everyone role
     ///
     /// for public room joining
+    // TODO: move to permissions cache
     pub async fn default_for_room(&self, room_id: RoomId) -> Result<Permissions> {
         let data = self.state.data();
 
@@ -271,5 +289,64 @@ impl ServicePermissions {
         let data = self.state.data();
         data.permission_allows_friend_request_from_user(source_user_id, target_user_id)
             .await
+    }
+
+    pub async fn auth_check(
+        &self,
+        auth_check: &AuthCheck,
+        session: &Session,
+        connection_id: ConnectionId,
+    ) -> Result<bool> {
+        let srv = self.state.services();
+        let uid = session.user_id();
+        let should_send = match auth_check {
+            AuthCheck::Room(room_id) => {
+                let perms = srv.cache.permissions(*room_id, true).await?;
+                perms.can_view_room(uid)
+            }
+            AuthCheck::RoomPerm(room_id, perm) => {
+                let perms = srv.cache.permissions(*room_id, true).await?;
+                perms.query2(uid, None)?.has(*perm)
+            }
+            AuthCheck::Channel(channel_id) => {
+                let perms = self.for_channel2(uid, *channel_id).await?;
+                perms.has(Permission::ChannelView)
+            }
+            AuthCheck::ChannelPerm(channel_id, perm) => {
+                let perms = self.for_channel2(uid, *channel_id).await?;
+                perms.has(*perm)
+            }
+            AuthCheck::User(target_user_id) => {
+                if let Some(user_id) = session.user_id() {
+                    user_id == *target_user_id
+                } else {
+                    false
+                }
+            }
+            AuthCheck::UserVisible(target_user_id) => {
+                if let Some(user_id) = session.user_id() {
+                    if user_id == *target_user_id {
+                        true
+                    } else {
+                        self.is_mutual(user_id, *target_user_id).await?
+                    }
+                } else {
+                    false
+                }
+            }
+            AuthCheck::Session(session_id) => session.id == *session_id,
+            AuthCheck::Connection(target_conn_id) => connection_id == *target_conn_id,
+            AuthCheck::Any(checks) => {
+                // PERF: optimize; two `AuthCheck::Room`s should only fetch the room once
+                for check in checks {
+                    if Box::pin(self.auth_check(check, session, connection_id)).await? {
+                        return Ok(true);
+                    }
+                }
+                false
+            }
+        };
+
+        Ok(should_send)
     }
 }
