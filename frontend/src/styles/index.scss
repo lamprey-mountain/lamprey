@@ -193,6 +193,7 @@ input[type="submit"] {
 		display: flex;
 		flex-direction: column;
 		overflow-y: auto;
+		justify-content: end;
 
 		& .list-inner > .header {
 			flex: 1;
