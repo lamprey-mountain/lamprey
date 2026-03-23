@@ -22,6 +22,7 @@
 
 use crate::parser::{Parsed, SyntaxKind, SyntaxNode};
 
+use lamprey_common::v1::types::{ChannelId, EmojiId, RoleId, UserId};
 pub use rowan::ast::AstNode;
 
 /// A reference to a span of text. Indexes are in bytes. Start is inclusive, end is not.
@@ -867,11 +868,11 @@ impl Ast {
 /// A mention ID that can be extracted from markdown.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MentionId {
-    User(uuid::Uuid),
-    Role(uuid::Uuid),
-    Channel(uuid::Uuid),
+    User(UserId),
+    Role(RoleId),
+    Channel(ChannelId),
     Emoji {
-        id: uuid::Uuid,
+        id: EmojiId,
         name: String,
         animated: bool,
     },
@@ -881,10 +882,10 @@ pub enum MentionId {
 /// Collection of mention IDs extracted from markdown.
 #[derive(Debug, Default, Clone)]
 pub struct MentionIds {
-    pub users: Vec<uuid::Uuid>,
-    pub roles: Vec<uuid::Uuid>,
-    pub channels: Vec<uuid::Uuid>,
-    pub emojis: Vec<(uuid::Uuid, String, bool)>, // (id, name, animated)
+    pub users: Vec<UserId>,
+    pub roles: Vec<RoleId>,
+    pub channels: Vec<ChannelId>,
+    pub emojis: Vec<(EmojiId, String, bool)>, // (id, name, animated)
     pub everyone: bool,
 }
 
@@ -1026,7 +1027,7 @@ impl<'a> Iterator for MentionsIter<'a> {
                     }
 
                     if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
-                        return Some(MentionId::User(uuid));
+                        return Some(MentionId::User(uuid.into()));
                     }
                 }
                 SyntaxKind::MentionRole => {
@@ -1041,7 +1042,7 @@ impl<'a> Iterator for MentionsIter<'a> {
                     }
 
                     if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
-                        return Some(MentionId::Role(uuid));
+                        return Some(MentionId::Role(uuid.into()));
                     }
                 }
                 SyntaxKind::MentionChannel => {
@@ -1056,7 +1057,7 @@ impl<'a> Iterator for MentionsIter<'a> {
                     }
 
                     if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
-                        return Some(MentionId::Channel(uuid));
+                        return Some(MentionId::Channel(uuid.into()));
                     }
                 }
                 SyntaxKind::Emoji => {
@@ -1089,7 +1090,7 @@ impl<'a> Iterator for MentionsIter<'a> {
 
                     if let Ok(uuid) = uuid::Uuid::parse_str(&uuid_str) {
                         return Some(MentionId::Emoji {
-                            id: uuid,
+                            id: uuid.into(),
                             name,
                             animated,
                         });

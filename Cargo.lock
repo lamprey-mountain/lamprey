@@ -3564,6 +3564,7 @@ dependencies = [
  "lamprey-common",
  "lamprey-hakari",
  "lamprey-macros",
+ "lamprey-markdown",
  "lettre",
  "linkify",
  "mediatype",
