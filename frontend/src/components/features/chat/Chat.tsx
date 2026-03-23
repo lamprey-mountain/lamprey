@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
 import { useCtx } from "../../../context.ts";
-import { createList2 } from "../../../list.tsx";
+import { createList2 } from "../../../atoms/list.tsx";
 import type { Channel } from "sdk";
 import {
 	renderTimeline,

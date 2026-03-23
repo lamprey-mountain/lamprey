@@ -1,20 +1,20 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import fuzzysort from "fuzzysort";
-import { Search } from "./atoms/Search";
-import icEmojiActivities from "./assets/emoji-activities.png";
-import icEmojiFaces from "./assets/emoji-faces.png";
-import icEmojiFlags from "./assets/emoji-flags.png";
-import icEmojiFood from "./assets/emoji-food.png";
-import icEmojiNature from "./assets/emoji-nature.png";
-import icEmojiObjects from "./assets/emoji-objects.png";
-import icEmojiPeople from "./assets/emoji-people.png";
-import icEmojiPlaces from "./assets/emoji-places.png";
-import icEmojiSymbols from "./assets/emoji-symbols.png";
-import { useApi, useRooms2 } from "./api";
-import { getThumbFromId } from "./media/util";
-import { RoomIcon } from "./User";
+import { Search } from "./Search";
+import icEmojiActivities from "../assets/emoji-activities.png";
+import icEmojiFaces from "../assets/emoji-faces.png";
+import icEmojiFlags from "../assets/emoji-flags.png";
+import icEmojiFood from "../assets/emoji-food.png";
+import icEmojiNature from "../assets/emoji-nature.png";
+import icEmojiObjects from "../assets/emoji-objects.png";
+import icEmojiPeople from "../assets/emoji-people.png";
+import icEmojiPlaces from "../assets/emoji-places.png";
+import icEmojiSymbols from "../assets/emoji-symbols.png";
+import { useApi, useRooms2 } from "../api";
+import { getThumbFromId } from "../media/util";
+import { RoomIcon } from "../User";
 import type { EmojiCustom, Room } from "sdk";
-import { type EmojiData, emojiResource, getTwemoji } from "./emoji";
+import { type EmojiData, emojiResource, getTwemoji } from "../emoji";
 
 type UnifiedEmoji = {
 	type: "standard" | "custom";

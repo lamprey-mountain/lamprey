@@ -33,7 +33,7 @@ import { Forum2, Forum2Thread, Forum2ThreadPage } from "../Forum2.tsx";
 import { Category } from "../Category.tsx";
 import { type Channel, SERVER_ROOM_ID } from "sdk";
 import { PinnedMessages } from "../components/features/chat/PinnedMessages.tsx";
-import { Resizable } from "../Resizable.tsx";
+import { Resizable } from "../atoms/Resizable.tsx";
 import { UserProfile } from "../UserProfile.tsx";
 import { Inbox } from "../Inbox.tsx";
 import { RoomNav } from "../RoomNav.tsx";

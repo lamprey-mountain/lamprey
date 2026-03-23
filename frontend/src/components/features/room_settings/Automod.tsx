@@ -12,7 +12,7 @@ import { useApi } from "../../../api.tsx";
 import { useCtx } from "../../../context.ts";
 import type { Room } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 import {
 	type AutomodRule,

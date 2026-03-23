@@ -11,15 +11,15 @@ import {
 	Switch,
 	useContext,
 } from "solid-js";
-import { useApi, useChannels2 } from "./api";
-import { md } from "./markdown_utils";
+import { useApi, useChannels2 } from "../api";
+import { md } from "../markdown_utils";
 import { useNavigate } from "@solidjs/router";
-import { useUserPopout } from "./contexts/mod";
-import { getEmojiUrl } from "./media/util";
-import { getTwemoji } from "./emoji";
+import { useUserPopout } from "../contexts/mod";
+import { getEmojiUrl } from "../media/util";
+import { getTwemoji } from "../emoji";
 import type { Token, Tokens } from "marked";
 import type { Channel } from "sdk";
-import { flags } from "./flags";
+import { flags } from "../flags";
 
 // --- Context ---
 

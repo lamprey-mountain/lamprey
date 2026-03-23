@@ -8,7 +8,7 @@ import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi, useChannels2 } from "./api.tsx";
 import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
-import { Time } from "./Time.tsx";
+import { Time } from "./atoms/Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { md } from "./markdown_utils.tsx";
 import { ReactiveMap } from "@solid-primitives/map";

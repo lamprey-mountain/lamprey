@@ -17,7 +17,7 @@ import { getMessageOverrideName } from "../../../utils/general";
 import { EditorState } from "prosemirror-state";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 import cancelIc from "../../../assets/x.png";
-import { createTooltip } from "../../../Tooltip.tsx";
+import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import { EmojiButton } from "../../../atoms/EmojiButton.tsx";
 import { Channel } from "sdk";
 import icDelete from "../../../assets/delete.png";

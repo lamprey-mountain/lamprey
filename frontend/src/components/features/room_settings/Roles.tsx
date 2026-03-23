@@ -15,7 +15,7 @@ import type { Pagination, Permission, Role, RoomMember, User } from "sdk";
 import { Copyable } from "../../../utils/general";
 import { createStore, produce } from "solid-js/store";
 import { permissions } from "../../../permissions.ts";
-import { Resizable } from "../../../Resizable";
+import { Resizable } from "../../../atoms/Resizable";
 import { md } from "../../../markdown_utils.tsx";
 import { PermissionSelector } from "../../../components/PermissionSelector";
 import { Checkbox } from "../../../icons";
@@ -24,7 +24,7 @@ import { useModals } from "../../../contexts/modal";
 import { A } from "@solidjs/router";
 import { Avatar } from "../../../User.tsx";
 import { Savebar } from "../../../atoms/Savebar";
-import { Markdown } from "../../../Markdown.tsx";
+import { Markdown } from "../../../atoms/Markdown.tsx";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));

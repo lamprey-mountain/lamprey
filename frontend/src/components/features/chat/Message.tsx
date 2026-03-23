@@ -35,7 +35,7 @@ import {
 } from "../../../media/mod.tsx";
 import { flags } from "../../../flags.ts";
 import { getEmojiUrl, type MediaProps } from "../../../media/util.tsx";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time";
 import { Avatar, UserView } from "../../../User.tsx";
 import { EmbedView } from "../../../UrlEmbed.tsx";
 import { createEditor } from "../editor/Editor.tsx";
@@ -51,7 +51,7 @@ import icMemberRemove from "../../../assets/member-remove.png";
 import icMemberJoin from "../../../assets/member-join.png";
 import icPin from "../../../assets/pin.png";
 import icThread from "../../../assets/threads.png";
-import { Markdown } from "../../../Markdown.tsx";
+import { Markdown } from "../../../atoms/Markdown.tsx";
 import { openThread } from "../../../utils/channel";
 import type { SetStoreFunction } from "solid-js/store";
 import type { ChannelState } from "../../../contexts/channel";

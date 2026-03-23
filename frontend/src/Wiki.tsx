@@ -12,7 +12,7 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
 import { useApi, useChannels2 } from "./api";
-import { Time } from "./Time";
+import { Time } from "./atoms/Time";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { usePermissions } from "./hooks/usePermissions";
@@ -21,7 +21,7 @@ import { flags } from "./flags";
 import { ChannelContext, createInitialChannelState } from "./channelctx";
 import { createStore } from "solid-js/store";
 import { Document } from "./components/features/editor/Document";
-import { Resizable } from "./Resizable";
+import { Resizable } from "./atoms/Resizable";
 import { ChannelIcon } from "./User";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 

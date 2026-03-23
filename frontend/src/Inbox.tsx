@@ -2,7 +2,7 @@ import { createSignal, For, Show } from "solid-js";
 import { useApi } from "./api.tsx";
 import type { Channel, Message, Notification, Room } from "sdk";
 import { A } from "@solidjs/router";
-import { Time } from "./Time.tsx";
+import { Time } from "./atoms/Time.tsx";
 import { MessageView } from "./components/features/chat/Message.tsx";
 import type { NotificationPagination } from "./api/inbox.ts";
 

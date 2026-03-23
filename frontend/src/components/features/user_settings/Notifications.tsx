@@ -3,7 +3,7 @@ import { type Preferences, type User } from "sdk";
 import { Checkbox } from "../../../icons";
 import { notificationPermission } from "../../../notification";
 import { useCtx } from "../../../context";
-import { Dropdown } from "../../../Dropdown";
+import { Dropdown } from "../../../atoms/Dropdown";
 import { useApi } from "../../../api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 

@@ -15,7 +15,7 @@ import icX4 from "../assets/x-4.png";
 import { permissions } from "../permissions.ts";
 import { cyrb53, LCG } from "../rng.ts";
 import { useCtx } from "../context.ts";
-import { Markdown } from "../Markdown.tsx";
+import { Markdown } from "../atoms/Markdown.tsx";
 
 const icon = (type: "x" | "slash" | "check", seed: string) => {
 	const rand = LCG(cyrb53(seed));

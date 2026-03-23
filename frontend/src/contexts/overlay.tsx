@@ -35,10 +35,10 @@ import {
 	RoomMenu,
 	UserMenu,
 } from "../menus/mod.ts";
-import { EmojiPicker } from "../EmojiPicker.tsx";
+import { EmojiPicker } from "../atoms/EmojiPicker.tsx";
 import { UserView } from "../User.tsx";
 import { ThreadPopout } from "../components/features/chat/ThreadPopout.tsx";
-import { Autocomplete } from "../Autocomplete.tsx";
+import { Autocomplete } from "../atoms/Autocomplete.tsx";
 import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
 import { getModal } from "../modals/mod.tsx";
 import { Modal, useModals } from "./modal.tsx";

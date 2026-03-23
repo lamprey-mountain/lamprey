@@ -9,7 +9,7 @@ import { createEditor } from "./components/features/editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
 import { RenderUploadItem } from "./components/features/chat/Input.tsx";
-import { Time } from "./Time.tsx";
+import { Time } from "./atoms/Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";

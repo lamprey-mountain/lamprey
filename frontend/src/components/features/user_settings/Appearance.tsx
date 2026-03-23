@@ -4,7 +4,7 @@ import { useCtx } from "../../../context.ts";
 import { useApi } from "../../../api.tsx";
 import { getThumbFromId } from "../../../media/util.tsx";
 import { Checkbox } from "../../../icons";
-import { Dropdown } from "../../../Dropdown";
+import { Dropdown } from "../../../atoms/Dropdown";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 
 export function Appearance(props: VoidProps<{ user: User }>) {

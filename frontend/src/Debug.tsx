@@ -6,7 +6,7 @@ import { MessageView } from "./components/features/chat/Message.tsx";
 import { flags } from "./flags.ts";
 import type { Embed, Message } from "sdk";
 import { EmbedView } from "./UrlEmbed.tsx";
-import { Dropdown } from "./Dropdown.tsx";
+import { Dropdown } from "./atoms/Dropdown.tsx";
 
 // @ts-ignore
 const packageJson = __VITE_PACKAGE_JSON__;

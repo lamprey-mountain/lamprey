@@ -8,7 +8,7 @@ import {
 	type MergedAuditLogEntry,
 } from "../../../audit-log-util.tsx";
 import { ReactiveSet } from "@solid-primitives/set";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();

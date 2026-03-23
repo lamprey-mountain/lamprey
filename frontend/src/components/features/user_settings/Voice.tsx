@@ -2,7 +2,7 @@ import { Show, type VoidProps } from "solid-js";
 import { type User } from "sdk";
 import { Checkbox } from "../../../icons";
 import { useCtx } from "../../../context.ts";
-import { Dropdown } from "../../../Dropdown";
+import { Dropdown } from "../../../atoms/Dropdown";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 
 export function Voice(_props: VoidProps<{ user: User }>) {

@@ -17,7 +17,7 @@ import iconSettings from "../../../assets/settings.png";
 import iconMusic from "../../../assets/music.png";
 import iconExit from "../../../assets/exit.png";
 import { useApi, useChannels2, useRooms2 } from "../../../api.tsx";
-import { ToggleIcon } from "../../../ToggleIcon.tsx";
+import { ToggleIcon } from "../../../atoms/ToggleIcon.tsx";
 import { useVoice } from "./voice-provider.tsx";
 import { useConfig } from "../../../config.tsx";
 import { flags } from "../../../flags.ts";

@@ -1,6 +1,6 @@
 import { type VoidProps } from "solid-js";
 import { tooltip } from "./Tooltip";
-import { tick } from "./hooks/tick";
+import { tick } from "../hooks/tick";
 
 export function timeAgo(date: Date): string {
 	const diff = Date.now() - (+date);

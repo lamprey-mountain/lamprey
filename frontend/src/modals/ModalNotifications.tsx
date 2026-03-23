@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { Dropdown } from "../Dropdown";
+import { Dropdown } from "../atoms/Dropdown";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
 import { CheckboxOption } from "../atoms/CheckboxOption";

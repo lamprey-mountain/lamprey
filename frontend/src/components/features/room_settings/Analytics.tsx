@@ -10,8 +10,8 @@ import type { RoomT } from "../../../types.ts";
 import { useApi } from "../../../api.tsx";
 import { useCtx } from "../../../context.ts";
 import { formatBytes } from "../../../media/util.tsx";
-import { DateRangePicker } from "../../../Daterangepicker.tsx";
-import { Dropdown } from "../../../Dropdown.tsx";
+import { DateRangePicker } from "../../../atoms/Daterangepicker.tsx";
+import { Dropdown } from "../../../atoms/Dropdown.tsx";
 import type { Aggregation } from "../../../api/room_analytics.ts";
 
 export function Metrics(props: VoidProps<{ room: RoomT }>) {

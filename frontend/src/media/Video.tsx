@@ -30,7 +30,7 @@ import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
 import iconFullscreen from "../assets/fullscreen.png";
 import iconFullscreent from "../assets/fullscreent.png";
-import { createTooltip } from "../Tooltip.tsx";
+import { createTooltip } from "../atoms/Tooltip.tsx";
 import { useCtx } from "../context.ts";
 
 export const VideoView = (props: MediaProps) => {

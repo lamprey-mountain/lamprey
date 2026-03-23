@@ -4,7 +4,7 @@ import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
 import type { Pagination, SessionT, UserT } from "../../../types.ts";
 import { ResourceFetcherInfo } from "solid-js";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { Copyable } from "../../../utils/general";
 
 function parseUA(ua: string) {

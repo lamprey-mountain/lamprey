@@ -3,7 +3,7 @@ import { useApi } from "../../../api.tsx";
 import type { Channel } from "sdk";
 import type { InviteWithMetadata } from "sdk";
 import { Avatar } from "../../../User.tsx";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { Copyable } from "../../../utils/general";
 
 export function Invites(props: VoidProps<{ channel: Channel }>) {

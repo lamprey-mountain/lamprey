@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import { Modal } from "./mod";
 import { useModals } from "../contexts/modal";
 import type { Api } from "../api";
-import { DurationInput } from "../DurationInput";
+import { DurationInput } from "../atoms/DurationInput";
 
 interface ModalBanProps {
 	api: Api;

@@ -14,9 +14,9 @@ import {
 	mergeAuditLogEntries,
 	type MergedAuditLogEntry,
 } from "../../../audit-log-util.tsx";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { ReactiveSet } from "@solid-primitives/set";
-import { Dropdown } from "../../../Dropdown.tsx";
+import { Dropdown } from "../../../atoms/Dropdown.tsx";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api = useApi();

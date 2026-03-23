@@ -20,7 +20,7 @@ import { useApi, useRooms2 } from "../../../api.tsx";
 import { PermissionSelector } from "../../../components/PermissionSelector";
 import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
 import { permissions } from "../../../permissions.ts";
-import { Resizable } from "../../../Resizable";
+import { Resizable } from "../../../atoms/Resizable";
 import { Copyable } from "../../../utils/general";
 import { useCtx } from "../../../context.ts";
 import { Savebar } from "../../../atoms/Savebar";

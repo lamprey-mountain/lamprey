@@ -12,8 +12,8 @@ import { Portal } from "solid-js/web";
 import { go } from "fuzzysort";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { createKeybinds } from "./keybinds";
-import { Checkmark, XMark } from "./icons";
+import { createKeybinds } from "../keybinds";
+import { Checkmark, XMark } from "../icons";
 
 export type DropdownItem<T> = {
 	item: T;

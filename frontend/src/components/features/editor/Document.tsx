@@ -34,7 +34,7 @@ import { useApi } from "../../../api.tsx";
 import type { HistoryPagination } from "sdk";
 import * as Y from "yjs";
 import { base64UrlDecode } from "./editor-utils.ts";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { schema } from "./schema.ts";
 import { md } from "../../../markdown_utils.tsx";
 import { DOMParser, type Node as PMNode } from "prosemirror-model";

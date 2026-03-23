@@ -12,11 +12,11 @@ import type { RoomT } from "../../../types.ts";
 import { Role, RoomMember, RoomMemberOrigin } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { Avatar } from "../../../User.tsx";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { useFloating } from "solid-floating-ui";
 import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
-import { createTooltip } from "../../../Tooltip.tsx";
+import { createTooltip } from "../../../atoms/Tooltip.tsx";
 
 export function Bans(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();

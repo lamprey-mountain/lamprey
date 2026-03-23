@@ -2,7 +2,7 @@ import { type VoidProps } from "solid-js";
 import { type User } from "sdk";
 import { Checkbox } from "../../../icons";
 import { useCtx } from "../../../context.ts";
-import { Dropdown } from "../../../Dropdown.tsx";
+import { Dropdown } from "../../../atoms/Dropdown.tsx";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 
 export function Chat(props: VoidProps<{ user: User }>) {

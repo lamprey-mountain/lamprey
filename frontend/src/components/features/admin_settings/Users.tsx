@@ -1,7 +1,7 @@
 import { createSignal, For, Show } from "solid-js";
 import { useApi } from "../../../api.tsx";
 import { Avatar } from "../../../User.tsx";
-import { Time } from "../../../Time.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { useCtx } from "../../../context.ts";
 import { useMenu } from "../../../contexts/mod.tsx";

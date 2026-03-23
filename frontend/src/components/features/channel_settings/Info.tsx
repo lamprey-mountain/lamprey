@@ -4,7 +4,10 @@ import { useCtx } from "../../../context.ts";
 import { useApi, useChannels2 } from "../../../api.tsx";
 import { useModals } from "../../../contexts/modal";
 import { Checkbox } from "../../../icons";
-import { DurationInput, type DurationPreset } from "../../../DurationInput.tsx";
+import {
+	DurationInput,
+	type DurationPreset,
+} from "../../../atoms/DurationInput.tsx";
 import { createUpload } from "sdk";
 import { ChannelIconGdm } from "../../../User.tsx";
 import { Savebar } from "../../../atoms/Savebar";

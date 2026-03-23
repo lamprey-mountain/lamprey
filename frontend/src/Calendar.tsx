@@ -13,7 +13,7 @@ import {
 import { createStore } from "solid-js/store";
 import { Checkbox, XMark } from "./icons";
 import { CheckboxOption } from "./atoms/CheckboxOption";
-import { Dropdown, type DropdownItem } from "./Dropdown";
+import { Dropdown, type DropdownItem } from "./atoms/Dropdown";
 
 export type CalendarPopup = {
 	ref: HTMLElement | null;

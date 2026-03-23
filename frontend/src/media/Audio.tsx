@@ -24,7 +24,7 @@ import {
 	type MediaProps,
 	parseRanges,
 } from "./util.tsx";
-import { tooltip } from "../Tooltip.tsx";
+import { tooltip } from "../atoms/Tooltip.tsx";
 import { useCtx } from "../context.ts";
 
 export const AudioView = (props: MediaProps) => {

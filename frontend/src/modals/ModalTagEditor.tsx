@@ -5,7 +5,7 @@ import { Tag, TagCreate, TagPatch } from "sdk";
 import { useApi, useChannels2 } from "../api";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
-import { Colorpicker } from "../Colorpicker";
+import { Colorpicker } from "../atoms/Colorpicker";
 import { CheckboxOption } from "../atoms/CheckboxOption";
 
 interface ModalTagEditorProps {

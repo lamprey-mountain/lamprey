@@ -19,7 +19,7 @@ import { ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { useModals } from "../../../contexts/modal";
 import { Checkbox } from "../../../icons";
-import { Resizable } from "../../../Resizable";
+import { Resizable } from "../../../atoms/Resizable";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { getThumbFromId } from "../../../media/util";
 import { Avatar } from "../../../User.tsx";
