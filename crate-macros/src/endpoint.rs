@@ -552,13 +552,13 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
     for attr in attrs {
         let path = attr.path();
         if path.is_ident("path") {
-            return Ok(FieldKind::Path(try_parse_header_or_path_arg(attr)));
+            return Ok(FieldKind::Path(try_parse_rename_arg(attr)?));
         }
         if path.is_ident("query") {
-            return Ok(FieldKind::Query(try_parse_header_or_path_arg(attr)));
+            return Ok(FieldKind::Query(try_parse_rename_arg(attr)?));
         }
         if path.is_ident("header") {
-            return Ok(FieldKind::Header(try_parse_header_or_path_arg(attr)));
+            return Ok(FieldKind::Header(try_parse_rename_arg(attr)?));
         }
         if path.is_ident("json") {
             return Ok(FieldKind::Json);
@@ -576,28 +576,37 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
     ))
 }
 
-fn try_parse_header_or_path_arg(attr: &Attribute) -> Option<String> {
-    // Try parsing as rename = "..." first
-    attr.parse_args::<syn::Meta>()
-        .ok()
-        .and_then(|meta| {
-            if let syn::Meta::NameValue(nv) = meta {
-                if nv.path.is_ident("rename") {
-                    if let syn::Expr::Lit(syn::ExprLit {
-                        lit: syn::Lit::Str(lit),
-                        ..
-                    }) = nv.value
-                    {
-                        return Some(lit.value());
-                    }
-                }
-            }
-            None
-        })
-        .or_else(|| {
-            // Fall back to simple string literal
-            attr.parse_args::<LitStr>().ok().map(|s| s.value())
-        })
+fn try_parse_rename_arg(attr: &Attribute) -> syn::Result<Option<String>> {
+    // #[path] with no args — valid, means use field name
+    if matches!(attr.meta, syn::Meta::Path(_)) {
+        return Ok(None);
+    }
+
+    let meta = attr.parse_args::<syn::Meta>().map_err(|_| {
+        syn::Error::new(
+            attr.span(),
+            "attribute must use the form #[attr] or #[attr(rename = \"...\")]",
+        )
+    })?;
+
+    match meta {
+        syn::Meta::NameValue(nv) if nv.path.is_ident("rename") => match nv.value {
+            syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(lit), .. }) => Ok(Some(lit.value())),
+            syn::Expr::Path(_) => Err(syn::Error::new(
+                nv.value.span(),
+                "rename value must be a string literal, e.g., rename = \"...\"",
+            )),
+            _ => Err(syn::Error::new(nv.value.span(), "rename value must be a string literal")),
+        },
+        syn::Meta::NameValue(nv) => Err(syn::Error::new(
+            nv.path.span(),
+            "unknown attribute argument, expected `rename`",
+        )),
+        _ => Err(syn::Error::new(
+            attr.span(),
+            "attribute must use the form #[attr] or #[attr(rename = \"...\")]",
+        )),
+    }
 }
 
 fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
