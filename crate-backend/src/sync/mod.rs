@@ -325,7 +325,7 @@ impl Connection {
         // TODO: more forgiving reconnections?
         if let Some(r) = reconnect {
             debug!("attempting to resume");
-            if let Some((_, mut conn)) = self.s.syncers.remove(&r.conn) {
+            if let Some((_, mut conn)) = self.s.services.connections.live.remove(&r.conn) {
                 debug!("resume conn exists");
                 if let Some(recon_session) = conn.state.session() {
                     debug!("resume session exists");
@@ -629,7 +629,7 @@ impl Connection {
         msg: Box<MessageSync>,
         nonce: Option<String>,
     ) -> Result<()> {
-        let mut session = match &self.state {
+        let session = match &self.state {
             ConnectionState::Authenticated { session }
             | ConnectionState::Disconnected { session } => session.clone(),
             _ => return Ok(()),
@@ -639,7 +639,7 @@ impl Connection {
             ConnectionState::Disconnected { .. }
                 if self.seq_server > self.seq_client + MAX_QUEUE_LEN as u64 =>
             {
-                self.s.syncers.remove(&self.id);
+                self.s.services.connections.live.remove(&self.id);
                 return Err(Error::BadStatic("expired session"));
             }
             _ => {}

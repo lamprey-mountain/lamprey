@@ -177,7 +177,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
 
     conn.disconnect().await;
     tracing::debug!("dehydrating syncer: {}", conn.get_id());
-    s.syncers.insert(conn.get_id(), conn);
+    s.services.connections.live.insert(conn.get_id(), conn);
 }
 
 async fn handle_timeout(

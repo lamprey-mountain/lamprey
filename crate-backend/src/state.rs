@@ -6,10 +6,9 @@ use std::{
 use common::v1::types::MessageSync;
 use common::v2::types::message::Message;
 use common::{
-    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, ConnectionId, RoomId, UserId},
+    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId},
     v2::types::message::MessageVersion,
 };
-use dashmap::DashMap;
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -21,7 +20,6 @@ use crate::{
     config::{self, Config},
     data::{Data, Postgres},
     services::Services,
-    sync::Connection,
     Result,
 };
 
@@ -72,9 +70,6 @@ pub enum MessagingService {
 pub struct ServerState {
     pub inner: Arc<ServerStateInner>,
     pub services: Arc<Services>,
-
-    // TODO(#997): limit number of connections per user, clean up old/unused entries
-    pub syncers: Arc<DashMap<ConnectionId, Connection>>,
 }
 
 impl ServerStateInner {
@@ -374,7 +369,6 @@ impl ServerState {
         services.start_background_tasks().await;
         Self {
             inner: services.state.clone(),
-            syncers: Arc::new(DashMap::new()),
             // channel_user: Arc::new(DashMap::new()),
             services,
         }
