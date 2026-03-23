@@ -1,16 +1,12 @@
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
-    sync::{SyncCompression, SyncFormat, SyncParams, SyncResume},
+    sync::{SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
     ChannelId, ConnectionId, SessionToken, UserId,
-};
-use flate2::{
-    Compress, Compression as FlateCompression, Decompress, FlushCompress, FlushDecompress, Status,
 };
 use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
-use axum::extract::ws::{Message, WebSocket};
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::error::{ApiError, ErrorCode, SyncError};
 use common::v1::types::presence::Presence;
@@ -28,14 +24,15 @@ use crate::services::member_lists::{
     syncer::MemberListSyncer,
     util::{MemberListKey1, MemberListTarget},
 };
-use crate::sync::permissions::AuthCheck;
+use crate::sync::{permissions::AuthCheck, transport::TransportSink};
 use crate::ServerState;
 use crate::{
     error::{Error, Result},
     services::documents::DocumentSyncer,
 };
 
-mod permissions;
+pub mod permissions;
+pub mod transport;
 
 type WsMessage = axum::extract::ws::Message;
 
@@ -55,19 +52,8 @@ pub struct Connection {
     seq_server: u64,
     seq_client: u64,
     id: ConnectionId,
-    compression: Option<Compression>,
-    pub format: SyncFormat,
-
     pub member_list: Box<ConnectionMemberListSyncer>,
     pub document: Box<DocumentSyncer>,
-}
-
-pub enum Compression {
-    Deflate {
-        compressor: Compress,
-        decompressor: Decompress,
-        buffer: Vec<u8>,
-    },
 }
 
 #[derive(Debug, Clone)]
@@ -139,18 +125,8 @@ impl ConnectionMemberListSyncer {
 }
 
 impl Connection {
-    pub fn new(s: Arc<ServerState>, params: SyncParams) -> Self {
-        let compression = match params.compression {
-            Some(SyncCompression::Deflate) => Some(Compression::Deflate {
-                compressor: Compress::new(FlateCompression::default(), true),
-                decompressor: Decompress::new(true),
-                buffer: Vec::new(),
-            }),
-            None => None,
-        };
-
+    pub fn new(s: Arc<ServerState>, _params: SyncParams) -> Self {
         let id = ConnectionId::new();
-        let format = params.format;
 
         let member_list = Box::new(ConnectionMemberListSyncer {
             inner: s.services().member_lists.create_syncer(id.into()),
@@ -167,8 +143,6 @@ impl Connection {
             id,
             member_list,
             document: Box::new(s.services().documents.create_syncer(id)),
-            compression,
-            format,
             s,
         }
     }
@@ -204,90 +178,11 @@ impl Connection {
         }
     }
 
-    pub async fn handle_message(
-        &mut self,
-        ws_msg: Message,
-        ws: &mut WebSocket,
-        timeout: &mut Timeout,
-    ) -> Result<()> {
-        match ws_msg {
-            Message::Text(utf8_bytes) => {
-                let msg = serde_json::from_str::<MessageClient>(&utf8_bytes)?;
-                self.handle_message_client(msg, ws, timeout).await
-            }
-            Message::Binary(bytes) => {
-                // Handle compressed JSON
-                if let Some(Compression::Deflate {
-                    decompressor,
-                    buffer,
-                    ..
-                }) = &mut self.compression
-                {
-                    let mut input_offset = 0;
-                    while input_offset < bytes.len() {
-                        let mut output = [0u8; 4096];
-                        let before_in = decompressor.total_in();
-                        let before_out = decompressor.total_out();
-                        let status = decompressor.decompress(
-                            &bytes[input_offset..],
-                            &mut output,
-                            FlushDecompress::None,
-                        )?;
-                        let consumed = (decompressor.total_in() - before_in) as usize;
-                        let produced = (decompressor.total_out() - before_out) as usize;
-                        buffer.extend_from_slice(&output[..produced]);
-                        input_offset += consumed;
-                        if status == Status::StreamEnd {
-                            break;
-                        }
-                        if consumed == 0 && produced == 0 {
-                            break;
-                        }
-                    }
-
-                    let mut msgs = Vec::new();
-                    let mut consumed = 0;
-                    {
-                        let mut stream = serde_json::Deserializer::from_slice(buffer)
-                            .into_iter::<MessageClient>();
-                        while let Some(msg_res) = stream.next() {
-                            match msg_res {
-                                Ok(msg) => {
-                                    msgs.push(msg);
-                                    consumed = stream.byte_offset();
-                                }
-                                Err(e) if e.is_eof() => break,
-                                Err(e) => return Err(e.into()),
-                            }
-                        }
-                    }
-                    if consumed > 0 {
-                        buffer.drain(..consumed);
-                    }
-
-                    for msg in msgs {
-                        self.handle_message_client(msg, ws, timeout).await?;
-                    }
-                    Ok(())
-                // Handle msgpack
-                } else if self.format == SyncFormat::Msgpack {
-                    let msg = rmp_serde::from_slice::<MessageClient>(&bytes)?;
-                    self.handle_message_client(msg, ws, timeout).await
-                } else {
-                    return Err(Error::BadStatic(
-                        "unexpected binary message for uncompressed session",
-                    ));
-                }
-            }
-            _ => Ok(()),
-        }
-    }
-
-    #[tracing::instrument(level = "debug", skip(self, ws, timeout), fields(id = self.get_id().to_string()))]
+    #[tracing::instrument(level = "debug", skip(self, transport, timeout), fields(id = self.get_id().to_string()))]
     pub async fn handle_message_client(
         &mut self,
         msg: MessageClient,
-        ws: &mut WebSocket,
+        transport: &mut dyn TransportSink,
         timeout: &mut Timeout,
     ) -> Result<()> {
         trace!("{:#?}", msg);
@@ -296,7 +191,7 @@ impl Connection {
                 token,
                 resume: reconnect,
                 presence,
-            } => Box::pin(self.handle_hello(token, reconnect, presence, ws)).await?,
+            } => Box::pin(self.handle_hello(token, reconnect, presence, transport)).await?,
             MessageClient::Presence { presence } => {
                 let session = match &self.state {
                     ConnectionState::Unauthed => return Err(SyncError::Unauthenticated.into()),
@@ -430,7 +325,7 @@ impl Connection {
         token: SessionToken,
         reconnect: Option<SyncResume>,
         presence: Option<Presence>,
-        ws: &mut WebSocket,
+        transport: &mut dyn TransportSink,
     ) -> Result<()> {
         let srv = self.s.services();
         let session = srv
@@ -507,7 +402,7 @@ impl Connection {
             },
         };
 
-        ws.send(self.serialize_and_compress(&msg)?).await?;
+        transport.send(msg).await?;
 
         self.seq_server += 1;
 
@@ -1156,19 +1051,16 @@ impl Connection {
         self.queue.truncate(MAX_QUEUE_LEN);
     }
 
-    #[tracing::instrument(level = "debug", skip(self, ws), fields(id = self.get_id().to_string()))]
-    pub async fn drain(&mut self, ws: &mut WebSocket) -> Result<()> {
+    #[tracing::instrument(level = "debug", skip(self, transport), fields(id = self.get_id().to_string()))]
+    pub async fn drain(&mut self, transport: &mut dyn TransportSink) -> Result<()> {
         let last_seen = self.seq_client;
         let mut high_water_mark = last_seen;
 
         let queue = &self.queue;
-        let compression = &mut self.compression;
-        let format = self.format;
 
         for (seq, msg) in queue.iter().rev() {
             if seq.is_none_or(|s| s > last_seen) {
-                ws.send(Self::compress_message(compression, format, msg)?)
-                    .await?;
+                transport.send(msg.clone()).await?;
 
                 if let Some(seq) = *seq {
                     high_water_mark = high_water_mark.max(seq);
@@ -1186,67 +1078,6 @@ impl Connection {
 
     pub fn state(&self) -> &ConnectionState {
         &self.state
-    }
-
-    pub fn serialize(&mut self, msg: &MessageEnvelope) -> Result<WsMessage> {
-        Self::compress_message(&mut self.compression, self.format, msg)
-    }
-
-    fn compress_message(
-        compression: &mut Option<Compression>,
-        format: SyncFormat,
-        msg: &MessageEnvelope,
-    ) -> Result<WsMessage> {
-        let bytes = if format == SyncFormat::Msgpack {
-            rmp_serde::to_vec_named(msg)?
-        } else {
-            serde_json::to_vec(msg)?
-        };
-
-        if let Some(Compression::Deflate { compressor, .. }) = compression {
-            // PERF: reuse this buffer?
-            let mut output = Vec::with_capacity(bytes.len() + 64);
-            let total_in = compressor.total_in() as usize;
-
-            loop {
-                if output.capacity() - output.len() < 1024 {
-                    output.reserve(1024);
-                }
-
-                let consumed = (compressor.total_in() as usize) - total_in;
-                let flush = FlushCompress::Sync;
-                match compressor.compress_vec(&bytes[consumed..], &mut output, flush)? {
-                    Status::StreamEnd => break,
-                    Status::BufError => {
-                        // we need more output space, loop will reserve more
-                    }
-                    Status::Ok => {
-                        if (compressor.total_in() as usize) - total_in == bytes.len() {
-                            break;
-                        }
-                    }
-                };
-            }
-
-            debug!(
-                size_before = bytes.len(),
-                size_after = output.len(),
-                "compressed message"
-            );
-
-            Ok(WsMessage::Binary(output.into()))
-        } else {
-            if format == SyncFormat::Msgpack {
-                Ok(WsMessage::Binary(bytes.into()))
-            } else {
-                let s = String::from_utf8(bytes).map_err(|e| Error::BadRequest(e.to_string()))?;
-                Ok(WsMessage::Text(s.into()))
-            }
-        }
-    }
-
-    fn serialize_and_compress(&mut self, msg: &MessageEnvelope) -> Result<WsMessage> {
-        Self::compress_message(&mut self.compression, self.format, msg)
     }
 }
 
