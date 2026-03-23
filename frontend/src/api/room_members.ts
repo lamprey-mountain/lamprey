@@ -7,7 +7,7 @@ import {
 	type Resource,
 	untrack,
 } from "solid-js";
-import type { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "@/api";
 import { fetchWithRetry } from "./util.ts";
 
 export class RoomMembers {

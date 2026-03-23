@@ -1,5 +1,5 @@
 import { createResource, createSignal, For, onCleanup } from "solid-js";
-import { useApi } from "../../../api";
+import { useApi } from "@/api";
 import { Time } from "../../../atoms/Time";
 import { Copyable } from "../../../utils/general";
 import type { Scope } from "sdk";

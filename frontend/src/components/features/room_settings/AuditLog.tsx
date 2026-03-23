@@ -6,7 +6,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { getTimestampFromUUID, type Room } from "sdk";
 import {
 	formatAuditLogEntry,

@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
-import { useApi } from "./api.tsx";
+import { useApi } from "@/api";
 import { useModals } from "./contexts/modal";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { flags } from "./flags.ts";

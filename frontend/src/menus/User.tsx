@@ -1,6 +1,6 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { For, Match, Show, Switch } from "solid-js";
-import { useApi } from "../api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "../context.ts";
 import { useMenu } from "../contexts/mod.tsx";
 import { usePermissions } from "../hooks/usePermissions.ts";

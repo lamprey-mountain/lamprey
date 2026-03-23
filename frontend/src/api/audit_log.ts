@@ -10,7 +10,7 @@ import type {
 } from "sdk";
 import { createEffect, createResource, type Resource, untrack } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
-import type { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "@/api";
 import { logger } from "../logger.ts";
 
 const log = logger.for("api/audit_log");

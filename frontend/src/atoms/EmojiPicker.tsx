@@ -10,7 +10,7 @@ import icEmojiObjects from "../assets/emoji-objects.png";
 import icEmojiPeople from "../assets/emoji-people.png";
 import icEmojiPlaces from "../assets/emoji-places.png";
 import icEmojiSymbols from "../assets/emoji-symbols.png";
-import { useApi, useRooms2 } from "../api";
+import { useApi, useRooms2 } from "@/api";
 import { getThumbFromId } from "../media/util";
 import { RoomIcon } from "../User";
 import type { EmojiCustom, Room } from "sdk";

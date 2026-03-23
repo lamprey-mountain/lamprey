@@ -1,5 +1,5 @@
 import { createResource, For, Show, type VoidProps } from "solid-js";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { getTimestampFromUUID, type User } from "sdk";
 import {
 	formatAuditLogEntry,

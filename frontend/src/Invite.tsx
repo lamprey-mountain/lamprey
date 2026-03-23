@@ -1,5 +1,5 @@
 import { createEffect, Show } from "solid-js";
-import { useApi } from "./api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
 import { useNavigate } from "@solidjs/router";

@@ -1,7 +1,7 @@
 import type { Pagination, Room } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
-import type { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "@/api";
 import { fetchWithRetry } from "./util.ts";
 import { RoomsService } from "./services/RoomsService.ts";
 import { logger } from "../logger.ts";

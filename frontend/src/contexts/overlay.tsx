@@ -27,7 +27,7 @@ import {
 	useUserPopout,
 } from "./mod.tsx";
 import { FormattingToolbar } from "./FormattingToolbar.tsx";
-import { useApi } from "../api.tsx";
+import { useApi } from "@/api";
 import {
 	ChannelMenu,
 	FolderMenu,

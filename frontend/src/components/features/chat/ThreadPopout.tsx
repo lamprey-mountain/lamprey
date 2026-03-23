@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useChannels2 } from "../../../api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { ChannelIcon } from "../../../User.tsx";
 import { useNavigate } from "@solidjs/router";

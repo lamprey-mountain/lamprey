@@ -16,7 +16,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import { useApi, useRooms2 } from "../../../api.tsx";
+import { useApi, useRooms2 } from "@/api";
 import { PermissionSelector } from "../../../components/PermissionSelector";
 import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
 import { permissions } from "../../../permissions.ts";

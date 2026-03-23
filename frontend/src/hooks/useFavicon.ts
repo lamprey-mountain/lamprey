@@ -1,7 +1,7 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useLocation } from "@solidjs/router";
-import { useApi, useApi2, useChannels2 } from "../api.tsx";
+import { useApi, useApi2, useChannels2 } from "@/api";
 import { generateFavicon } from "../drawing.ts";
 
 export function useFavicon() {

@@ -10,7 +10,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { type Application, createUpload, type Room, type User } from "sdk";
-import { useApi, useRooms2 } from "../../../api.tsx";
+import { useApi, useRooms2 } from "@/api";
 import { Copyable } from "../../../utils/general";
 import { createStore, reconcile } from "solid-js/store";
 import { useCtx } from "../../../context.ts";

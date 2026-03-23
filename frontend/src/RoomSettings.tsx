@@ -19,7 +19,7 @@ import * as Admin from "./components/features/admin_settings/mod.tsx";
 import { Permission, SERVER_ROOM_ID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context.ts";
-import { useApi } from "./api.tsx";
+import { useApi } from "@/api";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { flags } from "./flags.ts";

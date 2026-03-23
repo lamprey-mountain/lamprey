@@ -9,7 +9,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useChannels2, useRooms2, useUsers2 } from "./api";
+import { useApi, useChannels2, useRooms2, useUsers2 } from "@/api";
 import { useConfig } from "./config";
 import { flags } from "./flags";
 import { useCtx } from "./context";

@@ -8,7 +8,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "./api";
+import { useApi, useChannels2, useRooms2 } from "@/api";
 import { flags } from "./flags";
 import { getThumbFromId } from "./media/util";
 import { useCtx } from "./context";

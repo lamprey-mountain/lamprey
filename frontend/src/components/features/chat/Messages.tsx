@@ -1,5 +1,5 @@
 import { createMemo, Match, Show, Switch } from "solid-js";
-import { useApi, useMessages2, useRoomMembers2 } from "../../../api.tsx";
+import { useApi, useMessages2, useRoomMembers2 } from "@/api";
 import type { MessageT, ThreadT } from "../../../types.ts";
 import { useCtx } from "../../../context.ts";
 import { md } from "../../../markdown_utils.tsx";

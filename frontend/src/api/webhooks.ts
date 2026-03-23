@@ -7,7 +7,7 @@ import {
 	type Resource,
 	untrack,
 } from "solid-js";
-import type { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "@/api";
 import { logger } from "../logger.ts";
 
 const log = logger.for("api/webhooks");

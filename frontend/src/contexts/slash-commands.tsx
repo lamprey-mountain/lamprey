@@ -1,9 +1,9 @@
 import { Channel } from "sdk";
-import type { Api } from "../api.tsx";
-import type { ChannelsService } from "../api/services/ChannelsService";
+import type { Api } from "@/api";
+import type { ChannelsService } from "@/api/services/ChannelsService";
 import type { ChatCtx } from "../context.ts";
 import { createContext, type ParentProps, useContext } from "solid-js";
-import { RootStore } from "../api/core/Store.ts";
+import { RootStore } from "@/api/core/Store.ts";
 
 export type CommandOption = {
 	name: string;

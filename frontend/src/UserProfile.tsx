@@ -1,5 +1,5 @@
 import { createResource, For } from "solid-js";
-import { useApi } from "./api";
+import { useApi } from "@/api";
 import { UserView } from "./User";
 import { type UserWithRelationship } from "sdk";
 

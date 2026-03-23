@@ -1,6 +1,6 @@
 import { diffChars } from "diff";
 import { createResource, For } from "solid-js";
-import { useApi } from "../api";
+import { useApi } from "@/api";
 import { MessageView } from "../components/features/chat/Message";
 import { Modal } from "./mod";
 

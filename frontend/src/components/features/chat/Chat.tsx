@@ -8,9 +8,9 @@ import {
 	type TimelineItemT,
 } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
-import { useApi, useMessages2 } from "../../../api.tsx";
+import { useApi, useMessages2 } from "@/api";
 import { throttle } from "@solid-primitives/scheduled";
-import type { MessageListAnchor } from "../../../api/services/MessagesService.ts";
+import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
 import { uuidv7 } from "uuidv7";
 import { Portal } from "solid-js/web";
 import { useChannel } from "../../../channelctx.tsx";

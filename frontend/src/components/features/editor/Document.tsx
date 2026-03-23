@@ -30,7 +30,7 @@ import { useDocument } from "../../../contexts/document.tsx";
 import { useModals } from "../../../contexts/modal.tsx";
 import { TextSelection } from "prosemirror-state";
 import { useChannel } from "../../../contexts/channel.tsx";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import type { HistoryPagination } from "sdk";
 import * as Y from "yjs";
 import { base64UrlDecode } from "./editor-utils.ts";

@@ -1,5 +1,5 @@
 import type { HistoryPagination, User, UserWithRelationship } from "sdk";
-import type { Api } from "../api.tsx";
+import type { Api } from "@/api";
 import { ReactiveMap } from "@solid-primitives/map";
 import { fetchWithRetry } from "./util.ts";
 

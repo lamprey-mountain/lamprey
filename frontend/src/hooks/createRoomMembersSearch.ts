@@ -1,5 +1,5 @@
 import { createResource, createSignal } from "solid-js";
-import { useApi } from "../api";
+import { useApi } from "@/api";
 
 export function creaeRoomMembersSearch(
 	room_id: () => string,

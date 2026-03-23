@@ -1,5 +1,5 @@
 import { createResource, For, Show, type VoidProps } from "solid-js";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
 import type { Pagination, SessionT, UserT } from "../../../types.ts";

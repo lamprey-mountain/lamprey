@@ -15,7 +15,7 @@ import {
 	SessionT,
 	UserT,
 } from "./types.ts";
-import type { RevisionContent } from "./api/services/DocumentsService.ts";
+import type { RevisionContent } from "@/api/services/DocumentsService.ts";
 import type { ThreadMember } from "sdk";
 
 export interface ApiDB extends DBSchema {

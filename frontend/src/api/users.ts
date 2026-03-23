@@ -1,7 +1,7 @@
 import type { Pagination, Preferences, User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect, createResource, type Resource } from "solid-js";
-import type { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "@/api";
 import { fetchWithRetry } from "./util.ts";
 import { UsersService } from "./services/UsersService.ts";
 

@@ -8,7 +8,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "../../../context.ts";
 import type { Room } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";

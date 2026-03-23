@@ -2,7 +2,7 @@ import { createSignal, onMount } from "solid-js";
 import { Modal } from "./mod";
 import { useCtx } from "../context";
 import { Tag, TagCreate, TagPatch } from "sdk";
-import { useApi, useChannels2 } from "../api";
+import { useApi, useChannels2 } from "@/api";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
 import { Colorpicker } from "../atoms/Colorpicker";

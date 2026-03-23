@@ -5,7 +5,7 @@ import { useChannel } from "../../../channelctx";
 import type { ChannelSearch } from "../../../context";
 import { useRoom } from "../../../contexts/room";
 import { MessageView } from "./Message";
-import { useChannels2 } from "../../../api";
+import { useChannels2 } from "@/api";
 
 export const SearchResults = (props: {
 	channel?: Channel;

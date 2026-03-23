@@ -12,7 +12,7 @@ import {
 import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
-import { useApi } from "./api.tsx";
+import { useApi } from "@/api";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 const tabs: Array<{

@@ -11,7 +11,7 @@ import {
 	Switch,
 	useContext,
 } from "solid-js";
-import { useApi, useChannels2 } from "../api";
+import { useApi, useChannels2 } from "@/api";
 import { md } from "../markdown_utils";
 import { useNavigate } from "@solidjs/router";
 import { useUserPopout } from "../contexts/mod";

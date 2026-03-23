@@ -1,4 +1,4 @@
-import type { Api } from "../api.tsx";
+import type { Api } from "@/api";
 
 export class Sessions {
 	api: Api = null as unknown as Api;

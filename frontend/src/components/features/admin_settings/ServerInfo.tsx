@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { useApi } from "../../../api";
+import { useApi } from "@/api";
 
 export function ServerInfo() {
 	const api = useApi();

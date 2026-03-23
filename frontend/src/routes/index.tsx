@@ -1,7 +1,7 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
 import type { ParentProps, VoidProps } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "../api.tsx";
+import { useApi, useChannels2, useRooms2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { type ChannelSearch } from "../context.ts";
 import { flags } from "../flags.ts";

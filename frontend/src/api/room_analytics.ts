@@ -1,4 +1,4 @@
-import type { Api } from "../api.tsx";
+import type { Api } from "@/api";
 import type {
 	RoomAnalyticsChannel,
 	RoomAnalyticsInvites,

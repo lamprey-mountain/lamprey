@@ -1,6 +1,6 @@
 import { Channel } from "sdk";
-import type { Api } from "./api";
-import type { ChannelsService } from "./api/services/ChannelsService";
+import type { Api } from "@/api";
+import type { ChannelsService } from "@/api/services/ChannelsService";
 import type { ChatCtx } from "./context";
 import { type Command, SlashCommands } from "./contexts/slash-commands";
 import {

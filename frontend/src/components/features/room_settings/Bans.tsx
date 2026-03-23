@@ -6,7 +6,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "../../../context.ts";
 import type { RoomT } from "../../../types.ts";
 import { Role, RoomMember, RoomMemberOrigin } from "sdk";

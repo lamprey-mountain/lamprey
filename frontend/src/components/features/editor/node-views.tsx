@@ -1,7 +1,7 @@
 import { getOwner, runWithOwner, VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { getEmojiUrl } from "../../../media/util.tsx";
-import { type Api, useChannels2 } from "../../../api.tsx";
+import { type Api, useChannels2 } from "@/api";
 import { getTwemoji, getTwemojiUrl } from "../../../emoji.ts";
 
 export const createNodeViews = () => {

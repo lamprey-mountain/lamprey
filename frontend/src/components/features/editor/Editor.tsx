@@ -12,7 +12,7 @@ import {
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createEmojiPlugin } from "./emoji-plugin.ts";
-import { useApi, useChannels2 } from "../../../api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { createEditorNodeViews } from "./node-views.tsx";
 
 let isApplyingFormat = false;

@@ -3,7 +3,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "./api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { createEditor } from "./components/features/editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";

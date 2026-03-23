@@ -7,12 +7,12 @@ import {
 	type VoidProps,
 } from "solid-js";
 import type { RoomT } from "../../../types.ts";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { formatBytes } from "../../../media/util.tsx";
 import { DateRangePicker } from "../../../atoms/Daterangepicker.tsx";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
-import type { Aggregation } from "../../../api/room_analytics.ts";
+import type { Aggregation } from "@/api/room_analytics.ts";
 
 export function Metrics(props: VoidProps<{ room: RoomT }>) {
 	const api = useApi();

@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { Dropdown, MultiDropdown } from "../atoms/Dropdown";
 import { Modal } from "./mod";
-import { useApi, useChannels2, useRooms2 } from "../api";
+import { useApi, useChannels2, useRooms2 } from "@/api";
 import { Time } from "sdk";
 import {
 	calculatePermissions,

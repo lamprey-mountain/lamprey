@@ -49,7 +49,7 @@ import {
 	MenuProvider,
 	UserPopoutProvider,
 } from "./contexts/mod.tsx";
-import { RootStoreContext, useApi } from "./api.tsx";
+import { RootStoreContext, useApi } from "@/api";
 import {
 	CurrentUserProvider,
 	useCurrentUser,

@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi, useChannels2 } from "../../../api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import type { Channel } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";

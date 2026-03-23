@@ -1,6 +1,6 @@
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useCtx } from "../context.ts";
-import { useApi, useRooms2 } from "../api.tsx";
+import { useApi, useRooms2 } from "@/api";
 import type { RoomNavItem } from "../RoomNav.tsx";
 import { useModals } from "../contexts/modal";
 

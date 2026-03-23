@@ -1,5 +1,5 @@
 import type { Setter } from "solid-js";
-import { useApi, useApi2, useChannels2 } from "../api.tsx";
+import { useApi, useApi2, useChannels2 } from "@/api";
 import type { Menu } from "../context.ts";
 
 export function useContextMenu(setMenu: Setter<Menu | null>) {

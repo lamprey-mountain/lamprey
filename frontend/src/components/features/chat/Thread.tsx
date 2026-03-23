@@ -1,7 +1,7 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { Channel, Role, RoomMember, User } from "sdk";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { AvatarWithStatus } from "../../../User.tsx";
 import { useCtx } from "../../../context.ts";
 import { useUserPopout } from "../../../contexts/mod.tsx";

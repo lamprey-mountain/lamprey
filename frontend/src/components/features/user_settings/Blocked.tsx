@@ -1,6 +1,6 @@
 import { For, Show, type VoidProps } from "solid-js";
 import { type Pagination, type RelationshipWithUserId, type User } from "sdk";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { createResource } from "solid-js";
 import { Avatar } from "../../../User.tsx";
 import { useCtx } from "../../../context.ts";

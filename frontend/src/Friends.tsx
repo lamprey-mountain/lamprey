@@ -1,7 +1,7 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { useApi } from "./api";
+import { useApi } from "@/api";
 import { AvatarWithStatus } from "./User";
 import type { RelationshipType } from "sdk";
 

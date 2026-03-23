@@ -1,5 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
-import { useApi, useRooms2 } from "../../../api.tsx";
+import { useApi, useRooms2 } from "@/api";
 import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";

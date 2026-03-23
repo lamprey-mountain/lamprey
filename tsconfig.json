@@ -19,8 +19,13 @@
 		"strict": true,
 		"skipLibCheck": true,
 		"noFallthroughCasesInSwitch": true,
-		"noUncheckedSideEffectImports": true
+		"noUncheckedSideEffectImports": true,
 		// "noPropertyAccessFromIndexSignature": true
+
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["frontend/src/*"]
+		}
 	},
 	"include": [
 		"frontend",

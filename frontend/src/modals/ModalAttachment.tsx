@@ -1,7 +1,7 @@
 import { createSignal, onMount, Show } from "solid-js";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
-import { useApi } from "../api";
+import { useApi } from "@/api";
 import { useModals } from "../contexts/modal";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";

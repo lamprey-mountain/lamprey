@@ -1,6 +1,6 @@
 import { createContext, createMemo, JSX, useContext } from "solid-js";
 import { UserWithRelationship } from "sdk";
-import { useApi } from "../api";
+import { useApi } from "@/api";
 
 const CurrentUserContext = createContext<
 	() => UserWithRelationship | undefined

@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "../api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";

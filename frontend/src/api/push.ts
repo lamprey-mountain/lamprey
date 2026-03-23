@@ -1,5 +1,5 @@
 import type { PushCreate, PushInfo } from "sdk";
-import type { Api } from "../api.tsx";
+import type { Api } from "@/api";
 import { logger } from "../logger.ts";
 
 const log = logger.for("api/push");

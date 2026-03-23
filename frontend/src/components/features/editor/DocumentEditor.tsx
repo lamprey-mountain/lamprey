@@ -10,7 +10,7 @@ import {
 } from "y-prosemirror";
 import { keymap } from "prosemirror-keymap";
 import { md } from "../../../markdown_utils.tsx";
-import { useApi, useChannels2 } from "../../../api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
 import {

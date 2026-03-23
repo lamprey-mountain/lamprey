@@ -6,7 +6,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { createResource } from "solid-js";
 import * as i18n from "@solid-primitives/i18n";
 import type en from "../i18n/en.tsx";
-import { createApi } from "../api.tsx";
+import { createApi } from "@/api";
 import { useMouseTracking } from "./useMouseTracking.ts";
 import { SlashCommands } from "../contexts/slash-commands";
 import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
@@ -15,7 +15,7 @@ import type { ChatCtx, Data, Events, MediaCtx } from "../context.ts";
 import type { ThreadsViewData } from "../context.ts";
 import type { Config } from "../config.tsx";
 import { flags } from "../flags.ts";
-import { RootStore } from "../api/core/Store.ts";
+import { RootStore } from "@/api/core/Store.ts";
 import { colors, logger } from "../logger.ts";
 import { DBSchema, type IDBPDatabase, openDB } from "idb";
 import {
@@ -28,7 +28,7 @@ import {
 	SessionT,
 	UserT,
 } from "../types.ts";
-import type { RevisionContent } from "../api/services/DocumentsService.ts";
+import type { RevisionContent } from "@/api/services/DocumentsService.ts";
 import type { ThreadMember } from "sdk";
 import { ApiDB, migrations } from "../db.ts";
 

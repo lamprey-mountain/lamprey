@@ -1,6 +1,6 @@
 import { Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
-import { MessageListAnchor } from "../api/services/MessagesService.ts";
+import { MessageListAnchor } from "@/api/services/MessagesService.ts";
 import { Attachment } from "../context";
 import { EditorState } from "prosemirror-state";
 import { SetStoreFunction, Store } from "solid-js/store";

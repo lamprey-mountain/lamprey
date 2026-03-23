@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "../api";
+import { useApi, useChannels2, useRooms2 } from "@/api";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
 import { ChannelIcon } from "../User";

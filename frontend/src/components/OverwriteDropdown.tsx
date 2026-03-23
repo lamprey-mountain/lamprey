@@ -9,7 +9,7 @@ import {
 import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { useApi } from "../api.tsx";
+import { useApi } from "@/api";
 import { createKeybinds } from "../keybinds.tsx";
 import type { Role, RoomMemberSearchResponse, User } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";

@@ -1,7 +1,7 @@
 import { Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
 import { useCtx } from "../../../context.ts";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { getThumbFromId } from "../../../media/util.tsx";
 import { Checkbox } from "../../../icons";
 import { Dropdown } from "../../../atoms/Dropdown";

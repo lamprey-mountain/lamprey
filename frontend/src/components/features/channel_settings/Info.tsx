@@ -1,7 +1,7 @@
 import type { Channel } from "sdk";
 import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../../../context.ts";
-import { useApi, useChannels2 } from "../../../api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { useModals } from "../../../contexts/modal";
 import { Checkbox } from "../../../icons";
 import {

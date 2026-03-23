@@ -4,7 +4,7 @@ import { type Attachment, useCtx } from "../../../context.ts";
 import type { MessageT, ThreadT } from "../../../types.ts";
 import { createEditor } from "../editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
-import { useApi, useApi2, useChannels2, useMessages2 } from "../../../api.tsx";
+import { useApi, useApi2, useChannels2, useMessages2 } from "@/api";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import {
 	createEffect,

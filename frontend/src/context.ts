@@ -82,7 +82,7 @@ export type Popout = {
 import type { ChannelContextT } from "./channelctx";
 import type { RoomContextT } from "./contexts/room.tsx";
 import { DocumentContextT } from "./contexts/document.tsx";
-import type { Api } from "./api.tsx";
+import type { Api } from "@/api";
 import type { SetStoreFunction } from "solid-js/store";
 
 // TODO: split apart this massive context into more granular contexts

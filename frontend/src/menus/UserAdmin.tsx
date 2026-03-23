@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { useApi } from "../api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";

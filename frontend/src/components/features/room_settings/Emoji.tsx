@@ -1,6 +1,6 @@
 import { For, type VoidProps } from "solid-js";
 import type { RoomT } from "../../../types.ts";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { createUpload } from "sdk";
 import { useConfig } from "../../../config.tsx";

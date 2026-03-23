@@ -1,6 +1,6 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
-import { useApi, useMessages2 } from "./api.tsx";
+import { useApi, useMessages2 } from "@/api";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./components/features/chat/Message.tsx";
 import { flags } from "./flags.ts";

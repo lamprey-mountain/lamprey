@@ -1,6 +1,6 @@
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useChannels2, useMessages2, useRoles2 } from "../../../api";
+import { useApi, useChannels2, useMessages2, useRoles2 } from "@/api";
 import { useCtx } from "../../../context";
 import type { RoomT, ThreadT } from "../../../types";
 import type { ChannelSearch } from "../../../context";

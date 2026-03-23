@@ -11,7 +11,7 @@ import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
-import { useApi, useChannels2 } from "./api";
+import { useApi, useChannels2 } from "@/api";
 import { Time } from "./atoms/Time";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";

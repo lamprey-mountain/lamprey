@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import type { Channel } from "sdk";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import type { HistoryPagination } from "sdk";
 import { Time } from "../../../atoms/Time.tsx";
 import { useChannel } from "../../../contexts/channel.tsx";

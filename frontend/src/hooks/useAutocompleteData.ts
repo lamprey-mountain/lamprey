@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { useAutocomplete } from "../contexts/autocomplete";
-import { useApi, useApi2, useChannels2, useRoles2 } from "../api";
+import { useApi, useApi2, useChannels2, useRoles2 } from "@/api";
 import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import type { Role } from "sdk";

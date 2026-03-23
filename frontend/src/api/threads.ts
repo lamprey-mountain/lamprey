@@ -1,6 +1,6 @@
 import type { Channel, Pagination } from "sdk";
 import { batch, createResource, type Resource } from "solid-js";
-import type { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "@/api";
 import { logger } from "../logger.ts";
 
 const log = logger.for("api/threads");

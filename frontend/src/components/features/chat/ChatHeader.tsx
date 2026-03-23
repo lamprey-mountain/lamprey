@@ -1,7 +1,7 @@
 import { createSignal, Match, Show, Switch } from "solid-js";
 import type { Channel } from "sdk";
 import { useCtx } from "../../../context.ts";
-import { useApi, useChannels2, useMessages2 } from "../../../api.tsx";
+import { useApi, useChannels2, useMessages2 } from "@/api";
 import { useChannel } from "../../../channelctx.tsx";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { useModals } from "../../../contexts/modal.tsx";

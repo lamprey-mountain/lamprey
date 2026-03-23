@@ -20,7 +20,7 @@ import { ModalBan } from "./ModalBan.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
 import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
 import { ModalRoomCreate } from "./ModalRoomCreate";
-import { useApi } from "../api";
+import { useApi } from "@/api";
 
 export const Modal = (
 	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },

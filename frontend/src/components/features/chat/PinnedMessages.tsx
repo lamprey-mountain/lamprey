@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Channel } from "sdk";
-import { useApi, useMessages2 } from "../../../api.tsx";
+import { useApi, useMessages2 } from "@/api";
 import { MessageView } from "./Message.tsx";
 import type { Message } from "sdk";
 

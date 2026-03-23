@@ -1,5 +1,5 @@
 import type { PaginationResponse, Tag } from "sdk";
-import type { Api } from "../api";
+import type { Api } from "@/api";
 
 export class Tags {
 	api: Api = null as unknown as Api;

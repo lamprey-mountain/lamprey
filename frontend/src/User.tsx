@@ -5,7 +5,7 @@ import type {
 	ThreadMember,
 	UserWithRelationship,
 } from "sdk";
-import { useApi } from "./api";
+import { useApi } from "@/api";
 import {
 	createEffect,
 	createSignal,

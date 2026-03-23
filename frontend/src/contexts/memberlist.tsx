@@ -1,6 +1,6 @@
 import { createContext, createEffect, ParentProps, useContext } from "solid-js";
-import { useApi2, useMemberList2 } from "../api.tsx";
-import type { MemberList } from "../api.tsx";
+import { useApi2, useMemberList2 } from "@/api";
+import type { MemberList } from "@/api";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useLocation } from "@solidjs/router";
 

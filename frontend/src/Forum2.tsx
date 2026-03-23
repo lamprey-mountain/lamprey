@@ -24,7 +24,7 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
 import { useMenu, useUserPopout } from "./contexts/mod.tsx";
-import { useApi, useChannels2, useMessages2 } from "./api";
+import { useApi, useChannels2, useMessages2 } from "@/api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./atoms/Time";
 import { A, useNavigate } from "@solidjs/router";

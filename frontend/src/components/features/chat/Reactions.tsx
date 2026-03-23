@@ -2,7 +2,7 @@ import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { useCtx } from "../../../context.ts";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import type { Message } from "sdk";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import icReactionAdd from "../../../assets/reaction-add.png";
 import { renderReactionKey } from "../../../emoji";
 

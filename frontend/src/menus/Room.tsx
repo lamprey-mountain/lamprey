@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { timeAgo } from "../atoms/Time.tsx";
-import { useApi, useRooms2 } from "../api.tsx";
+import { useApi, useRooms2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";

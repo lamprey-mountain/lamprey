@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import type { User } from "sdk";
 import { Modal } from "./mod";
-import { useApi, useMessages2 } from "../api";
+import { useApi, useMessages2 } from "@/api";
 import { Avatar } from "../User";
 import { renderReactionKey } from "../emoji";
 

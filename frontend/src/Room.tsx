@@ -6,7 +6,7 @@ import { useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "./api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { Time } from "./atoms/Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";

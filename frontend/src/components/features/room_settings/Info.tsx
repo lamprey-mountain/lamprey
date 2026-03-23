@@ -9,7 +9,7 @@ import { useCtx } from "../../../context.ts";
 import type { RoomT } from "../../../types.ts";
 import { getThumbFromId, getUrl } from "../../../media/util.tsx";
 import { createUpload } from "sdk";
-import { useApi, useChannels2 } from "../../../api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { Checkbox } from "../../../icons";
 import { useModals } from "../../../contexts/modal";
 import { RoomIcon } from "../../../User.tsx";

@@ -1,5 +1,5 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import type { Channel } from "sdk";
 import type { InviteWithMetadata } from "sdk";
 import { Avatar } from "../../../User.tsx";

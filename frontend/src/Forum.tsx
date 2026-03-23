@@ -3,7 +3,7 @@ import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "./api.tsx";
+import { useApi, useChannels2 } from "@/api";
 import { ChannelIcon } from "./User";
 import { createEditor } from "./components/features/editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";

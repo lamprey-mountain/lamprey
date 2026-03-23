@@ -1,6 +1,6 @@
-import { type Api, useChannels2, useRooms2 } from "./api";
-import { type RoomsService } from "./api/services/RoomsService";
-import { type ChannelsService } from "./api/services/ChannelsService";
+import { type Api, useChannels2, useRooms2 } from "@/api";
+import { type RoomsService } from "@/api/services/RoomsService";
+import { type ChannelsService } from "@/api/services/ChannelsService";
 import type {
 	Channel,
 	Permission,

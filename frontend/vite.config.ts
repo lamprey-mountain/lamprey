@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import pkg from "./package.json";
 import { execSync, spawnSync } from "node:child_process";
+import path from "node:path";
 
 function getGitCommit() {
 	if (process.env.VITE_GIT_SHA) {
@@ -27,6 +28,11 @@ function isGitDirty() {
 
 // https://vite.dev/config/
 export default defineConfig({
+	resolve: {
+		alias: {
+			"@": path.resolve(__dirname, "./src"),
+		},
+	},
 	define: {
 		__VITE_PACKAGE_JSON__: pkg,
 		__VITE_GIT_COMMIT__: JSON.stringify(getGitCommit()),

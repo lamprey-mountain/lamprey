@@ -8,7 +8,7 @@ import {
 	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi } from "../api";
+import { useApi } from "@/api";
 import { createVoiceClient } from "../components/features/voice/rtc";
 import { ReactiveMap } from "@solid-primitives/map";
 // @ts-ignore

@@ -1,5 +1,5 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi } from "../../../api.tsx";
+import { useApi } from "@/api";
 import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";

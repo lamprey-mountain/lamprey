@@ -12,7 +12,7 @@ import {
 	onCleanup,
 	type Resource,
 } from "solid-js";
-import type { Api } from "../api.tsx";
+import type { Api } from "@/api";
 import type { Message } from "sdk";
 import { logger } from "../logger.ts";
 import type { RoomsService } from "./services/RoomsService";

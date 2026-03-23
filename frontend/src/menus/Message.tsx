@@ -1,6 +1,6 @@
 // the context menu for messages
 
-import { useApi, useChannels2, useMessages2 } from "../api.tsx";
+import { useApi, useChannels2, useMessages2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";

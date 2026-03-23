@@ -1,7 +1,7 @@
 import type { Media } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect, createResource, type Resource } from "solid-js";
-import type { Api } from "../api.tsx";
+import type { Api } from "@/api";
 
 export class MediaInfo {
 	api: Api = null as unknown as Api;

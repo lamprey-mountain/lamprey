@@ -1,7 +1,7 @@
 import { BaseService } from "../core/Service";
 import type { HistoryPagination, User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import type { Api } from "../../api.tsx";
+import type { Api } from "@/api";
 
 export type RevisionContent = {
 	data?: {

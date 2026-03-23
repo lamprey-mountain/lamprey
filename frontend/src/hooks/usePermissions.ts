@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 import type { Permission } from "sdk";
-import { useApi, useChannels2, useRooms2 } from "../api";
+import { useApi, useChannels2, useRooms2 } from "@/api";
 import {
 	calculatePermissions,
 	type PermissionContext,

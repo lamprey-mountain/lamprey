@@ -1,6 +1,6 @@
 import { createSignal, untrack } from "solid-js";
-import { useApi } from "../../../api";
-import { SignallingMessage, TrackMetadata, VoiceState } from "sdk";
+import { useApi } from "@/api";
+import { SignallingMessage, TrackMetadata } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEmitter } from "@solid-primitives/event-bus";
 

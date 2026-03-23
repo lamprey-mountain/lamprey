@@ -4,7 +4,7 @@ import { Checkbox } from "../../../icons";
 import { notificationPermission } from "../../../notification";
 import { useCtx } from "../../../context";
 import { Dropdown } from "../../../atoms/Dropdown";
-import { useApi } from "../../../api";
+import { useApi } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 
 type NotifAction = "Notify" | "Watching" | "Ignore";

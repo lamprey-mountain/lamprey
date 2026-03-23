@@ -1,7 +1,7 @@
 import { type AuditLogChange, type AuditLogEntry } from "sdk";
 import { ChangeObject, diffArrays } from "diff";
 import { JSX, untrack } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "./api";
+import { useApi, useChannels2, useRooms2 } from "@/api";
 import { useCtx } from "./context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes

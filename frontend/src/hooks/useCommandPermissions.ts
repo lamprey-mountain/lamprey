@@ -1,8 +1,8 @@
 import type { ChannelType } from "sdk";
-import type { Api } from "../api";
-import { useChannels2 } from "../api";
+import type { Api } from "@/api";
+import { useChannels2 } from "@/api";
 import { canUseCommand as checkCommandPermission } from "../permission-calculator";
-import { useRooms2 } from "../api";
+import { useRooms2 } from "@/api";
 
 /**
  * Check if a command should be available based on channel type and permissions

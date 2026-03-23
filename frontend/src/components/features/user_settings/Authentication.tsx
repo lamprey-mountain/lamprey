@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { type User } from "sdk";
 import { useCtx } from "../../../context";
-import { useApi } from "../../../api";
+import { useApi } from "@/api";
 import { useModals } from "../../../contexts/modal";
 import { Modal } from "../../../modals/mod";
 

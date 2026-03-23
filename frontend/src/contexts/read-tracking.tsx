@@ -1,10 +1,10 @@
 import { createContext, useContext } from "solid-js";
-import type { Api } from "../api.tsx";
+import type { Api } from "@/api";
 import type { ChannelContextT } from "../channelctx";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type { SetStoreFunction } from "solid-js/store";
 import type { Data } from "../context.ts";
-import type { ChannelsService } from "../api/services/ChannelsService.ts";
+import type { ChannelsService } from "@/api/services/ChannelsService.ts";
 
 export type ReadTrackingContextT = {
 	markThreadRead: (
