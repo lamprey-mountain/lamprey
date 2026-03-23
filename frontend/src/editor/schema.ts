@@ -102,6 +102,23 @@ export const schema = new Schema({
 				}),
 			}],
 		},
+		mentionEveryone: {
+			group: "inline",
+			atom: true,
+			inline: true,
+			selectable: false,
+			attrs: {},
+			leafText() {
+				return "@everyone";
+			},
+			toDOM: () => ["span", {
+				"data-mention": "everyone",
+				"class": "mention mention-everyone",
+			}, "@everyone"],
+			parseDOM: [{
+				tag: "span.mention-everyone",
+			}],
+		},
 		emoji: {
 			group: "inline",
 			atom: true,

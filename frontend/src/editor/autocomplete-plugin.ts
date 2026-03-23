@@ -199,17 +199,8 @@ export function createAutocompletePlugin(
 					name: item.name ?? "",
 				});
 			} else if (item.type === "everyone") {
-				// @everyone - insert as text, cursor after
-				let tr = state.tr.replaceWith(
-					triggerPos,
-					to,
-					state.schema.text("@everyone"),
-				);
-				const posAfter = tr.mapping.map(to);
-				tr = tr.setSelection(TextSelection.create(tr.doc, posAfter));
-				view.dispatch(tr);
-				autocomplete.hide();
-				return;
+				// @everyone - insert as atomic node
+				node = state.schema.nodes.mentionEveryone.create();
 			}
 		} else {
 			// channel mention

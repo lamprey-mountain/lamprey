@@ -35,6 +35,9 @@ function serializeNode(node: Node): string {
 			const roleId = node.attrs.role;
 			return `<@&${roleId}>`;
 		}
+		case "mentionEveryone": {
+			return "@everyone";
+		}
 		case "emoji": {
 			const emojiId = node.attrs.id;
 			const name = node.attrs.name;

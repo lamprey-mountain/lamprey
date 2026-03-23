@@ -81,6 +81,12 @@ export const createEditorNodeViews = (
 				return <span class="mention-role">@{name()}</span>;
 			},
 		),
+		mentionEveryone: nv(
+			() => ({}),
+			() => {
+				return <span class="mention-everyone">@everyone</span>;
+			},
+		),
 		emoji: nv(
 			(n) => ({ id: n.attrs.id, name: n.attrs.name }),
 			(props) => {
