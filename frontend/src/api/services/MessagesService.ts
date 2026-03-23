@@ -49,12 +49,13 @@ export class MessageRange {
 		return this.items.length === 0;
 	}
 
+	// TODO: make this return `string | undefined`
 	get start(): string {
-		return this.items[0]!.id;
+		return this.items[0]?.id ?? "";
 	}
 
 	get end(): string {
-		return this.items.at(-1)!.id;
+		return this.items.at(-1)?.id ?? "";
 	}
 
 	get len(): number {
@@ -350,8 +351,11 @@ export class MessagesService extends BaseService<Message> {
 				}
 
 				const start = Math.max(r.items.length - dir.limit, 0);
-				log.debug("returning live timeline", r.slice(start, r.items.length));
-				return r.slice(start, r.items.length);
+				const slice = r.slice(start, r.items.length);
+				if (!slice.isEmpty()) {
+					log.debug("returning live timeline", slice);
+				}
+				return slice;
 			}
 		}
 
@@ -597,6 +601,14 @@ export class MessagesService extends BaseService<Message> {
 
 		const slice = this.getSlice(ranges, dir);
 		if (!slice) {
+			if ("message_id" in dir && dir.message_id) {
+				log.warn("slice not resolved, falling back to live tail", dir);
+				return await this.fetchRange(
+					channel_id,
+					{ type: "backwards", limit: dir.limit },
+					ranges,
+				);
+			}
 			throw new Error(`Failed to resolve slice for ${JSON.stringify(dir)}`);
 		}
 		return slice;
