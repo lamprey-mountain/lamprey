@@ -19,7 +19,10 @@ import {
 } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ChannelSettings } from "./ChannelSettings.tsx";
-import { ChatHeader, ChatMain, RoomHeader, SearchResults } from "./Chat.tsx";
+import { ChatMain } from "./Chat.tsx";
+import { ChatHeader } from "./ChatHeader.tsx";
+import { RoomHeader } from "./RoomHeader.tsx";
+import { SearchResults } from "./SearchResults.tsx";
 import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
 import { Voice, VoiceTray } from "./Voice.tsx";
