@@ -8,16 +8,25 @@ better
 ## planned
 
 - `assets/` folder for non code resources (icons, fonts)
+  - fonts, icons, images
 - `styles/` frontend styling scss
 - `api/` code to interact with the rest/sync apis
-- `contexts/` solidjs contexts (global state)
-- `hooks/` logic that requires solidjs (local state)
-- `components/` reusable components
-  - `atoms/` small components (like tooltips, inputs)
-  - `user_settings/` user settings
-  - `room_settings/` room settings
-  - `admin_settings/` admin settings
-  - `media/` rendering media (like message attachments)
-  - `modals/` modals (popups)
-- `utils/` functions/logic not tied to solidjs/tsx
+- `contexts/` solidjs contexts for state management
+- `hooks/` reactive logic
+- `routes/` route definitions/page components
+- `components/` ui components
+  - `atoms/` reusable components (aka design system - contains tooltips, inputs,
+    Resizable, etc)
+  - `modals/` modals/popups
+  - `menus/` context menus
+  - `features/`
+    - `user_settings/` user settings
+    - `room_settings/` room settings
+    - `admin_settings/` admin settings
+    - `chat/` the main chat timeline
+    - `voice/` voice stuff
+    - `editor/` rich text editor
+    - may contain other one-off files for small features that dont need a full
+      directory
+- `utils/` helper functions/logic that dont belong anywhere else
 - `i18n/` translation strings

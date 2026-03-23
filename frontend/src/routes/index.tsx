@@ -56,9 +56,9 @@ import {
 	DocumentContext,
 	useDocument,
 } from "./contexts/document.tsx";
-import { shouldUseThreadSidebar } from "./util/channel.ts";
+import { shouldUseThreadSidebar } from "./utils/channel.ts";
 import { useNavigate } from "@solidjs/router";
-import { useModals } from "./contexts/modal.tsx";
+import { useModals } from "./contexts/modals.tsx";
 import { ChannelIcon } from "./User.tsx";
 import icX from "./assets/x-1.png";
 export { RouteAuthorize } from "./Oauth.tsx";

@@ -8,7 +8,7 @@ import {
 	Permissions,
 	Tags,
 	Webhooks,
-} from "./channel_settings/mod.tsx";
+} from "./features/channel_settings/mod.tsx";
 import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";

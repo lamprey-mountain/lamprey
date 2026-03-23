@@ -32,7 +32,7 @@ import {
 	RouteRoom,
 	RouteRoomSettings,
 	RouteUser,
-} from "./routes.tsx";
+} from "./routes";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 import { CalendarPopupProvider } from "./Calendar.tsx";
 import { ModalsProvider, useModals } from "./contexts/modal";

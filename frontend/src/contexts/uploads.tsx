@@ -8,7 +8,7 @@ import {
 import { createUpload, type Media } from "sdk";
 import type { Attachment, ChatCtx } from "../context";
 import type { ReactiveMap } from "@solid-primitives/map";
-import { useModals } from "./modal";
+import { useModals } from "./modals";
 
 export type UploadController = {
 	init: (local_id: string, thread_id: string, file: File) => void;

@@ -1,7 +1,7 @@
 import { createResource, createSignal, For, onCleanup } from "solid-js";
 import { useApi } from "../api";
 import { Time } from "../Time";
-import { Copyable } from "../util";
+import { Copyable } from "../utils/general";
 import type { Scope } from "sdk";
 import fuzzysort from "fuzzysort";
 

@@ -14,8 +14,8 @@ import {
 	Metrics as Analytics,
 	Roles,
 	Webhooks,
-} from "./room_settings/mod.tsx";
-import * as Admin from "./admin_settings/mod.tsx";
+} from "./features/room_settings/mod.tsx";
+import * as Admin from "./features/admin_settings/mod.tsx";
 import { Permission, SERVER_ROOM_ID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context.ts";

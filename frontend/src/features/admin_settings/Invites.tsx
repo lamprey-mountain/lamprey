@@ -3,7 +3,7 @@ import { useApi } from "../api.tsx";
 import type { RoomT } from "../types.ts";
 import { Avatar } from "../User.tsx";
 import { Time } from "../Time.tsx";
-import { Copyable } from "../util.tsx";
+import { Copyable } from "../utils/general";
 
 export function Invites(props: VoidProps<{ room: RoomT }>) {
 	const api = useApi();

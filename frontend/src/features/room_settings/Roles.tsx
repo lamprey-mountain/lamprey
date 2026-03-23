@@ -12,7 +12,7 @@ import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
 import type { Pagination, Permission, Role, RoomMember, User } from "sdk";
-import { Copyable } from "../util.tsx";
+import { Copyable } from "../utils/general";
 import { createStore, produce } from "solid-js/store";
 import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";

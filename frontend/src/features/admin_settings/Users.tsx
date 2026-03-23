@@ -5,8 +5,8 @@ import { Time } from "../Time.tsx";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { useCtx } from "../context.ts";
 import { useMenu } from "../contexts/mod.tsx";
-import { UserAdminMenu } from "../menu/UserAdmin.tsx";
-import { UserMenu } from "../menu/User.tsx";
+import { UserAdminMenu } from "../menus/UserAdmin.tsx";
+import { UserMenu } from "../menus/User.tsx";
 
 export function Users() {
 	const ctx = useCtx();

@@ -9,8 +9,8 @@ import {
 import { type User } from "sdk";
 import { useCtx } from "../context";
 import { useApi } from "../api";
-import { useModals } from "../contexts/modal";
-import { Modal } from "../modal/mod";
+import { useModals } from "../contexts/modals";
+import { Modal } from "../modals/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
 	const [, modalctl] = useModals();

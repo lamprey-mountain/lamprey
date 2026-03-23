@@ -52,7 +52,7 @@ import icMemberJoin from "./assets/member-join.png";
 import icPin from "./assets/pin.png";
 import icThread from "./assets/threads.png";
 import { Markdown } from "./Markdown.tsx";
-import { openThread } from "./util/channel";
+import { openThread } from "./utils/channel";
 import type { SetStoreFunction } from "solid-js/store";
 import type { ChannelState } from "./contexts/channel";
 import { useConfig } from "./config.tsx";

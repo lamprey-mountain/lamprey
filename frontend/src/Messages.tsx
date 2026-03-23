@@ -6,7 +6,10 @@ import { md } from "./markdown_utils.tsx";
 import { MessageView } from "./Message.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { Message, UserWithRelationship } from "sdk";
-import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
+import {
+	getMessageOverrideName,
+	getMsgTs as get_msg_ts,
+} from "./utils/general";
 import { ChannelIcon } from "./User.tsx";
 
 export type TimelineItemT =

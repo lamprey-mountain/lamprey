@@ -11,7 +11,7 @@ import {
 import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";
 import { ReactiveMap } from "@solid-primitives/map";
-import { Copyable } from "./util";
+import { Copyable } from "./utils/general";
 import { useApi } from "./api";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {

@@ -13,7 +13,7 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import { getMessageOverrideName } from "./util.tsx";
+import { getMessageOverrideName } from "./utils/general";
 import { EditorState } from "prosemirror-state";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import cancelIc from "./assets/x.png";

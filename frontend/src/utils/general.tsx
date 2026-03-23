@@ -1,5 +1,5 @@
 import { type Message } from "sdk";
-import { useModals } from "./contexts/modal";
+import { useModals } from "../contexts/modal";
 
 export function createWeaklyMemoized<T extends object, U>(
 	fn: (_: T) => U,

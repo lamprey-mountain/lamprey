@@ -16,7 +16,7 @@ import {
 	Profile,
 	Sessions,
 	Voice,
-} from "./user_settings/mod.tsx";
+} from "./features/user_settings/mod.tsx";
 import type { User } from "sdk";
 
 const tabs = [

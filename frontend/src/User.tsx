@@ -15,7 +15,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { Copyable } from "./util";
+import { Copyable } from "./utils/general";
 import { getThumbFromId } from "./media/util";
 import { createStore } from "solid-js/store";
 import { useCtx } from "./context.ts";

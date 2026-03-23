@@ -5,7 +5,7 @@ import { useModals } from "../contexts/modal";
 import type { Pagination, SessionT, UserT } from "../types.ts";
 import { ResourceFetcherInfo } from "solid-js";
 import { Time } from "../Time.tsx";
-import { Copyable } from "../util.tsx";
+import { Copyable } from "../utils/general";
 
 function parseUA(ua: string) {
 	if (/iPhone|iPad/.test(ua)) return { icon: "mobile", label: "iOS" };

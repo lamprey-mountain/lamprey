@@ -19,7 +19,7 @@ import {
 } from "@floating-ui/dom";
 import { Portal } from "solid-js/web";
 import { useCtx } from "../context.ts";
-import type { Menu } from "./menu.tsx";
+import type { Menu } from "./menus.tsx";
 import {
 	useAutocomplete,
 	useFormattingToolbar,
@@ -34,14 +34,14 @@ import {
 	MessageMenu,
 	RoomMenu,
 	UserMenu,
-} from "../menu/mod.ts";
+} from "../menus/mod.ts";
 import { EmojiPicker } from "../EmojiPicker.tsx";
 import { UserView } from "../User.tsx";
 import { ThreadPopout } from "../ThreadPopout.tsx";
 import { Autocomplete } from "../Autocomplete.tsx";
 import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
-import { getModal } from "../modal/mod.tsx";
-import { Modal, useModals } from "./modal.tsx";
+import { getModal } from "../modals/mod.tsx";
+import { Modal, useModals } from "./modals.tsx";
 
 export function OverlayProvider(props: ParentProps) {
 	const ctx = useCtx();

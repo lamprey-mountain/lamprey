@@ -58,7 +58,7 @@ import { createEditor } from "./editor/Editor";
 import type { EditorState } from "prosemirror-state";
 
 import { Resizable } from "./Resizable";
-import { getMessageOverrideName } from "./util";
+import { getMessageOverrideName } from "./utils/general";
 import cancelIc from "./assets/x.png";
 import { createTooltip } from "./Tooltip";
 import { leading, throttle } from "@solid-primitives/scheduled";

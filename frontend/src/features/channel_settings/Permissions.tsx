@@ -21,7 +21,7 @@ import { PermissionSelector } from "../components/PermissionSelector";
 import { OverwriteDropdown } from "../components/OverwriteDropdown";
 import { permissions } from "../permissions.ts";
 import { Resizable } from "../Resizable";
-import { Copyable } from "../util.tsx";
+import { Copyable } from "../utils/general";
 import { useCtx } from "../context.ts";
 import { Savebar } from "../atoms/Savebar";
 

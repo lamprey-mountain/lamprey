@@ -4,7 +4,7 @@ import type { Channel } from "sdk";
 import type { InviteWithMetadata } from "sdk";
 import { Avatar } from "../User.tsx";
 import { Time } from "../Time.tsx";
-import { Copyable } from "../util.tsx";
+import { Copyable } from "../utils/general";
 
 export function Invites(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();

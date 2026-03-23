@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import { type Application, createUpload, type Room, type User } from "sdk";
 import { useApi, useRooms2 } from "../api.tsx";
-import { Copyable } from "../util.tsx";
+import { Copyable } from "../utils/general";
 import { createStore, reconcile } from "solid-js/store";
 import { useCtx } from "../context.ts";
 import { useFloating } from "solid-floating-ui";

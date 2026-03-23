@@ -2,7 +2,7 @@ import { createSignal, Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
 import { useApi } from "../api";
 import { useCtx } from "../context";
-import { Copyable } from "../util";
+import { Copyable } from "../utils/general";
 import { useModals } from "../contexts/modal";
 import { Avatar } from "../User.tsx";
 import { Savebar } from "../atoms/Savebar";
