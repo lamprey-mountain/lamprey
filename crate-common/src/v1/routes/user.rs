@@ -34,6 +34,7 @@ pub mod user_get {
     scopes = [Full],
     permissions = [UserManage],
     permissions_optional = [UserProfileSelf],
+    audit_log_events = ["UserUpdate"],
     response(OK, body = User, description = "success"),
     response(NOT_MODIFIED, description = "not modified"),
 )]
@@ -61,6 +62,7 @@ pub mod user_update {
     tags = ["user"],
     permissions = [UserManage],
     permissions_optional = [UserManageSelf],
+    audit_log_events = ["UserDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod user_delete {
@@ -82,6 +84,7 @@ pub mod user_delete {
     path = "/user/{user_id}/undelete",
     tags = ["user"],
     permissions = [UserManage],
+    audit_log_events = ["UserUndelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod user_undelete {
@@ -184,6 +187,7 @@ pub mod guest_create {
     path = "/user/{user_id}/suspend",
     tags = ["user"],
     permissions = [MemberBan],
+    audit_log_events = ["UserSuspend"],
     response(OK, body = User, description = "success"),
 )]
 pub mod user_suspend {
@@ -212,6 +216,7 @@ pub mod user_suspend {
     path = "/user/{user_id}/suspend",
     tags = ["user"],
     permissions = [MemberBan],
+    audit_log_events = ["UserUnsuspend"],
     response(OK, body = User, description = "success"),
 )]
 pub mod user_unsuspend {
@@ -302,6 +307,7 @@ pub mod harvest_get {
     post,
     path = "/user/@self/harvest",
     tags = ["user"],
+    audit_log_events = ["HarvestCreate"],
     response(ACCEPTED, description = "harvest has been queued"),
 )]
 pub mod harvest_create {

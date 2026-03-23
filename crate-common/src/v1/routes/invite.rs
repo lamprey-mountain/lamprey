@@ -7,6 +7,7 @@ use lamprey_macros::endpoint;
     tags = ["invite"],
     scopes = [Full],
     permissions_optional = [InviteManage],
+    audit_log_events = ["InviteDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod invite_delete {
@@ -50,6 +51,7 @@ pub mod invite_resolve {
     tags = ["invite"],
     scopes = [Full],
     permissions_optional = [InviteManage],
+    audit_log_events = ["InviteCreate"],
     response(CREATED, body = Invite, description = "success"),
 )]
 pub mod invite_room_create {
@@ -128,6 +130,7 @@ pub mod invite_channel_list {
     tags = ["invite"],
     scopes = [Full],
     permissions_optional = [InviteManage],
+    audit_log_events = ["InviteCreate"],
     response(CREATED, body = Invite, description = "success"),
 )]
 pub mod invite_channel_create {
@@ -154,6 +157,7 @@ pub mod invite_channel_create {
     tags = ["invite"],
     scopes = [Full],
     permissions_optional = [InviteManage],
+    audit_log_events = ["InviteUpdate"],
     response(OK, body = Invite, description = "success"),
 )]
 pub mod invite_update {

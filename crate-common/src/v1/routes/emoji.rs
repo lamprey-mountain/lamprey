@@ -9,6 +9,7 @@ use lamprey_macros::endpoint;
     tags = ["emoji"],
     scopes = [Full],
     permissions = [EmojiManage],
+    audit_log_events = ["EmojiCreate"],
     response(CREATED, body = EmojiCustom, description = "new emoji created"),
 )]
 pub mod emoji_create {
@@ -69,6 +70,7 @@ pub mod emoji_get {
     tags = ["emoji"],
     scopes = [Full],
     permissions = [EmojiManage],
+    audit_log_events = ["EmojiDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod emoji_delete {
@@ -94,6 +96,7 @@ pub mod emoji_delete {
     tags = ["emoji"],
     scopes = [Full],
     permissions = [EmojiManage],
+    audit_log_events = ["EmojiUpdate"],
     response(OK, body = EmojiCustom, description = "success"),
 )]
 pub mod emoji_update {

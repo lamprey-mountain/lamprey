@@ -55,6 +55,7 @@ pub mod thread_member_get {
     path = "/thread/{thread_id}/member/{user_id}",
     tags = ["thread"],
     permissions_optional = [MemberKick],
+    audit_log_events = ["ThreadMemberAdd"],
     response(OK, body = ThreadMember, description = "success"),
     response(NOT_MODIFIED, description = "not modified"),
 )]
@@ -85,6 +86,7 @@ pub mod thread_member_add {
     path = "/thread/{thread_id}/member/{user_id}",
     tags = ["thread"],
     permissions_optional = [MemberKick],
+    audit_log_events = ["ThreadMemberRemove"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod thread_member_delete {

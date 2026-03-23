@@ -49,6 +49,7 @@ pub mod session_list {
     path = "/session/{session_id}",
     tags = ["session"],
     scopes = [Full],
+    audit_log_events = ["SessionUpdate"],
     response(OK, body = Session, description = "success"),
     response(NOT_MODIFIED, body = Session, description = "not modified"),
 )]
@@ -76,6 +77,7 @@ pub mod session_update {
     path = "/session/{session_id}",
     tags = ["session"],
     scopes = [Full],
+    audit_log_events = ["SessionDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod session_delete {
@@ -119,6 +121,7 @@ pub mod session_get {
     path = "/session/{session_id}/status",
     tags = ["session"],
     scopes = [Full],
+    audit_log_events = ["SessionUpdate"],
     response(OK, body = Session, description = "success"),
 )]
 pub mod session_status_set {
@@ -145,6 +148,7 @@ pub mod session_status_set {
     path = "/session/@all",
     tags = ["session"],
     scopes = [Full],
+    audit_log_events = ["SessionDeleteAll"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod session_delete_all {

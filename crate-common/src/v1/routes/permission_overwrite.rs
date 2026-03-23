@@ -7,6 +7,7 @@ use lamprey_macros::endpoint;
     tags = ["channel"],
     scopes = [Full],
     permissions = [RoleManage],
+    audit_log_events = ["PermissionOverwriteCreate", "PermissionOverwriteUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod permission_set {
@@ -34,6 +35,7 @@ pub mod permission_set {
     tags = ["channel"],
     scopes = [Full],
     permissions = [RoleManage],
+    audit_log_events = ["PermissionOverwriteDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod permission_remove {

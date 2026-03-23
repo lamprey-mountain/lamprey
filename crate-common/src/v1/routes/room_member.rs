@@ -89,6 +89,7 @@ pub mod room_member_add {
     tags = ["room_member"],
     scopes = [Full],
     permissions_optional = [VoiceMute, VoiceDeafen, MemberKick, RoleApply, MemberTimeout, MemberNickname, MemberNicknameManage],
+    audit_log_events = ["MemberUpdate"],
     response(OK, body = RoomMember, description = "success"),
     response(NOT_MODIFIED, description = "not modified"),
 )]
@@ -120,6 +121,7 @@ pub mod room_member_update {
     tags = ["room_member"],
     scopes = [Full],
     permissions_optional = [MemberKick],
+    audit_log_events = ["MemberKick"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_member_delete {
@@ -197,6 +199,7 @@ pub mod room_member_search_advanced {
     tags = ["room_member"],
     scopes = [Full],
     permissions = [MemberBan],
+    audit_log_events = ["MemberBan"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_ban_create {
@@ -277,6 +280,7 @@ pub mod room_ban_get {
     tags = ["room_member"],
     scopes = [Full],
     permissions = [MemberBan],
+    audit_log_events = ["MemberUnban"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_ban_delete {
@@ -324,6 +328,7 @@ pub mod room_ban_bulk_create {
     tags = ["room_member"],
     scopes = [Full],
     permissions = [MemberKick],
+    audit_log_events = ["MemberPrune"],
     response(OK, body = PruneResponse, description = "success"),
 )]
 pub mod room_prune_begin {

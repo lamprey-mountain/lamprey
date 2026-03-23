@@ -31,6 +31,7 @@ pub mod automod_rule_list {
     tags = ["automod"],
     scopes = [Full],
     permissions = [RoomEdit],
+    audit_log_events = ["AutomodRuleCreate"],
     response(CREATED, body = AutomodRule, description = "Create automod rule success"),
 )]
 pub mod automod_rule_create {
@@ -85,6 +86,7 @@ pub mod automod_rule_get {
     tags = ["automod"],
     scopes = [Full],
     permissions = [RoomEdit],
+    audit_log_events = ["AutomodRuleUpdate"],
     response(OK, body = AutomodRule, description = "Update automod rule success"),
 )]
 pub mod automod_rule_update {
@@ -115,6 +117,7 @@ pub mod automod_rule_update {
     tags = ["automod"],
     scopes = [Full],
     permissions = [RoomEdit],
+    audit_log_events = ["AutomodRuleDelete"],
     response(NO_CONTENT, description = "Delete automod rule success"),
 )]
 pub mod automod_rule_delete {

@@ -7,6 +7,7 @@ use lamprey_macros::endpoint;
     tags = ["role"],
     scopes = [Full],
     permissions = [RoleManage],
+    audit_log_events = ["RoleCreate"],
     response(CREATED, body = Role, description = "success"),
 )]
 pub mod role_create {
@@ -36,6 +37,7 @@ pub mod role_create {
     tags = ["role"],
     scopes = [Full],
     permissions = [RoleManage],
+    audit_log_events = ["RoleUpdate"],
     response(OK, body = Role, description = "success"),
     response(NOT_MODIFIED, description = "success"),
 )]
@@ -66,6 +68,7 @@ pub mod role_update {
     tags = ["role"],
     scopes = [Full],
     permissions = [RoleManage],
+    audit_log_events = ["RoleDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod role_delete {
@@ -142,6 +145,7 @@ pub mod role_get {
     tags = ["role"],
     scopes = [Full],
     permissions = [RoleManage],
+    audit_log_events = ["RoleReorder"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod role_reorder {
@@ -221,6 +225,7 @@ pub mod role_member_list {
     tags = ["role"],
     scopes = [Full],
     permissions = [RoleApply],
+    audit_log_events = ["RoleApply"],
     response(OK, body = RoomMember, description = "success"),
 )]
 pub mod role_member_add {
@@ -250,6 +255,7 @@ pub mod role_member_add {
     tags = ["role"],
     scopes = [Full],
     permissions = [RoleApply],
+    audit_log_events = ["RoleUnapply"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod role_member_remove {

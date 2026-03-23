@@ -56,6 +56,7 @@ pub mod friend_list_pending {
     path = "/user/@self/friend/{target_id}",
     tags = ["relationship"],
     scopes = [Full],
+    audit_log_events = ["FriendRequest", "FriendAccept"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod friend_add {
@@ -77,6 +78,7 @@ pub mod friend_add {
     path = "/user/@self/friend/{target_id}",
     tags = ["relationship"],
     scopes = [Full],
+    audit_log_events = ["FriendDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod friend_remove {
@@ -122,6 +124,7 @@ pub mod block_list {
     path = "/user/@self/block/{target_id}",
     tags = ["relationship"],
     scopes = [Full],
+    audit_log_events = ["BlockCreate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod block_add {
@@ -143,6 +146,7 @@ pub mod block_add {
     path = "/user/@self/block/{target_id}",
     tags = ["relationship"],
     scopes = [Full],
+    audit_log_events = ["BlockDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod block_remove {
@@ -188,6 +192,7 @@ pub mod ignore_list {
     path = "/user/@self/ignore/{target_id}",
     tags = ["relationship"],
     scopes = [Full],
+    audit_log_events = ["IgnoreAdd"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod ignore_add {
@@ -213,6 +218,7 @@ pub mod ignore_add {
     path = "/user/@self/ignore/{target_id}",
     tags = ["relationship"],
     scopes = [Full],
+    audit_log_events = ["IgnoreRemove"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod ignore_remove {

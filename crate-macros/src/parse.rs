@@ -16,6 +16,7 @@ pub struct EndpointArgs {
     pub permissions_optional: Vec<Ident>,
     pub permissions_server: Vec<Ident>,
     pub permissions_server_optional: Vec<Ident>,
+    pub audit_log_events: Vec<LitStr>,
     pub responses: Vec<ResponseSpec>,
 }
 
@@ -53,6 +54,7 @@ impl Parse for EndpointArgs {
         let mut permissions_optional = vec![];
         let mut permissions_server = vec![];
         let mut permissions_server_optional = vec![];
+        let mut audit_log_events = vec![];
         let mut responses = vec![];
 
         while !input.is_empty() {
@@ -97,6 +99,7 @@ impl Parse for EndpointArgs {
                 "permissions_server_optional" => {
                     permissions_server_optional = parse_ident_array(input)?
                 }
+                "audit_log_events" => audit_log_events = parse_str_array(input)?,
                 other => {
                     return Err(syn::Error::new(
                         key.span(),
@@ -119,6 +122,7 @@ impl Parse for EndpointArgs {
             permissions_optional,
             permissions_server,
             permissions_server_optional,
+            audit_log_events,
             responses,
         })
     }

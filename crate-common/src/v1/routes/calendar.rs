@@ -55,6 +55,7 @@ pub mod calendar_event_list {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [CalendarEventCreate],
+    audit_log_events = ["CalendarEventCreate"],
     response(CREATED, body = CalendarEvent, description = "Create calendar event success"),
 )]
 pub mod calendar_event_create {
@@ -109,6 +110,7 @@ pub mod calendar_event_get {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["CalendarEventUpdate"],
     response(OK, body = CalendarEvent, description = "Update calendar event success"),
 )]
 pub mod calendar_event_update {
@@ -139,6 +141,7 @@ pub mod calendar_event_update {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["CalendarEventDelete"],
     response(NO_CONTENT, description = "Delete calendar event success"),
 )]
 pub mod calendar_event_delete {
@@ -223,6 +226,7 @@ pub mod calendar_event_rsvp_get {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["CalendarRsvpDelete"],
     response(OK, description = "ok"),
 )]
 pub mod calendar_event_rsvp_put {
@@ -254,6 +258,7 @@ pub mod calendar_event_rsvp_put {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["CalendarRsvpDelete"],
     response(NO_CONTENT, description = "Delete calendar event RSVP success"),
 )]
 pub mod calendar_event_rsvp_delete {
@@ -338,6 +343,7 @@ pub mod calendar_overwrite_get {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [CalendarEventManage],
+    audit_log_events = ["CalendarOverwriteUpdate"],
     response(OK, body = CalendarOverwrite, description = "Update calendar overwrite success"),
 )]
 pub mod calendar_overwrite_update {
@@ -371,6 +377,7 @@ pub mod calendar_overwrite_update {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [CalendarEventManage],
+    audit_log_events = ["CalendarOverwriteDelete"],
     response(NO_CONTENT, description = "Delete calendar overwrite success"),
 )]
 pub mod calendar_overwrite_delete {
@@ -430,6 +437,7 @@ pub mod calendar_overwrite_rsvp_list {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["CalendarRsvpDelete"],
     response(OK, description = "ok"),
 )]
 pub mod calendar_overwrite_rsvp_put {
@@ -464,6 +472,7 @@ pub mod calendar_overwrite_rsvp_put {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["CalendarRsvpDelete"],
     response(NO_CONTENT, description = "Delete calendar overwrite RSVP success"),
 )]
 pub mod calendar_overwrite_rsvp_delete {

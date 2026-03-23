@@ -6,6 +6,7 @@ use lamprey_macros::endpoint;
     path = "/user/{user_id}/email/{addr}",
     tags = ["user_email"],
     scopes = [Full],
+    audit_log_events = ["EmailCreate"],
     response(CREATED, description = "success"),
     response(OK, description = "already exists"),
 )]
@@ -29,6 +30,7 @@ pub mod email_add {
     path = "/user/{user_id}/email/{addr}",
     tags = ["user_email"],
     scopes = [Full],
+    audit_log_events = ["EmailDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod email_delete {
@@ -121,6 +123,7 @@ pub mod email_list {
     path = "/user/{user_id}/email/{addr}",
     tags = ["user_email"],
     scopes = [Full],
+    audit_log_events = ["EmailUpdate"],
     response(OK, body = EmailInfo, description = "success"),
 )]
 pub mod email_update {

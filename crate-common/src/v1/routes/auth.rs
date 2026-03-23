@@ -54,6 +54,7 @@ pub mod auth_oauth_redirect {
     post,
     path = "/auth/register",
     tags = ["auth"],
+    audit_log_events = ["UserRegistered"],
     response(OK, body = SessionWithToken, description = "success"),
 )]
 pub mod auth_register {
@@ -75,6 +76,7 @@ pub mod auth_register {
     post,
     path = "/auth/login",
     tags = ["auth"],
+    audit_log_events = ["SessionLogin"],
     response(OK, body = SessionWithToken, description = "success"),
 )]
 pub mod auth_login {
@@ -104,6 +106,7 @@ pub mod auth_login {
     path = "/auth/logout",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["SessionDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_logout {
@@ -136,6 +139,7 @@ pub mod auth_totp_init {
     path = "/auth/totp/enable",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_totp_enable {
@@ -178,6 +182,7 @@ pub mod auth_totp_recovery_codes_get {
     path = "/auth/totp/recovery-codes",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(OK, body = TotpRecoveryCodes, description = "success"),
 )]
 pub mod auth_totp_recovery_codes_rotate {
@@ -197,6 +202,7 @@ pub mod auth_totp_recovery_codes_rotate {
     path = "/auth/password",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_password_set {
@@ -216,6 +222,7 @@ pub mod auth_password_set {
     path = "/auth/password/exec",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_password_exec {
@@ -254,6 +261,7 @@ pub mod auth_webauthn_challenge {
     path = "/auth/webauthn/finish",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_webauthn_finish {
@@ -292,6 +300,7 @@ pub mod auth_webauthn_authenticators {
     path = "/auth/webauthn/authenticator/{authenticator_id}",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_webauthn_authenticator_delete {
@@ -351,6 +360,7 @@ pub mod auth_captcha_submit {
     path = "/auth/webauthn/init",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(OK, description = "success"),
 )]
 pub mod auth_webauthn_init {
@@ -363,6 +373,7 @@ pub mod auth_webauthn_init {
     post,
     path = "/auth/webauthn/exec",
     tags = ["auth"],
+    audit_log_events = ["SessionLogin"],
     response(OK, description = "success"),
 )]
 pub mod auth_webauthn_exec {
@@ -376,6 +387,7 @@ pub mod auth_webauthn_exec {
     path = "/auth/webauthn",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_webauthn_patch {
@@ -389,6 +401,7 @@ pub mod auth_webauthn_patch {
     path = "/auth/webauthn",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_webauthn_delete {
@@ -402,6 +415,7 @@ pub mod auth_webauthn_delete {
     path = "/auth/sudo/upgrade",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthSudo"],
     response(OK, description = "success"),
 )]
 pub mod auth_sudo_upgrade {
@@ -507,6 +521,7 @@ pub mod auth_email_complete {
     post,
     path = "/auth/totp",
     tags = ["auth"],
+    audit_log_events = ["SessionLogin"],
     response(OK, body = AuthState, description = "success"),
 )]
 pub mod auth_totp_exec {
@@ -530,6 +545,7 @@ pub mod auth_totp_exec {
     post,
     path = "/auth/totp/recovery",
     tags = ["auth"],
+    audit_log_events = ["SessionLogin"],
     response(OK, body = AuthState, description = "success"),
 )]
 pub mod auth_totp_recovery_exec {
@@ -554,6 +570,7 @@ pub mod auth_totp_recovery_exec {
     path = "/auth/totp",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(OK, body = AuthState, description = "success"),
 )]
 pub mod auth_totp_delete {
@@ -575,6 +592,7 @@ pub mod auth_totp_delete {
     path = "/auth/password",
     tags = ["auth"],
     scopes = [Full],
+    audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_password_delete {

@@ -422,12 +422,28 @@ fn build_meta_fn(args: &EndpointArgs, mod_attrs: &[&Attribute]) -> syn::Result<T
     for p in &args.permissions_optional {
         tags_full.push(LitStr::new(&format!("badge.perm-opt.{}", p), p.span()));
     }
+    for p in &args.permissions_server {
+        tags_full.push(LitStr::new(&format!("badge.server-perm.{}", p), p.span()));
+    }
+    for p in &args.permissions_server_optional {
+        tags_full.push(LitStr::new(
+            &format!("badge.server-perm-opt.{}", p),
+            p.span(),
+        ));
+    }
+    for e in &args.audit_log_events {
+        tags_full.push(LitStr::new(
+            &format!("badge.audit-log.{}", e.value()),
+            e.span(),
+        ));
+    }
 
     let scopes: Vec<_> = args.scopes.iter().collect();
     let permissions: Vec<_> = args.permissions.iter().collect();
     let permissions_optional: Vec<_> = args.permissions_optional.iter().collect();
     let permissions_server: Vec<_> = args.permissions_server.iter().collect();
     let permissions_server_optional: Vec<_> = args.permissions_server_optional.iter().collect();
+    let audit_log_events: Vec<_> = args.audit_log_events.iter().collect();
 
     // Parse doc comments into summary and description
     let (summary, description) = parse_doc_attrs(mod_attrs);
@@ -446,6 +462,7 @@ fn build_meta_fn(args: &EndpointArgs, mod_attrs: &[&Attribute]) -> syn::Result<T
                 permissions_optional: &[#(crate::v1::types::Permission::#permissions_optional,)*],
                 permissions_server: &[#(crate::v1::types::Permission::#permissions_server,)*],
                 permissions_server_optional: &[#(crate::v1::types::Permission::#permissions_server_optional,)*],
+                audit_log_events: &[#(#audit_log_events,)*],
             }
         }
     })

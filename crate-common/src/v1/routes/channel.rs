@@ -9,6 +9,7 @@ use lamprey_macros::endpoint;
     tags = ["channel"],
     scopes = [Full],
     permissions_optional = [ChannelManage, ThreadCreatePublic, ThreadCreatePrivate],
+    audit_log_events = ["ChannelCreate"],
     response(CREATED, body = Channel, description = "Create thread success"),
 )]
 pub mod channel_create_room {
@@ -40,6 +41,7 @@ pub mod channel_create_room {
     tags = ["channel"],
     scopes = [Full],
     permissions = [DmCreate],
+    audit_log_events = ["ChannelCreate"],
     response(CREATED, body = Channel, description = "Create thread success"),
     response(OK, body = Channel, description = "already exists"),
 )]
@@ -148,6 +150,7 @@ pub mod channel_list_removed {
     tags = ["channel"],
     scopes = [Full],
     permissions = [ChannelManage],
+    audit_log_events = ["ChannelReorder"],
     response(NO_CONTENT, description = "Reorder channels success"),
 )]
 pub mod channel_reorder {
@@ -171,6 +174,7 @@ pub mod channel_reorder {
     tags = ["channel"],
     scopes = [Full],
     permissions_optional = [ChannelEdit, ThreadEdit],
+    audit_log_events = ["ChannelUpdate"],
     response(OK, body = Channel, description = "edit message success"),
     response(NOT_MODIFIED, body = Channel, description = "no change"),
 )]
@@ -228,6 +232,7 @@ pub mod channel_ack {
     scopes = [Full],
     permissions = [ThreadManage],
     permissions_optional = [ChannelManage],
+    audit_log_events = ["ChannelUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod channel_remove {
@@ -249,6 +254,7 @@ pub mod channel_remove {
     scopes = [Full],
     permissions = [ThreadManage],
     permissions_optional = [ChannelManage],
+    audit_log_events = ["ChannelUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod channel_restore {
@@ -292,6 +298,7 @@ pub mod channel_typing {
     path = "/channel/{channel_id}/upgrade",
     tags = ["channel"],
     scopes = [Full],
+    audit_log_events = ["ChannelUpdate"],
     response(OK, body = Room, description = "success"),
 )]
 pub mod channel_upgrade {
@@ -314,6 +321,7 @@ pub mod channel_upgrade {
     path = "/channel/{channel_id}/transfer-ownership",
     tags = ["channel"],
     scopes = [Full],
+    audit_log_events = ["ChannelUpdate"],
     response(OK, body = Channel, description = "success"),
 )]
 pub mod channel_transfer_ownership {
@@ -343,6 +351,7 @@ pub mod channel_transfer_ownership {
     tags = ["channel"],
     scopes = [Full],
     permissions_optional = [ChannelManage, ThreadManage, MemberTimeout],
+    audit_log_events = ["RatelimitUpdate"],
     response(OK, description = "Rate limit updated"),
 )]
 pub mod channel_ratelimit_update {
@@ -372,6 +381,7 @@ pub mod channel_ratelimit_update {
     tags = ["channel"],
     scopes = [Full],
     permissions_optional = [ChannelManage, ThreadManage, MemberTimeout],
+    audit_log_events = ["RatelimitDelete"],
     response(NO_CONTENT, description = "Rate limit expired"),
 )]
 pub mod channel_ratelimit_delete {
@@ -398,6 +408,7 @@ pub mod channel_ratelimit_delete {
     tags = ["channel"],
     scopes = [Full],
     permissions_optional = [ChannelManage, ThreadManage, MemberTimeout],
+    audit_log_events = ["RatelimitDeleteAll"],
     response(NO_CONTENT, description = "Rate limit expired"),
 )]
 pub mod channel_ratelimit_delete_all {

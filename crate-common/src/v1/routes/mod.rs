@@ -123,6 +123,9 @@ pub struct Endpoint {
 
     /// Optional server permissions that may enhance functionality but are not required.
     pub permissions_server_optional: &'static [Permission],
+
+    /// Audit log events that may be created.
+    pub audit_log_events: &'static [&'static str],
 }
 
 /// HTTP method for an endpoint.

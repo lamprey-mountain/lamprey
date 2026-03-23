@@ -287,6 +287,7 @@ pub mod voice_sfu_command {
     tags = ["voice"],
     scopes = [Full],
     permissions_optional = [VoiceMove],
+    audit_log_events = ["MemberDisconnect"],
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod voice_state_disconnect {
@@ -311,6 +312,7 @@ pub mod voice_state_disconnect {
     tags = ["voice"],
     scopes = [Full],
     permissions_optional = [VoiceMove],
+    audit_log_events = ["MemberDisconnectAll"],
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod voice_state_disconnect_all {

@@ -7,6 +7,7 @@ use lamprey_macros::endpoint;
     tags = ["tag"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["TagCreate"],
     response(CREATED, body = Tag, description = "Create tag success"),
 )]
 pub mod tag_create {
@@ -37,6 +38,7 @@ pub mod tag_create {
     tags = ["tag"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["TagUpdate"],
     response(OK, body = Tag, description = "Update tag success"),
 )]
 pub mod tag_update {
@@ -67,6 +69,7 @@ pub mod tag_update {
     tags = ["tag"],
     scopes = [Full],
     permissions = [ChannelEdit],
+    audit_log_events = ["TagDelete"],
     response(NO_CONTENT, description = "Delete tag success"),
 )]
 pub mod tag_delete {

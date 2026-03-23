@@ -7,6 +7,7 @@ use lamprey_macros::endpoint;
     tags = ["webhook"],
     scopes = [Full],
     permissions = [IntegrationsManage],
+    audit_log_events = ["WebhookCreate"],
     response(CREATED, body = Webhook, description = "Create webhook success"),
 )]
 pub mod webhook_create {
@@ -142,6 +143,7 @@ pub mod webhook_get_with_token {
     tags = ["webhook"],
     scopes = [Full],
     permissions = [IntegrationsManage],
+    audit_log_events = ["WebhookDelete"],
     response(NO_CONTENT, description = "Delete webhook success"),
 )]
 pub mod webhook_delete {
@@ -183,6 +185,7 @@ pub mod webhook_delete_with_token {
     tags = ["webhook"],
     scopes = [Full],
     permissions = [IntegrationsManage],
+    audit_log_events = ["WebhookUpdate"],
     response(OK, body = Webhook, description = "Update webhook success"),
 )]
 pub mod webhook_update {

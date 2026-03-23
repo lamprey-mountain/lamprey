@@ -161,6 +161,7 @@ pub mod message_edit {
     tags = ["message"],
     scopes = [Full],
     permissions_optional = [MessageDelete],
+    audit_log_events = ["MessageDelete"],
     response(NO_CONTENT, description = "delete message success"),
 )]
 pub mod message_delete {
@@ -244,6 +245,7 @@ pub mod message_version_get {
     tags = ["message"],
     scopes = [Full],
     permissions_optional = [MessageDelete],
+    audit_log_events = ["MessageVersionDelete"],
     response(NO_CONTENT, description = "delete message version success"),
 )]
 pub mod message_version_delete {
@@ -272,6 +274,7 @@ pub mod message_version_delete {
     tags = ["message"],
     scopes = [Full],
     permissions_optional = [MessageDelete, MessageRemove],
+    audit_log_events = ["MessageDeleteBulk", "MessageRemove", "MessageRestore"],
     response(OK, description = "success"),
 )]
 pub mod message_moderate {
@@ -318,6 +321,7 @@ pub mod message_migrate {
     tags = ["message"],
     scopes = [Full],
     permissions = [MessagePin],
+    audit_log_events = ["MessagePin"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod message_pin {
@@ -341,6 +345,7 @@ pub mod message_pin {
     tags = ["message"],
     scopes = [Full],
     permissions = [MessagePin],
+    audit_log_events = ["MessageUnpin"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod message_unpin {
@@ -390,6 +395,7 @@ pub mod message_pins_list {
     tags = ["message"],
     scopes = [Full],
     permissions = [MessagePin],
+    audit_log_events = ["MessagePinReorder"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod message_pins_reorder {

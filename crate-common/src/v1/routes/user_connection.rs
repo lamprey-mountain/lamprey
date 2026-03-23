@@ -61,6 +61,7 @@ pub mod user_connection_update {
     delete,
     path = "/user/{user_id}/connection/{app_id}",
     tags = ["user_connection"],
+    audit_log_events = ["ConnectionDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod user_connection_delete {

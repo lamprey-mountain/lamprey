@@ -7,6 +7,7 @@ use lamprey_macros::endpoint;
     tags = ["room"],
     scopes = [Full],
     permissions = [RoomCreate],
+    audit_log_events = ["RoomCreate"],
     response(CREATED, body = Room, description = "success"),
 )]
 pub mod room_create {
@@ -104,6 +105,7 @@ pub mod room_search {
     tags = ["room"],
     scopes = [Full],
     permissions = [RoomEdit],
+    audit_log_events = ["RoomUpdate"],
     response(OK, body = Room, description = "edit success"),
     response(NOT_MODIFIED, description = "no change"),
 )]
@@ -130,6 +132,7 @@ pub mod room_edit {
     path = "/room/{room_id}",
     tags = ["room"],
     scopes = [Full],
+    audit_log_events = ["RoomDelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_delete {
@@ -150,6 +153,7 @@ pub mod room_delete {
     tags = ["room"],
     scopes = [Full],
     permissions = [RoomManage],
+    audit_log_events = ["RoomUndelete"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_undelete {
@@ -275,6 +279,7 @@ pub mod room_integration_list {
     tags = ["room"],
     scopes = [Full],
     permissions = [RoomManage],
+    audit_log_events = ["RoomQuarantine"],
     response(OK, body = Room, description = "success"),
 )]
 pub mod room_quarantine {
@@ -298,6 +303,7 @@ pub mod room_quarantine {
     tags = ["room"],
     scopes = [Full],
     permissions = [RoomManage],
+    audit_log_events = ["RoomUnquarantine"],
     response(OK, body = Room, description = "success"),
 )]
 pub mod room_unquarantine {

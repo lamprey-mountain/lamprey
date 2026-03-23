@@ -78,6 +78,7 @@ pub mod reaction_add {
     tags = ["reaction"],
     scopes = [Full],
     permissions_optional = [ReactionManage],
+    audit_log_events = ["ReactionDeleteUser"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod reaction_remove {
@@ -111,6 +112,7 @@ pub mod reaction_remove {
     tags = ["reaction"],
     scopes = [Full],
     permissions = [ReactionManage],
+    audit_log_events = ["ReactionDeleteAll"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod reaction_remove_all {
@@ -136,6 +138,7 @@ pub mod reaction_remove_all {
     tags = ["reaction"],
     scopes = [Full],
     permissions = [ReactionManage],
+    audit_log_events = ["ReactionDeleteKey"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod reaction_remove_emoji {
