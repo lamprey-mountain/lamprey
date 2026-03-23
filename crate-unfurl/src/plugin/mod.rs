@@ -17,7 +17,7 @@ pub trait UnfurlPlugin: Send + Sync {
     /// Use this for custom protocols (`magnet://`) or specific API targets (`youtube.com`).
     /// Return `Ok(Some(EmbedGeneration))` to short-circuit the HTTP request entirely.
     async fn process_url(&self, _url: &Url) -> Result<Option<Vec<EmbedGeneration>>, UnfurlError> {
-        Ok(Some(vec![]))
+        Ok(None)
     }
 
     /// Check whether this plugin can accept this http response

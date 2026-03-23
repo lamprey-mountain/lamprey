@@ -9,6 +9,7 @@ use url::Url;
 
 use crate::{
     error::UnfurlError,
+    logging::{LogEntry, LogSink, NoopLogSink, SelectPluginEntry, SelectPluginReason},
     plugin::UnfurlPlugin,
     util::{EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
 };
@@ -52,9 +53,25 @@ impl Unfurler {
 
     /// Generate some url embeds for this url. Only runs the first sucessful plugin, but the plugin may return multiple embeds.
     pub async fn unfurl(&self, url: &Url) -> Result<Vec<EmbedGeneration>, UnfurlError> {
+        self.unfurl_with_logger(url, &mut NoopLogSink).await
+    }
+
+    /// Generate some url embeds for this url with logging support.
+    ///
+    /// Only runs the first sucessful plugin, but the plugin may return multiple embeds.
+    /// Log entries are emitted to the provided `log_sink` during unfurling.
+    pub async fn unfurl_with_logger(
+        &self,
+        url: &Url,
+        log_sink: &mut dyn LogSink,
+    ) -> Result<Vec<EmbedGeneration>, UnfurlError> {
         // 1. Try URL-based plugins (e.g. magnet://, ipfs://)
         for plugin in &self.plugins {
             if let Some(generation) = plugin.process_url(url).await? {
+                log_sink.handle(LogEntry::SelectPlugin(SelectPluginEntry::new(
+                    plugin.name(),
+                    SelectPluginReason::Url,
+                )));
                 return Ok(generation);
             }
         }
@@ -70,6 +87,10 @@ impl Unfurler {
         // 3. Find a plugin that handles this specific response
         for plugin in &self.plugins {
             if plugin.accepts_response(&res) {
+                log_sink.handle(LogEntry::SelectPlugin(SelectPluginEntry::new(
+                    plugin.name(),
+                    SelectPluginReason::Response,
+                )));
                 return plugin.process_response(&final_url, res).await;
             }
         }
