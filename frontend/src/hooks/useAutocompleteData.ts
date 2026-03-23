@@ -75,7 +75,7 @@ export const useAutocompleteData = () => {
 			// Also fetch mentionable roles for combined autocomplete
 			if (roomId) {
 				const mentionableRoles = [...rolesApi.cache.values()].filter(
-					(r) => r.room_id === roomId && r.is_mentionable,
+					(r) => r.room_id === roomId && r.is_mentionable && r.id !== roomId,
 				);
 				setAllRoles(mentionableRoles);
 			}
