@@ -49,6 +49,20 @@ async fn message_create(
         )
         .await?;
 
+    // automatically ack the channel for the user who sent the message
+    let data = s.data();
+    data.unread_ack(
+        auth.user.id,
+        req.channel_id,
+        message.id,
+        message.latest_version.version_id,
+        Some(0),
+    )
+    .await?;
+    srv.channels
+        .invalidate_user(req.channel_id, auth.user.id)
+        .await;
+
     Ok((StatusCode::CREATED, Json(message)))
 }
 
