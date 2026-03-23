@@ -41,6 +41,7 @@ pub struct EmbedMediaPending {
     pub placeholder_media_id: MediaId,
     pub url: Url,
     pub mime_guess: Option<Mime>,
+    pub alt: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,11 +55,17 @@ impl EmbedMediaPending {
             placeholder_media_id: MediaId::new(),
             url,
             mime_guess: None,
+            alt: None,
         }
     }
 
     pub fn mime_guess(mut self, m: Mime) -> Self {
         self.mime_guess = Some(m);
+        self
+    }
+
+    pub fn alt(mut self, alt: impl Into<String>) -> Self {
+        self.alt = Some(alt.into());
         self
     }
 }

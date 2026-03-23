@@ -3565,6 +3565,7 @@ dependencies = [
  "lamprey-hakari",
  "lamprey-macros",
  "lamprey-markdown",
+ "lamprey-unfurl",
  "lettre",
  "linkify",
  "mediatype",
@@ -3998,10 +3999,12 @@ dependencies = [
  "ipnet",
  "lamprey-common",
  "reqwest 0.13.2",
+ "serde",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
  "url",
+ "utoipa",
 ]
 
 [[package]]

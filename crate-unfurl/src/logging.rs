@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
 /// Trait for receiving unfurler log events.
 ///
 /// Implement this to capture debug information during unfurling,
@@ -13,7 +16,7 @@ pub trait LogSink: Send + Sync {
 }
 
 /// A log entry from the unfurler.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub enum LogEntry {
     /// HTTP fetch event (initial request or redirect)
     Fetch(FetchEntry),
@@ -29,7 +32,7 @@ pub enum LogEntry {
 }
 
 /// HTTP fetch log entry.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct FetchEntry {
     /// Whether this is the initial fetch or a redirect
     pub reason: FetchReason,
@@ -45,17 +48,17 @@ pub struct FetchEntry {
 }
 
 /// Plugin selection log entry.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SelectPluginEntry {
     /// The name of the selected plugin
-    pub plugin_name: &'static str,
+    pub plugin_name: String,
 
     /// Whether the plugin was selected via URL or response
     pub reason: SelectPluginReason,
 }
 
 /// Reason for plugin selection.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
 pub enum SelectPluginReason {
     /// Plugin was selected via `process_url` (URL-based matching)
     Url,
@@ -65,7 +68,7 @@ pub enum SelectPluginReason {
 }
 
 /// Reason for an HTTP fetch.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub enum FetchReason {
     /// Initial URL fetch
     Initial,
@@ -75,7 +78,7 @@ pub enum FetchReason {
 }
 
 /// Non-fatal error during embed generation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ErrorEntry {
     /// The error code
     pub code: ErrorCode,
@@ -88,7 +91,7 @@ pub struct ErrorEntry {
 }
 
 /// Error codes for non-fatal errors.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum ErrorCode {
     /// HTML was malformed or invalid
     InvalidHtml,
@@ -110,7 +113,7 @@ pub enum ErrorCode {
 }
 
 /// Fatal failure that prevented embed generation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct FailedEntry {
     /// The failure code
     pub code: FailedCode,
@@ -120,7 +123,7 @@ pub struct FailedEntry {
 }
 
 /// Failure codes for fatal failures.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum FailedCode {
     /// Connection timed out
     ConnectionTimeout,
@@ -167,9 +170,9 @@ impl FetchEntry {
 }
 
 impl SelectPluginEntry {
-    pub fn new(plugin_name: &'static str, reason: SelectPluginReason) -> Self {
+    pub fn new(plugin_name: impl Into<String>, reason: SelectPluginReason) -> Self {
         Self {
-            plugin_name,
+            plugin_name: plugin_name.into(),
             reason,
         }
     }

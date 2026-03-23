@@ -16,7 +16,9 @@ html5ever = "0.39.0"
 ipnet = "2.12.0"
 lamprey-common = { version = "0.1.1", path = "../crate-common" }
 reqwest = "0.13.2"
+serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.18"
 tokio = "1.50.0"
 tracing = "0.1.44"
 url = "2.5.8"
+utoipa = { version = "5.4.0", features = ["url"] }

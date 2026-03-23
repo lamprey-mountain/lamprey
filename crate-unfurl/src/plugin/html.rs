@@ -84,6 +84,8 @@ impl UnfurlPlugin for HtmlStreamPlugin {
 
         let data = parse_task.await?;
 
+        let image_mode = determine_image_mode(&data);
+
         let mut tmpl = EmbedGenerationTemplate {
             ty: EmbedType::Link,
             url: Some(url.clone()),
@@ -139,19 +141,103 @@ impl UnfurlPlugin for HtmlStreamPlugin {
             }
         } else if let Some(img) = data.images.first() {
             if let Ok(i_url) = url.join(img) {
-                // typical website, image becomes a thumbnail
-                tmpl.thumbnail = Some(
-                    EmbedMediaPending::new(i_url)
-                        .mime_guess("image/jpeg".parse().unwrap())
-                        .into(),
-                );
+                // NOTE: there might be cases where i want to include full media *and* a thumbnail?
+                match image_mode {
+                    ImageMode::Hide => {}
+                    ImageMode::Full => {
+                        tmpl.media = Some(
+                            EmbedMediaPending::new(i_url)
+                                .mime_guess("image/jpeg".parse().unwrap())
+                                .into(),
+                        );
+                    }
+                    ImageMode::Thumb => {
+                        tmpl.thumbnail = Some(
+                            EmbedMediaPending::new(i_url)
+                                .mime_guess("image/jpeg".parse().unwrap())
+                                .into(),
+                        );
+                    }
+                }
             }
         }
 
-        // Handle rel=me and RSS feeds if needed later...
+        // TODO: handle rel=me and RSS feeds if needed later...
 
         Ok(vec![EmbedGeneration { embed: tmpl }])
     }
+}
+
+/// Image display mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ImageMode {
+    /// Don't show image
+    Hide,
+    /// Show as full-width main media
+    Full,
+    /// Show as thumbnail
+    Thumb,
+}
+
+/// Determine image display mode based on Twitter card and robots directives
+fn determine_image_mode(data: &ExtractedData) -> ImageMode {
+    // Check robots max-image-preview first (takes precedence)
+    if let Some(robots) = data.robots_max_image_preview {
+        return match robots {
+            RobotsImagePreview::None => ImageMode::Hide,
+            RobotsImagePreview::Standard => ImageMode::Thumb,
+            RobotsImagePreview::Large => ImageMode::Full,
+        };
+    }
+
+    // Check Twitter card
+    match data.twitter_card.as_deref() {
+        Some("summary_large_image" | "player") => ImageMode::Full,
+        Some("summary" | "app") => ImageMode::Thumb,
+        // Default: use OG type heuristics
+        _ => {
+            let og_type = data.og_type.as_deref().unwrap_or("website");
+            if is_og_type_probably_thumbnail(og_type) {
+                ImageMode::Thumb
+            } else {
+                ImageMode::Full
+            }
+        }
+    }
+}
+
+/// Check if an OG type typically uses thumbnail images
+fn is_og_type_probably_thumbnail(og_type: &str) -> bool {
+    matches!(
+        og_type,
+        "music.song"
+            | "music.album"
+            | "music.playlist"
+            | "music.radio_station"
+            | "article"
+            | "book"
+            | "profile"
+            | "website"
+    )
+}
+
+/// Parse robots max-image-preview directive from robots meta content
+fn parse_robots_image_preview(content: &str) -> Option<RobotsImagePreview> {
+    // Robots meta can contain multiple comma-separated directives
+    // e.g., "noindex, nofollow, max-image-preview:large"
+    for directive in content.split(',') {
+        let directive = directive.trim().to_lowercase();
+        if directive.starts_with("max-image-preview:") {
+            let value = directive.strip_prefix("max-image-preview:")?.trim();
+            return Some(match value {
+                "none" => RobotsImagePreview::None,
+                "standard" => RobotsImagePreview::Standard,
+                "large" => RobotsImagePreview::Large,
+                _ => continue,
+            });
+        }
+    }
+    None
 }
 
 /// Merges `tail` with `chunk`, returning the valid UTF-8 string and
@@ -207,6 +293,17 @@ struct ExtractedData {
 
     feeds: Vec<String>,
     rel_me: Vec<String>,
+
+    twitter_card: Option<String>,
+    robots_max_image_preview: Option<RobotsImagePreview>,
+}
+
+/// Robots max-image-preview directive
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RobotsImagePreview {
+    None,
+    Standard,
+    Large,
 }
 
 struct MetaSink {
@@ -252,6 +349,7 @@ impl TokenSink for MetaSink {
                                 match key.as_str() {
                                     "og:title" => data.og_title = Some(content),
                                     "twitter:title" => data.twitter_title = Some(content),
+                                    "twitter:card" => data.twitter_card = Some(content),
                                     "description" => data.description = Some(content),
                                     "og:description" => data.og_description = Some(content),
                                     "twitter:description" => {
@@ -261,6 +359,10 @@ impl TokenSink for MetaSink {
                                     "theme-color" => data.theme_color = Some(content),
                                     "og:url" => data.og_url = Some(content),
                                     "og:type" => data.og_type = Some(content),
+                                    "robots" => {
+                                        data.robots_max_image_preview =
+                                            parse_robots_image_preview(&content);
+                                    }
 
                                     "author" => data.author_name = Some(content),
                                     "article:author" => {

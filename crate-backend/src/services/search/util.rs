@@ -10,3 +10,5 @@ pub const COMMIT_INTERVAL: Duration = Duration::from_secs(5);
 
 /// the maximum of uncommitted documents before needing to commit
 pub const MAX_UNCOMMITTED: usize = 1000;
+
+// TODO: finetune these numbers. maybe dynamically change them based on what's happening, eg. raise limits during bulk imports?

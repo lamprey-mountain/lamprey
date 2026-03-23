@@ -94,6 +94,7 @@ arc-swap = "1.8.2"
 im = "15.1.0"
 kameo = "0.19.2"
 lamprey-macros = { version = "0.1", path = "../crate-macros" }
+lamprey-unfurl = { version = "0.1", path = "../crate-unfurl" }
 pastey = "0.2.1"
 # lamprey-backend-rest = { version = "0.1.1", path = "../crate-backend-rest" }
 # lamprey-backend-sync = { version = "0.1.1", path = "../crate-backend-sync" }

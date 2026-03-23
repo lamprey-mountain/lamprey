@@ -3,13 +3,14 @@ use std::sync::Arc;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
-use common::v1::types::{ChannelId, EmbedRequest, Permission, RoomId, UserId};
+use common::v1::types::{ChannelId, Embed, Permission, RoomId, UserId};
+use lamprey_unfurl::logging::LogEntry;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::services::embed::ServiceEmbed;
+use crate::services::embed::DebugLogSink;
 use crate::state::MessagingService;
 use crate::ServerState;
 
@@ -242,34 +243,164 @@ async fn debug_version() -> Result<impl IntoResponse> {
     }))
 }
 
-/// Embed a url
+/// Debug unfurler request
+#[derive(Debug, Deserialize, ToSchema)]
+struct DebugRequest {
+    url: Url,
+}
+
+/// Debug unfurler response
+#[derive(Debug, Serialize, ToSchema)]
+struct DebugResponse {
+    /// unfurler log
+    log: Vec<LogEntry>,
+
+    /// the generated embeds
+    embeds: Vec<Embed>,
+}
+
+/// Batch unfurl request
+#[derive(Debug, Deserialize, ToSchema)]
+struct UnfurlRequest {
+    /// limits to 4 urls max
+    urls: Vec<Url>,
+}
+
+/// Batch unfurl response
+#[derive(Debug, Serialize, ToSchema)]
+struct UnfurlResponse {
+    embeds: Vec<Embed>,
+}
+
+/// Unfurler debug
 #[utoipa::path(
     post,
-    path = "/debug/embed-url",
-    tags = ["debug", "badge.scope.full"],
-    request_body = EmbedRequest,
+    path = "/unfurler/debug",
+    tags = ["debug"],
+    request_body = DebugRequest,
     responses(
-        (status = ACCEPTED, description = "success"),
+        (status = OK, body = DebugResponse, description = "success"),
     )
 )]
-async fn debug_embed_url(
+async fn unfurler_debug(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<EmbedRequest>,
+    Json(json): Json<DebugRequest>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let mut embed = ServiceEmbed::generate_inner(&s.inner, auth.user.id, json.url).await?;
-    if let Some(m) = &mut embed.media {
-        s.presign(m).await?;
+
+    let mut log_sink = DebugLogSink::new();
+    let generations = s
+        .inner
+        .services()
+        .embed
+        .unfurl_with_logger(&json.url, &mut log_sink)
+        .await?;
+
+    let mut embeds = Vec::new();
+    for mut gen in generations {
+        let pending = gen.pending_media();
+        for p in pending {
+            let mut media = s
+                .inner
+                .services()
+                .media
+                .import_from_url_with_max_size(
+                    auth.user.id,
+                    common::v2::types::media::MediaCreate {
+                        alt: p.alt,
+                        strip_exif: false,
+                        source: common::v2::types::media::MediaCreateSource::Download {
+                            filename: None,
+                            size: None,
+                            source_url: p.url,
+                        },
+                    },
+                    1024 * 1024 * 8,
+                )
+                .await?;
+
+            gen.update_media(
+                p.placeholder_media_id,
+                lamprey_unfurl::util::EmbedMedia::Finished(media.clone()),
+            );
+
+            s.presign(&mut media).await?;
+        }
+
+        embeds.push(gen.to_embed());
     }
-    if let Some(m) = &mut embed.thumbnail {
-        s.presign(m).await?;
+
+    Ok(Json(DebugResponse {
+        log: log_sink.into_entries(),
+        embeds,
+    }))
+}
+
+/// Unfurl multiple urls
+#[utoipa::path(
+    post,
+    path = "/unfurler/unfurl",
+    tags = ["debug"],
+    request_body = UnfurlRequest,
+    responses(
+        (status = OK, body = UnfurlResponse, description = "success"),
+    )
+)]
+async fn unfurler_unfurl(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<UnfurlRequest>,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    auth.user.ensure_unsuspended()?;
+
+    if json.urls.len() > 4 {
+        return Err(crate::error::Error::BadRequest(
+            "maximum 4 URLs allowed".into(),
+        ));
     }
-    if let Some(m) = &mut embed.author_avatar {
-        s.presign(m).await?;
+
+    let mut embeds = Vec::new();
+    for url in json.urls {
+        let generations = s.inner.services().embed.unfurl(&url).await?;
+
+        for mut gen in generations {
+            let pending = gen.pending_media();
+            for p in pending {
+                let mut media = s
+                    .inner
+                    .services()
+                    .media
+                    .import_from_url_with_max_size(
+                        auth.user.id,
+                        common::v2::types::media::MediaCreate {
+                            alt: p.alt,
+                            strip_exif: false,
+                            source: common::v2::types::media::MediaCreateSource::Download {
+                                filename: None,
+                                size: None,
+                                source_url: p.url,
+                            },
+                        },
+                        1024 * 1024 * 8,
+                    )
+                    .await?;
+
+                gen.update_media(
+                    p.placeholder_media_id,
+                    lamprey_unfurl::util::EmbedMedia::Finished(media.clone()),
+                );
+
+                s.presign(&mut media).await?;
+            }
+
+            embeds.push(gen.to_embed());
+        }
     }
-    Ok(Json(embed))
+
+    Ok(Json(UnfurlResponse { embeds }))
 }
 
 /// Trigger a panic
@@ -476,7 +607,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(debug_info))
         .routes(routes!(debug_version))
-        .routes(routes!(debug_embed_url))
+        .routes(routes!(unfurler_debug))
+        .routes(routes!(unfurler_unfurl))
         .routes(routes!(debug_panic))
         .routes(routes!(debug_test_permissions))
         .routes(routes!(debug_health))
