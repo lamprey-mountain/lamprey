@@ -19,9 +19,9 @@ pub trait IndexDefinition {
 }
 
 pub mod abuse_monitoring;
+pub mod analytics;
 pub mod content;
 pub mod document_history;
-pub mod room_analytics;
 
 pub use content::ContentIndex;
 

@@ -7,11 +7,11 @@ use tantivy::schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING};
 
 use crate::services::search::schema::IndexDefinition;
 
-pub struct RoomAnalyticsIndex {
-    schema: RoomAnalyticsSchema,
+pub struct AnalyticsIndex {
+    schema: AnalyticsSchema,
 }
 
-pub struct RoomAnalyticsSchema {
+pub struct AnalyticsSchema {
     /// the tantivy schema itself
     pub schema: Schema,
 
@@ -43,15 +43,7 @@ pub struct RoomAnalyticsSchema {
     pub count: schema::Field,
 }
 
-/// a single room/server analytics event
-pub struct AnalyticsEvent {
-    pub id: Uuid,
-    pub room_id: RoomId,
-    pub time: Time,
-    pub payload: AnalyticsEventPayload,
-}
-
-impl IndexDefinition for RoomAnalyticsIndex {
+impl IndexDefinition for AnalyticsIndex {
     fn schema(&self) -> &Schema {
         &self.schema.schema
     }
@@ -61,15 +53,15 @@ impl IndexDefinition for RoomAnalyticsIndex {
     }
 }
 
-impl Default for RoomAnalyticsIndex {
+impl Default for AnalyticsIndex {
     fn default() -> Self {
         Self {
-            schema: RoomAnalyticsSchema::default(),
+            schema: AnalyticsSchema::default(),
         }
     }
 }
 
-impl Default for RoomAnalyticsSchema {
+impl Default for AnalyticsSchema {
     fn default() -> Self {
         let mut sb = SchemaBuilder::new();
 

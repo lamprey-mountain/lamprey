@@ -42,12 +42,25 @@ pub struct SearchMessagesResponseRaw {
     pub total: u64,
 }
 
+pub struct SearchChannels {
+    pub req: ChannelSearchRequest,
+    pub visible_room_ids: Vec<RoomId>,
+}
+
+pub struct SearchChannelsResponseRawItem {
+    pub id: ChannelId,
+    pub archived_at: Option<Time>,
+    pub created_at: Time,
+}
+
+pub struct SearchChannelsResponseRaw {
+    pub items: Vec<SearchChannelsResponseRawItem>,
+    pub total: u64,
+}
+
 impl ContentSearcher {
     /// generate a tantivy query to restrict visibility
-    pub fn generate_visibility_query(
-        &self,
-        visible_channel_ids: &[(ChannelId, bool)],
-    ) -> BooleanQuery {
+    fn generate_visibility_query(&self, visible_channel_ids: &[(ChannelId, bool)]) -> BooleanQuery {
         let mut channel_terms = vec![];
         let mut parent_channel_terms = vec![];
         for (id, can_view_private_threads) in visible_channel_ids {
@@ -185,8 +198,6 @@ impl ContentSearcher {
         Ok(SearchMessagesResponseRaw { items, total })
     }
 
-    // pub fn search_channels(&self, q: SearchChannels) -> Result<_> {}
-
     pub fn count_documents_for_channel(&self, channel_id: ChannelId) -> Result<u64> {
         let searcher = self.reader.searcher();
 
@@ -198,27 +209,9 @@ impl ContentSearcher {
         let count = searcher.search(&query, &Count)?;
         Ok(count as u64)
     }
-}
 
-pub struct SearchChannels {
-    pub req: ChannelSearchRequest,
-    pub visible_room_ids: Vec<RoomId>,
-}
-
-pub struct SearchChannelsResponseRawItem {
-    pub id: ChannelId,
-    pub archived_at: Option<Time>,
-    pub created_at: Time,
-}
-
-pub struct SearchChannelsResponseRaw {
-    pub items: Vec<SearchChannelsResponseRawItem>,
-    pub total: u64,
-}
-
-impl ContentSearcher {
     /// generate a tantivy query to restrict channel visibility by room
-    pub fn generate_channel_visibility_query(&self, visible_room_ids: &[RoomId]) -> BooleanQuery {
+    fn generate_channel_visibility_query(&self, visible_room_ids: &[RoomId]) -> BooleanQuery {
         let room_terms: Vec<Term> = visible_room_ids
             .iter()
             .map(|id| Term::from_field_text(self.schema.room_id, &id.to_string()))

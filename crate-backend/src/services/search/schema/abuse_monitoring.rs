@@ -1,9 +1,12 @@
 use common::v1::types::RoomId;
-use lamprey_backend_core::types::analytics::{AbuseMetadata, AnalyticsEventPayload};
+use lamprey_backend_core::types::analytics::{AbuseEvent, AbuseMetadata, AnalyticsEventPayload};
 use time::Time;
 use uuid::Uuid;
 
-use tantivy::schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING, TEXT};
+use tantivy::{
+    schema::{self, Schema, SchemaBuilder, FAST, STORED, STRING, TEXT},
+    TantivyDocument,
+};
 
 use crate::services::search::schema::IndexDefinition;
 
@@ -47,16 +50,6 @@ pub struct AbuseMonitoringSchema {
 
     /// session ID
     pub session_id: schema::Field,
-}
-
-/// a single abuse monitoring event
-pub struct AbuseEvent {
-    pub id: Uuid,
-    /// the room id this happened in, or SERVER_ROOM_ID otherwise
-    pub room_id: RoomId,
-    pub time: Time,
-    pub payload: AnalyticsEventPayload,
-    pub abuse_metadata: Option<AbuseMetadata>,
 }
 
 impl IndexDefinition for AbuseMonitoringIndex {
@@ -111,3 +104,25 @@ impl Default for AbuseMonitoringSchema {
         }
     }
 }
+
+pub fn tantivy_document_from_abuse_monitoring_event(
+    s: &AbuseMonitoringSchema,
+    event: AbuseEvent,
+) -> TantivyDocument {
+    todo!()
+}
+
+pub fn tantivy_document_from_analytics_event(
+    s: &AbuseMonitoringSchema,
+    event: AbuseEvent,
+) -> TantivyDocument {
+    todo!()
+}
+
+// fn populate_doc_from_event_payload(
+//     s: &???Schema,
+//     event: AnalyticsEventPayload,
+//     doc: &mut TantivyDocument,
+// ) {
+//     todo!()
+// }

@@ -35,11 +35,14 @@ pub struct ServiceSearch {
 
     /// searcher for messages, channels, rooms, and other generic content
     content_searcher: OnceCell<Arc<ContentSearcher>>,
-    // /// index for room (and server) analytics
-    // room_analytics: ActorRef<IndexActor>,
+    // /// searcher for room (and server) analytics
+    // analytics_searcher: ...,
+
+    // /// searcher for server-wide abuse monitoring
+    // abuse_searcher: ...,
 
     // /// index for document history
-    // document_history: ActorRef<IndexActor>,
+    // documents_searcher: ...,
 }
 
 impl ServiceSearch {
@@ -50,8 +53,6 @@ impl ServiceSearch {
             state,
             index_manager,
             content_searcher: OnceCell::new(),
-            // room_analytics,
-            // document_history,
         }
     }
 

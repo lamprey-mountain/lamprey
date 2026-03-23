@@ -1,6 +1,54 @@
 use std::net::IpAddr;
 
 use common::v1::types::{ChannelId, MediaId, RoomId, RoomMemberOrigin, SessionId, UserId};
+use time::Time;
+use uuid::Uuid;
+
+/// a single room/server analytics event
+#[derive(Debug, Clone)]
+pub struct AnalyticsEvent {
+    pub id: Uuid,
+    pub room_id: RoomId,
+    pub time: Time,
+    pub payload: AnalyticsEventPayload,
+}
+
+/// a single abuse monitoring event
+#[derive(Debug, Clone)]
+pub struct AbuseEvent {
+    pub id: Uuid,
+    /// the room id this happened in, or SERVER_ROOM_ID otherwise
+    pub room_id: RoomId,
+    pub time: Time,
+    pub payload: AnalyticsEventPayload,
+    pub abuse_metadata: Option<AbuseMetadata>,
+}
+
+// save space in postgres
+pub struct CombinedEvent {
+    pub id: Uuid,                              // index on this
+    pub room_id: RoomId,                       // index on this
+    pub time: Time,                            // index on this
+    pub payload: AnalyticsEventPayload,        // jsonb
+    pub abuse_metadata: Option<AbuseMetadata>, // jsonb
+    pub analytics_retention: AnalyticsRetention,
+    pub abuse_retention: AbuseRetention,
+}
+
+/// Controls retention for analytics
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AnalyticsRetention {
+    Full,
+    Anonymized,
+    None,
+}
+
+/// Controls retention for abuse monitoring
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AbuseRetention {
+    Yes,
+    No,
+}
 
 #[derive(Debug, Clone)]
 pub enum AnalyticsEventPayload {
@@ -65,6 +113,13 @@ pub enum AnalyticsEventPayload {
         channel_id: ChannelId,
     },
 
+    /// snapshots of media statistics
+    MediaSnapshot {
+        channel_id: ChannelId,
+        total_media_size: u64,
+        total_media_count: u64,
+    },
+
     Auth {
         /// the user id that they tried to log into
         user_id: Option<UserId>,
@@ -82,6 +137,8 @@ pub enum AnalyticsResourceAction {
 }
 
 /// metadata for abuse monitoring
+// NOTE: do i want to manually impl Debug to hide sensitive fields?
+#[derive(Debug, Clone)]
 pub struct AbuseMetadata {
     /// the ip address of the request that caused this event
     pub ip_addr: IpAddr,
