@@ -11,7 +11,7 @@ use futures_util::StreamExt;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::sync::transport::{Transport, TransportEvent, TransportSink, WebsocketTransport};
-use crate::sync::{Connection, Timeout};
+use crate::sync::{util::Timeout, Connection};
 use crate::ServerState;
 
 /// Sync init

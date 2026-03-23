@@ -4,46 +4,38 @@ use common::v1::types::{
     voice::VoiceStateScreenshare,
     ChannelId, ConnectionId, SessionToken, UserId,
 };
-use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
-use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::error::{ApiError, ErrorCode, SyncError};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
-    DocumentBranchId, InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync,
-    Permission, Session,
+    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission,
 };
 use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
 
-use crate::services::member_lists::{
-    syncer::MemberListSyncer,
-    util::{MemberListKey1, MemberListTarget},
-};
 use crate::sync::{permissions::AuthCheck, transport::TransportSink};
 use crate::ServerState;
 use crate::{
     error::{Error, Result},
     services::documents::DocumentSyncer,
 };
+use crate::{
+    services::member_lists::{
+        syncer::MemberListSyncer,
+        util::{MemberListKey1, MemberListTarget},
+    },
+    sync::util::{ConnectionState, Timeout, HEARTBEAT_TIME, MAX_QUEUE_LEN},
+};
 
 pub mod permissions;
 pub mod transport;
+pub mod util;
 
 type WsMessage = axum::extract::ws::Message;
-
-pub const HEARTBEAT_TIME: Duration = Duration::from_secs(30);
-pub const CLOSE_TIME: Duration = Duration::from_secs(10);
-const MAX_QUEUE_LEN: usize = 256;
-
-pub enum Timeout {
-    Ping(Instant),
-    Close(Instant),
-}
 
 pub struct Connection {
     state: ConnectionState,
@@ -54,13 +46,6 @@ pub struct Connection {
     id: ConnectionId,
     pub member_list: Box<ConnectionMemberListSyncer>,
     pub document: Box<DocumentSyncer>,
-}
-
-#[derive(Debug, Clone)]
-pub enum ConnectionState {
-    Unauthed,
-    Authenticated { session: Session },
-    Disconnected { session: Session },
 }
 
 pub struct ConnectionMemberListSyncer {
@@ -774,32 +759,5 @@ impl Connection {
 
     pub fn state(&self) -> &ConnectionState {
         &self.state
-    }
-}
-
-impl ConnectionState {
-    pub fn session(&self) -> Option<&Session> {
-        match self {
-            ConnectionState::Unauthed => None,
-            ConnectionState::Authenticated { session } => Some(session),
-            ConnectionState::Disconnected { session } => Some(session),
-        }
-    }
-}
-
-impl Timeout {
-    pub fn for_ping() -> Self {
-        Timeout::Ping(Instant::now() + HEARTBEAT_TIME)
-    }
-
-    pub fn for_close() -> Self {
-        Timeout::Close(Instant::now() + CLOSE_TIME)
-    }
-
-    pub fn get_instant(&self) -> Instant {
-        match self {
-            Timeout::Ping(instant) => *instant,
-            Timeout::Close(instant) => *instant,
-        }
     }
 }
