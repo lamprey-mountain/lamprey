@@ -17,6 +17,18 @@ import { ThreadMembersService } from "../services/ThreadMembersService";
 import { MessagesService } from "../services/MessagesService";
 import { NotificationService } from "../services/NotificationService";
 import { MemberListService } from "../services/MemberListService";
+import { InvitesService } from "../services/InvitesService";
+import { AuthService } from "../services/AuthService";
+import { DmsService } from "../services/DmsService";
+import { EmojiService } from "../services/EmojiService";
+import { PushService } from "../services/PushService";
+import { ReactionsService } from "../services/ReactionsService";
+import { RoomAnalyticsService } from "../services/RoomAnalyticsService";
+import { RoomBansService } from "../services/RoomBansService";
+import { TagsService } from "../services/TagsService";
+import { ThreadsService } from "../services/ThreadsService";
+import { WebhooksService } from "../services/WebhooksService";
+import { AuditLogService } from "../services/AuditLogService";
 import { Emitter } from "@solid-primitives/event-bus";
 import type { IDBPDatabase } from "idb";
 
@@ -32,6 +44,18 @@ export class RootStore {
 	messages: MessagesService;
 	notifications: NotificationService;
 	memberLists: MemberListService;
+	invites: InvitesService;
+	auth: AuthService;
+	dms: DmsService;
+	emoji: EmojiService;
+	push: PushService;
+	reactions: ReactionsService;
+	roomAnalytics: RoomAnalyticsService;
+	roomBans: RoomBansService;
+	tags: TagsService;
+	threads: ThreadsService;
+	webhooks: WebhooksService;
+	auditLog: AuditLogService;
 
 	session: Accessor<Session | null>;
 	setSession: (s: Session | null) => void;
@@ -70,6 +94,18 @@ export class RootStore {
 		this.messages = new MessagesService(this, getDb);
 		this.notifications = new NotificationService(this);
 		this.memberLists = new MemberListService(this);
+		this.invites = new InvitesService(this, getDb);
+		this.auth = new AuthService(this, getDb);
+		this.dms = new DmsService(this, getDb);
+		this.emoji = new EmojiService(this, getDb);
+		this.push = new PushService(this, getDb);
+		this.reactions = new ReactionsService(this, getDb);
+		this.roomAnalytics = new RoomAnalyticsService(this, getDb);
+		this.roomBans = new RoomBansService(this, getDb);
+		this.tags = new TagsService(this, getDb);
+		this.threads = new ThreadsService(this, getDb);
+		this.webhooks = new WebhooksService(this, getDb);
+		this.auditLog = new AuditLogService(this, getDb);
 
 		events.on("sync", ([msg, raw]) => this.handleSync(msg, raw));
 		events.on("ready", (msg) => this.handleReady(msg));

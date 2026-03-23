@@ -124,6 +124,54 @@ export function useMemberList2() {
 	return useApi2().memberLists;
 }
 
+export function useInvites2() {
+	return useApi2().invites;
+}
+
+export function useAuth2() {
+	return useApi2().auth;
+}
+
+export function useDms2() {
+	return useApi2().dms;
+}
+
+export function useEmoji2() {
+	return useApi2().emoji;
+}
+
+export function usePush2() {
+	return useApi2().push;
+}
+
+export function useReactions2() {
+	return useApi2().reactions;
+}
+
+export function useRoomAnalytics2() {
+	return useApi2().roomAnalytics;
+}
+
+export function useRoomBans2() {
+	return useApi2().roomBans;
+}
+
+export function useTags2() {
+	return useApi2().tags;
+}
+
+export function useThreads2() {
+	return useApi2().threads;
+}
+
+export function useWebhooks2() {
+	return useApi2().webhooks;
+}
+
+export function useAuditLog2() {
+	return useApi2().auditLog;
+}
+
 export type MemberList = {
 	groups: MemberListGroup[];
 	items: {
