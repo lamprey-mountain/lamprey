@@ -2,7 +2,7 @@ import { Room } from "sdk";
 import { BaseService } from "../core/Service";
 import { batch, createResource, createSignal, type Resource } from "solid-js";
 import type { Pagination } from "sdk";
-import { ListState, PaginatedList } from "../../core/PaginatedList";
+import { ListState, PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
 
 const log = logger.for("api/rooms");
