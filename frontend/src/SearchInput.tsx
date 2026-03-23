@@ -814,81 +814,98 @@ export const SearchInput = (
 		}
 
 		if (filters.author_ids) {
-			for (const author_id of filters.author_ids) {
-				queryParts.push(`author_id:${author_id}`);
-			}
+			queryParts.push(`+author_id: IN [${filters.author_ids.join(" ")}]`);
 		}
 
 		if (props.channel) {
 			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
-				queryParts.push(`channel_id:${props.channel.id}`);
+				queryParts.push(`+channel_id:${props.channel.id}`);
 			} else if (filters.thread_ids) {
-				for (const thread_id of filters.thread_ids) {
-					queryParts.push(`channel_id:${thread_id}`);
-				}
+				queryParts.push(`+channel_id: IN [${filters.thread_ids.join(" ")}]`);
 				if (props.channel.room_id) {
-					queryParts.push(`room_id:${props.channel.room_id}`);
+					queryParts.push(`+room_id:${props.channel.room_id}`);
 				}
 			} else if (props.channel.room_id) {
-				queryParts.push(`room_id:${props.channel.room_id}`);
+				queryParts.push(`+room_id:${props.channel.room_id}`);
 			} else {
-				queryParts.push(`channel_id:${props.channel.id}`);
+				queryParts.push(`+channel_id:${props.channel.id}`);
 			}
 		} else if (props.room) {
-			queryParts.push(`room_id:${props.room.id}`);
+			queryParts.push(`+room_id:${props.room.id}`);
 		}
 
-		if (filters.after) {
+		if (filters.before && filters.after) {
+			const from_uuid = dateToBoundaryUUID(filters.after, "start");
+			const to_uuid = dateToBoundaryUUID(filters.before, "end");
+			if (from_uuid && to_uuid) {
+				queryParts.push(`+created_at:[${from_uuid} TO ${to_uuid}]`);
+			}
+		} else if (filters.after) {
 			const from_uuid = dateToBoundaryUUID(filters.after, "start");
 			if (from_uuid) {
-				queryParts.push(`created_at:[${from_uuid} TO *]`);
+				queryParts.push(`+created_at:[${from_uuid} TO *]`);
 			}
-		}
-		if (filters.before) {
+		} else if (filters.before) {
 			const to_uuid = dateToBoundaryUUID(filters.before, "end");
 			if (to_uuid) {
-				queryParts.push(`created_at:[* TO ${to_uuid}]`);
+				queryParts.push(`+created_at:[* TO ${to_uuid}]`);
 			}
 		}
 
 		if (filters.has) {
+			const hasSubquery: string[] = [];
+
 			if (filters.has.includes("attachment")) {
-				queryParts.push(`metadata_fast.has_attachment:true`);
+				hasSubquery.push(`metadata_fast.has_attachment:true`);
 			}
 			if (filters.has.includes("image")) {
-				queryParts.push(`metadata_fast.has_image:true`);
+				hasSubquery.push(`metadata_fast.has_image:true`);
 			}
 			if (filters.has.includes("audio")) {
-				queryParts.push(`metadata_fast.has_audio:true`);
+				hasSubquery.push(`metadata_fast.has_audio:true`);
 			}
 			if (filters.has.includes("video")) {
-				queryParts.push(`metadata_fast.has_video:true`);
+				hasSubquery.push(`metadata_fast.has_video:true`);
 			}
 			if (filters.has.includes("link")) {
-				queryParts.push(`metadata_fast.has_link:true`);
+				hasSubquery.push(`metadata_fast.has_link:true`);
 			}
 			if (filters.has.includes("embed")) {
-				queryParts.push(`metadata_fast.has_embed:true`);
+				hasSubquery.push(`metadata_fast.has_embed:true`);
+			}
+
+			if (hasSubquery.length === 1) {
+				queryParts.push(`+${hasSubquery[0]}`);
+			} else if (hasSubquery.length > 1) {
+				queryParts.push(`+(${hasSubquery.join(" ")})`);
 			}
 		}
 
 		if (filters.pinned) {
-			queryParts.push(`metadata_fast.pinned:${filters.pinned}`);
+			queryParts.push(`+metadata_fast.pinned:${filters.pinned}`);
 		}
 
 		if (filters.mentions_ids) {
+			const mentionSubquery: string[] = [];
+
 			for (const mentionId of filters.mentions_ids) {
 				if (mentionId.startsWith("user-")) {
 					const user_id = mentionId.replace("user-", "");
-					queryParts.push(`metadata_fast.mentions_user:${user_id}`);
+					mentionSubquery.push(`metadata_fast.mentions_user:${user_id}`);
 				} else if (mentionId.startsWith("role-")) {
 					const role_id = mentionId.replace("role-", "");
-					queryParts.push(`metadata_fast.mentions_role:${role_id}`);
+					mentionSubquery.push(`metadata_fast.mentions_role:${role_id}`);
 				} else if (
 					mentionId === "everyone-room" || mentionId === "everyone-thread"
 				) {
-					queryParts.push(`metadata_fast.mentions_everyone:true`);
+					mentionSubquery.push(`metadata_fast.mentions_everyone:true`);
 				}
+			}
+
+			if (mentionSubquery.length === 1) {
+				queryParts.push(`+${mentionSubquery[0]}`);
+			} else if (mentionSubquery.length > 1) {
+				queryParts.push(`+(${mentionSubquery.join(" ")})`);
 			}
 		}
 
