@@ -166,6 +166,22 @@ export class RootStore {
 			if (raw.op === "Sync") m.nonce = raw.nonce;
 			this.messages.handleMessageCreate(m);
 			this.notifications.handleMessageCreate(m);
+
+			const session = this.session();
+			const isOwnMessage = m.author_id === session?.user_id;
+			if (isOwnMessage) {
+				const channel = this.channels.cache.get(m.channel_id);
+				if (channel) {
+					this.channels.cache.set(m.channel_id, {
+						...channel,
+						message_count: (channel.message_count ?? 0) + 1,
+						mention_count: 0,
+						last_version_id: m.latest_version.version_id,
+						last_read_id: m.latest_version.version_id,
+						is_unread: false,
+					});
+				}
+			}
 		} else if (msg.type === "MessageUpdate") {
 			this.messages.handleMessageUpdate(msg.message as any);
 		} else if (msg.type === "MessageDelete") {

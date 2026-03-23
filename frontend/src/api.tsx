@@ -613,7 +613,8 @@ export function createApi(
 			batch(() => {
 				store.messages.handleMessageCreate(m);
 
-				const is_unread = true;
+				const isOwnMessage = m.author_id === users.cache.get("@self")?.id;
+				const is_unread = !isOwnMessage;
 				const t = api.channels.cache.get(m.channel_id);
 				if (t) {
 					api.channels.cache.set(m.channel_id, {
