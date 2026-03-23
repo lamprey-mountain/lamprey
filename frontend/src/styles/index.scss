@@ -29,6 +29,7 @@
 	-moz-osx-font-smoothing: grayscale;
 	color: $fg-100;
 	background-color: $bg-100;
+	accent-color: $link-500;
 }
 
 ::selection {
@@ -1720,7 +1721,6 @@ input[type="text"].dropdown {
 
 input[type="range"] {
 	appearance: auto;
-	accent-color: $link-500;
 }
 
 .range {
