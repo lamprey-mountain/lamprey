@@ -119,7 +119,7 @@ export const schema = new Schema({
 				tag: "span.mention-everyone",
 			}],
 		},
-		emoji: {
+		emojiCustom: {
 			group: "inline",
 			atom: true,
 			inline: true,
@@ -146,6 +146,32 @@ export const schema = new Schema({
 					id: (el as HTMLElement).dataset.emojiId,
 					name: (el as HTMLElement).dataset.emojiName,
 					animated: (el as HTMLElement).dataset.emojiAnimated === "true",
+				}),
+			}],
+		},
+		emojiUnicode: {
+			group: "inline",
+			atom: true,
+			inline: true,
+			selectable: false,
+			attrs: {
+				char: {},
+			},
+			leafText(node) {
+				return node.attrs.char;
+			},
+			toDOM: (n) => [
+				"span",
+				{
+					"data-emoji-unicode": n.attrs.char,
+					"class": "emoji-unicode",
+				},
+				n.attrs.char,
+			],
+			parseDOM: [{
+				tag: "span[data-emoji-unicode]",
+				getAttrs: (el) => ({
+					char: (el as HTMLElement).dataset.emojiUnicode,
 				}),
 			}],
 		},

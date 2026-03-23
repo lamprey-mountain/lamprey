@@ -11,6 +11,7 @@ import {
 } from "./editor-utils.ts";
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
+import { createEmojiPlugin } from "./emoji-plugin.ts";
 import { useApi } from "../api.tsx";
 import { createEditorNodeViews } from "./node-views.tsx";
 
@@ -39,6 +40,7 @@ export const createEditor = (
 		opts.channelId,
 		opts.roomId ?? (() => ""),
 	);
+	const emojiPlugin = createEmojiPlugin();
 
 	const createState = () => {
 		let doc;
@@ -94,6 +96,7 @@ export const createEditor = (
 				}),
 				toolbarPlugin,
 				autocompletePlugin,
+				emojiPlugin,
 			],
 		});
 	};

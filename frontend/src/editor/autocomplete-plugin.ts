@@ -162,9 +162,13 @@ export function createAutocompletePlugin(
 		let node;
 		if (type === "emoji") {
 			if (item.char) {
-				node = state.schema.text(item.char);
+				// Unicode emoji - insert as emojiUnicode atom node
+				node = state.schema.nodes.emojiUnicode.create({
+					char: item.char,
+				});
 			} else {
-				node = state.schema.nodes.emoji.create({
+				// Custom emoji
+				node = state.schema.nodes.emojiCustom.create({
 					id: item.id,
 					name: item.label ?? item.name,
 				});

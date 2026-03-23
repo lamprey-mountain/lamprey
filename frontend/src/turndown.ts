@@ -1,6 +1,7 @@
 // some gfm stuff is vendored because the npm package doesn't have types
 
 import TurndownService from "turndown";
+import { EMOJI_TEST } from "./editor/emoji-plugin";
 
 const highlightRegExp =
 	/\b(?:language|lang|source|highlight(?:-source|-lang)?)-([a-z0-9_+-]+)\b/i;
@@ -225,6 +226,14 @@ export function initTurndownService(): TurndownService {
 			}
 			return content;
 		},
+	});
+
+	turndownService.addRule("twemoji", {
+		filter: (node) =>
+			node.nodeName === "IMG" &&
+			(node as HTMLElement).getAttribute("alt")?.match(EMOJI_TEST) !== null,
+		replacement: (_content, node) =>
+			(node as HTMLElement).getAttribute("alt") ?? "",
 	});
 
 	return turndownService;

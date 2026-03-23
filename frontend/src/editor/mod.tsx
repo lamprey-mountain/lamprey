@@ -8,9 +8,10 @@ import {
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { useCtx } from "../context";
 import { initTurndownService } from "../turndown.ts";
-import { decorate, md } from "../markdown_utils.tsx";
+import { decorate } from "../markdown_utils.tsx";
 import { schema as defaultSchema } from "./schema";
 import { serializeToMarkdown } from "./serializer.ts";
+import { convertEmojiInText } from "./emoji-plugin.ts";
 
 const turndown = initTurndownService();
 
@@ -113,11 +114,9 @@ export const createEditor = (opts: EditorOptions) => {
 
 						const html = event.clipboardData?.getData("text/html");
 						const plainText = event.clipboardData?.getData("text/plain");
-						const str = html
-							? turndown.turndown(html)
-							: (plainText !== null && plainText !== undefined
-								? plainText
-								: slice.content.textBetween(0, slice.content.size, "\n"));
+
+						const str = html ? turndown.turndown(html) : (plainText ??
+							slice.content.textBetween(0, slice.content.size, "\n"));
 
 						const tr = view.state.tr;
 						if (
@@ -140,31 +139,24 @@ export const createEditor = (opts: EditorOptions) => {
 							return true;
 						}
 
-						const tokens = md.lexer(str);
-						const hasSpecial = (t: any): boolean => {
-							if (t.type === "mention") return true;
-							if (t.tokens) return t.tokens.some(hasSpecial);
-							return false;
-						};
-						const hasStructured = tokens.some(hasSpecial);
+						const { content, hasEmoji } = convertEmojiInText(
+							schema,
+							str,
+						);
 
-						if (!html && !hasStructured) {
+						if (hasEmoji) {
+							const { from, to } = view.state.selection;
 							view.dispatch(
-								view.state.tr.replaceSelectionWith(schema.text(str))
+								view.state.tr.replaceWith(from, to, content)
 									.scrollIntoView()
 									.setMeta("paste", true),
 							);
 							return true;
 						}
 
-						const div = document.createElement("div");
-						div.style.whiteSpace = "pre-wrap";
-						div.innerHTML = md.parser(tokens).trimEnd();
-						const newSlice = DOMParser.fromSchema(schema).parseSlice(div, {
-							preserveWhitespace: "full",
-						});
 						view.dispatch(
-							view.state.tr.replaceSelection(newSlice).scrollIntoView()
+							view.state.tr.replaceSelectionWith(schema.text(str))
+								.scrollIntoView()
 								.setMeta("paste", true),
 						);
 						return true;

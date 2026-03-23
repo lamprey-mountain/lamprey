@@ -699,7 +699,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				tr = editorState.tr.replaceWith(
 					from,
 					to,
-					editor.schema.nodes.emoji.create({ id, name }),
+					editor.schema.nodes.emojiCustom.create({ id, name }),
 				);
 			} else {
 				tr = editorState.tr.insertText(emoji, from, to);
@@ -1026,7 +1026,7 @@ function CommentEditor(
 				tr = editorState.tr.replaceWith(
 					from,
 					to,
-					editor.schema.nodes.emoji.create({ id, name }),
+					editor.schema.nodes.emojiCustom.create({ id, name }),
 				);
 			} else {
 				tr = editorState.tr.insertText(emoji, from, to);

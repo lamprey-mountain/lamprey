@@ -38,7 +38,7 @@ function serializeNode(node: Node): string {
 		case "mentionEveryone": {
 			return "@everyone";
 		}
-		case "emoji": {
+		case "emojiCustom": {
 			const emojiId = node.attrs.id;
 			const name = node.attrs.name;
 			const animated = node.attrs.animated;
@@ -46,6 +46,9 @@ function serializeNode(node: Node): string {
 				return `<a:${name}:${emojiId}>`;
 			}
 			return `<:${name}:${emojiId}>`;
+		}
+		case "emojiUnicode": {
+			return node.attrs.char;
 		}
 		default: {
 			// For any other node types, try to get text content

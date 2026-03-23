@@ -127,7 +127,7 @@ export function Input(props: InputProps) {
 				tr = editorState.tr.replaceWith(
 					from,
 					to,
-					editor.schema.nodes.emoji.create({ id, name, animated }),
+					editor.schema.nodes.emojiCustom.create({ id, name, animated }),
 				);
 			} else {
 				tr = editorState.tr.insertText(emoji, from, to);

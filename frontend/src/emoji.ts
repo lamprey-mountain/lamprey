@@ -88,6 +88,14 @@ export const getTwemoji = (
 	});
 };
 
+export const getTwemojiUrl = (unicode: string): string | null => {
+	const codePoint = twemoji.convert.toCodePoint(
+		unicode.indexOf("\u200D") < 0 ? unicode.replace(/\uFE0F/g, "") : unicode,
+	);
+	if (!codePoint) return null;
+	return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codePoint}.svg`;
+};
+
 /**
  * Render an emoji reaction key (unicode or custom) as HTML.
  * @param key - The reaction key object
