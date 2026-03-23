@@ -552,13 +552,28 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
     for attr in attrs {
         let path = attr.path();
         if path.is_ident("path") {
-            return Ok(FieldKind::Path(try_parse_rename_arg(attr)?));
+            let rename = if matches!(attr.meta, syn::Meta::Path(_)) {
+                None
+            } else {
+                try_parse_rename_arg(attr)?
+            };
+            return Ok(FieldKind::Path(rename));
         }
         if path.is_ident("query") {
-            return Ok(FieldKind::Query(try_parse_rename_arg(attr)?));
+            let rename = if matches!(attr.meta, syn::Meta::Path(_)) {
+                None
+            } else {
+                try_parse_rename_arg(attr)?
+            };
+            return Ok(FieldKind::Query(rename));
         }
         if path.is_ident("header") {
-            return Ok(FieldKind::Header(try_parse_rename_arg(attr)?));
+            let rename = if matches!(attr.meta, syn::Meta::Path(_)) {
+                None
+            } else {
+                try_parse_rename_arg(attr)?
+            };
+            return Ok(FieldKind::Header(rename));
         }
         if path.is_ident("json") {
             return Ok(FieldKind::Json);
