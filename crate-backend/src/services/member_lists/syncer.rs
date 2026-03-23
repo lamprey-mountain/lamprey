@@ -6,12 +6,13 @@ use tokio_stream::{wrappers::BroadcastStream, StreamExt, StreamMap, StreamNotify
 use uuid::Uuid;
 
 use crate::{
+    error::Result,
     services::member_lists::{
         actor::{MemberListCommand, MemberListEvent},
-        util::{MemberListKey, MemberListKey1},
+        util::{MemberListKey, MemberListKey1, MemberListTarget},
     },
     services::rooms::MemberListCommandMsg,
-    Error, Result, ServerStateInner,
+    Error, ServerStateInner,
 };
 
 /// Syncer for member list events
@@ -25,6 +26,8 @@ pub struct MemberListSyncer {
     pub(super) known_users: HashSet<UserId>,
     pub(super) known_room_members: HashSet<(RoomId, UserId)>,
     pub(super) known_thread_members: HashSet<(ChannelId, UserId)>,
+    pub(super) user_id: Option<UserId>,
+    pub(super) current_key: Option<MemberListKey1>,
 }
 
 impl MemberListSyncer {
@@ -39,6 +42,48 @@ impl MemberListSyncer {
             known_users: HashSet::new(),
             known_room_members: HashSet::new(),
             known_thread_members: HashSet::new(),
+            user_id: None,
+            current_key: None,
+        }
+    }
+
+    /// Set the user ID for this syncer
+    pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
+        self.user_id = user_id;
+    }
+
+    /// Set the member list query
+    pub async fn set_query(
+        &mut self,
+        target: MemberListTarget,
+        ranges: &[(u64, u64)],
+    ) -> Result<()> {
+        if let Some(key) = self.current_key.take() {
+            let _ = self.unsubscribe(key).await;
+        }
+
+        let srv = self.s.services();
+        let key1 = match target {
+            MemberListTarget::Room(room_id) => MemberListKey1::Room(room_id),
+            MemberListTarget::Channel(channel_id) => {
+                let channel = srv.channels.get(channel_id, None).await?;
+                if let Some(room_id) = channel.room_id {
+                    MemberListKey1::RoomChannel(room_id, channel_id)
+                } else {
+                    MemberListKey1::DmChannel(channel_id)
+                }
+            }
+        };
+
+        self.subscribe(key1, ranges.to_vec()).await?;
+        self.current_key = Some(key1);
+        Ok(())
+    }
+
+    /// Clear the current member list query
+    pub async fn clear_query(&mut self) {
+        if let Some(key) = self.current_key.take() {
+            let _ = self.unsubscribe(key).await;
         }
     }
 
@@ -165,11 +210,16 @@ impl MemberListSyncer {
     }
 
     /// Poll for new events
-    pub async fn poll(&mut self, user_id: UserId) -> Result<Option<MessageSync>> {
+    pub async fn poll(&mut self) -> Result<MessageSync> {
+        let user_id = match self.user_id {
+            Some(uid) => uid,
+            None => std::future::pending().await,
+        };
+
         loop {
             if let Some(mut msg) = self.outbox.pop_front() {
                 self.patch_msg(&mut msg, user_id);
-                return Ok(Some(msg));
+                return Ok(msg);
             }
 
             tokio::select! {

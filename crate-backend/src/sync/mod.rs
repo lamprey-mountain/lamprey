@@ -24,10 +24,7 @@ use crate::{
     services::documents::DocumentSyncer,
 };
 use crate::{
-    services::member_lists::{
-        syncer::MemberListSyncer,
-        util::{MemberListKey1, MemberListTarget},
-    },
+    services::member_lists::{syncer::MemberListSyncer, util::MemberListTarget},
     sync::util::{ConnectionState, Timeout, HEARTBEAT_TIME, MAX_QUEUE_LEN},
 };
 
@@ -44,81 +41,15 @@ pub struct Connection {
     seq_server: u64,
     seq_client: u64,
     id: ConnectionId,
-    pub member_list: Box<ConnectionMemberListSyncer>,
+    pub member_list: MemberListSyncer,
     pub document: Box<DocumentSyncer>,
-}
-
-pub struct ConnectionMemberListSyncer {
-    inner: MemberListSyncer,
-    user_id: Option<UserId>,
-    current_key: Option<MemberListKey1>,
-    s: Arc<ServerState>,
-}
-
-// TODO(#996): remove this, merge with MemberListSyncer?
-impl ConnectionMemberListSyncer {
-    pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
-        self.user_id = user_id;
-    }
-
-    pub async fn set_query(
-        &mut self,
-        target: MemberListTarget,
-        ranges: &[(u64, u64)],
-    ) -> Result<()> {
-        if let Some(key) = self.current_key.take() {
-            let _ = self.inner.unsubscribe(key).await;
-        }
-
-        let srv = self.s.services();
-        let key1 = match target {
-            MemberListTarget::Room(room_id) => MemberListKey1::Room(room_id),
-            MemberListTarget::Channel(channel_id) => {
-                let channel = srv.channels.get(channel_id, None).await?;
-                if let Some(room_id) = channel.room_id {
-                    MemberListKey1::RoomChannel(room_id, channel_id)
-                } else {
-                    MemberListKey1::DmChannel(channel_id)
-                }
-            }
-        };
-
-        self.inner.subscribe(key1, ranges.to_vec()).await?;
-        self.current_key = Some(key1);
-        Ok(())
-    }
-
-    pub async fn clear_query(&mut self) {
-        if let Some(key) = self.current_key.take() {
-            let _ = self.inner.unsubscribe(key).await;
-        }
-    }
-
-    pub async fn poll(&mut self) -> Result<MessageSync> {
-        if let Some(user_id) = self.user_id {
-            if let Some(msg) = self.inner.poll(user_id).await? {
-                Ok(msg)
-            } else {
-                Err(Error::Internal(
-                    "Member list poll returned None unexpectedly".to_string(),
-                ))
-            }
-        } else {
-            std::future::pending().await
-        }
-    }
 }
 
 impl Connection {
     pub fn new(s: Arc<ServerState>, _params: SyncParams) -> Self {
         let id = ConnectionId::new();
 
-        let member_list = Box::new(ConnectionMemberListSyncer {
-            inner: s.services().member_lists.create_syncer(id.into()),
-            user_id: None,
-            current_key: None,
-            s: s.clone(),
-        });
+        let member_list = s.services().member_lists.create_syncer(id.into());
 
         Self {
             state: ConnectionState::Unauthed,
