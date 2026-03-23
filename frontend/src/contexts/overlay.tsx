@@ -155,6 +155,7 @@ export function OverlayProvider(props: ParentProps) {
 			floating,
 			() => {
 				computePosition(reference, floating, {
+					middleware: [offset({ mainAxis: 8 })],
 					placement: "top-start",
 				}).then(({ x, y, strategy }) => {
 					setAutocompleteFloating({ x, y, strategy: strategy as any });

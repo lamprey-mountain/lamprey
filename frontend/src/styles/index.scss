@@ -3444,18 +3444,35 @@ button.link {
 	border: solid $sep-300 1px;
 	box-shadow: 0 2px 8px $bg-100;
 	width: max-content;
-	min-width: 120px;
+	min-width: 180px;
 	max-width: 360px;
 
+	& > header {
+		font-size: 0.8em;
+		color: $fg-600;
+		background: $bg-100;
+		padding: 2px 6px;
+		padding-top: 6px;
+		margin-bottom: 6px;
+	}
+
 	& > .item {
-		padding: 2px 4px;
+		padding: 4px 2px;
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		cursor: pointer;
+		border-radius: 2px;
+		margin: 0 4px;
+		margin-top: -2px;
 
 		&:hover,
 		&.hovered {
 			background: #fff2;
+		}
+
+		& > .icon {
+			filter: invert(0.6);
 		}
 	}
 

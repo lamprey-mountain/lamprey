@@ -1,12 +1,13 @@
 import { For, Match, Show, Switch } from "solid-js";
 import { useAutocomplete } from "./contexts/autocomplete";
-import { type EmojiCustom } from "sdk";
+import { type Channel, type EmojiCustom } from "sdk";
 import { getEmojiUrl } from "./media/util";
 import { Avatar } from "./User";
 import { type EmojiData, getTwemoji } from "./emoji";
 import { type Command } from "./contexts/slash-commands";
 import { useAutocompleteData } from "./hooks/useAutocompleteData";
 import type { AutocompleteMentionItem } from "./contexts/autocomplete";
+import { ChannelIcon } from "./avatar/ChannelIcon";
 
 export const Autocomplete = () => {
 	const { state, select, setIndex } = useAutocomplete();
@@ -18,6 +19,11 @@ export const Autocomplete = () => {
 				filtered().length > 0}
 		>
 			<div class="autocomplete">
+				<header>
+					<Show when={state.query} fallback={`list ${state.kind?.type}s`}>
+						filter {state.kind?.type} matching "{state.query}"
+					</Show>
+				</header>
 				<For each={filtered()}>
 					{(result, i) => (
 						<div
@@ -81,6 +87,13 @@ export const Autocomplete = () => {
 									<div class="everyone-mention">
 										<span>@everyone</span>
 									</div>
+								</Match>
+								<Match when={state.kind?.type === "channel"}>
+									<ChannelIcon
+										channel={result.obj as Channel}
+										style="width: 20px; height: 20px;"
+									/>
+									<span>{(result.obj as Channel).name}</span>
 								</Match>
 								<Match when={true}>
 									{"label" in result.obj
