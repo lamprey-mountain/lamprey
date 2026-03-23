@@ -577,36 +577,43 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
 }
 
 fn try_parse_rename_arg(attr: &Attribute) -> syn::Result<Option<String>> {
-    // #[path] with no args — valid, means use field name
-    if matches!(attr.meta, syn::Meta::Path(_)) {
-        return Ok(None);
-    }
-
     let meta = attr.parse_args::<syn::Meta>().map_err(|_| {
         syn::Error::new(
             attr.span(),
-            "attribute must use the form #[attr] or #[attr(rename = \"...\")]",
+            "attribute must use the form #[attr(rename = \"...\")]",
         )
     })?;
-
-    match meta {
-        syn::Meta::NameValue(nv) if nv.path.is_ident("rename") => match nv.value {
-            syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(lit), .. }) => Ok(Some(lit.value())),
-            syn::Expr::Path(_) => Err(syn::Error::new(
-                nv.value.span(),
-                "rename value must be a string literal, e.g., rename = \"...\"",
-            )),
-            _ => Err(syn::Error::new(nv.value.span(), "rename value must be a string literal")),
-        },
-        syn::Meta::NameValue(nv) => Err(syn::Error::new(
-            nv.path.span(),
-            "unknown attribute argument, expected `rename`",
-        )),
-        _ => Err(syn::Error::new(
-            attr.span(),
-            "attribute must use the form #[attr] or #[attr(rename = \"...\")]",
-        )),
+    if let syn::Meta::NameValue(nv) = meta {
+        if nv.path.is_ident("rename") {
+            match nv.value {
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(lit),
+                    ..
+                }) => return Ok(Some(lit.value())),
+                syn::Expr::Path(_) => {
+                    return Err(syn::Error::new(
+                        nv.value.span(),
+                        "rename value must be a string literal, e.g., rename = \"...\"",
+                    ))
+                }
+                _ => {
+                    return Err(syn::Error::new(
+                        nv.value.span(),
+                        "rename value must be a string literal",
+                    ))
+                }
+            }
+        } else {
+            return Err(syn::Error::new(
+                nv.path.span(),
+                "unknown attribute argument, expected `rename`",
+            ));
+        }
     }
+    Err(syn::Error::new(
+        attr.span(),
+        "attribute must use the form #[attr(rename = \"...\")]",
+    ))
 }
 
 fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
