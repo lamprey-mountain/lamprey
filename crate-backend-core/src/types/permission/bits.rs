@@ -333,4 +333,18 @@ impl PermissionBits {
     pub fn mask(&mut self, mask: PermissionBits) {
         self.0 &= mask.0;
     }
+
+    /// Check if any of the given permissions are set
+    #[inline]
+    pub fn has_any(&self, perms: &[Permission]) -> bool {
+        let mask = Self::from_slice(perms);
+        (self.0 & mask.0) != 0
+    }
+
+    /// Check if all of the given permissions are set
+    #[inline]
+    pub fn has_all(&self, perms: &[Permission]) -> bool {
+        let mask = Self::from_slice(perms);
+        (self.0 & mask.0) == mask.0
+    }
 }
