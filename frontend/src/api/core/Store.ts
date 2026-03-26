@@ -17,6 +17,7 @@ import { RoomMembersService } from "../services/RoomMembersService";
 import { ThreadMembersService } from "../services/ThreadMembersService";
 import { MessagesService } from "../services/MessagesService";
 import { NotificationService } from "../services/NotificationService";
+export { MemberListService } from "../services/MemberListService";
 import { MemberListService } from "../services/MemberListService";
 import { InvitesService } from "../services/InvitesService";
 import { AuthService } from "../services/AuthService";
@@ -36,9 +37,12 @@ import { Emitter } from "@solid-primitives/event-bus";
 import type { IDBPDatabase } from "idb";
 import { ReactiveMap } from "@solid-primitives/map";
 import type { UserWithRelationship, VoiceState } from "sdk";
+import { logger } from "../../logger";
 import {
 	stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal,
 } from "../../notification-util.ts";
+
+const storeLog = logger.for("api/rooms");
 
 export class RootStore {
 	client: Client;
@@ -99,7 +103,7 @@ export class RootStore {
 	get voiceState(): VoiceState | null {
 		const session = this.session();
 		if (!session || session.status === "Unauthorized") return null;
-		const userId = (session as any).user_id;
+		const userId = session.user_id;
 		if (!userId) return null;
 		return this.voiceStates.get(userId) ?? null;
 	}
@@ -183,10 +187,10 @@ export class RootStore {
 		this.setSession(msg.session);
 		if (msg.user) {
 			// Set @self alias first using session user_id
-			const userId = (msg.session as any)?.user_id;
+			const userId = msg.session.user_id;
 			storeLog.debug("Setting @self alias", {
 				userId,
-				session_user_id: (msg.session as any)?.user_id,
+				session_user_id: msg.session.user_id,
 			});
 			if (userId) {
 				const userWithRelationship: UserWithRelationship = {
@@ -240,14 +244,14 @@ export class RootStore {
 			}
 		} else if (msg.type === "UserCreate" || msg.type === "UserUpdate") {
 			this.users.upsert(msg.user);
-			this.memberLists.updateUser(msg.user as any);
+			this.memberLists.updateUser(msg.user);
 		} else if (msg.type === "PresenceUpdate") {
 			const { user_id, presence } = msg;
 			const user = this.users.get(user_id);
 			if (user) {
 				const updatedUser = { ...user, presence };
 				this.users.upsert(updatedUser);
-				this.memberLists.updateUser(updatedUser as any);
+				this.memberLists.updateUser(updatedUser);
 			}
 		} else if (msg.type === "RoleCreate" || msg.type === "RoleUpdate") {
 			this.roles.upsert(msg.role);
@@ -287,7 +291,7 @@ export class RootStore {
 				this.memberLists.updateMember(user_id, undefined, msg.thread_id);
 			}
 		} else if (msg.type === "MessageCreate") {
-			const m = msg.message as any;
+			const m = msg.message;
 			if (raw.op === "Sync") m.nonce = raw.nonce;
 			this.messages.handleMessageCreate(m);
 			this.notifications.handleMessageCreate(m);
@@ -308,12 +312,12 @@ export class RootStore {
 				}
 			}
 		} else if (msg.type === "MessageUpdate") {
-			this.messages.handleMessageUpdate(msg.message as any);
+			this.messages.handleMessageUpdate(msg.message);
 		} else if (msg.type === "MessageDelete") {
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "PreferencesGlobal") {
 			if (
-				msg.user_id === (this.session() as any)?.user_id && this.setPreferences
+				msg.user_id === this.session()?.user_id && this.setPreferences
 			) {
 				this.setPreferences(msg.config);
 				if (this.setServerPreferences) {

@@ -265,7 +265,7 @@ function RouteSettings(p: RouteSectionProps) {
 		<>
 			<Title title={user() ? t("page.settings_user") : t("loading")} />
 			<Show when={user()}>
-				<UserSettings user={user()!} page={p.params.page} />
+				<UserSettings user={user()!} page={p.params.page!} />
 			</Show>
 		</>
 	);

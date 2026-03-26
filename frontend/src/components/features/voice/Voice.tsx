@@ -1,6 +1,7 @@
 import { Channel } from "sdk";
 import {
 	createEffect,
+	createResource,
 	createSignal,
 	For,
 	Match,
@@ -44,14 +45,12 @@ export const Voice = (p: { channel: Channel }) => {
 	}));
 
 	const getName = (uid: string) => {
-		const user = api2.users.fetch(() => uid);
+		const user = api2.users.use(() => uid);
 		const room_member = p.channel.room_id
-			? api2.room_members.fetch(() => p.channel.room_id!, () => uid)
+			? api2.room_members.use(() => `${p.channel.room_id}!:${uid}`)
 			: null;
-		const rm = room_member?.();
-		return ((rm as any)?.membership === "Join" && rm?.override_name) ||
-			user()?.name ||
-			uid;
+		return ((room_member?.()?.membership === "Join" && room_member?.()?.override_name) ||
+			uid);
 	};
 
 	const getUsersWithoutStreams = () => {
@@ -181,7 +180,7 @@ export const Voice = (p: { channel: Channel }) => {
 							</For>
 							<For each={getUsersWithoutStreams()}>
 								{(uid) => {
-									const user = api2.users.fetch(() => uid);
+									const user = api2.users.use(() => uid);
 									return (
 										<div
 											class="stream"
@@ -189,10 +188,12 @@ export const Voice = (p: { channel: Channel }) => {
 												"background-color": getColor(uid),
 											}}
 										>
-											<AvatarWithStatus user={user()} />
-											<div class="status">
-												{getName(uid)}
-											</div>
+											<Show when={user}>
+												<AvatarWithStatus user={user()} />
+												<div class="status">
+													{getName(uid)}
+												</div>
+											</Show>
 										</div>
 									);
 								}}

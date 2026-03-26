@@ -1,6 +1,6 @@
 import { For, Match, Show, Switch } from "solid-js";
 import { useAutocomplete } from "../contexts/autocomplete";
-import { type Channel, type EmojiCustom } from "sdk";
+import { type Channel, type EmojiCustom, type User } from "sdk";
 import { getEmojiUrl } from "../media/util";
 import { Avatar } from "../User";
 import { type EmojiData, getTwemoji } from "../emoji";
@@ -65,10 +65,10 @@ export const Autocomplete = () => {
 								>
 									<div class="mention-user">
 										<Avatar
-											user={(result.obj as AutocompleteMentionItem).user}
+											user={(result.obj as AutocompleteMentionItem & { user: User }).user}
 											pad={0}
 										/>
-										<span>{(result.obj as AutocompleteMentionItem).name}</span>
+										<span>{(result.obj as AutocompleteMentionItem & { name: string }).name}</span>
 									</div>
 								</Match>
 								<Match
@@ -77,7 +77,7 @@ export const Autocomplete = () => {
 								>
 									<div class="mention-role">
 										<span class="role-badge">#</span>
-										<span>{(result.obj as AutocompleteMentionItem).name}</span>
+										<span>{(result.obj as AutocompleteMentionItem & { name: string }).name}</span>
 									</div>
 								</Match>
 								<Match

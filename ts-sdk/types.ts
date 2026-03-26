@@ -223,14 +223,14 @@ export type SignallingMessage =
 export type VoiceState = {
 	user_id: string;
 	channel_id: string;
-	session_id: string | null;
+	session_id?: string | null;
 	joined_at: string;
 	mute: boolean;
 	deaf: boolean;
 	self_mute: boolean;
 	self_deaf: boolean;
 	self_video: boolean;
-	self_screen: boolean;
+	self_screen?: boolean;
 	/** @description the thread this voice state is in */
 	thread_id?: string;
 };

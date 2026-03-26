@@ -19,7 +19,7 @@ export class PaginatedList {
 			cursor: undefined,
 			isLoading: false,
 			...initialState,
-		});
+		} as ListState);
 		this.state = state;
 		this.setState = setState;
 	}
@@ -37,20 +37,29 @@ export class PaginatedList {
 	// Used for WebSocket CREATE events
 	prependId(id: string) {
 		if (!this.state.ids.includes(id)) {
-			this.setState("ids", (ids: string[]) => [id, ...ids]);
+			this.setState((prev: ListState) => ({
+				...prev,
+				ids: [id, ...prev.ids],
+			}));
 		}
 	}
 
 	// Used for WebSocket CREATE events (if appending to bottom)
 	appendId(id: string) {
 		if (!this.state.ids.includes(id)) {
-			this.setState("ids", (ids: string[]) => [...ids, id]);
+			this.setState((prev: ListState) => ({
+				...prev,
+				ids: [...prev.ids, id],
+			}));
 		}
 	}
 
 	// Used for WebSocket DELETE Events
 	removeId(id: string) {
-		this.setState("ids", (ids: string[]) => ids.filter((i) => i !== id));
+		this.setState((prev: ListState) => ({
+			...prev,
+			ids: prev.ids.filter((i) => i !== id),
+		}));
 	}
 
 	setLoading(isLoading: boolean) {

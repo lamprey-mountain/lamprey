@@ -65,7 +65,7 @@ export const OauthAuthorizePrompt = (
 
 	const scopes = () => {
 		const s = p.location.query.scope;
-		const s2 = Array.isArray(s) ? s : [s];
+		const s2 = Array.isArray(s) ? s : s ? [s] : [];
 		return s2.flatMap((i) => i.split(" "));
 	};
 

@@ -16,7 +16,7 @@ export type { MessagesService } from "./api/services/MessagesService";
 export type { NotificationService } from "./api/services/NotificationService";
 
 // Re-export other types
-export type { MemberList } from "./api/core/Store";
+export type { MemberList } from "./api/services/MemberListService";
 export type { MessageListAnchor } from "./api/services/MessagesService";
 export type { RevisionContent } from "./api/services/DocumentsService";
 export type { Aggregation } from "./api/services/RoomAnalyticsService";

@@ -1,8 +1,9 @@
-import { getOwner, runWithOwner, VoidComponent } from "solid-js";
+import { createMemo, getOwner, runWithOwner, VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { getEmojiUrl } from "../../../media/util.tsx";
 import { type Api, useChannels2 } from "@/api";
 import { getTwemoji, getTwemojiUrl } from "../../../emoji.ts";
+import type { RoomMember, UserWithRelationship } from "sdk";
 
 export const createNodeViews = () => {
 	const owner = getOwner();
@@ -44,19 +45,24 @@ export const createEditorNodeViews = (
 				const getUserId = () => props.id;
 				if (opts?.currentChannelId) {
 					const channel = channels2.use(() => opts.currentChannelId!());
-					const user = api.users.fetch(getUserId);
-					const roomMember = api.room_members.fetch(
-						() => channel()?.room_id!,
-						getUserId,
-					);
-					const name = () => {
+					const userId = createMemo(() => {
+						const cid = opts.currentChannelId!();
+						return cid ? getUserId() : undefined;
+					});
+					const user = api.users.use(userId);
+					const roomMember = channel()
+						? api.room_members.use(() => `${channel()!.room_id}!:${getUserId()}`)
+						: null;
+					const name = createMemo(() => {
 						const id = getUserId();
 						if (!id) return "..."; // Placeholder while loading/missing
-						return roomMember()?.override_name ?? user()?.name ?? id;
-					};
+						if (roomMember?.()?.override_name) return roomMember()!.override_name;
+						if (user()?.name) return user()!.name;
+						return id;
+					});
 					return <span class="mention mention-user">@{name()}</span>;
 				} else {
-					const user = api.users.fetch(getUserId);
+					const user = api.users.use(getUserId);
 					return (
 						<span class="mention mention-user">
 							@{user()?.name ?? getUserId() ?? "..."}

@@ -213,6 +213,7 @@ export function createAutocompletePlugin(
 			node = nodeType.create(attrs);
 		}
 
+		if (!node) return;
 		let tr = state.tr.replaceWith(triggerPos, to, node);
 		const posAfter = tr.mapping.map(to);
 		tr = tr.insert(posAfter, state.schema.text(" ", []));

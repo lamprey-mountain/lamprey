@@ -131,7 +131,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 
 											function name() {
 												let name: string | undefined | null = null;
-												const rm = room_member();
+												const rm = room_member as RoomMember;
 												if (rm) {
 													name ??= rm.override_name;
 												}

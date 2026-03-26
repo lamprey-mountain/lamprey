@@ -76,7 +76,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 				<ul>
 					<For each={integrations()!.items}>
 						{({ member: i }) => {
-							const user = users2.cache.get(i.user_id);
+							const user = api2.users.cache.get(i.user_id);
 							const name = () =>
 								((i as any).membership === "Join" ? i.override_name : null) ??
 									user?.name;
@@ -91,7 +91,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 													each={(i as any).membership === "Join" ? i.roles : []}
 												>
 													{(role_id) => {
-														const role = roles2.cache.get(role_id);
+														const role = api2.roles.cache.get(role_id);
 														return (
 															<li>
 																<button
@@ -172,10 +172,9 @@ const EditRoles = (
 	props: { x: number; y: number; user_id: string; room: RoomT },
 ) => {
 	const api2 = useApi2();
-	const roles = api2.roles.list(() => props.room.id);
-	const member = api2.room_members.fetch(
-		() => props.room.id,
-		() => props.user_id,
+	const roles = api2.roles.use(() => props.room.id);
+	const member = api2.room_members.use(
+		() => `${props.room.id}!:${props.user_id}`,
 	);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
