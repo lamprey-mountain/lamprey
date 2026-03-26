@@ -7,7 +7,10 @@ use common::v1::types::{
     SERVER_ROOM_ID,
 };
 use dashmap::DashMap;
-use lamprey_backend_core::types::permission::{Permissions, PermissionsContext};
+use lamprey_backend_core::types::permission::{
+    CheckVisibility, MemberState, PermissionBits, Permissions, Permissions2, Permissions2Metadata,
+    PermissionsFlags, ResourceContext,
+};
 use moka::future::Cache;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
@@ -78,13 +81,15 @@ impl ServicePermissions {
     pub async fn for_room(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
         let srv = self.state.services();
         let calc = srv.cache.permissions(room_id, true).await?;
-        calc.query(user_id, None)
+        let perms2 = calc.query(user_id, None)?;
+        Ok(perms2.into())
     }
 
     pub async fn for_room2(&self, user_id: Option<UserId>, room_id: RoomId) -> Result<Permissions> {
         let srv = self.state.services();
         let calc = srv.cache.permissions(room_id, true).await?;
-        calc.query2(user_id, None)
+        let perms2 = calc.query2(user_id, None)?;
+        Ok(perms2.into())
     }
 
     /// calculate the permissions a user has on this server
@@ -97,35 +102,71 @@ impl ServicePermissions {
         &self,
         user_id: Option<UserId>,
         channel_id: ChannelId,
-    ) -> Result<Permissions> {
+    ) -> Result<Permissions2<CheckVisibility>> {
         let srv = self.state.services();
         let chan = srv.channels.get(channel_id, user_id).await?;
 
         if let Some(room_id) = chan.room_id {
             let calc = srv.cache.permissions(room_id, true).await?;
-            calc.query2(user_id, Some(&chan))
+            let mut perms = calc.query2(user_id, Some(&chan))?;
+
+            // load slowmode fields
+            if let Some(uid) = user_id {
+                let data = self.state.data();
+
+                if let Some(expire_at) = data
+                    .channel_get_message_slowmode_expire_at(channel_id, uid)
+                    .await?
+                {
+                    if expire_at > Time::now_utc() {
+                        perms.metadata.channel_slowmode_message_active = true;
+                    }
+                }
+
+                if chan.is_thread() {
+                    if let Some(expire_at) = data
+                        .channel_get_thread_slowmode_expire_at(channel_id, uid)
+                        .await?
+                    {
+                        if expire_at > Time::now_utc() {
+                            perms.metadata.channel_slowmode_thread_active = true;
+                        }
+                    }
+                }
+            }
+
+            Ok(perms.into())
         } else {
             if let Some(parent_id) = chan.parent_id {
-                Box::pin(self.for_channel2(user_id, parent_id)).await
+                // handle threads in dm/gdms
+                Box::pin(self.for_channel_inner(user_id, parent_id)).await
             } else {
-                // DMs/GDMs use Permissions builder directly
-                let mut p = Permissions::builder();
-                p.context = PermissionsContext::Channel;
-
-                // if its not in a room and doesnt have a parent, it must be a dm or gdm
                 let is_recipient = chan.recipients.iter().any(|r| Some(r.id) == user_id);
                 let is_owner = chan.owner_id == user_id;
 
+                let mut bits = PermissionBits::default();
+                let mut flags = PermissionsFlags::new();
+
                 if is_recipient || is_owner {
-                    use lamprey_backend_core::types::permission::PermissionBits;
-                    p.perms = PermissionBits::from_slice(EVERYONE_TRUSTED);
-                    p.perms.add(Permission::ChannelView);
+                    bits = PermissionBits::from_slice(EVERYONE_TRUSTED);
+                    bits.add(Permission::ChannelView);
                 } else {
-                    p.flags.set_cannot_view();
+                    flags.set_cannot_view();
                 }
 
-                // permission overwrites dont exist outside of rooms
-                Ok(p.build())
+                Ok(Permissions2 {
+                    visible: flags.can_view(),
+                    context: ResourceContext::Channel(None, channel_id),
+                    bits,
+                    metadata: Permissions2Metadata {
+                        rank: 0,
+                        member_state: MemberState::Lurker,
+                        channel_locked: false,
+                        channel_slowmode_thread_active: false,
+                        channel_slowmode_message_active: false,
+                    },
+                    state: CheckVisibility,
+                })
             }
         }
     }
@@ -133,7 +174,9 @@ impl ServicePermissions {
     /// calculate the permissions a user has in a channel
     pub async fn for_channel(&self, user_id: UserId, channel_id: ChannelId) -> Result<Permissions> {
         // why is this wrapped?
-        self.for_channel_inner(Some(user_id), channel_id).await
+        self.for_channel_inner(Some(user_id), channel_id)
+            .await
+            .map(|p| p.into())
     }
 
     pub async fn for_channel2(
@@ -141,6 +184,16 @@ impl ServicePermissions {
         user_id: Option<UserId>,
         channel_id: ChannelId,
     ) -> Result<Permissions> {
+        self.for_channel_inner(user_id, channel_id)
+            .await
+            .map(|p| p.into())
+    }
+
+    pub async fn for_channel3(
+        &self,
+        user_id: Option<UserId>,
+        channel_id: ChannelId,
+    ) -> Result<Permissions2<CheckVisibility>> {
         self.for_channel_inner(user_id, channel_id).await
     }
 
@@ -297,16 +350,17 @@ impl ServicePermissions {
         session: &Session,
         connection_id: ConnectionId,
     ) -> Result<bool> {
-        let srv = self.state.services();
         let uid = session.user_id();
         let should_send = match auth_check {
             AuthCheck::Room(room_id) => {
-                let perms = srv.cache.permissions(*room_id, true).await?;
-                perms.can_view_room(uid)
+                // Use can_view_room directly on calculator for efficiency
+                let srv = self.state.services();
+                let perms_calc = srv.cache.permissions(*room_id, true).await?;
+                perms_calc.can_view_room(uid)
             }
             AuthCheck::RoomPerm(room_id, perm) => {
-                let perms = srv.cache.permissions(*room_id, true).await?;
-                perms.query2(uid, None)?.has(*perm)
+                // Use service method that returns old Permissions for compatibility
+                self.for_room2(uid, *room_id).await?.has(*perm)
             }
             AuthCheck::Channel(channel_id) => {
                 let perms = self.for_channel2(uid, *channel_id).await?;
