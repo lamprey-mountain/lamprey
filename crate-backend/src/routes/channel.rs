@@ -19,7 +19,7 @@ use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::Auth;
+use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{
     ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
@@ -205,39 +205,41 @@ async fn channel_create_dm(
 /// Channel get
 #[handler(routes::channel_get)]
 async fn channel_get(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
     let perms = s
         .services()
         .perms
-        .for_channel(auth.user.id, req.channel_id)
+        .for_channel2(user_id, req.channel_id)
         .await?;
     perms.ensure(Permission::ChannelView)?;
-    let channel = s
-        .services()
-        .channels
-        .get(req.channel_id, Some(auth.user.id))
-        .await?;
+    let channel = s.services().channels.get(req.channel_id, user_id).await?;
     Ok(Json(channel))
 }
 
 /// Room channel list
 #[handler(routes::channel_list)]
 async fn channel_list(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    let _perms = srv.perms.for_room2(user_id, req.room_id).await?;
     let channels = data.channel_list(req.room_id).await?;
     let ids: Vec<_> = channels.iter().map(|t| t.id).collect();
-    let channels = srv.channels.get_many(&ids, Some(auth.user.id)).await?;
+    let channels = srv.channels.get_many(&ids, user_id).await?;
     let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
     let channels: Vec<_> = ids
         .into_iter()

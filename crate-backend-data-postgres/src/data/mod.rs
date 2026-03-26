@@ -189,34 +189,25 @@ pub trait DataMessage {
         version_id: MessageVerId,
         update: DbMessageUpdate,
     ) -> Result<()>;
-    async fn message_get(
-        &self,
-        channel_id: ChannelId,
-        message_id: MessageId,
-        user_id: UserId,
-    ) -> Result<Message>;
+    async fn message_get(&self, channel_id: ChannelId, message_id: MessageId) -> Result<Message>;
     async fn message_get_many(
         &self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
-        user_id: UserId,
     ) -> Result<Vec<Message>>;
     async fn message_list(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_deleted(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_removed(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_activity(
@@ -228,7 +219,6 @@ pub trait DataMessage {
     async fn message_list_all(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
@@ -251,7 +241,6 @@ pub trait DataMessage {
         &self,
         channel_id: ChannelId,
         version_id: MessageVerId,
-        user_id: UserId,
     ) -> Result<MessageVersion>;
     async fn message_version_delete(
         &self,
@@ -262,7 +251,6 @@ pub trait DataMessage {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<MessageVersion>>;
     async fn message_replies(
@@ -505,7 +493,7 @@ pub trait DataEmbed {
     async fn url_embed_queue_insert(
         &self,
         message_ref: Option<MessageRef>,
-        user_id: UserId,
+        user_id: Option<UserId>,
         url: String,
     ) -> Result<Uuid>;
     async fn url_embed_queue_claim(&self) -> Result<Option<UrlEmbedQueue>>;

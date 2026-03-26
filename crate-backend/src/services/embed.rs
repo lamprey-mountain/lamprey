@@ -140,7 +140,7 @@ impl ServiceEmbed {
         if let Err(e) = Self::attach_embed(
             state,
             job.message_ref.map(|v| serde_json::from_value(v).unwrap()),
-            job.user_id.into(),
+            Some(job.user_id.into()),
             embed,
         )
         .await
@@ -153,7 +153,7 @@ impl ServiceEmbed {
     pub async fn queue(
         &self,
         message_ref: Option<MessageRef>,
-        user_id: UserId,
+        user_id: Option<UserId>,
         url: Url,
     ) -> Result<()> {
         if let Some(embed) = self.cache.get(&url).await {
@@ -250,18 +250,16 @@ impl ServiceEmbed {
     async fn attach_embed(
         state: &Arc<ServerStateInner>,
         message_ref: Option<MessageRef>,
-        user_id: UserId,
+        user_id: Option<UserId>,
         embed: Embed,
     ) -> Result<()> {
         let Some(mref) = message_ref else {
             return Ok(());
         };
         let data = state.data();
-        let mut message = data
-            .message_get(mref.thread_id, mref.message_id, user_id)
-            .await?;
+        let mut message = data.message_get(mref.thread_id, mref.message_id).await?;
         let ver = data
-            .message_version_get(mref.thread_id, mref.version_id, user_id)
+            .message_version_get(mref.thread_id, mref.version_id)
             .await?;
         message.latest_version = ver;
 
@@ -333,17 +331,12 @@ impl ServiceEmbed {
         )
         .await?;
 
-        let mut message = data
-            .message_get(mref.thread_id, mref.message_id, user_id)
-            .await?;
+        let mut message = data.message_get(mref.thread_id, mref.message_id).await?;
         if message.latest_version.version_id == mref.version_id {
             state.presign_message(&mut message).await?;
+            let uid = user_id.expect("embed queue always has user_id");
             state
-                .broadcast_channel(
-                    mref.thread_id,
-                    user_id,
-                    MessageSync::MessageUpdate { message },
-                )
+                .broadcast_channel(mref.thread_id, uid, MessageSync::MessageUpdate { message })
                 .await?;
         } else {
             info!("not sending update because message is not latest");

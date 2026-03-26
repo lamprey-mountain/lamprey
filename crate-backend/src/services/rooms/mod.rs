@@ -557,7 +557,7 @@ impl ServiceRooms {
                     mentions: Default::default(),
                 })
                 .await?;
-            let welcome_message = data.message_get(wti, welcome_message_id, user_id).await?;
+            let welcome_message = data.message_get(wti, welcome_message_id).await?;
 
             self.state
                 .broadcast_channel(

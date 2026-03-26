@@ -144,7 +144,7 @@ async fn thread_member_add(
             .await?;
         let message = srv
             .messages
-            .get(req.thread_id, message_id, auth.user.id)
+            .get(req.thread_id, message_id, Some(auth.user.id))
             .await?;
         srv.channels.invalidate(req.thread_id).await;
         s.broadcast_channel(
@@ -231,7 +231,7 @@ async fn thread_member_delete(
             .await?;
         let message = srv
             .messages
-            .get(req.thread_id, message_id, auth.user.id)
+            .get(req.thread_id, message_id, Some(auth.user.id))
             .await?;
         srv.channels.invalidate(req.thread_id).await;
         s.broadcast_channel(
