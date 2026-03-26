@@ -82,10 +82,7 @@ impl Connection {
     }
 
     pub fn rewind(&mut self, seq: u64) -> Result<()> {
-        let is_still_valid = self
-            .queue
-            .iter()
-            .any(|(seq, _)| seq.is_some_and(|s| s <= self.seq_client));
+        let is_still_valid = self.queue.iter().any(|(s, _)| s.is_some_and(|s| s >= seq));
         if is_still_valid {
             self.seq_client = seq;
             Ok(())
@@ -318,8 +315,7 @@ impl Connection {
             },
         };
 
-        transport.send(msg).await?;
-
+        self.queue.push_front((Some(0), msg));
         self.seq_server += 1;
 
         if let Some(user_id) = session.user_id() {
